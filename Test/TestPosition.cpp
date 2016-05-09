@@ -40,20 +40,20 @@
 using namespace OFX;
 
 
-
 #define kParamPositionTranslate kParamTransformTranslate
 #define kParamPositionTranslateLabel kParamTransformTranslateLabel
 #define kParamPositionTranslateHint "New position of the bottom-left pixel. Rounded to the closest pixel."
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class TestPositionPlugin : public Transform3x3Plugin
+class TestPositionPlugin
+    : public Transform3x3Plugin
 {
 public:
     /** @brief ctor */
     TestPositionPlugin(OfxImageEffectHandle handle)
-    : Transform3x3Plugin(handle, /*masked=*/true, eTransform3x3ParamsTypeMotionBlur) // plugin is masked because it cannot be composed downwards
-    , _translate(0)
+        : Transform3x3Plugin(handle, /*masked=*/ true, eTransform3x3ParamsTypeMotionBlur) // plugin is masked because it cannot be composed downwards
+        , _translate(0)
     {
         // NON-GENERIC
         _translate = fetchDouble2DParam(kParamPositionTranslate);
@@ -62,9 +62,7 @@ public:
 
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
-
     virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
-
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 
@@ -77,9 +75,10 @@ bool
 TestPositionPlugin::isIdentity(double time)
 {
     double x, y;
+
     _translate->getValueAtTime(time, x, y);
 
-    if (std::floor(x+0.5) == 0. && std::floor(y+0.5) == 0.) {
+    if ( (std::floor(x + 0.5) == 0.) && (std::floor(y + 0.5) == 0.) ) {
         return true;
     }
 
@@ -87,9 +86,14 @@ TestPositionPlugin::isIdentity(double time)
 }
 
 bool
-TestPositionPlugin::getInverseTransformCanonical(double time, int /*view*/, double /*amount*/, bool invert, OFX::Matrix3x3* invtransform) const
+TestPositionPlugin::getInverseTransformCanonical(double time,
+                                                 int /*view*/,
+                                                 double /*amount*/,
+                                                 bool invert,
+                                                 OFX::Matrix3x3* invtransform) const
 {
     double x, y;
+
     _translate->getValueAtTime(time, x, y);
 
     invtransform->a = 1.;
@@ -106,7 +110,8 @@ TestPositionPlugin::getInverseTransformCanonical(double time, int /*view*/, doub
 }
 
 void
-TestPositionPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+TestPositionPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                                 const std::string &paramName)
 {
     if (paramName == kParamPositionTranslate) {
         changedTransform(args);
@@ -115,27 +120,24 @@ TestPositionPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std
     }
 }
 
-
-
-
-
-
 mDeclarePluginFactory(TestPositionPluginFactory, {}, {});
-
-void TestPositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+TestPositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginPositionName);
     desc.setPluginGrouping(kPluginPositionGrouping);
     desc.setPluginDescription(kPluginPositionDescription);
 
-    Transform3x3Describe(desc, /*masked=*/true);
+    Transform3x3Describe(desc, /*masked=*/ true);
 }
 
-void TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                             OFX::ContextEnum context)
 {
     // make some pages and to things in
-    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, /*masked=*/true);
+    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, /*masked=*/ true);
 
     // translate
     {
@@ -147,7 +149,7 @@ void TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setDefault(0., 0.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-        if (param->getHostHasNativeOverlayHandle()) {
+        if ( param->getHostHasNativeOverlayHandle() ) {
             param->setUseHostNativeOverlayHandle(true);
         }
 
@@ -161,11 +163,11 @@ void TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
 }
 
 OFX::ImageEffect*
-TestPositionPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+TestPositionPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                          OFX::ContextEnum /*context*/)
 {
     return new TestPositionPlugin(handle);
 }
-
 
 static TestPositionPluginFactory p(kPluginPositionIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

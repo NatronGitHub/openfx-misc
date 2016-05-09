@@ -40,8 +40,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "NoOpOFX"
 #define kPluginGrouping "Other"
-#define kPluginDescription "Copies the input to the ouput.\n"\
-"This plugin concatenates transforms."
+#define kPluginDescription "Copies the input to the ouput.\n" \
+    "This plugin concatenates transforms."
 #define kPluginIdentifier "net.sf.openfx.NoOpPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -96,23 +96,24 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class NoOpPlugin : public OFX::ImageEffect
+class NoOpPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     NoOpPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _forceCopy(0)
-    , _setPremult(0)
-    , _premult(0)
-    , _setFieldOrder(0)
-    , _fieldOrder(0)
-    , _setPixelAspectRatio(0)
-    , _pixelAspectRatio(0)
-    , _setFrameRate(0)
-    , _frameRate(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _forceCopy(0)
+        , _setPremult(0)
+        , _premult(0)
+        , _setFieldOrder(0)
+        , _fieldOrder(0)
+        , _setPixelAspectRatio(0)
+        , _pixelAspectRatio(0)
+        , _setFrameRate(0)
+        , _frameRate(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -120,38 +121,36 @@ public:
         _setPremult = fetchBooleanParam(kParamSetPremult);
         _premult = fetchChoiceParam(kParamOutputPremult);
         assert(_forceCopy && _setPremult && _premult);
-        _premult->setEnabled(_setPremult->getValue());
+        _premult->setEnabled( _setPremult->getValue() );
 
         const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
         if (gHostDescription.supportsSetableFielding) {
             _setFieldOrder = fetchBooleanParam(kParamSetFieldOrder);
             _fieldOrder = fetchChoiceParam(kParamOutputFieldOrder);
             assert(_setFieldOrder && _fieldOrder);
-            _fieldOrder->setEnabled(_setFieldOrder->getValue());
+            _fieldOrder->setEnabled( _setFieldOrder->getValue() );
         }
         if (gHostDescription.supportsMultipleClipPARs) {
             _setPixelAspectRatio = fetchBooleanParam(kParamSetPixelAspectRatio);
             _pixelAspectRatio = fetchDoubleParam(kParamOutputPixelAspectRatio);
             assert(_setPixelAspectRatio && _pixelAspectRatio);
-            _pixelAspectRatio->setEnabled(_setPixelAspectRatio->getValue());
+            _pixelAspectRatio->setEnabled( _setPixelAspectRatio->getValue() );
         }
         if (gHostDescription.supportsSetableFrameRate) {
             _setFrameRate = fetchBooleanParam(kParamSetFrameRate);
             _frameRate = fetchDoubleParam(kParamOutputFrameRate);
             assert(_setFrameRate && _frameRate);
-            _frameRate->setEnabled(_setFrameRate->getValue());
+            _frameRate->setEnabled( _setFrameRate->getValue() );
         }
     }
 
 private:
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
@@ -159,7 +158,7 @@ private:
 
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
-    virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
+    virtual bool getTransform(const OFX::TransformArguments & args, OFX::Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
 #endif
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
@@ -168,7 +167,6 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-
     OFX::BooleanParam *_forceCopy;
     OFX::BooleanParam *_setPremult;
     OFX::ChoiceParam *_premult;
@@ -191,7 +189,8 @@ private:
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-NoOpPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+NoOpPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
+                                 OFX::RegionOfInterestSetter &rois)
 {
     if (!_srcClip) {
         return;
@@ -207,7 +206,7 @@ NoOpPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OF
     double srcPAR = _srcClip->getPixelAspectRatio();
     double pixelAspectRatio = 1.;
     _pixelAspectRatio->getValueAtTime(args.time, pixelAspectRatio);
-    if (srcPAR <= 0 || pixelAspectRatio <= 0) {
+    if ( (srcPAR <= 0) || (pixelAspectRatio <= 0) ) {
         return;
     }
 
@@ -218,9 +217,9 @@ NoOpPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OF
     rois.setRegionOfInterest(*_srcClip, srcRoI);
 }
 
-
 bool
-NoOpPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+NoOpPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                  OfxRectD &rod)
 {
     if (!_srcClip) {
         return false;
@@ -236,12 +235,12 @@ NoOpPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, 
     double srcPAR = _srcClip->getPixelAspectRatio();
     double pixelAspectRatio = 1.;
     _pixelAspectRatio->getValueAtTime(args.time, pixelAspectRatio);
-    if (srcPAR <= 0 || pixelAspectRatio <= 0) {
+    if ( (srcPAR <= 0) || (pixelAspectRatio <= 0) ) {
         return false;
     }
 
     const OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
-    if (OFX::Coords::rectIsEmpty(srcRoD)) {
+    if ( OFX::Coords::rectIsEmpty(srcRoD) ) {
         return false;
     }
     rod = srcRoD;
@@ -257,6 +256,7 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
 {
     const double time = args.time;
     bool forceCopy;
+
     _forceCopy->getValueAtTime(time, forceCopy);
 
 #ifdef DEBUG
@@ -266,48 +266,52 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
     }
 #endif
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    copyPixels(*this, args.renderWindow, src.get(), dst.get());
+    copyPixels( *this, args.renderWindow, src.get(), dst.get() );
 }
 
 bool
-NoOpPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+NoOpPlugin::isIdentity(const IsIdentityArguments &args,
+                       Clip * &identityClip,
+                       double & /*identityTime*/)
 {
     const double time = args.time;
     bool forceCopy;
+
     _forceCopy->getValueAtTime(time, forceCopy);
 
     if (!forceCopy) {
         identityClip = _srcClip;
+
         return true;
     } else {
         return false;
@@ -317,10 +321,13 @@ NoOpPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, do
 #ifdef OFX_EXTENSIONS_NUKE
 // overridden getTransform
 bool
-NoOpPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
+NoOpPlugin::getTransform(const OFX::TransformArguments &args,
+                         OFX::Clip * &transformClip,
+                         double transformMatrix[9])
 {
     const double time = args.time;
     bool forceCopy;
+
     _forceCopy->getValueAtTime(time, forceCopy);
     if (forceCopy) {
         return false;
@@ -338,6 +345,7 @@ NoOpPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &trans
 
     return true;
 }
+
 #endif
 
 
@@ -345,28 +353,38 @@ static const char*
 bitDepthString(BitDepthEnum bitDepth)
 {
     switch (bitDepth) {
-        case OFX::eBitDepthUByte:
-            return "8u";
-        case OFX::eBitDepthUShort:
-            return "16u";
-        case OFX::eBitDepthHalf:
-            return "16f";
-        case OFX::eBitDepthFloat:
-            return "32f";
-        case OFX::eBitDepthCustom:
-            return "x";
-        case OFX::eBitDepthNone:
-            return "0";
+    case OFX::eBitDepthUByte:
+
+        return "8u";
+    case OFX::eBitDepthUShort:
+
+        return "16u";
+    case OFX::eBitDepthHalf:
+
+        return "16f";
+    case OFX::eBitDepthFloat:
+
+        return "32f";
+    case OFX::eBitDepthCustom:
+
+        return "x";
+    case OFX::eBitDepthNone:
+
+        return "0";
 #ifdef OFX_EXTENSIONS_VEGAS
-        case eBitDepthUByteBGRA:
-            return "8uBGRA";
-        case eBitDepthUShortBGRA:
-            return "16uBGRA";
-        case eBitDepthFloatBGRA:
-            return "32fBGRA";
+    case eBitDepthUByteBGRA:
+
+        return "8uBGRA";
+    case eBitDepthUShortBGRA:
+
+        return "16uBGRA";
+    case eBitDepthFloatBGRA:
+
+        return "32fBGRA";
 #endif
-        default:
-            return "[unknown bit depth]";
+    default:
+
+        return "[unknown bit depth]";
     }
 }
 
@@ -375,21 +393,26 @@ pixelComponentString(const std::string& p)
 {
     const std::string prefix = "OfxImageComponent";
     std::string s = p;
-    return s.replace(s.find(prefix),prefix.length(),"");
+
+    return s.replace(s.find(prefix), prefix.length(), "");
 }
 
 static const char*
 premultString(PreMultiplicationEnum e)
 {
     switch (e) {
-        case eImageOpaque:
-            return "Opaque";
-        case eImagePreMultiplied:
-            return "PreMultiplied";
-        case eImageUnPreMultiplied:
-            return "UnPreMultiplied";
-        default:
-            return "[unknown premult]";
+    case eImageOpaque:
+
+        return "Opaque";
+    case eImagePreMultiplied:
+
+        return "PreMultiplied";
+    case eImageUnPreMultiplied:
+
+        return "UnPreMultiplied";
+    default:
+
+        return "[unknown premult]";
     }
 }
 
@@ -398,50 +421,62 @@ static const char*
 pixelOrderString(PixelOrderEnum e)
 {
     switch (e) {
-        case ePixelOrderRGBA:
-            return "RGBA";
-        case ePixelOrderBGRA:
-            return "BGRA";
-        default:
-            return "[unknown pixel order]";
+    case ePixelOrderRGBA:
+
+        return "RGBA";
+    case ePixelOrderBGRA:
+
+        return "BGRA";
+    default:
+
+        return "[unknown pixel order]";
     }
 }
+
 #endif
 
 static const char*
 fieldOrderString(FieldEnum e)
 {
     switch (e) {
-        case eFieldNone:
-            return "None";
-        case eFieldBoth:
-            return "Both";
-        case eFieldLower:
-            return "Lower";
-        case eFieldUpper:
-            return "Upper";
-        case eFieldSingle:
-            return "Single";
-        case eFieldDoubled:
-            return "Doubled";
-        default:
-            return "[unknown field order]";
+    case eFieldNone:
+
+        return "None";
+    case eFieldBoth:
+
+        return "Both";
+    case eFieldLower:
+
+        return "Lower";
+    case eFieldUpper:
+
+        return "Upper";
+    case eFieldSingle:
+
+        return "Single";
+    case eFieldDoubled:
+
+        return "Doubled";
+    default:
+
+        return "[unknown field order]";
     }
 }
 
 void
-NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                         const std::string &paramName)
 {
     if (paramName == kParamSetPremult) {
-        _premult->setEnabled(_setPremult->getValue());
+        _premult->setEnabled( _setPremult->getValue() );
     } else if (paramName == kParamSetFieldOrder) {
-        _fieldOrder->setEnabled(_setFieldOrder->getValue());
+        _fieldOrder->setEnabled( _setFieldOrder->getValue() );
     } else if (paramName == kParamSetFieldOrder) {
-        _fieldOrder->setEnabled(_setFieldOrder->getValue());
+        _fieldOrder->setEnabled( _setFieldOrder->getValue() );
     } else if (paramName == kParamSetPixelAspectRatio) {
-        _pixelAspectRatio->setEnabled(_setPixelAspectRatio->getValue());
+        _pixelAspectRatio->setEnabled( _setPixelAspectRatio->getValue() );
     } else if (paramName == kParamSetFrameRate) {
-        _frameRate->setEnabled(_setFrameRate->getValue());
+        _frameRate->setEnabled( _setFrameRate->getValue() );
     } else if (paramName == kParamClipInfo) {
         std::ostringstream oss;
         oss << "Clip Info:\n\n";
@@ -450,19 +485,19 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
             oss << "N/A";
         } else {
             OFX::Clip &c = *_srcClip;
-            oss << pixelComponentString(c.getPixelComponentsProperty());
-            oss << bitDepthString(c.getPixelDepth());
+            oss << pixelComponentString( c.getPixelComponentsProperty() );
+            oss << bitDepthString( c.getPixelDepth() );
             oss << " (unmapped: ";
-            oss << pixelComponentString(c.getUnmappedPixelComponentsProperty());
-            oss << bitDepthString(c.getUnmappedPixelDepth());
+            oss << pixelComponentString( c.getUnmappedPixelComponentsProperty() );
+            oss << bitDepthString( c.getUnmappedPixelDepth() );
             oss << ")\npremultiplication: ";
-            oss << premultString(c.getPreMultiplication());
+            oss << premultString( c.getPreMultiplication() );
 #ifdef OFX_EXTENSIONS_VEGAS
             oss << "\npixel order: ";
-            oss << pixelOrderString(c.getPixelOrder());
+            oss << pixelOrderString( c.getPixelOrder() );
 #endif
             oss << "\nfield order: ";
-            oss << fieldOrderString(c.getFieldOrder());
+            oss << fieldOrderString( c.getFieldOrder() );
             oss << "\n";
             oss << (c.isConnected() ? "connected" : "not connected");
             oss << "\n";
@@ -491,19 +526,19 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
             oss << "N/A";
         } else {
             OFX::Clip &c = *_dstClip;
-            oss << pixelComponentString(c.getPixelComponentsProperty());
-            oss << bitDepthString(c.getPixelDepth());
+            oss << pixelComponentString( c.getPixelComponentsProperty() );
+            oss << bitDepthString( c.getPixelDepth() );
             oss << " (unmapped: ";
-            oss << pixelComponentString(c.getUnmappedPixelComponentsProperty());
-            oss << bitDepthString(c.getUnmappedPixelDepth());
+            oss << pixelComponentString( c.getUnmappedPixelComponentsProperty() );
+            oss << bitDepthString( c.getUnmappedPixelDepth() );
             oss << ")\npremultiplication: ";
-            oss << premultString(c.getPreMultiplication());
+            oss << premultString( c.getPreMultiplication() );
 #ifdef OFX_EXTENSIONS_VEGAS
             oss << "\npixel order: ";
-            oss << pixelOrderString(c.getPixelOrder());
+            oss << pixelOrderString( c.getPixelOrder() );
 #endif
             oss << "\nfield order: ";
-            oss << fieldOrderString(c.getFieldOrder());
+            oss << fieldOrderString( c.getFieldOrder() );
             oss << "\n";
             oss << (c.isConnected() ? "connected" : "not connected");
             oss << "\n";
@@ -528,10 +563,10 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
         }
         oss << "\n\n";
         oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
-        
-        sendMessage(OFX::Message::eMessageMessage, "", oss.str());
+
+        sendMessage( OFX::Message::eMessageMessage, "", oss.str() );
     }
-}
+} // NoOpPlugin::changedParam
 
 /* Override the clip preferences */
 void
@@ -539,6 +574,7 @@ NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip
     bool setPremult = _setPremult->getValue();
+
     if (setPremult) {
         PreMultiplicationEnum premult = (PreMultiplicationEnum)_premult->getValue();
 
@@ -574,10 +610,9 @@ NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     }
 }
 
-
 mDeclarePluginFactory(NoOpPluginFactory, {}, {});
-
-void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -622,11 +657,14 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                     OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentNone);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
@@ -640,7 +678,7 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentNone);
@@ -651,8 +689,8 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     dstClip->addSupportedComponent(ePixelComponentXY);
 #endif
     dstClip->setSupportsTiles(kSupportsTiles);
-    
-    // make some pages and to things in 
+
+    // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // forceCopy
@@ -686,11 +724,11 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setLabel(kParamOutputPremultLabel);
         param->setHint(kParamOutputPremultHint);
         assert(param->getNOptions() == eImageOpaque);
-        param->appendOption(premultString(eImageOpaque));
+        param->appendOption( premultString(eImageOpaque) );
         assert(param->getNOptions() == eImagePreMultiplied);
-        param->appendOption(premultString(eImagePreMultiplied));
+        param->appendOption( premultString(eImagePreMultiplied) );
         assert(param->getNOptions() == eImageUnPreMultiplied);
-        param->appendOption(premultString(eImageUnPreMultiplied));
+        param->appendOption( premultString(eImageUnPreMultiplied) );
         param->setDefault(eImagePreMultiplied); // images should be premultiplied in a compositing context
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
@@ -698,7 +736,6 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             page->addChild(*param);
         }
     }
-
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
 
     if (gHostDescription.supportsSetableFielding) {
@@ -721,17 +758,17 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             param->setLabel(kParamOutputFieldOrderLabel);
             param->setHint(kParamOutputFieldOrderHint);
             assert(param->getNOptions() == eFieldNone);
-            param->appendOption(fieldOrderString(eFieldNone));
+            param->appendOption( fieldOrderString(eFieldNone) );
             assert(param->getNOptions() == eFieldBoth);
-            param->appendOption(fieldOrderString(eFieldBoth));
+            param->appendOption( fieldOrderString(eFieldBoth) );
             assert(param->getNOptions() == eFieldLower);
-            param->appendOption(fieldOrderString(eFieldLower));
+            param->appendOption( fieldOrderString(eFieldLower) );
             assert(param->getNOptions() == eFieldUpper);
-            param->appendOption(fieldOrderString(eFieldUpper));
+            param->appendOption( fieldOrderString(eFieldUpper) );
             assert(param->getNOptions() == eFieldSingle);
-            param->appendOption(fieldOrderString(eFieldSingle));
+            param->appendOption( fieldOrderString(eFieldSingle) );
             assert(param->getNOptions() == eFieldDoubled);
-            param->appendOption(fieldOrderString(eFieldDoubled));
+            param->appendOption( fieldOrderString(eFieldDoubled) );
             param->setDefault(eFieldNone);
             param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
@@ -806,13 +843,14 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             page->addChild(*param);
         }
     }
-}
+} // NoOpPluginFactory::describeInContext
 
-OFX::ImageEffect* NoOpPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+NoOpPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                  OFX::ContextEnum /*context*/)
 {
     return new NoOpPlugin(handle);
 }
-
 
 static NoOpPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

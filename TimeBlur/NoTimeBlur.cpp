@@ -57,15 +57,16 @@ enum RoundingEnum
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class NoTimeBlurPlugin : public OFX::ImageEffect
+class NoTimeBlurPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     NoTimeBlurPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _rounding(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _rounding(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -76,16 +77,13 @@ public:
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-
     OFX::ChoiceParam *_rounding;
 };
 
@@ -108,98 +106,103 @@ NoTimeBlurPlugin::render(const OFX::RenderArguments &args)
 
     const double time = args.time;
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-
     RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
     double srcTime = time;
     switch (rounding) {
-        case eRoundingRint:
-            srcTime = std::floor(time + 0.5);
-            break;
-        case eRoundingFloor:
-            srcTime = std::floor(time);
-            break;
-        case eRoundingCeil:
-            srcTime = std::ceil(time);
-            break;
-        case eRoundingNone:
-            break;
+    case eRoundingRint:
+        srcTime = std::floor(time + 0.5);
+        break;
+    case eRoundingFloor:
+        srcTime = std::floor(time);
+        break;
+    case eRoundingCeil:
+        srcTime = std::ceil(time);
+        break;
+    case eRoundingNone:
+        break;
     }
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(srcTime) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(srcTime) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    copyPixels(*this, args.renderWindow, src.get(), dst.get());
-}
+    copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+} // NoTimeBlurPlugin::render
 
 bool
-NoTimeBlurPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+NoTimeBlurPlugin::isIdentity(const IsIdentityArguments &args,
+                             Clip * &identityClip,
+                             double &identityTime)
 {
     const double time = args.time;
     RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
     double srcTime = time;
+
     switch (rounding) {
-        case eRoundingRint:
-            srcTime = std::floor(time + 0.5);
-            break;
-        case eRoundingFloor:
-            srcTime = std::floor(time);
-            break;
-        case eRoundingCeil:
-            srcTime = std::ceil(time);
-            break;
-        case eRoundingNone:
-            break;
+    case eRoundingRint:
+        srcTime = std::floor(time + 0.5);
+        break;
+    case eRoundingFloor:
+        srcTime = std::floor(time);
+        break;
+    case eRoundingCeil:
+        srcTime = std::ceil(time);
+        break;
+    case eRoundingNone:
+        break;
     }
 
     identityClip = _srcClip;
     identityTime = srcTime;
+
     return true;
 }
 
 bool
-NoTimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+NoTimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                        OfxRectD &rod)
 {
     const double time = args.time;
     RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
     double srcTime = time;
+
     switch (rounding) {
-        case eRoundingRint:
-            srcTime = std::floor(time + 0.5);
-            break;
-        case eRoundingFloor:
-            srcTime = std::floor(time);
-            break;
-        case eRoundingCeil:
-            srcTime = std::ceil(time);
-            break;
-        case eRoundingNone:
-            break;
+    case eRoundingRint:
+        srcTime = std::floor(time + 0.5);
+        break;
+    case eRoundingFloor:
+        srcTime = std::floor(time);
+        break;
+    case eRoundingCeil:
+        srcTime = std::ceil(time);
+        break;
+    case eRoundingNone:
+        break;
     }
 
     rod = _srcClip->getRegionOfDefinition(srcTime);
@@ -208,8 +211,8 @@ NoTimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
 }
 
 mDeclarePluginFactory(NoTimeBlurPluginFactory, {}, {});
-
-void NoTimeBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+NoTimeBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -251,11 +254,14 @@ void NoTimeBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void NoTimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+NoTimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                           OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentNone);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
@@ -266,7 +272,7 @@ void NoTimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentNone);
@@ -277,8 +283,8 @@ void NoTimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     dstClip->addSupportedComponent(ePixelComponentXY);
 #endif
     dstClip->setSupportsTiles(kSupportsTiles);
-    
-    // make some pages and to things in 
+
+    // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // rounding
@@ -300,13 +306,14 @@ void NoTimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
             page->addChild(*param);
         }
     }
-}
+} // NoTimeBlurPluginFactory::describeInContext
 
-OFX::ImageEffect* NoTimeBlurPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+NoTimeBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new NoTimeBlurPlugin(handle);
 }
-
 
 static NoTimeBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

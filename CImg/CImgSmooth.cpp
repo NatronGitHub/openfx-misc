@@ -42,11 +42,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "SmoothCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Smooth/Denoise input stream using anisotropic PDE-based smoothing.\n" \
-"Uses the 'blur_anisotropic' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Smooth/Denoise input stream using anisotropic PDE-based smoothing.\n" \
+    "Uses the 'blur_anisotropic' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgSmooth"
 // History:
@@ -151,12 +151,13 @@ struct CImgSmoothParams
     bool fast_approx;
 };
 
-class CImgSmoothPlugin : public CImgFilterPluginHelper<CImgSmoothParams,false>
+class CImgSmoothPlugin
+    : public CImgFilterPluginHelper<CImgSmoothParams, false>
 {
 public:
 
     CImgSmoothPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgSmoothParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgSmoothParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _sharpness  = fetchDoubleParam(kParamSharpness);
@@ -171,7 +172,8 @@ public:
         assert(_amplitude && _sharpness && _anisotropy && _alpha && _sigma && _dl && _da && _gprec && _interp && _fast_approx);
     }
 
-    virtual void getValuesAtTime(double time, CImgSmoothParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgSmoothParams& params) OVERRIDE FINAL
     {
         _amplitude->getValueAtTime(time, params.amplitude);
         _sharpness->getValueAtTime(time, params.sharpness);
@@ -187,33 +189,41 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgSmoothParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& renderScale,
+                        const CImgSmoothParams& params,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil((params.amplitude + params.alpha + params.sigma) * renderScale.x);
+        int delta_pix = (int)std::ceil( (params.amplitude + params.alpha + params.sigma) * renderScale.x );
+
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgSmoothParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        const CImgSmoothParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.blur_anisotropic((float)(params.amplitude * args.renderScale.x), // in pixels
-                              (float)params.sharpness,
-                              (float)params.anisotropy,
-                              (float)(params.alpha * args.renderScale.x), // in pixels
-                              (float)(params.sigma * args.renderScale.x), // in pixels
-                              (float)params.dl, // in pixel, but we don't discretize more
-                              (float)params.da,
-                              (float)params.gprec,
-                              params.interp_i,
-                              params.fast_approx);
-
+        cimg.blur_anisotropic( (float)(params.amplitude * args.renderScale.x), // in pixels
+                               (float)params.sharpness,
+                               (float)params.anisotropy,
+                               (float)(params.alpha * args.renderScale.x), // in pixels
+                               (float)(params.sigma * args.renderScale.x), // in pixels
+                               (float)params.dl, // in pixel, but we don't discretize more
+                               (float)params.da,
+                               (float)params.gprec,
+                               params.interp_i,
+                               params.fast_approx );
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgSmoothParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+                            const CImgSmoothParams& params) OVERRIDE FINAL
     {
         return (params.amplitude <= 0. || params.dl < 0.);
     };
@@ -236,7 +246,8 @@ private:
 
 mDeclarePluginFactory(CImgSmoothPluginFactory, {}, {});
 
-void CImgSmoothPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgSmoothPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -264,7 +275,9 @@ void CImgSmoothPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                           OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgSmoothPlugin::describeInContextBegin(desc, context,
@@ -273,9 +286,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
                                                                               kSupportsXY,
                                                                               kSupportsAlpha,
                                                                               kSupportsTiles,
-                                                                              /*processRGB=*/true,
-                                                                              /*processAlpha*/false,
-                                                                              /*processIsSecret=*/false);
+                                                                              /*processRGB=*/ true,
+                                                                              /*processAlpha*/ false,
+                                                                              /*processIsSecret=*/ false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
@@ -381,7 +394,7 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->appendOption(kParamInterpOptionLinear, kParamInterpOptionLinearHint);
         assert(param->getNOptions() == eInterpRungeKutta && param->getNOptions() == 2);
         param->appendOption(kParamInterpOptionRungeKutta, kParamInterpOptionRungeKuttaHint);
-        param->setDefault((int)kParamInterpDefault);
+        param->setDefault( (int)kParamInterpDefault );
         if (page) {
             page->addChild(*param);
         }
@@ -395,15 +408,15 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
             page->addChild(*param);
         }
     }
-
     CImgSmoothPlugin::describeInContextEnd(desc, context, page);
-}
+} // CImgSmoothPluginFactory::describeInContext
 
-OFX::ImageEffect* CImgSmoothPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgSmoothPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new CImgSmoothPlugin(handle);
 }
-
 
 static CImgSmoothPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

@@ -168,8 +168,7 @@ alpha (or another channel).
 
 ### Views
 
-These plugin use the Sony Vegas multiview extension (they don't work
-with Nuke).
+These plugins are compatible with the Sony Vegas and Nuke [multiview extensions](http://openeffects.org/standard_changes/multi-view-effects).
 
 * JoinViewsOFX: JoinView inputs to make a stereo output.
 * OneViewOFX: Takes one view from the input.

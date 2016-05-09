@@ -51,7 +51,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamMixHint "Mix factor for the right view"
 
 // Base class for the RGBA and the Alpha processor
-class MixViewsBase : public OFX::ImageProcessor
+class MixViewsBase
+    : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcLeftImg;
@@ -61,31 +62,32 @@ protected:
 public:
     /** @brief no arg ctor */
     MixViewsBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcLeftImg(0)
-    , _srcRightImg(0)
-    , _mix(0)
+        : OFX::ImageProcessor(instance)
+        , _srcLeftImg(0)
+        , _srcRightImg(0)
+        , _mix(0)
     {
     }
 
     /** @brief set the left src image */
-    void setSrcLeftImg(const OFX::Image *v) {_srcLeftImg = v;}
+    void setSrcLeftImg(const OFX::Image *v) {_srcLeftImg = v; }
 
     /** @brief set the right src image */
-    void setSrcRightImg(const OFX::Image *v) {_srcRightImg = v;}
+    void setSrcRightImg(const OFX::Image *v) {_srcRightImg = v; }
 
     /** @brief set the mix factor of right view */
-    void setMix(float v) {_mix = v;}
+    void setMix(float v) {_mix = v; }
 };
 
 // template to do the RGBA processing
 template <class PIX, int nComponents, int max>
-class ViewMixer : public MixViewsBase
+class ViewMixer
+    : public MixViewsBase
 {
 public:
     // ctor
     ViewMixer(OFX::ImageEffect &instance)
-    : MixViewsBase(instance)
+        : MixViewsBase(instance)
     {
     }
 
@@ -94,10 +96,10 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
-            
+
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
@@ -105,7 +107,7 @@ private:
                 const PIX *srcRightPix = (const PIX *)(_srcRightImg ? _srcRightImg->getPixelAddress(x, y) : 0);
 
                 for (int c = 0; c < nComponents; c++) {
-                    dstPix[c] = (srcLeftPix ? srcLeftPix[c] : PIX())*(1-_mix) + (srcRightPix ? srcRightPix[c] : PIX())*_mix;
+                    dstPix[c] = ( srcLeftPix ? srcLeftPix[c] : PIX() ) * (1 - _mix) + ( srcRightPix ? srcRightPix[c] : PIX() ) * _mix;
                 }
 
                 // increment the dst pixel
@@ -118,25 +120,26 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class MixViewsPlugin : public OFX::ImageEffect
+class MixViewsPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     MixViewsPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _mix(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _mix(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _mix  = fetchDoubleParam(kParamMix);
         assert(_mix);
     }
@@ -168,103 +171,108 @@ private:
 
 /* set up and run a processor */
 void
-MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArguments &args)
+MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
+                                const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> srcLeft((_srcClip && _srcClip->isConnected()) ?
-                                            _srcClip->fetchStereoscopicImage(args.time, 0) : 0);
-    std::auto_ptr<const OFX::Image> srcRight((_srcClip && _srcClip->isConnected()) ?
-                                             _srcClip->fetchStereoscopicImage(args.time,1) : 0);
+    std::auto_ptr<const OFX::Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
+                                             _srcClip->fetchStereoscopicImage(args.time, 0) : 0 );
+    std::auto_ptr<const OFX::Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
+                                              _srcClip->fetchStereoscopicImage(args.time, 1) : 0 );
 
     // make sure bit depths are sane
-    if (srcLeft.get()) {
-        if (srcLeft->getRenderScale().x != args.renderScale.x ||
-            srcLeft->getRenderScale().y != args.renderScale.y ||
-            (srcLeft->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcLeft->getField() != args.fieldToRender)) {
+    if ( srcLeft.get() ) {
+        if ( (srcLeft->getRenderScale().x != args.renderScale.x) ||
+             ( srcLeft->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcLeft->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcLeft->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = srcLeft->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = srcLeft->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcLeft->getPixelComponents();
 
         // see if they have the same depths and bytes and all
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
     }
-    if (srcRight.get()) {
-        if (srcRight->getRenderScale().x != args.renderScale.x ||
-            srcRight->getRenderScale().y != args.renderScale.y ||
-            (srcRight->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcRight->getField() != args.fieldToRender)) {
+    if ( srcRight.get() ) {
+        if ( (srcRight->getRenderScale().x != args.renderScale.x) ||
+             ( srcRight->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcRight->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcRight->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = srcRight->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = srcRight->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcRight->getPixelComponents();
 
         // see if they have the same depths and bytes and all
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
     }
 
     double mix = _mix->getValueAtTime(args.time);
 
     // set the images
-    processor.setDstImg(dst.get());
-    processor.setSrcLeftImg(srcLeft.get());
-    processor.setSrcRightImg(srcRight.get());
+    processor.setDstImg( dst.get() );
+    processor.setSrcLeftImg( srcLeft.get() );
+    processor.setSrcRightImg( srcRight.get() );
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
     // set the parameters
-    processor.setMix((float)mix);
+    processor.setMix( (float)mix );
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-}
+} // MixViewsPlugin::setupAndProcess
 
 // the internal render function
 template <int nComponents>
 void
-MixViewsPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+MixViewsPlugin::renderInternal(const OFX::RenderArguments &args,
+                               OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
-            ViewMixer<unsigned char, nComponents, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthUShort: {
-            ViewMixer<unsigned short, nComponents, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthFloat: {
-            ViewMixer<float, nComponents, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthUByte: {
+        ViewMixer<unsigned char, nComponents, 255> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthUShort: {
+        ViewMixer<unsigned short, nComponents, 65535> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthFloat: {
+        ViewMixer<float, nComponents, 1> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -272,14 +280,14 @@ MixViewsPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEn
 void
 MixViewsPlugin::render(const OFX::RenderArguments &args)
 {
-    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    if ( !OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
         OFX::throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     }
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
@@ -295,10 +303,9 @@ MixViewsPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-
-mDeclarePluginFactory(MixViewsPluginFactory, ;, {});
-
-void MixViewsPluginFactory::load()
+mDeclarePluginFactory(MixViewsPluginFactory,; , {});
+void
+MixViewsPluginFactory::load()
 {
     // we can't be used on hosts that don't support the stereoscopic suite
     // returning an error here causes a blank menu entry in Nuke
@@ -307,7 +314,8 @@ void MixViewsPluginFactory::load()
     //}
 }
 
-void MixViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+MixViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -341,9 +349,11 @@ void MixViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                         OFX::ContextEnum /*context*/)
 {
-    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    if ( !OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
         throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     }
 
@@ -365,8 +375,8 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
-    
-    // make some pages and to things in 
+
+    // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // mix
@@ -386,11 +396,12 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     }
 }
 
-OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+MixViewsPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                      OFX::ContextEnum /*context*/)
 {
     return new MixViewsPlugin(handle);
 }
-
 
 static MixViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

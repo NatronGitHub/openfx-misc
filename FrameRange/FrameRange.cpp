@@ -79,7 +79,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBeforeAfterOptionBlack "Black"
 #define kParamBeforeAfterOptionBlackHint "Return an empty frame."
 
-enum BeforeAfterEnum {
+enum BeforeAfterEnum
+{
     eBeforeAfterOriginal = 0,
     eBeforeAfterHold,
     eBeforeAfterBlack,
@@ -88,18 +89,19 @@ enum BeforeAfterEnum {
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class FrameRangePlugin : public OFX::ImageEffect
+class FrameRangePlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     FrameRangePlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _frameRange(0)
-    , _before(0)
-    , _after(0)
-    , _sublabel(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _frameRange(0)
+        , _before(0)
+        , _after(0)
+        , _sublabel(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -114,29 +116,25 @@ public:
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
-    virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
+    virtual bool getTransform(const OFX::TransformArguments & args, OFX::Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
 #endif
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
-      /* override the time domain action, only for the general context */
+    /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-
     OFX::Int2DParam *_frameRange;
     OFX::ChoiceParam *_before;
     OFX::ChoiceParam *_after;
@@ -159,6 +157,7 @@ FrameRangePlugin::render(const OFX::RenderArguments &args)
     OfxPointI range = _frameRange->getValue();
     double srcTime = time;
     bool black = false;
+
     if (time < range.x) {
         BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
         if (before == eBeforeAfterBlack) {
@@ -175,48 +174,51 @@ FrameRangePlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected() && !black) ?
-                                        _srcClip->fetchImage(srcTime) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( (_srcClip && _srcClip->isConnected() && !black) ?
+                                         _srcClip->fetchImage(srcTime) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     if (black) {
-        fillBlack(*this, args.renderWindow, dst.get());
+        fillBlack( *this, args.renderWindow, dst.get() );
     } else {
-        copyPixels(*this, args.renderWindow, src.get(), dst.get());
+        copyPixels( *this, args.renderWindow, src.get(), dst.get() );
     }
-}
+} // FrameRangePlugin::render
 
 bool
-FrameRangePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+FrameRangePlugin::isIdentity(const IsIdentityArguments &args,
+                             Clip * &identityClip,
+                             double &identityTime)
 {
     const double time = args.time;
     OfxPointI range = _frameRange->getValue();
+
     if (time < range.x) {
         BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
         if (before == eBeforeAfterBlack) {
@@ -233,13 +235,15 @@ FrameRangePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         }
     }
     identityClip = _srcClip;
+
     return true;
 }
 
 bool
-FrameRangePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
+FrameRangePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
+                                        OfxRectD &rod)
 {
-    if (!_srcClip || !_srcClip->isConnected()) {
+    if ( !_srcClip || !_srcClip->isConnected() ) {
         return false;
     }
     const double time = args.time;
@@ -248,31 +252,39 @@ FrameRangePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
         if (before == eBeforeAfterBlack) {
             rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
+
             return true;
         } else if (before == eBeforeAfterHold) {
             rod = _srcClip->getRegionOfDefinition(range.x);
+
             return true;
         }
     } else if (time > range.y) {
         BeforeAfterEnum after = (BeforeAfterEnum)_after->getValue();
         if (after == eBeforeAfterBlack) {
             rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
+
             return true;
         } else if (after == eBeforeAfterHold) {
             rod = _srcClip->getRegionOfDefinition(range.y);
+
             return true;
         }
     }
+
     return false;
 }
 
 #ifdef OFX_EXTENSIONS_NUKE
 // overridden getTransform
 bool
-FrameRangePlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
+FrameRangePlugin::getTransform(const OFX::TransformArguments &args,
+                               OFX::Clip * &transformClip,
+                               double transformMatrix[9])
 {
     const double time = args.time;
     OfxPointI range = _frameRange->getValue();
+
     if (time < range.x) {
         BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
         if (before != eBeforeAfterOriginal) {
@@ -297,39 +309,41 @@ FrameRangePlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * 
 
     return true;
 }
+
 #endif
 
 
 /** @brief called when a clip has just been changed in some way (a rewire maybe) */
 void
-FrameRangePlugin::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
+FrameRangePlugin::changedClip(const OFX::InstanceChangedArgs &args,
+                              const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        args.reason == OFX::eChangeUserEdit &&
-        _srcClip &&
-        _srcClip->isConnected()) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         ( args.reason == OFX::eChangeUserEdit) &&
+         _srcClip &&
+         _srcClip->isConnected() ) {
         // if range is (1,1), i.e. the default value, set it to the input range
         int min, max;
         _frameRange->getValue(min, max);
-        if (min == 1 && max == 1) {
+        if ( (min == 1) && (max == 1) ) {
             OfxRangeD srcRange = _srcClip->getFrameRange();
-            _frameRange->setValue(std::floor(srcRange.min), std::ceil(srcRange.max));
+            _frameRange->setValue( std::floor(srcRange.min), std::ceil(srcRange.max) );
         }
     }
 }
 
-
 void
-FrameRangePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+FrameRangePlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                               const std::string &paramName)
 {
-    if (paramName == kParamReset && _srcClip && _srcClip->isConnected() && args.reason == eChangeUserEdit) {
+    if ( (paramName == kParamReset) && _srcClip && _srcClip->isConnected() && (args.reason == eChangeUserEdit) ) {
         OfxRangeD range = _srcClip->getFrameRange();
-        _frameRange->setValue((int)std::floor(range.min), (int)std::ceil(range.max));
+        _frameRange->setValue( (int)std::floor(range.min), (int)std::ceil(range.max) );
         char label[80];
-        snprintf(label, sizeof(label), "%d - %d", (int)std::floor(range.min), (int)std::ceil(range.max));
+        snprintf( label, sizeof(label), "%d - %d", (int)std::floor(range.min), (int)std::ceil(range.max) );
         _sublabel->setValue(label);
     }
-    if (paramName == kParamFrameRange && args.reason == eChangeUserEdit) {
+    if ( (paramName == kParamFrameRange) && (args.reason == eChangeUserEdit) ) {
         OfxPointI range = _frameRange->getValue();
         char label[80];
         snprintf(label, sizeof(label), "%d - %d", range.x, range.y);
@@ -347,13 +361,13 @@ FrameRangePlugin::getTimeDomain(OfxRangeD &range)
     _frameRange->getValue(min, max);
     range.min = min;
     range.max = std::max(min, max);
+
     return true;
 }
 
-
 mDeclarePluginFactory(FrameRangePluginFactory, {}, {});
-
-void FrameRangePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+FrameRangePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -398,11 +412,14 @@ void FrameRangePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                           OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentNone);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
@@ -416,7 +433,7 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentNone);
@@ -427,8 +444,8 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     dstClip->addSupportedComponent(ePixelComponentXY);
 #endif
     dstClip->setSupportsTiles(kSupportsTiles);
-    
-    // make some pages and to things in 
+
+    // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // frameRange
@@ -436,7 +453,7 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         Int2DParamDescriptor *param = desc.defineInt2DParam(kParamFrameRange);
         param->setLabel(kParamFrameRangeLabel);
         param->setHint(kParamFrameRangeHint);
-        param->setDefault(1,1);
+        param->setDefault(1, 1);
         param->setDimensionLabels("first", "last");
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false); // used in getTimeDomain()
@@ -464,7 +481,7 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->appendOption(kParamBeforeAfterOptionHold, kParamBeforeAfterOptionHoldHint);
         assert(param->getNOptions() == (int)eBeforeAfterBlack);
         param->appendOption(kParamBeforeAfterOptionBlack, kParamBeforeAfterOptionBlackHint);
-        param->setDefault((int)eBeforeAfterBlack);
+        param->setDefault( (int)eBeforeAfterBlack );
         param->setAnimates(false);
         if (page) {
             page->addChild(*param);
@@ -481,7 +498,7 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->appendOption(kParamBeforeAfterOptionHold, kParamBeforeAfterOptionHoldHint);
         assert(param->getNOptions() == (int)eBeforeAfterBlack);
         param->appendOption(kParamBeforeAfterOptionBlack, kParamBeforeAfterOptionBlackHint);
-        param->setDefault((int)eBeforeAfterBlack);
+        param->setDefault( (int)eBeforeAfterBlack );
         param->setAnimates(false);
         if (page) {
             page->addChild(*param);
@@ -496,13 +513,14 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setEvaluateOnChange(false);
         param->setDefault("1 - 1");
     }
-}
+} // FrameRangePluginFactory::describeInContext
 
-OFX::ImageEffect* FrameRangePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+FrameRangePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new FrameRangePlugin(handle);
 }
-
 
 static FrameRangePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

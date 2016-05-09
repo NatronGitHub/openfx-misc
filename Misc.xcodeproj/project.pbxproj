@@ -9224,16 +9224,14 @@
 					"$(inherited)",
 				);
 				HEADER_SEARCH_PATHS = (
-					"$(OFX_PATH)/include",
-					"$(OFX_PATH)/Support/include",
-					"$(OFX_PATH)/Support/Plugins/include",
+					"$(inherited)",
 					"$(OSMESA_PATH)/include",
 				);
 				INFOPLIST_FILE = Shadertoy/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/opt/osmesa/lib,
+					"$(OSMESA_PATH)/lib",
 				);
 				OTHER_LDFLAGS = (
 					"-L$(LLVM_PATH)/lib",
@@ -9287,16 +9285,14 @@
 					"$(inherited)",
 				);
 				HEADER_SEARCH_PATHS = (
-					"$(OFX_PATH)/include",
-					"$(OFX_PATH)/Support/include",
-					"$(OFX_PATH)/Support/Plugins/include",
+					"$(inherited)",
 					"$(OSMESA_PATH)/include",
 				);
 				INFOPLIST_FILE = Shadertoy/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/opt/osmesa/lib,
+					"$(OSMESA_PATH)/lib",
 				);
 				OTHER_LDFLAGS = (
 					"-L$(LLVM_PATH)/lib",

@@ -36,7 +36,7 @@
 #error "include this file first only once, either with USE_OPENGL, or with USE_OSMESA"
 #endif
 
-#if defined(USE_OSMESA) || !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
+#if defined(USE_OSMESA) || !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 #define GL_GLEXT_PROTOTYPES
 #endif
 
@@ -77,7 +77,8 @@
 #endif // defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
 // put a breakpoint in glError to halt the debugger
-inline void glError() {}
+inline void
+glError() {}
 
 #define glCheckError()                                                  \
     {                                                                   \
@@ -90,7 +91,9 @@ inline void glError() {}
 
 #define DPRINT(args) print_dbg args
 static
-void print_dbg(const char *format, ...)
+void
+print_dbg(const char *format,
+          ...)
 {
     char str[1024];
     va_list ap;
@@ -101,10 +104,11 @@ void print_dbg(const char *format, ...)
 #  if _MSC_VER >= 1400
     vsnprintf_s(str, size, _TRUNCATE, format, ap);
 #  else
-    if (size == 0)        /* not even room for a \0? */
+    if (size == 0) {      /* not even room for a \0? */
         return -1;        /* not what C99 says to do, but what windows does */
-    str[size-1] = '\0';
-    _vsnprintf(str, size-1, format, ap);
+    }
+    str[size - 1] = '\0';
+    _vsnprintf(str, size - 1, format, ap);
 #  endif
 #else
     vsnprintf(str, size, format, ap);
@@ -116,22 +120,24 @@ void print_dbg(const char *format, ...)
 #endif
     va_end(ap);
 }
-#endif
+
+#endif // ifndef DEBUG
 
 #ifdef USE_OSMESA
 struct TestOpenGLPlugin::OSMesaPrivate
 {
     OSMesaPrivate(TestOpenGLPlugin *effect)
-    : _effect(effect)
-    , _ctx(0)
-    , _ctxFormat(0)
-    , _ctxDepthBits(0)
-    , _ctxStencilBits(0)
-    , _ctxAccumBits(0)
+        : _effect(effect)
+        , _ctx(0)
+        , _ctxFormat(0)
+        , _ctxDepthBits(0)
+        , _ctxStencilBits(0)
+        , _ctxAccumBits(0)
     {
     }
 
-    ~OSMesaPrivate() {
+    ~OSMesaPrivate()
+    {
         /* destroy the context */
         if (_ctx) {
             // make the context current, with a dummy buffer
@@ -141,7 +147,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
             OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
             OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
             OSMesaDestroyContext( _ctx );
-            assert(!OSMesaGetCurrentContext());
+            assert( !OSMesaGetCurrentContext() );
         }
     }
 
@@ -158,12 +164,13 @@ struct TestOpenGLPlugin::OSMesaPrivate
         if (!buffer) {
             //printf("%p before OSMesaMakeCurrent(%p,buf=NULL), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
             OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0);
+
             return;
         }
-        if (!_ctx || (format      != _ctxFormat &&
-                      depthBits   != _ctxDepthBits &&
-                      stencilBits != _ctxStencilBits &&
-                      accumBits   != _ctxAccumBits)) {
+        if ( !_ctx || ( (format      != _ctxFormat) &&
+                        ( depthBits  != _ctxDepthBits) &&
+                        ( stencilBits != _ctxStencilBits) &&
+                        ( accumBits  != _ctxAccumBits) ) ) {
             /* destroy the context */
             if (_ctx) {
                 //printf("%p before OSMesaDestroyContext(%p), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
@@ -174,7 +181,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
                 OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
                 OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
                 OSMesaDestroyContext( _ctx );
-                assert(!OSMesaGetCurrentContext());
+                assert( !OSMesaGetCurrentContext() );
                 _ctx = 0;
             }
             assert(!_ctx);
@@ -187,8 +194,9 @@ struct TestOpenGLPlugin::OSMesaPrivate
             _ctx = OSMesaCreateContext( format, NULL );
 #endif
             if (!_ctx) {
-                DPRINT(("OSMesaCreateContext failed!\n"));
+                DPRINT( ("OSMesaCreateContext failed!\n") );
                 OFX::throwSuiteStatusException(kOfxStatFailed);
+
                 return;
             }
             _ctxFormat = format;
@@ -205,9 +213,10 @@ struct TestOpenGLPlugin::OSMesaPrivate
         //printf("%p before OSMesaMakeCurrent(%p), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
 
         /* Bind the buffer to the context and make it current */
-        if (!OSMesaMakeCurrent( _ctx, buffer, type, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1 )) {
-            DPRINT(("OSMesaMakeCurrent failed!\n"));
+        if ( !OSMesaMakeCurrent( _ctx, buffer, type, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1 ) ) {
+            DPRINT( ("OSMesaMakeCurrent failed!\n") );
             OFX::throwSuiteStatusException(kOfxStatFailed);
+
             return;
         }
         //OSMesaPixelStore(OSMESA_Y_UP, true); // default value
@@ -218,7 +227,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
             // set viewport
             glViewport(0, 0, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1);
         }
-    }
+    } // setContext
 
     OSMesaContext ctx() { return _ctx; }
 
@@ -231,68 +240,68 @@ struct TestOpenGLPlugin::OSMesaPrivate
     GLint _ctxAccumBits;
 };
 
-
 void
 TestOpenGLPlugin::initMesa()
 {
 }
 
-
 void
 TestOpenGLPlugin::exitMesa()
 {
     OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
         delete *it;
     }
     _osmesa.clear();
 }
-#endif
+
+#endif // ifdef USE_OSMESA
 
 /* The OpenGL teapot */
 
 /**
-(c) Copyright 1993, Silicon Graphics, Inc.
+   (c) Copyright 1993, Silicon Graphics, Inc.
 
-ALL RIGHTS RESERVED
+   ALL RIGHTS RESERVED
 
-Permission to use, copy, modify, and distribute this software
-for any purpose and without fee is hereby granted, provided
-that the above copyright notice appear in all copies and that
-both the copyright notice and this permission notice appear in
-supporting documentation, and that the name of Silicon
-Graphics, Inc. not be used in advertising or publicity
-pertaining to distribution of the software without specific,
-written prior permission.
+   Permission to use, copy, modify, and distribute this software
+   for any purpose and without fee is hereby granted, provided
+   that the above copyright notice appear in all copies and that
+   both the copyright notice and this permission notice appear in
+   supporting documentation, and that the name of Silicon
+   Graphics, Inc. not be used in advertising or publicity
+   pertaining to distribution of the software without specific,
+   written prior permission.
 
-THE MATERIAL EMBODIED ON THIS SOFTWARE IS PROVIDED TO YOU
-"AS-IS" AND WITHOUT WARRANTY OF ANY KIND, EXPRESS, IMPLIED OR
-OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF
-MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  IN NO
-EVENT SHALL SILICON GRAPHICS, INC.  BE LIABLE TO YOU OR ANYONE
-ELSE FOR ANY DIRECT, SPECIAL, INCIDENTAL, INDIRECT OR
-CONSEQUENTIAL DAMAGES OF ANY KIND, OR ANY DAMAGES WHATSOEVER,
-INCLUDING WITHOUT LIMITATION, LOSS OF PROFIT, LOSS OF USE,
-SAVINGS OR REVENUE, OR THE CLAIMS OF THIRD PARTIES, WHETHER OR
-NOT SILICON GRAPHICS, INC.  HAS BEEN ADVISED OF THE POSSIBILITY
-OF SUCH LOSS, HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-ARISING OUT OF OR IN CONNECTION WITH THE POSSESSION, USE OR
-PERFORMANCE OF THIS SOFTWARE.
+   THE MATERIAL EMBODIED ON THIS SOFTWARE IS PROVIDED TO YOU
+   "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, EXPRESS, IMPLIED OR
+   OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  IN NO
+   EVENT SHALL SILICON GRAPHICS, INC.  BE LIABLE TO YOU OR ANYONE
+   ELSE FOR ANY DIRECT, SPECIAL, INCIDENTAL, INDIRECT OR
+   CONSEQUENTIAL DAMAGES OF ANY KIND, OR ANY DAMAGES WHATSOEVER,
+   INCLUDING WITHOUT LIMITATION, LOSS OF PROFIT, LOSS OF USE,
+   SAVINGS OR REVENUE, OR THE CLAIMS OF THIRD PARTIES, WHETHER OR
+   NOT SILICON GRAPHICS, INC.  HAS BEEN ADVISED OF THE POSSIBILITY
+   OF SUCH LOSS, HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+   ARISING OUT OF OR IN CONNECTION WITH THE POSSESSION, USE OR
+   PERFORMANCE OF THIS SOFTWARE.
 
-US Government Users Restricted Rights
+   US Government Users Restricted Rights
 
-Use, duplication, or disclosure by the Government is subject to
-restrictions set forth in FAR 52.227.19(c)(2) or subparagraph
-(c)(1)(ii) of the Rights in Technical Data and Computer
-Software clause at DFARS 252.227-7013 and/or in similar or
-successor clauses in the FAR or the DOD or NASA FAR
-Supplement.  Unpublished-- rights reserved under the copyright
-laws of the United States.  Contractor/manufacturer is Silicon
-Graphics, Inc., 2011 N.  Shoreline Blvd., Mountain View, CA
-94039-7311.
+   Use, duplication, or disclosure by the Government is subject to
+   restrictions set forth in FAR 52.227.19(c)(2) or subparagraph
+   (c)(1)(ii) of the Rights in Technical Data and Computer
+   Software clause at DFARS 252.227-7013 and/or in similar or
+   successor clauses in the FAR or the DOD or NASA FAR
+   Supplement.  Unpublished-- rights reserved under the copyright
+   laws of the United States.  Contractor/manufacturer is Silicon
+   Graphics, Inc., 2011 N.  Shoreline Blvd., Mountain View, CA
+   94039-7311.
 
-OpenGL(TM) is a trademark of Silicon Graphics, Inc.
-*/
+   OpenGL(TM) is a trademark of Silicon Graphics, Inc.
+ */
 
 /* Rim, body, lid, and bottom data must be reflected in x and
    y; handle and spout data across the y axis only.  */
@@ -300,31 +309,31 @@ OpenGL(TM) is a trademark of Silicon Graphics, Inc.
 static int patchdata[][16] =
 {
     /* rim */
-  {102, 103, 104, 105, 4, 5, 6, 7, 8, 9, 10, 11,
-    12, 13, 14, 15},
+    {102, 103, 104, 105, 4, 5, 6, 7, 8, 9, 10, 11,
+     12, 13, 14, 15},
     /* body */
-  {12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-    24, 25, 26, 27},
-  {24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 35, 36,
-    37, 38, 39, 40},
+    {12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+     24, 25, 26, 27},
+    {24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 35, 36,
+     37, 38, 39, 40},
     /* lid */
-  {96, 96, 96, 96, 97, 98, 99, 100, 101, 101, 101,
-    101, 0, 1, 2, 3,},
-  {0, 1, 2, 3, 106, 107, 108, 109, 110, 111, 112,
-    113, 114, 115, 116, 117},
+    {96, 96, 96, 96, 97, 98, 99, 100, 101, 101, 101,
+     101, 0, 1, 2, 3, },
+    {0, 1, 2, 3, 106, 107, 108, 109, 110, 111, 112,
+     113, 114, 115, 116, 117},
     /* bottom */
-  {118, 118, 118, 118, 124, 122, 119, 121, 123, 126,
-    125, 120, 40, 39, 38, 37},
+    {118, 118, 118, 118, 124, 122, 119, 121, 123, 126,
+     125, 120, 40, 39, 38, 37},
     /* handle */
-  {41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
-    53, 54, 55, 56},
-  {53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
-    28, 65, 66, 67},
+    {41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
+     53, 54, 55, 56},
+    {53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
+     28, 65, 66, 67},
     /* spout */
-  {68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
-    80, 81, 82, 83},
-  {80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91,
-    92, 93, 94, 95}
+    {68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+     80, 81, 82, 83},
+    {80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91,
+     92, 93, 94, 95}
 };
 /* *INDENT-OFF* */
 
@@ -384,7 +393,9 @@ static float tex[2][2][2] =
 /* *INDENT-ON* */
 
 static void
-teapot(GLint grid, GLdouble scale, GLenum type)
+teapot(GLint grid,
+       GLdouble scale,
+       GLenum type)
 {
     float p[4][4][3], q[4][4][3], r[4][4][3], s[4][4][3];
     long i, j, k, l;
@@ -404,18 +415,22 @@ teapot(GLint grid, GLdouble scale, GLenum type)
                 for (l = 0; l < 3; l++) {
                     p[j][k][l] = cpdata[patchdata[i][j * 4 + k]][l];
                     q[j][k][l] = cpdata[patchdata[i][j * 4 + (3 - k)]][l];
-                    if (l == 1)
+                    if (l == 1) {
                         q[j][k][l] *= -1.0;
+                    }
                     if (i < 6) {
                         r[j][k][l] =
-                        cpdata[patchdata[i][j * 4 + (3 - k)]][l];
-                        if (l == 0)
+                            cpdata[patchdata[i][j * 4 + (3 - k)]][l];
+                        if (l == 0) {
                             r[j][k][l] *= -1.0;
+                        }
                         s[j][k][l] = cpdata[patchdata[i][j * 4 + k]][l];
-                        if (l == 0)
+                        if (l == 0) {
                             s[j][k][l] *= -1.0;
-                        if (l == 1)
+                        }
+                        if (l == 1) {
                             s[j][k][l] *= -1.0;
+                        }
                     }
                 }
             }
@@ -440,7 +455,7 @@ teapot(GLint grid, GLdouble scale, GLenum type)
     }
     glPopMatrix();
     glPopAttrib();
-}
+} // teapot
 
 /* CENTRY */
 static void
@@ -458,7 +473,8 @@ glutSolidTeapot(GLdouble scale)
 /* ENDCENTRY */
 
 static
-int glutExtensionSupported( const char* extension )
+int
+glutExtensionSupported( const char* extension )
 {
     const char *extensions, *start;
     const size_t len = std::strlen( extension );
@@ -467,8 +483,9 @@ int glutExtensionSupported( const char* extension )
     //FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutExtensionSupported" );
     //freeglut_return_val_if_fail( fgStructure.CurrentWindow != NULL, 0 );
 
-    if (std::strchr(extension, ' '))
+    if ( std::strchr(extension, ' ') ) {
         return 0;
+    }
     start = extensions = (const char *) glGetString(GL_EXTENSIONS);
 
     /* XXX consider printing a warning to stderr that there's no current
@@ -481,16 +498,18 @@ int glutExtensionSupported( const char* extension )
 
     while (1) {
         const char *p = std::strstr(extensions, extension);
-        if (!p)
+        if (!p) {
             return 0;  /* not found */
+        }
         /* check that the match isn't a super string */
-        if ((p == start || p[-1] == ' ') && (p[len] == ' ' || p[len] == 0))
+        if ( ( (p == start) || (p[-1] == ' ') ) && ( (p[len] == ' ') || (p[len] == 0) ) ) {
             return 1;
+        }
         /* skip the false match and continue */
         extensions = p + len;
     }
-    
-    return 0 ;
+
+    return 0;
 }
 
 void
@@ -506,6 +525,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     bool projective = true;
     bool mipmap = true;
     bool anisotropic = true;
+
     if (_scale) {
         _scale->getValueAtTime(time, scalex, scaley);
     }
@@ -535,116 +555,124 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 # ifdef OFX_SUPPORTS_OPENGLRENDER
     const int& gl_enabled = args.openGLEnabled;
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-    DPRINT(("render: openGLSuite %s\n", gHostDescription.supportsOpenGLRender ? "found" : "not found"));
+    DPRINT( ("render: openGLSuite %s\n", gHostDescription.supportsOpenGLRender ? "found" : "not found") );
     if (gHostDescription.supportsOpenGLRender) {
-        DPRINT(("render: openGL rendering %s\n", gl_enabled ? "enabled" : "DISABLED"));
+        DPRINT( ("render: openGL rendering %s\n", gl_enabled ? "enabled" : "DISABLED") );
     }
 #  ifdef USE_OPENGL
     // For this test, we only process in OpenGL mode.
     if (!gl_enabled) {
         OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
         return;
     }
 #  endif
 # endif
 
     const OfxRectI renderWindow = args.renderWindow;
-    DPRINT(("renderWindow = [%d, %d - %d, %d]\n",
-            renderWindow.x1, renderWindow.y1,
-            renderWindow.x2, renderWindow.y2));
+    DPRINT( ("renderWindow = [%d, %d - %d, %d]\n",
+             renderWindow.x1, renderWindow.y1,
+             renderWindow.x2, renderWindow.y2) );
 
 
     // get the output image texture
 # ifdef USE_OPENGL
-    std::auto_ptr<OFX::Texture> dst(_dstClip->loadTexture(time));
+    std::auto_ptr<OFX::Texture> dst( _dstClip->loadTexture(time) );
 # else
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
 # endif
-    if (!dst.get()) {
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
+
         return;
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
+
         return;
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
+
         return;
     }
 # ifdef USE_OPENGL
     const GLuint dstIndex = (GLuint)dst->getIndex();
     const GLenum dstTarget = (GLenum)dst->getTarget();
-    DPRINT(("openGL: output texture index %d, target %d, depth %s\n",
-            dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth)));
+    DPRINT( ( "openGL: output texture index %d, target %d, depth %s\n",
+              dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth) ) );
 # endif
 
 # ifdef USE_OPENGL
-    std::auto_ptr<const OFX::Texture> src((_srcClip && _srcClip->isConnected()) ?
-                                          _srcClip->loadTexture(time) : 0);
+    std::auto_ptr<const OFX::Texture> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                           _srcClip->loadTexture(time) : 0 );
 # else
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                          _srcClip->fetchImage(time) : 0);
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(time) : 0 );
 # endif
 
-    if (!src.get()) {
+    if ( !src.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
+
         return;
     }
-    OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+    OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
     OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-    if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+    if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
         OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
         return;
     }
 # ifdef USE_OPENGL
     const GLuint srcIndex = (GLuint)src->getIndex();
     const GLenum srcTarget = (GLenum)src->getTarget();
-    DPRINT(("openGL: source texture index %d, target %d, depth %s\n",
-            srcIndex, srcTarget, mapBitDepthEnumToStr(srcBitDepth)));
+    DPRINT( ( "openGL: source texture index %d, target %d, depth %s\n",
+              srcIndex, srcTarget, mapBitDepthEnumToStr(srcBitDepth) ) );
 # endif
     // XXX: check status for errors
 
 #ifdef USE_OSMESA
     GLenum format;
     switch (srcComponents) {
-        case OFX::ePixelComponentRGBA:
-            format = GL_RGBA;
-            break;
-        case OFX::ePixelComponentAlpha:
-            format = GL_ALPHA;
-            break;
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-            return;
+    case OFX::ePixelComponentRGBA:
+        format = GL_RGBA;
+        break;
+    case OFX::ePixelComponentAlpha:
+        format = GL_ALPHA;
+        break;
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
+        return;
     }
     GLint depthBits = 0;
     GLint stencilBits = 0;
     GLint accumBits = 0;
     GLenum type;
     switch (srcBitDepth) {
-        case OFX::eBitDepthUByte:
-            depthBits = 16;
-            type = GL_UNSIGNED_BYTE;
-            break;
-        case OFX::eBitDepthUShort:
-            depthBits = 16;
-            type = GL_UNSIGNED_SHORT;
-            break;
-        case OFX::eBitDepthFloat:
-            depthBits = 32;
-            type = GL_FLOAT;
-            break;
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-            return;
+    case OFX::eBitDepthUByte:
+        depthBits = 16;
+        type = GL_UNSIGNED_BYTE;
+        break;
+    case OFX::eBitDepthUShort:
+        depthBits = 16;
+        type = GL_UNSIGNED_SHORT;
+        break;
+    case OFX::eBitDepthFloat:
+        depthBits = 32;
+        type = GL_FLOAT;
+        break;
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
+        return;
     }
     /* Allocate the image buffer */
     void* buffer = dst->getPixelData();
@@ -652,7 +680,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     OSMesaPrivate *osmesa;
     {
         OFX::MultiThread::AutoMutex lock(_osmesaMutex);
-        if (_osmesa.empty()) {
+        if ( _osmesa.empty() ) {
             osmesa = new OSMesaPrivate(this);
         } else {
             osmesa = _osmesa.back();
@@ -679,28 +707,28 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glTexParameteri(srcTarget, GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
     }
 
-    glTexImage2D(srcTarget, 0, format,
-                 srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
-                 format, type, src->getPixelData());
+    glTexImage2D( srcTarget, 0, format,
+                  srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
+                  format, type, src->getPixelData() );
 
     // setup the projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(dstBounds.x1, dstBounds.x2,
-            dstBounds.y1, dstBounds.y2,
-            -10.0*(dstBounds.y2-dstBounds.y1), 10.0*(dstBounds.y2-dstBounds.y1));
+    glOrtho( dstBounds.x1, dstBounds.x2,
+             dstBounds.y1, dstBounds.y2,
+             -10.0 * (dstBounds.y2 - dstBounds.y1), 10.0 * (dstBounds.y2 - dstBounds.y1) );
     glMatrixMode(GL_MODELVIEW);
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    DPRINT(("dstBounds = [%d, %d - %d, %d]\n",
-            dstBounds.x1, dstBounds.y1,
-            dstBounds.x2, dstBounds.y2));
+    DPRINT( ("dstBounds = [%d, %d - %d, %d]\n",
+             dstBounds.x1, dstBounds.y1,
+             dstBounds.x2, dstBounds.y2) );
 
-#endif
+#endif // ifdef USE_OSMESA
 
     const OfxPointD& rs = args.renderScale;
-    DPRINT(("renderScale = [%g, %d]\n",
-            rs.x, rs.y));
+    DPRINT( ("renderScale = [%g, %d]\n",
+             rs.x, rs.y) );
 
     // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
     float w = (renderWindow.x2 - renderWindow.x1);
@@ -767,17 +795,17 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     glVertex2f   (w * sourceScalex, 0);
     if (projective) {
-        glTexCoord4f ((1 - sourceStretch), (1 - sourceStretch), 0, (1 - sourceStretch));
+        glTexCoord4f ( (1 - sourceStretch), (1 - sourceStretch), 0, (1 - sourceStretch) );
     } else {
         glTexCoord2f (1, 1);
     }
-    glVertex2f   (w * sourceScalex * (1 + (1 - sourceStretch)) / 2., h * sourceScaley);
+    glVertex2f   (w * sourceScalex * ( 1 + (1 - sourceStretch) ) / 2., h * sourceScaley);
     if (projective) {
-        glTexCoord4f (0, (1 - sourceStretch), 0, (1 - sourceStretch));
+        glTexCoord4f ( 0, (1 - sourceStretch), 0, (1 - sourceStretch) );
     } else {
         glTexCoord2f (0, 1);
     }
-    glVertex2f   (w * sourceScalex * (1 - (1 - sourceStretch)) / 2., h * sourceScaley);
+    glVertex2f   (w * sourceScalex * ( 1 - (1 - sourceStretch) ) / 2., h * sourceScaley);
     glEnd ();
 
     glDisable(srcTarget);
@@ -789,8 +817,8 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glColor3f(1.0f, 0, 0); //Set the colour to red
     glVertex2f(10 * rs.x, 10 * rs.y);
     glVertex2f(10 * rs.x, (10 + HEIGHT * scaley) * rs.y);
-    glVertex2f((10 + WIDTH * scalex) * rs.x, (10 + HEIGHT * scaley) * rs.y);
-    glVertex2f((10 + WIDTH * scalex) * rs.x, 10 * rs.y);
+    glVertex2f( (10 + WIDTH * scalex) * rs.x, (10 + HEIGHT * scaley) * rs.y );
+    glVertex2f( (10 + WIDTH * scalex) * rs.x, 10 * rs.y );
     glEnd();
 
     // Now draw a teapot
@@ -820,7 +848,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glMaterialfv(GL_FRONT, GL_AMBIENT, low_ambient);
     glMaterialf(GL_FRONT, GL_SHININESS, 40.0);
     glPushMatrix();
-    glTranslatef(w/2., h/2., 0.0);
+    glTranslatef(w / 2., h / 2., 0.0);
     // get the angle parameters
     double angleX = 0;
     double angleY = 0;
@@ -838,7 +866,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glRotatef(angleY, 0., 1., 0.);
     glRotatef(angleZ, 0., 0., 1.);
     glEnable(srcTarget); // it deserves testure
-    glutSolidTeapot(teapotScale * h/4.);
+    glutSolidTeapot(teapotScale * h / 4.);
     glDisable(srcTarget);
     glPopMatrix();
 
@@ -859,8 +887,8 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glGetIntegerv(GL_BLUE_BITS, &b);
         glGetIntegerv(GL_ALPHA_BITS, &a);
         glGetIntegerv(GL_DEPTH_BITS, &d);
-        DPRINT(("channel sizes: %d %d %d %d\n", r, g, b, a));
-        DPRINT(("depth bits %d\n", d));
+        DPRINT( ("channel sizes: %d %d %d %d\n", r, g, b, a) );
+        DPRINT( ("depth bits %d\n", d) );
     }
 #endif
     glFinish();
@@ -875,13 +903,16 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         _osmesa.push_back(osmesa);
     }
 #endif
-}
+} // TestOpenGLPlugin::RENDERFUNC
 
 static
-void getGlVersion(int *major, int *minor)
+void
+getGlVersion(int *major,
+             int *minor)
 {
     const char *verstr = (const char *) glGetString(GL_VERSION);
-    if ((verstr == NULL) || (std::sscanf(verstr,"%d.%d", major, minor) != 2)) {
+
+    if ( (verstr == NULL) || (std::sscanf(verstr, "%d.%d", major, minor) != 2) ) {
         *major = *minor = 0;
         //fprintf(stderr, "Invalid GL_VERSION format!!!\n");
     }
@@ -889,34 +920,36 @@ void getGlVersion(int *major, int *minor)
 
 #if 0
 static
-void getGlslVersion(int *major, int *minor)
+void
+getGlslVersion(int *major,
+               int *minor)
 {
     int gl_major, gl_minor;
+
     getGlVersion(&gl_major, &gl_minor);
 
     *major = *minor = 0;
-    if(gl_major == 1) {
+    if (gl_major == 1) {
         /* GL v1.x can only provide GLSL v1.00 as an extension */
         const char *extstr = (const char *) glGetString(GL_EXTENSIONS);
-        if ((extstr != NULL) &&
-            (strstr(extstr, "GL_ARB_shading_language_100") != NULL)) {
+        if ( (extstr != NULL) &&
+             (strstr(extstr, "GL_ARB_shading_language_100") != NULL) ) {
             *major = 1;
             *minor = 0;
         }
-    }
-    else if (gl_major >= 2)
-    {
+    } else if (gl_major >= 2)   {
         /* GL v2.0 and greater must parse the version string */
         const char *verstr =
-        (const char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
+            (const char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-        if ((verstr == NULL) ||
-            (std::sscanf(verstr, "%d.%d", major, minor) != 2)) {
+        if ( (verstr == NULL) ||
+             (std::sscanf(verstr, "%d.%d", major, minor) != 2) ) {
             *major = *minor = 0;
             //fprintf(stderr, "Invalid GL_SHADING_LANGUAGE_VERSION format!!!\n");
         }
     }
 }
+
 #endif
 
 /*
@@ -928,21 +961,21 @@ void getGlslVersion(int *major, int *minor)
  *  - allocate a lookup table on a GPU,
  *  - create an openCL or CUDA context that is bound to the host's OpenGL
  *    context so it can share buffers.
-*/
+ */
 void
 TestOpenGLPlugin::contextAttached()
 {
 #ifdef DEBUG
-    DPRINT(("GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER)));
-    DPRINT(("GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION)));
-    DPRINT(("GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR)));
-    DPRINT(("GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS)));
+    DPRINT( ( "GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER) ) );
+    DPRINT( ( "GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION) ) );
+    DPRINT( ( "GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR) ) );
+    DPRINT( ( "GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS) ) );
 #endif
     // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
     int major, minor;
     getGlVersion(&major, &minor);
     if (major < 2) {
-        if (!glutExtensionSupported("GL_ARB_texture_non_power_of_two")) {
+        if ( !glutExtensionSupported("GL_ARB_texture_non_power_of_two") ) {
             sendMessage(OFX::Message::eMessageError, "", "Can not render: OpenGL 2.0 or GL_ARB_texture_non_power_of_two is required.");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -954,7 +987,7 @@ TestOpenGLPlugin::contextAttached()
         GLfloat MaxAnisoMax;
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &MaxAnisoMax);
         _maxAnisoMax = MaxAnisoMax;
-        DPRINT(("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", _maxAnisoMax));
+        DPRINT( ("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", _maxAnisoMax) );
     }
 }
 
@@ -972,3 +1005,4 @@ void
 TestOpenGLPlugin::contextDetached()
 {
 }
+

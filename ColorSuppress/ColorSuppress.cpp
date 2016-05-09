@@ -482,7 +482,6 @@ private:
     void setupAndProcess(ColorSuppressProcessorBase &, const RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
@@ -741,7 +740,7 @@ ColorSuppressPlugin::changedParam(const InstanceChangedArgs &args,
 
         return;
     }
-    if ( (paramName == kParamOutputMode || paramName == kParamPreserveLuma) && (args.reason == eChangeUserEdit) ) {
+    if ( ( (paramName == kParamOutputMode) || (paramName == kParamPreserveLuma) ) && (args.reason == eChangeUserEdit) ) {
         OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
         switch (outputMode) {
         case eOutputModeImage:
@@ -770,22 +769,22 @@ ColorSuppressPlugin::changedParam(const InstanceChangedArgs &args,
 void
 ColorSuppressPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    if (!_srcClip || !_srcClip->isConnected() || !_dstClip || !_dstClip->isConnected()) {
+    if ( !_srcClip || !_srcClip->isConnected() || !_dstClip || !_dstClip->isConnected() ) {
         return;
     }
 
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
-    switch(outputMode) {
-        case eOutputModeAlpha:
-        case eOutputModeAlphaImage:
-            // Input and Output are RGBA
-            clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
-            clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
-            break;
-        case eOutputModeImage:
-            // Output has same components as input
-            clipPreferences.setClipComponents(*_dstClip, _srcClip->getPixelComponents());
-            break;
+    switch (outputMode) {
+    case eOutputModeAlpha:
+    case eOutputModeAlphaImage:
+        // Input and Output are RGBA
+        clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
+        clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+        break;
+    case eOutputModeImage:
+        // Output has same components as input
+        clipPreferences.setClipComponents( *_dstClip, _srcClip->getPixelComponents() );
+        break;
     }
 }
 

@@ -38,11 +38,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "GodRaysOFX"
 #define kPluginGrouping "Filter"
 #define kPluginDescription \
-"Average an image over a range of transforms.\n" \
-"This can be used to create crepuscular rays (also called God rays) by setting the scale and center parameters: scale governs the length of rays, and center should be set to the Sun or light position (which may be outside of the image).\n" \
-"Setting toColor to black and gamma to 1 causes an exponential decay which is very similar to the real crepuscular rays.\n" \
-"This can also be used to create directional blur using a fixed number of samples (as opposed to DirBlur, which uses an adaptive sampling method).\n" \
-"This plugin concatenates transforms upstream."
+    "Average an image over a range of transforms.\n" \
+    "This can be used to create crepuscular rays (also called God rays) by setting the scale and center parameters: scale governs the length of rays, and center should be set to the Sun or light position (which may be outside of the image).\n" \
+    "Setting toColor to black and gamma to 1 causes an exponential decay which is very similar to the real crepuscular rays.\n" \
+    "This can also be used to create directional blur using a fixed number of samples (as opposed to DirBlur, which uses an adaptive sampling method).\n" \
+    "This plugin concatenates transforms upstream."
 
 #define kPluginIdentifier "net.sf.openfx.GodRays"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -83,7 +83,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 
 class GodRaysProcessorBase
-: public Transform3x3ProcessorBase
+    : public Transform3x3ProcessorBase
 {
 protected:
     double _fromColor[4];
@@ -97,13 +97,13 @@ protected:
 public:
 
     GodRaysProcessorBase(OFX::ImageEffect &instance)
-    : Transform3x3ProcessorBase(instance)
+        : Transform3x3ProcessorBase(instance)
 #ifdef USE_STEPS
-    , _steps(5)
+        , _steps(5)
 #endif
-    , _max(false)
+        , _max(false)
     {
-        for (int c=0; c < 4; ++c) {
+        for (int c = 0; c < 4; ++c) {
             _fromColor[c] = _toColor[c] = _gamma[c] = 1.;
         }
     }
@@ -123,7 +123,8 @@ public:
                            bool max)
     {
         Transform3x3ProcessorBase::setValues(invtransform, 0, invtransformsize, blackOutside, motionblur, mix);
-        for (int c=0; c < 4; ++c) {
+
+        for (int c = 0; c < 4; ++c) {
             _fromColor[c] = fromColor[c];
             _toColor[c] = toColor[c];
             _gamma[c] = (gamma[c] > 0.) ? gamma[c] : 1.;
@@ -139,11 +140,11 @@ public:
 // by the compiler, using the same generic code for all filters.
 template <class PIX, int nComponents, int maxValue, FilterEnum filter, bool clamp>
 class GodRaysProcessor
-: public GodRaysProcessorBase
+    : public GodRaysProcessorBase
 {
 public:
     GodRaysProcessor(OFX::ImageEffect &instance)
-    : GodRaysProcessorBase(instance)
+        : GodRaysProcessorBase(instance)
     {
     }
 
@@ -173,21 +174,22 @@ private:
                            bool max) OVERRIDE FINAL
     {
         GodRaysProcessorBase::setValues(invtransform, invtransformsize, blackOutside, motionblur, mix, fromColor, toColor, gamma, steps, max);
+
         _color.resize(invtransformsize);
 #ifdef GODRAYS_LINEAR_INTERPOLATION
         // Linear interpolation is usually not whant the user wants, because in real life crepuscular rays have an exponential decrease in intensity.
         int range = std::max(1, (int)invtransformsize); // works even if invtransformsize = 1
         // Same as Nuke: toColor is never completely reached.
-        for (int i=0; i < (int)invtransformsize; ++i) {
-            double alpha = (i+1) / (double)range; // alpha is never 0
+        for (int i = 0; i < (int)invtransformsize; ++i) {
+            double alpha = (i + 1) / (double)range; // alpha is never 0
             for (int c = 0; c < nComponents; ++c) {
                 int ci = (nComponents == 1) ? 3 : c;
                 double g = gamma[ci];
                 if (g != 1.) {
-                    _color[i][c] = std::pow(std::pow(std::max(0.,fromColor[ci]),g) * alpha +
-                                            std::pow(std::max(0.,toColor[ci]),  g) * (1-alpha), 1./g);
+                    _color[i][c] = std::pow(std::pow(std::max(0., fromColor[ci]), g) * alpha +
+                                            std::pow(std::max(0., toColor[ci]),  g) * (1 - alpha), 1. / g);
                 } else {
-                    _color[i][c] = fromColor[ci] * alpha + toColor[ci] * (1.-alpha);
+                    _color[i][c] = fromColor[ci] * alpha + toColor[ci] * (1. - alpha);
                 }
             }
         }
@@ -196,18 +198,18 @@ private:
         for (int c = 0; c < nComponents; ++c) {
             int ci = (nComponents == 1) ? 3 : c;
             double g = gamma[ci];
-            double col1 = std::max(0.001,fromColor[ci]);
-            double col2 = std::max(0.001,toColor[ci]);
-            for (int i = invtransformsize-1; i >= 0; --i) {
-                double col = col1 * std::pow(col2/col1, (invtransformsize-1-i)/(double)invtransformsize);
-                if (g == 1. || col1 == col2) {
+            double col1 = std::max(0.001, fromColor[ci]);
+            double col2 = std::max(0.001, toColor[ci]);
+            for (int i = invtransformsize - 1; i >= 0; --i) {
+                double col = col1 * std::pow(col2 / col1, (invtransformsize - 1 - i) / (double)invtransformsize);
+                if ( (g == 1.) || (col1 == col2) ) {
                     _color[i][c] = col;
                 } else {
                     // "gamma"-interpolation
                     // reinterpret the color descrease in a different gamma space
-                    double alpha = (col - col2)/(col1 - col2);
-                    _color[i][c] = std::pow(std::pow(col1,g) * alpha +
-                                            std::pow(col2,g) * (1-alpha), 1./g);
+                    double alpha = (col - col2) / (col1 - col2);
+                    _color[i][c] = std::pow(std::pow(col1, g) * alpha +
+                                            std::pow(col2, g) * (1 - alpha), 1. / g);
                 }
             }
         }
@@ -229,6 +231,7 @@ private:
     {
         float tmpPix[nComponents];
         const OFX::Matrix3x3 & H = _invtransform[0];
+
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
                 break;
@@ -258,13 +261,13 @@ private:
                     double fx = transformed.z != 0 ? transformed.x / transformed.z : transformed.x;
                     double fy = transformed.z != 0 ? transformed.y / transformed.z : transformed.y;
                     if (filter == eFilterImpulse) {
-                        ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
+                        ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                     } else {
-                        double Jxx = (H.a*transformed.z - transformed.x*H.g)/(transformed.z*transformed.z);
-                        double Jxy = (H.b*transformed.z - transformed.x*H.h)/(transformed.z*transformed.z);
-                        double Jyx = (H.d*transformed.z - transformed.y*H.g)/(transformed.z*transformed.z);
-                        double Jyy = (H.e*transformed.z - transformed.y*H.h)/(transformed.z*transformed.z);
-                        ofxsFilterInterpolate2DSuper<PIX,nComponents,filter,clamp>(fx, fy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+                        double Jxx = (H.a * transformed.z - transformed.x * H.g) / (transformed.z * transformed.z);
+                        double Jxy = (H.b * transformed.z - transformed.x * H.h) / (transformed.z * transformed.z);
+                        double Jyx = (H.d * transformed.z - transformed.y * H.g) / (transformed.z * transformed.z);
+                        double Jyy = (H.e * transformed.z - transformed.y * H.h) / (transformed.z * transformed.z);
+                        ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(fx, fy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
                     }
                 }
 
@@ -276,6 +279,7 @@ private:
     void multiThreadProcessImagesMotionBlur(const OfxRectI &procWindow)
     {
         float tmpPix[nComponents];
+
 #ifndef USE_STEPS
         const double maxErr2 = kTransform3x3ProcessorMotionBlurMaxError * kTransform3x3ProcessorMotionBlurMaxError; // maximum expected squared error
         const int maxIt = kTransform3x3ProcessorMotionBlurMaxIterations; // maximum number of iterations
@@ -317,7 +321,7 @@ private:
                 const int minsamples = _invtransformsize;
 #else
                 const int minsamples = kTransform3x3ProcessorMotionBlurMinIterations; // minimum number of samples (at most maxIt/3
-                unsigned int seed = (unsigned int)(hash(hash(x + (unsigned int)(0x10000 * _motionblur)) + y));
+                unsigned int seed = (unsigned int)( hash(hash( x + (unsigned int)(0x10000 * _motionblur) ) + y) );
 #endif
                 int maxsamples = minsamples;
                 while (sample < maxsamples) {
@@ -329,7 +333,7 @@ private:
                         //int t = 0.5*(van_der_corput<2>(seed1) + van_der_corput<3>(seed2)) * _invtransform.size();
                         if (sample < minsamples) {
                             // distribute the first samples evenly over the interval
-                            t = (int)(( sample  + van_der_corput<2>(seed) ) * _invtransformsize / (double)minsamples);
+                            t = (int)( ( sample  + van_der_corput<2>(seed) ) * _invtransformsize / (double)minsamples );
                         } else {
                             t = (int)(van_der_corput<2>(seed) * _invtransformsize);
                         }
@@ -351,13 +355,13 @@ private:
                             double fx = transformed.z != 0 ? transformed.x / transformed.z : transformed.x;
                             double fy = transformed.z != 0 ? transformed.y / transformed.z : transformed.y;
                             if (filter == eFilterImpulse) {
-                                ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
+                                ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                             } else {
-                                double Jxx = (H.a*transformed.z - transformed.x*H.g)/(transformed.z*transformed.z);
-                                double Jxy = (H.b*transformed.z - transformed.x*H.h)/(transformed.z*transformed.z);
-                                double Jyx = (H.d*transformed.z - transformed.y*H.g)/(transformed.z*transformed.z);
-                                double Jyy = (H.e*transformed.z - transformed.y*H.h)/(transformed.z*transformed.z);
-                                ofxsFilterInterpolate2DSuper<PIX,nComponents,filter,clamp>(fx, fy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+                                double Jxx = (H.a * transformed.z - transformed.x * H.g) / (transformed.z * transformed.z);
+                                double Jxy = (H.b * transformed.z - transformed.x * H.h) / (transformed.z * transformed.z);
+                                double Jyx = (H.d * transformed.z - transformed.y * H.g) / (transformed.z * transformed.z);
+                                double Jyy = (H.e * transformed.z - transformed.y * H.h) / (transformed.z * transformed.z);
+                                ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(fx, fy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
                             }
                         }
                         for (int c = 0; c < nComponents; ++c) {
@@ -388,7 +392,7 @@ private:
                             // - the error should be less than motionblur*maxValue/100
                             // - the total number of iterations should be less than motionblur*100
                             if (maxsamples < maxIt) {
-                                maxsamples = std::max( maxsamples, std::min( (int)(var[c] / maxErr2),maxIt ) );
+                                maxsamples = std::max( maxsamples, std::min( (int)(var[c] / maxErr2), maxIt ) );
                             }
                         }
                     }
@@ -411,7 +415,7 @@ private:
                 ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _domask, _maskImg, (float)_mix, _maskInvert, dstPix);
             }
         }
-    }
+    } // multiThreadProcessImagesMotionBlur
 
 #ifndef USE_STEPS
     // Compute the /seed/th element of the van der Corput sequence
@@ -436,7 +440,7 @@ private:
 
         return r;
     }
-    
+
     unsigned int hash(unsigned int a)
     {
         a = (a ^ 61) ^ (a >> 16);
@@ -444,20 +448,23 @@ private:
         a = a ^ (a >> 4);
         a = a * 0x27d4eb2d;
         a = a ^ (a >> 15);
-        
+
         return a;
     }
+
 #endif
 
 private:
-    class Pix {
-    public:
-        Pix() { std::fill(_data, _data+nComponents, 0.f); }
+    class Pix
+    {
+public:
+        Pix() { std::fill(_data, _data + nComponents, 0.f); }
 
         float operator [](size_t c) const { return _data[c]; }
+
         float& operator [](size_t c) { return _data[c]; }
 
-    private:
+private:
         float _data[nComponents];
     };
 
@@ -466,32 +473,33 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class GodRaysPlugin : public Transform3x3Plugin
+class GodRaysPlugin
+    : public Transform3x3Plugin
 {
 public:
     /** @brief ctor */
     GodRaysPlugin(OfxImageEffectHandle handle)
-    : Transform3x3Plugin(handle, true, eTransform3x3ParamsTypeDirBlur)
-    , _translate(0)
-    , _rotate(0)
-    , _scale(0)
-    , _scaleUniform(0)
-    , _skewX(0)
-    , _skewY(0)
-    , _skewOrder(0)
-    , _center(0)
-    , _interactive(0)
-    , _fromColor(0)
-    , _toColor(0)
-    , _gamma(0)
+        : Transform3x3Plugin(handle, true, eTransform3x3ParamsTypeDirBlur)
+        , _translate(0)
+        , _rotate(0)
+        , _scale(0)
+        , _scaleUniform(0)
+        , _skewX(0)
+        , _skewY(0)
+        , _skewOrder(0)
+        , _center(0)
+        , _interactive(0)
+        , _fromColor(0)
+        , _toColor(0)
+        , _gamma(0)
 #ifdef USE_STEPS
-    , _steps(0)
+        , _steps(0)
 #endif
-    , _max(0)
-    , _premultChanged(0)
+        , _max(0)
+        , _premultChanged(0)
     {
         // NON-GENERIC
-        if (paramExists(kParamTransformTranslateOld)) {
+        if ( paramExists(kParamTransformTranslateOld) ) {
             _translate = fetchDouble2DParam(kParamTransformTranslateOld);
             assert(_translate);
         }
@@ -521,16 +529,15 @@ public:
         // since uniform scaling is easy through Natron's GUI.
         // The parameter is kept for backward compatibility.
         // Fixes https://github.com/MrKepzie/Natron/issues/1204
-        if (getImageEffectHostDescription()->isNatron &&
-            !_scaleUniform->getValue() &&
-            _scaleUniform->getNumKeys() == 0) {
+        if ( getImageEffectHostDescription()->isNatron &&
+             !_scaleUniform->getValue() &&
+             ( _scaleUniform->getNumKeys() == 0) ) {
             _scaleUniform->setIsSecret(true);
         }
     }
 
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
-
     virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
 
     void resetCenter(double time);
@@ -539,7 +546,6 @@ private:
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
 private:
@@ -549,7 +555,7 @@ private:
 
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
-    
+
     /* set up and run a processor */
     void setupAndProcess(GodRaysProcessorBase &, const OFX::RenderArguments &args);
 
@@ -580,6 +586,7 @@ GodRaysPlugin::isIdentity(double time)
     OfxPointD translate = { 0., 0. };
     double rotate = 0.;
     double skewX = 0., skewY = 0.;
+
     if (_scale) {
         _scale->getValueAtTime(time, scale.x, scale.y);
     }
@@ -603,7 +610,7 @@ GodRaysPlugin::isIdentity(double time)
         _skewY->getValueAtTime(time, skewY);
     }
 
-    if (scale.x == 1. && scale.y == 1. && translate.x == 0. && translate.y == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
+    if ( (scale.x == 1.) && (scale.y == 1.) && (translate.x == 0.) && (translate.y == 0.) && (rotate == 0.) && (skewX == 0.) && (skewY == 0.) ) {
         return true;
     }
 
@@ -617,10 +624,15 @@ GodRaysPlugin::isIdentity(double time)
 }
 
 bool
-GodRaysPlugin::getInverseTransformCanonical(double time, int /*view*/, double amount, bool invert, OFX::Matrix3x3* invtransform) const
+GodRaysPlugin::getInverseTransformCanonical(double time,
+                                            int /*view*/,
+                                            double amount,
+                                            bool invert,
+                                            OFX::Matrix3x3* invtransform) const
 {
     // NON-GENERIC
     OfxPointD center = { 0., 0. };
+
     if (_center) {
         _center->getValueAtTime(time, center.x, center.y);
     }
@@ -684,8 +696,9 @@ GodRaysPlugin::getInverseTransformCanonical(double time, int /*view*/, double am
     } else {
         *invtransform = OFX::ofxsMatTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
     }
+
     return true;
-}
+} // GodRaysPlugin::getInverseTransformCanonical
 
 void
 GodRaysPlugin::resetCenter(double time)
@@ -694,11 +707,11 @@ GodRaysPlugin::resetCenter(double time)
         return;
     }
     OfxRectD rod = _srcClip->getRegionOfDefinition(time);
-    if (rod.x1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.x2 ||
-        rod.y1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.y2) {
+    if ( (rod.x1 <= kOfxFlagInfiniteMin) || (kOfxFlagInfiniteMax <= rod.x2) ||
+         ( rod.y1 <= kOfxFlagInfiniteMin) || ( kOfxFlagInfiniteMax <= rod.y2) ) {
         return;
     }
-    if (OFX::Coords::rectIsEmpty(rod)) {
+    if ( OFX::Coords::rectIsEmpty(rod) ) {
         // default to project window
         OfxPointD offset = getProjectOffset();
         OfxPointD size = getProjectSize();
@@ -712,7 +725,6 @@ GodRaysPlugin::resetCenter(double time)
         _rotate->getValueAtTime(time, currentRotation);
     }
     double rot = OFX::ofxsToRadians(currentRotation);
-
     double skewX = 0.;
     if (_skewX) {
         _skewX->getValueAtTime(time, skewX);
@@ -746,12 +758,12 @@ GodRaysPlugin::resetCenter(double time)
         _center->getValueAtTime(time, center.x, center.y);
     }
 
-    OFX::Matrix3x3 Rinv = (ofxsMatRotation(-rot) *
-                           ofxsMatSkewXY(skewX, skewY, skewOrder) *
-                           ofxsMatScale(scale.x, scale.y));
+    OFX::Matrix3x3 Rinv = ( ofxsMatRotation(-rot) *
+                            ofxsMatSkewXY(skewX, skewY, skewOrder) *
+                            ofxsMatScale(scale.x, scale.y) );
     OfxPointD newCenter;
-    newCenter.x = (rod.x1+rod.x2)/2;
-    newCenter.y = (rod.y1+rod.y2)/2;
+    newCenter.x = (rod.x1 + rod.x2) / 2;
+    newCenter.y = (rod.y1 + rod.y2) / 2;
     beginEditBlock("resetCenter");
     if (_center) {
         _center->setValue(newCenter.x, newCenter.y);
@@ -773,26 +785,27 @@ GodRaysPlugin::resetCenter(double time)
         OfxPointD newTranslate;
         newTranslate.x = translate.x + dx - dxrot;
         newTranslate.y = translate.y + dy - dyrot;
-        _translate->setValue(newTranslate.x,newTranslate.y);
+        _translate->setValue(newTranslate.x, newTranslate.y);
     }
     endEditBlock();
-}
+} // GodRaysPlugin::resetCenter
 
 void
-GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                            const std::string &paramName)
 {
     if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);
-    } else if (paramName == kParamTransformTranslateOld ||
-        paramName == kParamTransformRotateOld ||
-        paramName == kParamTransformScaleOld ||
-        paramName == kParamTransformScaleUniformOld ||
-        paramName == kParamTransformSkewXOld ||
-        paramName == kParamTransformSkewYOld ||
-        paramName == kParamTransformSkewOrderOld ||
-        paramName == kParamTransformCenterOld) {
+    } else if ( (paramName == kParamTransformTranslateOld) ||
+                ( paramName == kParamTransformRotateOld) ||
+                ( paramName == kParamTransformScaleOld) ||
+                ( paramName == kParamTransformScaleUniformOld) ||
+                ( paramName == kParamTransformSkewXOld) ||
+                ( paramName == kParamTransformSkewYOld) ||
+                ( paramName == kParamTransformSkewOrderOld) ||
+                ( paramName == kParamTransformCenterOld) ) {
         changedTransform(args);
-    } else if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+    } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
@@ -800,16 +813,15 @@ GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
 }
 
 void
-GodRaysPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+GodRaysPlugin::changedClip(const InstanceChangedArgs &args,
+                           const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        _srcClip && _srcClip->isConnected() &&
-        args.reason == OFX::eChangeUserEdit) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         _srcClip && _srcClip->isConnected() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
         resetCenter(args.time);
     }
 }
-
-
 
 /* set up and run a processor */
 void
@@ -822,21 +834,21 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
-        ( dst->getRenderScale().y != args.renderScale.y) ||
-        ( (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) ) {
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
     size_t invtransformsizealloc = 0;
     size_t invtransformsize = 0;
     std::vector<OFX::Matrix3x3> invtransform;
@@ -893,7 +905,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         if (_steps) {
             _steps->getValueAtTime(time, steps);
         }
-        invtransformsizealloc = 1 << std::max(0,steps);
+        invtransformsizealloc = 1 << std::max(0, steps);
 #else
         invtransformsizealloc = kTransform3x3MotionBlurCount;
 #endif
@@ -929,7 +941,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     }
 
     // auto ptr for the mask.
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if (doMasking) {
         bool maskInvert = false;
@@ -997,6 +1009,7 @@ GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 {
     const double time = args.time;
     FilterEnum filter = args.renderQualityDraft ? eFilterImpulse : eFilterCubic;
+
     if (!args.renderQualityDraft && _filter) {
         filter = (FilterEnum)_filter->getValueAtTime(time);
     }
@@ -1008,67 +1021,67 @@ GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
     // as you may see below, some filters don't need explicit clamping, since they are
     // "clamped" by construction.
     switch (filter) {
-        case eFilterImpulse: {
-            GodRaysProcessor<PIX, nComponents, maxValue, eFilterImpulse, false> fred(*this);
+    case eFilterImpulse: {
+        GodRaysProcessor<PIX, nComponents, maxValue, eFilterImpulse, false> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eFilterBilinear: {
+        GodRaysProcessor<PIX, nComponents, maxValue, eFilterBilinear, false> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eFilterCubic: {
+        GodRaysProcessor<PIX, nComponents, maxValue, eFilterCubic, false> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eFilterKeys:
+        if (clamp) {
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterKeys, true> fred(*this);
             setupAndProcess(fred, args);
-            break;
-        }
-        case eFilterBilinear: {
-            GodRaysProcessor<PIX, nComponents, maxValue, eFilterBilinear, false> fred(*this);
+        } else {
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterKeys, false> fred(*this);
             setupAndProcess(fred, args);
-            break;
         }
-        case eFilterCubic: {
-            GodRaysProcessor<PIX, nComponents, maxValue, eFilterCubic, false> fred(*this);
+        break;
+    case eFilterSimon:
+        if (clamp) {
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterSimon, true> fred(*this);
             setupAndProcess(fred, args);
-            break;
-        }
-        case eFilterKeys:
-            if (clamp) {
-                GodRaysProcessor<PIX, nComponents, maxValue, eFilterKeys, true> fred(*this);
-                setupAndProcess(fred, args);
-            } else {
-                GodRaysProcessor<PIX, nComponents, maxValue, eFilterKeys, false> fred(*this);
-                setupAndProcess(fred, args);
-            }
-            break;
-        case eFilterSimon:
-            if (clamp) {
-                GodRaysProcessor<PIX, nComponents, maxValue, eFilterSimon, true> fred(*this);
-                setupAndProcess(fred, args);
-            } else {
-                GodRaysProcessor<PIX, nComponents, maxValue, eFilterSimon, false> fred(*this);
-                setupAndProcess(fred, args);
-            }
-            break;
-        case eFilterRifman:
-            if (clamp) {
-                GodRaysProcessor<PIX, nComponents, maxValue, eFilterRifman, true> fred(*this);
-                setupAndProcess(fred, args);
-            } else {
-                GodRaysProcessor<PIX, nComponents, maxValue, eFilterRifman, false> fred(*this);
-                setupAndProcess(fred, args);
-            }
-            break;
-        case eFilterMitchell:
-            if (clamp) {
-                GodRaysProcessor<PIX, nComponents, maxValue, eFilterMitchell, true> fred(*this);
-                setupAndProcess(fred, args);
-            } else {
-                GodRaysProcessor<PIX, nComponents, maxValue, eFilterMitchell, false> fred(*this);
-                setupAndProcess(fred, args);
-            }
-            break;
-        case eFilterParzen: {
-            GodRaysProcessor<PIX, nComponents, maxValue, eFilterParzen, false> fred(*this);
+        } else {
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterSimon, false> fred(*this);
             setupAndProcess(fred, args);
-            break;
         }
-        case eFilterNotch: {
-            GodRaysProcessor<PIX, nComponents, maxValue, eFilterNotch, false> fred(*this);
+        break;
+    case eFilterRifman:
+        if (clamp) {
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterRifman, true> fred(*this);
             setupAndProcess(fred, args);
-            break;
+        } else {
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterRifman, false> fred(*this);
+            setupAndProcess(fred, args);
         }
+        break;
+    case eFilterMitchell:
+        if (clamp) {
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterMitchell, true> fred(*this);
+            setupAndProcess(fred, args);
+        } else {
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterMitchell, false> fred(*this);
+            setupAndProcess(fred, args);
+        }
+        break;
+    case eFilterParzen: {
+        GodRaysProcessor<PIX, nComponents, maxValue, eFilterParzen, false> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eFilterNotch: {
+        GodRaysProcessor<PIX, nComponents, maxValue, eFilterNotch, false> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
     } // switch
 } // renderInternalForBitDepth
 
@@ -1076,20 +1089,20 @@ GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 template <int nComponents>
 void
 GodRaysPlugin::renderInternal(const OFX::RenderArguments &args,
-                                   OFX::BitDepthEnum dstBitDepth)
+                              OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte:
-            renderInternalForBitDepth<unsigned char, nComponents, 255>(args);
-            break;
-        case OFX::eBitDepthUShort:
-            renderInternalForBitDepth<unsigned short, nComponents, 65535>(args);
-            break;
-        case OFX::eBitDepthFloat:
-            renderInternalForBitDepth<float, nComponents, 1>(args);
-            break;
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthUByte:
+        renderInternalForBitDepth<unsigned char, nComponents, 255>(args);
+        break;
+    case OFX::eBitDepthUShort:
+        renderInternalForBitDepth<unsigned short, nComponents, 65535>(args);
+        break;
+    case OFX::eBitDepthFloat:
+        renderInternalForBitDepth<float, nComponents, 1>(args);
+        break;
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -1101,8 +1114,8 @@ GodRaysPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
@@ -1116,10 +1129,9 @@ GodRaysPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-
 mDeclarePluginFactory(GodRaysPluginFactory, {}, {});
-
-void GodRaysPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+GodRaysPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -1131,14 +1143,16 @@ void GodRaysPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
 }
 
-void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                        OFX::ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
 
     // NON-GENERIC PARAMETERS
     //
-    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/true, /*oldParams=*/true, /*noTranslate=*/true);
+    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*noTranslate=*/ true);
 
     // invert
     {
@@ -1161,7 +1175,7 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamFromColor);
         param->setLabel(kParamFromColorLabel);
         param->setHint(kParamFromColorHint);
-        param->setDefault(1.,1.,1.,1.);
+        param->setDefault(1., 1., 1., 1.);
         if (page) {
             page->addChild(*param);
         }
@@ -1172,7 +1186,7 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamToColor);
         param->setLabel(kParamToColorLabel);
         param->setHint(kParamToColorHint);
-        param->setDefault(1.,1.,1.,1.);
+        param->setDefault(1., 1., 1., 1.);
         if (page) {
             page->addChild(*param);
         }
@@ -1183,7 +1197,7 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamGamma);
         param->setLabel(kParamGammaLabel);
         param->setHint(kParamGammaHint);
-        param->setDefault(1.,1.,1.,1.);
+        param->setDefault(1., 1., 1., 1.);
         param->setRange(0., 0., 0., 0., DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0.2, 0.2, 0.2, 0.2, 5., 5., 5., 5.);
         if (page) {
@@ -1243,13 +1257,14 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             page->addChild(*param);
         }
     }
-}
+} // GodRaysPluginFactory::describeInContext
 
-OFX::ImageEffect* GodRaysPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+GodRaysPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                     OFX::ContextEnum /*context*/)
 {
     return new GodRaysPlugin(handle);
 }
-
 
 static GodRaysPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

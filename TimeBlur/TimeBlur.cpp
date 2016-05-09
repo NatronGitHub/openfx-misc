@@ -44,7 +44,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "TimeBlurOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription \
-"Blend frames of the input clip over the shutter range."
+    "Blend frames of the input clip over the shutter range."
 
 #define kPluginIdentifier "net.sf.openfx.TimeBlur"
 // History:
@@ -67,7 +67,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kFrameChunk 4 // how many frames to process simultaneously
 
 
-class TimeBlurProcessorBase : public OFX::PixelProcessor
+class TimeBlurProcessorBase
+    : public OFX::PixelProcessor
 {
 protected:
     std::vector<const OFX::Image*> _srcImgs;
@@ -77,31 +78,33 @@ protected:
 public:
 
     TimeBlurProcessorBase(OFX::ImageEffect &instance)
-    : OFX::PixelProcessor(instance)
-    , _srcImgs(0)
-    , _accumulatorData(0)
-    , _divisions(0)
+        : OFX::PixelProcessor(instance)
+        , _srcImgs(0)
+        , _accumulatorData(0)
+        , _divisions(0)
     {
     }
 
-    void setSrcImgs(const std::vector<const OFX::Image*> &v) {_srcImgs = v;}
-    void setAccumulator(float *accumulatorData) {_accumulatorData = accumulatorData;}
+    void setSrcImgs(const std::vector<const OFX::Image*> &v) {_srcImgs = v; }
+
+    void setAccumulator(float *accumulatorData) {_accumulatorData = accumulatorData; }
 
     void setValues(int divisions)
     {
         _divisions = divisions;
     }
+
 private:
 };
 
 
-
 template <class PIX, int nComponents, int maxValue>
-class TimeBlurProcessor : public TimeBlurProcessorBase
+class TimeBlurProcessor
+    : public TimeBlurProcessorBase
 {
 public:
     TimeBlurProcessor(OFX::ImageEffect &instance)
-    : TimeBlurProcessorBase(instance)
+        : TimeBlurProcessorBase(instance)
     {
     }
 
@@ -115,7 +118,7 @@ private:
         const float initVal = 0.;
         const bool lastPass = (_divisions != 0);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
@@ -127,8 +130,8 @@ private:
             }
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                size_t renderPix = ((_renderWindow.x2 - _renderWindow.x1) * (y - _renderWindow.y1) +
-                                    (x - _renderWindow.x1));
+                size_t renderPix = ( (_renderWindow.x2 - _renderWindow.x1) * (y - _renderWindow.y1) +
+                                     (x - _renderWindow.x1) );
                 if (_accumulatorData) {
                     std::copy(&_accumulatorData[renderPix * nComponents], &_accumulatorData[renderPix * nComponents + nComponents], tmpPix);
                 } else {
@@ -146,48 +149,49 @@ private:
                 if (!lastPass) {
                     assert(_accumulatorData);
                     if (_accumulatorData) {
-                        std::copy(tmpPix, tmpPix + nComponents , &_accumulatorData[renderPix * nComponents]);
+                        std::copy(tmpPix, tmpPix + nComponents, &_accumulatorData[renderPix * nComponents]);
                     }
                 } else {
                     for (int c = 0; c < nComponents; ++c) {
                         float v = tmpPix[c] / _divisions;
-                        dstPix[c] = ofxsClampIfInt<PIX,maxValue>(v, 0, maxValue);
+                        dstPix[c] = ofxsClampIfInt<PIX, maxValue>(v, 0, maxValue);
                     }
                     // increment the dst pixel
                     dstPix += nComponents;
                 }
             }
         }
-    }
+    } // multiThreadProcessImages
 };
 
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class TimeBlurPlugin : public OFX::ImageEffect
+class TimeBlurPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     TimeBlurPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _divisions(0)
-    , _shutter(0)
-    , _shutteroffset(0)
-    , _shuttercustomoffset(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _divisions(0)
+        , _shutter(0)
+        , _shutteroffset(0)
+        , _shuttercustomoffset(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
-                            _dstClip->getPixelComponents() == ePixelComponentXY ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _dstClip->getPixelComponents() == ePixelComponentXY ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
-                             _srcClip->getPixelComponents() == ePixelComponentXY ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                               _srcClip->getPixelComponents() == ePixelComponentXY ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _divisions = fetchIntParam(kParamDivisions);
         _shutter = fetchDoubleParam(kParamShutter);
         _shutteroffset = fetchChoiceParam(kParamShutterOffset);
@@ -206,7 +210,6 @@ private:
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
@@ -238,13 +241,12 @@ private:
 struct OptionalImagesHolder_RAII
 {
     std::vector<const OFX::Image*> images;
-    
+
     OptionalImagesHolder_RAII()
-    : images()
+        : images()
     {
-        
     }
-    
+
     ~OptionalImagesHolder_RAII()
     {
         for (unsigned int i = 0; i < images.size(); ++i) {
@@ -255,23 +257,25 @@ struct OptionalImagesHolder_RAII
 
 /* set up and run a processor */
 void
-TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::RenderArguments &args)
+TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
+                                const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -286,10 +290,8 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
     double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
     OfxRangeD range;
     OFX::shutterRange(time, shutter, shutteroffset, shuttercustomoffset, &range);
-
     int divisions = _divisions->getValueAtTime(time);
-    double interval = divisions >= 1 ? (range.max-range.min)/divisions : 1.;
-
+    double interval = divisions >= 1 ? (range.max - range.min) / divisions : 1.;
     const OfxRectI& renderWindow = args.renderWindow;
     size_t nPixels = (renderWindow.y2 - renderWindow.y1) * (renderWindow.x2 - renderWindow.x1);
 
@@ -307,7 +309,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
             // Initialize accumulator image (always use float)
             if (!accumulatorData) {
                 int dstNComponents = _dstClip->getPixelComponentCount();
-                accumulator.reset(new OFX::ImageMemory(nPixels * dstNComponents * sizeof(float), this));
+                accumulator.reset( new OFX::ImageMemory(nPixels * dstNComponents * sizeof(float), this) );
                 accumulatorData = (float*)accumulator->lock();
                 std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 0.);
             }
@@ -316,21 +318,21 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
         // fetch the source images
         OptionalImagesHolder_RAII srcImgs;
         for (int i = imin; i < imax; ++i) {
-            if (abort()) {
+            if ( abort() ) {
                 return;
             }
             const OFX::Image* src = _srcClip ? _srcClip->fetchImage(range.min + i * interval) : 0;
             //std::printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
             if (src) {
-                if (src->getRenderScale().x != args.renderScale.x ||
-                    src->getRenderScale().y != args.renderScale.y ||
-                    (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+                if ( (src->getRenderScale().x != args.renderScale.x) ||
+                     ( src->getRenderScale().y != args.renderScale.y) ||
+                     ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
                     setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
                 }
-                OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+                OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-                if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+                if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                     OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
             }
@@ -339,7 +341,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
 
         // set the images
         if (lastPass) {
-            processor.setDstImg(dst.get());
+            processor.setDstImg( dst.get() );
         }
         processor.setSrcImgs(srcImgs.images);
         // set the render window
@@ -347,11 +349,11 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
         processor.setAccumulator(accumulatorData);
 
         processor.setValues(lastPass ? divisions : 0);
-        
+
         // Call the base class process member, this will call the derived templated process code
         processor.process();
     }
-}
+} // TimeBlurPlugin::setupAndProcess
 
 // the overridden render function
 void
@@ -359,8 +361,8 @@ TimeBlurPlugin::render(const OFX::RenderArguments &args)
 {
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderForComponents<4>(args);
@@ -379,20 +381,21 @@ void
 TimeBlurPlugin::renderForComponents(const OFX::RenderArguments &args)
 {
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte:
-            renderForBitDepth<unsigned char, nComponents, 255>(args);
-            break;
+    case OFX::eBitDepthUByte:
+        renderForBitDepth<unsigned char, nComponents, 255>(args);
+        break;
 
-        case OFX::eBitDepthUShort:
-            renderForBitDepth<unsigned short, nComponents, 65535>(args);
-            break;
+    case OFX::eBitDepthUShort:
+        renderForBitDepth<unsigned short, nComponents, 65535>(args);
+        break;
 
-        case OFX::eBitDepthFloat:
-            renderForBitDepth<float, nComponents, 1>(args);
-            break;
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthFloat:
+        renderForBitDepth<float, nComponents, 1>(args);
+        break;
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -405,12 +408,15 @@ TimeBlurPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 }
 
 bool
-TimeBlurPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+TimeBlurPlugin::isIdentity(const IsIdentityArguments &args,
+                           Clip * &identityClip,
+                           double &identityTime)
 {
     const double time = args.time;
 
     // compute range
     double shutter = 0.;
+
     _shutter->getValueAtTime(time, shutter);
     if (shutter != 0) {
         int divisions;
@@ -426,12 +432,13 @@ TimeBlurPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip
 
     identityClip = _srcClip;
     identityTime = range.min;
+
     return true;
 }
 
 void
 TimeBlurPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
-                                   OFX::FramesNeededSetter &frames)
+                                OFX::FramesNeededSetter &frames)
 {
     const double time = args.time;
     // compute range
@@ -441,9 +448,11 @@ TimeBlurPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
     OfxRangeD range;
     OFX::shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
     int divisions = _divisions->getValueAtTime(time);
-    if (shutter == 0 || divisions <= 1) {
+
+    if ( (shutter == 0) || (divisions <= 1) ) {
         range.max = range.min;
         frames.setFramesNeeded(*_srcClip, range);
+
         return;
     }
 #define OFX_HOST_ACCEPTS_FRACTIONAL_FRAME_RANGES // works with Natron, but this is perhaps borderline with respect to OFX spec
@@ -451,10 +460,9 @@ TimeBlurPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
     //std::printf("TimeBlur: range(%g,%g)\n", range.min, range.max);
     frames.setFramesNeeded(*_srcClip, range);
 #else
-    double interval = divisions > 1 ? (range.max-range.min)/divisions : 1.;
+    double interval = divisions > 1 ? (range.max - range.min) / divisions : 1.;
     for (int i = 1; i < divisions; ++i) {
         double t = range.min + i * interval;
-
         OfxRangeD r = {t, t};
         //std::printf("TimeBlur: range(%g,%g)\n", r.min, r.max);
         frames.setFramesNeeded(*_srcClip, r);
@@ -463,7 +471,8 @@ TimeBlurPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 }
 
 bool
-TimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+TimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                      OfxRectD &rod)
 {
     const double time = args.time;
     // compute range
@@ -473,7 +482,7 @@ TimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     OfxRangeD range;
     OFX::shutterRange(time, shutter, shutteroffset, shuttercustomoffset, &range);
     int divisions = _divisions->getValueAtTime(time);
-    double interval = divisions > 1 ? (range.max-range.min)/divisions : 1.;
+    double interval = divisions > 1 ? (range.max - range.min) / divisions : 1.;
 
     rod = _srcClip->getRegionOfDefinition(range.min);
 
@@ -481,12 +490,13 @@ TimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
         OfxRectD srcRoD = _srcClip->getRegionOfDefinition(range.min + i * interval);
         OFX::Coords::rectBoundingBox(srcRoD, rod, &rod);
     }
+
     return true;
 }
 
 mDeclarePluginFactory(TimeBlurPluginFactory, {}, {});
-
-void TimeBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+TimeBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -509,18 +519,20 @@ void TimeBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    
+
 #ifdef OFX_EXTENSIONS_NATRON
     //desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
-
 }
 
-void TimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+TimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                         OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentXY);
@@ -552,15 +564,15 @@ void TimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
             page->addChild(*param);
         }
     }
-
     OFX::shutterDescribeInContext(desc, context, page);
 }
 
-OFX::ImageEffect* TimeBlurPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+TimeBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                      OFX::ContextEnum /*context*/)
 {
     return new TimeBlurPlugin(handle);
 }
-
 
 static TimeBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

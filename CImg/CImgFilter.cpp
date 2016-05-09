@@ -31,43 +31,43 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
                                                        bool supportsTiles,
                                                        bool supportsMultiResolution,
                                                        bool supportsRenderScale,
-                                                       bool defaultUnpremult/* = true*/,
-                                                       bool defaultProcessAlphaOnRGBA/* = false*/,
-                                                       bool isFilter/* = true*/)
-: ImageEffect(handle)
-, _dstClip(0)
-, _srcClip(0)
-, _maskClip(0)
-, _processR(0)
-, _processG(0)
-, _processB(0)
-, _processA(0)
-, _premult(0)
-, _premultChannel(0)
-, _mix(0)
-, _maskApply(0)
-, _maskInvert(0)
-, _supportsComponentRemapping(supportsComponentRemapping)
-, _supportsTiles(supportsTiles)
-, _supportsMultiResolution(supportsMultiResolution)
-, _supportsRenderScale(supportsRenderScale)
-, _defaultUnpremult(defaultUnpremult)
-, _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
-, _premultChanged(0)
+                                                       bool defaultUnpremult /* = true*/,
+                                                       bool defaultProcessAlphaOnRGBA /* = false*/,
+                                                       bool isFilter /* = true*/)
+    : ImageEffect(handle)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _maskClip(0)
+    , _processR(0)
+    , _processG(0)
+    , _processB(0)
+    , _processA(0)
+    , _premult(0)
+    , _premultChannel(0)
+    , _mix(0)
+    , _maskApply(0)
+    , _maskInvert(0)
+    , _supportsComponentRemapping(supportsComponentRemapping)
+    , _supportsTiles(supportsTiles)
+    , _supportsMultiResolution(supportsMultiResolution)
+    , _supportsRenderScale(supportsRenderScale)
+    , _defaultUnpremult(defaultUnpremult)
+    , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
+    , _premultChanged(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-    assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
-                        _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA));
+    assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+                         _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
     if (isFilter) {
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
     }
 
-    if (paramExists(kNatronOfxParamProcessR)) {
+    if ( paramExists(kNatronOfxParamProcessR) ) {
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
         _processG = fetchBooleanParam(kNatronOfxParamProcessG);
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
@@ -85,18 +85,19 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     assert(_premultChanged);
 }
 
-
 void
-CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
+CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args,
+                                        const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        _srcClip && _srcClip->isConnected() &&
-        args.reason == OFX::eChangeUserEdit) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         _srcClip && _srcClip->isConnected() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
         beginEditBlock("changedClip");
-        if (_defaultUnpremult && !_premultChanged->getValue()) {
+        if ( _defaultUnpremult && !_premultChanged->getValue() ) {
             if (_srcClip->getPixelComponents() != OFX::ePixelComponentRGBA) {
                 _premult->setValue(false);
-            } else switch (_srcClip->getPreMultiplication()) {
+            } else {
+                switch ( _srcClip->getPreMultiplication() ) {
                 case OFX::eImageOpaque:
                     _premult->setValue(false);
                     break;
@@ -106,26 +107,27 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, co
                 case OFX::eImageUnPreMultiplied:
                     _premult->setValue(false);
                     break;
+                }
             }
         }
         if (_processR) {
-            switch (_srcClip->getPixelComponents()) {
-                case OFX::ePixelComponentAlpha:
-                    _processR->setValue(false);
-                    _processG->setValue(false);
-                    _processB->setValue(false);
-                    _processA->setValue(true);
-                    break;
-                case OFX::ePixelComponentRGBA:
-                case OFX::ePixelComponentRGB:
-                    // Alpha is not processed by default on RGBA images
-                    _processR->setValue(true);
-                    _processG->setValue(true);
-                    _processB->setValue(true);
-                    _processA->setValue(_defaultProcessAlphaOnRGBA);
-                    break;
-                default:
-                    break;
+            switch ( _srcClip->getPixelComponents() ) {
+            case OFX::ePixelComponentAlpha:
+                _processR->setValue(false);
+                _processG->setValue(false);
+                _processB->setValue(false);
+                _processA->setValue(true);
+                break;
+            case OFX::ePixelComponentRGBA:
+            case OFX::ePixelComponentRGB:
+                // Alpha is not processed by default on RGBA images
+                _processR->setValue(true);
+                _processG->setValue(true);
+                _processB->setValue(true);
+                _processA->setValue(_defaultProcessAlphaOnRGBA);
+                break;
+            default:
+                break;
             }
         }
         endEditBlock();
@@ -133,9 +135,10 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, co
 }
 
 void
-CImgFilterPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+CImgFilterPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args,
+                                         const std::string &paramName)
 {
-    if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
 }
@@ -153,7 +156,6 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
                                                    bool processAlpha,
                                                    bool processIsSecret)
 {
-
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
@@ -174,7 +176,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(supportsTiles);
     srcClip->setIsMask(false);
-    if (context == OFX::eContextGeneral && sourceIsOptional) {
+    if ( (context == OFX::eContextGeneral) && sourceIsOptional ) {
         srcClip->setOptional(sourceIsOptional);
     }
 
@@ -251,7 +253,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
 
 
     return page;
-}
+} // CImgFilterPluginHelperBase::describeInContextBegin
 
 void
 CImgFilterPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &desc,
@@ -272,9 +274,6 @@ CImgFilterPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &des
         }
     }
 }
-
-
-
 
 /* set up and run a copy processor */
 void
@@ -299,7 +298,6 @@ CImgFilterPluginHelperBase::setupAndFill(OFX::PixelProcessorFilterBase & process
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
-
 
 /* set up and run a copy processor */
 void
@@ -335,14 +333,14 @@ CImgFilterPluginHelperBase::setupAndCopy(OFX::PixelProcessorFilterBase & process
            dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
            dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
     // make sure bit depths are sane
-    if(srcBitDepth != dstPixelDepth/* || srcPixelComponents != dstPixelComponents*/) {
+    if (srcBitDepth != dstPixelDepth /* || srcPixelComponents != dstPixelComponents*/) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    if (isEmpty(renderWindow)) {
+    if ( isEmpty(renderWindow) ) {
         return;
     }
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         processor.doMasking(true);
         processor.setMaskImg(mask, maskInvert);
@@ -364,12 +362,15 @@ CImgFilterPluginHelperBase::setupAndCopy(OFX::PixelProcessorFilterBase & process
     processor.process();
 }
 
-
 // utility functions
 bool
-CImgFilterPluginHelperBase::maskLineIsZero(const OFX::Image* mask, int x1, int x2, int y, bool maskInvert)
+CImgFilterPluginHelperBase::maskLineIsZero(const OFX::Image* mask,
+                                           int x1,
+                                           int x2,
+                                           int y,
+                                           bool maskInvert)
 {
-    assert(!mask || (mask->getPixelComponents() == OFX::ePixelComponentAlpha && mask->getPixelDepth() == OFX::eBitDepthFloat));
+    assert( !mask || (mask->getPixelComponents() == OFX::ePixelComponentAlpha && mask->getPixelDepth() == OFX::eBitDepthFloat) );
 
     if (maskInvert) {
         if (!mask) {
@@ -377,11 +378,11 @@ CImgFilterPluginHelperBase::maskLineIsZero(const OFX::Image* mask, int x1, int x
         }
         const OfxRectI& maskBounds = mask->getBounds();
         // if part of the line is out of maskbounds, then mask is 1 at these places
-        if (y < maskBounds.y1 || maskBounds.y2 <= y || x1 < maskBounds.x1 || maskBounds.x2 <= x2) {
+        if ( (y < maskBounds.y1) || (maskBounds.y2 <= y) || (x1 < maskBounds.x1) || (maskBounds.x2 <= x2) ) {
             return false;
         }
         // the whole line is within the mask
-        const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x1, y));
+        const float *p = reinterpret_cast<const float*>( mask->getPixelAddress(x1, y) );
         assert(p);
         for (int x = x1; x < x2; ++x, ++p) {
             if (*p != 1.) {
@@ -394,14 +395,14 @@ CImgFilterPluginHelperBase::maskLineIsZero(const OFX::Image* mask, int x1, int x
         }
         const OfxRectI& maskBounds = mask->getBounds();
         // if the line is completely out of the mask, it is 0
-        if (y < maskBounds.y1 || maskBounds.y2 <= y) {
+        if ( (y < maskBounds.y1) || (maskBounds.y2 <= y) ) {
             return true;
         }
         // restrict the search to the part of the line which is within the mask
         x1 = std::max(x1, maskBounds.x1);
         x2 = std::min(x2, maskBounds.x2);
         if (x1 < x2) { // the line is not empty
-            const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x1, y));
+            const float *p = reinterpret_cast<const float*>( mask->getPixelAddress(x1, y) );
             assert(p);
 
             for (int x = x1; x < x2; ++x, ++p) {
@@ -416,7 +417,11 @@ CImgFilterPluginHelperBase::maskLineIsZero(const OFX::Image* mask, int x1, int x
 }
 
 bool
-CImgFilterPluginHelperBase::maskColumnIsZero(const OFX::Image* mask, int x, int y1, int y2, bool maskInvert)
+CImgFilterPluginHelperBase::maskColumnIsZero(const OFX::Image* mask,
+                                             int x,
+                                             int y1,
+                                             int y2,
+                                             bool maskInvert)
 {
     if (!mask) {
         return (!maskInvert);
@@ -428,11 +433,11 @@ CImgFilterPluginHelperBase::maskColumnIsZero(const OFX::Image* mask, int x, int 
     if (maskInvert) {
         const OfxRectI& maskBounds = mask->getBounds();
         // if part of the column is out of maskbounds, then mask is 1 at these places
-        if (x < maskBounds.x1 || maskBounds.x2 <= x || y1 < maskBounds.y1 || maskBounds.y2 <= y2) {
+        if ( (x < maskBounds.x1) || (maskBounds.x2 <= x) || (y1 < maskBounds.y1) || (maskBounds.y2 <= y2) ) {
             return false;
         }
         // the whole column is within the mask
-        const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y1));
+        const float *p = reinterpret_cast<const float*>( mask->getPixelAddress(x, y1) );
         assert(p);
         for (int y = y1; y < y2; ++y,  p += rowElems) {
             if (*p != 1.) {
@@ -442,14 +447,14 @@ CImgFilterPluginHelperBase::maskColumnIsZero(const OFX::Image* mask, int x, int 
     } else {
         const OfxRectI& maskBounds = mask->getBounds();
         // if the column is completely out of the mask, it is 0
-        if (x < maskBounds.x1 || maskBounds.x2 <= x) {
+        if ( (x < maskBounds.x1) || (maskBounds.x2 <= x) ) {
             return true;
         }
         // restrict the search to the part of the column which is within the mask
         y1 = std::max(y1, maskBounds.y1);
         y2 = std::min(y2, maskBounds.y2);
         if (y1 < y2) { // the column is not empty
-            const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y1));
+            const float *p = reinterpret_cast<const float*>( mask->getPixelAddress(x, y1) );
             assert(p);
 
             for (int y = y1; y < y2; ++y,  p += rowElems) {

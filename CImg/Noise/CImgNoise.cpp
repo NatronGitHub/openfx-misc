@@ -42,12 +42,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "NoiseCImg"
 #define kPluginGrouping      "Draw"
 #define kPluginDescription \
-"Add random noise to input stream.\n" \
-"Note that each render gives a different noise.\n" \
-"Uses the 'noise' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Add random noise to input stream.\n" \
+    "Note that each render gives a different noise.\n" \
+    "Uses the 'noise' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgNoise"
 // History:
@@ -110,19 +110,21 @@ struct CImgNoiseParams
     int type_i;
 };
 
-class CImgNoisePlugin : public CImgFilterPluginHelper<CImgNoiseParams,true>
+class CImgNoisePlugin
+    : public CImgFilterPluginHelper<CImgNoiseParams, true>
 {
 public:
 
     CImgNoisePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgNoiseParams,true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/false, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgNoiseParams, true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ false, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _sigma  = fetchDoubleParam(kParamSigma);
         _type = fetchChoiceParam(kParamType);
         assert(_sigma && _type);
     }
 
-    virtual void getValuesAtTime(double time, CImgNoiseParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgNoiseParams& params) OVERRIDE FINAL
     {
         _sigma->getValueAtTime(time, params.sigma);
         _type->getValueAtTime(time, params.type_i);
@@ -130,7 +132,10 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& /*renderScale*/, const CImgNoiseParams& /*params*/, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& /*renderScale*/,
+                        const CImgNoiseParams& /*params*/,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
         roi->x1 = rect.x1;
         roi->x2 = rect.x2;
@@ -138,7 +143,11 @@ public:
         roi->y2 = rect.y2;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgNoiseParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        const CImgNoiseParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -152,7 +161,8 @@ public:
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgNoiseParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+                            const CImgNoiseParams& params) OVERRIDE FINAL
     {
         return (params.sigma == 0.);
     };
@@ -174,7 +184,8 @@ private:
 
 mDeclarePluginFactory(CImgNoisePluginFactory, {}, {});
 
-void CImgNoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgNoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -202,7 +213,9 @@ void CImgNoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                          OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgNoisePlugin::describeInContextBegin(desc, context,
@@ -211,9 +224,9 @@ void CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                                              kSupportsXY,
                                                                              kSupportsAlpha,
                                                                              kSupportsTiles,
-                                                                             /*processRGB=*/true,
-                                                                             /*processAlpha*/false,
-                                                                             /*processIsSecret=*/false);
+                                                                             /*processRGB=*/ true,
+                                                                             /*processAlpha*/ false,
+                                                                             /*processIsSecret=*/ false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
@@ -242,20 +255,20 @@ void CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         param->appendOption(kParamTypeOptionPoisson, kParamTypeOptionPoissonHint);
         assert(param->getNOptions() == eTypeRice && param->getNOptions() == 4);
         param->appendOption(kParamTypeOptionRice, kParamTypeOptionRiceHint);
-        param->setDefault((int)kParamTypeDefault);
+        param->setDefault( (int)kParamTypeDefault );
         if (page) {
             page->addChild(*param);
         }
     }
-
     CImgNoisePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgNoisePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgNoisePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                       OFX::ContextEnum /*context*/)
 {
     return new CImgNoisePlugin(handle);
 }
-
 
 static CImgNoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

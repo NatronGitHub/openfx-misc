@@ -84,6 +84,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipSourceCount 64
 #define kClipSourceOffset 1 // clip numbers start
 
+static
+std::string
+unsignedToString(unsigned i)
+{
+    if (i == 0) {
+        return "0";
+    }
+    std::string nb;
+    for (unsigned j = i; j != 0; j /= 10) {
+        nb += ( '0' + (j % 10) );
+    }
+
+    return nb;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class AppendClipPlugin
@@ -91,32 +106,26 @@ class AppendClipPlugin
 {
 public:
     /** @brief ctor */
-    AppendClipPlugin(OfxImageEffectHandle handle, bool numerousInputs)
+    AppendClipPlugin(OfxImageEffectHandle handle,
+                     bool numerousInputs)
         : ImageEffect(handle)
-          , _dstClip(0)
-          , _srcClip(numerousInputs ? kClipSourceCount : 2)
-    , _fadeIn(0)
-    , _fadeOut(0)
-    , _crossDissolve(0)
-    , _firstFrame(0)
-    , _lastFrame(0)
+        , _dstClip(0)
+        , _srcClip(numerousInputs ? kClipSourceCount : 2)
+        , _fadeIn(0)
+        , _fadeOut(0)
+        , _crossDissolve(0)
+        , _firstFrame(0)
+        , _lastFrame(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
+        assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
         for (unsigned j = 0; j < _srcClip.size(); ++j) {
-            if (getContext() == OFX::eContextTransition && j < 2) {
+            if ( (getContext() == OFX::eContextTransition) && (j < 2) ) {
                 _srcClip[j] = fetchClip(j == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
             } else {
-                int i = j + kClipSourceOffset;
-                char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-                assert(i < 1000);
-                name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
-                name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
-                // coverity[dead_error_line]
-                name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
-                _srcClip[j] = fetchClip(name);
+                _srcClip[j] = fetchClip( unsignedToString(j + kClipSourceOffset) );
             }
-            assert(_srcClip[j] && (_srcClip[j]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[j]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[j]->getPixelComponents() == OFX::ePixelComponentAlpha));
+            assert( _srcClip[j] && (_srcClip[j]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[j]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[j]->getPixelComponents() == OFX::ePixelComponentAlpha) );
         }
 
         _fadeIn = fetchIntParam(kParamFadeIn);
@@ -136,12 +145,10 @@ private:
 
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* override the time domain action, only for the general context */
@@ -149,7 +156,6 @@ private:
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
-
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
@@ -243,25 +249,40 @@ AppendClipPlugin::getSources(int firstFrame,
     int clip1OutMin = firstFrame;
     int clip1OutMax = firstFrame - 1;
     int lastClip = _srcClip.size() - 1;
-    while (lastClip >= 0 && !_srcClip[lastClip]->isConnected()) {
+    while ( lastClip >= 0 && !_srcClip[lastClip]->isConnected() ) {
         --lastClip;
     }
     if (lastClip < 0) {
         // no clip, just be black, and lastFrame = firstFrame-1
-        if (clip0_p) { *clip0_p = clip0; }
-        if (t0_p) { *t0_p = t0; }
-        if (alpha0_p) { *alpha0_p = alpha0; }
-        if (clip1_p) { *clip1_p = clip1; }
-        if (t1_p) { *t1_p = t1; }
-        if (alpha1_p) { *alpha1_p = alpha1; }
-        if (lastFrame) { *lastFrame = clip1OutMax; }
+        if (clip0_p) {
+            *clip0_p = clip0;
+        }
+        if (t0_p) {
+            *t0_p = t0;
+        }
+        if (alpha0_p) {
+            *alpha0_p = alpha0;
+        }
+        if (clip1_p) {
+            *clip1_p = clip1;
+        }
+        if (t1_p) {
+            *t1_p = t1;
+        }
+        if (alpha1_p) {
+            *alpha1_p = alpha1;
+        }
+        if (lastFrame) {
+            *lastFrame = clip1OutMax;
+        }
+
         return;
     }
     int firstClip = 0;
-    while (firstClip < (int)_srcClip.size() && !_srcClip[firstClip]->isConnected()) {
+    while ( firstClip < (int)_srcClip.size() && !_srcClip[firstClip]->isConnected() ) {
         ++firstClip;
     }
-    assert(firstClip < (int)_srcClip.size()); // there is at least one connected clip
+    assert( firstClip < (int)_srcClip.size() ); // there is at least one connected clip
     for (int i = firstClip; i <= lastClip; ++i) {
         // loop invariants:
         // *clip0 contains the index of last visited connected clip
@@ -269,23 +290,35 @@ AppendClipPlugin::getSources(int firstFrame,
         // clip0Max contains the last frame of the last visited and connected clip
         // clip0OutMin contains the output frame corresponding to clip0Min
         // clip0OutMax contains the output frame corresponding to clip0Max
-        if (_srcClip[i]->isConnected()) {
+        if ( _srcClip[i]->isConnected() ) {
             OfxRangeD r = _srcClip[i]->getFrameRange();
             // if this is the first connected clip, and time is before this clip,
             // return either black or this clip (no clip1), depending on fadeIn
             if (clip1 == -1) {
-                if (!lastFrame && (time < firstFrame)) {
+                if ( !lastFrame && (time < firstFrame) ) {
                     // before the first clip, the solution is trivial
                     clip0 = i;
                     // render clip0
                     t0 = r.min + (time - firstFrame);
                     alpha0 =  (fadeIn == 0);
-                    if (clip0_p) { *clip0_p = clip0; }
-                    if (t0_p) { *t0_p = t0; }
-                    if (alpha0_p) { *alpha0_p = alpha0; }
-                    if (clip1_p) { *clip1_p = clip1; }
-                    if (t1_p) { *t1_p = t1; }
-                    if (alpha1_p) { *alpha1_p = alpha1; }
+                    if (clip0_p) {
+                        *clip0_p = clip0;
+                    }
+                    if (t0_p) {
+                        *t0_p = t0;
+                    }
+                    if (alpha0_p) {
+                        *alpha0_p = alpha0;
+                    }
+                    if (clip1_p) {
+                        *clip1_p = clip1;
+                    }
+                    if (t1_p) {
+                        *t1_p = t1;
+                    }
+                    if (alpha1_p) {
+                        *alpha1_p = alpha1;
+                    }
                     assert(!lastFrame);
 
                     return;
@@ -294,8 +327,8 @@ AppendClipPlugin::getSources(int firstFrame,
                 clip1Min = r.min;
                 clip1Max = r.max;
                 clip1OutMin = firstFrame;
-                clip1OutMax = std::max(firstFrame + (int)(r.max - r.min),firstFrame);
-                
+                clip1OutMax = std::max(firstFrame + (int)(r.max - r.min), firstFrame);
+
                 continue; // proceed to extract clip1 etc.
             }
             // get info for this clip
@@ -305,11 +338,11 @@ AppendClipPlugin::getSources(int firstFrame,
             assert(clip1OutMax >= clip0OutMax);
             int clip2OutMin = std::max(clip0OutMax + 1, // next clip must start after end of the forelast Clip (never more than 2 clips at the same time)
                                        clip1OutMax + 1 - crossDissolve);
-            int clip2OutMax = std::max(clip1OutMax, // clip end should be at least the end of the previous clip
-                                       clip2OutMin + (clip2Max - clip2Min));
+            int clip2OutMax = std::max( clip1OutMax, // clip end should be at least the end of the previous clip
+                                        clip2OutMin + (clip2Max - clip2Min) );
 
             // if time is before this clip, we're done
-            if (!lastFrame && time < clip2OutMin) {
+            if ( !lastFrame && (time < clip2OutMin) ) {
                 break;
             }
 
@@ -335,27 +368,41 @@ AppendClipPlugin::getSources(int firstFrame,
     if (lastFrame) {
         // set last frame and exit (used in getFrameRange and changedClip/changedParam)
         *lastFrame = clip1OutMax;
+
         return;
     }
 
     // clips should be ordered
-    assert(clip0 == -1|| clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax));
-    assert(clip0 == -1|| (clip0Min <= clip0Max && clip0OutMin <= clip0OutMax));
-    assert(clip1 == -1|| (clip1Min <= clip1Max && clip1OutMin <= clip1OutMax));
-    if (clip0 == -1 && clip1 == -1) {
+    assert( clip0 == -1 || clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax) );
+    assert( clip0 == -1 || (clip0Min <= clip0Max && clip0OutMin <= clip0OutMax) );
+    assert( clip1 == -1 || (clip1Min <= clip1Max && clip1OutMin <= clip1OutMax) );
+    if ( (clip0 == -1) && (clip1 == -1) ) {
         assert(false); // treated above, should never happen!
         // no clip, just be black, and lastFrame = firstFrame-1
-        if (clip0_p) { *clip0_p = clip0; }
-        if (t0_p) { *t0_p = t0; }
-        if (alpha0_p) { *alpha0_p = alpha0; }
-        if (clip1_p) { *clip1_p = clip1; }
-        if (t1_p) { *t1_p = t1; }
-        if (alpha1_p) { *alpha1_p = alpha1; }
+        if (clip0_p) {
+            *clip0_p = clip0;
+        }
+        if (t0_p) {
+            *t0_p = t0;
+        }
+        if (alpha0_p) {
+            *alpha0_p = alpha0;
+        }
+        if (clip1_p) {
+            *clip1_p = clip1;
+        }
+        if (t1_p) {
+            *t1_p = t1;
+        }
+        if (alpha1_p) {
+            *alpha1_p = alpha1;
+        }
+
         return;
     }
     assert(clip1 != -1);
-    if ((clip0 == -1) &&
-        (clip1 != -1) && time < clip1OutMin) {
+    if ( (clip0 == -1) &&
+         (clip1 != -1) && ( time < clip1OutMin) ) {
         assert(false); // treated above, should never happen!
         // before the first clip, the solution is trivial
         clip0 = clip1;
@@ -374,23 +421,23 @@ AppendClipPlugin::getSources(int firstFrame,
         alpha0 = (fadeIn == 0);
         t1 = -1;
         alpha1 = 0.;
-    } else if ((clip0 != -1) && clip0OutMin <= time && time <= clip0OutMax &&
-               (clip1 != -1) && clip1OutMin <= time && time <= clip1OutMax) {
+    } else if ( (clip0 != -1) && (clip0OutMin <= time) && (time <= clip0OutMax) &&
+                (clip1 != -1) && ( clip1OutMin <= time) && ( time <= clip1OutMax) ) {
         // clip0 and clip1: cross-dissolve
         assert(clip1OutMin + crossDissolve - 1 >= clip0OutMax);
         t0 = clip0Min + (time - clip0OutMin);
-        alpha0 = 1. - (time + 1 - clip1OutMin)/(double)(crossDissolve+1);
+        alpha0 = 1. - (time + 1 - clip1OutMin) / (double)(crossDissolve + 1);
         assert(0 < alpha0 && alpha0 < 1.);
         t1 = clip1Min + (time - clip1OutMin);
-        alpha1 = std::max(0., 1.-alpha0);
-    } else if ((clip0 != -1) && clip0OutMin <= time && time <= clip0OutMax) {
+        alpha1 = std::max(0., 1. - alpha0);
+    } else if ( (clip0 != -1) && (clip0OutMin <= time) && (time <= clip0OutMax) ) {
         // clip0 only
         t0 = clip0Min + (time - clip0OutMin);
         alpha0 = 1.;
         clip1 = -1;
         t1 = 0.;
         alpha1 = 0.;
-    } else if ((clip1 != -1) && clip1OutMin <= time && time <= clip1OutMax) {
+    } else if ( (clip1 != -1) && (clip1OutMin <= time) && (time <= clip1OutMax) ) {
         // clip1 only
         clip0 = clip1;
         clip0Min = clip1Min;
@@ -408,7 +455,7 @@ AppendClipPlugin::getSources(int firstFrame,
         alpha0 = 1.;
         t1 = -1;
         alpha1 = 0.;
-    } else if ((clip1 != -1) && clip1OutMax < time) {
+    } else if ( (clip1 != -1) && (clip1OutMax < time) ) {
         // after the last clip, the solution is trivial
         clip0 = clip1;
         clip0Min = clip1Min;
@@ -430,55 +477,67 @@ AppendClipPlugin::getSources(int firstFrame,
         assert(false);
     }
     // clips should be ordered
-    assert(clip0 == -1|| clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax));
-    assert(clip0 == -1|| (clip0Min <= clip0Max && clip0OutMin <= clip0OutMax));
-    assert(clip1 == -1|| (clip1Min <= clip1Max && clip1OutMin <= clip1OutMax));
+    assert( clip0 == -1 || clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax) );
+    assert( clip0 == -1 || (clip0Min <= clip0Max && clip0OutMin <= clip0OutMax) );
+    assert( clip1 == -1 || (clip1Min <= clip1Max && clip1OutMin <= clip1OutMax) );
 
     // now, check for fade in/fade out
     if (fadeIn != 0) {
-        if (clip0 == firstClip && clip0OutMin <= time) {
+        if ( (clip0 == firstClip) && (clip0OutMin <= time) ) {
             assert(clip0OutMin == firstFrame);
             // fadeIn = x means that the first x frames are modified
-            if ((time - firstFrame) < fadeIn) {
+            if ( (time - firstFrame) < fadeIn ) {
                 // fade in
                 assert(alpha0 > 0.);
-                alpha0 *= (time - firstFrame + 1)/(fadeIn+1);
-                alpha1 *= (time - firstFrame + 1)/(fadeIn+1);
+                alpha0 *= (time - firstFrame + 1) / (fadeIn + 1);
+                alpha1 *= (time - firstFrame + 1) / (fadeIn + 1);
             }
         }
     }
     if (fadeOut != 0) {
-        if (clip0 == lastClip && time <= clip0OutMax) {
+        if ( (clip0 == lastClip) && (time <= clip0OutMax) ) {
             assert(clip1 == -1);
             // fadeOut = x means that the last x frames are modified
-            if ((clip0OutMax - time) < fadeOut) {
+            if ( (clip0OutMax - time) < fadeOut ) {
                 // fade out
                 assert(alpha0 > 0.);
-                alpha0 *= (clip0OutMax - time + 1)/(fadeOut+1);
-                alpha1 *= (clip0OutMax - time + 1)/(fadeOut+1);
+                alpha0 *= (clip0OutMax - time + 1) / (fadeOut + 1);
+                alpha1 *= (clip0OutMax - time + 1) / (fadeOut + 1);
             }
         }
-        if (clip1 == lastClip && time <= clip1OutMax) {
+        if ( (clip1 == lastClip) && (time <= clip1OutMax) ) {
             assert(clip0 != lastClip);
             // fadeOut = x means that the last x frames are modified
-            if ((clip1OutMax - time) < fadeOut) {
+            if ( (clip1OutMax - time) < fadeOut ) {
                 // fade out
                 assert(alpha0 > 0.);
-                alpha0 *= (clip1OutMax - time + 1)/(fadeOut+1);
-                alpha1 *= (clip1OutMax - time + 1)/(fadeOut+1);
+                alpha0 *= (clip1OutMax - time + 1) / (fadeOut + 1);
+                alpha1 *= (clip1OutMax - time + 1) / (fadeOut + 1);
             }
         }
     }
-    assert(0 <= alpha0 && alpha0 <=1);
-    assert(0 <= alpha1 && alpha1 <1);
+    assert(0 <= alpha0 && alpha0 <= 1);
+    assert(0 <= alpha1 && alpha1 < 1);
 
-    if (clip0_p) { *clip0_p = clip0; }
-    if (t0_p) { *t0_p = t0; }
-    if (alpha0_p) { *alpha0_p = alpha0; }
-    if (clip1_p) { *clip1_p = clip1; }
-    if (t1_p) { *t1_p = t1; }
-    if (alpha1_p) { *alpha1_p = alpha1; }
-}
+    if (clip0_p) {
+        *clip0_p = clip0;
+    }
+    if (t0_p) {
+        *t0_p = t0;
+    }
+    if (alpha0_p) {
+        *alpha0_p = alpha0;
+    }
+    if (clip1_p) {
+        *clip1_p = clip1;
+    }
+    if (t1_p) {
+        *t1_p = t1;
+    }
+    if (alpha1_p) {
+        *alpha1_p = alpha1;
+    }
+} // AppendClipPlugin::getSources
 
 /* set up and run a processor */
 void
@@ -487,19 +546,20 @@ AppendClipPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
 {
     // get a dst image
     std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(args.time) );
-    if (!dst.get()) {
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -521,54 +581,56 @@ AppendClipPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
     double alpha1;
     getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, &alpha0, &clip1, &t1, &alpha1, NULL);
 
-    if ((clip0 == -1 && clip1 == -1) || (alpha0 == 0. && alpha1 == 0.)) {
+    if ( ( (clip0 == -1) && (clip1 == -1) ) || ( (alpha0 == 0.) && (alpha1 == 0.) ) ) {
         // no clip, just fill with black
-        fillBlack(*this, args.renderWindow, dst.get());
+        fillBlack( *this, args.renderWindow, dst.get() );
+
         return;
     }
     assert(clip0 != clip1);
-    if (clip1 == -1 && alpha0 == 1.) {
+    if ( (clip1 == -1) && (alpha0 == 1.) ) {
         // should never happen, since it's identity, but it still may happen (Resolve)
         //assert(0);
-        std::auto_ptr<const OFX::Image> src((_srcClip[clip0] && _srcClip[clip0]->isConnected()) ?
-                                            _srcClip[clip0]->fetchImage(t0) : 0);
-        if (src.get()) {
-            if (src->getRenderScale().x != args.renderScale.x ||
-                src->getRenderScale().y != args.renderScale.y ||
-                (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+        std::auto_ptr<const OFX::Image> src( ( _srcClip[clip0] && _srcClip[clip0]->isConnected() ) ?
+                                             _srcClip[clip0]->fetchImage(t0) : 0 );
+        if ( src.get() ) {
+            if ( (src->getRenderScale().x != args.renderScale.x) ||
+                 ( src->getRenderScale().y != args.renderScale.y) ||
+                 ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
-            OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+            OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
             OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-            if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                 OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
-        copyPixels(*this, args.renderWindow, src.get(), dst.get());
+        copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+
         return;
     }
 
     // fetch the two source images
-    std::auto_ptr<const OFX::Image> fromImg((clip0 != -1 && _srcClip[clip0] && _srcClip[clip0]->isConnected()) ?
-                                            _srcClip[clip0]->fetchImage(t0) : 0);
-    std::auto_ptr<const OFX::Image> toImg((clip1 != -1 && _srcClip[clip1] && _srcClip[clip1]->isConnected()) ?
-                                          _srcClip[clip1]->fetchImage(t1) : 0);
+    std::auto_ptr<const OFX::Image> fromImg( ( clip0 != -1 && _srcClip[clip0] && _srcClip[clip0]->isConnected() ) ?
+                                             _srcClip[clip0]->fetchImage(t0) : 0 );
+    std::auto_ptr<const OFX::Image> toImg( ( clip1 != -1 && _srcClip[clip1] && _srcClip[clip1]->isConnected() ) ?
+                                           _srcClip[clip1]->fetchImage(t1) : 0 );
 
     // make sure bit depths are sane
-    if (fromImg.get()) {
-        if (fromImg->getRenderScale().x != args.renderScale.x ||
-            fromImg->getRenderScale().y != args.renderScale.y ||
-            (fromImg->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && fromImg->getField() != args.fieldToRender)) {
+    if ( fromImg.get() ) {
+        if ( (fromImg->getRenderScale().x != args.renderScale.x) ||
+             ( fromImg->getRenderScale().y != args.renderScale.y) ||
+             ( ( fromImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( fromImg->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
-    if (toImg.get()) {
-        if (toImg->getRenderScale().x != args.renderScale.x ||
-            toImg->getRenderScale().y != args.renderScale.y ||
-            (toImg->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && toImg->getField() != args.fieldToRender)) {
+    if ( toImg.get() ) {
+        if ( (toImg->getRenderScale().x != args.renderScale.x) ||
+             ( toImg->getRenderScale().y != args.renderScale.y) ||
+             ( ( toImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( toImg->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -585,13 +647,13 @@ AppendClipPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
 
     // set the scales
     assert(0 < alpha0 && alpha0 <= 1 && 0 <= alpha1 && alpha1 < 1);
-    assert(toImg.get() || (alpha1 == 0));
-    assert(fromImg.get());
+    assert( toImg.get() || (alpha1 == 0) );
+    assert( fromImg.get() );
     processor.setBlend(1. - alpha0);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-}
+} // AppendClipPlugin::setupAndProcess
 
 // the overridden render function
 void
@@ -601,8 +663,8 @@ AppendClipPlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        assert(kSupportsMultipleClipPARs   || _srcClip[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-        assert(kSupportsMultipleClipDepths || _srcClip[i]->getPixelDepth()       == _dstClip->getPixelDepth());
+        assert( kSupportsMultipleClipPARs   || _srcClip[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+        assert( kSupportsMultipleClipDepths || _srcClip[i]->getPixelDepth()       == _dstClip->getPixelDepth() );
     }
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -622,20 +684,21 @@ void
 AppendClipPlugin::renderForComponents(const OFX::RenderArguments &args)
 {
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte:
-            renderForBitDepth<unsigned char, nComponents, 255>(args);
-            break;
+    case OFX::eBitDepthUByte:
+        renderForBitDepth<unsigned char, nComponents, 255>(args);
+        break;
 
-        case OFX::eBitDepthUShort:
-            renderForBitDepth<unsigned short, nComponents, 65535>(args);
-            break;
+    case OFX::eBitDepthUShort:
+        renderForBitDepth<unsigned short, nComponents, 65535>(args);
+        break;
 
-        case OFX::eBitDepthFloat:
-            renderForBitDepth<float, nComponents, 1>(args);
-            break;
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthFloat:
+        renderForBitDepth<float, nComponents, 1>(args);
+        break;
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -644,6 +707,7 @@ void
 AppendClipPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
     OFX::ImageBlender<PIX, nComponents> fred(*this);
+
     setupAndProcess(fred, args);
 }
 
@@ -655,6 +719,7 @@ AppendClipPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 {
     const double time = args.time;
     int firstFrame;
+
     _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
     _fadeIn->getValueAtTime(time, fadeIn);
@@ -666,13 +731,14 @@ AppendClipPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     double t0;
     double alpha0;
     getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, &alpha0, NULL, NULL, NULL, NULL);
-    assert(clip0 >= -1 && clip0 < (int)_srcClip.size());
-    if (clip0 >= 0 && clip0 < (int)_srcClip.size() && alpha0 == 1.) {
+    assert( clip0 >= -1 && clip0 < (int)_srcClip.size() );
+    if ( (clip0 >= 0) && ( clip0 < (int)_srcClip.size() ) && (alpha0 == 1.) ) {
         identityClip = _srcClip[clip0];
         identityTime = t0;
 
         return true;
     }
+
     // nope, identity we isnt
     return false;
 }
@@ -686,6 +752,7 @@ AppendClipPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
 {
     const double time = args.time;
     int firstFrame;
+
     _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
     _fadeIn->getValueAtTime(time, fadeIn);
@@ -697,7 +764,7 @@ AppendClipPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
     getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, NULL, NULL, &clip1, NULL, NULL, NULL);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if ((int)i != clip0 && (int)i != clip1) {
+        if ( ( (int)i != clip0 ) && ( (int)i != clip1 ) ) {
             rois.setRegionOfInterest(*_srcClip[i], emptyRoI);
         }
     }
@@ -709,6 +776,7 @@ AppendClipPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 {
     const double time = args.time;
     int firstFrame;
+
     _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
     _fadeIn->getValueAtTime(time, fadeIn);
@@ -740,16 +808,19 @@ void
 AppendClipPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         clipPreferences.setClipComponents(*_srcClip[i], outputComps);
     }
 }
 
 bool
-AppendClipPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+AppendClipPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                        OfxRectD &rod)
 {
     const double time = args.time;
     int firstFrame;
+
     _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
     _fadeIn->getValueAtTime(time, fadeIn);
@@ -760,19 +831,23 @@ AppendClipPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     int clip0;
     double t0;
     getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, NULL, NULL, NULL, NULL);
-    assert(clip0 >= -1 && clip0 < (int)_srcClip.size());
-    if (clip0 >= 0 && clip0 < (int)_srcClip.size()) {
+    assert( clip0 >= -1 && clip0 < (int)_srcClip.size() );
+    if ( (clip0 >= 0) && ( clip0 < (int)_srcClip.size() ) ) {
         rod = _srcClip[clip0]->getRegionOfDefinition(t0);
+
         return true;
     }
+
     return false;
 }
 
 void
-AppendClipPlugin::changedClip(const OFX::InstanceChangedArgs &args, const std::string &/*clipName*/)
+AppendClipPlugin::changedClip(const OFX::InstanceChangedArgs &args,
+                              const std::string & /*clipName*/)
 {
     const double time = args.time;
     int firstFrame;
+
     _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
     _fadeIn->getValueAtTime(time, fadeIn);
@@ -786,10 +861,12 @@ AppendClipPlugin::changedClip(const OFX::InstanceChangedArgs &args, const std::s
 }
 
 void
-AppendClipPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+AppendClipPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                               const std::string &paramName)
 {
     const double time = args.time;
-    if (paramName != kParamLastFrame && args.reason == OFX::eChangeUserEdit) {
+
+    if ( (paramName != kParamLastFrame) && (args.reason == OFX::eChangeUserEdit) ) {
         int firstFrame;
         _firstFrame->getValueAtTime(time, firstFrame);
         int fadeIn;
@@ -831,7 +908,6 @@ AppendClipPlugin::getTimeDomain(OfxRangeD &range)
 
 mDeclarePluginFactory(AppendClipPluginFactory, {}, {}
                       );
-
 void
 AppendClipPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -864,14 +940,13 @@ AppendClipPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void
 AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                         ContextEnum context)
+                                           ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
                             OFX::getImageEffectHostDescription()->versionMajor >= 2);
-
-    int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
+    unsigned clipSourceCount = numerousInputs ? kClipSourceCount : 2;
 
     {
         ClipDescriptor *srcClip;
@@ -879,12 +954,8 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             // we are a transition, so define the sourceFrom/sourceTo input clip
             srcClip = desc.defineClip(kOfxImageEffectTransitionSourceFromClipName);
         } else {
-            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            int i = 0;
-            int clipNumber = i + kClipSourceOffset;
-            name[0] = '0' + clipNumber;
-            name[1] = 0;
-            srcClip = desc.defineClip(name);
+            unsigned i = 0;
+            srcClip = desc.defineClip( unsignedToString(i + kClipSourceOffset) );
             srcClip->setOptional(true);
         }
         srcClip->addSupportedComponent(ePixelComponentNone);
@@ -902,12 +973,8 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             // we are a transition, so define the sourceFrom/sourceTo input clip
             srcClip = desc.defineClip(kOfxImageEffectTransitionSourceToClipName);
         } else {
-            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            int i = 1;
-            int clipNumber = i + kClipSourceOffset;
-            name[0] = '0' + clipNumber;
-            name[1] = 0;
-            srcClip = desc.defineClip(name);
+            unsigned i = 1;
+            srcClip = desc.defineClip( unsignedToString(i + kClipSourceOffset) );
             srcClip->setOptional(true);
         }
         srcClip->addSupportedComponent(ePixelComponentNone);
@@ -921,16 +988,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     if (numerousInputs) {
-        for (int j = 2; j < clipSourceCount; ++j) {
+        for (unsigned j = 2; j < clipSourceCount; ++j) {
             ClipDescriptor *srcClip;
-            int i = j + kClipSourceOffset;
-            char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            assert(i < 1000);
-            name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
-            name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
-            // coverity[dead_error_line]
-            name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
-            srcClip = desc.defineClip(name);
+            srcClip = desc.defineClip( unsignedToString(j + kClipSourceOffset) );
             srcClip->setOptional(true);
             srcClip->addSupportedComponent(ePixelComponentNone);
             srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -1020,11 +1080,11 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-}
+} // AppendClipPluginFactory::describeInContext
 
 ImageEffect*
 AppendClipPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                      ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
@@ -1033,7 +1093,6 @@ AppendClipPluginFactory::createInstance(OfxImageEffectHandle handle,
 
     return new AppendClipPlugin(handle, numerousInputs);
 }
-
 
 static AppendClipPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

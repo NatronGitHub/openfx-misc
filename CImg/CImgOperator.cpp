@@ -27,58 +27,58 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
                                                            bool supportsRenderScale,
                                                            bool defaultUnpremult,
                                                            bool defaultProcessAlphaOnRGBA)
-: CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA, false)
-, _srcAClip(0)
-, _srcBClip(0)
-, _srcAClipName(srcAClipName)
-, _srcBClipName(srcBClipName)
+    : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA, false)
+    , _srcAClip(0)
+    , _srcBClip(0)
+    , _srcAClipName(srcAClipName)
+    , _srcBClipName(srcBClipName)
 {
     _srcAClip = fetchClip(_srcAClipName);
-    assert(_srcAClip && (_srcAClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGBA));
+    assert( _srcAClip && (_srcAClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
     _srcBClip = fetchClip(_srcBClipName);
-    assert(_srcBClip && (_srcBClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcBClip->getPixelComponents() == OFX::ePixelComponentRGBA));
+    assert( _srcBClip && (_srcBClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcBClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
 }
 
-void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
+void
+CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args,
+                                          const std::string &clipName)
 {
-    if (clipName == _srcAClipName &&
-        _srcAClip && _srcAClip->isConnected() &&
-        args.reason == OFX::eChangeUserEdit) {
-        if (_defaultUnpremult && !_premultChanged->getValue()) {
-            switch (_srcAClip->getPreMultiplication()) {
-                case OFX::eImageOpaque:
-                    _premult->setValue(false);
-                    break;
-                case OFX::eImagePreMultiplied:
-                    _premult->setValue(true);
-                    break;
-                case OFX::eImageUnPreMultiplied:
-                    _premult->setValue(false);
-                    break;
+    if ( (clipName == _srcAClipName) &&
+         _srcAClip && _srcAClip->isConnected() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
+        if ( _defaultUnpremult && !_premultChanged->getValue() ) {
+            switch ( _srcAClip->getPreMultiplication() ) {
+            case OFX::eImageOpaque:
+                _premult->setValue(false);
+                break;
+            case OFX::eImagePreMultiplied:
+                _premult->setValue(true);
+                break;
+            case OFX::eImageUnPreMultiplied:
+                _premult->setValue(false);
+                break;
             }
         }
     }
-    if (clipName == _srcBClipName &&
-        _srcBClip && _srcBClip->isConnected() &&
-        !_premultChanged->getValue() &&
-        args.reason == OFX::eChangeUserEdit) {
+    if ( (clipName == _srcBClipName) &&
+         _srcBClip && _srcBClip->isConnected() &&
+         !_premultChanged->getValue() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
         if (_defaultUnpremult) {
-            switch (_srcBClip->getPreMultiplication()) {
-                case OFX::eImageOpaque:
-                    _premult->setValue(false);
-                    break;
-                case OFX::eImagePreMultiplied:
-                    _premult->setValue(true);
-                    break;
-                case OFX::eImageUnPreMultiplied:
-                    _premult->setValue(false);
-                    break;
+            switch ( _srcBClip->getPreMultiplication() ) {
+            case OFX::eImageOpaque:
+                _premult->setValue(false);
+                break;
+            case OFX::eImagePreMultiplied:
+                _premult->setValue(true);
+                break;
+            case OFX::eImageUnPreMultiplied:
+                _premult->setValue(false);
+                break;
             }
         }
     }
 }
-
-
 
 OFX::PageParamDescriptor*
 CImgOperatorPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc,
@@ -97,6 +97,7 @@ CImgOperatorPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor 
     OFX::ClipDescriptor *srcBClip = desc.defineClip(srcBClipName);
     OFX::ClipDescriptor *srcAClip = desc.defineClip(srcAClipName);
     OFX::ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+
     if (supportsRGBA) {
         srcAClip->addSupportedComponent(OFX::ePixelComponentRGBA);
         srcBClip->addSupportedComponent(OFX::ePixelComponentRGBA);
@@ -130,3 +131,4 @@ CImgOperatorPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor 
 
     return page;
 }
+

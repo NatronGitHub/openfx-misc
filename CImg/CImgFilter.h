@@ -43,10 +43,10 @@
 #  define thread_local _Thread_local
 #  define HAVE_THREAD_LOCAL
 # elif defined _WIN32 && ( \
-       defined _MSC_VER || \
-       defined __ICL || \
-       defined __DMC__ || \
-       defined __BORLANDC__ )
+    defined _MSC_VER || \
+    defined __ICL || \
+    defined __DMC__ || \
+    defined __BORLANDC__ )
 // For DLLs that are loaded dynamically after the process has started (delay load, COM objects,
 // explicit LoadLibrary, etc) __declspec(thread) does not work on Windows XP, 2003 Server and
 // earlier OSes, but does work on Vista and 2008 Server.
@@ -56,8 +56,8 @@
 #  warning "CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
 /* note that ICC (linux) and Clang are covered by __GNUC__ */
 # elif defined __GNUC__ || \
-       defined __SUNPRO_C || \
-       defined __xlC__
+    defined __SUNPRO_C || \
+    defined __xlC__
 // Clang 3.4 also support SD-6 (feature test macros __cpp_*), but no thread local macro
 #   if defined(__clang__)
 #    if __has_feature(cxx_thread_local)
@@ -107,6 +107,7 @@
 #ifdef _OPENMP
 #define cimg_use_openmp
 #endif
+#define cimg_verbosity 0
 
 // Abort mechanism:
 // we have a struct with a thread-local storage that holds the OFX::ImageEffect
@@ -126,25 +127,28 @@ typedef float cimgpix_t;
 #define CIMG_ABORTABLE // use abortable versions of CImg functions
 
 #ifdef HAVE_THREAD_LOCAL
-struct tls {
+struct tls
+{
     static thread_local OFX::ImageEffect *gImageEffect;
 };
 
-inline void gImageEffectAbort()
+inline void
+gImageEffectAbort()
 {
 #  ifdef cimg_use_openmp
-    if (omp_get_thread_num()) {
+    if ( omp_get_thread_num() ) {
         return;
     }
 #  endif
-    if (tls::gImageEffect && tls::gImageEffect->abort()) {
+    if ( tls::gImageEffect && tls::gImageEffect->abort() ) {
         throw cimg_library::CImgAbortException("");
     }
 }
 
 #endif // HAVE_THREAD_LOCAL
 
-class CImgFilterPluginHelperBase : public OFX::ImageEffect
+class CImgFilterPluginHelperBase
+    : public OFX::ImageEffect
 {
 public:
 
@@ -153,94 +157,87 @@ public:
                                bool supportsTiles,
                                bool supportsMultiResolution,
                                bool supportsRenderScale,
-                               bool defaultUnpremult/* = true*/,
-                               bool defaultProcessAlphaOnRGBA/* = false*/,
-                               bool isFilter/* = true*/);
+                               bool defaultUnpremult /* = true*/,
+                               bool defaultProcessAlphaOnRGBA /* = false*/,
+                               bool isFilter /* = true*/);
 
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE;
-    
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
-
-    static OFX::PageParamDescriptor*
-    describeInContextBegin(bool sourceIsOptional,
-                           OFX::ImageEffectDescriptor &desc,
-                           OFX::ContextEnum context,
-                           bool supportsRGBA,
-                           bool supportsRGB,
-                           bool supportsXY,
-                           bool supportsAlpha,
-                           bool supportsTiles,
-                           bool processRGB/* = true*/,
-                           bool processAlpha/* = false*/,
-                           bool processIsSecret/* = false*/);
-
-    static void
-    describeInContextEnd(OFX::ImageEffectDescriptor &desc,
-                         OFX::ContextEnum context,
-                         OFX::PageParamDescriptor* page);
+    static OFX::PageParamDescriptor* describeInContextBegin(bool sourceIsOptional,
+                                                            OFX::ImageEffectDescriptor &desc,
+                                                            OFX::ContextEnum context,
+                                                            bool supportsRGBA,
+                                                            bool supportsRGB,
+                                                            bool supportsXY,
+                                                            bool supportsAlpha,
+                                                            bool supportsTiles,
+                                                            bool processRGB /* = true*/,
+                                                            bool processAlpha /* = false*/,
+                                                            bool processIsSecret /* = false*/);
+    static void describeInContextEnd(OFX::ImageEffectDescriptor &desc,
+                                     OFX::ContextEnum context,
+                                     OFX::PageParamDescriptor* page);
 
     // utility functions
-    static bool
-    isEmpty(const OfxRectI& r)
+    static bool isEmpty(const OfxRectI& r)
     {
         return r.x1 >= r.x2 || r.y1 >= r.y2;
     }
 
 protected:
 #ifdef CIMG_DEBUG
-    static void
-    printRectI(const char*name, const OfxRectI& rect) {
+    static void printRectI(const char*name,
+                           const OfxRectI& rect)
+    {
         printf("%s= (%d, %d)-(%d, %d)\n", name, rect.x1, rect.y1, rect.x2, rect.y2);
     }
+
 #else
-    static void printRectI(const char*, const OfxRectI&) {}
+    static void printRectI(const char*,
+                           const OfxRectI&) {}
+
 #endif
 
 
-    void
-    setupAndFill(OFX::PixelProcessorFilterBase & processor,
-                 const OfxRectI &renderWindow,
-                 void *dstPixelData,
-                 const OfxRectI& dstBounds,
-                 OFX::PixelComponentEnum dstPixelComponents,
-                 int dstPixelComponentCount,
-                 OFX::BitDepthEnum dstPixelDepth,
-                 int dstRowBytes);
+    void setupAndFill(OFX::PixelProcessorFilterBase & processor,
+                      const OfxRectI &renderWindow,
+                      void *dstPixelData,
+                      const OfxRectI& dstBounds,
+                      OFX::PixelComponentEnum dstPixelComponents,
+                      int dstPixelComponentCount,
+                      OFX::BitDepthEnum dstPixelDepth,
+                      int dstRowBytes);
 
-    void
-    setupAndCopy(OFX::PixelProcessorFilterBase & processor,
-                 double time,
-                 const OfxRectI &renderWindow,
-                 const OFX::Image* orig,
-                 const OFX::Image* mask,
-                 const void *srcPixelData,
-                 const OfxRectI& srcBounds,
-                 OFX::PixelComponentEnum srcPixelComponents,
-                 int srcPixelComponentCount,
-                 OFX::BitDepthEnum srcBitDepth,
-                 int srcRowBytes,
-                 int srcBoundary,
-                 void *dstPixelData,
-                 const OfxRectI& dstBounds,
-                 OFX::PixelComponentEnum dstPixelComponents,
-                 int dstPixelComponentCount,
-                 OFX::BitDepthEnum dstPixelDepth,
-                 int dstRowBytes,
-                 bool premult,
-                 int premultChannel,
-                 double mix,
-                 bool maskInvert);
+    void setupAndCopy(OFX::PixelProcessorFilterBase & processor,
+                      double time,
+                      const OfxRectI &renderWindow,
+                      const OFX::Image* orig,
+                      const OFX::Image* mask,
+                      const void *srcPixelData,
+                      const OfxRectI& srcBounds,
+                      OFX::PixelComponentEnum srcPixelComponents,
+                      int srcPixelComponentCount,
+                      OFX::BitDepthEnum srcBitDepth,
+                      int srcRowBytes,
+                      int srcBoundary,
+                      void *dstPixelData,
+                      const OfxRectI& dstBounds,
+                      OFX::PixelComponentEnum dstPixelComponents,
+                      int dstPixelComponentCount,
+                      OFX::BitDepthEnum dstPixelDepth,
+                      int dstRowBytes,
+                      bool premult,
+                      int premultChannel,
+                      double mix,
+                      bool maskInvert);
 
 
     // utility functions
     static
-    bool
-    maskLineIsZero(const OFX::Image* mask, int x1, int x2, int y, bool maskInvert);
-
+    bool maskLineIsZero(const OFX::Image* mask, int x1, int x2, int y, bool maskInvert);
     static
-    bool
-    maskColumnIsZero(const OFX::Image* mask, int x, int y1, int y2, bool maskInvert);
+    bool maskColumnIsZero(const OFX::Image* mask, int x, int y1, int y2, bool maskInvert);
 
 protected:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -258,7 +255,6 @@ protected:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
-
     bool _supportsComponentRemapping; // true if the number and order of components of the image passed to render() has no importance
     bool _supportsTiles;
     bool _supportsMultiResolution;
@@ -269,7 +265,8 @@ protected:
 };
 
 template <class Params, bool sourceIsOptional>
-class CImgFilterPluginHelper : public CImgFilterPluginHelperBase
+class CImgFilterPluginHelper
+    : public CImgFilterPluginHelperBase
 {
 public:
 
@@ -278,51 +275,48 @@ public:
                            bool supportsTiles,
                            bool supportsMultiResolution,
                            bool supportsRenderScale,
-                           bool defaultUnpremult/* = true*/,
-                           bool defaultProcessAlphaOnRGBA/* = false*/)
-    : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA, /*isFilter=*/true)
+                           bool defaultUnpremult /* = true*/,
+                           bool defaultProcessAlphaOnRGBA /* = false*/)
+        : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA, /*isFilter=*/ true)
     {
     }
 
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip* &identityClip, double &identityTime) OVERRIDE FINAL;
 
     // the following functions can be overridden/implemented by the plugin
-
     virtual void getValuesAtTime(double time, Params& params) = 0;
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const Params& params, OfxRectI* roi) = 0;
-
-    virtual bool getRegionOfDefinition(const OfxRectI& /*srcRoD*/, const OfxPointD& /*renderScale*/, const Params& /*params*/, OfxRectI* /*dstRoD*/) { return false; };
-
+    virtual bool getRegionOfDefinition(const OfxRectI& /*srcRoD*/,
+                                       const OfxPointD& /*renderScale*/,
+                                       const Params& /*params*/,
+                                       OfxRectI* /*dstRoD*/) { return false; };
     virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<cimgpix_t>& cimg) = 0;
-
-    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const Params& /*params*/) { return false; };
+    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+                            const Params& /*params*/) { return false; };
 
     // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
     virtual int getBoundary(const Params& /*params*/) { return 0; }
 
     //static void describe(OFX::ImageEffectDescriptor &desc, bool supportsTiles);
 
-    static OFX::PageParamDescriptor*
-    describeInContextBegin(OFX::ImageEffectDescriptor &desc,
-                           OFX::ContextEnum context,
-                           bool supportsRGBA,
-                           bool supportsRGB,
-                           bool supportsXY,
-                           bool supportsAlpha,
-                           bool supportsTiles,
-                           bool processRGB/* = true*/,
-                           bool processAlpha/* = false*/,
-                           bool processIsSecret/* = false*/)
+    static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc,
+                                                            OFX::ContextEnum context,
+                                                            bool supportsRGBA,
+                                                            bool supportsRGB,
+                                                            bool supportsXY,
+                                                            bool supportsAlpha,
+                                                            bool supportsTiles,
+                                                            bool processRGB /* = true*/,
+                                                            bool processAlpha /* = false*/,
+                                                            bool processIsSecret /* = false*/)
     {
         return CImgFilterPluginHelperBase::describeInContextBegin(sourceIsOptional,
                                                                   desc,
@@ -341,23 +335,22 @@ public:
 
 template <class Params, bool sourceIsOptional>
 void
-CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArguments &args)
+CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArguments &args)
 {
-    if (!_supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     const double time = args.time;
     const OfxPointD& renderScale = args.renderScale;
     const OfxRectI& renderWindow = args.renderWindow;
-
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != renderScale.x ||
-        dst->getRenderScale().y != renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != renderScale.x) ||
+         ( dst->getRenderScale().y != renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -366,17 +359,17 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     const int dstPixelComponentCount = dst->getPixelComponentCount();
     assert(dstBitDepth == OFX::eBitDepthFloat); // only float is supported for now (others are untested)
 
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
-    if (src.get()) {
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
+    if ( src.get() ) {
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcPixelComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcPixelComponents != dstPixelComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcPixelComponents != dstPixelComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        if (src->getRenderScale().x != renderScale.x ||
-            src->getRenderScale().y != renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+        if ( (src->getRenderScale().x != renderScale.x) ||
+             ( src->getRenderScale().y != renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -393,29 +386,29 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
 
         int nComponents = dst->getPixelComponentCount();
         switch (nComponents) {
-            case 1: {
-                OFX::BlackFiller<float, 1> fred(*this);
-                setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-                break;
-            }
-            case 2: {
-                OFX::BlackFiller<float, 2> fred(*this);
-                setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-                break;
-            }
-            case 3: {
-                OFX::BlackFiller<float, 3> fred(*this);
-                setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-                break;
-            }
-            case 4: {
-                OFX::BlackFiller<float, 4> fred(*this);
-                setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-                break;
-            }
-            default:
-                assert(false);
-                break;
+        case 1: {
+            OFX::BlackFiller<float, 1> fred(*this);
+            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
+            break;
+        }
+        case 2: {
+            OFX::BlackFiller<float, 2> fred(*this);
+            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
+            break;
+        }
+        case 3: {
+            OFX::BlackFiller<float, 3> fred(*this);
+            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
+            break;
+        }
+        case 4: {
+            OFX::BlackFiller<float, 4> fred(*this);
+            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
+            break;
+        }
+        default:
+            assert(false);
+            break;
         } // switch
 
         return;
@@ -430,7 +423,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     OFX::BitDepthEnum srcBitDepth;
     //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
     int srcRowBytes;
-    if (!src.get()) {
+    if ( !src.get() ) {
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
@@ -461,7 +454,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     if (!_supportsTiles) {
         // http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#kOfxImageEffectPropSupportsTiles
         //  If a clip or plugin does not support tiled images, then the host should supply full RoD images to the effect whenever it fetches one.
-        if (src.get()) {
+        if ( src.get() ) {
             assert(srcRoD.x1 == srcBounds.x1);
             assert(srcRoD.x2 == srcBounds.x2);
             assert(srcRoD.y1 == srcBounds.y1);
@@ -477,7 +470,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         //   Multiple resolution images mean...
         //    input and output images can be of any size
         //    input and output images can be offset from the origin
-        if (src.get()) {
+        if ( src.get() ) {
             assert(srcRoD.x1 == 0);
             assert(srcRoD.y1 == 0);
             assert(srcRoD.x1 == dstRoD.x1);
@@ -486,7 +479,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
             assert(srcRoD.y2 == dstRoD.y2); // crashes on Natron if kSupportsMultiResolution=0
         }
     }
-    
+
     bool processR, processG, processB, processA;
     if (_processR) {
         _processR->getValueAtTime(time, processR);
@@ -509,7 +502,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         premult = false;
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     OfxRectI processWindow = renderWindow; //!< the window where pixels have to be computed (may be smaller than renderWindow if mask is zero on the borders)
 
@@ -518,10 +511,10 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         processWindow.x2 = processWindow.x1;
         processWindow.y2 = processWindow.y1;
     }
-    if (mask.get()) {
-        if (mask->getRenderScale().x != renderScale.x ||
-            mask->getRenderScale().y != renderScale.y ||
-            (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+    if ( mask.get() ) {
+        if ( (mask->getRenderScale().x != renderScale.x) ||
+             ( mask->getRenderScale().y != renderScale.y) ||
+             ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -529,19 +522,19 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
 
         // shrink the processWindow at much as possible
         // top
-        while (processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y2-1, maskInvert)) {
+        while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y2 - 1, maskInvert) ) {
             --processWindow.y2;
         }
         // bottom
-        while (processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y1, maskInvert)) {
+        while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y1, maskInvert) ) {
             ++processWindow.y1;
         }
         // left
-        while (processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x1, processWindow.y1, processWindow.y2, maskInvert)) {
+        while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x1, processWindow.y1, processWindow.y2, maskInvert) ) {
             ++processWindow.x1;
         }
         // right
-        while (processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x2-1, processWindow.y1, processWindow.y2, maskInvert)) {
+        while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x2 - 1, processWindow.y1, processWindow.y2, maskInvert) ) {
             --processWindow.x2;
         }
     }
@@ -577,16 +570,16 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     {
         std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (dstPixelComponentCount == 4) {
-            fred.reset(new OFX::PixelCopier<float, 4>(*this));
+            fred.reset( new OFX::PixelCopier<float, 4>(*this) );
         } else if (dstPixelComponentCount == 3) {
-            fred.reset(new OFX::PixelCopier<float, 3>(*this));
+            fred.reset( new OFX::PixelCopier<float, 3>(*this) );
         } else if (dstPixelComponentCount == 2) {
-            fred.reset(new OFX::PixelCopier<float, 2>(*this));
+            fred.reset( new OFX::PixelCopier<float, 2>(*this) );
         }  else if (dstPixelComponentCount == 1) {
-            fred.reset(new OFX::PixelCopier<float, 1>(*this));
+            fred.reset( new OFX::PixelCopier<float, 1>(*this) );
         }
-        assert(fred.get());
-        if (fred.get()) {
+        assert( fred.get() );
+        if ( fred.get() ) {
             setupAndCopy(*fred, time, copyWindowN, src.get(), mask.get(),
                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
@@ -606,14 +599,14 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         }
     }
 
-    printRectI("srcRoD",srcRoD);
-    printRectI("srcBounds",srcBounds);
-    printRectI("dstRoD",dstRoD);
-    printRectI("dstBounds",dstBounds);
-    printRectI("renderWindow",renderWindow);
-    printRectI("processWindow",processWindow);
-    
-    if (isEmpty(processWindow)) {
+    printRectI("srcRoD", srcRoD);
+    printRectI("srcBounds", srcBounds);
+    printRectI("dstRoD", dstRoD);
+    printRectI("dstBounds", dstBounds);
+    printRectI("renderWindow", renderWindow);
+    printRectI("processWindow", processWindow);
+
+    if ( isEmpty(processWindow) ) {
         // the area that actually has to be processed is empty, the job is finished!
         return;
     }
@@ -646,17 +639,17 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
     assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
            srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
-    if (srcBounds.x1 > srcRoI.x1 || srcRoI.x2 > srcBounds.x2 ||
-        srcBounds.y1 > srcRoI.y1 || srcRoI.y2 > srcBounds.y2) {
+    if ( (srcBounds.x1 > srcRoI.x1) || (srcRoI.x2 > srcBounds.x2) ||
+         ( srcBounds.y1 > srcRoI.y1) || ( srcRoI.y2 > srcBounds.y2) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    if (doMasking && mix != 1.) {
+    if ( doMasking && (mix != 1.) ) {
         // the renderWindow should also be contained within srcBounds, since we are mixing
         assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
                srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
-        if (srcBounds.x1 > renderWindow.x1 || renderWindow.x2 > srcBounds.x2 ||
-            srcBounds.y1 > renderWindow.y1 || renderWindow.y2 > srcBounds.y2) {
+        if ( (srcBounds.x1 > renderWindow.x1) || (renderWindow.x2 > srcBounds.x2) ||
+             ( srcBounds.y1 > renderWindow.y1) || ( renderWindow.y2 > srcBounds.y2) ) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
@@ -673,7 +666,6 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
 
     //////////////////////////////////////////////////////////////////////////////////////////
     // 1- copy & unpremult all channels from srcRoI, from src to a tmp image of size srcRoI
-
     const OfxRectI tmpBounds = srcRoI;
     const OFX::PixelComponentEnum tmpPixelComponents = srcPixelComponents;
     const int tmpPixelComponentCount = srcNComponents; // don't use srcPixelComponentCount, which may be zero
@@ -684,40 +676,40 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     size_t tmpSize = tmpRowBytes * tmpHeight;
 
     assert(tmpSize > 0);
-    std::auto_ptr<OFX::ImageMemory> tmpData(new OFX::ImageMemory(tmpSize, this));
+    std::auto_ptr<OFX::ImageMemory> tmpData( new OFX::ImageMemory(tmpSize, this) );
     float *tmpPixelData = (float*)tmpData->lock();
 
     {
         std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if (!src.get()) {
+        if ( !src.get() ) {
             // no src, fill with black & transparent
-            fred.reset(new OFX::BlackFiller<float>(*this, dstPixelComponentCount));
+            fred.reset( new OFX::BlackFiller<float>(*this, dstPixelComponentCount) );
         } else {
             if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-                fred.reset(new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this));
+                fred.reset( new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this) );
             } else if (dstPixelComponentCount == 4) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 4>(*this));
+                fred.reset( new OFX::PixelCopier<float, 4>(*this) );
             } else if (dstPixelComponentCount == 3) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 3>(*this));
+                fred.reset( new OFX::PixelCopier<float, 3>(*this) );
             } else if (dstPixelComponentCount == 2) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 2>(*this));
+                fred.reset( new OFX::PixelCopier<float, 2>(*this) );
             }  else if (dstPixelComponentCount == 1) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 1>(*this));
+                fred.reset( new OFX::PixelCopier<float, 1>(*this) );
             }
         }
-        assert(fred.get());
-        if (fred.get()) {
+        assert( fred.get() );
+        if ( fred.get() ) {
             setupAndCopy(*fred, time, srcRoI, src.get(), mask.get(),
                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary,
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
                          premult, premultChannel, mix, maskInvert);
         }
     }
-    if (abort()) {
+    if ( abort() ) {
         return;
     }
 
@@ -729,21 +721,21 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     if (!_supportsComponentRemapping) {
         cimgSpectrum = srcNComponents;
     } else {
-        switch(srcPixelComponents) {
-            case OFX::ePixelComponentAlpha:
-                cimgSpectrum = (int)processA;
-                break;
-            case OFX::ePixelComponentXY:
-                cimgSpectrum = (int)processR + (int)processG + (int) processB;
-                break;
-            case OFX::ePixelComponentRGB:
-                cimgSpectrum = (int)processR + (int)processG + (int) processB;
-                break;
-            case OFX::ePixelComponentRGBA:
-                cimgSpectrum = (int)processR + (int)processG + (int) processB + (int)processA;
-                break;
-            default:
-                cimgSpectrum = 0;
+        switch (srcPixelComponents) {
+        case OFX::ePixelComponentAlpha:
+            cimgSpectrum = (int)processA;
+            break;
+        case OFX::ePixelComponentXY:
+            cimgSpectrum = (int)processR + (int)processG + (int) processB;
+            break;
+        case OFX::ePixelComponentRGB:
+            cimgSpectrum = (int)processR + (int)processG + (int) processB;
+            break;
+        case OFX::ePixelComponentRGBA:
+            cimgSpectrum = (int)processR + (int)processG + (int) processB + (int)processA;
+            break;
+        default:
+            cimgSpectrum = 0;
         }
     }
     const int cimgWidth = srcRoI.x2 - srcRoI.x1;
@@ -778,7 +770,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
                 srcChannel[c] = 2;
                 ++c;
             }
-            if (processA && srcNComponents >= 4) {
+            if ( processA && (srcNComponents >= 4) ) {
                 srcChannel[c] = 3;
                 ++c;
             }
@@ -786,19 +778,19 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         }
     }
     if (cimgSize) { // may be zero if no channel is processed
-        std::auto_ptr<OFX::ImageMemory> cimgData(new OFX::ImageMemory(cimgSize, this));
+        std::auto_ptr<OFX::ImageMemory> cimgData( new OFX::ImageMemory(cimgSize, this) );
         cimgpix_t *cimgPixelData = (cimgpix_t*)cimgData->lock();
         cimg_library::CImg<cimgpix_t> cimg(cimgPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
 
 
-        for (int c=0; c < cimgSpectrum; ++c) {
-            cimgpix_t *dst = cimg.data(0,0,0,c);
+        for (int c = 0; c < cimgSpectrum; ++c) {
+            cimgpix_t *dst = cimg.data(0, 0, 0, c);
             const float *src = tmpPixelData + srcChannel[c];
             for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, src += srcNComponents, ++dst) {
                 *dst = *src;
             }
         }
-        if (abort()) {
+        if ( abort() ) {
             return;
         }
 
@@ -811,15 +803,17 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
             render(args, params, srcRoI.x1, srcRoI.y1, cimg);
         } catch (cimg_library::CImgAbortException) {
             tls::gImageEffect = 0;
+
             return;
         }
+
         tls::gImageEffect = 0;
 #else
         render(args, params, srcRoI.x1, srcRoI.y1, cimg);
 #endif
         // check that the dimensions didn't change
         assert(cimg.width() == cimgWidth && cimg.height() == cimgHeight && cimg.depth() == 1 && cimg.spectrum() == cimgSpectrum);
-        if (abort()) {
+        if ( abort() ) {
             return;
         }
 
@@ -827,16 +821,15 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         // 4- copy back the processed channels from the cImg to tmp. only processWindow has to be copied
 
         // We copy the whole srcRoI. This could be optimized to copy only renderWindow
-        for (int c=0; c < cimgSpectrum; ++c) {
-            const cimgpix_t *src = cimg.data(0,0,0,c);
+        for (int c = 0; c < cimgSpectrum; ++c) {
+            const cimgpix_t *src = cimg.data(0, 0, 0, c);
             float *dst = tmpPixelData + srcChannel[c];
             for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, ++src, dst += srcNComponents) {
                 *dst = *src;
             }
         }
-
     }
-    if (abort()) {
+    if ( abort() ) {
         return;
     }
 
@@ -846,39 +839,39 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     {
         std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-            fred.reset(new OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1>(*this));
+            fred.reset( new OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1>(*this) );
         } else if (dstPixelComponentCount == 4) {
             // just copy, no premult
             if (doMasking) {
-                fred.reset(new OFX::PixelCopierMaskMix<float, 4, 1, true>(*this));
+                fred.reset( new OFX::PixelCopierMaskMix<float, 4, 1, true>(*this) );
             } else {
-                fred.reset(new OFX::PixelCopierMaskMix<float, 4, 1, false>(*this));
+                fred.reset( new OFX::PixelCopierMaskMix<float, 4, 1, false>(*this) );
             }
         } else if (dstPixelComponentCount == 3) {
             // just copy, no premult
             if (doMasking) {
-                fred.reset(new OFX::PixelCopierMaskMix<float, 3, 1, true>(*this));
+                fred.reset( new OFX::PixelCopierMaskMix<float, 3, 1, true>(*this) );
             } else {
-                fred.reset(new OFX::PixelCopierMaskMix<float, 3, 1, false>(*this));
+                fred.reset( new OFX::PixelCopierMaskMix<float, 3, 1, false>(*this) );
             }
         } else if (dstPixelComponentCount == 2) {
             // just copy, no premult
             if (doMasking) {
-                fred.reset(new OFX::PixelCopierMaskMix<float, 2, 1, true>(*this));
+                fred.reset( new OFX::PixelCopierMaskMix<float, 2, 1, true>(*this) );
             } else {
-                fred.reset(new OFX::PixelCopierMaskMix<float, 2, 1, false>(*this));
+                fred.reset( new OFX::PixelCopierMaskMix<float, 2, 1, false>(*this) );
             }
         }  else if (dstPixelComponentCount == 1) {
             // just copy, no premult
             assert(srcPixelComponents == OFX::ePixelComponentAlpha);
             if (doMasking) {
-                fred.reset(new OFX::PixelCopierMaskMix<float, 1, 1, true>(*this));
+                fred.reset( new OFX::PixelCopierMaskMix<float, 1, 1, true>(*this) );
             } else {
-                fred.reset(new OFX::PixelCopierMaskMix<float, 1, 1, false>(*this));
+                fred.reset( new OFX::PixelCopierMaskMix<float, 1, 1, false>(*this) );
             }
         }
-        assert(fred.get());
-        if (fred.get()) {
+        assert( fred.get() );
+        if ( fred.get() ) {
             setupAndCopy(*fred, time, processWindow, src.get(), mask.get(),
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes, 0,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
@@ -888,31 +881,30 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
 
     //////////////////////////////////////////////////////////////////////////////////////////
     // done!
-}
-
-
+} // >::render
 
 // override the roi call
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 template <class Params, bool sourceIsOptional>
 void
-CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
+                                                                       OFX::RegionOfInterestSetter &rois)
 {
-    if (!_supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
     const OfxRectD& regionOfInterest = args.regionOfInterest;
     OfxRectD srcRoI;
-
     double mix = 1.;
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         _mix->getValueAtTime(time, mix);
         if (mix == 0.) {
             // identity transform
             //srcRoI = regionOfInterest;
+
             //rois.setRegionOfInterest(*_srcClip, srcRoI);
             return;
         }
@@ -922,14 +914,13 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionsOfInterest(const OFX:
     getValuesAtTime(args.time, params);
 
     double pixelaspectratio = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
-
     OfxRectI rectPixel;
     OFX::Coords::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
     OfxRectI srcRoIPixel;
     getRoI(rectPixel, args.renderScale, params, &srcRoIPixel);
     OFX::Coords::toCanonical(srcRoIPixel, args.renderScale, pixelaspectratio, &srcRoI);
 
-    if (doMasking && mix != 1.) {
+    if ( doMasking && (mix != 1.) ) {
         // for masking or mixing, we also need the source image.
         // compute the bounding box with the default ROI
         OFX::Coords::rectBoundingBox(srcRoI, regionOfInterest, &srcRoI);
@@ -941,10 +932,10 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionsOfInterest(const OFX:
 
 template <class Params, bool sourceIsOptional>
 bool
-CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
-                                                                       OfxRectD &rod)
+CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                                                        OfxRectD &rod)
 {
-    if (!_supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     Params params;
@@ -958,11 +949,11 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX
         }
     }
     OfxRectI rodPixel;
-
     bool ret = getRegionOfDefinition(srcRoDPixel, args.renderScale, params, &rodPixel);
     if (ret) {
         double pixelaspectratio = _dstClip ? _dstClip->getPixelAspectRatio() : 1.;
         OFX::Coords::toCanonical(rodPixel, args.renderScale, pixelaspectratio, &rod);
+
         return true;
     }
 
@@ -971,22 +962,22 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX
 
 template <class Params, bool sourceIsOptional>
 bool
-CImgFilterPluginHelper<Params,sourceIsOptional>::isIdentity(const OFX::IsIdentityArguments &args,
-                                                            OFX::Clip * &identityClip,
-                                                            double &/*identityTime*/)
+CImgFilterPluginHelper<Params, sourceIsOptional>::isIdentity(const OFX::IsIdentityArguments &args,
+                                                             OFX::Clip * &identityClip,
+                                                             double & /*identityTime*/)
 {
-    if (!_supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
-    
     double mix;
     _mix->getValueAtTime(time, mix);
     if (mix == 0.) {
         identityClip = _srcClip;
+
         return true;
     }
-    
+
     if (_processR) {
         bool processR;
         bool processG;
@@ -998,18 +989,20 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::isIdentity(const OFX::IsIdentit
         _processA->getValueAtTime(args.time, processA);
         if (!processR && !processG && !processB && !processA) {
             identityClip = _srcClip;
+
             return true;
         }
     }
-    
+
     Params params;
     getValuesAtTime(time, params);
-    if (isIdentity(args, params)) {
+    if ( isIdentity(args, params) ) {
         identityClip = _srcClip;
+
         return true;
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
@@ -1017,14 +1010,15 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::isIdentity(const OFX::IsIdentit
             OfxRectI maskRoD;
             OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
+
                 return true;
             }
         }
     }
 
     return false;
-}
+} // >::isIdentity
 
-#endif
+#endif // ifndef Misc_CImgFilter_h

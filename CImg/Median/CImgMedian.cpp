@@ -44,11 +44,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "MedianCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Apply a median filter to input images. Pixel values within a square box of the given size around the current pixel are sorted, and the median value is output if it does not differ from the current value by more than the given. Median filtering is performed per-channel.\n" \
-"Uses the 'blur_median' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Apply a median filter to input images. Pixel values within a square box of the given size around the current pixel are sorted, and the median value is output if it does not differ from the current value by more than the given. Median filtering is performed per-channel.\n" \
+    "Uses the 'blur_median' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgMedian"
 // History:
@@ -92,19 +92,21 @@ struct CImgMedianParams
     double threshold;
 };
 
-class CImgMedianPlugin : public CImgFilterPluginHelper<CImgMedianParams,false>
+class CImgMedianPlugin
+    : public CImgFilterPluginHelper<CImgMedianParams, false>
 {
 public:
 
     CImgMedianPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgMedianParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgMedianParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _size  = fetchIntParam(kParamSize);
         _threshold  = fetchDoubleParam(kParamThreshold);
         assert(_size);
     }
 
-    virtual void getValuesAtTime(double time, CImgMedianParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgMedianParams& params) OVERRIDE FINAL
     {
         _size->getValueAtTime(time, params.size);
         _threshold->getValueAtTime(time, params.threshold);
@@ -112,24 +114,33 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgMedianParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& renderScale,
+                        const CImgMedianParams& params,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
         int delta_pix_x = (int)std::ceil(std::abs(params.size) * renderScale.x);
         int delta_pix_y = (int)std::ceil(std::abs(params.size) * renderScale.y);
+
         roi->x1 = rect.x1 - delta_pix_x;
         roi->x2 = rect.x2 + delta_pix_x;
         roi->y1 = rect.y1 - delta_pix_y;
         roi->y2 = rect.y2 + delta_pix_y;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgMedianParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        const CImgMedianParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.blur_median((unsigned int)std::floor(std::max(1, params.size) * args.renderScale.x) * 2 + 1, params.threshold);
+        cimg.blur_median( (unsigned int)std::floor(std::max(1, params.size) * args.renderScale.x) * 2 + 1, params.threshold );
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgMedianParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args,
+                            const CImgMedianParams& params) OVERRIDE FINAL
     {
         return (std::floor(params.size * args.renderScale.x) == 0);
     };
@@ -144,7 +155,8 @@ private:
 
 mDeclarePluginFactory(CImgMedianPluginFactory, {}, {});
 
-void CImgMedianPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgMedianPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -172,7 +184,9 @@ void CImgMedianPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgMedianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgMedianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                           OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgMedianPlugin::describeInContextBegin(desc, context,
@@ -181,9 +195,9 @@ void CImgMedianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
                                                                               kSupportsXY,
                                                                               kSupportsAlpha,
                                                                               kSupportsTiles,
-                                                                              /*processRGB=*/true,
-                                                                              /*processAlpha*/false,
-                                                                              /*processIsSecret=*/false);
+                                                                              /*processRGB=*/ true,
+                                                                              /*processAlpha*/ false,
+                                                                              /*processIsSecret=*/ false);
 
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamSize);
@@ -207,15 +221,15 @@ void CImgMedianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
             page->addChild(*param);
         }
     }
-
     CImgMedianPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgMedianPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgMedianPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new CImgMedianPlugin(handle);
 }
-
 
 static CImgMedianPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

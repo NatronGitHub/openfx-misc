@@ -3,7 +3,7 @@ PLUGINOBJECTS = \
 
 PLUGINNAME = Shadertoy
 
-OSMESA_PATH ?= /opt/mesa
+OSMESA_PATH ?= /opt/osmesa
 
 TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.master

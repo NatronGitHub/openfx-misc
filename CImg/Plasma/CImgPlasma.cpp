@@ -43,12 +43,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "PlasmaCImg"
 #define kPluginGrouping      "Draw"
 #define kPluginDescription \
-"Draw a random plasma texture (using the mid-point algorithm).\n" \
-"Note that each render scale gives a different noise, but the image rendered at full scale always has the same noise at a given time. Noise can be modulated using the 'seed' parameter.\n" \
-"Uses the 'draw_plasma' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Draw a random plasma texture (using the mid-point algorithm).\n" \
+    "Note that each render scale gives a different noise, but the image rendered at full scale always has the same noise at a given time. Noise can be modulated using the 'seed' parameter.\n" \
+    "Uses the 'draw_plasma' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgPlasma"
 // History:
@@ -111,12 +111,13 @@ struct CImgPlasmaParams
     int seed;
 };
 
-class CImgPlasmaPlugin : public CImgFilterPluginHelper<CImgPlasmaParams,true>
+class CImgPlasmaPlugin
+    : public CImgFilterPluginHelper<CImgPlasmaParams, true>
 {
 public:
 
     CImgPlasmaPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgPlasmaParams,true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgPlasmaParams, true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _alpha  = fetchDoubleParam(kParamAlpha);
         _beta  = fetchDoubleParam(kParamBeta);
@@ -125,7 +126,8 @@ public:
         assert(_alpha && _beta && _scale);
     }
 
-    virtual void getValuesAtTime(double time, CImgPlasmaParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgPlasmaParams& params) OVERRIDE FINAL
     {
         _alpha->getValueAtTime(time, params.alpha);
         _beta->getValueAtTime(time, params.beta);
@@ -135,21 +137,30 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgPlasmaParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& renderScale,
+                        const CImgPlasmaParams& params,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 1 << std::max(0, params.scale - (int)OFX::Coords::mipmapLevelFromScale(renderScale.x));
+        int delta_pix = 1 << std::max( 0, params.scale - (int)OFX::Coords::mipmapLevelFromScale(renderScale.x) );
+
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgPlasmaParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        const CImgPlasmaParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg_library::cimg::srand((unsigned int)args.time + (unsigned int)params.seed);
-        cimg.draw_plasma((float)params.alpha/args.renderScale.x, (float)params.beta/args.renderScale.x, std::max(0, params.scale - (int)OFX::Coords::mipmapLevelFromScale(args.renderScale.x)));
+        cimg_library::cimg::srand( (unsigned int)args.time + (unsigned int)params.seed );
+
+        cimg.draw_plasma( (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, std::max( 0, params.scale - (int)OFX::Coords::mipmapLevelFromScale(args.renderScale.x) ) );
     }
 
     //virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgPlasmaParams& params) OVERRIDE FINAL
@@ -176,7 +187,8 @@ private:
 
 mDeclarePluginFactory(CImgPlasmaPluginFactory, {}, {});
 
-void CImgPlasmaPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgPlasmaPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -204,7 +216,9 @@ void CImgPlasmaPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                           OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgPlasmaPlugin::describeInContextBegin(desc, context,
@@ -213,9 +227,9 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
                                                                               kSupportsXY,
                                                                               kSupportsAlpha,
                                                                               kSupportsTiles,
-                                                                              /*processRGB=*/true,
-                                                                              /*processAlpha*/false,
-                                                                              /*processIsSecret=*/false);
+                                                                              /*processRGB=*/ true,
+                                                                              /*processAlpha*/ false,
+                                                                              /*processIsSecret=*/ false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlpha);
@@ -262,15 +276,15 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
             page->addChild(*param);
         }
     }
-
     CImgPlasmaPlugin::describeInContextEnd(desc, context, page);
-}
+} // CImgPlasmaPluginFactory::describeInContext
 
-OFX::ImageEffect* CImgPlasmaPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgPlasmaPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new CImgPlasmaPlugin(handle);
 }
-
 
 static CImgPlasmaPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

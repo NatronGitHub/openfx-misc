@@ -43,11 +43,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "HistEQCImg"
 #define kPluginGrouping      "Color"
 #define kPluginDescription \
-"Equalize histogram of brightness values.\n" \
-"Uses the 'equalize' function from the CImg library on the 'V' channel of the HSV decomposition of the image.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Equalize histogram of brightness values.\n" \
+    "Uses the 'equalize' function from the CImg library on the 'V' channel of the HSV decomposition of the image.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgHistEQ"
 // History:
@@ -85,34 +85,44 @@ struct CImgHistEQParams
     int nb_levels;
 };
 
-class CImgHistEQPlugin : public CImgFilterPluginHelper<CImgHistEQParams,false>
+class CImgHistEQPlugin
+    : public CImgFilterPluginHelper<CImgHistEQParams, false>
 {
 public:
 
     CImgHistEQPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgHistEQParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgHistEQParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _nb_levels  = fetchIntParam(kParamNbLevels);
         assert(_nb_levels);
     }
 
-    virtual void getValuesAtTime(double time, CImgHistEQParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgHistEQParams& params) OVERRIDE FINAL
     {
         _nb_levels->getValueAtTime(time, params.nb_levels);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& /*renderScale*/, const CImgHistEQParams& /*params*/, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& /*renderScale*/,
+                        const CImgHistEQParams& /*params*/,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
         int delta_pix = 0;
+
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &/*args*/, const CImgHistEQParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments & /*args*/,
+                        const CImgHistEQParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -127,10 +137,11 @@ public:
 #endif
             cimg_forXY(cimg, x, y) {
                 float h, s, v;
-                OFX::Color::rgb_to_hsv(cimg(x,y,0,0), cimg(x,y,0,1), cimg(x,y,0,2), &h, &s, &v);
-                cimg(x,y,0,0) = h;
-                cimg(x,y,0,1) = s;
-                cimg(x,y,0,2) = v;
+                OFX::Color::rgb_to_hsv(cimg(x, y, 0, 0), cimg(x, y, 0, 1), cimg(x, y, 0, 2), &h, &s, &v);
+
+                cimg(x, y, 0, 0) = h;
+                cimg(x, y, 0, 1) = s;
+                cimg(x, y, 0, 2) = v;
             }
             cimg_library::CImg<cimgpix_t> vchannel = cimg.get_shared_channel(2);
             float vmin, vmax;
@@ -138,10 +149,11 @@ public:
             vchannel.equalize(params.nb_levels, vmin, vmax);
             cimg_forXY(cimg, x, y) {
                 float r, g, b;
-                OFX::Color::hsv_to_rgb(cimg(x,y,0,0), cimg(x,y,0,1), cimg(x,y,0,2), &r, &g, &b);
-                cimg(x,y,0,0) = r;
-                cimg(x,y,0,1) = g;
-                cimg(x,y,0,2) = b;
+                OFX::Color::hsv_to_rgb(cimg(x, y, 0, 0), cimg(x, y, 0, 1), cimg(x, y, 0, 2), &r, &g, &b);
+
+                cimg(x, y, 0, 0) = r;
+                cimg(x, y, 0, 1) = g;
+                cimg(x, y, 0, 2) = b;
             }
         }
     }
@@ -160,7 +172,8 @@ private:
 
 mDeclarePluginFactory(CImgHistEQPluginFactory, {}, {});
 
-void CImgHistEQPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgHistEQPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -188,7 +201,9 @@ void CImgHistEQPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                           OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgHistEQPlugin::describeInContextBegin(desc, context,
@@ -197,9 +212,9 @@ void CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
                                                                               kSupportsXY,
                                                                               kSupportsAlpha,
                                                                               kSupportsTiles,
-                                                                              /*processRGB=*/true,
-                                                                              /*processAlpha=*/true,
-                                                                              /*processIsSecret=*/true);
+                                                                              /*processRGB=*/ true,
+                                                                              /*processAlpha=*/ true,
+                                                                              /*processIsSecret=*/ true);
 
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamNbLevels);
@@ -210,15 +225,15 @@ void CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
             page->addChild(*param);
         }
     }
-
     CImgHistEQPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgHistEQPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgHistEQPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new CImgHistEQPlugin(handle);
 }
-
 
 static CImgHistEQPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

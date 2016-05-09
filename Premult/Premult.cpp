@@ -42,16 +42,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginPremultName "PremultOFX"
 #define kPluginPremultGrouping "Merge"
 #define kPluginPremultDescription \
-"Multiply the selected channels by alpha (or another channel).\n\n" \
-"If no channel is selected, or the premultChannel is set to None, the " \
-"image data is left untouched, but its premultiplication state is set to PreMultiplied."
+    "Multiply the selected channels by alpha (or another channel).\n\n" \
+    "If no channel is selected, or the premultChannel is set to None, the " \
+    "image data is left untouched, but its premultiplication state is set to PreMultiplied."
 #define kPluginPremultIdentifier "net.sf.openfx.Premult"
 #define kPluginUnpremultName "UnpremultOFX"
 #define kPluginUnpremultGrouping "Merge"
 #define kPluginUnpremultDescription \
-"Divide the selected channels by alpha (or another channel)\n\n" \
-"If no channel is selected, or the premultChannel is set to None, the " \
-"image data is left untouched, but its premultiplication state is set to UnPreMultiplied."
+    "Divide the selected channels by alpha (or another channel)\n\n" \
+    "If no channel is selected, or the premultChannel is set to None, the " \
+    "image data is left untouched, but its premultiplication state is set to UnPreMultiplied."
 #define kPluginUnpremultIdentifier "net.sf.openfx.Unpremult"
 // History:
 // version 1.0: initial version
@@ -89,7 +89,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // TODO: sRGB conversions for short and byte types
 
-enum InputChannelEnum {
+enum InputChannelEnum
+{
     eInputChannelNone = 0,
     eInputChannelR,
     eInputChannelG,
@@ -99,53 +100,59 @@ enum InputChannelEnum {
 
 
 // Base class for the RGBA and the Alpha processor
-class PremultBase : public OFX::ImageProcessor
+class PremultBase
+    : public OFX::ImageProcessor
 {
-  protected:
+protected:
     const OFX::Image *_srcImg;
     bool _processR;
     bool _processG;
     bool _processB;
     bool _processA;
     int _p;
-  public:
+
+public:
     /** @brief no arg ctor */
     PremultBase(OFX::ImageEffect &instance)
-            : OFX::ImageProcessor(instance)
-            , _srcImg(0)
-            , _processR(true)
-            , _processG(true)
-            , _processB(true)
-            , _processA(false)
-            , _p(3)
+        : OFX::ImageProcessor(instance)
+        , _srcImg(0)
+        , _processR(true)
+        , _processG(true)
+        , _processB(true)
+        , _processA(false)
+        , _p(3)
     {
     }
 
     /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
 
-    void setValues(bool processR, bool processG, bool processB, bool processA, InputChannelEnum premultChannel)
+    void setValues(bool processR,
+                   bool processG,
+                   bool processB,
+                   bool processA,
+                   InputChannelEnum premultChannel)
     {
         _processR = processR;
         _processG = processG;
         _processB = processB;
         _processA = processA;
         switch (premultChannel) {
-            case eInputChannelNone:
-                _p = -1;
-                break;
-            case eInputChannelR:
-                _p = 0;
-                break;
-            case eInputChannelG:
-                _p = 1;
-                break;
-            case eInputChannelB:
-                _p = 2;
-                break;
-            case eInputChannelA:
-                _p = 3;
-                break;
+        case eInputChannelNone:
+            _p = -1;
+            break;
+        case eInputChannelR:
+            _p = 0;
+            break;
+        case eInputChannelG:
+            _p = 1;
+            break;
+        case eInputChannelB:
+            _p = 2;
+            break;
+        case eInputChannelA:
+            _p = 3;
+            break;
         }
     }
 };
@@ -159,21 +166,23 @@ ClampNonFloat(float v)
         // assume float
         return v;
     }
+
     return (v > maxValue) ? maxValue : v;
 }
 
 // template to do the RGBA processing
 template <class PIX, int nComponents, int maxValue, bool isPremult>
-class ImagePremulter : public PremultBase
+class ImagePremulter
+    : public PremultBase
 {
-  public:
+public:
     // ctor
     ImagePremulter(OFX::ImageEffect &instance)
-            : PremultBase(instance)
+        : PremultBase(instance)
     {
     }
 
-  private:
+private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
@@ -186,29 +195,29 @@ class ImagePremulter : public PremultBase
             if (g) {
                 if (b) {
                     if (a) {
-                        return process<true ,true ,true ,true >(procWindow); // RGBA
+                        return process<true, true, true, true >(procWindow); // RGBA
                     } else {
-                        return process<true ,true ,true ,false>(procWindow); // RGBa
+                        return process<true, true, true, false>(procWindow); // RGBa
                     }
                 } else {
                     if (a) {
-                        return process<true ,true ,false,true >(procWindow); // RGbA
+                        return process<true, true, false, true >(procWindow); // RGbA
                     } else {
-                        return process<true ,true ,false,false>(procWindow); // RGba
+                        return process<true, true, false, false>(procWindow); // RGba
                     }
                 }
             } else {
                 if (b) {
                     if (a) {
-                        return process<true ,false,true ,true >(procWindow); // RgBA
+                        return process<true, false, true, true >(procWindow); // RgBA
                     } else {
-                        return process<true ,false,true ,false>(procWindow); // RgBa
+                        return process<true, false, true, false>(procWindow); // RgBa
                     }
                 } else {
                     if (a) {
-                        return process<true ,false,false,true >(procWindow); // RgbA
+                        return process<true, false, false, true >(procWindow); // RgbA
                     } else {
-                        return process<true ,false,false,false>(procWindow); // Rgba
+                        return process<true, false, false, false>(procWindow); // Rgba
                     }
                 }
             }
@@ -216,70 +225,70 @@ class ImagePremulter : public PremultBase
             if (g) {
                 if (b) {
                     if (a) {
-                        return process<false,true ,true ,true >(procWindow); // rGBA
+                        return process<false, true, true, true >(procWindow); // rGBA
                     } else {
-                        return process<false,true ,true ,false>(procWindow); // rGBa
+                        return process<false, true, true, false>(procWindow); // rGBa
                     }
                 } else {
                     if (a) {
-                        return process<false,true ,false,true >(procWindow); // rGbA
+                        return process<false, true, false, true >(procWindow); // rGbA
                     } else {
-                        return process<false,true ,false,false>(procWindow); // rGba
+                        return process<false, true, false, false>(procWindow); // rGba
                     }
                 }
             } else {
                 if (b) {
                     if (a) {
-                        return process<false,false,true ,true >(procWindow); // rgBA
+                        return process<false, false, true, true >(procWindow); // rgBA
                     } else {
-                        return process<false,false,true ,false>(procWindow); // rgBa
+                        return process<false, false, true, false>(procWindow); // rgBa
                     }
                 } else {
                     if (a) {
-                        return process<false,false,false,true >(procWindow); // rgbA
+                        return process<false, false, false, true >(procWindow); // rgbA
                     } else {
-                        return process<false,false,false,false>(procWindow); // rgba
+                        return process<false, false, false, false>(procWindow); // rgba
                     }
                 }
             }
         }
-#     endif
-    }
+#     endif // ifndef __COVERITY__
+    } // multiThreadProcessImages
 
-  private:
+private:
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow)
     {
         bool doc[4];
+
         doc[0] = processR;
         doc[1] = processG;
         doc[2] = processB;
         doc[3] = processA;
         const float fltmin = std::numeric_limits<float>::min();
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
 
                 // do we have a source image to scale up
                 if (srcPix) {
-                    if (_p >= 0 && (processR || processG || processB || processA)) {
+                    if ( (_p >= 0) && (processR || processG || processB || processA) ) {
                         PIX alpha = srcPix[_p];
                         for (int c = 0; c < nComponents; c++) {
                             if (isPremult) {
-                                dstPix[c] = doc[c] ? (((float)srcPix[c]*alpha)/maxValue) : srcPix[c];
+                                dstPix[c] = doc[c] ? ( ( (float)srcPix[c] * alpha ) / maxValue ) : srcPix[c];
                             } else {
                                 PIX val;
-                                if (!doc[c] || (alpha <= (PIX)(fltmin * maxValue))) {
+                                if ( !doc[c] || ( alpha <= (PIX)(fltmin * maxValue) ) ) {
                                     val = srcPix[c];
                                 } else {
-                                    val = ClampNonFloat<PIX, maxValue>(((float)srcPix[c]*maxValue)/alpha);
+                                    val = ClampNonFloat<PIX, maxValue>( ( (float)srcPix[c] * maxValue ) / alpha );
                                 }
                                 dstPix[c] = val;
                             }
@@ -300,36 +309,37 @@ class ImagePremulter : public PremultBase
                 dstPix += nComponents;
             }
         }
-    }
+    } // process
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 template<bool isPremult>
-class PremultPlugin : public OFX::ImageEffect
+class PremultPlugin
+    : public OFX::ImageEffect
 {
-  public:
+public:
     /** @brief ctor */
     PremultPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _processR(0)
-    , _processG(0)
-    , _processB(0)
-    , _processA(0)
-    , _premult(0)
-    , _premultChanged(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _processR(0)
+        , _processG(0)
+        , _processB(0)
+        , _processA(0)
+        , _premult(0)
+        , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA ||
-                            _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _dstClip->getPixelComponents() == ePixelComponentAlpha) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                             _srcClip->getPixelComponents() == ePixelComponentAlpha)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                               _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
         _processG = fetchBooleanParam(kNatronOfxParamProcessG);
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
@@ -340,16 +350,15 @@ class PremultPlugin : public OFX::ImageEffect
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
     }
-    
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    
+
     /* set up and run a processor */
     void setupAndProcess(PremultBase &, const OFX::RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* override changedParam */
@@ -357,12 +366,11 @@ private:
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    
-  private:
+
+private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-
     OFX::BooleanParam* _processR;
     OFX::BooleanParam* _processG;
     OFX::BooleanParam* _processB;
@@ -382,49 +390,51 @@ private:
 /* set up and run a processor */
 template<bool isPremult>
 void
-PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor, const OFX::RenderArguments &args)
+PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
+                                          const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
 
     // make sure bit depths are sane
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
 
         // see if they have the same depths and bytes and all
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    
+
     bool processR, processG, processB, processA;
     _processR->getValueAtTime(args.time, processR);
     _processG->getValueAtTime(args.time, processG);
@@ -432,17 +442,17 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor, const OFX::Ren
     _processA->getValueAtTime(args.time, processA);
     InputChannelEnum premult = (InputChannelEnum)_premult->getValueAtTime(time);
     processor.setValues(processR, processG, processB, processA, premult);
-    
+
     // set the images
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
-    
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( src.get() );
+
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-}
+} // >::setupAndProcess
 
 // the overridden render function
 template<bool isPremult>
@@ -450,62 +460,65 @@ void
 PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    if (!_srcClip || !_srcClip->isConnected()) {
+    if ( !_srcClip || !_srcClip->isConnected() ) {
         // get a dst image
-        std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-        if (!dst.get()) {
+        std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+        if ( !dst.get() ) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
 
-        fillBlack(*this, args.renderWindow, dst.get());
+        fillBlack( *this, args.renderWindow, dst.get() );
     } else if (_srcClip->getPreMultiplication() == eImageOpaque) {
         // Opaque images can have alpha set to anything, but it should always be considered 1
 
         // fetch main input image
-        std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                            _srcClip->fetchImage(args.time) : 0);
+        std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                             _srcClip->fetchImage(args.time) : 0 );
         // get a dst image
-        std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-        if (!dst.get()) {
+        std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+        if ( !dst.get() ) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
 
-        copyPixelsOpaque(*this, args.renderWindow, src.get(), dst.get());
+        copyPixelsOpaque( *this, args.renderWindow, src.get(), dst.get() );
     } else {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImagePremulter<unsigned char, 4, 255, isPremult> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
+        case OFX::eBitDepthUByte: {
+            ImagePremulter<unsigned char, 4, 255, isPremult> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
 
-            case OFX::eBitDepthUShort : {
-                ImagePremulter<unsigned short, 4, 65535, isPremult> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
+        case OFX::eBitDepthUShort: {
+            ImagePremulter<unsigned short, 4, 65535, isPremult> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
 
-            case OFX::eBitDepthFloat : {
-                ImagePremulter<float, 4, 1, isPremult> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthFloat: {
+            ImagePremulter<float, 4, 1, isPremult> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
-}
+} // >::render
 
 template<bool isPremult>
 bool
-PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args,
+                                     Clip * &identityClip,
+                                     double & /*identityTime*/)
 {
     const double time = args.time;
+
     if (!_srcClip) {
         return false;
     }
@@ -527,16 +540,16 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &id
     _processA->getValueAtTime(args.time, processA);
     InputChannelEnum premult = (InputChannelEnum)_premult->getValueAtTime(time);
 
-    if (premult == eInputChannelNone || (!processR && !processG && !processB && !processA)) {
+    if ( (premult == eInputChannelNone) || (!processR && !processG && !processB && !processA) ) {
         // no processing: identity
         identityClip = _srcClip;
+
         return true;
     } else {
         // data is changed: no identity
         return false;
     }
 }
-
 
 /* Override the clip preferences */
 template<bool isPremult>
@@ -548,59 +561,67 @@ PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPre
     clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
 }
 
-static std::string premultString(PreMultiplicationEnum e)
+static std::string
+premultString(PreMultiplicationEnum e)
 {
     switch (e) {
-        case eImageOpaque:
-            return "Opaque";
-        case eImagePreMultiplied:
-            return "PreMultiplied";
-        case eImageUnPreMultiplied:
-            return "UnPreMultiplied";
+    case eImageOpaque:
+
+        return "Opaque";
+    case eImagePreMultiplied:
+
+        return "PreMultiplied";
+    case eImageUnPreMultiplied:
+
+        return "UnPreMultiplied";
     }
+
     return "Unknown";
 }
 
 template<bool isPremult>
 void
-PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args,
+                                       const std::string &paramName)
 {
-    if (paramName == kParamClipInfo && _srcClip && args.reason == eChangeUserEdit) {
+    if ( (paramName == kParamClipInfo) && _srcClip && (args.reason == eChangeUserEdit) ) {
         std::string msg;
         msg += "Input; ";
         if (!_srcClip) {
             msg += "N/A";
         } else {
-            msg += premultString(_srcClip->getPreMultiplication());
+            msg += premultString( _srcClip->getPreMultiplication() );
         }
         msg += "\n";
         msg += "Output: ";
         if (!_dstClip) {
             msg += "N/A";
         } else {
-            msg += premultString(_dstClip->getPreMultiplication());
+            msg += premultString( _dstClip->getPreMultiplication() );
         }
         msg += "\n";
         sendMessage(OFX::Message::eMessageMessage, "", msg);
-    } else if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+    } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
 }
 
 template<bool isPremult>
 void
-PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args,
+                                      const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        _srcClip && _srcClip->isConnected() &&
-        !_premultChanged->getValue() &&
-        args.reason == OFX::eChangeUserEdit) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         _srcClip && _srcClip->isConnected() &&
+         !_premultChanged->getValue() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
         if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
             _processR->setValue(false);
             _processG->setValue(false);
             _processB->setValue(false);
             _processA->setValue(false);
-        } else switch (_srcClip->getPreMultiplication()) {
+        } else {
+            switch ( _srcClip->getPreMultiplication() ) {
             case eImageOpaque:
                 _processR->setValue(false);
                 _processG->setValue(false);
@@ -637,18 +658,22 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                     _premult->setValue(eInputChannelA);
                 }
                 break;
+            }
         }
     }
-}
-
+} // >::changedClip
 
 //mDeclarePluginFactory(PremultPluginFactory, {}, {});
 
 template<bool isPremult>
-class PremultPluginFactory : public OFX::PluginFactoryHelper<PremultPluginFactory<isPremult> >
+class PremultPluginFactory
+    : public OFX::PluginFactoryHelper<PremultPluginFactory<isPremult> >
 {
 public:
-    PremultPluginFactory(const std::string& id, unsigned int verMaj, unsigned int verMin):OFX::PluginFactoryHelper<PremultPluginFactory<isPremult> >(id, verMaj, verMin){}
+    PremultPluginFactory(const std::string& id,
+                         unsigned int verMaj,
+                         unsigned int verMin) : OFX::PluginFactoryHelper<PremultPluginFactory<isPremult> >(id, verMaj, verMin) {}
+
     virtual void load() {};
     virtual void unload() {};
     virtual void describe(OFX::ImageEffectDescriptor &desc);
@@ -658,7 +683,8 @@ public:
 
 
 template<bool isPremult>
-void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
+void
+PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     if (isPremult) {
@@ -696,18 +722,21 @@ void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 template<bool isPremult>
-void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                                   OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     //srcClip->addSupportedComponent(ePixelComponentRGB);
     //srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -717,13 +746,12 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-
     const std::string premultString = isPremult ? "Multiply " : "Divide ";
 
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
         param->setLabel(kNatronOfxParamProcessRLabel);
-        param->setHint(premultString+kParamProcessRHint);
+        param->setHint(premultString + kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -733,7 +761,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
         param->setLabel(kNatronOfxParamProcessGLabel);
-        param->setHint(premultString+kParamProcessGHint);
+        param->setHint(premultString + kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -743,7 +771,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
         param->setLabel(kNatronOfxParamProcessBLabel);
-        param->setHint(premultString+kParamProcessBHint);
+        param->setHint(premultString + kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -753,7 +781,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
         param->setLabel(kNatronOfxParamProcessALabel);
-        param->setHint(premultString+kParamProcessAHint);
+        param->setHint(premultString + kParamProcessAHint);
         param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -775,7 +803,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->appendOption(kParamPremultOptionB, kParamPremultOptionBHint);
         assert(param->getNOptions() == eInputChannelA);
         param->appendOption(kParamPremultOptionA, kParamPremultOptionAHint);
-        param->setDefault((int)eInputChannelA);
+        param->setDefault( (int)eInputChannelA );
         if (page) {
             page->addChild(*param);
         }
@@ -800,15 +828,15 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
             page->addChild(*param);
         }
     }
-}
+} // >::describeInContext
 
 template<bool isPremult>
 OFX::ImageEffect*
-PremultPluginFactory<isPremult>::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+PremultPluginFactory<isPremult>::createInstance(OfxImageEffectHandle handle,
+                                                OFX::ContextEnum /*context*/)
 {
     return new PremultPlugin<isPremult>(handle);
 }
-
 
 static PremultPluginFactory<true> p1(kPluginPremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static PremultPluginFactory<false> p2(kPluginUnpremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);

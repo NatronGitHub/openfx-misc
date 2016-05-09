@@ -32,7 +32,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "TimeOffsetOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Move the input clip forward or backward in time. " \
-                           "This can also reverse the order of the input frames so that last one is first."
+    "This can also reverse the order of the input frames so that last one is first."
 #define kPluginIdentifier "net.sf.openfx.timeOffset"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -58,7 +58,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class TimeOffsetPlugin : public OFX::ImageEffect
+class TimeOffsetPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
@@ -76,7 +77,6 @@ private:
 
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     double getSourceTime(double time) const;
@@ -85,30 +85,28 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     //OFX::Clip *_dstClip;            /**< @brief Mandated output clips */
     OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
-
     OFX::IntParam  *_time_offset;      /**< @brief only used in the filter context. */
     OFX::BooleanParam  *_reverse_input;
     OFX::BooleanParam  *_clip;
 };
 
 TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
-: ImageEffect(handle)
-, _srcClip(0)
-, _time_offset(0)
-, _reverse_input(0)
+    : ImageEffect(handle)
+    , _srcClip(0)
+    , _time_offset(0)
+    , _reverse_input(0)
 {
     _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-           (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
-                         _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
-                         _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA)));
+    assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+            ( _srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
+                           _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+                           _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA) ) );
 
     _time_offset   = fetchIntParam(kParamTimeOffset);
     _reverse_input = fetchBooleanParam(kParamReverseInput);
     _clip = fetchBooleanParam(kParamClipToInputRange);
     assert(_time_offset && _reverse_input && _clip);
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -121,6 +119,7 @@ double
 TimeOffsetPlugin::getSourceTime(double t) const
 {
     double sourceTime = t - _time_offset->getValueAtTime(t); // no animation
+
     if (!_srcClip) {
         return sourceTime;
     }
@@ -129,7 +128,7 @@ TimeOffsetPlugin::getSourceTime(double t) const
     if (reverse_input) {
         sourceTime = range.max - sourceTime + range.min;
     }
-    if (_clip->getValueAtTime(t)) {
+    if ( _clip->getValueAtTime(t) ) {
         // clip to min/max range
         if (sourceTime < range.min) {
             sourceTime = range.min;
@@ -137,6 +136,7 @@ TimeOffsetPlugin::getSourceTime(double t) const
             sourceTime = range.max;
         }
     }
+
     return sourceTime;
 }
 
@@ -151,6 +151,7 @@ TimeOffsetPlugin::getTimeDomain(OfxRangeD &range)
 
         range.min = srcRange.min + _time_offset->getValueAtTime(srcRange.min);
         range.max = srcRange.max + _time_offset->getValueAtTime(srcRange.max);
+
         return true;
     }
 
@@ -163,6 +164,7 @@ TimeOffsetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 {
     double sourceTime = getSourceTime(args.time);
     OfxRangeD range;
+
     range.min = sourceTime;
     range.max = sourceTime;
     frames.setFramesNeeded(*_srcClip, range);
@@ -170,22 +172,26 @@ TimeOffsetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 
 // the overridden render function
 void
-TimeOffsetPlugin::render(const OFX::RenderArguments &/*args*/)
+TimeOffsetPlugin::render(const OFX::RenderArguments & /*args*/)
 {
     // do nothing as this should never be called as isIdentity should always be trapped
 }
 
 // overridden is identity
 bool
-TimeOffsetPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
+TimeOffsetPlugin::isIdentity(const OFX::IsIdentityArguments &args,
+                             OFX::Clip * &identityClip,
+                             double &identityTime)
 {
     identityClip = _srcClip;
     identityTime = getSourceTime(args.time);
+
     return true;
 }
 
 bool
-TimeOffsetPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+TimeOffsetPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                        OfxRectD &rod)
 {
     const double identityTime = getSourceTime(args.time);
 
@@ -194,9 +200,9 @@ TimeOffsetPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     return true;
 }
 
-mDeclarePluginFactory(TimeOffsetPluginFactory, ;, {});
-
-void TimeOffsetPluginFactory::load()
+mDeclarePluginFactory(TimeOffsetPluginFactory,; , {});
+void
+TimeOffsetPluginFactory::load()
 {
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
@@ -205,7 +211,8 @@ void TimeOffsetPluginFactory::load()
 }
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -241,10 +248,13 @@ void TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void
+TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                           ContextEnum /*context*/)
 {
     // we are a transition, so define the sourceTo input clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
@@ -300,14 +310,15 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
             page->addChild(*param);
         }
     }
-}
+} // TimeOffsetPluginFactory::describeInContext
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect*
+TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        ContextEnum /*context*/)
 {
     return new TimeOffsetPlugin(handle);
 }
-
 
 static TimeOffsetPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

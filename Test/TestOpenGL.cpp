@@ -41,8 +41,8 @@ using namespace OFX;
 #define kPluginName "TestOpenGL"
 #define kPluginGrouping "Other/Test"
 #define kPluginDescription \
-"Test OpenGL rendering.\n" \
-"This plugin draws a 200x100 red square at (10,10)."
+    "Test OpenGL rendering.\n" \
+    "This plugin draws a 200x100 red square at (10,10)."
 
 #define kPluginIdentifier "net.sf.openfx.TestOpenGL"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -106,30 +106,30 @@ using namespace OFX;
 /** @brief The plugin that does our work */
 
 TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
-: ImageEffect(handle)
-, _dstClip(0)
-, _srcClip(0)
-, _scale(0)
-, _sourceScale(0)
-, _sourceStretch(0)
-, _teapotScale(0)
-, _angleX(0)
-, _angleY(0)
-, _angleZ(0)
-, _projective(0)
-, _mipmap(0)
-, _anisotropic(0)
-, _useGPUIfAvailable(0)
-, _haveAniso(false)
-, _maxAnisoMax(1.)
+    : ImageEffect(handle)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _scale(0)
+    , _sourceScale(0)
+    , _sourceStretch(0)
+    , _teapotScale(0)
+    , _angleX(0)
+    , _angleY(0)
+    , _angleZ(0)
+    , _projective(0)
+    , _mipmap(0)
+    , _anisotropic(0)
+    , _useGPUIfAvailable(0)
+    , _haveAniso(false)
+    , _maxAnisoMax(1.)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-    assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
-                        _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
+    assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
+                         _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
     _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-           (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
-                         _srcClip->getPixelComponents() == OFX::ePixelComponentAlpha)));
+    assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+            ( _srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
+                           _srcClip->getPixelComponents() == OFX::ePixelComponentAlpha) ) );
 
     _scale = fetchDouble2DParam(kParamScale);
     _sourceScale = fetchDouble2DParam(kParamSourceScale);
@@ -174,12 +174,12 @@ TestOpenGLPlugin::~TestOpenGLPlugin()
 void
 TestOpenGLPlugin::render(const OFX::RenderArguments &args)
 {
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     bool openGLRender = false;
 #if defined(OFX_SUPPORTS_OPENGLRENDER)
@@ -203,9 +203,10 @@ TestOpenGLPlugin::render(const OFX::RenderArguments &args)
 
 // overriding getRegionOfDefinition is necessary to tell the host that we do not support render scale
 bool
-TestOpenGLPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &/*rod*/)
+TestOpenGLPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                        OfxRectD & /*rod*/)
 {
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
@@ -218,13 +219,12 @@ TestOpenGLPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
 {
     // We have to do this because the processing code does not support varying components for srcClip and dstClip
     // (The OFX spec doesn't state a default value for this)
-    clipPreferences.setClipComponents(*_dstClip, _srcClip->getPixelComponents());
+    clipPreferences.setClipComponents( *_dstClip, _srcClip->getPixelComponents() );
 }
 
-mDeclarePluginFactory(TestOpenGLPluginFactory, ;, {});
-
-
-void TestOpenGLPluginFactory::load()
+mDeclarePluginFactory(TestOpenGLPluginFactory,; , {});
+void
+TestOpenGLPluginFactory::load()
 {
     // we can't be used on hosts that don't support the stereoscopic suite
     // returning an error here causes a blank menu entry in Nuke
@@ -294,10 +294,11 @@ TestOpenGLPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     }
 #endif
 #endif
-}
+} // TestOpenGLPluginFactory::describe
 
 void
-TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                           OFX::ContextEnum /*context*/)
 {
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
@@ -466,14 +467,14 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         }
     }
 #endif
-}
+} // TestOpenGLPluginFactory::describeInContext
 
 OFX::ImageEffect*
-TestOpenGLPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+TestOpenGLPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new TestOpenGLPlugin(handle);
 }
-
 
 static TestOpenGLPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

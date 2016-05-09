@@ -38,14 +38,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "GradeOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Modify the tonal spread of an image from the white and black points. " \
-                          "This node can also be used to match colors of 2 images: The darkest and lightest points of " \
-                          "the target image are converted to black and white using the blackpoint and whitepoint values. " \
-                          "These 2 values are then moved to new values using the black(for dark point) and white(for white point). " \
-                          "You can also apply multiply/offset/gamma for other color fixing you may need. " \
-                          "Here is the formula used: \n" \
-                          "A = multiply * (white - black) / (whitepoint - blackpoint) \n" \
-                          "B = offset + black - A * blackpoint \n" \
-                          "output = pow(A * input + B, 1 / gamma)."
+    "This node can also be used to match colors of 2 images: The darkest and lightest points of " \
+    "the target image are converted to black and white using the blackpoint and whitepoint values. " \
+    "These 2 values are then moved to new values using the black(for dark point) and white(for white point). " \
+    "You can also apply multiply/offset/gamma for other color fixing you may need. " \
+    "Here is the formula used: \n" \
+    "A = multiply * (white - black) / (whitepoint - blackpoint) \n" \
+    "B = offset + black - A * blackpoint \n" \
+    "output = pow(A * input + B, 1 / gamma)."
 #define kPluginIdentifier "net.sf.openfx.GradePlugin"
 // History:
 // version 1.0: initial version
@@ -99,50 +99,54 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamPremultChanged "premultChanged"
 
 
-struct RGBAValues {
-    double r,g,b,a;
+struct RGBAValues
+{
+    double r, g, b, a;
     RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+
     RGBAValues() : r(0), g(0), b(0), a(0) {}
 };
 
-class GradeProcessorBase : public OFX::ImageProcessor
+class GradeProcessorBase
+    : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
     bool _premult;
     int _premultChannel;
-    bool  _doMasking;
+    bool _doMasking;
     double _mix;
     bool _maskInvert;
     bool _processR, _processG, _processB, _processA;
 
 public:
-    
+
     GradeProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _maskImg(0)
-    , _premult(false)
-    , _premultChannel(3)
-    , _doMasking(false)
-    , _mix(1.)
-    , _maskInvert(false)
-    , _processR(false)
-    , _processG(false)
-    , _processB(false)
-    , _processA(false)
-    , _clampBlack(true)
-    , _clampWhite(true)
+        : OFX::ImageProcessor(instance)
+        , _srcImg(0)
+        , _maskImg(0)
+        , _premult(false)
+        , _premultChannel(3)
+        , _doMasking(false)
+        , _mix(1.)
+        , _maskInvert(false)
+        , _processR(false)
+        , _processG(false)
+        , _processB(false)
+        , _processA(false)
+        , _clampBlack(true)
+        , _clampWhite(true)
     {
     }
-    
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
-    
-    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
-    
-    void doMasking(bool v) {_doMasking = v;}
-    
+
+    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+
+    void setMaskImg(const OFX::Image *v,
+                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+
+    void doMasking(bool v) {_doMasking = v; }
+
     void setValues(const RGBAValues& blackPoint,
                    const RGBAValues& whitePoint,
                    const RGBAValues& black,
@@ -178,10 +182,18 @@ public:
         _processA = processA;
     }
 
-    void grade(double* v, double wp, double bp, double white, double black, double mutiply, double offset, double gamma)
+    void grade(double* v,
+               double wp,
+               double bp,
+               double white,
+               double black,
+               double mutiply,
+               double offset,
+               double gamma)
     {
         if (gamma == 0) {
             *v = 0;
+
             return;
         }
         double d = wp - bp;
@@ -189,15 +201,18 @@ public:
         double B = offset + black - A * bp;
         double invgamma = 1. / gamma;
         A = (A * *v) + B;
-        if (A < 0 && std::floor(invgamma + 0.5) != invgamma) {
+        if ( (A < 0) && (std::floor(invgamma + 0.5) != invgamma) ) {
             *v = 0; // pow would produce NaNs in that case
         } else {
             *v = std::pow(A, invgamma);
         }
     }
-    
+
     template<bool processR, bool processG, bool processB, bool processA>
-    void grade(double *r, double *g, double *b,double *a)
+    void grade(double *r,
+               double *g,
+               double *b,
+               double *a)
     {
         if (processR) {
             grade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r);
@@ -213,30 +228,30 @@ public:
         }
         if (_clampBlack) {
             if (processR) {
-                *r = std::max(0.,*r);
+                *r = std::max(0., *r);
             }
             if (processG) {
-                *g = std::max(0.,*g);
+                *g = std::max(0., *g);
             }
             if (processB) {
-                *b = std::max(0.,*b);
+                *b = std::max(0., *b);
             }
             if (processA) {
-                *a = std::max(0.,*a);
+                *a = std::max(0., *a);
             }
         }
         if (_clampWhite) {
             if (processR) {
-                *r = std::min(1.,*r);
+                *r = std::min(1., *r);
             }
             if (processG) {
-                *g = std::min(1.,*g);
+                *g = std::min(1., *g);
             }
             if (processB) {
-                *b = std::min(1.,*b);
+                *b = std::min(1., *b);
             }
             if (processA) {
-                *a = std::min(1.,*a);
+                *a = std::min(1., *a);
             }
         }
     }
@@ -254,16 +269,16 @@ private:
 };
 
 
-
 template <class PIX, int nComponents, int maxValue>
-class GradeProcessor : public GradeProcessorBase
+class GradeProcessor
+    : public GradeProcessorBase
 {
 public:
     GradeProcessor(OFX::ImageEffect &instance)
-    : GradeProcessorBase(instance)
+        : GradeProcessorBase(instance)
     {
     }
-    
+
     void multiThreadProcessImages(OfxRectI procWindow)
     {
 #     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
@@ -275,29 +290,29 @@ public:
             if (g) {
                 if (b) {
                     if (a) {
-                        return process<true ,true ,true ,true >(procWindow); // RGBA
+                        return process<true, true, true, true >(procWindow); // RGBA
                     } else {
-                        return process<true ,true ,true ,false>(procWindow); // RGBa
+                        return process<true, true, true, false>(procWindow); // RGBa
                     }
                 } else {
                     if (a) {
-                        return process<true ,true ,false,true >(procWindow); // RGbA
+                        return process<true, true, false, true >(procWindow); // RGbA
                     } else {
-                        return process<true ,true ,false,false>(procWindow); // RGba
+                        return process<true, true, false, false>(procWindow); // RGba
                     }
                 }
             } else {
                 if (b) {
                     if (a) {
-                        return process<true ,false,true ,true >(procWindow); // RgBA
+                        return process<true, false, true, true >(procWindow); // RgBA
                     } else {
-                        return process<true ,false,true ,false>(procWindow); // RgBa
+                        return process<true, false, true, false>(procWindow); // RgBa
                     }
                 } else {
                     if (a) {
-                        return process<true ,false,false,true >(procWindow); // RgbA
+                        return process<true, false, false, true >(procWindow); // RgbA
                     } else {
-                        return process<true ,false,false,false>(procWindow); // Rgba
+                        return process<true, false, false, false>(procWindow); // Rgba
                     }
                 }
             }
@@ -305,50 +320,49 @@ public:
             if (g) {
                 if (b) {
                     if (a) {
-                        return process<false,true ,true ,true >(procWindow); // rGBA
+                        return process<false, true, true, true >(procWindow); // rGBA
                     } else {
-                        return process<false,true ,true ,false>(procWindow); // rGBa
+                        return process<false, true, true, false>(procWindow); // rGBa
                     }
                 } else {
                     if (a) {
-                        return process<false,true ,false,true >(procWindow); // rGbA
+                        return process<false, true, false, true >(procWindow); // rGbA
                     } else {
-                        return process<false,true ,false,false>(procWindow); // rGba
+                        return process<false, true, false, false>(procWindow); // rGba
                     }
                 }
             } else {
                 if (b) {
                     if (a) {
-                        return process<false,false,true ,true >(procWindow); // rgBA
+                        return process<false, false, true, true >(procWindow); // rgBA
                     } else {
-                        return process<false,false,true ,false>(procWindow); // rgBa
+                        return process<false, false, true, false>(procWindow); // rgBa
                     }
                 } else {
                     if (a) {
-                        return process<false,false,false,true >(procWindow); // rgbA
+                        return process<false, false, false, true >(procWindow); // rgbA
                     } else {
-                        return process<false,false,false,false>(procWindow); // rgba
+                        return process<false, false, false, false>(procWindow); // rgba
                     }
                 }
             }
         }
-#     endif
-    }
-
+#     endif // ifndef __COVERITY__
+    } // multiThreadProcessImages
 
 private:
-    
+
     template<bool processR, bool processG, bool processB, bool processA>
     void process(OfxRectI procWindow)
     {
-        assert((!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4));
-        assert(!processA || (nComponents == 1 || nComponents == 4));
+        assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
+        assert( !processA || (nComponents == 1 || nComponents == 4) );
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         float unpPix[4];
         float tmpPix[4];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
@@ -361,7 +375,7 @@ private:
                 double t_g = unpPix[1];
                 double t_b = unpPix[2];
                 double t_a = unpPix[3];
-                grade<processR,processG,processB,processA>(&t_r,&t_g,&t_b,&t_a);
+                grade<processR, processG, processB, processA>(&t_r, &t_g, &t_b, &t_a);
                 tmpPix[0] = (float)t_r;
                 tmpPix[1] = (float)t_g;
                 tmpPix[2] = (float)t_b;
@@ -377,42 +391,43 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class GradePlugin : public OFX::ImageEffect
+class GradePlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     GradePlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _maskClip(0)
-    , _processR(0)
-    , _processG(0)
-    , _processB(0)
-    , _processA(0)
-    , _blackPoint(0)
-    , _whitePoint(0)
-    , _black(0)
-    , _white(0)
-    , _multiply(0)
-    , _offset(0)
-    , _gamma(0)
-    , _clampBlack(0)
-    , _clampWhite(0)
-    , _premult(0)
-    , _premultChannel(0)
-    , _mix(0)
-    , _maskApply(0)
-    , _maskInvert(0)
-    , _premultChanged(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _maskClip(0)
+        , _processR(0)
+        , _processG(0)
+        , _processB(0)
+        , _processA(0)
+        , _blackPoint(0)
+        , _whitePoint(0)
+        , _black(0)
+        , _white(0)
+        , _multiply(0)
+        , _offset(0)
+        , _gamma(0)
+        , _clampBlack(0)
+        , _clampWhite(0)
+        , _premult(0)
+        , _premultChannel(0)
+        , _mix(0)
+        , _maskApply(0)
+        , _maskInvert(0)
+        , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _blackPoint = fetchRGBAParam(kParamBlackPoint);
@@ -441,11 +456,11 @@ public:
         _processA = fetchBooleanParam(kNatronOfxParamProcessA);
         assert(_processR && _processG && _processB && _processA);
     }
-    
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    
+
     /* set up and run a processor */
     void setupAndProcess(GradeProcessorBase &, const OFX::RenderArguments &args);
 
@@ -453,7 +468,6 @@ private:
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
@@ -491,48 +505,50 @@ private:
 
 /* set up and run a processor */
 void
-GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArguments &args)
+GradePlugin::setupAndProcess(GradeProcessorBase &processor,
+                             const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if (doMasking) {
-        if (mask.get()) {
-            if (mask->getRenderScale().x != args.renderScale.x ||
-                mask->getRenderScale().y != args.renderScale.y ||
-                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+        if ( mask.get() ) {
+            if ( (mask->getRenderScale().x != args.renderScale.x) ||
+                 ( mask->getRenderScale().y != args.renderScale.y) ||
+                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -542,11 +558,11 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
-    
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
+
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( src.get() );
     processor.setRenderWindow(args.renderWindow);
-    
+
     RGBAValues blackPoint, whitePoint, black, white, multiply, offset, gamma;
     _blackPoint->getValueAtTime(args.time, blackPoint.r, blackPoint.g, blackPoint.b, blackPoint.a);
     _whitePoint->getValueAtTime(args.time, whitePoint.r, whitePoint.g, whitePoint.b, whitePoint.a);
@@ -555,7 +571,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     _multiply->getValueAtTime(args.time, multiply.r, multiply.g, multiply.b, multiply.a);
     _offset->getValueAtTime(args.time, offset.r, offset.g, offset.b, offset.a);
     _gamma->getValueAtTime(args.time, gamma.r, gamma.g, gamma.b, gamma.a);
-    bool clampBlack,clampWhite;
+    bool clampBlack, clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
     bool premult;
@@ -564,7 +580,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    
+
     bool processR, processG, processB, processA;
     _processR->getValueAtTime(time, processR);
     _processG->getValueAtTime(time, processG);
@@ -575,75 +591,78 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
                         clampBlack, clampWhite, premult, premultChannel, mix,
                         processR, processG, processB, processA);
     processor.process();
-}
+} // GradePlugin::setupAndProcess
 
 // the overridden render function
 void
 GradePlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
-    
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                GradeProcessor<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                GradeProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                GradeProcessor<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUByte: {
+            GradeProcessor<unsigned char, 4, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            GradeProcessor<unsigned short, 4, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            GradeProcessor<float, 4, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                GradeProcessor<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                GradeProcessor<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                GradeProcessor<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUByte: {
+            GradeProcessor<unsigned char, 3, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            GradeProcessor<unsigned short, 3, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            GradeProcessor<float, 3, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
-}
-
+} // GradePlugin::render
 
 bool
-GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+GradePlugin::isIdentity(const IsIdentityArguments &args,
+                        Clip * &identityClip,
+                        double & /*identityTime*/)
 {
     double mix;
+
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0.) {
         identityClip = _srcClip;
+
         return true;
     }
-    
+
     {
         bool processR;
         bool processG;
@@ -655,17 +674,18 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         _processA->getValueAtTime(args.time, processA);
         if (!processR && !processG && !processB && !processA) {
             identityClip = _srcClip;
+
             return true;
         }
     }
 
-    bool clampBlack,clampWhite;
+    bool clampBlack, clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
     if (clampBlack || clampWhite) {
         return false;
     }
-    RGBAValues blackPoint,whitePoint,black,white,multiply,offset,gamma;
+    RGBAValues blackPoint, whitePoint, black, white, multiply, offset, gamma;
     _blackPoint->getValueAtTime(args.time, blackPoint.r, blackPoint.g, blackPoint.b, blackPoint.a);
     _whitePoint->getValueAtTime(args.time, whitePoint.r, whitePoint.g, whitePoint.b, whitePoint.a);
     _black->getValueAtTime(args.time, black.r, black.g, black.b, black.a);
@@ -673,18 +693,19 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
     _multiply->getValueAtTime(args.time, multiply.r, multiply.g, multiply.b, multiply.a);
     _offset->getValueAtTime(args.time, offset.r, offset.g, offset.b, offset.a);
     _gamma->getValueAtTime(args.time, gamma.r, gamma.g, gamma.b, gamma.a);
-    if (blackPoint.r == 0. && blackPoint.g == 0. && blackPoint.b == 0. && blackPoint.a == 0. &&
-        whitePoint.r == 1. && whitePoint.g == 1. && whitePoint.b == 1. && whitePoint.a == 1. &&
-        black.r == 0. && black.g == 0. && black.b == 0. && black.a == 0. &&
-        white.r == 1. && white.g == 1. && white.b == 1. && white.a == 1. &&
-        multiply.r == 1. && multiply.g == 1. && multiply.b == 1. && multiply.a == 1. &&
-        offset.r == 0. && offset.g == 0. && offset.b == 0. && offset.a == 0. &&
-        gamma.r == 1. && gamma.g == 1. && gamma.b == 1. && gamma.a == 1) {
+    if ( (blackPoint.r == 0.) && (blackPoint.g == 0.) && (blackPoint.b == 0.) && (blackPoint.a == 0.) &&
+         ( whitePoint.r == 1.) && ( whitePoint.g == 1.) && ( whitePoint.b == 1.) && ( whitePoint.a == 1.) &&
+         ( black.r == 0.) && ( black.g == 0.) && ( black.b == 0.) && ( black.a == 0.) &&
+         ( white.r == 1.) && ( white.g == 1.) && ( white.b == 1.) && ( white.a == 1.) &&
+         ( multiply.r == 1.) && ( multiply.g == 1.) && ( multiply.b == 1.) && ( multiply.a == 1.) &&
+         ( offset.r == 0.) && ( offset.g == 0.) && ( offset.b == 0.) && ( offset.a == 0.) &&
+         ( gamma.r == 1.) && ( gamma.g == 1.) && ( gamma.b == 1.) && ( gamma.a == 1) ) {
         identityClip = _srcClip;
+
         return true;
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
@@ -692,26 +713,29 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
             OfxRectI maskRoD;
             OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
+
                 return true;
             }
         }
     }
 
     return false;
-}
+} // GradePlugin::isIdentity
 
 void
-GradePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+GradePlugin::changedClip(const InstanceChangedArgs &args,
+                         const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        _srcClip && _srcClip->isConnected() &&
-        !_premultChanged->getValue() &&
-        args.reason == OFX::eChangeUserEdit) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         _srcClip && _srcClip->isConnected() &&
+         !_premultChanged->getValue() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
         if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
             _premult->setValue(false);
-        } else switch (_srcClip->getPreMultiplication()) {
+        } else {
+            switch ( _srcClip->getPreMultiplication() ) {
             case eImageOpaque:
                 _premult->setValue(false);
                 break;
@@ -721,20 +745,21 @@ GradePlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
             case eImageUnPreMultiplied:
                 _premult->setValue(false);
                 break;
+            }
         }
-   }
+    }
 }
 
 void
-GradePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+GradePlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                          const std::string &paramName)
 {
-    if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
 }
 
 mDeclarePluginFactory(GradePluginFactory, {}, {});
-
 void
 GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -749,7 +774,7 @@ GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
-    
+
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
@@ -760,48 +785,55 @@ GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    
+
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
-    
 }
 
 static
-void defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
-                          const std::string &name, const std::string &label, const std::string &hint,
-                          PageParamDescriptor* page,double def , double min,double max)
+void
+defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
+                     const std::string &name,
+                     const std::string &label,
+                     const std::string &hint,
+                     PageParamDescriptor* page,
+                     double def,
+                     double min,
+                     double max)
 {
     RGBAParamDescriptor *param = desc.defineRGBAParam(name);
+
     param->setLabel(label);
     param->setHint(hint);
-    param->setDefault(def,def,def,def);
+    param->setDefault(def, def, def, def);
     param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-    param->setDisplayRange(min,min,min,min,max,max,max,max);
+    param->setDisplayRange(min, min, min, min, max, max, max, max);
     if (page) {
         page->addChild(*param);
     }
 }
 
-
 void
-GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                      OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
-    
+
     ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
     maskClip->addSupportedComponent(ePixelComponentAlpha);
     maskClip->setTemporalClipAccess(false);
@@ -813,7 +845,7 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
+
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
         param->setLabel(kNatronOfxParamProcessRLabel);
@@ -883,7 +915,7 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
             page->addChild(*param);
         }
     }
-    
+
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 
@@ -897,14 +929,14 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
             page->addChild(*param);
         }
     }
-}
+} // GradePluginFactory::describeInContext
 
 OFX::ImageEffect*
-GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+GradePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                   OFX::ContextEnum /*context*/)
 {
     return new GradePlugin(handle);
 }
-
 
 static GradePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

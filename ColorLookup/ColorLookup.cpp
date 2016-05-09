@@ -47,9 +47,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ColorLookupOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
-"Apply a parametric lookup curve to each channel separately.\n" \
-"The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
-"Computation is faster for values that are within the given range."
+    "Apply a parametric lookup curve to each channel separately.\n" \
+    "The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
+    "Computation is faster for values that are within the given range."
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -121,11 +121,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kCurveNb 5
 
 
-class ColorLookupProcessorBase : public OFX::ImageProcessor {
+class ColorLookupProcessorBase
+    : public OFX::ImageProcessor
+{
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
-    bool  _doMasking;
+    bool _doMasking;
     bool _clampBlack;
     bool _clampWhite;
     bool _premult;
@@ -134,25 +136,28 @@ protected:
     bool _maskInvert;
 
 public:
-    ColorLookupProcessorBase(OFX::ImageEffect &instance, bool clampBlack, bool clampWhite)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _maskImg(0)
-    , _doMasking(false)
-    , _clampBlack(clampBlack)
-    , _clampWhite(clampWhite)
-    , _premult(false)
-    , _premultChannel(3)
-    , _mix(1.)
-    , _maskInvert(false)
+    ColorLookupProcessorBase(OFX::ImageEffect &instance,
+                             bool clampBlack,
+                             bool clampWhite)
+        : OFX::ImageProcessor(instance)
+        , _srcImg(0)
+        , _maskImg(0)
+        , _doMasking(false)
+        , _clampBlack(clampBlack)
+        , _clampWhite(clampWhite)
+        , _premult(false)
+        , _premultChannel(3)
+        , _mix(1.)
+        , _maskInvert(false)
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
 
-    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+    void setMaskImg(const OFX::Image *v,
+                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
-    void doMasking(bool v) {_doMasking = v;}
+    void doMasking(bool v) {_doMasking = v; }
 
     void setValues(bool premult,
                    int premultChannel,
@@ -166,29 +171,35 @@ public:
 protected:
     // clamp for integer types
     template<class PIX>
-    float clamp(float value, int maxValue)
+    float clamp(float value,
+                int maxValue)
     {
-        return std::max(0.f, std::min(value, float(maxValue)));
+        return std::max( 0.f, std::min( value, float(maxValue) ) );
     }
+
     // clamp for integer types
     template<class PIX>
-    double clamp(double value, int maxValue)
+    double clamp(double value,
+                 int maxValue)
     {
-        return std::max(0., std::min(value, double(maxValue)));
+        return std::max( 0., std::min( value, double(maxValue) ) );
     }
 };
 
 
 // floats don't clamp
 template<>
-float ColorLookupProcessorBase::clamp<float>(float value, int maxValue)
+float
+ColorLookupProcessorBase::clamp<float>(float value,
+                                       int maxValue)
 {
     assert(maxValue == 1.);
-    if (_clampBlack && value < 0.) {
+    if ( _clampBlack && (value < 0.) ) {
         value = 0.f;
-    } else  if (_clampWhite && value > 1.0) {
+    } else if ( _clampWhite && (value > 1.0) ) {
         value = 1.0f;
     }
+
     return value;
 }
 
@@ -196,34 +207,44 @@ static inline int
 componentToCurve(int comp)
 {
     switch (comp) {
-        case 0:
-            return kCurveRed;
-        case 1:
-            return kCurveGreen;
-        case 2:
-            return kCurveBlue;
-        case 3:
-            return kCurveAlpha;
-        default:
-            return 0;
+    case 0:
+
+        return kCurveRed;
+    case 1:
+
+        return kCurveGreen;
+    case 2:
+
+        return kCurveBlue;
+    case 3:
+
+        return kCurveAlpha;
+    default:
+
+        return 0;
     }
 }
-
-
 
 // template to do the processing.
 // nbValues is the number of values in the LUT minus 1. For integer types, it should be the same as
 // maxValue
 template <class PIX, int nComponents, int maxValue, int nbValues>
-class ColorLookupProcessor : public ColorLookupProcessorBase
+class ColorLookupProcessor
+    : public ColorLookupProcessorBase
 {
 public:
     // ctor
-    ColorLookupProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTableParam, double rangeMin, double rangeMax, bool clampBlack, bool clampWhite)
-    : ColorLookupProcessorBase(instance, clampBlack, clampWhite)
-    , _lookupTableParam(lookupTableParam)
-    , _rangeMin(std::min(rangeMin,rangeMax))
-    , _rangeMax(std::max(rangeMin,rangeMax))
+    ColorLookupProcessor(OFX::ImageEffect &instance,
+                         const OFX::RenderArguments &args,
+                         OFX::ParametricParam  *lookupTableParam,
+                         double rangeMin,
+                         double rangeMax,
+                         bool clampBlack,
+                         bool clampWhite)
+        : ColorLookupProcessorBase(instance, clampBlack, clampWhite)
+        , _lookupTableParam(lookupTableParam)
+        , _rangeMin( std::min(rangeMin, rangeMax) )
+        , _rangeMax( std::max(rangeMin, rangeMax) )
     {
         // build the LUT
         assert(_lookupTableParam);
@@ -232,19 +253,19 @@ public:
             // avoid divisions by zero
             _rangeMax = _rangeMin + 1.;
         }
-        assert((PIX)maxValue == maxValue);
+        assert( (PIX)maxValue == maxValue );
         // except for float, maxValue is the same as nbValues
-        assert(maxValue == 1 || (maxValue == nbValues));
+        assert( maxValue == 1 || (maxValue == nbValues) );
         for (int component = 0; component < nComponents; ++component) {
-            _lookupTable[component].resize(nbValues+1);
+            _lookupTable[component].resize(nbValues + 1);
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
             for (int position = 0; position <= nbValues; ++position) {
                 // position to evaluate the param at
-                double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position)/nbValues;
+                double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
 
                 // evaluate the parametric param
                 double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
-                if (nComponents != 1 && lutIndex != kCurveAlpha) {
+                if ( (nComponents != 1) && (lutIndex != kCurveAlpha) ) {
                     value += _lookupTableParam->getValue(kCurveMaster, _time, parametricPos) - parametricPos;
                 }
                 // set that in the lut
@@ -261,21 +282,21 @@ private:
         assert(_dstImg);
         float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
-            for (int x = procWindow.x1; x < procWindow.x2; x++)  {
+            for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if (nComponents == 1 || nComponents == 3) {
+                if ( (nComponents == 1) || (nComponents == 3) ) {
                     // RGB and Alpha: don't premult/unpremult, just apply curves
                     // normalize/denormalize properly
                     for (int c = 0; c < nComponents; ++c) {
                         tmpPix[c] = (float)interpolate(c, srcPix ? (srcPix[c] / (float)maxValue) : 0.f) * maxValue;
-                        assert((!srcPix || (!isnan(srcPix[c]) && !isnan(srcPix[c]))) &&
-                               !isnan(tmpPix[c]) && !isnan(tmpPix[c]));
+                        assert( ( !srcPix || ( !isnan(srcPix[c]) && !isnan(srcPix[c]) ) ) &&
+                                !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
                     }
                     // ofxsMaskMix expects denormalized input
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -286,8 +307,8 @@ private:
                     // ofxsUnPremult outputs normalized data
                     for (int c = 0; c < nComponents; ++c) {
                         tmpPix[c] = interpolate(c, unpPix[c]);
-                        assert(!isnan(unpPix[c]) && !isnan(unpPix[c]) &&
-                               !isnan(tmpPix[c]) && !isnan(tmpPix[c]));
+                        assert( !isnan(unpPix[c]) && !isnan(unpPix[c]) &&
+                                !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
                     }
                     // ofxsPremultMaskMixPix expects normalized input
                     ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -299,22 +320,26 @@ private:
     }
 
     // on input to interpolate, value should be normalized to the [0-1] range
-    float interpolate(int component, float value) {
-        if (value < _rangeMin || _rangeMax < value) {
+    float interpolate(int component,
+                      float value)
+    {
+        if ( (value < _rangeMin) || (_rangeMax < value) ) {
             // slow version
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
             double ret = _lookupTableParam->getValue(lutIndex, _time, value);
-            if (nComponents != 1 && lutIndex != kCurveAlpha) {
+            if ( (nComponents != 1) && (lutIndex != kCurveAlpha) ) {
                 ret += _lookupTableParam->getValue(kCurveMaster, _time, value) - value;
             }
+
             return (float)clamp<PIX>(ret, maxValue);;
         } else {
             float x = (float)(value - _rangeMin) / (float)(_rangeMax - _rangeMin);
             int i = (int)(x * nbValues);
             assert(0 <= i && i <= nbValues);
-            float alpha = std::max(0.f,std::min(x * nbValues - i, 1.f));
+            float alpha = std::max( 0.f, std::min(x * nbValues - i, 1.f) );
             float a = _lookupTable[component][i];
-            float b = (i  < nbValues) ? _lookupTable[component][i+1] : 0.f;
+            float b = (i  < nbValues) ? _lookupTable[component][i + 1] : 0.f;
+
             return a * (1.f - alpha) + b * alpha;
         }
     }
@@ -330,25 +355,26 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class ColorLookupPlugin : public OFX::ImageEffect
+class ColorLookupPlugin
+    : public OFX::ImageEffect
 {
 public:
     ColorLookupPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _maskClip(0)
-    , _premultChanged(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _maskClip(0)
+        , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
@@ -370,11 +396,10 @@ public:
         assert(_mix && _maskInvert);
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
-     }
+    }
 
 private:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
@@ -384,24 +409,25 @@ private:
     void renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     void setupAndProcess(ColorLookupProcessorBase &, const OFX::RenderArguments &args);
-    
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL
+
+    virtual void changedParam(const OFX::InstanceChangedArgs &args,
+                              const std::string &paramName) OVERRIDE FINAL
     {
-        if (paramName == kParamSetMaster && args.reason == eChangeUserEdit) {
+        if ( (paramName == kParamSetMaster) && (args.reason == eChangeUserEdit) ) {
             double source[4];
             double target[4];
             _source->getValueAtTime(args.time, source[0], source[1], source[2], source[3]);
             _target->getValueAtTime(args.time, target[0], target[1], target[2], target[3]);
 
-            double s = 0.2126 * source[0] + 0.7152 * source[1] + 0.0722 *source[2];
-            double t = 0.2126 * target[0] + 0.7152 * target[1] + 0.0722 *target[2];
+            double s = 0.2126 * source[0] + 0.7152 * source[1] + 0.0722 * source[2];
+            double t = 0.2126 * target[0] + 0.7152 * target[1] + 0.0722 * target[2];
             _lookupTable->addControlPoint(kCurveMaster, // curve to set
                                           args.time,   // time, ignored in this case, as we are not adding a key
                                           s,   // parametric position
                                           t,   // value to be
                                           false);   // don't add a key
         }
-        if ((paramName == kParamSetRGB || paramName == kParamSetRGBA || paramName == kParamSetA) && args.reason == eChangeUserEdit) {
+        if ( ( (paramName == kParamSetRGB) || (paramName == kParamSetRGBA) || (paramName == kParamSetA) ) && (args.reason == eChangeUserEdit) ) {
             double source[4];
             double target[4];
             _source->getValueAtTime(args.time, source[0], source[1], source[2], source[3]);
@@ -419,17 +445,17 @@ private:
             }
         }
 #ifdef COLORLOOKUP_ADD
-        if (paramName == kParamAddCtrlPts && args.reason == eChangeUserEdit) {
+        if ( (paramName == kParamAddCtrlPts) && (args.reason == eChangeUserEdit) ) {
             for (int component = 0; component < kCurveNb; ++component) {
                 int n = _lookupTable->getNControlPoints(component, args.time);
                 if (n <= 1) {
                     // less than two points: add the two default control points
                     // add a control point at 0, value is 0
                     _lookupTable->addControlPoint(component, // curve to set
-                                                 args.time,   // time, ignored in this case, as we are not adding a key
-                                                 0.0,   // parametric position, zero
-                                                 0.0,   // value to be, 0
-                                                 false);   // don't add a key
+                                                  args.time,  // time, ignored in this case, as we are not adding a key
+                                                  0.0,  // parametric position, zero
+                                                  0.0,  // value to be, 0
+                                                  false);  // don't add a key
                     // add a control point at 1, value is 1
                     _lookupTable->addControlPoint(component, args.time, 1.0, 1.0, false);
                 } else {
@@ -441,9 +467,9 @@ private:
                         std::pair<double, double> next = _lookupTable->getNthControlPoint(component, args.time, i);
                         if (prev.first != next.first) { // don't create additional points if there is no space for one
                             // create a new control point between two existing control points
-                            double parametricPos = (prev.first + next.first)/2.;
+                            double parametricPos = (prev.first + next.first) / 2.;
                             double parametricVal = _lookupTable->getValueAtTime(time, component, args.time, parametricPos);
-                            newCtrlPts.push_back(std::make_pair(parametricPos, parametricVal));
+                            newCtrlPts.push_back( std::make_pair(parametricPos, parametricVal) );
                         }
                         prev = next;
                     }
@@ -462,48 +488,48 @@ private:
         }
 #endif
 #ifdef COLORLOOKUP_RESET
-        if (paramName == kParamResetCtrlPts && args.reason == eChangeUserEdit) {
+        if ( (paramName == kParamResetCtrlPts) && (args.reason == eChangeUserEdit) ) {
             OFX::Message::MessageReplyEnum reply = sendMessage(OFX::Message::eMessageQuestion, "", "Delete all control points for all components?");
             // Nuke seems to always reply eMessageReplyOK, whatever the real answer was
             switch (reply) {
-                case OFX::Message::eMessageReplyOK:
-                    sendMessage(OFX::Message::eMessageMessage, "","OK");
-                    break;
-                case OFX::Message::eMessageReplyYes:
-                    sendMessage(OFX::Message::eMessageMessage, "","Yes");
-                    break;
-                case OFX::Message::eMessageReplyNo:
-                    sendMessage(OFX::Message::eMessageMessage, "","No");
-                    break;
-                case OFX::Message::eMessageReplyFailed:
-                    sendMessage(OFX::Message::eMessageMessage, "","Failed");
-                    break;
+            case OFX::Message::eMessageReplyOK:
+                sendMessage(OFX::Message::eMessageMessage, "", "OK");
+                break;
+            case OFX::Message::eMessageReplyYes:
+                sendMessage(OFX::Message::eMessageMessage, "", "Yes");
+                break;
+            case OFX::Message::eMessageReplyNo:
+                sendMessage(OFX::Message::eMessageMessage, "", "No");
+                break;
+            case OFX::Message::eMessageReplyFailed:
+                sendMessage(OFX::Message::eMessageMessage, "", "Failed");
+                break;
             }
             if (reply == OFX::Message::eMessageReplyYes) {
                 for (int component = 0; component < kCurveNb; ++component) {
                     _lookupTable->deleteControlPoint(component);
                     // add a control point at 0, value is 0
                     _lookupTable->addControlPoint(component, // curve to set
-                                                 args.time,   // time, ignored in this case, as we are not adding a key
-                                                 0.0,   // parametric position, zero
-                                                 0.0,   // value to be, 0
-                                                 false);   // don't add a key
+                                                  args.time,  // time, ignored in this case, as we are not adding a key
+                                                  0.0,  // parametric position, zero
+                                                  0.0,  // value to be, 0
+                                                  false);  // don't add a key
                     // add a control point at 1, value is 1
                     lookupTable->addControlPoint(component, args.time, 1.0, 1.0, false);
                 }
             }
         }
 #endif
-        if (paramName == kParamRange && args.reason == eChangeUserEdit) {
+        if ( (paramName == kParamRange) && (args.reason == eChangeUserEdit) ) {
             double rmin, rmax;
             _range->getValueAtTime(args.time, rmin, rmax);
             if (rmax < rmin) {
                 _range->setValue(rmax, rmin);
             }
-        } else if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+        } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
             _premultChanged->setValue(true);
         }
-    }
+    } // changedParam
 
 private:
     OFX::Clip *_dstClip;
@@ -526,48 +552,48 @@ private:
 
 void
 ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
-                              const OFX::RenderArguments &args)
+                                   const OFX::RenderArguments &args)
 {
     assert(_dstClip);
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if (doMasking) {
-        if (mask.get()) {
-            if (mask->getRenderScale().x != args.renderScale.x ||
-                mask->getRenderScale().y != args.renderScale.y ||
-                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+        if ( mask.get() ) {
+            if ( (mask->getRenderScale().x != args.renderScale.x) ||
+                 ( mask->getRenderScale().y != args.renderScale.y) ||
+                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -578,19 +604,20 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
-    if (src.get() && dst.get()) {
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+    if ( src.get() && dst.get() ) {
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
         // see if they have the same depths and bytes and all
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
     }
 
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( src.get() );
     processor.setRenderWindow(args.renderWindow);
     bool premult;
     int premultChannel;
@@ -600,44 +627,49 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
     _mix->getValueAtTime(args.time, mix);
     processor.setValues(premult, premultChannel, mix);
     processor.process();
-}
+} // ColorLookupPlugin::setupAndProcess
 
 // the internal render function
 template <int nComponents>
 void
-ColorLookupPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+ColorLookupPlugin::renderForComponents(const OFX::RenderArguments &args,
+                                       OFX::BitDepthEnum dstBitDepth)
 {
     double rangeMin, rangeMax;
     bool clampBlack, clampWhite;
+
     _range->getValueAtTime(args.time, rangeMin, rangeMax);
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
-    switch(dstBitDepth) {
-        case OFX::eBitDepthUByte: {
-            ColorLookupProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
-            setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthUShort: {
-            ColorLookupProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
-            setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthFloat: {
-            ColorLookupProcessor<float, nComponents, 1, 1023> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
-            setupAndProcess(fred, args);
-        }   break;
-        default :
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    switch (dstBitDepth) {
+    case OFX::eBitDepthUByte: {
+        ColorLookupProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthUShort: {
+        ColorLookupProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthFloat: {
+        ColorLookupProcessor<float, nComponents, 1, 1023> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
+        setupAndProcess(fred, args);
+        break;
+    }
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 void
 ColorLookupPlugin::render(const OFX::RenderArguments &args)
 {
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderForComponents<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
@@ -651,9 +683,12 @@ ColorLookupPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-ColorLookupPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+ColorLookupPlugin::isIdentity(const IsIdentityArguments &args,
+                              Clip * &identityClip,
+                              double & /*identityTime*/)
 {
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
@@ -661,8 +696,9 @@ ColorLookupPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityC
             OfxRectI maskRoD;
             OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
+
                 return true;
             }
         }
@@ -672,15 +708,17 @@ ColorLookupPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityC
 }
 
 void
-ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+ColorLookupPlugin::changedClip(const InstanceChangedArgs &args,
+                               const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        _srcClip && _srcClip->isConnected() &&
-        !_premultChanged->getValue() &&
-        args.reason == OFX::eChangeUserEdit) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         _srcClip && _srcClip->isConnected() &&
+         !_premultChanged->getValue() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
         if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
             _premult->setValue(false);
-        } else switch (_srcClip->getPreMultiplication()) {
+        } else {
+            switch ( _srcClip->getPreMultiplication() ) {
             case eImageOpaque:
                 _premult->setValue(false);
                 break;
@@ -690,13 +728,12 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::strin
             case eImageUnPreMultiplied:
                 _premult->setValue(false);
                 break;
+            }
         }
     }
 }
 
-
 mDeclarePluginFactory(ColorLookupPluginFactory, {}, {});
-
 void
 ColorLookupPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -730,12 +767,14 @@ ColorLookupPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                            OFX::ContextEnum context)
 {
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-    const bool supportsParametricParameter = (gHostDescription.supportsParametricParameter &&
-                                              !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9))); // Nuke 8 and 9 are known to *not* support Parametric
+    const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
+                                               !( gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                  (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9) ) ); // Nuke 8 and 9 are known to *not* support Parametric
+
     if (!supportsParametricParameter) {
         throwHostMissingSuiteException(kOfxParametricParameterSuite);
     }
@@ -802,12 +841,12 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setDimensionLabel("alpha", kCurveAlpha);
 
         // set the UI colour for each dimension
-        const OfxRGBColourD master  = {0.9,0.9,0.9};
+        const OfxRGBColourD master  = {0.9, 0.9, 0.9};
         // the following are magic colors, they all have the same luminance
-        const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};		//set red color to red curve
-        const OfxRGBColourD green = {0., 0.546986106552894, 0.};		//set green color to green curve
-        const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};		//set blue color to blue curve
-        const OfxRGBColourD alpha  = {0.398979,0.398979,0.398979};
+        const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};      //set red color to red curve
+        const OfxRGBColourD green = {0., 0.546986106552894, 0.};        //set green color to green curve
+        const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};      //set blue color to blue curve
+        const OfxRGBColourD alpha  = {0.398979, 0.398979, 0.398979};
         param->setUIColour( kCurveRed, red );
         param->setUIColour( kCurveGreen, green );
         param->setUIColour( kCurveBlue, blue );
@@ -818,17 +857,17 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setRange(0.0, 1.0);
 
         /*
-         // set a default curve, this example sets identity
-         for (int component = 0; component < 3; ++component) {
-         // add a control point at 0, value is 0
-         param->addControlPoint(component, // curve to set
-         0.0,   // time, ignored in this case, as we are not adding a key
-         0.0,   // parametric position, zero
-         0.0,   // value to be, 0
-         false);   // don't add a key
-         // add a control point at 1, value is 1
-         param->addControlPoint(component, 0.0, 1.0, 1.0, false);
-         }
+           // set a default curve, this example sets identity
+           for (int component = 0; component < 3; ++component) {
+           // add a control point at 0, value is 0
+           param->addControlPoint(component, // curve to set
+           0.0,   // time, ignored in this case, as we are not adding a key
+           0.0,   // parametric position, zero
+           0.0,   // value to be, 0
+           false);   // don't add a key
+           // add a control point at 1, value is 1
+           param->addControlPoint(component, 0.0, 1.0, 1.0, false);
+           }
          */
         param->setIdentity();
         if (page) {
@@ -946,14 +985,14 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
             page->addChild(*param);
         }
     }
-}
+} // ColorLookupPluginFactory::describeInContext
 
 OFX::ImageEffect*
-ColorLookupPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+ColorLookupPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                         OFX::ContextEnum /*context*/)
 {
     return new ColorLookupPlugin(handle);
 }
-
 
 static ColorLookupPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

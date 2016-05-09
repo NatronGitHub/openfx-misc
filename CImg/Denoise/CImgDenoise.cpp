@@ -43,15 +43,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "DenoiseCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Denoise selected images by non-local patch averaging.\n" \
-"This uses the method described in:  " \
-"Non-Local Image Smoothing by Applying Anisotropic Diffusion PDE's in the Space of Patches " \
-"(D. Tschumperlé, L. Brun), ICIP'09 " \
-"(https://tschumperle.users.greyc.fr/publications/tschumperle_icip09.pdf).\n" \
-"Uses the 'blur_patch' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Denoise selected images by non-local patch averaging.\n" \
+    "This uses the method described in:  " \
+    "Non-Local Image Smoothing by Applying Anisotropic Diffusion PDE's in the Space of Patches " \
+    "(D. Tschumperlé, L. Brun), ICIP'09 " \
+    "(https://tschumperle.users.greyc.fr/publications/tschumperle_icip09.pdf).\n" \
+    "Uses the 'blur_patch' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgDenoise"
 // History:
@@ -120,12 +120,13 @@ struct CImgDenoiseParams
     bool fast_approx;
 };
 
-class CImgDenoisePlugin : public CImgFilterPluginHelper<CImgDenoiseParams,false>
+class CImgDenoisePlugin
+    : public CImgFilterPluginHelper<CImgDenoiseParams, false>
 {
 public:
 
     CImgDenoisePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgDenoiseParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgDenoiseParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -136,7 +137,8 @@ public:
         assert(_sigma_s && _sigma_r);
     }
 
-    virtual void getValuesAtTime(double time, CImgDenoiseParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgDenoiseParams& params) OVERRIDE FINAL
     {
         _sigma_s->getValueAtTime(time, params.sigma_s);
         _sigma_r->getValueAtTime(time, params.sigma_r);
@@ -148,16 +150,24 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgDenoiseParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& renderScale,
+                        const CImgDenoiseParams& params,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil((params.sigma_s * 3.6) * renderScale.x) + std::ceil(params.psize * renderScale.x) + std::ceil(params.lsize * renderScale.x);
+        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x ) + std::ceil(params.psize * renderScale.x) + std::ceil(params.lsize * renderScale.x);
+
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgDenoiseParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        const CImgDenoiseParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -306,17 +316,18 @@ public:
 #undef Tfloat
 #undef T
 
-#else
-        cimg.blur_patch((float)(params.sigma_s * args.renderScale.x),
-                        (float)params.sigma_r,
-                        (unsigned int)std::ceil(std::max(0, params.psize) * args.renderScale.x),
-                        (unsigned int)std::ceil(std::max(0, params.lsize) * args.renderScale.x),
-                        (float)(params.smoothness * args.renderScale.x),
-                        params.fast_approx);
-#endif
+#else // ifdef CIMG_ABORTABLE
+        cimg.blur_patch( (float)(params.sigma_s * args.renderScale.x),
+                         (float)params.sigma_r,
+                         (unsigned int)std::ceil(std::max(0, params.psize) * args.renderScale.x),
+                         (unsigned int)std::ceil(std::max(0, params.lsize) * args.renderScale.x),
+                         (float)(params.smoothness * args.renderScale.x),
+                         params.fast_approx );
+#endif // ifdef CIMG_ABORTABLE
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgDenoiseParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+                            const CImgDenoiseParams& params) OVERRIDE FINAL
     {
         return (params.sigma_s == 0. && params.sigma_r == 0.);
     };
@@ -335,7 +346,8 @@ private:
 
 mDeclarePluginFactory(CImgDenoisePluginFactory, {}, {});
 
-void CImgDenoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgDenoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -363,7 +375,9 @@ void CImgDenoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                            OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgDenoisePlugin::describeInContextBegin(desc, context,
@@ -372,9 +386,9 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
                                                                                kSupportsXY,
                                                                                kSupportsAlpha,
                                                                                kSupportsTiles,
-                                                                               /*processRGB=*/true,
-                                                                               /*processAlpha*/false,
-                                                                               /*processIsSecret=*/false);
+                                                                               /*processRGB=*/ true,
+                                                                               /*processAlpha*/ false,
+                                                                               /*processIsSecret=*/ false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
@@ -442,15 +456,15 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
             page->addChild(*param);
         }
     }
-
     CImgDenoisePlugin::describeInContextEnd(desc, context, page);
-}
+} // CImgDenoisePluginFactory::describeInContext
 
-OFX::ImageEffect* CImgDenoisePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgDenoisePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                         OFX::ContextEnum /*context*/)
 {
     return new CImgDenoisePlugin(handle);
 }
-
 
 static CImgDenoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

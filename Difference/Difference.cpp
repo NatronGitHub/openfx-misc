@@ -59,15 +59,24 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipB "B"
 
 
-template <class T> inline T
-Clamp(T v, int min, int max)
+template <class T>
+inline T
+Clamp(T v,
+      int min,
+      int max)
 {
-    if (v < T(min)) return T(min);
-    if (v > T(max)) return T(max);
+    if ( v < T(min) ) {
+        return T(min);
+    }
+    if ( v > T(max) ) {
+        return T(max);
+    }
+
     return v;
 }
 
-class DifferencerBase : public OFX::ImageProcessor
+class DifferencerBase
+    : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImgA;
@@ -77,15 +86,16 @@ protected:
 
 public:
     DifferencerBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImgA(0)
-    , _srcImgB(0)
-    , _offset(0.)
-    , _gain(1.)
+        : OFX::ImageProcessor(instance)
+        , _srcImgA(0)
+        , _srcImgB(0)
+        , _offset(0.)
+        , _gain(1.)
     {
     }
 
-    void setSrcImg(const OFX::Image *A, const OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
+    void setSrcImg(const OFX::Image *A,
+                   const OFX::Image *B) {_srcImgA = A; _srcImgB = B; }
 
     void setValues(double offset,
                    double gain)
@@ -93,17 +103,16 @@ public:
         _offset = offset;
         _gain = gain;
     }
-
 };
 
 
-
 template <class PIX, int nComponents, int maxValue>
-class Differencer : public DifferencerBase
+class Differencer
+    : public DifferencerBase
 {
 public:
     Differencer(OFX::ImageEffect &instance)
-    : DifferencerBase(instance)
+        : DifferencerBase(instance)
     {
     }
 
@@ -111,7 +120,7 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
@@ -127,11 +136,11 @@ private:
                         for (int c = 0; c < nComponents - 1; ++c) {
                             dstPix[c] = srcPixB[c];
                             double d = srcPixB[c] - srcPixA[c];
-                            diff += d*d;
+                            diff += d * d;
                         }
                     }
-                    diff = _gain*diff - _offset; // this seems to be the formula used in Nuke
-                    dstPix[nComponents-1] = (PIX)std::max(0.,std::min(diff, (double)maxValue));
+                    diff = _gain * diff - _offset; // this seems to be the formula used in Nuke
+                    dstPix[nComponents - 1] = (PIX)std::max( 0., std::min(diff, (double)maxValue) );
                 } else if (srcPixB && !srcPixA) {
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = srcPixB[c];
@@ -149,33 +158,33 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class DifferencePlugin : public OFX::ImageEffect
+class DifferencePlugin
+    : public OFX::ImageEffect
 {
 public:
 
     /** @brief ctor */
     DifferencePlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClipA(0)
-    , _srcClipB(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClipA(0)
+        , _srcClipB(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
         _srcClipA = fetchClip(kClipA);
-        assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha));
+        assert( _srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha) );
         _srcClipB = fetchClip(kClipB);
-        assert(_srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha));
+        assert( _srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
         _offset = fetchDoubleParam(kParamOffset);
         assert(_offset);
         _gain = fetchDoubleParam(kParamGain);
         assert(_gain);
     }
-    
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     template <int nComponents>
@@ -183,13 +192,12 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(DifferencerBase &, const OFX::RenderArguments &args);
-    
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClipA;
     OFX::Clip *_srcClipB;
-
     OFX::DoubleParam *_offset;
     OFX::DoubleParam *_gain;
 };
@@ -199,53 +207,55 @@ private:
 
 /* set up and run a processor */
 void
-DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderArguments &args)
+DifferencePlugin::setupAndProcess(DifferencerBase &processor,
+                                  const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> srcA((_srcClipA && _srcClipA->isConnected()) ?
-                                         _srcClipA->fetchImage(args.time) : 0);
-    std::auto_ptr<const OFX::Image> srcB((_srcClipB && _srcClipB->isConnected()) ?
-                                         _srcClipB->fetchImage(args.time) : 0);
-    if (srcA.get()) {
-        if (srcA->getRenderScale().x != args.renderScale.x ||
-            srcA->getRenderScale().y != args.renderScale.y ||
-            (srcA->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcA->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
+                                          _srcClipA->fetchImage(args.time) : 0 );
+    std::auto_ptr<const OFX::Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
+                                          _srcClipB->fetchImage(args.time) : 0 );
+    if ( srcA.get() ) {
+        if ( (srcA->getRenderScale().x != args.renderScale.x) ||
+             ( srcA->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcA->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
-    if (srcB.get()) {
-        if (srcB->getRenderScale().x != args.renderScale.x ||
-            srcB->getRenderScale().y != args.renderScale.y ||
-            (srcB->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcB->getField() != args.fieldToRender)) {
+    if ( srcB.get() ) {
+        if ( (srcB->getRenderScale().x != args.renderScale.x) ||
+             ( srcB->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcB->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcB->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -255,36 +265,37 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
     _offset->getValueAtTime(args.time, offset);
     _gain->getValueAtTime(args.time, gain);
     processor.setValues(offset, gain);
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(srcA.get(),srcB.get());
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( srcA.get(), srcB.get() );
     processor.setRenderWindow(args.renderWindow);
-    
+
     processor.process();
-}
+} // DifferencePlugin::setupAndProcess
 
 // the internal render function
 template <int nComponents>
 void
-DifferencePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+DifferencePlugin::renderInternal(const OFX::RenderArguments &args,
+                                 OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
-            Differencer<unsigned char, nComponents, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthUShort: {
-            Differencer<unsigned short, nComponents, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthFloat: {
-            Differencer<float, nComponents, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthUByte: {
+        Differencer<unsigned char, nComponents, 255> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthUShort: {
+        Differencer<unsigned short, nComponents, 65535> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthFloat: {
+        Differencer<float, nComponents, 1> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -292,15 +303,14 @@ DifferencePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepth
 void
 DifferencePlugin::render(const OFX::RenderArguments &args)
 {
-    
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
-    
-    assert(kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth());
+
+    assert( kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
@@ -314,30 +324,30 @@ DifferencePlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-
 void
 DifferencePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+
     clipPreferences.setClipComponents(*_srcClipA, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
 }
 
 mDeclarePluginFactory(DifferencePluginFactory, {}, {});
-
-void DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
-    
+
     //desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
-    
+
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
@@ -353,9 +363,12 @@ void DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                           OFX::ContextEnum /*context*/)
 {
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
+
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipB->addSupportedComponent( OFX::ePixelComponentXY );
@@ -412,13 +425,14 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
             page->addChild(*param);
         }
     }
-}
+} // DifferencePluginFactory::describeInContext
 
-OFX::ImageEffect* DifferencePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+DifferencePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new DifferencePlugin(handle);
 }
-
 
 static DifferencePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
