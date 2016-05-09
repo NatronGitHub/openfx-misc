@@ -192,6 +192,9 @@ public:
 #else
 #define test_abort() if (abort()) throw CImgAbortException("")
 #endif
+// exceptions within an omp parallel block *must* be caught inside that block anyway
+// reference: https://software.intel.com/en-us/blogs/2009/11/05/openmp-and-exceptions
+#define test_abort_parallel() if (abort()) throw CImgAbortException("")
 
 #define _cimg_blur_patch2d_fast(N) \
         cimg_for##N##Y(res,y) { \
@@ -261,54 +264,66 @@ public:
             case 9 : if (is_fast_approx) _cimg_blur_patch2d_fast(9) else _cimg_blur_patch2d(9) break;
             default : { // Fast
                 const int psize2 = (int)patch_size/2, psize1 = (int)patch_size - psize2 - 1;
+                unsigned errCount = 0;
                 if (is_fast_approx) {
 #ifdef cimg_use_openmp
-#pragma omp parallel for if (res._width>=32 && res._height>=4) firstprivate(P,Q)
+#pragma omp parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q) reduction(+: errCount)
 #endif
                     cimg_forY(res,y) {
-                        test_abort();
-                        cimg_forX(res,x) { // 2d fast approximation.
-                            P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
-                            const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
-                            float sum_weights = 0;
-                            cimg_for_inXY(res,x0,y0,x1,y1,p,q) if (cimg::abs(img(x,y,0)-img(p,q,0))<sigma_p3) {
-                                (Q = img.get_crop(p - psize1,q - psize1,p + psize2,q + psize2,true))-=P;
-                                const float
-                                dx = (float)x - p, dy = (float)y - q,
-                                distance2 = (float)(Q.pow(2).sum()/Pnorm + (dx*dx + dy*dy)/sigma_s2),
-                                weight = distance2>3?0.0f:1.0f;
-                                sum_weights+=weight;
-                                cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c);
+                        try {
+                            test_abort_parallel();
+                            cimg_forX(res,x) { // 2d fast approximation.
+                                P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
+                                const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
+                                float sum_weights = 0;
+                                cimg_for_inXY(res,x0,y0,x1,y1,p,q) if (cimg::abs(img(x,y,0)-img(p,q,0))<sigma_p3) {
+                                    (Q = img.get_crop(p - psize1,q - psize1,p + psize2,q + psize2,true))-=P;
+                                    const float
+                                    dx = (float)x - p, dy = (float)y - q,
+                                    distance2 = (float)(Q.pow(2).sum()/Pnorm + (dx*dx + dy*dy)/sigma_s2),
+                                    weight = distance2>3?0.0f:1.0f;
+                                    sum_weights+=weight;
+                                    cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c);
+                                }
+                                if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
+                                else cimg_forC(res,c) res(x,y,c) = (Tfloat)(cimg(x,y,c));
                             }
-                            if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
-                            else cimg_forC(res,c) res(x,y,c) = (Tfloat)(cimg(x,y,c));
+                        } catch (...) {
+                            ++errCount;
                         }
                     }
                 } else {
 #ifdef cimg_use_openmp
-#pragma omp parallel for if (res._width>=32 && res._height>=4) firstprivate(P,Q)
+#pragma omp parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q) reduction(+: errCount)
 #endif
                     cimg_forY(res,y) {
-                        test_abort();
-                        cimg_forX(res,x) { // 2d exact algorithm.
-                            P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
-                            const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
-                            float sum_weights = 0, weight_max = 0;
-                            cimg_for_inXY(res,x0,y0,x1,y1,p,q) if (p!=x || q!=y) {
-                                (Q = img.get_crop(p - psize1,q - psize1,p + psize2,q + psize2,true))-=P;
-                                const float
-                                dx = (float)x - p, dy = (float)y - q,
-                                distance2 = (float)(Q.pow(2).sum()/Pnorm + (dx*dx + dy*dy)/sigma_s2),
-                                weight = (float)std::exp(-distance2);
-                                if (weight>weight_max) weight_max = weight;
-                                sum_weights+=weight;
-                                cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c);
+                        try {
+                            test_abort_parallel();
+                            cimg_forX(res,x) { // 2d exact algorithm.
+                                P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
+                                const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
+                                float sum_weights = 0, weight_max = 0;
+                                cimg_for_inXY(res,x0,y0,x1,y1,p,q) if (p!=x || q!=y) {
+                                    (Q = img.get_crop(p - psize1,q - psize1,p + psize2,q + psize2,true))-=P;
+                                    const float
+                                    dx = (float)x - p, dy = (float)y - q,
+                                    distance2 = (float)(Q.pow(2).sum()/Pnorm + (dx*dx + dy*dy)/sigma_s2),
+                                    weight = (float)std::exp(-distance2);
+                                    if (weight>weight_max) weight_max = weight;
+                                    sum_weights+=weight;
+                                    cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c);
+                                }
+                                sum_weights+=weight_max; cimg_forC(res,c) res(x,y,c)+=weight_max*cimg(x,y,c);
+                                if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
+                                else cimg_forC(res,c) res(x,y,0,c) = (Tfloat)(cimg(x,y,c));
                             }
-                            sum_weights+=weight_max; cimg_forC(res,c) res(x,y,c)+=weight_max*cimg(x,y,c);
-                            if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
-                            else cimg_forC(res,c) res(x,y,0,c) = (Tfloat)(cimg(x,y,c));
+                        } catch (...) {
+                            ++errCount;
                         }
                     }
+                }
+                if (errCount) {
+                    throw CImgAbortException("");
                 }
             }
         }
