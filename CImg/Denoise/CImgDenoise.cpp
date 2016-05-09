@@ -288,13 +288,13 @@ public:
                                 }
                             } catch (...) {
 #pragma omp atomic
-                                go = false;
+                                go &= false;
                             }
                         }
                     }
                 } else {
 #ifdef cimg_use_openmp
-#pragma omp parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q) reduction(+: errCount)
+#pragma omp parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q)
 #endif
                     cimg_forY(res,y) {
                         if (go) {
@@ -320,7 +320,7 @@ public:
                                 }
                             } catch (...) {
 #pragma omp atomic
-                                go = false;
+                                go &= false;
                             }
                         }
                     }
