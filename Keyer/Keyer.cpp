@@ -279,7 +279,7 @@ public:
             return ( Kfg - (_center + _toleranceLower + _softnessLower) ) / -_softnessLower;
         } else if (Kfg <= _center + _toleranceUpper) {
             return 1.;
-        }  else if ( ( 1. <= (_center + _toleranceUpper) ) && (1. <= Kfg) ) {      // special case: everything above 1 is 1. if center+toleranceUpper>=1
+        }  else if ( ( 1. <= (_center + _toleranceUpper) ) && (1. <= Kfg) ) {       // special case: everything above 1 is 1. if center+toleranceUpper>=1
             return 1.;
         } else if ( ( Kfg < (_center + _toleranceUpper + _softnessUpper) ) && (_softnessUpper > 0.) ) {
             return ( (_center + _toleranceUpper + _softnessUpper) - Kfg ) / _softnessUpper;

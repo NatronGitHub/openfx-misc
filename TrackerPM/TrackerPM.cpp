@@ -83,17 +83,17 @@ class TrackerPMPlugin
 public:
     /** @brief ctor */
     TrackerPMPlugin(OfxImageEffectHandle handle)
-    : GenericTrackerPlugin(handle)
-    , _score(0)
-    , _center(0)
-    , _offset(0)
-    , _referenceFrame(0)
-    , _enableReferenceFrame(0)
-    , _correlationScore(0)
-    , _innerBtmLeft(0)
-    , _innerTopRight(0)
-    , _outerBtmLeft(0)
-    , _outerTopRight(0)
+        : GenericTrackerPlugin(handle)
+        , _score(0)
+        , _center(0)
+        , _offset(0)
+        , _referenceFrame(0)
+        , _enableReferenceFrame(0)
+        , _correlationScore(0)
+        , _innerBtmLeft(0)
+        , _innerTopRight(0)
+        , _outerBtmLeft(0)
+        , _outerTopRight(0)
     {
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
@@ -557,17 +557,15 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
     }
 
     bool enableRefFrame = _enableReferenceFrame->getValue();
-    
+
     while ( args.forward ? (t <= args.last) : (t >= args.last) ) {
-        
-        
         OfxTime refFrame;
         if (enableRefFrame) {
             refFrame = (OfxTime)_referenceFrame->getValueAtTime(t);
         } else {
             refFrame = args.forward ? (t - 1) : (t + 1);
         }
-        
+
 
         OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
         assert(srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA ||
@@ -763,9 +761,8 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
             _center->setValueAtTime(refTime, refCenter.x, refCenter.y);
             // create a keyframe at end point
             _center->setValueAtTime(otherTime, newCenter.x - otherOffset.x, newCenter.y - otherOffset.y);
-            _correlationScore->setValueAtTime(otherTime, processor.getBestScore());
-           // endEditBlock();
-
+            _correlationScore->setValueAtTime( otherTime, processor.getBestScore() );
+            // endEditBlock();
         }
     }
 } // TrackerPMPlugin::setupAndProcess
@@ -831,17 +828,17 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
     OfxPointD refCenterWithOffset;
     refCenterWithOffset.x = refCenter.x + offset.x;
     refCenterWithOffset.y = refCenter.y + offset.y;
-    
+
     // The search window should be centered around the last keyframe we set to the center
     OfxPointD prevTimeCenterWithOffset;
     _center->getValueAtTime(otherTime, prevTimeCenterWithOffset.x, prevTimeCenterWithOffset.y);
-    
+
     OfxPointD offsetPrevTime;
     _offset->getValueAtTime(otherTime, offsetPrevTime.x, offsetPrevTime.y);
-    
+
     prevTimeCenterWithOffset.x += offsetPrevTime.x;
     prevTimeCenterWithOffset.y += offsetPrevTime.y;
-    
+
 
     OfxRectD refBounds;
     getRefBounds(refRect, refCenterWithOffset, &refBounds);
@@ -940,12 +937,12 @@ TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(true);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setOverlayInteractDescriptor(new TrackerRegionOverlayDescriptor);
-    
+
 #ifdef OFX_EXTENSIONS_NATRON
     // This plug-in is deprecated since Natron has its new tracker implementation
-    if (OFX::getImageEffectHostDescription()->isNatron &&
-        OFX::getImageEffectHostDescription()->versionMajor >= 2 &&
-        OFX::getImageEffectHostDescription()->versionMinor >= 1) {
+    if ( OFX::getImageEffectHostDescription()->isNatron &&
+         ( OFX::getImageEffectHostDescription()->versionMajor >= 2) &&
+         ( OFX::getImageEffectHostDescription()->versionMinor >= 1) ) {
         desc.setIsDeprecated(true);
     }
 #endif
@@ -998,7 +995,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    
+
     // ref
     {
         OFX::IntParamDescriptor* param = desc.defineIntParam(kParamTrackingReferenceFrame);
@@ -1010,7 +1007,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    
+
     // enable ref
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTrackingEnableReferenceFrame);
@@ -1022,7 +1019,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    
+
     // correlation score
     {
         OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTrackingCorrelationScore);
@@ -1034,7 +1031,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    
+
 
     // innerBtmLeft
     {
