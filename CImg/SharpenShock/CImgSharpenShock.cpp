@@ -191,69 +191,87 @@ public:
             if (sigma > 0) {
                 G.blur(sigma);
             }
+            bool go = true;
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (G.width()>=32 && G.height()>=16)
 #endif
             cimg_forY(G, y) {
-                CImg<Tfloat> val, vec;
-                Tfloat *ptrG0 = G.data(0, y, 0, 0), *ptrG1 = G.data(0, y, 0, 1), *ptrG2 = G.data(0, y, 0, 2);
-                test_abort();
-                cimg_forX(G, x) {
-                    G.get_tensor_at(x, y).symmetric_eigen(val, vec);
-                    if (val[0] < 0) {val[0] = 0; }
-                    if (val[1] < 0) {val[1] = 0; }
-                    *(ptrG0++) = vec(0, 0);
-                    *(ptrG1++) = vec(0, 1);
-                    *(ptrG2++) = 1 - (Tfloat)std::pow(1 + val[0] + val[1], -(Tfloat)nedge);
+                if (go) {
+                    try {
+                        CImg<Tfloat> val, vec;
+                        Tfloat *ptrG0 = G.data(0, y, 0, 0), *ptrG1 = G.data(0, y, 0, 1), *ptrG2 = G.data(0, y, 0, 2);
+                        test_abort();
+                        cimg_forX(G, x) {
+                            G.get_tensor_at(x, y).symmetric_eigen(val, vec);
+                            if (val[0] < 0) {val[0] = 0; }
+                            if (val[1] < 0) {val[1] = 0; }
+                            *(ptrG0++) = vec(0, 0);
+                            *(ptrG1++) = vec(0, 1);
+                            *(ptrG2++) = 1 - (Tfloat)std::pow(1 + val[0] + val[1], -(Tfloat)nedge);
+                        }
+                    } catch (...) {
+#pragma omp atomic
+                        go &= false;
+                    }
                 }
             }
+            test_abort();
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (cimg.width()*cimg.height()>=512 && cimg.spectrum()>=2)
 #endif
             cimg_forC(cimg, c) {
-                Tfloat *ptrd = velocity.data(0, 0, 0, c), veloc_max = 0;
+                if (go) {
+                    try {
+                        Tfloat *ptrd = velocity.data(0, 0, 0, c), veloc_max = 0;
 
-                CImg_3x3(I, Tfloat);
-                cimg_for3(cimg._height, y) {
-                    test_abort();
-                    for (int x = 0,
-                         _p1x = 0,
-                         _n1x = (int)(
-                             ( I[0] = I[1] = (T)cimg(_p1x, _p1y, 0, c) ),
-                             ( I[3] = I[4] = (T)cimg(0, y, 0, c) ),
-                             ( I[6] = I[7] = (T)cimg(0, _n1y, 0, c) ),
-                             1 >= cimg._width ? cimg.width() - 1 : 1);
-                         ( _n1x < cimg.width() && (
-                               ( I[2] = (T)cimg(_n1x, _p1y, 0, c) ),
-                               ( I[5] = (T)cimg(_n1x, y, 0, c) ),
-                               ( I[8] = (T)cimg(_n1x, _n1y, 0, c) ), 1) ) ||
-                         x == --_n1x;
-                         I[0] = I[1], I[1] = I[2],
-                         I[3] = I[4], I[4] = I[5],
-                         I[6] = I[7], I[7] = I[8],
-                         _p1x = x++, ++_n1x) {
-                        const Tfloat u = G(x, y, 0),
-                                     v = G(x, y, 1),
-                                     amp = G(x, y, 2),
-                                     ixx = Inc + Ipc - 2 * Icc,
-                                     ixy = (Inn + Ipp - Inp - Ipn) / 4,
-                                     iyy = Icn + Icp - 2 * Icc,
-                                     ixf = Inc - Icc,
-                                     ixb = Icc - Ipc,
-                                     iyf = Icn - Icc,
-                                     iyb = Icc - Icp,
-                                     itt = u * u * ixx + v * v * iyy + 2 * u * v * ixy,
-                                     it = u * cimg::minmod(ixf, ixb) + v * cimg::minmod(iyf, iyb),
-                                     veloc = -amp*cimg::sign(itt) * cimg::abs(it);
-                        *(ptrd++) = veloc;
-                        if (veloc > veloc_max) {
-                            veloc_max = veloc;
-                        } else if (-veloc > veloc_max) {
-                            veloc_max = -veloc;
+                        CImg_3x3(I, Tfloat);
+                        cimg_for3(cimg._height, y) {
+                            if (go) {
+                                test_abort();
+                                for (int x = 0,
+                                     _p1x = 0,
+                                     _n1x = (int)(
+                                                  ( I[0] = I[1] = (T)cimg(_p1x, _p1y, 0, c) ),
+                                                  ( I[3] = I[4] = (T)cimg(0, y, 0, c) ),
+                                                  ( I[6] = I[7] = (T)cimg(0, _n1y, 0, c) ),
+                                                  1 >= cimg._width ? cimg.width() - 1 : 1);
+                                     ( _n1x < cimg.width() && (
+                                                               ( I[2] = (T)cimg(_n1x, _p1y, 0, c) ),
+                                                               ( I[5] = (T)cimg(_n1x, y, 0, c) ),
+                                                               ( I[8] = (T)cimg(_n1x, _n1y, 0, c) ), 1) ) ||
+                                     x == --_n1x;
+                                     I[0] = I[1], I[1] = I[2],
+                                     I[3] = I[4], I[4] = I[5],
+                                     I[6] = I[7], I[7] = I[8],
+                                     _p1x = x++, ++_n1x) {
+                                    const Tfloat u = G(x, y, 0),
+                                    v = G(x, y, 1),
+                                    amp = G(x, y, 2),
+                                    ixx = Inc + Ipc - 2 * Icc,
+                                    ixy = (Inn + Ipp - Inp - Ipn) / 4,
+                                    iyy = Icn + Icp - 2 * Icc,
+                                    ixf = Inc - Icc,
+                                    ixb = Icc - Ipc,
+                                    iyf = Icn - Icc,
+                                    iyb = Icc - Icp,
+                                    itt = u * u * ixx + v * v * iyy + 2 * u * v * ixy,
+                                    it = u * cimg::minmod(ixf, ixb) + v * cimg::minmod(iyf, iyb),
+                                    veloc = -amp*cimg::sign(itt) * cimg::abs(it);
+                                    *(ptrd++) = veloc;
+                                    if (veloc > veloc_max) {
+                                        veloc_max = veloc;
+                                    } else if (-veloc > veloc_max) {
+                                        veloc_max = -veloc;
+                                    }
+                                }
+                            }
                         }
+                        _veloc_max[c] = veloc_max;
+                    } catch (...) {
+#pragma omp atomic
+                        go &= false;
                     }
                 }
-                _veloc_max[c] = veloc_max;
             }
 
             const Tfloat veloc_max = _veloc_max.max();
