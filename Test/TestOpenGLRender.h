@@ -891,7 +891,8 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         DPRINT( ("depth bits %d\n", d) );
     }
 #endif
-    glFinish();
+    glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
+    glFinish(); // waits for all previously submitted commands to complete executing
     // make sure the buffer is not referenced anymore
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, NULL, dstBounds);
     OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
