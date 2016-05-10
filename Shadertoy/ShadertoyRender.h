@@ -108,6 +108,7 @@ struct ShadertoyShader
 
 #if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 // Program
+#ifdef GL_VERSION_2_0
 static PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
 static PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
 static PFNGLUSEPROGRAMPROC glUseProgram = NULL;
@@ -141,29 +142,39 @@ static PFNGLVERTEXATTRIB1FVPROC glVertexAttrib1fv = NULL;
 static PFNGLVERTEXATTRIB2FVPROC glVertexAttrib2fv = NULL;
 static PFNGLVERTEXATTRIB3FVPROC glVertexAttrib3fv = NULL;
 static PFNGLVERTEXATTRIB4FVPROC glVertexAttrib4fv = NULL;
+static PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
 static PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
 static PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = NULL;
 static PFNGLBINDATTRIBLOCATIONPROC glBindAttribLocation = NULL;
 static PFNGLGETACTIVEUNIFORMPROC glGetActiveUniform = NULL;
+#endif
 
 // Shader
+#ifdef GL_VERSION_2_0
 static PFNGLCREATESHADERPROC glCreateShader = NULL;
 static PFNGLDELETESHADERPROC glDeleteShader = NULL;
 static PFNGLSHADERSOURCEPROC glShaderSource = NULL;
 static PFNGLCOMPILESHADERPROC glCompileShader = NULL;
 static PFNGLGETSHADERIVPROC glGetShaderiv = NULL;
+#endif
 
 // VBO
+#ifdef GL_VERSION_1_5
 static PFNGLGENBUFFERSPROC glGenBuffers = NULL;
 static PFNGLBINDBUFFERPROC glBindBuffer = NULL;
 static PFNGLBUFFERDATAPROC glBufferData = NULL;
-static PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
+#endif
 
 //Multitexture
+#ifdef GL_VERSION_1_3
 static PFNGLACTIVETEXTUREARBPROC glActiveTexture = NULL;
-static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = NULL;
-static PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f = NULL;
+#endif
+#ifdef GL_VERSION_1_3_DEPRECATED
+//static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = NULL;
+//static PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f = NULL;
+#endif
 
+#ifdef GL_ARB_framebuffer_object
 // Framebuffers
 //static PFNGLISFRAMEBUFFERPROC glIsFramebuffer = NULL;
 static PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
@@ -175,6 +186,22 @@ static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 //PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D = NULL;
 //PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
 //PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetFramebufferAttachmentParameteriv = NULL;
+#endif
+
+#ifdef GL_ARB_sync
+// Sync Objects https://www.opengl.org/wiki/Sync_Object
+//typedef GLsync (APIENTRYP PFNGLFENCESYNCPROC) (GLenum condition, GLbitfield flags);
+static PFNGLFENCESYNCPROC glFenceSync​ = NULL;
+//typedef GLboolean (APIENTRYP PFNGLISSYNCPROC) (GLsync sync);
+static PFNGLISSYNCPROC glIsSync = NULL;
+//typedef void (APIENTRYP PFNGLDELETESYNCPROC) (GLsync sync);
+static PFNGLDELETESYNCPROC glDeleteSync = NULL;
+//typedef GLenum (APIENTRYP PFNGLCLIENTWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
+static PFNGLCLIENTWAITSYNCPROC glClientWaitSync​ = NULL;
+//typedef void (APIENTRYP PFNGLWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
+static PFNGLWAITSYNCPROC glWaitSync​ = NULL;
+#endif
+
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
 #ifndef DEBUG
@@ -1154,22 +1181,14 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
 
-    glUseProgram(0);
+    if ( !abort() ) {
+        glUseProgram(0);
 
-    // done; clean up.
-    glPopAttrib();
-
-#ifdef USE_OSMESA
-    /* This is very important!!!
-     * Make sure buffered commands are finished!!!
-     */
-    for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if ( src[i].get() ) {
-            glDeleteTextures(1, &srcIndex[i]);
-        }
+        // done; clean up.
+        glPopAttrib();
     }
 
-#ifdef DEBUG
+#ifdef DEBUG_OPENGL_BITS
     {
         GLint r, g, b, a, d;
         glGetIntegerv(GL_RED_BITS, &r);
@@ -1181,7 +1200,52 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         DPRINT( ("depth bits %d\n", d) );
     }
 #endif
-    glFinish();
+
+#ifdef USE_OSMESA
+    /* This is very important!!!
+     * Make sure buffered commands are finished!!!
+     */
+    if ( !abort() ) {
+        for (unsigned i = 0; i < NBINPUTS; ++i) {
+            if ( src[i].get() ) {
+                glDeleteTextures(1, &srcIndex[i]);
+            }
+        }
+    }
+
+#if 0//ifdef GL_ARB_sync
+    // glFenceSync does not seem to work properly in OSMesa:
+    // we get random black images.
+    if (!glFenceSync) {
+        // If Sync Objects not available (but they should always be there in Mesa)
+        if ( !abort() ) {
+            glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
+            glFinish(); // waits for all previously submitted commands to complete executing
+        }
+    } else if ( !abort() ) {
+        glCheckError();
+        GLsync fenceId = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
+        if ( !fenceId && !abort() ) {
+            // glFenceSync failed for some reason
+            glCheckError();
+            glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
+            glFinish(); // waits for all previously submitted commands to complete executing
+        } else {
+            while ( !abort() ) {
+                GLenum result = glClientWaitSync(fenceId, GL_SYNC_FLUSH_COMMANDS_BIT, GLuint64(10*1000)); // 10ms timeout
+                if (result != GL_TIMEOUT_EXPIRED) {
+                    break; // we ignore timeouts and wait until all OpenGL commands are processed!
+                }
+            }
+            glCheckError();
+        }
+    }
+#else
+    if ( !abort() ) {
+        glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
+        glFinish(); // waits for all previously submitted commands to complete executing
+    }
+#endif
     // make sure the buffer is not referenced anymore
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, NULL, dstBounds);
     OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
@@ -1310,6 +1374,7 @@ ShadertoyPlugin::contextAttached()
 #if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
     if (glCreateProgram == NULL) {
         // Program
+#ifdef GL_VERSION_2_0
         glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
         glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
         glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
@@ -1343,28 +1408,38 @@ ShadertoyPlugin::contextAttached()
         glVertexAttrib2fv = (PFNGLVERTEXATTRIB2FVPROC)wglGetProcAddress("glVertexAttrib2fv");
         glVertexAttrib3fv = (PFNGLVERTEXATTRIB3FVPROC)wglGetProcAddress("glVertexAttrib3fv");
         glVertexAttrib4fv = (PFNGLVERTEXATTRIB4FVPROC)wglGetProcAddress("glVertexAttrib4fv");
+        glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
         glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
         glBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)wglGetProcAddress("glBindAttribLocation");
+#endif
 
         // Shader
+#ifdef GL_VERSION_2_0
         glCreateShader = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
         glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
         glShaderSource = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
         glCompileShader = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
         glGetShaderiv = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
+#endif
 
         // VBO
+#ifdef GL_VERSION_1_5
         glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
         glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
         glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
-        glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
+#endif
 
         // Multitexture
+#ifdef GL_VERSION_1_3
         glActiveTexture = (PFNGLACTIVETEXTUREARBPROC)wglGetProcAddress("glActiveTexture");
-        glClientActiveTexture = (PFNGLCLIENTACTIVETEXTUREPROC)wglGetProcAddress("glClientActiveTexture");
-        glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FPROC)wglGetProcAddress("glMultiTexCoord2f");
+#endif
+#ifdef GL_VERSION_1_3_DEPRECATED
+        //glClientActiveTexture = (PFNGLCLIENTACTIVETEXTUREPROC)wglGetProcAddress("glClientActiveTexture");
+        //glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FPROC)wglGetProcAddress("glMultiTexCoord2f");
+#endif
 
         // Framebuffers
+#ifdef GL_ARB_framebuffer_object
         //glIsFramebuffer = (PFNGLISFRAMEBUFFERPROC)wglGetProcAddress("glIsFramebuffer");
         glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)wglGetProcAddress("glBindFramebuffer");
         glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)wglGetProcAddress("glDeleteFramebuffers");
@@ -1375,6 +1450,16 @@ ShadertoyPlugin::contextAttached()
         //glFramebufferTexture3D = (PFNGLFRAMEBUFFERTEXTURE3DPROC)wglGetProcAddress("glFramebufferTexture3D");
         //glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)wglGetProcAddress("glFramebufferRenderbuffer");
         //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)wglGetProcAddress("glGetFramebufferAttachmentParameteriv");
+#endif
+
+#ifdef GL_ARB_sync
+        // Sync Objects https://www.opengl.org/wiki/Sync_Object
+        glFenceSync = (PFNGLFENCESYNCPROC)wglGetProcAddress("glFenceSync​");
+        glIsSync = (PFNGLISSYNCPROC)wglGetProcAddress("glIsSync");
+        glDeleteSync = (PFNGLDELETESYNCPROC)wglGetProcAddress("glDeleteSync");
+        glClientWaitSync = (PFNGLCLIENTWAITSYNCPROC)wglGetProcAddress("glClientWaitSync​");
+        glWaitSync = (PFNGLWAITSYNCPROC)wglGetProcAddress("glWaitSync​");
+#endif
     }
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
