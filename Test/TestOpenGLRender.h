@@ -555,7 +555,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 # ifdef OFX_SUPPORTS_OPENGLRENDER
     const int& gl_enabled = args.openGLEnabled;
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-    DPRINT( ("render: openGLSuite %s\n", gHostDescription.supportsOpenGLRender ? "found" : "not found") );
+    //DPRINT( ("render: openGLSuite %s\n", gHostDescription.supportsOpenGLRender ? "found" : "not found") );
     if (gHostDescription.supportsOpenGLRender) {
         DPRINT( ("render: openGL rendering %s\n", gl_enabled ? "enabled" : "DISABLED") );
     }
@@ -569,10 +569,8 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #  endif
 # endif
 
-    const OfxRectI renderWindow = args.renderWindow;
-    DPRINT( ("renderWindow = [%d, %d - %d, %d]\n",
-             renderWindow.x1, renderWindow.y1,
-             renderWindow.x2, renderWindow.y2) );
+    const OfxRectI& renderWindow = args.renderWindow;
+    //DPRINT( ("renderWindow = [%d, %d - %d, %d]\n", renderWindow.x1, renderWindow.y1,renderWindow.x2, renderWindow.y2) );
 
 
     // get the output image texture
