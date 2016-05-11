@@ -191,15 +191,15 @@ static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 #ifdef GL_ARB_sync
 // Sync Objects https://www.opengl.org/wiki/Sync_Object
 //typedef GLsync (APIENTRYP PFNGLFENCESYNCPROC) (GLenum condition, GLbitfield flags);
-static PFNGLFENCESYNCPROC glFenceSync​ = NULL;
+static PFNGLFENCESYNCPROC glFenceSync = NULL;
 //typedef GLboolean (APIENTRYP PFNGLISSYNCPROC) (GLsync sync);
 static PFNGLISSYNCPROC glIsSync = NULL;
 //typedef void (APIENTRYP PFNGLDELETESYNCPROC) (GLsync sync);
 static PFNGLDELETESYNCPROC glDeleteSync = NULL;
 //typedef GLenum (APIENTRYP PFNGLCLIENTWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
-static PFNGLCLIENTWAITSYNCPROC glClientWaitSync​ = NULL;
+static PFNGLCLIENTWAITSYNCPROC glClientWaitSync = NULL;
 //typedef void (APIENTRYP PFNGLWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
-static PFNGLWAITSYNCPROC glWaitSync​ = NULL;
+static PFNGLWAITSYNCPROC glWaitSync = NULL;
 #endif
 
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
