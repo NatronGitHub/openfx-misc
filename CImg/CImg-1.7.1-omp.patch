@@ -1,6 +1,87 @@
---- CImg.h.orig	2016-05-09 19:01:40.000000000 +0200
-+++ CImg.h	2016-05-09 19:22:27.000000000 +0200
-@@ -29506,10 +29506,12 @@
+--- CImg.h.orig	2016-05-11 16:52:09.000000000 +0200
++++ CImg.h	2016-05-11 17:08:14.000000000 +0200
+@@ -23195,25 +23195,30 @@
+             T *ptrd = *expression=='<'?_data + _width*_height*_depth - 1:_data;
+             if (*expression=='<') {
+               CImg<doubleT> res(1,mp.result_dim);
+-              cimg_rofXYZ(*this,x,y,z) {
++              cimg_rofZ(*this,z) cimg_rofY(*this,y) { cimg_test_abort(); cimg_rofX(*this,x) {
+                 mp(x,y,z,0,res._data);
+                 const double *ptrs = res._data;
+                 T *_ptrd = ptrd--; for (unsigned int n = N; n>0; --n) { *_ptrd = (T)(*ptrs++); _ptrd+=whd; }
++                }
+               }
+             } else if (*expression=='>' || !do_in_parallel) {
+               CImg<doubleT> res(1,mp.result_dim);
+-              cimg_forXYZ(*this,x,y,z) {
++              cimg_forZ(*this,z) cimg_forY(*this,y) { cimg_test_abort(); cimg_forX(*this,x) {
+                 mp(x,y,z,0,res._data);
+                 const double *ptrs = res._data;
+                 T *_ptrd = ptrd++; for (unsigned int n = N; n>0; --n) { *_ptrd = (T)(*ptrs++); _ptrd+=whd; }
++                }
+               }
+             } else {
+ #ifdef cimg_use_openmp
++              bool go = true;
+ #pragma omp parallel
+               {
+                 _cimg_math_parser _mp = omp_get_thread_num()?mp:_cimg_math_parser(), &lmp = omp_get_thread_num()?_mp:mp;
+ #pragma omp for collapse(2)
+                 cimg_forYZ(*this,y,z) {
++                  if (go) { try {
++                  cimg_test_abort();
+                   CImg<doubleT> res(1,lmp.result_dim);
+                   T *ptrd = data(0,y,z,0);
+                   cimg_forX(*this,x) {
+@@ -23221,6 +23226,10 @@
+                     const double *ptrs = res._data;
+                     T *_ptrd = ptrd++; for (unsigned int n = N; n>0; --n) { *_ptrd = (T)(*ptrs++); _ptrd+=whd; }
+                   }
++                  } catch (...) {
++#pragma omp atomic
++                    go &= false;
++                  } }
+                 }
+               }
+ #endif
+@@ -23228,23 +23237,31 @@
+ 
+           } else { // Scalar-valued expression
+             T *ptrd = *expression=='<'?end() - 1:_data;
+-            if (*expression=='<')
+-              cimg_rofXYZC(*this,x,y,z,c) *(ptrd--) = (T)mp(x,y,z,c);
+-            else if (*expression=='>' || !do_in_parallel)
+-              cimg_forXYZC(*this,x,y,z,c) *(ptrd++) = (T)mp(x,y,z,c);
+-            else {
++            if (*expression=='<') {
++              cimg_rofC(*this,c) cimg_rofZ(*this,z) cimg_rofY(*this,y) { cimg_test_abort(); cimg_rofX(*this,x)  *(ptrd--) = (T)mp(x,y,z,c); }
++            } else if (*expression=='>' || !do_in_parallel) {
++              cimg_forC(*this,c) cimg_forZ(*this,z) cimg_forY(*this,y) { cimg_test_abort(); cimg_forX(*this,x) *(ptrd++) = (T)mp(x,y,z,c); }
++            } else {
+ #ifdef cimg_use_openmp
++              bool go = true;
+ #pragma omp parallel
+               {
+                 _cimg_math_parser _mp = omp_get_thread_num()?mp:_cimg_math_parser(), &lmp = omp_get_thread_num()?_mp:mp;
+ #pragma omp for collapse(3)
+                 cimg_forYZC(*this,y,z,c) {
++                  if (go) { try {
++                  cimg_test_abort();
+                   T *ptrd = data(0,y,z,c);
+                   cimg_forX(*this,x) *ptrd++ = (T)lmp(x,y,z,c);
++                  } catch (...) {
++#pragma omp atomic
++                    go &= false;
++                  } }
+                 }
+               }
+ #endif
+             }
++            cimg_test_abort();
+           }
+         } catch (CImgException& e) { CImg<charT>::string(e._message).move_to(is_error); }
+ 
+@@ -29506,10 +29523,12 @@
            mx2 = mask.width()/2, my2 = mask.height()/2, mz2 = mask.depth()/2,
            mx1 = mx2 - 1 + (mask.width()%2), my1 = my2 - 1 + (mask.height()%2), mz1 = mz2 - 1 + (mask.depth()%2),
            mxe = width() - mx2, mye = height() - my2, mze = depth() - mz2;
@@ -13,7 +94,7 @@
            cimg_test_abort();
            const CImg<T> _img = get_shared_channel(c%_spectrum);
            const CImg<t> _mask = mask.get_shared_channel(c%mask._spectrum);
-@@ -29623,6 +29625,12 @@
+@@ -29623,6 +29642,12 @@
                  }
                }
            }
@@ -26,7 +107,7 @@
          }
        }
        return res;
-@@ -29753,10 +29761,12 @@
+@@ -29753,10 +29778,12 @@
          mx2 = mask.width()/2, my2 = mask.height()/2, mz2 = mask.depth()/2,
          mx1 = mx2 - 1 + (mask.width()%2), my1 = my2 - 1 + (mask.height()%2), mz1 = mz2 - 1 + (mask.depth()%2),
          mxe = width() - mx2, mye = height() - my2, mze = depth() - mz2;
@@ -39,7 +120,7 @@
          cimg_test_abort();
          const CImg<T> _img = get_shared_channel(c%_spectrum);
          const CImg<t> _mask = mask.get_shared_channel(c%mask._spectrum);
-@@ -29869,7 +29879,12 @@
+@@ -29869,7 +29896,12 @@
                }
              }
          }
@@ -53,7 +134,7 @@
        return res;
      }
  
-@@ -30055,10 +30070,12 @@
+@@ -30055,10 +30087,12 @@
          mx2 = mask.width()/2, my2 = mask.height()/2, mz2 = mask.depth()/2,
          mx1 = mx2 - 1 + (mask.width()%2), my1 = my2 - 1 + (mask.height()%2), mz1 = mz2 - 1 + (mask.depth()%2),
          mxe = width() - mx2, mye = height() - my2, mze = depth() - mz2;
@@ -66,7 +147,7 @@
          cimg_test_abort();
          const CImg<T> _img = get_shared_channel(c%_spectrum);
          const CImg<t> _mask = mask.get_shared_channel(c%mask._spectrum);
-@@ -30170,7 +30187,12 @@
+@@ -30170,7 +30204,12 @@
                }
              }
          }
@@ -80,7 +161,7 @@
        return res;
      }
  
-@@ -30182,6 +30204,7 @@
+@@ -30182,6 +30221,7 @@
      **/
      CImg<T>& dilate(const unsigned int sx, const unsigned int sy, const unsigned int sz=1) {
        if (is_empty() || (sx==1 && sy==1 && sz==1)) return *this;
@@ -88,7 +169,7 @@
        if (sx>1 && _width>1) { // Along X-axis.
          const int L = width(), off = 1, s = (int)sx, _s2 = s/2 + 1, _s1 = s - _s2, s1 = _s1>L?L:_s1, s2 = _s2>L?L:_s2;
          CImg<T> buf(L);
-@@ -30189,6 +30212,7 @@
+@@ -30189,6 +30229,7 @@
  #pragma omp parallel for collapse(3) firstprivate(buf) if (size()>524288)
  #endif
          cimg_forYZC(*this,y,z,c) {
@@ -96,7 +177,7 @@
            T *const ptrdb = buf._data, *ptrd = ptrdb, *const ptrde = buf._data + L - 1;
            const T *const ptrsb = data(0,y,z,c), *ptrs = ptrsb, *const ptrse = ptrs + L*off - off;
            T cur = *ptrs; ptrs+=off; bool is_first = true;
-@@ -30222,6 +30246,12 @@
+@@ -30222,6 +30263,12 @@
              }
              T *pd = data(0,y,z,c); cimg_for(buf,ps,T) { *pd = *ps; pd+=off; }
            }
@@ -109,7 +190,7 @@
          }
        }
  
-@@ -30233,6 +30263,7 @@
+@@ -30233,6 +30280,7 @@
  #pragma omp parallel for collapse(3) firstprivate(buf) if (size()>524288)
  #endif
          cimg_forXZC(*this,x,z,c) {
@@ -117,7 +198,7 @@
            T *const ptrdb = buf._data, *ptrd = ptrdb, *const ptrde = buf._data + L - 1;
            const T *const ptrsb = data(x,0,z,c), *ptrs = ptrsb, *const ptrse = ptrs + L*off - off;
            T cur = *ptrs; ptrs+=off; bool is_first = true;
-@@ -30266,6 +30297,12 @@
+@@ -30266,6 +30314,12 @@
              }
              T *pd = data(x,0,z,c); cimg_for(buf,ps,T) { *pd = *ps; pd+=off; }
            }
@@ -130,7 +211,7 @@
          }
        }
  
-@@ -30277,6 +30314,7 @@
+@@ -30277,6 +30331,7 @@
  #pragma omp parallel for collapse(3) firstprivate(buf) if (size()>524288)
  #endif
          cimg_forXYC(*this,x,y,c) {
@@ -138,7 +219,7 @@
            T *const ptrdb = buf._data, *ptrd = ptrdb, *const ptrde = buf._data + L - 1;
            const T *const ptrsb = data(x,y,0,c), *ptrs = ptrsb, *const ptrse = ptrs + L*off - off;
            T cur = *ptrs; ptrs+=off; bool is_first = true;
-@@ -30310,6 +30348,12 @@
+@@ -30310,6 +30365,12 @@
              }
              T *pd = data(x,y,0,c); cimg_for(buf,ps,T) { *pd = *ps; pd+=off; }
            }
