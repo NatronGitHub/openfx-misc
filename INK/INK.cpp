@@ -41,9 +41,7 @@ Version   Date       Author       Description
     1.4   18-NOV-15  N. Carroll   Implemented Despill Core
     1.5   26-NOV-15  N. Carroll   Implemented Spill Replacement
     1.6   27-APR-16  N. Carroll   Implemented Key Amount and Tune Key Amount
-
-* TODO fix up the tune key amount 
-use a lerp or a smoothstep
+    1.7   11-MAY-16  N. Carroll   Made Tune Key Amount smoother
 
 * TODO implement Matte and Despill Balance
 use the ratios between matte balance's channels for this
@@ -55,6 +53,8 @@ do these with cimg
 
 * TODO possible bug: garbage matte is multiplying, negating core matte.
 need to look into this further.
+* TODO poss bug w invert/garbage on matte monitor
+* TODO poss bug in white/ black point
 */
 
 #include "INK.h"
@@ -87,7 +87,7 @@ using namespace cimg_library;
 
 #define kPluginIdentifier "com.casanico.INK"
 #define kPluginVersionMajor 1 // Increment this if you have broken backwards compatibility.
-#define kPluginVersionMinor 6
+#define kPluginVersionMinor 5
 
 #define kSupportsTiles 1 
 #define kSupportsMultiResolution 1
@@ -425,29 +425,29 @@ private:
                 garbage = max(0.f,min(garbage,1.f));
 
 	       	// which channel of the key colour is max
-		int minKey = 0; 
-		int midKey = 1; 
-		int maxKey = 2; 
+		int minK = 0; 
+		int midK = 1; 
+		int maxK = 2; 
 		if(_keyColour.b <= _keyColour.r && _keyColour.r <= _keyColour.g ){
-		  minKey = 2; 
-		  midKey = 0; 
-		  maxKey = 1; 
+		  minK = 2; 
+		  midK = 0; 
+		  maxK = 1; 
 		} else if (_keyColour.r <= _keyColour.b && _keyColour.b <= _keyColour.g ){
-		  minKey = 0; 
-		  midKey = 2; 
-		  maxKey = 1; 
+		  minK = 0; 
+		  midK = 2; 
+		  maxK = 1; 
 		} else if (_keyColour.g <= _keyColour.b && _keyColour.b <= _keyColour.r ){
-		  minKey = 1; 
-		  midKey = 2; 
-		  maxKey = 0; 
+		  minK = 1; 
+		  midK = 2; 
+		  maxK = 0; 
 		} else if (_keyColour.g <= _keyColour.r && _keyColour.r <= _keyColour.b ){
-		  minKey = 1; 
-		  midKey = 0; 
-		  maxKey = 2; 
+		  minK = 1; 
+		  midK = 0; 
+		  maxK = 2; 
 		} else if (_keyColour.b <= _keyColour.g && _keyColour.g <= _keyColour.r ){
-		  minKey = 2; 
-		  midKey = 1; 
-		  maxKey = 0; 
+		  minK = 2; 
+		  midK = 1; 
+		  maxK = 0; 
 		}
 		// K is for Key Colour
 		double K[3] = {_keyColour.r, _keyColour.g, _keyColour.b};
@@ -461,52 +461,51 @@ private:
 		double origLum = rgb2luminance(P[0], P[1], P[2]);
 
 		// background
-                //bg double minBg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[minKey]) : 0.;
-		//bg double midBg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[midKey]) : 0.;
-                //bg double maxBg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[maxKey]) : 0.;
+                //bg double minBg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[minK]) : 0.;
+		//bg double midBg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[midK]) : 0.;
+                //bg double maxBg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[maxK]) : 0.;
 
 		// output pixel channels
 		double chan[3] = {P[0], P[1], P[2]};
 		double currMatte = 1.;
 		double amount = _keyAmount;
-		double margin = 0.1;
-		// TUNE KEY AMOUNT
-		if (origLum <= (_midpoint - margin)) {
-                  amount *= _shadows;
-                } else if (origLum <= (_midpoint)) {
-                  amount *=  (_shadows+_midtones)/2;
-                } else if (origLum <= (_midpoint + 2*margin)) {
-                  amount *= (_midtones+_highlights)/2;
-                } else {
-                  amount *= _highlights;
+		double lowlerp =  origLum/_midpoint;
+		double highlerp = (1-origLum)/(1-_midpoint);
+
+		// tune key amount
+		if (origLum <= _midpoint) {
+		  amount *= (1- lowlerp) * _shadows + lowlerp * _midtones;
+                } else if (origLum > _midpoint) {
+		  amount *= highlerp * _midtones + (1-highlerp) * _highlights;
                 }
+		
 		double amountRGB = amount;
 		// We will apply the core matte to RGB by reducing the key amount
 		double bal = _keyBalance;
 		if (!_despillCore) {
 		  amountRGB *= (1-(double)core);
 		}
-		if (!(K[minKey] == 0. && K[midKey] == 0. && K[maxKey] == 0.) &&
-		    !(P[minKey] == 0. && P[midKey] == 0. && P[maxKey] == 0.) && !(amountRGB==0.)) {
-		    // solve chan[minKey]		
-		    double min1 = (P[minKey]/(P[maxKey]-bal*P[midKey])-amountRGB*amountRGB*K[minKey]/(K[maxKey]-bal*K[midKey]))
-		      / (1+P[minKey]/(P[maxKey]-bal*P[midKey])-(2-bal)*amountRGB*amountRGB*K[minKey]/(K[maxKey]-bal*K[midKey]));
-		    double min2 = min(P[minKey],(P[maxKey]-bal*P[midKey])*min1/(1-min1));    
-		    chan[minKey] = max(0.,min(min2,1.));
-		    // solve chan[midKey]
-		    double mid1 = (P[midKey]/(P[maxKey]-(1-bal)*P[minKey])-amountRGB*amountRGB*K[midKey]/(K[maxKey]-(1-bal)*K[minKey]))
-		      / (1+P[midKey]/(P[maxKey]-(1-bal)*P[minKey])-(1+bal)*amountRGB*amountRGB*K[midKey]/(K[maxKey]-(1-bal)*K[minKey]));
-		    double mid2 = min(P[midKey],(P[maxKey]-(1-bal)*P[minKey])*mid1/(1-mid1));
-		    chan[midKey] = max(0.,min(mid2,1.));
-	  	    // solve chan[maxKey]
-		    double max1 = min(P[maxKey],(bal*min(P[midKey],(P[maxKey]-(1-bal)*P[minKey])*mid1/(1-mid1))
-						 + (1-bal)*min(P[minKey],(P[maxKey]-bal*P[midKey])*min1/(1-min1))));
-		    chan[maxKey] = max(0.,min(max1,1.));
+		if (!(K[minK] == 0. && K[midK] == 0. && K[maxK] == 0.) &&
+		    !(P[minK] == 0. && P[midK] == 0. && P[maxK] == 0.) && !(amountRGB==0.)) {
+		    // solve chan[minK]		
+		    double min1 = (P[minK]/(P[maxK]-bal*P[midK])-amountRGB*amountRGB*K[minK]/(K[maxK]-bal*K[midK]))
+		      / (1+P[minK]/(P[maxK]-bal*P[midK])-(2-bal)*amountRGB*amountRGB*K[minK]/(K[maxK]-bal*K[midK]));
+		    double min2 = min(P[minK],(P[maxK]-bal*P[midK])*min1/(1-min1));    
+		    chan[minK] = max(0.,min(min2,1.));
+		    // solve chan[midK]
+		    double mid1 = (P[midK]/(P[maxK]-(1-bal)*P[minK])-amountRGB*amountRGB*K[midK]/(K[maxK]-(1-bal)*K[minK]))
+		      / (1+P[midK]/(P[maxK]-(1-bal)*P[minK])-(1+bal)*amountRGB*amountRGB*K[midK]/(K[maxK]-(1-bal)*K[minK]));
+		    double mid2 = min(P[midK],(P[maxK]-(1-bal)*P[minK])*mid1/(1-mid1));
+		    chan[midK] = max(0.,min(mid2,1.));
+	  	    // solve chan[maxK]
+		    double max1 = min(P[maxK],(bal*min(P[midK],(P[maxK]-(1-bal)*P[minK])*mid1/(1-mid1))
+						 + (1-bal)*min(P[minK],(P[maxK]-bal*P[midK])*min1/(1-min1))));
+		    chan[maxK] = max(0.,min(max1,1.));
 		    // solve alpha
-		    double a1 = (1-K[maxKey])+(bal*K[midKey]+(1-bal)*K[minKey]);
-		    double a2 = amount*(1+a1/abs(1-a1));
-		    double a3 =  (1-P[maxKey])-P[maxKey]*(a2-(1+(bal*P[midKey]+(1-bal)*P[minKey])/P[maxKey]*a2));
-		    double a4 = max(chan[midKey],max(a3,chan[minKey]));
+		    double a1 = (1-K[maxK])+(bal*K[midK]+(1-bal)*K[minK]);
+		    double a2 = amount*amount*(1+a1/abs(1-a1));
+		    double a3 =  (1-P[maxK])-P[maxK]*(a2-(1+(bal*P[midK]+(1-bal)*P[minK])/P[maxK]*a2));
+		    double a4 = max(chan[midK],max(a3,chan[minK]));
 		    currMatte = max(0.,min(a4,1.)); //alpha
 		}
                 double sourceMatte = (_sourceAlpha == eSourceAlphaNormal && srcPix) ? sampleToFloat<PIX,maxValue>(srcPix[3]) : 1.;
@@ -514,20 +513,20 @@ private:
 		double combMatte = (currMatte+(double)core - currMatte*(double)core) * (1-garbage) * sourceMatte;
 
 		// apply the garbage and source mattes to RGB
-		chan[minKey] *= (1-garbage) * sourceMatte;
-		chan[midKey] *= (1-garbage) * sourceMatte;
-		chan[maxKey] *= (1-garbage) * sourceMatte;
+		chan[minK] *= (1-garbage) * sourceMatte;
+		chan[midK] *= (1-garbage) * sourceMatte;
+		chan[maxK] *= (1-garbage) * sourceMatte;
 
 		// SPILL REPLACEMENT		
-		if (_despillCore & !(R[minKey] == 0. && R[midKey] == 0. && R[maxKey] == 0.)) {
+		if (_despillCore & !(R[minK] == 0. && R[midK] == 0. && R[maxK] == 0.)) {
 		  // give the spill replace colour the luminance of the despilled pixel
 		  double replaceLum = rgb2luminance(R[0], R[1], R[2]);
 		  double despilledLum = rgb2luminance(chan[0], chan[1], chan[2]);
 		  double lumFactor =  _preserveLuminance*(despilledLum/replaceLum-1.)+1.;
 		  // replacement amount
-		  chan[minKey] += lumFactor * _replacementAmount * R[minKey] * ((double)core - currMatte*(double)core);
-		  chan[midKey] += lumFactor * _replacementAmount * R[midKey] * ((double)core - currMatte*(double)core);
-		  chan[maxKey] += lumFactor * _replacementAmount * R[maxKey] * ((double)core - currMatte*(double)core);
+		  chan[minK] += lumFactor * _replacementAmount * R[minK] * ((double)core - currMatte*(double)core);
+		  chan[midK] += lumFactor * _replacementAmount * R[midK] * ((double)core - currMatte*(double)core);
+		  chan[maxK] += lumFactor * _replacementAmount * R[maxK] * ((double)core - currMatte*(double)core);
 		}
 		
 		// MATTE POSTPROCESS
@@ -573,9 +572,9 @@ private:
                         break;
                     //bg case eOutputModeComposite:
                     //bg     // traditional composite.
-		    //bg     dstPix[minKey] = floatToSample<PIX,maxValue>(chan[minKey] + minBg*(1-combMatte));
-		    //bg     dstPix[midKey] = floatToSample<PIX,maxValue>(chan[midKey] + midBg*(1-combMatte));
-		    //bg     dstPix[maxKey] = floatToSample<PIX,maxValue>(chan[maxKey] + maxBg*(1-combMatte));
+		    //bg     dstPix[minK] = floatToSample<PIX,maxValue>(chan[minK] + minBg*(1-combMatte));
+		    //bg     dstPix[midK] = floatToSample<PIX,maxValue>(chan[midK] + midBg*(1-combMatte));
+		    //bg     dstPix[maxK] = floatToSample<PIX,maxValue>(chan[maxK] + maxBg*(1-combMatte));
                     //bg     break;
 		    case eOutputModeMatteMonitor:
 		        dstPix[0] = floatToSample<PIX,maxValue>(matteMonitor(core));
@@ -1022,7 +1021,7 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setHint(kParamKeyAmountHint);
         //param->setDoubleType(eDoubleTypeAngle);;
         param->setRange(0., 2);
-        param->setDisplayRange(0., 2.);  
+        param->setDisplayRange(0.5, 1.5);  
         param->setDefault(1.);    
         param->setAnimates(true);
         if (page) {
@@ -1057,7 +1056,7 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setHint(kParamShadowsHint);
         param->setDoubleType(eDoubleTypeAngle);;
         param->setRange(0., 2.);
-        param->setDisplayRange(0., 2.);  
+        param->setDisplayRange(0.5, 1.5);  
         param->setDefault(1.);    
         param->setAnimates(true);
 	param->setParent(*tuneKey);
@@ -1070,7 +1069,7 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setHint(kParamMidtonesHint);
         param->setDoubleType(eDoubleTypeAngle);;
         param->setRange(0., 2.);
-        param->setDisplayRange(0., 2.);  
+        param->setDisplayRange(0.5, 1.5);  
         param->setDefault(1.);    
         param->setAnimates(true);
 	param->setParent(*tuneKey);
@@ -1082,7 +1081,7 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setHint(kParamHighlightsHint);
         param->setDoubleType(eDoubleTypeAngle);;
         param->setRange(0., 2.);
-        param->setDisplayRange(0., 2.);  
+        param->setDisplayRange(0.5, 1.5);  
         param->setDefault(1.);    
         param->setAnimates(true);
 	param->setParent(*tuneKey);
