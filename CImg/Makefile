@@ -128,11 +128,12 @@ CXXFLAGS += \
 # commit 035ae8fb8b90dcaf9e186b3712a2b5a8e4b3a255 is CImg 1.6.9
 # commit 7f84548e5ee0e2eaaf473ad936eb54abb0c72d45 is CImg 1.7.0
 # commit aa2f7451cfa3a881948453cce0be175acbc6ca10 is CImg 1.7.1
-CIMGVERSION=aa2f7451cfa3a881948453cce0be175acbc6ca10
+# commit 81e3aebe14544ac975125a50e52dc35130dd6d0d is CImg 1.7.1 + abort fixes
+CIMGVERSION=81e3aebe14544ac975125a50e52dc35130dd6d0d
 
 CImg.h:
 	curl -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
-	patch -p0 -d. < CImg-1.7.1-omp.patch
+#	patch -p0 -d. < CImg-1.7.1-omp.patch
 
 #git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 

@@ -113,7 +113,7 @@
 // we have a struct with a thread-local storage that holds the OFX::ImageEffect
 // for the thread being rendered
 #ifdef HAVE_THREAD_LOCAL
-#define cimg_test_abort() gImageEffectAbort()
+#define cimg_abort_test() gImageEffectAbort()
 inline void gImageEffectAbort();
 #endif
 

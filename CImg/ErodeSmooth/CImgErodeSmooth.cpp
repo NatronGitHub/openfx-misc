@@ -282,7 +282,7 @@ box(CImg<T>& img,
         return /* *this*/;
     }
     const unsigned int _width = img._width, _height = img._height, _depth = img._depth, _spectrum = img._spectrum;
-    const char naxis = cimg::uncase(axis);
+    const char naxis =  cimg::lowercase(axis); // was cimg::uncase(axis) before CImg 1.7.2
     if ( img.is_empty() || ( (width <= 1.f) && !order ) ) {
         return /* *this*/;
     }

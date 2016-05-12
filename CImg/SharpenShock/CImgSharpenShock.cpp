@@ -97,12 +97,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamIterationsHint "Number of iterations. A reasonable value is 1."
 #define kParamIterationsDefault 1
 
+#undef cimg_abort_test
 #ifdef cimg_use_openmp
-#define test_abort() if ( !omp_get_thread_num() && abort() ) \
-        throw CImgAbortException("")
+#define cimg_pragma_omp(p) cimg_pragma(omp p)
+#define cimg_abort_test() if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
 #else
-#define test_abort() if ( abort() ) \
-        throw CImgAbortException("")
+#define cimg_pragma_omp(p)
+#define cimg_abort_test() if (abort()) throw CImgAbortException("")
 #endif
 
 using namespace cimg_library;
@@ -172,7 +173,7 @@ public:
         double alpha = args.renderScale.x * params.alpha;
         double sigma = args.renderScale.x * params.sigma;
         for (int i = 1; i < params.iterations; ++i) {
-            test_abort();
+            cimg_abort_test();
 #ifdef CIMG_ABORTABLE
             // args
             const float amplitude = (float)params.amplitude;
@@ -191,43 +192,30 @@ public:
             if (sigma > 0) {
                 G.blur(sigma);
             }
-            bool go = true;
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (G.width()>=32 && G.height()>=16)
-#endif
+            cimg_abort_init; cimg_pragma_omp(parallel for if (G.width()>=32 && G.height()>=16))
             cimg_forY(G, y) {
-                if (go) {
-                    try {
-                        CImg<Tfloat> val, vec;
-                        Tfloat *ptrG0 = G.data(0, y, 0, 0), *ptrG1 = G.data(0, y, 0, 1), *ptrG2 = G.data(0, y, 0, 2);
-                        test_abort();
-                        cimg_forX(G, x) {
-                            G.get_tensor_at(x, y).symmetric_eigen(val, vec);
-                            if (val[0] < 0) {val[0] = 0; }
-                            if (val[1] < 0) {val[1] = 0; }
-                            *(ptrG0++) = vec(0, 0);
-                            *(ptrG1++) = vec(0, 1);
-                            *(ptrG2++) = 1 - (Tfloat)std::pow(1 + val[0] + val[1], -(Tfloat)nedge);
-                        }
-                    } catch (...) {
-#pragma omp atomic
-                        go &= false;
+                cimg_abort_try {
+                    CImg<Tfloat> val, vec;
+                    Tfloat *ptrG0 = G.data(0, y, 0, 0), *ptrG1 = G.data(0, y, 0, 1), *ptrG2 = G.data(0, y, 0, 2);
+                    cimg_abort_test();
+                    cimg_forX(G, x) {
+                        G.get_tensor_at(x, y).symmetric_eigen(val, vec);
+                        if (val[0] < 0) {val[0] = 0; }
+                        if (val[1] < 0) {val[1] = 0; }
+                        *(ptrG0++) = vec(0, 0);
+                        *(ptrG1++) = vec(0, 1);
+                        *(ptrG2++) = 1 - (Tfloat)std::pow(1 + val[0] + val[1], -(Tfloat)nedge);
                     }
-                }
+                } cimg_abort_catch()
             }
-            test_abort();
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (cimg.width()*cimg.height()>=512 && cimg.spectrum()>=2)
-#endif
+            cimg_abort_test();
+            cimg_pragma_omp(parallel for if (cimg.width()*cimg.height()>=512 && cimg.spectrum()>=2))
             cimg_forC(cimg, c) {
-                if (go) {
-                    try {
-                        Tfloat *ptrd = velocity.data(0, 0, 0, c), veloc_max = 0;
+                cimg_abort_try {
+                    Tfloat *ptrd = velocity.data(0, 0, 0, c), veloc_max = 0;
 
-                        CImg_3x3(I, Tfloat);
-                        cimg_for3(cimg._height, y) {
-                            if (go) {
-                                test_abort();
+                    CImg_3x3(I, Tfloat);
+                    cimg_for3(cimg._height, y) {
                                 for (int x = 0,
                                      _p1x = 0,
                                      _n1x = (int)(
@@ -265,14 +253,10 @@ public:
                                     }
                                 }
                             }
-                        }
-                        _veloc_max[c] = veloc_max;
-                    } catch (...) {
-#pragma omp atomic
-                        go &= false;
-                    }
-                }
+                    _veloc_max[c] = veloc_max;
+                } cimg_abort_catch()
             }
+            cimg_abort_test();
 
             const Tfloat veloc_max = _veloc_max.max();
             if (veloc_max > 0) {
