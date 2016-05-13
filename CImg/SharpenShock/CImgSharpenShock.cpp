@@ -99,10 +99,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #undef cimg_abort_test
 #ifdef cimg_use_openmp
-#define cimg_pragma_omp(p) cimg_pragma(omp p)
 #define cimg_abort_test() if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
 #else
-#define cimg_pragma_omp(p)
 #define cimg_abort_test() if (abort()) throw CImgAbortException("")
 #endif
 
@@ -192,7 +190,7 @@ public:
             if (sigma > 0) {
                 G.blur(sigma);
             }
-            cimg_abort_init; cimg_pragma_omp(parallel for if (G.width()>=32 && G.height()>=16))
+            cimg_abort_init; cimg_pragma_openmp(parallel for if (G.width()>=32 && G.height()>=16))
             cimg_forY(G, y) {
                 cimg_abort_try {
                     CImg<Tfloat> val, vec;
@@ -209,7 +207,7 @@ public:
                 } cimg_abort_catch()
             }
             cimg_abort_test();
-            cimg_pragma_omp(parallel for if (cimg.width()*cimg.height()>=512 && cimg.spectrum()>=2))
+            cimg_pragma_openmp(parallel for if (cimg.width()*cimg.height()>=512 && cimg.spectrum()>=2))
             cimg_forC(cimg, c) {
                 cimg_abort_try {
                     Tfloat *ptrd = velocity.data(0, 0, 0, c), veloc_max = 0;

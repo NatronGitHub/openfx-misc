@@ -657,6 +657,12 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
 
     int srcNComponents = _srcClip->getPixelComponentCount();
 
+#ifdef cimg_use_openmp
+    // set the number of OpenMP threads to a reasonable value
+    // (but remember that the OpenMP threads are not counted my the multithread suite)
+    omp_set_num_threads(OFX::MultiThread::getNumCPUs());
+#endif
+
     // from here on, we do the following steps:
     // 1- copy & unpremult all channels from srcRoI, from src to a tmp image of size srcRoI
     // 2- extract channels to be processed from tmp to a cimg of size srcRoI (and do the interleaved to coplanar conversion)

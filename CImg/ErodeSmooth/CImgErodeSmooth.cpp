@@ -288,34 +288,26 @@ box(CImg<T>& img,
     }
     switch (naxis) {
     case 'x': {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forYZC(img, y, z, c)
         _cimg_box_apply(img.data(0, y, z, c), width, img._width, 1U, iter, order, boundary_conditions);
     }
     break;
     case 'y': {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXZC(img, x, z, c)
         _cimg_box_apply(img.data(x, 0, z, c), width, _height, (unsigned long)_width, iter, order, boundary_conditions);
     }
     break;
     case 'z': {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXYC(img, x, y, c)
         _cimg_box_apply(img.data(x, y, 0, c), width, _depth, (unsigned long)(_width * _height),
                         iter, order, boundary_conditions);
     }
     break;
     default: {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXYZ(img, x, y, z)
         _cimg_box_apply(img.data(x, y, z, 0), width, _spectrum, (unsigned long)(_width * _height * _depth),
                         iter, order, boundary_conditions);
@@ -500,9 +492,7 @@ public:
             return;
         }
         // scale to [0,1]
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (cimg.size()>=4096)
-#endif
+        cimg_pragma_openmp(parallel for if (cimg.size()>=4096))
         cimg_rof(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - rmin) / (rmax - rmin) + ERODESMOOTH_OFFSET );
 
         // see "Robust local max-min filters by normalized power-weighted filtering" by L.J. van Vliet
@@ -512,9 +502,7 @@ public:
             cimg_library::CImg<cimgpix_t> denom(cimg, false);
             const double vmin = std::pow( (double)ERODESMOOTH_MIN, (double)1. / params.exponent );
             //printf("%g\n",vmin);
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (denom.size()>=4096)
-#endif
+            cimg_pragma_openmp(parallel for if (denom.size()>=4096))
             cimg_rof(denom, ptrd, cimgpix_t) * ptrd = (cimgpix_t)std::pow( (double)( (*ptrd < 0. ? 0. : *ptrd) + vmin ), params.exponent ); // C++98 and C++11 both have std::pow(double,int)
 
             cimg.mul(denom);
@@ -565,9 +553,7 @@ public:
         }
 
         // scale to [rmin,rmax]
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (cimg.size()>=4096)
-#endif
+        cimg_pragma_openmp(parallel for if (cimg.size()>=4096))
         cimg_rof(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - ERODESMOOTH_OFFSET) * (rmax - rmin) + rmin );
     } // render
 

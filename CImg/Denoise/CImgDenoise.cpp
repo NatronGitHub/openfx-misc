@@ -189,18 +189,14 @@ public:
 
 #undef cimg_abort_test
 #ifdef cimg_use_openmp
-#define cimg_pragma_omp(p) cimg_pragma(omp p)
 #define cimg_abort_test() if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
 #else
-#define cimg_pragma_omp(p)
 #define cimg_abort_test() if (abort()) throw CImgAbortException("")
 #endif
 
-#define _cimg_blur_patch2d_fast(N)              \
-        { cimg_abort_init; cimg_pragma_omp(parallel for cimg_openmp_if(img.size()>=65536)) \
-        cimg_for##N##Y(res,y) cimg_abort_try {                      \
-         cimg_abort_test(); \
-         cimg_for##N##X(res,x) { \
+        // the macros are taken from CImg.h, with (*this) replaced by (cimg)
+#define _cimg_blur_patch2d_fast(N) \
+        cimg_for##N##XY(res,x,y) { \
           T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
           const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
           float sum_weights = 0; \
@@ -212,18 +208,14 @@ public:
             const float dx = (float)p - x, dy = (float)q - y, \
               alldist = distance2 + (dx*dx+dy*dy)/sigma_s2, weight = alldist>3?0.0f:1.0f; \
             sum_weights+=weight; \
-            cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c); \
+            cimg_forC(res,c) res(x,y,c)+=weight*(cimg)(p,q,c); \
           } \
           if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights; \
-          else cimg_forC(res,c) res(x,y,c) = (Tfloat)(cimg(x,y,c)); \
-         } cimg_abort_catch() \
-        } cimg_abort_test(); }
+          else cimg_forC(res,c) res(x,y,c) = (Tfloat)((cimg)(x,y,c)); \
+        }
 
 #define _cimg_blur_patch2d(N) \
-        { cimg_abort_init; cimg_pragma_omp(parallel for cimg_openmp_if(img.size()>=65536)) \
-        cimg_for##N##Y(res,y) cimg_abort_try {                      \
-         cimg_abort_test(); \
-         cimg_for##N##X(res,x) { \
+        cimg_for##N##XY(res,x,y) { \
           T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
           const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
           float sum_weights = 0, weight_max = 0; \
@@ -236,13 +228,12 @@ public:
               alldist = distance2 + (dx*dx+dy*dy)/sigma_s2, weight = (float)std::exp(-alldist); \
             if (weight>weight_max) weight_max = weight; \
             sum_weights+=weight; \
-            cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c); \
+            cimg_forC(res,c) res(x,y,c)+=weight*(cimg)(p,q,c); \
           } \
-          sum_weights+=weight_max; cimg_forC(res,c) res(x,y,c)+=weight_max*cimg(x,y,c); \
+          sum_weights+=weight_max; cimg_forC(res,c) res(x,y,c)+=weight_max*(cimg)(x,y,c); \
           if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights; \
-          else cimg_forC(res,c) res(x,y,c) = (Tfloat)(cimg(x,y,c)); \
-         } cimg_abort_catch() \
-        } cimg_abort_test(); }
+          else cimg_forC(res,c) res(x,y,c) = (Tfloat)((cimg)(x,y,c)); \
+    }
 
         if (cimg.is_empty() || !patch_size || !lookup_size) return;
         CImg<Tfloat> res(cimg._width,cimg._height,cimg._depth,cimg._spectrum,0);
@@ -260,15 +251,16 @@ public:
             case 3 : if (is_fast_approx) _cimg_blur_patch2d_fast(3) else _cimg_blur_patch2d(3) break;
             case 4 : if (is_fast_approx) _cimg_blur_patch2d_fast(4) else _cimg_blur_patch2d(4) break;
             case 5 : if (is_fast_approx) _cimg_blur_patch2d_fast(5) else _cimg_blur_patch2d(5) break;
-            case 6 : if (is_fast_approx) _cimg_blur_patch2d_fast(6) else _cimg_blur_patch2d(6) break;
-            case 7 : if (is_fast_approx) _cimg_blur_patch2d_fast(7) else _cimg_blur_patch2d(7) break;
-            case 8 : if (is_fast_approx) _cimg_blur_patch2d_fast(8) else _cimg_blur_patch2d(8) break;
-            case 9 : if (is_fast_approx) _cimg_blur_patch2d_fast(9) else _cimg_blur_patch2d(9) break;
+                // use OpenMP when patch_size > 5
+            //case 6 : if (is_fast_approx) _cimg_blur_patch2d_fast(6) else _cimg_blur_patch2d(6) break;
+            //case 7 : if (is_fast_approx) _cimg_blur_patch2d_fast(7) else _cimg_blur_patch2d(7) break;
+            //case 8 : if (is_fast_approx) _cimg_blur_patch2d_fast(8) else _cimg_blur_patch2d(8) break;
+            //case 9 : if (is_fast_approx) _cimg_blur_patch2d_fast(9) else _cimg_blur_patch2d(9) break;
             default : { // Fast
                 const int psize2 = (int)patch_size/2, psize1 = (int)patch_size - psize2 - 1;
                 cimg_abort_init;
                 if (is_fast_approx) {
-                    cimg_pragma_omp(parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q))
+                    cimg_pragma_openmp(parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q))
                     cimg_forY(res,y) {
                         cimg_abort_try {
                             cimg_abort_test();
@@ -291,7 +283,7 @@ public:
                         } cimg_abort_catch()
                     }
                 } else {
-                    cimg_pragma_omp(parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q))
+                    cimg_pragma_openmp(parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q))
                     cimg_forY(res,y) {
                         cimg_abort_try {
                             cimg_abort_test();

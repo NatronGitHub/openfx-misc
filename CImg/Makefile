@@ -129,7 +129,8 @@ CXXFLAGS += \
 # commit 7f84548e5ee0e2eaaf473ad936eb54abb0c72d45 is CImg 1.7.0
 # commit aa2f7451cfa3a881948453cce0be175acbc6ca10 is CImg 1.7.1
 # commit 81e3aebe14544ac975125a50e52dc35130dd6d0d is CImg 1.7.1 + abort fixes
-CIMGVERSION=81e3aebe14544ac975125a50e52dc35130dd6d0d
+# commit 4f8f21f3cf1707e8a9b6d2100fc61d3b3768ce34 is CImg 1.7.1 + use macros for openmp
+CIMGVERSION=4f8f21f3cf1707e8a9b6d2100fc61d3b3768ce34
 
 CImg.h:
 	curl -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
@@ -137,36 +138,40 @@ CImg.h:
 
 #git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 
-$(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImg.h
+$(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImgOperator.h CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImg.h
+$(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImg.h
+$(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp CImg.h
+$(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImg.h
+$(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImg.h
+$(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgErodeSmooth.o: CImgErodeSmooth.cpp CImg.h
+$(OBJECTPATH)/CImgErodeSmooth.o: CImgErodeSmooth.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImg.h
+$(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgGuided.o: CImgGuided.cpp CImg.h
+$(OBJECTPATH)/CImgFilter.o: CImgOperator.cpp CImgOperator.h CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp CImg.h
+$(OBJECTPATH)/CImgGuided.o: CImgGuided.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgMedian.o: CImgMedian.cpp CImg.h
+$(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgNoise.o: CImgNoise.cpp CImg.h
+$(OBJECTPATH)/CImgMedian.o: CImgMedian.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgPlasma.o: CImgPlasma.cpp CImg.h
+$(OBJECTPATH)/CImgNoise.o: CImgNoise.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgRollingGuidance.o: CImgRollingGuidance.cpp CImg.h
+$(OBJECTPATH)/CImgOperator.o: CImgOperator.cpp CImgOperator.h CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgSharpenInvDiff.o: CImgSharpenInvDiff.cpp CImg.h
+$(OBJECTPATH)/CImgPlasma.o: CImgPlasma.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgSharpenShock.o: CImgSharpenShock.cpp CImg.h
+$(OBJECTPATH)/CImgRollingGuidance.o: CImgRollingGuidance.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgSmooth.o: CImgSmooth.cpp CImg.h
+$(OBJECTPATH)/CImgSharpenInvDiff.o: CImgSharpenInvDiff.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgSharpenShock.o: CImgSharpenShock.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgSmooth.o: CImgSmooth.cpp CImgFilter.h CImg.h

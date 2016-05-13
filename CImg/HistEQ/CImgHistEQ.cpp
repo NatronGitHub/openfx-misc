@@ -132,9 +132,7 @@ public:
             vmin = cimg.min_max(vmax);
             cimg.equalize(params.nb_levels, vmin, vmax);
         } else {
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (cimg.size()>=1048576)
-#endif
+            cimg_pragma_openmp(parallel for if (cimg.size()>=1048576))
             cimg_forXY(cimg, x, y) {
                 float h, s, v;
                 OFX::Color::rgb_to_hsv(cimg(x, y, 0, 0), cimg(x, y, 0, 1), cimg(x, y, 0, 2), &h, &s, &v);

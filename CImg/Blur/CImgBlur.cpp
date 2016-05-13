@@ -388,34 +388,26 @@ box(CImg<T>& img,
     }
     switch (naxis) {
     case 'x': {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forYZC(img, y, z, c)
         _cimg_box_apply(img.data(0, y, z, c), width, img._width, 1U, iter, order, boundary_conditions);
     }
     break;
     case 'y': {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXZC(img, x, z, c)
         _cimg_box_apply(img.data(x, 0, z, c), width, _height, (unsigned long)_width, iter, order, boundary_conditions);
     }
     break;
     case 'z': {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXYC(img, x, y, c)
         _cimg_box_apply(img.data(x, y, 0, c), width, _depth, (unsigned long)(_width * _height),
                         iter, order, boundary_conditions);
     }
     break;
     default: {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXYZ(img, x, y, z)
         _cimg_box_apply(img.data(x, y, z, 0), width, _spectrum, (unsigned long)(_width * _height * _depth),
                         iter, order, boundary_conditions);
@@ -725,34 +717,26 @@ vanvliet(CImg<T>& img,
     filter[0] = B; filter[1] = -b1; filter[2] = -b2; filter[3] = -b3;
     switch (naxis) {
     case 'x': {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forYZC(img, y, z, c)
         _cimg_recursive_apply<4>(img.data(0, y, z, c), filter, img._width, 1U, order, boundary_conditions);
     }
     break;
     case 'y': {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXZC(img, x, z, c)
         _cimg_recursive_apply<4>(img.data(x, 0, z, c), filter, _height, (unsigned long)_width, order, boundary_conditions);
     }
     break;
     case 'z': {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXYC(img, x, y, c)
         _cimg_recursive_apply<4>(img.data(x, y, 0, c), filter, _depth, (unsigned long)(_width * _height),
                                  order, boundary_conditions);
     }
     break;
     default: {
-#ifdef cimg_use_openmp
-#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
-#endif
+        cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXYZ(img, x, y, z)
         _cimg_recursive_apply<4>(img.data(x, y, z, 0), filter, _spectrum, (unsigned long)(_width * _height * _depth),
                                  order, boundary_conditions);
