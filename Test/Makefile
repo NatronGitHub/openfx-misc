@@ -14,7 +14,7 @@ include $(TOP_SRCDIR)/Makefile.master
 
 ## Enable these if you installed a mangled OSMesa (preferably with 32 bits FP support)
 #CXXFLAGS += -DHAVE_OSMESA
-#LINKFLAGS += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lMangledGLU `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
+#LINKFLAGS += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
 
 
 $(OBJECTPATH)/TestOpenGL.o: TestOpenGL.cpp TestOpenGL.h

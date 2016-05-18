@@ -60,11 +60,11 @@
 #if !defined(USE_OSMESA) && defined(__APPLE__)
 #  include <OpenGL/gl.h>
 #  include <OpenGL/glext.h>
-#  include <OpenGL/glu.h>
+//#  include <OpenGL/glu.h>
 #else
 #  include <GL/gl.h>
 #  include <GL/glext.h>
-#  include <GL/glu.h>
+//#  include <GL/glu.h>
 #endif
 
 #define NBINPUTS SHADERTOY_NBINPUTS
@@ -222,11 +222,48 @@ static PFNGLWAITSYNCPROC glWaitSync = NULL;
 inline void
 glError() {}
 
+inline const char*
+glErrorString(GLenum errorCode)
+{
+    static const struct {
+        GLenum code;
+        const char *string;
+    } errors[]=
+    {
+        /* GL */
+        {GL_NO_ERROR, "no error"},
+        {GL_INVALID_ENUM, "invalid enumerant"},
+        {GL_INVALID_VALUE, "invalid value"},
+        {GL_INVALID_OPERATION, "invalid operation"},
+        {GL_STACK_OVERFLOW, "stack overflow"},
+        {GL_STACK_UNDERFLOW, "stack underflow"},
+        {GL_OUT_OF_MEMORY, "out of memory"},
+#ifdef GL_EXT_histogram
+        {GL_TABLE_TOO_LARGE, "table too large"},
+#endif
+#ifdef GL_EXT_framebuffer_object
+        {GL_INVALID_FRAMEBUFFER_OPERATION_EXT, "invalid framebuffer operation"},
+#endif
+
+        {0, NULL }
+    };
+
+    int i;
+
+    for (i=0; errors[i].string; i++) {
+        if (errors[i].code == errorCode) {
+            return errors[i].string;
+        }
+    }
+
+    return NULL;
+}
+
 #define glCheckError()                                                  \
     {                                                                   \
         GLenum _glerror_ = glGetError();                                \
         if (_glerror_ != GL_NO_ERROR) {                                 \
-            std::cout << "GL_ERROR :" << __FILE__ << " " << __LINE__ << " " << gluErrorString(_glerror_) << std::endl; \
+            std::cout << "GL_ERROR :" << __FILE__ << " " << __LINE__ << " " << glErrorString(_glerror_) << std::endl; \
             glError();                                                  \
         }                                                               \
     }
@@ -500,11 +537,7 @@ compileShader(GLenum shaderType,
         if (infologLength > 0) {
             infoLog = new char[infologLength];
             glGetShaderInfoLog(s, infologLength, NULL, infoLog);
-            if (shaderType == GL_FRAGMENT_SHADER) {
-                errstr += "\nError log (subtract 100 from line numbers):\n";
-            } else {
-                errstr += "\nError log:\n";
-            }
+            errstr += "\nError log:\n";
             errstr += infoLog;
             delete [] infoLog;
         } else {
@@ -945,13 +978,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 fsSource += std::string("uniform sampler2D iChannel") + (char)('0' + i) + ";\n";
             }
-            size_t fsSourceLines = std::count(fsSource.begin(), fsSource.end(), '\n');
-            assert(fsSourceLines <= 100);
-            if ( (int)fsSourceLines > 100 ) {
-                fsSourceLines = 100;
-            }
-            // make sure the actual program starts at line 100
-            fsSource += std::string(100 - fsSourceLines, '\n') + str + '\n' + fsFooter;
+            fsSource += "#line 1\n";
+            fsSource += str + '\n' + fsFooter;
             std::string errstr;
             shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fsSource.c_str(), errstr);
             if (shadertoy->program == 0) {

@@ -55,11 +55,11 @@
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
 #  include <OpenGL/glext.h>
-#  include <OpenGL/glu.h>
+//#  include <OpenGL/glu.h>
 #else
 #  include <GL/gl.h>
 #  include <GL/glext.h>
-#  include <GL/glu.h>
+//#  include <GL/glu.h>
 #endif
 
 #ifndef DEBUG
@@ -80,11 +80,48 @@
 inline void
 glError() {}
 
+inline const char*
+glErrorString(GLenum errorCode)
+{
+    static const struct {
+        GLenum code;
+        const char *string;
+    } errors[]=
+    {
+        /* GL */
+        {GL_NO_ERROR, "no error"},
+        {GL_INVALID_ENUM, "invalid enumerant"},
+        {GL_INVALID_VALUE, "invalid value"},
+        {GL_INVALID_OPERATION, "invalid operation"},
+        {GL_STACK_OVERFLOW, "stack overflow"},
+        {GL_STACK_UNDERFLOW, "stack underflow"},
+        {GL_OUT_OF_MEMORY, "out of memory"},
+#ifdef GL_EXT_histogram
+        {GL_TABLE_TOO_LARGE, "table too large"},
+#endif
+#ifdef GL_EXT_framebuffer_object
+        {GL_INVALID_FRAMEBUFFER_OPERATION_EXT, "invalid framebuffer operation"},
+#endif
+
+        {0, NULL }
+    };
+
+    int i;
+
+    for (i=0; errors[i].string; i++) {
+        if (errors[i].code == errorCode) {
+            return errors[i].string;
+        }
+    }
+
+    return NULL;
+}
+
 #define glCheckError()                                                  \
     {                                                                   \
         GLenum _glerror_ = glGetError();                                \
         if (_glerror_ != GL_NO_ERROR) {                                 \
-            std::cout << "GL_ERROR :" << __FILE__ << " " << __LINE__ << " " << gluErrorString(_glerror_) << std::endl; \
+            std::cout << "GL_ERROR :" << __FILE__ << " " << __LINE__ << " " << glErrorString(_glerror_) << std::endl; \
             glError();                                                  \
         }                                                               \
     }
