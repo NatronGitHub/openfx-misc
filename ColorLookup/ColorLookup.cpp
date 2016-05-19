@@ -772,8 +772,8 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 {
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
-                                               !( gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                  (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9) ) ); // Nuke 8 and 9 are known to *not* support Parametric
+                                               !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                  8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) ); // Nuke 8-10 are known to *not* support Parametric
 
     if (!supportsParametricParameter) {
         throwHostMissingSuiteException(kOfxParametricParameterSuite);
