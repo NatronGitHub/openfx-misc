@@ -192,6 +192,22 @@ Notes & Caveats
 
 If you use the Roto plugin in any other host than [Natron](http://natron.inria.fr), you will notice that it doesn't do much. Its role is just to provide an entry point for a host-based rotoscoping tool, which provides a roto mask to this plugin.
 
+### The default parameters are too small on DaVinci Resolve
+
+This is because Resolve does not support the `kOfxParamPropDefaultCoordinateSystem` property. A solution was implemented in CornerPin (look for the comment "Some hosts (e.g. Resolve) may not support normalized defaults"), but the following plugins still have to be fixed:
+
+- CopyRectangle
+- Crop
+- HSVTool
+- ImageStatistics
+- ofxsGenerator
+- ofxsPositionInteract
+- ofxsTransformInteract
+- Position
+- ReConverge
+- TestPosition
+- TrackerPM
+
 ### ColorLookup does not work on Nuke 8/9, DaVinci Resolve...
 
 Although Nuke 8 & 9 claim via OpenFX that they support parametric parameters (i.e. adjustable parametric curves), these don't work (at least on OS X, and maybe on other platforms). The plugin appears in the plugin list, but cannot be instanciated. Nothing seems to happen, and the following message appears on the console (on OS X):
