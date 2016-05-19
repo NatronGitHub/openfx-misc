@@ -2831,6 +2831,8 @@
 		1E9B5F6A198A54210095C8AA /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		1E9B5F6B198A54210095C8AA /* Makefile.master */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.master; sourceTree = "<group>"; };
 		1E9B5F6C198A54210095C8AA /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
+		1E9DD3C01CEE1D9D00B674E9 /* README-hosts.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "README-hosts.txt"; sourceTree = "<group>"; };
+		1E9DD3C11CEE200800B674E9 /* gpl-header-c.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "gpl-header-c.txt"; sourceTree = "<group>"; };
 		1E9FC1CE180BF74400EFE0F9 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		1E9FC1CF180BF74400EFE0F9 /* fnPublicOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnPublicOfxExtensions.h; sourceTree = "<group>"; };
 		1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Dissolve.cpp; sourceTree = "<group>"; };
@@ -4109,7 +4111,9 @@
 			isa = PBXGroup;
 			children = (
 				1E9B5F6C198A54210095C8AA /* README.md */,
+				1E9DD3C01CEE1D9D00B674E9 /* README-hosts.txt */,
 				1E9B5F6A198A54210095C8AA /* LICENSE */,
+				1E9DD3C11CEE200800B674E9 /* gpl-header-c.txt */,
 				1EDE1BE8182D8B18002392CB /* Makefile */,
 				1E9B5F6B198A54210095C8AA /* Makefile.master */,
 				1EF2A8091AB1CF8B00CC0D10 /* CImg.vcxproj */,

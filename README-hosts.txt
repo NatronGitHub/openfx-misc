@@ -62,9 +62,10 @@ OfxImageEffectPropPlanarIOEnabled (render arg? images are represented by planes 
 * Nuke
 
 OFX API version 1.2
+type=Host
 hostName=uk.co.thefoundry.nuke
 hostLabel=nuke
-hostVersion=9.0.6 (9.0v6)
+hostVersion=10.0.1 (10.0)
 hostIsBackground=0
 supportsOverlays=1
 supportsMultiResolution=1
