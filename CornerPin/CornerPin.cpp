@@ -126,8 +126,12 @@ static const char* const kParamFrom[4] = {
 
 #define kParamSrcClipChanged "srcClipChanged"
 
+// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+#define kParamDefaultsNormalised "defaultsNormalised"
+
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
+static bool gHostSupportsDefaultCoordinateSystem = true;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -166,6 +170,32 @@ public:
         assert(_copyInputButton && _copyToButton && _copyFromButton);
         _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
+    }
+
+    // The following is called after the constructor
+    // (it sets values, which may have an undefined behavior)
+    void init()
+    {
+        if (paramExists(kParamDefaultsNormalised)) {
+            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+            // handle these ourselves!
+            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
+            assert(param);
+            bool normalised = param->getValue();
+            if (normalised) {
+                OfxPointD size = getProjectExtent();
+                OfxPointD p;
+                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                for (int i = 0; i < 4; ++i) {
+                    p = _to[i]->getValue();
+                    _to[i]->setValue(p.x * size.x, p.y * size.y);
+                    p = _from[i]->getValue();
+                    _from[i]->setValue(p.x * size.x, p.y * size.y);
+                }
+                param->setValue(false);
+            }
+        }
+
     }
 
 private:
@@ -896,12 +926,17 @@ defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTo[i]);
         param->setLabel(kParamTo[i]);
-        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setAnimates(true);
         param->setIncrement(1.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+        if (param->supportsDefaultCoordinateSystem()) {
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        } else {
+            gHostSupportsDefaultCoordinateSystem = false; // no multithread here
+        }
         param->setDefault(x, y);
         param->setDimensionLabels("x", "y");
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
@@ -938,12 +973,17 @@ defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
     Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamFrom[i]);
 
     param->setLabel(kParamFrom[i]);
-    param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     param->setAnimates(true);
     param->setIncrement(1.);
     param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
     param->setDisplayRange(-10000, -10000, 10000, 10000);
-    param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+    param->setDoubleType(eDoubleTypeXYAbsolute);
+    // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+    if (param->supportsDefaultCoordinateSystem()) {
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+    } else {
+        gHostSupportsDefaultCoordinateSystem = false; // no multithread here
+    }
     param->setDefault(x, y);
     param->setDimensionLabels("x", "y");
     param->setParent(*group);
@@ -1105,6 +1145,19 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+    if (!gHostSupportsDefaultCoordinateSystem) {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDefaultsNormalised);
+        param->setDefault(true);
+        param->setEvaluateOnChange(false);
+        param->setIsSecret(true);
+        param->setIsPersistant(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 } // CornerPinPluginDescribeInContext
 
 mDeclarePluginFactory(CornerPinPluginFactory, {}, {});
@@ -1147,7 +1200,9 @@ OFX::ImageEffect*
 CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle,
                                        OFX::ContextEnum /*context*/)
 {
-    return new CornerPinPlugin(handle, false);
+    CornerPinPlugin* p = new CornerPinPlugin(handle, false);
+    p->init();
+    return p;
 }
 
 mDeclarePluginFactory(CornerPinMaskedPluginFactory, {}, {});
@@ -1190,7 +1245,9 @@ OFX::ImageEffect*
 CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
                                              OFX::ContextEnum /*context*/)
 {
-    return new CornerPinPlugin(handle, true);
+    CornerPinPlugin* p = new CornerPinPlugin(handle, true);
+    p->init();
+    return p;
 }
 
 static CornerPinPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
