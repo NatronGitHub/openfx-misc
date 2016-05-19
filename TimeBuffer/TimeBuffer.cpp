@@ -240,6 +240,7 @@ public:
         , _buffer(0)
         , _name()
     {
+        setSequentialRender(true); // must also be set here, since it is missing from the plugin descriptor in Resolve
         if ( !gTimeBufferMapMutex.get() ) {
             gTimeBufferMapMutex.reset(new OFX::MultiThread::Mutex);
         }
