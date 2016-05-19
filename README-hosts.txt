@@ -5,7 +5,7 @@ Host-specific OpenFX bugs and caveats:
 OFX API version 1.3
 hostName=DaVinciResolveLite
 hostLabel=DaVinci Resolve Lite
-hostVersion=12.2.0 (12.2)
+hostVersion=12.5.0 (12.5)
 hostIsBackground=0
 supportsOverlays=1
 supportsMultiResolution=0
@@ -42,7 +42,7 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 - The range AND display range has to be defined for all Double params (kOfxParamTypeDouble, kOfxParamTypeDouble2D, kOfxParamTypeDouble3D), or a default range of (-1,1) is used, and values cannot lie outsideof this range !
 - The range AND display range has to be defined for Int params (kOfxParamTypeInteger), or a default range of (0,0) is used, and values cannot lie outsideof this range !
 - kOfxPropPluginDescription property is absent from the plugin descriptor (although it was introduced in API version 1.2)
-- kOfxParamPropDefaultCoordinateSystem=kOfxParamCoordinatesNormalised isn't supported (although API version 1.3 is claimed), the only solution is to use kOfxParamDoubleTypeNormalised* params and scale inside the plugin
+- kOfxParamPropDefaultCoordinateSystem (set by setDefaultCoordinateSystem() in Support) is not present on double parameters (although API version 1.3 is claimed), the only solution is to use a secret boolean and denormalize at instance creation, 
 - kOfxParamTypeInteger2D kOfxParamTypeInteger3D are not supported (crash when opening the parameters page), at least in Generators
 - kOfxImageEffectInstancePropSequentialRender property is missing on the host and the Image Effect descriptor (but exists on the image effect instance)
 - kOfxImageEffectPropPluginHandle property is missing on the image effect instance
@@ -50,6 +50,14 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 - kOfxPropHostOSHandle property is missing on the host
 - the working directory when plugin code is executed, (where the ofxTextLog.txt file is written) is "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Resources/"
 - boolean params animate by default
+- the OFX plugins cache is in "/Library/Application Support/Blackmagic Design/DaVinci Resolve/OFXPluginCache.xml"
+- plugin descriptors may have the extra properties OfxImageEffectPropCudaRenderSupported OfxImageEffectPropOpenCLRenderSupported OfxImageEffectPropPlanarIOSupported (see below) OfxImageEffectPropSupportedComponents (redundant with clip descriptors?)
+- there is an extra parameter type OfxParamTypeStrChoice
+- other constants:
+OfxImageEffectPropCudaEnabled (render arg?)
+OfxImageEffectPropOpenCLEnabled (render arg?)
+OfxImageEffectPropPlanarIOEnabled (render arg? images are represented by planes RRRGGGBBB instead of interleaved RRGBRGBRGB)
+- extra clip property kOfxImageClipPropThumbnail (with a k)
 
 * Nuke
 
@@ -90,7 +98,7 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 - The Modelview matrix is not identity in interacts. Moreover, it is affected by successive transforms, so that the interact itself is affected by the transform.
 - kOfxImageEffectInstancePropSequentialRender property is missing on the Image Effect descriptor (but exists on the host and on the effect instance)
 - kOfxImageEffectPropPluginHandle property is missing on the image effect instance
-
+- the OFX plugin cache is in /var/tmp/nuke-u501/ofxplugincache/ofxplugincache-501-*.xml
 * Natron
 
 OFX API version 1.3
