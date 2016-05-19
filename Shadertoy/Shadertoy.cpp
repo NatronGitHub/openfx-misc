@@ -1151,6 +1151,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamMousePositionLabel);
         param->setHint(kParamMousePositionHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setUseHostNativeOverlayHandle(true);
         param->setAnimates(true);
         if (page) {
@@ -1162,6 +1163,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamMouseClickLabel);
         param->setHint(kParamMouseClickHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setUseHostNativeOverlayHandle(true);
         param->setAnimates(true);
         if (page) {

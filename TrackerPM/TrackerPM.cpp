@@ -985,7 +985,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamTrackingOffsetHint);
         param->setInstanceSpecific(true);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(0, 0);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -1039,7 +1039,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamTrackingPatternBoxBtmLeftLabel);
         param->setHint(kParamTrackingPatternBoxBtmLeftHint);
         param->setDoubleType(eDoubleTypeXY);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(-15, -15);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-50., -50., 50., 50.);
@@ -1060,7 +1060,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamTrackingPatternBoxTopRightLabel);
         param->setHint(kParamTrackingPatternBoxTopRightHint);
         param->setDoubleType(eDoubleTypeXY);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(15, 15);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-50., -50., 50., 50.);
@@ -1081,7 +1081,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamTrackingSearchBoxBtmLeftLabel);
         param->setHint(kParamTrackingSearchBoxBtmLeftHint);
         param->setDoubleType(eDoubleTypeXY);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(-25, -25);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-100., -100., 100., 100.);
@@ -1102,7 +1102,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamTrackingSearchBoxTopRightLabel);
         param->setHint(kParamTrackingSearchBoxBtmLeftHint);
         param->setDoubleType(eDoubleTypeXY);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(25, 25);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-100., -100., 100., 100.);

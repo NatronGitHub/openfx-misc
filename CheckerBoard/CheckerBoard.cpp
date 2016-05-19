@@ -585,8 +585,8 @@ CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(1, 1, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 100, 100);
         param->setDoubleType(eDoubleTypeXY);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(64, 64);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
         param->setAnimates(true); // can animate
         if (page) {
             page->addChild(*param);

@@ -1868,8 +1868,8 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         {
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
             param->setLabel(kParamRectangleInteractBtmLeftLabel);
-            param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-            param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+            param->setDoubleType(eDoubleTypeXYAbsolute);
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
             param->setDefault(0.5, 0.5);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -1890,8 +1890,8 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         {
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
             param->setLabel(kParamRectangleInteractSizeLabel);
-            param->setDoubleType(OFX::eDoubleTypeXY);
-            param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+            param->setDoubleType(eDoubleTypeXY);
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
             param->setDefault(0.5, 0.5);
             param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)

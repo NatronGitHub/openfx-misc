@@ -98,7 +98,11 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 - The Modelview matrix is not identity in interacts. Moreover, it is affected by successive transforms, so that the interact itself is affected by the transform.
 - kOfxImageEffectInstancePropSequentialRender property is missing on the Image Effect descriptor (but exists on the host and on the effect instance)
 - kOfxImageEffectPropPluginHandle property is missing on the image effect instance
+- kOfxParamPropDefaultCoordinateSystem defaults to kOfxParamCoordinatesNormalised for XY and XYAbsolute!
 - the OFX plugin cache is in /var/tmp/nuke-u501/ofxplugincache/ofxplugincache-501-*.xml
+
+
+
 * Natron
 
 OFX API version 1.3
