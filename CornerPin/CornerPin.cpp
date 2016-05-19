@@ -539,6 +539,32 @@ CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     glGetDoublev( GL_PROJECTION_MATRIX, projection);
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
+#ifdef CORNERPIN_DEBUG_OPENGL
+    GLdouble modelview[16];
+    glGetDoublev( GL_MODELVIEW_MATRIX, modelview);
+    std::cout << "modelview:\n";
+    {
+        GLdouble *m = modelview;
+        std::cout << "[[" << m[0] << ',' << m[1] << ',' << m[2] << ',' << m[3] << "]\n [" << m[4] << ',' << m[5] << ',' << m[6] << ',' << m[7] << "]\n [" << m[8] << ',' << m[9] << ',' << m[10] << ',' << m[11] << "]\n [" << m[12] << ',' << m[13] << ',' << m[14] << ',' << m[15] << "]]\n";
+    }
+
+    std::cout << "projection:\n";
+    {
+        GLdouble *m = projection;
+        std::cout << "[[" << m[0] << ',' << m[1] << ',' << m[2] << ',' << m[3] << "]\n [" << m[4] << ',' << m[5] << ',' << m[6] << ',' << m[7] << "]\n [" << m[8] << ',' << m[9] << ',' << m[10] << ',' << m[11] << "]\n [" << m[12] << ',' << m[13] << ',' << m[14] << ',' << m[15] << "]]\n";
+    }
+    {
+        std::cout << "projection*modelview:\n";
+        Matrix4x4 p(projection);
+        Matrix4x4 m(modelview);
+        Matrix4x4 pm = p * m;
+        std::cout << "[[" << pm(0,0) << ',' << pm(0,1) << ',' << pm(0,2) << ',' << pm(0,3) << "]\n [" << pm(1,0) << ',' << pm(1,1) << ',' << pm(1,2) << ',' << pm(1,3) << "]\n [" <<pm(2,0) << ',' << pm(2,1) << ',' << pm(2,2) << ',' << pm(2,3) << "]\n [" << pm(3,0) << ',' << pm(3,1) << ',' << pm(3,2) << ',' << pm(3,3) << "]]\n";
+    }
+    std::cout << "viewport:\n";
+    {
+        std::cout << "[" << viewport[0] << ',' << viewport[1] << ',' << viewport[2] << ',' << viewport[3] << "]\n";
+    }
+#endif
     OfxPointD shadow; // how much to translate GL_PROJECTION to get exactly one pixel on screen
     shadow.x = 2. / (projection[0] * viewport[2]);
     shadow.y = 2. / (projection[5] * viewport[3]);
