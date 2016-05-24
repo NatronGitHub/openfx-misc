@@ -140,3 +140,36 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 
 - may give a fake hostName for plugins that don't officially support Natron, but sets an extra host property kNatronOfxHostIsNatron
 - the isidentity action may point to a frame on the output clip, which is useful for generators and readers
+
+* Sony Catalyst Edit
+
+OFX API version 1.3
+type=OfxTypeImageEffectHost
+hostName=com.sony.Catalyst.Edit
+hostLabel=Catalyst Edit 2015.1
+hostVersion=2015.1.1 (2015.1)
+hostIsBackground=0
+supportsOverlays=0
+supportsMultiResolution=0
+supportsTiles=0
+temporalClipAccess=1
+supportedComponents=OfxImageComponentNone,OfxImageComponentRGBA,OfxImageComponentAlpha
+supportedContexts=OfxImageEffectContextGeneral,OfxImageEffectContextGenerator,OfxImageEffectContextFilter,OfxImageEffectContextTransition,OfxImageEffectContextRetimer,OfxImageEffectContextPaint
+supportedPixelDepths=OfxBitDepthByte,OfxBitDepthShort,OfxBitDepthHalf,OfxBitDepthFloat
+supportsMultipleClipDepths=0
+supportsMultipleClipPARs=0
+supportsSetableFrameRate=0
+supportsSetableFielding=0
+supportsStringAnimation=1
+supportsCustomInteract=0
+supportsChoiceAnimation=1
+supportsBooleanAnimation=1
+supportsCustomAnimation=0
+supportsParametricAnimation=0
+canTransform=0
+maxParameters=1000
+pageRowCount=0
+pageColumnCount=0
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMessageSuite,OfxProgressSuite,OfxImageEffectOpenGLRenderSuite,OfxOpenCLProgramSuite,
+
+- supports the undocumented suite OfxOpenCLProgramSuite
