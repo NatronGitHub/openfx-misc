@@ -245,10 +245,10 @@ public:
             gTimeBufferMapMutex.reset(new OFX::MultiThread::Mutex);
         }
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGBA) );
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
+                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGBA) ) );
 
         _bufferName = fetchStringParam(kParamBufferName);
         _startFrame = fetchIntParam(kParamStartFrame);
@@ -914,9 +914,9 @@ public:
             gTimeBufferMapMutex.reset(new OFX::MultiThread::Mutex);
         }
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && _dstClip->getPixelComponents() == ePixelComponentRGBA);
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && _srcClip->getPixelComponents() == ePixelComponentRGBA);
+        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA) );
         _syncClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(_syncClip && _syncClip->getPixelComponents() == ePixelComponentRGBA);
 

@@ -193,9 +193,18 @@ protected:
         printf("%s= (%d, %d)-(%d, %d)\n", name, rect.x1, rect.y1, rect.x2, rect.y2);
     }
 
+    static void printRectD(const char*name,
+                           const OfxRectD& rect)
+    {
+        printf("%s= (%g, %g)-(%g, %g)\n", name, rect.x1, rect.y1, rect.x2, rect.y2);
+    }
+
 #else
     static void printRectI(const char*,
                            const OfxRectI&) {}
+
+    static void printRectD(const char*,
+                           const OfxRectD&) {}
 
 #endif
 
@@ -427,16 +436,22 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = _srcClip ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcPixelComponents = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
         srcPixelComponentCount = 0;
-        srcBitDepth = _srcClip ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
+        srcBitDepth = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
         srcRowBytes = 0;
     } else {
         assert(_srcClip);
         srcPixelData = src->getPixelData();
         srcBounds = src->getBounds();
         // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
+        if (_supportsTiles) {
+            OFX::Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
+        } else {
+            // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+            // in hosts that do not support tiles (such as Sony Catalyst Edit), the image RoD is the image Bounds anyway.
+            srcRoD = srcBounds;
+        }
         srcPixelComponents = src->getPixelComponents();
         srcPixelComponentCount = src->getPixelComponentCount();
         srcBitDepth = src->getPixelDepth();
@@ -446,7 +461,13 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     void *dstPixelData = dst->getPixelData();
     const OfxRectI& dstBounds = dst->getBounds();
     OfxRectI dstRoD; // = dst->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-    OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
+    if (_supportsTiles) {
+        OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
+    } else {
+        // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+        // in hosts that do not support tiles (such as Sony Catalyst Edit), the image RoD is the image Bounds anyway.
+        dstRoD = dstBounds;
+    }
     //const OFX::PixelComponentEnum dstPixelComponents = dst->getPixelComponents();
     //const OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
     const int dstRowBytes = dst->getRowBytes();
@@ -615,17 +636,18 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // compute the src ROI (should be consistent with getRegionsOfInterest())
     OfxRectI srcRoI;
     getRoI(processWindow, renderScale, params, &srcRoI);
-
+    printRectI("srcRoI", srcRoI);
     // intersect against the destination RoD
     bool intersect = OFX::Coords::rectIntersection(srcRoI, dstRoD, &srcRoI);
+    printRectI("srcRoIIntersected", srcRoI);
     if (!intersect) {
         src.reset(0);
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = _srcClip ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcPixelComponents = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
         srcPixelComponentCount = 0;
-        srcBitDepth = _srcClip ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
+        srcBitDepth = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
         srcRowBytes = 0;
     }
 
@@ -919,7 +941,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionsOfInterest(const OFX
     Params params;
     getValuesAtTime(args.time, params);
 
-    double pixelaspectratio = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
+    double pixelaspectratio = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 1.;
     OfxRectI rectPixel;
     OFX::Coords::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
     OfxRectI srcRoIPixel;
@@ -949,7 +971,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionOfDefinition(const OF
 
     OfxRectI srcRoDPixel = {0, 0, 0, 0};
     {
-        double pixelaspectratio = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
+        double pixelaspectratio = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 1.;
         if (_srcClip) {
             OFX::Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(args.time), args.renderScale, pixelaspectratio, &srcRoDPixel);
         }
@@ -1014,12 +1036,16 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::isIdentity(const OFX::IsIdenti
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-            // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                identityClip = _srcClip;
+            if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
+                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
+                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                // effect is identity if the renderWindow doesn't intersect the mask RoD
+                if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+                    identityClip = _srcClip;
 
-                return true;
+                    return true;
+                }
             }
         }
     }

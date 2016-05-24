@@ -96,7 +96,7 @@ public:
         , _outerTopRight(0)
     {
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kParamScore);
         assert(_score);
 

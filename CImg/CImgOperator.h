@@ -188,7 +188,13 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcAPixelData = srcA->getPixelData();
         srcABounds = srcA->getBounds();
         // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::Coords::toPixelEnclosing(_srcAClip->getRegionOfDefinition(time), args.renderScale, _srcAClip->getPixelAspectRatio(), &srcARoD);
+        if (_supportsTiles) {
+            OFX::Coords::toPixelEnclosing(_srcAClip->getRegionOfDefinition(time), args.renderScale, _srcAClip->getPixelAspectRatio(), &srcARoD);
+        } else {
+            // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+            // in hosts that do not support tiles (such as Sony Catalyst Edit), the image RoD is the image Bounds anyway.
+            srcARoD = srcABounds;
+        }
         srcAPixelComponents = srcA->getPixelComponents();
         srcAPixelComponentCount = srcA->getPixelComponentCount();
         srcABitDepth = srcA->getPixelDepth();
@@ -230,7 +236,13 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcBPixelData = srcB->getPixelData();
         srcBBounds = srcB->getBounds();
         // = srcB->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::Coords::toPixelEnclosing(_srcBClip->getRegionOfDefinition(time), args.renderScale, _srcBClip->getPixelAspectRatio(), &srcBRoD);
+        if (_supportsTiles) {
+            OFX::Coords::toPixelEnclosing(_srcBClip->getRegionOfDefinition(time), args.renderScale, _srcBClip->getPixelAspectRatio(), &srcBRoD);
+        } else {
+            // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+            // in hosts that do not support tiles (such as Sony Catalyst Edit), the image RoD is the image Bounds anyway.
+            srcBRoD = srcBBounds;
+        }
         srcBPixelComponents = srcB->getPixelComponents();
         srcBPixelComponentCount = srcB->getPixelComponentCount();
         srcBBitDepth = srcB->getPixelDepth();
@@ -240,7 +252,13 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     void *dstPixelData = dst->getPixelData();
     const OfxRectI& dstBounds = dst->getBounds();
     OfxRectI dstRoD; // = dst->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-    OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
+    if (_supportsTiles) {
+        OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
+    } else {
+        // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+        // in hosts that do not support tiles (such as Sony Catalyst Edit), the image RoD is the image Bounds anyway.
+        dstRoD = dstBounds;
+    }
     //const OFX::PixelComponentEnum dstPixelComponents = dst->getPixelComponents();
     //const OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
     const int dstRowBytes = dst->getRowBytes();

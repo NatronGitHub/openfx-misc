@@ -637,14 +637,17 @@ public:
         , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+        if (_maskClip) {
+            printf( "mask connected=%d has components %s\n", _maskClip->isConnected(), mapPixelComponentEnumToStr( _maskClip->getPixelComponents() ) );
+        }
+        assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         fetchColorControlGroup(kGroupMaster, &_masterParamsGroup);
         fetchColorControlGroup(kGroupShadows, &_shadowsParamsGroup);
         fetchColorControlGroup(kGroupMidtones, &_midtonesParamsGroup);
@@ -1009,12 +1012,16 @@ ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-            // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                identityClip = _srcClip;
+            if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
+                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
+                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                // effect is identity if the renderWindow doesn't intersect the mask RoD
+                if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+                    identityClip = _srcClip;
 
-                return true;
+                    return true;
+                }
             }
         }
     }
@@ -1239,7 +1246,7 @@ ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
                                                !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                  8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) ); // Nuke 8-10 are known to *not* support Parametric
+                                                 8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric
     if (supportsParametricParameter) {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamColorCorrectToneRanges);
         assert(param);
@@ -1317,7 +1324,7 @@ ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle,
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
                                                !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                  8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) ); // Nuke 8-10 are known to *not* support Parametric
+                                                 8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric
 
     return new ColorCorrectPlugin(handle, supportsParametricParameter);
 }

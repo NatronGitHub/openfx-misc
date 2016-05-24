@@ -425,7 +425,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderUniformsChanged(true)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-    assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
+    assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
                          _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
     switch ( getContext() ) {
     case OFX::eContextFilter:

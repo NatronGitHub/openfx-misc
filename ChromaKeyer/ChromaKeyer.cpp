@@ -581,18 +581,18 @@ public:
         , _sourceAlpha(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _bgClip = fetchClip(kClipBg);
-        assert( _bgClip && (_bgClip->getPixelComponents() == ePixelComponentRGB || _bgClip->getPixelComponents() == ePixelComponentRGBA) );
+        assert( _bgClip && (!_bgClip->isConnected() || _bgClip->getPixelComponents() == ePixelComponentRGB || _bgClip->getPixelComponents() == ePixelComponentRGBA) );
         _inMaskClip = fetchClip(kClipInsideMask);;
-        assert(_inMaskClip && _inMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert( _inMaskClip && (!_inMaskClip->isConnected() || _inMaskClip->getPixelComponents() == ePixelComponentAlpha) );
         _outMaskClip = fetchClip(kClipOutsidemask);;
-        assert(_outMaskClip && _outMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert( _outMaskClip && (!_outMaskClip->isConnected() || _outMaskClip->getPixelComponents() == ePixelComponentAlpha) );
         _keyColor = fetchRGBParam(kParamKeyColor);
         _acceptanceAngle = fetchDoubleParam(kParamAcceptanceAngle);
         _suppressionAngle = fetchDoubleParam(kParamSuppressionAngle);

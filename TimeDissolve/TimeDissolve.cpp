@@ -84,13 +84,13 @@ public:
         , _dissolveCurve(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentXY || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentXY || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
 
         _srcClipA = fetchClip(kClipA);
-        assert( _srcClipA && (_srcClipA->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClipA->getPixelComponents() == OFX::ePixelComponentRGB || _srcClipA->getPixelComponents() == OFX::ePixelComponentXY || _srcClipA->getPixelComponents() == OFX::ePixelComponentAlpha) );
+        assert( _srcClipA && (!_srcClipA->isConnected() || _srcClipA->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClipA->getPixelComponents() == OFX::ePixelComponentRGB || _srcClipA->getPixelComponents() == OFX::ePixelComponentXY || _srcClipA->getPixelComponents() == OFX::ePixelComponentAlpha) );
 
         _srcClipB = fetchClip(getContext() == OFX::eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB);
-        assert( _srcClipB && (_srcClipB->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClipB->getPixelComponents() == OFX::ePixelComponentRGB || _srcClipB->getPixelComponents() == OFX::ePixelComponentXY || _srcClipB->getPixelComponents() == OFX::ePixelComponentAlpha) );
+        assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClipB->getPixelComponents() == OFX::ePixelComponentRGB || _srcClipB->getPixelComponents() == OFX::ePixelComponentXY || _srcClipB->getPixelComponents() == OFX::ePixelComponentAlpha) );
 
         _dissolveIn = fetchIntParam(kParamIn);
         _dissolveOut = fetchIntParam(kParamOut);
@@ -530,7 +530,7 @@ TimeDissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
                                                !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                  8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) ); // Nuke 8-10 are known to *not* support Parametric
+                                                 8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric
     if (supportsParametricParameter) {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamCurve);
         assert(param);
@@ -567,7 +567,7 @@ TimeDissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
                                                !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                  8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) ); // Nuke 8-10 are known to *not* support Parametric
+                                                 8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric
 
     return new TimeDissolvePlugin(handle, supportsParametricParameter);
 }

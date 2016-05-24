@@ -279,7 +279,7 @@ public:
             return ( Kfg - (_center + _toleranceLower + _softnessLower) ) / -_softnessLower;
         } else if (Kfg <= _center + _toleranceUpper) {
             return 1.;
-        }  else if ( ( 1. <= (_center + _toleranceUpper) ) && (1. <= Kfg) ) {       // special case: everything above 1 is 1. if center+toleranceUpper>=1
+        }  else if ( ( 1. <= (_center + _toleranceUpper) ) && (1. <= Kfg) ) {        // special case: everything above 1 is 1. if center+toleranceUpper>=1
             return 1.;
         } else if ( ( Kfg < (_center + _toleranceUpper + _softnessUpper) ) && (_softnessUpper > 0.) ) {
             return ( (_center + _toleranceUpper + _softnessUpper) - Kfg ) / _softnessUpper;
@@ -550,17 +550,17 @@ public:
         , _sourceAlpha(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGBA) );
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _bgClip = fetchClip(kClipBg);
-        assert( _bgClip && (_bgClip->getPixelComponents() == ePixelComponentRGB || _bgClip->getPixelComponents() == ePixelComponentRGBA) );
+        assert( _bgClip && (!_bgClip->isConnected() || _bgClip->getPixelComponents() == ePixelComponentRGB || _bgClip->getPixelComponents() == ePixelComponentRGBA) );
         _inMaskClip = fetchClip(kClipInsideMask);;
-        assert(_inMaskClip && _inMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert( _inMaskClip && (!_inMaskClip->isConnected() || _inMaskClip->getPixelComponents() == ePixelComponentAlpha) );
         _outMaskClip = fetchClip(kClipOutsidemask);;
-        assert(_outMaskClip && _outMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert( _outMaskClip && (!_outMaskClip->isConnected() || _outMaskClip->getPixelComponents() == ePixelComponentAlpha) );
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         _keyColor = fetchRGBParam(kParamKeyColor);
         _keyerMode = fetchChoiceParam(kParamKeyerMode);

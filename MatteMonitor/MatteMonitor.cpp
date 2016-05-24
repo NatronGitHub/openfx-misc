@@ -151,10 +151,10 @@ public:
         , _srcClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGBA ||
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha) );
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGBA ||
+        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                              _srcClip->getPixelComponents() == ePixelComponentAlpha) );
         _slope = fetchDoubleParam(kParamSlope);
         assert(_slope);

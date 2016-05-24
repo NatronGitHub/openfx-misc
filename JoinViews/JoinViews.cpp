@@ -67,7 +67,7 @@ public:
         , _srcRightClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcLeftClip = fetchClip(kClipLeft);
         assert( _srcLeftClip && (_srcLeftClip->getPixelComponents() == ePixelComponentAlpha || _srcLeftClip->getPixelComponents() == ePixelComponentRGB || _srcLeftClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcRightClip = fetchClip(kClipRight);

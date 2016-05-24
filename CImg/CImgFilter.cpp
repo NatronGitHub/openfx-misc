@@ -48,23 +48,23 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     , _maskApply(0)
     , _maskInvert(0)
     , _supportsComponentRemapping(supportsComponentRemapping)
-    , _supportsTiles(supportsTiles)
-    , _supportsMultiResolution(supportsMultiResolution)
+    , _supportsTiles(OFX::getImageEffectHostDescription()->supportsTiles && supportsTiles)
+    , _supportsMultiResolution(OFX::getImageEffectHostDescription()->supportsMultiResolution && supportsMultiResolution)
     , _supportsRenderScale(supportsRenderScale)
     , _defaultUnpremult(defaultUnpremult)
     , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
     , _premultChanged(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-    assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+    assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
                          _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
     if (isFilter) {
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-                ( _srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  OFX::ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
+        assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
     }
 
     if ( paramExists(kNatronOfxParamProcessR) ) {

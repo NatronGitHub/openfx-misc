@@ -429,11 +429,11 @@ public:
         , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
@@ -586,7 +586,7 @@ template <ColorTransformEnum transform>
 void
 ColorTransformPlugin<transform>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    if ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGBA) ) {
+    if ( _srcClip && ( !_srcClip->isConnected() || (_srcClip->getPixelComponents() ==  ePixelComponentRGBA) ) ) {
         bool premult;
         _premult->getValue(premult);
         // set the premultiplication of _dstClip

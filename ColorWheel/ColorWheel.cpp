@@ -271,7 +271,7 @@ public:
         , _rotate(0)
     {
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( _srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
+        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
                              _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == OFX::ePixelComponentXY ||
                              _srcClip->getPixelComponents() == OFX::ePixelComponentAlpha) );

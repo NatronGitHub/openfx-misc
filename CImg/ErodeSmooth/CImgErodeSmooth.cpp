@@ -381,7 +381,7 @@ public:
             // both sizes should have the same sign
             params.sizey = 0.;
         }
-        double par = _srcClip ? _srcClip->getPixelAspectRatio() : 0.;
+        double par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
         if (par != 0.) {
             params.sizex /= par;
         }

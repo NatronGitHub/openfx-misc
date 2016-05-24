@@ -28,6 +28,7 @@
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
+#include <iostream>
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
@@ -834,7 +835,7 @@ public:
         if (uniform) {
             params.sizey = params.sizex;
         }
-        double par = _srcClip ? _srcClip->getPixelAspectRatio() : 0.;
+        double par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
         if (par != 0.) {
             params.sizex /= par;
         }
@@ -971,7 +972,9 @@ public:
         // This is the only place where the actual processing takes place
         double sx = args.renderScale.x * params.sizex;
         double sy = args.renderScale.y * params.sizey;
-
+        std::cout << "renderScale=" << args.renderScale.x << ',' << args.renderScale.y << std::endl;
+        std::cout << "renderWindow=" << args.renderWindow.x1 << ',' << args.renderWindow.y1 << ',' << args.renderWindow.x2 << ',' << args.renderWindow.y2 << std::endl;
+        std::cout << "cimg=" << cimg.width() << ',' << cimg.height() << std::endl;
         CImg<cimgpix_t> cimg0;
         CImg<cimgpix_t> cimg1;
         if (_blurPlugin == eBlurPluginLaplacian) {

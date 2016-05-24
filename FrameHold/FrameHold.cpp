@@ -74,12 +74,12 @@ public:
         , _sublabel(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-                ( _srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
+                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  OFX::ePixelComponentAlpha ||
                                _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA) ) );
 

@@ -176,7 +176,7 @@ public:
     // (it sets values, which may have an undefined behavior)
     void init()
     {
-        if (paramExists(kParamDefaultsNormalised)) {
+        if ( paramExists(kParamDefaultsNormalised) ) {
             // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
             // handle these ourselves!
             BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
@@ -195,7 +195,6 @@ public:
                 param->setValue(false);
             }
         }
-
     }
 
 private:
@@ -577,7 +576,6 @@ CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         GLdouble *m = modelview;
         std::cout << "[[" << m[0] << ',' << m[1] << ',' << m[2] << ',' << m[3] << "]\n [" << m[4] << ',' << m[5] << ',' << m[6] << ',' << m[7] << "]\n [" << m[8] << ',' << m[9] << ',' << m[10] << ',' << m[11] << "]\n [" << m[12] << ',' << m[13] << ',' << m[14] << ',' << m[15] << "]]\n";
     }
-
     std::cout << "projection:\n";
     {
         GLdouble *m = projection;
@@ -588,7 +586,7 @@ CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         Matrix4x4 p(projection);
         Matrix4x4 m(modelview);
         Matrix4x4 pm = p * m;
-        std::cout << "[[" << pm(0,0) << ',' << pm(0,1) << ',' << pm(0,2) << ',' << pm(0,3) << "]\n [" << pm(1,0) << ',' << pm(1,1) << ',' << pm(1,2) << ',' << pm(1,3) << "]\n [" <<pm(2,0) << ',' << pm(2,1) << ',' << pm(2,2) << ',' << pm(2,3) << "]\n [" << pm(3,0) << ',' << pm(3,1) << ',' << pm(3,2) << ',' << pm(3,3) << "]]\n";
+        std::cout << "[[" << pm(0, 0) << ',' << pm(0, 1) << ',' << pm(0, 2) << ',' << pm(0, 3) << "]\n [" << pm(1, 0) << ',' << pm(1, 1) << ',' << pm(1, 2) << ',' << pm(1, 3) << "]\n [" << pm(2, 0) << ',' << pm(2, 1) << ',' << pm(2, 2) << ',' << pm(2, 3) << "]\n [" << pm(3, 0) << ',' << pm(3, 1) << ',' << pm(3, 2) << ',' << pm(3, 3) << "]]\n";
     }
     std::cout << "viewport:\n";
     {
@@ -932,7 +930,7 @@ defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setDoubleType(eDoubleTypeXYAbsolute);
         // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-        if (param->supportsDefaultCoordinateSystem()) {
+        if ( param->supportsDefaultCoordinateSystem() ) {
             param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         } else {
             gHostSupportsDefaultCoordinateSystem = false; // no multithread here
@@ -979,7 +977,7 @@ defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
     param->setDisplayRange(-10000, -10000, 10000, 10000);
     param->setDoubleType(eDoubleTypeXYAbsolute);
     // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-    if (param->supportsDefaultCoordinateSystem()) {
+    if ( param->supportsDefaultCoordinateSystem() ) {
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
     } else {
         gHostSupportsDefaultCoordinateSystem = false; // no multithread here
@@ -1201,7 +1199,9 @@ CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle,
                                        OFX::ContextEnum /*context*/)
 {
     CornerPinPlugin* p = new CornerPinPlugin(handle, false);
+
     p->init();
+
     return p;
 }
 
@@ -1246,7 +1246,9 @@ CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
                                              OFX::ContextEnum /*context*/)
 {
     CornerPinPlugin* p = new CornerPinPlugin(handle, true);
+
     p->init();
+
     return p;
 }
 

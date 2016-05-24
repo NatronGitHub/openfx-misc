@@ -34,9 +34,9 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
     , _srcBClipName(srcBClipName)
 {
     _srcAClip = fetchClip(_srcAClipName);
-    assert( _srcAClip && (_srcAClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
+    assert( _srcAClip && (!_srcAClip->isConnected() || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
     _srcBClip = fetchClip(_srcBClipName);
-    assert( _srcBClip && (_srcBClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcBClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
+    assert( _srcBClip && (!_srcBClip->isConnected() || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcBClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
 }
 
 void

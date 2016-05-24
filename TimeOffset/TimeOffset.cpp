@@ -98,7 +98,7 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 {
     _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-            ( _srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
+            ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  OFX::ePixelComponentAlpha ||
                            _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
                            _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA) ) );
 
