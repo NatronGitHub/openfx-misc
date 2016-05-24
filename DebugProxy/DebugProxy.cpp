@@ -42,6 +42,7 @@
 #include "ofxProgress.h"
 #include "ofxTimeLine.h"
 #include "ofxParametricParam.h"
+#include "ofxOpenGLRender.h"
 #ifdef OFX_EXTENSIONS_VEGAS
 #include "ofxSonyVegas.h"
 #endif
@@ -205,6 +206,7 @@ static std::vector<OfxMessageSuiteV2*>                gMessageV2Host;
 static std::vector<OfxProgressSuiteV1*>               gProgressHost;
 static std::vector<OfxTimeLineSuiteV1*>               gTimeLineHost;
 static std::vector<OfxParametricParameterSuiteV1*>    gParametricParameterHost;
+static std::vector<OfxImageEffectOpenGLRenderSuiteV1*> gOpenGLRenderHost;
 #ifdef OFX_EXTENSIONS_NUKE
 static std::vector<NukeOfxCameraSuiteV1*>             gCameraHost;
 static std::vector<FnOfxImageEffectPlaneSuiteV1*>     gImageEffectPlaneV1Host;
@@ -217,6 +219,10 @@ static std::vector<OfxVegasProgressSuiteV1*>          gVegasProgressHost;
 static std::vector<OfxVegasStereoscopicImageSuiteV1*> gVegasStereoscopicImageHost;
 static std::vector<OfxVegasKeyframeSuiteV1*>          gVegasKeyframeHost;
 #endif
+// undocumented suite (present in Sony Catalyst Edit)
+static std::vector<void*> gOpenCLProgramHost;
+#define kOfxOpenCLProgramSuite "OfxOpenCLProgramSuite"
+
 
 static std::vector<OfxInteractSuiteV1*>    gInteractHost;
 
@@ -386,6 +392,7 @@ fetchHostSuites(int nth)
         gProgressHost.resize(nth + 1);
         gTimeLineHost.resize(nth + 1);
         gParametricParameterHost.resize(nth + 1);
+        gOpenGLRenderHost.resize(nth + 1);
 #ifdef OFX_EXTENSIONS_NUKE
         gCameraHost.resize(nth + 1);
         gImageEffectPlaneV1Host.resize(nth + 1);
@@ -398,6 +405,7 @@ fetchHostSuites(int nth)
         gVegasStereoscopicImageHost.resize(nth + 1);
         gVegasKeyframeHost.resize(nth + 1);
 #endif
+        gOpenCLProgramHost.resize(nth + 1);
 
         gInteractHost.resize(nth + 1);
 #ifdef OFX_DEBUG_PROXY_CLIPS
@@ -405,6 +413,9 @@ fetchHostSuites(int nth)
 #endif
     }
 
+    if (!gHost[nth]->fetchSuite) {
+        return kOfxStatErrMissingHostFeature;
+    }
     gEffectHost[nth]                 = (OfxImageEffectSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxImageEffectSuite, 1);
     gPropHost[nth]                   = (OfxPropertySuiteV1 *)    gHost[nth]->fetchSuite(gHost[nth]->host, kOfxPropertySuite, 1);
     gParamHost[nth]                  = (OfxParameterSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxParameterSuite, 1);
@@ -415,42 +426,71 @@ fetchHostSuites(int nth)
     gProgressHost[nth]               = (OfxProgressSuiteV1 *)    gHost[nth]->fetchSuite(gHost[nth]->host, kOfxProgressSuite, 1);
     gTimeLineHost[nth]               = (OfxTimeLineSuiteV1 *)    gHost[nth]->fetchSuite(gHost[nth]->host, kOfxTimeLineSuite, 1);
     gParametricParameterHost[nth]    = (OfxParametricParameterSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxParametricParameterSuite, 1);
+    gOpenGLRenderHost[nth]    = (OfxImageEffectOpenGLRenderSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxOpenGLRenderSuite, 1);
 #ifdef OFX_EXTENSIONS_NUKE
     gCameraHost[nth]                 = (NukeOfxCameraSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kNukeOfxCameraSuite, 1);
     gImageEffectPlaneV1Host[nth]     = (FnOfxImageEffectPlaneSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kFnOfxImageEffectPlaneSuite, 1);
-    gImageEffectPlaneV1Proxy[nth]    = *gImageEffectPlaneV1Host[nth];
-    gImageEffectPlaneV1Proxy[nth].clipGetImagePlane = clipGetImagePlaneV1NthFunc(nth);
+    if (gImageEffectPlaneV1Host[nth]) {
+        gImageEffectPlaneV1Proxy[nth]    = *gImageEffectPlaneV1Host[nth];
+        gImageEffectPlaneV1Proxy[nth].clipGetImagePlane = clipGetImagePlaneV1NthFunc(nth);
+    } else {
+        gImageEffectPlaneV1Proxy[nth].clipGetImagePlane = NULL;
+    }
     gImageEffectPlaneV2Host[nth]     = (FnOfxImageEffectPlaneSuiteV2 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kFnOfxImageEffectPlaneSuite, 2);
-    gImageEffectPlaneV2Proxy[nth]    = *gImageEffectPlaneV2Host[nth];
-    gImageEffectPlaneV2Proxy[nth].clipGetImagePlane = clipGetImagePlaneNthFunc(nth);
-    gImageEffectPlaneV2Proxy[nth].clipGetRegionOfDefinition = fnClipGetRegionOfDefinitionNthFunc(nth);
-    gImageEffectPlaneV2Proxy[nth].getViewName = getViewNameNthFunc(nth);
-    gImageEffectPlaneV2Proxy[nth].getViewCount = getViewCountNthFunc(nth);
+    if (gImageEffectPlaneV2Host[nth]) {
+        gImageEffectPlaneV2Proxy[nth]    = *gImageEffectPlaneV2Host[nth];
+        gImageEffectPlaneV2Proxy[nth].clipGetImagePlane = clipGetImagePlaneNthFunc(nth);
+        gImageEffectPlaneV2Proxy[nth].clipGetRegionOfDefinition = fnClipGetRegionOfDefinitionNthFunc(nth);
+        gImageEffectPlaneV2Proxy[nth].getViewName = getViewNameNthFunc(nth);
+        gImageEffectPlaneV2Proxy[nth].getViewCount = getViewCountNthFunc(nth);
+    } else {
+        gImageEffectPlaneV2Proxy[nth].clipGetImagePlane = NULL;
+        gImageEffectPlaneV2Proxy[nth].clipGetRegionOfDefinition = NULL;
+        gImageEffectPlaneV2Proxy[nth].getViewName = NULL;
+        gImageEffectPlaneV2Proxy[nth].getViewCount = NULL;
+    }
 #endif
 #ifdef OFX_EXTENSIONS_VEGAS
     gVegasProgressHost[nth]          = (OfxVegasProgressSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxVegasProgressSuite, 1);
     gVegasStereoscopicImageHost[nth] = (OfxVegasStereoscopicImageSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxVegasStereoscopicImageEffectSuite, 1);
     gVegasKeyframeHost[nth]          = (OfxVegasKeyframeSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxVegasKeyframeSuite, 1);
 #endif
+    gOpenCLProgramHost[nth] = (void*)gHost[nth]->fetchSuite(gHost[nth]->host, kOfxOpenCLProgramSuite, 1);
     gInteractHost[nth]   = (OfxInteractSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxInteractSuite, 1);
     if (!gEffectHost[nth] || !gPropHost[nth] || !gParamHost[nth] || !gMemoryHost[nth] || !gThreadHost[nth]) {
         return kOfxStatErrMissingHostFeature;
     }
     // setup proxies
-    gEffectProxy[nth] = *gEffectHost[nth];
-    gEffectProxy[nth].getPropertySet = getPropertySetNthFunc(nth);
-    gEffectProxy[nth].getParamSet = getParamSetNthFunc(nth);
-    gEffectProxy[nth].clipDefine = clipDefineNthFunc(nth);
-    gEffectProxy[nth].clipGetHandle = clipGetHandleNthFunc(nth);
-    gEffectProxy[nth].clipGetPropertySet = clipGetPropertySetNthFunc(nth);
-    gEffectProxy[nth].clipGetImage = clipGetImageNthFunc(nth);
-    gEffectProxy[nth].clipReleaseImage = clipReleaseImageNthFunc(nth);
-    gEffectProxy[nth].clipGetRegionOfDefinition = clipGetRegionOfDefinitionNthFunc(nth);
-    gEffectProxy[nth].abort = abortNthFunc(nth);
-    gEffectProxy[nth].imageMemoryAlloc = imageMemoryAllocNthFunc(nth);
-    gEffectProxy[nth].imageMemoryFree = imageMemoryFreeNthFunc(nth);
-    gEffectProxy[nth].imageMemoryLock = imageMemoryLockNthFunc(nth);
-    gEffectProxy[nth].imageMemoryUnlock = imageMemoryUnlockNthFunc(nth);
+    if (gEffectHost[nth]) {
+        gEffectProxy[nth] = *gEffectHost[nth];
+        gEffectProxy[nth].getPropertySet = getPropertySetNthFunc(nth);
+        gEffectProxy[nth].getParamSet = getParamSetNthFunc(nth);
+        gEffectProxy[nth].clipDefine = clipDefineNthFunc(nth);
+        gEffectProxy[nth].clipGetHandle = clipGetHandleNthFunc(nth);
+        gEffectProxy[nth].clipGetPropertySet = clipGetPropertySetNthFunc(nth);
+        gEffectProxy[nth].clipGetImage = clipGetImageNthFunc(nth);
+        gEffectProxy[nth].clipReleaseImage = clipReleaseImageNthFunc(nth);
+        gEffectProxy[nth].clipGetRegionOfDefinition = clipGetRegionOfDefinitionNthFunc(nth);
+        gEffectProxy[nth].abort = abortNthFunc(nth);
+        gEffectProxy[nth].imageMemoryAlloc = imageMemoryAllocNthFunc(nth);
+        gEffectProxy[nth].imageMemoryFree = imageMemoryFreeNthFunc(nth);
+        gEffectProxy[nth].imageMemoryLock = imageMemoryLockNthFunc(nth);
+        gEffectProxy[nth].imageMemoryUnlock = imageMemoryUnlockNthFunc(nth);
+    } else {
+        gEffectProxy[nth].getPropertySet = NULL;
+        gEffectProxy[nth].getParamSet = NULL;
+        gEffectProxy[nth].clipDefine = NULL;
+        gEffectProxy[nth].clipGetHandle = NULL;
+        gEffectProxy[nth].clipGetPropertySet = NULL;
+        gEffectProxy[nth].clipGetImage = NULL;
+        gEffectProxy[nth].clipReleaseImage = NULL;
+        gEffectProxy[nth].clipGetRegionOfDefinition = NULL;
+        gEffectProxy[nth].abort = NULL;
+        gEffectProxy[nth].imageMemoryAlloc = NULL;
+        gEffectProxy[nth].imageMemoryFree = NULL;
+        gEffectProxy[nth].imageMemoryLock = NULL;
+        gEffectProxy[nth].imageMemoryUnlock = NULL;
+    }
 
     return kOfxStatOK;
 } // fetchHostSuites
@@ -471,6 +511,12 @@ fetchHostDescription(int nth)
     ImageEffectHostDescription &hostDesc = gHostDescription[nth];
     OfxStatus st;
     // and get some properties
+    if (!gPropHost[nth] ||
+        !gPropHost[nth]->propGetInt ||
+        !gPropHost[nth]->propGetString ||
+        !gPropHost[nth]->propGetDimension) {
+        return kOfxStatErrMissingHostFeature;
+    }
     {
         int v = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxPropAPIVersion, 0, &v);
@@ -730,6 +776,9 @@ printHostDescription(int nth)
     if (gParametricParameterHost[nth]) {
         std::cout << kOfxParametricParameterSuite << ',';
     }
+    if (gOpenGLRenderHost[nth]) {
+        std::cout << kOfxOpenGLRenderSuite << ',';
+    }
 #ifdef OFX_EXTENSIONS_NUKE
     if (gCameraHost[nth]) {
         std::cout << kNukeOfxCameraSuite << ',';
@@ -752,6 +801,9 @@ printHostDescription(int nth)
         std::cout << kOfxVegasKeyframeSuite << ',';
     }
 #endif
+    if (gOpenCLProgramHost[nth]) {
+        std::cout << kOfxOpenCLProgramSuite << ',';
+    }
     std::cout << std::endl;
     std::cout << "OFX DebugProxy: host description finished" << std::endl;
 } // printHostDescription
@@ -953,6 +1005,12 @@ static std::string
 getContext(int nth,
            OfxImageEffectHandle handle)
 {
+    if (!gEffectHost[nth] ||
+        !gEffectHost[nth]->getPropertySet ||
+        !gPropHost[nth] ||
+        !gPropHost[nth]->propGetString) {
+        return "ERROR";
+    }
     // fetch effect props
     OfxPropertySetHandle propHandle;
     OfxStatus st = gEffectHost[nth]->getPropertySet( (OfxImageEffectHandle)handle, &propHandle );
@@ -1657,7 +1715,9 @@ getPropertySetNth(OfxImageEffectHandle imageEffect,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->getPropertySet(imageEffect, propHandle);
+        st = (gEffectHost[nth]->getPropertySet ?
+              gEffectHost[nth]->getPropertySet(imageEffect, propHandle) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getPropertySet(" << imageEffect << ", " << propHandle << "): host exception!" << std::endl;
         throw;
@@ -1697,7 +1757,9 @@ getParamSetNth(OfxImageEffectHandle imageEffect,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->getParamSet(imageEffect, paramSet);
+        st = (gEffectHost[nth]->getParamSet ?
+              gEffectHost[nth]->getParamSet(imageEffect, paramSet) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getParamSet(" << imageEffect << ", " << paramSet << "): host exception!" << std::endl;
         throw;
@@ -1738,7 +1800,9 @@ clipDefineNth(OfxImageEffectHandle imageEffect,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->clipDefine(imageEffect, name, propertySet);
+        st = (gEffectHost[nth]->clipDefine ?
+              gEffectHost[nth]->clipDefine(imageEffect, name, propertySet) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipDefine(" << imageEffect << ", " << name << ", " << propertySet << "): host exception!" << std::endl;
         throw;
@@ -1784,7 +1848,9 @@ clipGetHandleNth(OfxImageEffectHandle imageEffect,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->clipGetHandle(imageEffect, name, clip, propertySet);
+        st = (gEffectHost[nth]->clipGetHandle ?
+              gEffectHost[nth]->clipGetHandle(imageEffect, name, clip, propertySet) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetHandle(" << imageEffect << ", " << name << ", " << clip << ", " << propertySet << "): host exception!" << std::endl;
         throw;
@@ -1828,7 +1894,9 @@ clipGetPropertySetNth(OfxImageClipHandle clip,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->clipGetPropertySet(clip, propHandle);
+        st = (gEffectHost[nth]->clipGetPropertySet ?
+              gEffectHost[nth]->clipGetPropertySet(clip, propHandle) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetPropertySet(" << clip << ", " << propHandle << "): host exception!" << std::endl;
         throw;
@@ -1870,7 +1938,9 @@ clipGetImageNth(OfxImageClipHandle clip,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->clipGetImage(clip, time, region, imageHandle);
+        st = (gEffectHost[nth]->clipGetImage ?
+              gEffectHost[nth]->clipGetImage(clip, time, region, imageHandle) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImage(" << clip << ", " << time << ", " << region << ", " << imageHandle << "): host exception!" << std::endl;
         throw;
@@ -1913,7 +1983,9 @@ clipReleaseImageNth(OfxPropertySetHandle imageHandle)
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->clipReleaseImage(imageHandle);
+        st = (gEffectHost[nth]->clipReleaseImage ?
+              gEffectHost[nth]->clipReleaseImage(imageHandle) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipReleaseImage(" << imageHandle << "): host exception!" << std::endl;
         throw;
@@ -1954,7 +2026,9 @@ clipGetRegionOfDefinitionNth(OfxImageClipHandle clip,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->clipGetRegionOfDefinition(clip, time, bounds);
+        st = (gEffectHost[nth]->clipGetRegionOfDefinition ?
+              gEffectHost[nth]->clipGetRegionOfDefinition(clip, time, bounds) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(" << clip << ", " << time << ", " << bounds << "): host exception!" << std::endl;
         throw;
@@ -1997,7 +2071,9 @@ abortNth(OfxImageEffectHandle imageEffect)
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->abort(imageEffect);
+        st = (gEffectHost[nth]->abort ?
+              gEffectHost[nth]->abort(imageEffect) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..abort(" << imageEffect << "): host exception!" << std::endl;
         throw;
@@ -2038,7 +2114,9 @@ imageMemoryAllocNth(OfxImageEffectHandle instanceHandle,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->imageMemoryAlloc(instanceHandle, nBytes, memoryHandle);
+        st = (gEffectHost[nth]->imageMemoryAlloc ?
+              gEffectHost[nth]->imageMemoryAlloc(instanceHandle, nBytes, memoryHandle) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryAlloc(" << instanceHandle << ", " << nBytes << ", " << memoryHandle << "): host exception!" << std::endl;
         throw;
@@ -2077,7 +2155,9 @@ imageMemoryFreeNth(OfxImageMemoryHandle memoryHandle)
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->imageMemoryFree(memoryHandle);
+        st = (gEffectHost[nth]->imageMemoryFree ?
+              gEffectHost[nth]->imageMemoryFree(memoryHandle) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryFree(" << memoryHandle << "): host exception!" << std::endl;
         throw;
@@ -2117,7 +2197,9 @@ imageMemoryLockNth(OfxImageMemoryHandle memoryHandle,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->imageMemoryLock(memoryHandle, returnedPtr);
+        st = (gEffectHost[nth]->imageMemoryLock ?
+              gEffectHost[nth]->imageMemoryLock(memoryHandle, returnedPtr) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryLock(" << memoryHandle << ", " << returnedPtr << "): host exception!" << std::endl;
         throw;
@@ -2156,7 +2238,9 @@ imageMemoryUnlockNth(OfxImageMemoryHandle memoryHandle)
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gEffectHost[nth]->imageMemoryUnlock(memoryHandle);
+        st = (gEffectHost[nth]->imageMemoryUnlock ?
+              gEffectHost[nth]->imageMemoryUnlock(memoryHandle) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryUnlock(" << memoryHandle << "): host exception!" << std::endl;
         throw;
@@ -2239,7 +2323,9 @@ clipGetImagePlaneV1Nth(OfxImageClipHandle clip,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gImageEffectPlaneV1Host[nth]->clipGetImagePlane(clip, time, plane, region, imageHandle);
+        st = (gImageEffectPlaneV1Host[nth]->clipGetImagePlane ?
+              gImageEffectPlaneV1Host[nth]->clipGetImagePlane(clip, time, plane, region, imageHandle) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << plane << ", " << region << ", " << imageHandle << "): host exception!" << std::endl;
         throw;
@@ -2291,7 +2377,9 @@ clipGetImagePlaneNth(OfxImageClipHandle clip,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gImageEffectPlaneV2Host[nth]->clipGetImagePlane(clip, time, view, plane, region, imageHandle);
+        st = (gImageEffectPlaneV2Host[nth]->clipGetImagePlane ?
+              gImageEffectPlaneV2Host[nth]->clipGetImagePlane(clip, time, view, plane, region, imageHandle) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << view << ", " << plane << ", " << region << ", " << imageHandle << "): host exception!" << std::endl;
         throw;
@@ -2338,7 +2426,9 @@ fnClipGetRegionOfDefinitionNth(OfxImageClipHandle clip,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gImageEffectPlaneV2Host[nth]->clipGetRegionOfDefinition(clip, time, view, bounds);
+        st = (gImageEffectPlaneV2Host[nth]->clipGetRegionOfDefinition ?
+              gImageEffectPlaneV2Host[nth]->clipGetRegionOfDefinition(clip, time, view, bounds) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(plane suite)(" << clip << ", " << time << ", " << view << ", " << bounds << "): host exception!" << std::endl;
         throw;
@@ -2384,7 +2474,9 @@ getViewNameNth(OfxImageEffectHandle effect,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gImageEffectPlaneV2Host[nth]->getViewName(effect, view, viewName);
+        st = (gImageEffectPlaneV2Host[nth]->getViewName ?
+              gImageEffectPlaneV2Host[nth]->getViewName(effect, view, viewName) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewName(" << effect << ", " << view << ", " << *viewName << "): host exception!" << std::endl;
         throw;
@@ -2423,7 +2515,9 @@ getViewCountNth(OfxImageEffectHandle effect,
 
     assert( nth < gHost.size() && nth < gPluginsSetHost.size() );
     try {
-        st = gImageEffectPlaneV2Host[nth]->getViewCount(effect, nViews);
+        st = (gImageEffectPlaneV2Host[nth]->getViewCount ?
+              gImageEffectPlaneV2Host[nth]->getViewCount(effect, nViews) :
+              kOfxStatErrMissingHostFeature);
     } catch (...) {
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewCount(" << effect << ", " << *nViews << "): host exception!" << std::endl;
         throw;
@@ -2537,6 +2631,8 @@ OfxGetNumberOfPlugins(void)
 
         gInteractHost.reserve(gPluginsNb);
     }
+
+    std::cout << "OFX DebugProxy: OfxGetNumberOfPlugins() -> " << gPluginsNb << std::endl;
 
     return gPluginsNb;
 }
