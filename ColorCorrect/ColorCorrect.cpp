@@ -644,9 +644,6 @@ public:
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        if (_maskClip) {
-            printf( "mask connected=%d has components %s\n", _maskClip->isConnected(), mapPixelComponentEnumToStr( _maskClip->getPixelComponents() ) );
-        }
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         fetchColorControlGroup(kGroupMaster, &_masterParamsGroup);
         fetchColorControlGroup(kGroupShadows, &_shadowsParamsGroup);
