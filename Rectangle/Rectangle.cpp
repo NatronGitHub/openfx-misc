@@ -29,6 +29,7 @@
 //#define DEBUG_HOSTDESCRIPTION
 #ifdef DEBUG_HOSTDESCRIPTION
 #include <iostream> // for host description printing code
+#include "ofxOpenGLRender.h"
 #endif
 
 #include "ofxsProcessing.H"
@@ -919,6 +920,9 @@ RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
         if ( fetchSuite(kOfxMemorySuite, 1, true) ) {
             std::cout << kOfxMemorySuite << ',';
         }
+        if ( fetchSuite(kOfxMultiThreadSuite, 1, true) ) {
+            std::cout << kOfxMultiThreadSuite << ',';
+        }
         if ( fetchSuite(kOfxMessageSuite, 1, true) ) {
             std::cout << kOfxMessageSuite << ',';
         }
@@ -933,6 +937,9 @@ RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
         }
         if ( fetchSuite(kOfxParametricParameterSuite, 1, true) ) {
             std::cout << kOfxParametricParameterSuite << ',';
+        }
+        if ( fetchSuite(kOfxOpenGLRenderSuite, 1, true) ) {
+            std::cout << kOfxOpenGLRenderSuite << ',';
         }
 #ifdef OFX_EXTENSIONS_NUKE
         if ( fetchSuite(kNukeOfxCameraSuite, 1, true) ) {
@@ -956,6 +963,9 @@ RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
             std::cout << kOfxVegasKeyframeSuite << ',';
         }
 #endif
+        if ( fetchSuite("OfxOpenCLProgramSuite", 1, true) ) {
+            std::cout << "OfxOpenCLProgramSuite" << ',';
+        }
         std::cout << std::endl;
         std::cout << "OFX DebugProxy: host description finished" << std::endl;
     }
