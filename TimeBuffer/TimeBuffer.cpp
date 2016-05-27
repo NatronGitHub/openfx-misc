@@ -216,7 +216,7 @@ struct TimeBuffer
 // so that the same name can exist in different groups and/or different projects
 typedef std::string TimeBufferKey;
 typedef std::map<TimeBufferKey, TimeBuffer*> TimeBufferMap;
-static TimeBufferMap gTimeBufferMap;
+static std::auto_ptr<TimeBufferMap> gTimeBufferMap;
 static std::auto_ptr<OFX::MultiThread::Mutex> gTimeBufferMapMutex;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -243,6 +243,12 @@ public:
         setSequentialRender(true); // must also be set here, since it is missing from the plugin descriptor in Resolve
         if ( !gTimeBufferMapMutex.get() ) {
             gTimeBufferMapMutex.reset(new OFX::MultiThread::Mutex);
+        }
+        {
+            OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+            if ( !gTimeBufferMap.get() ) {
+                gTimeBufferMap.reset(new TimeBufferMap);
+            }
         }
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -294,7 +300,7 @@ private:
                 // we may free this buffer
                 {
                     OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-                    gTimeBufferMap.erase(_name);
+                    gTimeBufferMap->erase(_name);
                 }
                 delete _buffer;
                 _buffer = 0;
@@ -305,8 +311,8 @@ private:
             TimeBuffer* timeBuffer = 0;
             {
                 OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
-                if ( it != gTimeBufferMap.end() ) {
+                TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
+                if ( it != gTimeBufferMap->end() ) {
                     timeBuffer = it->second;
                 }
             }
@@ -326,8 +332,8 @@ private:
             _name = name;
             {
                 OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
-                if ( it != gTimeBufferMap.end() ) {
+                TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
+                if ( it != gTimeBufferMap->end() ) {
                     assert(it->second == timeBuffer);
                     if (it->second != timeBuffer) {
                         setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"") + name + "\".");
@@ -339,7 +345,7 @@ private:
                         return;
                     }
                 } else {
-                    gTimeBufferMap[key] = _buffer;
+                    (*gTimeBufferMap)[key] = _buffer;
                 }
             }
         }
@@ -352,8 +358,8 @@ private:
 #ifdef DEBUG
         std::string key = _projectId + '.' + _groupId + '.' + _name;
         OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-        TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
-        if ( it == gTimeBufferMap.end() ) {
+        TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
+        if ( it == gTimeBufferMap->end() ) {
             if ( !_name.empty() ) {
                 std::cout << "Error: Buffer '" << _name << "' not found\n";
 
@@ -361,7 +367,7 @@ private:
             }
         } else {
             if ( _name.empty() ) {
-                if ( it != gTimeBufferMap.end() ) {
+                if ( it != gTimeBufferMap->end() ) {
                     std::cout << "Error: Buffer with empty name found\n";
                 }
                 if (_buffer) {
@@ -391,8 +397,8 @@ private:
         // * if the write instance does not exist, an error is displayed and render fails
         {
             OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-            TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
-            if ( it != gTimeBufferMap.end() ) {
+            TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
+            if ( it != gTimeBufferMap->end() ) {
                 timeBuffer = it->second;
             }
         }
@@ -725,7 +731,7 @@ TimeBufferReadPlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferReadPluginFactory, {}, {});
+mDeclarePluginFactory(TimeBufferReadPluginFactory, {}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
 void
 TimeBufferReadPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -913,6 +919,13 @@ public:
         if ( !gTimeBufferMapMutex.get() ) {
             gTimeBufferMapMutex.reset(new OFX::MultiThread::Mutex);
         }
+        {
+            OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+            if ( !gTimeBufferMap.get() ) {
+                gTimeBufferMap.reset(new TimeBufferMap);
+            }
+        }
+        
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -957,7 +970,7 @@ private:
                 // we may free this buffer
                 {
                     OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-                    gTimeBufferMap.erase(_name);
+                    gTimeBufferMap->erase(_name);
                 }
                 delete _buffer;
                 _buffer = 0;
@@ -968,8 +981,8 @@ private:
             TimeBuffer* timeBuffer = 0;
             {
                 OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
-                if ( it != gTimeBufferMap.end() ) {
+                TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
+                if ( it != gTimeBufferMap->end() ) {
                     timeBuffer = it->second;
                 }
             }
@@ -989,8 +1002,8 @@ private:
             _name = name;
             {
                 OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
-                if ( it != gTimeBufferMap.end() ) {
+                TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
+                if ( it != gTimeBufferMap->end() ) {
                     assert(it->second == timeBuffer);
                     if (it->second != timeBuffer) {
                         setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferWrite already exists with name \"") + name + "\".");
@@ -1002,7 +1015,7 @@ private:
                         return;
                     }
                 } else {
-                    gTimeBufferMap[key] = _buffer;
+                    (*gTimeBufferMap)[key] = _buffer;
                 }
             }
         }
@@ -1015,8 +1028,8 @@ private:
 #ifdef DEBUG
         std::string key = _projectId + '.' + _groupId + '.' + _name;
         OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-        TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
-        if ( it == gTimeBufferMap.end() ) {
+        TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
+        if ( it == gTimeBufferMap->end() ) {
             if ( !_name.empty() ) {
                 std::cout << "Error: Buffer '" << _name << "' not found\n";
 
@@ -1024,7 +1037,7 @@ private:
             }
         } else {
             if ( _name.empty() ) {
-                if ( it != gTimeBufferMap.end() ) {
+                if ( it != gTimeBufferMap->end() ) {
                     std::cout << "Error: Buffer with empty name found\n";
                 }
                 if (_buffer) {
@@ -1054,8 +1067,8 @@ private:
         // * if the read instance does not exist, an error is displayed and render fails
         {
             OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
-            TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
-            if ( it != gTimeBufferMap.end() ) {
+            TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
+            if ( it != gTimeBufferMap->end() ) {
                 timeBuffer = it->second;
             }
         }
@@ -1226,7 +1239,7 @@ TimeBufferWritePlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferWritePluginFactory, {}, {});
+mDeclarePluginFactory(TimeBufferWritePluginFactory, {}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
 void
 TimeBufferWritePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
