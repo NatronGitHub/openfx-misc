@@ -48,6 +48,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsByte true
+#define kSupportsUShort true
+#define kSupportsFloat true
+
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -237,7 +241,7 @@ class ColorBarsPlugin
 public:
     /** @brief ctor */
     ColorBarsPlugin(OfxImageEffectHandle handle)
-        : GeneratorPlugin(handle, true)
+        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsFloat)
     {
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
@@ -402,9 +406,15 @@ ColorBarsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     desc.addSupportedContext(eContextGenerator);
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthFloat);
+    if (kSupportsByte) {
+        desc.addSupportedBitDepth(eBitDepthUByte);
+    }
+    if (kSupportsUShort) {
+        desc.addSupportedBitDepth(eBitDepthUShort);
+    }
+    if (kSupportsFloat) {
+        desc.addSupportedBitDepth(eBitDepthFloat);
+    }
 
     // set a few flags
     desc.setSingleInstance(false);

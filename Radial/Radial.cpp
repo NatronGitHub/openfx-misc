@@ -56,6 +56,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsByte true
+#define kSupportsUShort true
+#define kSupportsFloat true
+
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -385,7 +389,7 @@ class RadialPlugin
 public:
     /** @brief ctor */
     RadialPlugin(OfxImageEffectHandle handle)
-        : GeneratorPlugin(handle, false)
+        : GeneratorPlugin(handle, false, kSupportsByte, kSupportsUShort, kSupportsFloat)
         , _srcClip(0)
         , _processR(0)
         , _processG(0)
@@ -822,10 +826,15 @@ RadialPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextGenerator);
-
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthFloat);
+    if (kSupportsByte) {
+        desc.addSupportedBitDepth(eBitDepthUByte);
+    }
+    if (kSupportsUShort) {
+        desc.addSupportedBitDepth(eBitDepthUShort);
+    }
+    if (kSupportsFloat) {
+        desc.addSupportedBitDepth(eBitDepthFloat);
+    }
 
 
     desc.setSingleInstance(false);
