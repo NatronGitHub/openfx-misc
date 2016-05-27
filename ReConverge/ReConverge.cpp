@@ -412,6 +412,7 @@ ReConvergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif
+    desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 void

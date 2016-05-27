@@ -447,6 +447,8 @@ TestGroupsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // set a few flags
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
+
+    desc.setRenderThreadSafety(eRenderFullySafe);
 }
 
 void

@@ -799,6 +799,8 @@ TestRenderPluginFactory<supportsTiles, supportsMultiResolution, supportsRenderSc
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
+
+    desc.setRenderThreadSafety(eRenderFullySafe);
 }
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
