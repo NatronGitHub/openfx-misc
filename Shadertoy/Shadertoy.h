@@ -23,9 +23,16 @@
 #ifndef Misc_Shadertoy_h
 #define Misc_Shadertoy_h
 
+#include <memory>
+
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#ifndef OFX_USE_MULTITHREAD_MUTEX
+// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
+// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
+#include "fast_mutex.h"
+#endif
 
 #define SHADERTOY_NBINPUTS 4 // number of input channels (the standard shadertoy has 4 inputs)
 #define SHADERTOY_NBUNIFORMS 10 // number of additional uniforms
@@ -94,6 +101,15 @@ private:
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+public:
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+    typedef OFX::MultiThread::Mutex Mutex;
+    typedef OFX::MultiThread::AutoMutex AutoMutex;
+#else
+    typedef tthread::fast_mutex Mutex;
+    typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+#endif
+
 private:
     void updateVisibility();
     void updateVisibilityParam(unsigned i, bool visible);
@@ -126,7 +142,7 @@ private:
     OFX::BooleanParam *_useGPUIfAvailable;
     bool _haveAniso;
     float _maxAnisoMax;
-    OFX::MultiThread::Mutex _shaderMutex;
+    std::auto_ptr<Mutex> _shaderMutex;
 #if defined(HAVE_OSMESA)
     unsigned int _imageShaderID; // (Mesa-only) an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // (Mesa-only) an ID that changes each time the uniform names or count changed
@@ -134,7 +150,7 @@ private:
     ShadertoyShaderOpenGL *_imageShader; // (OpenGL-only) shader information
     bool _imageShaderChanged; // (OpenGL-only) shader ID needs to be recompiled
     bool _imageShaderUniformsChanged; // (OpenGL-only) custom uniforms names or count changed, need to re-get their location
-    OFX::MultiThread::Mutex _rendererInfoMutex;
+    std::auto_ptr<Mutex> _rendererInfoMutex;
     std::string _rendererInfoGL;
 
 #if defined(HAVE_OSMESA)
@@ -143,7 +159,7 @@ private:
     // A new context is created if the list is empty.
     // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
     std::list<OSMesaPrivate *> _osmesa;
-    OFX::MultiThread::Mutex _osmesaMutex;
+    std::auto_ptr<Mutex> _osmesaMutex;
     std::string _rendererInfoMesa;
 #endif
 };

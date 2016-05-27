@@ -35,6 +35,21 @@
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsMultiThread.h"
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+namespace {
+typedef OFX::MultiThread::Mutex Mutex;
+typedef OFX::MultiThread::AutoMutex AutoMutex;
+}
+#else
+// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
+// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
+#include "fast_mutex.h"
+namespace {
+typedef tthread::fast_mutex Mutex;
+typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+}
+#endif
 
 #ifdef DEBUG
 #pragma message WARN("TimeBuffer not yet supported by Natron, check again when Natron supports kOfxImageEffectInstancePropSequentialRender")
@@ -181,7 +196,7 @@ struct TimeBuffer
 {
     OFX::ImageEffect *readInstance; // written only once, not protected by mutex
     OFX::ImageEffect *writeInstance; // written only once, not protected by mutex
-    mutable OFX::MultiThread::Mutex mutex;
+    mutable Mutex mutex;
     double time; // can store any integer from 0 to 2^53
     bool dirty; // TimeBufferRead sets this to true and sets date to t+1, TimeBufferWrite sets this to false
     std::vector<unsigned char> pixelData;
@@ -217,7 +232,7 @@ struct TimeBuffer
 typedef std::string TimeBufferKey;
 typedef std::map<TimeBufferKey, TimeBuffer*> TimeBufferMap;
 static std::auto_ptr<TimeBufferMap> gTimeBufferMap;
-static std::auto_ptr<OFX::MultiThread::Mutex> gTimeBufferMapMutex;
+static std::auto_ptr<Mutex> gTimeBufferMapMutex;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -242,10 +257,10 @@ public:
     {
         setSequentialRender(true); // must also be set here, since it is missing from the plugin descriptor in Resolve
         if ( !gTimeBufferMapMutex.get() ) {
-            gTimeBufferMapMutex.reset(new OFX::MultiThread::Mutex);
+            gTimeBufferMapMutex.reset(new Mutex);
         }
         {
-            OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+            AutoMutex guard( gTimeBufferMapMutex.get() );
             if ( !gTimeBufferMap.get() ) {
                 gTimeBufferMap.reset(new TimeBufferMap);
             }
@@ -299,7 +314,7 @@ private:
             if (!_buffer->writeInstance) {
                 // we may free this buffer
                 {
-                    OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                    AutoMutex guard( gTimeBufferMapMutex.get() );
                     gTimeBufferMap->erase(_name);
                 }
                 delete _buffer;
@@ -310,7 +325,7 @@ private:
         if (!name.empty() && !_buffer) {
             TimeBuffer* timeBuffer = 0;
             {
-                OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                AutoMutex guard( gTimeBufferMapMutex.get() );
                 TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
                 if ( it != gTimeBufferMap->end() ) {
                     timeBuffer = it->second;
@@ -331,7 +346,7 @@ private:
             _buffer->readInstance = this;
             _name = name;
             {
-                OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                AutoMutex guard( gTimeBufferMapMutex.get() );
                 TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
                 if ( it != gTimeBufferMap->end() ) {
                     assert(it->second == timeBuffer);
@@ -357,7 +372,7 @@ private:
     {
 #ifdef DEBUG
         std::string key = _projectId + '.' + _groupId + '.' + _name;
-        OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+        AutoMutex guard( gTimeBufferMapMutex.get() );
         TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
         if ( it == gTimeBufferMap->end() ) {
             if ( !_name.empty() ) {
@@ -396,7 +411,7 @@ private:
         TimeBuffer* timeBuffer = 0;
         // * if the write instance does not exist, an error is displayed and render fails
         {
-            OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+            AutoMutex guard( gTimeBufferMapMutex.get() );
             TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
             if ( it != gTimeBufferMap->end() ) {
                 timeBuffer = it->second;
@@ -497,7 +512,7 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
         clearPersistentMessage();
         fillBlack( *this, args.renderWindow, dst.get() );
         if (time == startFrame) {
-            OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+            AutoMutex guard(timeBuffer->mutex);
             timeBuffer->dirty = true;
             timeBuffer->time = time + 1;
         }
@@ -505,7 +520,7 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
 
         return;
     }
-    OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+    AutoMutex guard(timeBuffer->mutex);
     // * if t > startTime:
     //   - the buffer is locked, and if it doesn't have date t, then either the render fails, a black image is rendered, or the buffer is used anyway, depending on the user-chosen strategy
     if (timeBuffer->time != time) {
@@ -626,7 +641,7 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
 
         return false; // use default behavior
     }
-    OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+    AutoMutex guard(timeBuffer->mutex);
     // * if t > startTime:
     // - the buffer is locked, and if it doesn't have date t, then either getRoD fails, a black image with an empty RoD is rendered, or the RoD from buffer is used anyway, depending on the user-chosen strategy
     if (timeBuffer->time != time) {
@@ -714,7 +729,7 @@ TimeBufferReadPlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
             throwSuiteStatusException(kOfxStatFailed);
         }
         // reset the buffer to a clean state
-        OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+        AutoMutex guard(timeBuffer->mutex);
         timeBuffer->time = -DBL_MAX;
         timeBuffer->dirty = true;
         timeBuffer->pixelComponents = ePixelComponentNone;
@@ -917,10 +932,10 @@ public:
         , _name()
     {
         if ( !gTimeBufferMapMutex.get() ) {
-            gTimeBufferMapMutex.reset(new OFX::MultiThread::Mutex);
+            gTimeBufferMapMutex.reset(new Mutex);
         }
         {
-            OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+            AutoMutex guard( gTimeBufferMapMutex.get() );
             if ( !gTimeBufferMap.get() ) {
                 gTimeBufferMap.reset(new TimeBufferMap);
             }
@@ -969,7 +984,7 @@ private:
             if (!_buffer->readInstance) {
                 // we may free this buffer
                 {
-                    OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                    AutoMutex guard( gTimeBufferMapMutex.get() );
                     gTimeBufferMap->erase(_name);
                 }
                 delete _buffer;
@@ -980,7 +995,7 @@ private:
         if (!name.empty() && !_buffer) {
             TimeBuffer* timeBuffer = 0;
             {
-                OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                AutoMutex guard( gTimeBufferMapMutex.get() );
                 TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
                 if ( it != gTimeBufferMap->end() ) {
                     timeBuffer = it->second;
@@ -1001,7 +1016,7 @@ private:
             _buffer->writeInstance = this;
             _name = name;
             {
-                OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                AutoMutex guard( gTimeBufferMapMutex.get() );
                 TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
                 if ( it != gTimeBufferMap->end() ) {
                     assert(it->second == timeBuffer);
@@ -1027,7 +1042,7 @@ private:
     {
 #ifdef DEBUG
         std::string key = _projectId + '.' + _groupId + '.' + _name;
-        OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+        AutoMutex guard( gTimeBufferMapMutex.get() );
         TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
         if ( it == gTimeBufferMap->end() ) {
             if ( !_name.empty() ) {
@@ -1066,7 +1081,7 @@ private:
         TimeBuffer* timeBuffer = 0;
         // * if the read instance does not exist, an error is displayed and render fails
         {
-            OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+            AutoMutex guard( gTimeBufferMapMutex.get() );
             TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
             if ( it != gTimeBufferMap->end() ) {
                 timeBuffer = it->second;
@@ -1173,7 +1188,7 @@ TimeBufferWritePlugin::render(const OFX::RenderArguments &args)
     }
     // - the buffer is locked for writing, and if it doesn't have date t+1 or is not dirty, then it is unlocked, render fails and a message is posted. It may be because the TimeBufferRead plugin is not upstream - in this case a solution is to connect TimeBufferRead output to TimeBufferWrite' sync input for syncing.
     {
-        OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+        AutoMutex guard(timeBuffer->mutex);
         if ( (timeBuffer->time != time + 1) || !timeBuffer->dirty ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "The TimeBuffer has wrong properties. Check that the corresponding TimeBufferRead effect is connected to the Sync input.");
             OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1217,7 +1232,7 @@ TimeBufferWritePlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
             throwSuiteStatusException(kOfxStatFailed);
         }
         // reset the buffer to a clean state
-        OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+        AutoMutex guard(timeBuffer->mutex);
         if (timeBuffer->readInstance) {
             sendMessage(OFX::Message::eMessageError, "", "A TimeBufferRead instance is connected to this buffer, please reset it instead.");
 

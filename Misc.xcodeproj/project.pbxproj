@@ -2793,6 +2793,7 @@
 		1E868B7619E6E28E00B793BA /* CImgErode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgErode.cpp; path = Erode/CImgErode.cpp; sourceTree = "<group>"; };
 		1E868B7919E6E72B00B793BA /* CImgNoise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgNoise.cpp; path = Noise/CImgNoise.cpp; sourceTree = "<group>"; };
 		1E868B7C19E6F6B500B793BA /* CImgDenoise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgDenoise.cpp; path = Denoise/CImgDenoise.cpp; sourceTree = "<group>"; };
+		1E894E121CF859A1003E7F35 /* fast_mutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fast_mutex.h; sourceTree = "<group>"; };
 		1E8B5D4718B769CA00C31FDC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E8B5D4818B769CA00C31FDC /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E8B5D5B18B76A7500C31FDC /* Misc.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Misc.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -4325,6 +4326,7 @@
 		1E9B5F46198A51590095C8AA /* SupportExt */ = {
 			isa = PBXGroup;
 			children = (
+				1E894E121CF859A1003E7F35 /* fast_mutex.h */,
 				AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */,
 				AC3525D71C216FCE0063F0C0 /* ofxsMultiPlane.h */,
 				1E3060271B70DA5300A9B507 /* ofxsCoords.h */,

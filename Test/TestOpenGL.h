@@ -26,6 +26,11 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#ifndef OFX_USE_MULTITHREAD_MUTEX
+// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
+// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
+#include "fast_mutex.h"
+#endif
 
 void getTestOpenGLPluginID(OFX::PluginFactoryArray &ids);
 
@@ -42,6 +47,15 @@ public:
     TestOpenGLPlugin(OfxImageEffectHandle handle);
 
     virtual ~TestOpenGLPlugin();
+
+public:
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+    typedef OFX::MultiThread::Mutex Mutex;
+    typedef OFX::MultiThread::AutoMutex AutoMutex;
+#else
+    typedef tthread::fast_mutex Mutex;
+    typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+#endif
 
 private:
     /* Override the render */
@@ -94,7 +108,7 @@ private:
     // A new context is created if the list is empty.
     // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
     std::list<OSMesaPrivate *> _osmesa;
-    OFX::MultiThread::Mutex _osmesaMutex;
+    Mutex _osmesaMutex;
 #endif
 };
 

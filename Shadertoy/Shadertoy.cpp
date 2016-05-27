@@ -37,6 +37,9 @@
 #include <string>
 #include <fstream>
 #include <streambuf>
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
@@ -224,7 +227,6 @@ using namespace OFX;
 #define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
-#define kRenderThreadSafety eRenderFullySafe
 
 
 #define kShaderInputsHint \
@@ -424,6 +426,18 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderChanged(true)
     , _imageShaderUniformsChanged(true)
 {
+    try {
+        _shaderMutex.reset(new Mutex);
+        _rendererInfoMutex.reset(new Mutex);
+#if defined(HAVE_OSMESA)
+        _osmesaMutex.reset(new Mutex);
+#endif
+    } catch (const std::exception& e) {
+#      ifdef DEBUG
+        std::cout << "ERROR in createInstance(): OFX::Multithread::Mutex creation returned " << e.what() << std::endl;
+#      endif
+    }
+
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
                          _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
@@ -774,7 +788,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     } else if ( ( (paramName == kParamImageShaderSource) && (args.reason != eChangeUserEdit) ) ||
                 (paramName == kParamImageShaderCompile) ) {
         {
-            OFX::MultiThread::AutoMutex lock(_shaderMutex);
+            AutoMutex lock(_shaderMutex.get());
             // mark that image shader must be recompiled on next render
 #         ifdef HAVE_OSMESA
             ++_imageShaderID;
@@ -789,7 +803,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _imageShaderCompile->setEnabled(true);
     } else if ( (paramName == kParamCount) || starts_with(paramName, kParamName) ) {
         {
-            OFX::MultiThread::AutoMutex lock(_shaderMutex);
+            AutoMutex lock(_shaderMutex.get());
             // mark that image shader must be recompiled on next render
 #         ifdef HAVE_OSMESA
             ++_imageShaderUniformsID;
@@ -799,7 +813,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         updateVisibility();
     } else if ( starts_with(paramName, kParamType) ) {
         {
-            OFX::MultiThread::AutoMutex lock(_shaderMutex);
+            AutoMutex lock(_shaderMutex.get());
             // mark that image shader must be recompiled on next render
 #         ifdef HAVE_OSMESA
             ++_imageShaderUniformsID;
@@ -820,13 +834,13 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         }
 
         if (openGLRender) {
-            OFX::MultiThread::AutoMutex lock(_rendererInfoMutex);
+            AutoMutex lock(_rendererInfoMutex.get());
             message = _rendererInfoGL;
         }
 #     endif
 #     ifdef HAVE_OSMESA
         if (!openGLRender) {
-            OFX::MultiThread::AutoMutex lock(_rendererInfoMutex);
+            AutoMutex lock(_rendererInfoMutex.get());
             message = _rendererInfoMesa;
         }
 #     endif // HAVE_OSMESA
@@ -915,6 +929,18 @@ ShadertoyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif
+
+    // some hosts may have the multithread suite, but no mutex capability (e.g. Sony Catalyst)
+    try {
+        ShadertoyPlugin::Mutex m;
+        desc.setRenderThreadSafety(eRenderFullySafe);
+    } catch (const std::exception &e) {
+#      ifdef DEBUG
+        std::cout << "ERROR in describe(): Mutex creation returned " << e.what() << std::endl;
+#      endif
+        desc.setRenderThreadSafety(eRenderInstanceSafe);
+    }
+
 } // ShadertoyPluginFactory::describe
 
 void

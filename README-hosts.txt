@@ -92,7 +92,7 @@ isNatron=0
 supportsDynamicChoices=0
 supportsCascadingChoices=0
 supportsChannelSelector=0
-suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxParametricParameterSuite,NukeOfxCameraSuite,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV1,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV2
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxParametricParameterSuite,NukeOfxCameraSuite,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV1,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV2
 
 - ChoiceParam items can only be set during description and cannot be changed afterwards
 - Params that are described as secret can never be "revealed", they are doomed to remain secret (fix: set them as secret at the end of effect instance creation)
@@ -136,7 +136,7 @@ isNatron=1
 supportsDynamicChoices=1
 supportsCascadingChoices=1
 supportsChannelSelector=1
-suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxParametricParameterSuite,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV1,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV2,OfxVegasStereoscopicImageEffectSuite
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxParametricParameterSuite,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV1,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV2,OfxVegasStereoscopicImageEffectSuite
 
 - may give a fake hostName for plugins that don't officially support Natron, but sets an extra host property kNatronOfxHostIsNatron
 - the isidentity action may point to a frame on the output clip, which is useful for generators and readers
@@ -170,7 +170,7 @@ canTransform=0
 maxParameters=1000
 pageRowCount=0
 pageColumnCount=0
-suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMessageSuite,OfxProgressSuite,OfxImageEffectOpenGLRenderSuite,OfxOpenCLProgramSuite,
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxProgressSuite,OfxImageEffectOpenGLRenderSuite,OfxOpenCLProgramSuite,
 
 - Non-conformant behavior: OfxImageEffectSuiteV1::clipGetRegionOfDefinition() returns the RoD in pixels, and depends on the current renderScale !!! Sony wrongly implemented http://openeffects.org/standard_changes/properties-that-are-doubles-canonical-but-should-really-be-ints-in-pixels-space in OFX 1.3
 - OfxParamTypeDouble2D parameters may have optional properties OfxCatalystParamPropLinkedParameterLabel and OfxCatalystParamPropLinkedParameterType (which can only be "rectangle") it links one parameter to the next described double2D parameter to form a rectangle between both corners- supports the undocumented suite OfxOpenCLProgramSuite, and the property OfxImageEffectPropOpenCLSupported on plugin descriptors

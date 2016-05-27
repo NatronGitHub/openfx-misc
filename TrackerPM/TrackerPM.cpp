@@ -28,6 +28,21 @@
 #include "ofxsProcessing.H"
 #include "ofxsTracking.h"
 #include "ofxsCoords.h"
+#include "ofxsMultiThread.h"
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+namespace {
+    typedef OFX::MultiThread::Mutex Mutex;
+    typedef OFX::MultiThread::AutoMutex AutoMutex;
+}
+#else
+// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
+// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
+#include "fast_mutex.h"
+namespace {
+    typedef tthread::fast_mutex Mutex;
+    typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+}
+#endif
 
 using namespace OFX;
 
@@ -169,7 +184,7 @@ protected:
     OfxRectI _refRectPixel;
     OfxPointI _refCenterI;
     std::pair<OfxPointD, double> _bestMatch; //< the results for the current processor
-    OFX::MultiThread::Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
+    Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
 
 public:
     TrackerPMProcessorBase(OFX::ImageEffect &instance)
@@ -491,7 +506,7 @@ private:
             }
             // check again...
             {
-                OFX::MultiThread::AutoMutex lock(_bestMatchMutex);
+                AutoMutex lock(_bestMatchMutex);
                 if (_bestMatch.second > bestScore) {
                     _bestMatch.second = bestScore;
                     _bestMatch.first.x = point.x + dx;

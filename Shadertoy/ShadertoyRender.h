@@ -434,7 +434,7 @@ ShadertoyPlugin::initMesa()
 void
 ShadertoyPlugin::exitMesa()
 {
-    OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+    AutoMutex lock(_osmesaMutex.get());
 
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
         delete *it;
@@ -933,7 +933,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     void* buffer = dst->getPixelData();
     OSMesaPrivate *osmesa;
     {
-        OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+        AutoMutex lock( _osmesaMutex.get() );
         if ( _osmesa.empty() ) {
             osmesa = new OSMesaPrivate(this);
         } else {
@@ -948,7 +948,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     // compile and link the shader if necessary
     ShadertoyShader *shadertoy;
     {
-        OFX::MultiThread::AutoMutex lock(_shaderMutex);
+        AutoMutex lock( _shaderMutex.get() );
         bool must_recompile = false;
         bool uniforms_changed = false;
 #ifdef USE_OPENGL
@@ -1279,7 +1279,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     // We're finished with this osmesa, make it available for other renders
     {
-        OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+        AutoMutex lock( _osmesaMutex.get() );
         _osmesa.push_back(osmesa);
     }
 #endif
@@ -1353,7 +1353,7 @@ ShadertoyPlugin::contextAttached()
     DPRINT( ( "GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS) ) );
 #endif
     {
-        OFX::MultiThread::AutoMutex lock(_rendererInfoMutex);
+        AutoMutex lock( _rendererInfoMutex.get() );
 #ifdef USE_OSMESA
         std::string &message = _rendererInfoMesa;
 #else

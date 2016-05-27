@@ -294,6 +294,8 @@ TestOpenGLPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     }
 #endif
 #endif
+
+    desc.setRenderThreadSafety(kRenderThreadSafety);
 } // TestOpenGLPluginFactory::describe
 
 void

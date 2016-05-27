@@ -285,7 +285,7 @@ TestOpenGLPlugin::initMesa()
 void
 TestOpenGLPlugin::exitMesa()
 {
-    OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+    AutoMutex lock(_osmesaMutex);
 
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
         delete *it;
@@ -714,7 +714,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     OfxRectI dstBounds = dst->getBounds();
     OSMesaPrivate *osmesa;
     {
-        OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+        AutoMutex lock(_osmesaMutex);
         if ( _osmesa.empty() ) {
             osmesa = new OSMesaPrivate(this);
         } else {
@@ -935,7 +935,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     // We're finished with this osmesa, make it available for other renders
     {
-        OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+        AutoMutex lock(_osmesaMutex);
         _osmesa.push_back(osmesa);
     }
 #endif
