@@ -761,6 +761,9 @@ printHostDescription(int nth)
     if (gMemoryHost[nth]) {
         std::cout << kOfxMemorySuite << ',';
     }
+    if (gThreadHost[nth]) {
+        std::cout << kOfxMultiThreadSuite << ',';
+    }
     if (gMessageHost[nth]) {
         std::cout << kOfxMessageSuite << ',';
     }
