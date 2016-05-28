@@ -97,6 +97,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamScaleMin 2
 #define kParamScaleMax 10
 
+#define kParamOffset "offset"
+#define kParamOffsetLabel "Offset"
+#define kParamOffsetHint "Offset to add to the plasma noise."
+#define kParamOffsetGeneratorDefault 0.5
+
 #define kParamSeed "seed"
 #define kParamSeedLabel "Random Seed"
 #define kParamSeedHint "Random seed used to generate the image. Time value is added to this seed, to get a time-varying effect."
@@ -108,6 +113,7 @@ struct CImgPlasmaParams
     double alpha;
     double beta;
     int scale;
+    double offset;
     int seed;
 };
 
@@ -122,6 +128,7 @@ public:
         _alpha  = fetchDoubleParam(kParamAlpha);
         _beta  = fetchDoubleParam(kParamBeta);
         _scale = fetchIntParam(kParamScale);
+        _offset = fetchDoubleParam(kParamOffset);
         _seed = fetchIntParam(kParamSeed);
         assert(_alpha && _beta && _scale);
     }
@@ -132,6 +139,7 @@ public:
         _alpha->getValueAtTime(time, params.alpha);
         _beta->getValueAtTime(time, params.beta);
         _scale->getValueAtTime(time, params.scale);
+        _offset->getValueAtTime(time, params.offset);
         _seed->getValueAtTime(time, params.seed);
     }
 
@@ -161,6 +169,9 @@ public:
         cimg_library::cimg::srand( (unsigned int)args.time + (unsigned int)params.seed );
 
         cimg.draw_plasma( (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, std::max( 0, params.scale - (int)OFX::Coords::mipmapLevelFromScale(args.renderScale.x) ) );
+        if (params.offset != 0.) {
+            cimg += params.offset;
+        }
     }
 
     //virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgPlasmaParams& params) OVERRIDE FINAL
@@ -181,6 +192,7 @@ private:
     OFX::DoubleParam *_alpha;
     OFX::DoubleParam *_beta;
     OFX::IntParam *_scale;
+    OFX::DoubleParam *_offset;
     OFX::IntParam *_seed;
 };
 
@@ -197,6 +209,7 @@ CImgPlasmaPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 
     // add supported context
     desc.addSupportedContext(eContextFilter);
+    desc.addSupportedContext(eContextGenerator);
     desc.addSupportedContext(eContextGeneral);
 
     // add supported pixel depths
@@ -264,6 +277,19 @@ CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         param->setRange(kParamScaleMin, kParamScaleMax);
         param->setDisplayRange(kParamScaleMin, kParamScaleMax);
         param->setDefault(kParamScaleDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOffset);
+        param->setLabel(kParamOffsetLabel);
+        param->setHint(kParamOffsetHint);
+        param->setRange(-DBL_MAX, DBL_MAX);
+        param->setDisplayRange(0., 1.);
+        if (context == eContextGenerator) {
+            param->setDefault(kParamOffsetGeneratorDefault);
+        }
         if (page) {
             page->addChild(*param);
         }
