@@ -436,9 +436,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcPixelComponents = OFX::ePixelComponentNone;
         srcPixelComponentCount = 0;
-        srcBitDepth = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
+        srcBitDepth = OFX::eBitDepthNone;
         srcRowBytes = 0;
     } else {
         assert(_srcClip);
@@ -645,9 +645,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcPixelComponents = OFX::ePixelComponentNone;
         srcPixelComponentCount = 0;
-        srcBitDepth = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
+        srcBitDepth = OFX::eBitDepthNone;
         srcRowBytes = 0;
     }
 
@@ -677,8 +677,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     }
 #endif
 
-    int srcNComponents = _srcClip->getPixelComponentCount();
-
 #ifdef cimg_use_openmp
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
@@ -695,19 +693,20 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     //////////////////////////////////////////////////////////////////////////////////////////
     // 1- copy & unpremult all channels from srcRoI, from src to a tmp image of size srcRoI
     const OfxRectI tmpBounds = srcRoI;
-    const OFX::PixelComponentEnum tmpPixelComponents = srcPixelComponents;
-    const int tmpPixelComponentCount = srcNComponents; // don't use srcPixelComponentCount, which may be zero
+    const OFX::PixelComponentEnum tmpPixelComponents = srcPixelData ? srcPixelComponents : dstPixelComponents;
+    const int tmpPixelComponentCount = srcPixelData ? srcPixelComponentCount : dstPixelComponentCount;
     const OFX::BitDepthEnum tmpBitDepth = OFX::eBitDepthFloat;
     const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
     const size_t tmpRowBytes = (size_t)tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
     size_t tmpSize = tmpRowBytes * tmpHeight;
 
-    assert(tmpSize > 0);
-    std::auto_ptr<OFX::ImageMemory> tmpData( new OFX::ImageMemory(tmpSize, this) );
-    float *tmpPixelData = (float*)tmpData->lock();
+    std::auto_ptr<OFX::ImageMemory> tmpData;
+    float *tmpPixelData = NULL;
+    if (tmpSize > 0) {
+        tmpData.reset( new OFX::ImageMemory(tmpSize, this) );
+        tmpPixelData = (float*)tmpData->lock();
 
-    {
         std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if ( !src.get() ) {
             // no src, fill with black & transparent
@@ -747,9 +746,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // allocate the cimg data to hold the src ROI
     int cimgSpectrum;
     if (!_supportsComponentRemapping) {
-        cimgSpectrum = srcNComponents;
+        cimgSpectrum = tmpPixelComponentCount;
     } else {
-        switch (srcPixelComponents) {
+        switch (tmpPixelComponents) {
         case OFX::ePixelComponentAlpha:
             cimgSpectrum = (int)processA;
             break;
@@ -772,12 +771,12 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     std::vector<int> srcChannel(cimgSpectrum, -1);
 
     if (!_supportsComponentRemapping) {
-        for (int c = 0; c < srcNComponents; ++c) {
+        for (int c = 0; c < tmpPixelComponentCount; ++c) {
             srcChannel[c] = c;
         }
-        assert(srcNComponents == cimgSpectrum);
+        assert(tmpPixelComponentCount == cimgSpectrum);
     } else {
-        if (srcNComponents == 1) {
+        if (tmpPixelComponentCount == 1) {
             if (processA) {
                 assert(cimgSpectrum == 1);
                 srcChannel[0] = 0;
@@ -798,7 +797,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
                 srcChannel[c] = 2;
                 ++c;
             }
-            if ( processA && (srcNComponents >= 4) ) {
+            if ( processA && (tmpPixelComponentCount >= 4) ) {
                 srcChannel[c] = 3;
                 ++c;
             }
@@ -810,13 +809,16 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         cimgpix_t *cimgPixelData = (cimgpix_t*)cimgData->lock();
         cimg_library::CImg<cimgpix_t> cimg(cimgPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
 
-
-        for (int c = 0; c < cimgSpectrum; ++c) {
-            cimgpix_t *dst = cimg.data(0, 0, 0, c);
-            const float *src = tmpPixelData + srcChannel[c];
-            for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, src += srcNComponents, ++dst) {
-                *dst = *src;
+        if (tmpSize > 0) {
+            for (int c = 0; c < cimgSpectrum; ++c) {
+                cimgpix_t *dst = cimg.data(0, 0, 0, c);
+                const float *src = tmpPixelData + srcChannel[c];
+                for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, src += tmpPixelComponentCount, ++dst) {
+                    *dst = *src;
+                }
             }
+        } else {
+            cimg.fill(0);
         }
         if ( abort() ) {
             return;
@@ -852,7 +854,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         for (int c = 0; c < cimgSpectrum; ++c) {
             const cimgpix_t *src = cimg.data(0, 0, 0, c);
             float *dst = tmpPixelData + srcChannel[c];
-            for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, ++src, dst += srcNComponents) {
+            for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, ++src, dst += tmpPixelComponentCount) {
                 *dst = *src;
             }
         }
