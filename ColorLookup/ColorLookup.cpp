@@ -737,7 +737,52 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args,
     }
 }
 
+#ifdef DEBUG
+class ColorLookupInteract : public OFX::ParamInteract
+{
+public:
+    ColorLookupInteract(OfxInteractHandle handle, OFX::ImageEffect* effect, const std::string& paramName):
+    OFX::ParamInteract(handle, effect)
+    {
+        _param = effect->fetchParametricParam(paramName);
+    }
+    virtual bool draw(const OFX::DrawArgs &args)
+    {
+        glBegin (GL_POLYGON);
+
+        glColor3f (0.0f, 0.0f, 0.0f);
+        glVertex2f (0.f, 0.f);
+
+        glColor3f (1.0f, 0.0f, 0.0f);
+        glVertex2f (0.f, 1.f);
+
+        glColor3f (0.0f, 1.0f, 0.0f);
+        glVertex2f (1.f, 1.f);
+
+        glColor3f (0.0f, 0.0f, 1.0f);
+        glVertex2f (1.f, 0.f);
+
+        glEnd();
+
+        return true;
+    }
+
+    virtual ~ColorLookupInteract() {}
+
+protected:
+    OFX::ParametricParam* _param;
+};
+
+// We are lucky, there's only one lookupTable param, so we need only one interact
+// descriptor. If there were several, be would have to use a template parameter,
+// as in propTester.cpp
+class ColorLookupInteractDescriptor : public OFX::DefaultParamInteractDescriptor<ColorLookupInteractDescriptor, ColorLookupInteract>
+{
+};
+#endif // DEBUG
+
 mDeclarePluginFactory(ColorLookupPluginFactory, {}, {});
+
 void
 ColorLookupPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -833,7 +878,9 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         assert(param);
         param->setLabel(kParamLookupTableLabel);
         param->setHint(kParamLookupTableHint);
-
+#ifdef DEBUG
+        param->setInteractDescriptor(new ColorLookupInteractDescriptor);
+#endif // DEBUG
         // define it as three dimensional
         param->setDimension(kCurveNb);
 
