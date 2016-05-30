@@ -940,7 +940,7 @@ public:
                 gTimeBufferMap.reset(new TimeBufferMap);
             }
         }
-        
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);

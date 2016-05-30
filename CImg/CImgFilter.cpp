@@ -333,7 +333,7 @@ CImgFilterPluginHelperBase::setupAndCopy(OFX::PixelProcessorFilterBase & process
            dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
            dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
     // make sure bit depths are sane
-    if (srcPixelData && srcBitDepth != dstPixelDepth) {
+    if ( srcPixelData && (srcBitDepth != dstPixelDepth) ) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
 

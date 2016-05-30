@@ -1002,7 +1002,11 @@ class MergePluginFactory
     : public OFX::PluginFactoryHelper<MergePluginFactory<plugin> >
 {
 public:
-    MergePluginFactory<plugin>(const std::string & id, unsigned int verMaj, unsigned int verMin) : OFX::PluginFactoryHelper<MergePluginFactory>(id, verMaj, verMin) {}
+    MergePluginFactory<plugin>(const std::string & id, unsigned int verMaj, unsigned int verMin)
+    : OFX::PluginFactoryHelper<MergePluginFactory>(id, verMaj, verMin)
+    {
+    }
+
     virtual void describe(OFX::ImageEffectDescriptor &desc);
     virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
     virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);

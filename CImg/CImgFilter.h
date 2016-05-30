@@ -680,7 +680,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
 #ifdef cimg_use_openmp
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
-    omp_set_num_threads(OFX::MultiThread::getNumCPUs());
+    omp_set_num_threads( OFX::MultiThread::getNumCPUs() );
 #endif
 
     // from here on, we do the following steps:
@@ -700,7 +700,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
     const size_t tmpRowBytes = (size_t)tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
     size_t tmpSize = tmpRowBytes * tmpHeight;
-
     std::auto_ptr<OFX::ImageMemory> tmpData;
     float *tmpPixelData = NULL;
     if (tmpSize > 0) {
@@ -943,7 +942,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionsOfInterest(const OFX
     Params params;
     getValuesAtTime(args.time, params);
 
-    double pixelaspectratio = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 1.;
+    double pixelaspectratio = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
     OfxRectI rectPixel;
     OFX::Coords::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
     OfxRectI srcRoIPixel;
@@ -973,7 +972,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionOfDefinition(const OF
 
     OfxRectI srcRoDPixel = {0, 0, 0, 0};
     {
-        double pixelaspectratio = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 1.;
+        double pixelaspectratio = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
         if (_srcClip) {
             OFX::Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(args.time), args.renderScale, pixelaspectratio, &srcRoDPixel);
         }
