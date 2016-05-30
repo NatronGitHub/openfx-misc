@@ -225,10 +225,13 @@ glError() {}
 inline const char*
 glErrorString(GLenum errorCode)
 {
-    static const struct {
+    static const struct
+    {
         GLenum code;
         const char *string;
-    } errors[]=
+    }
+
+    errors[] =
     {
         /* GL */
         {GL_NO_ERROR, "no error"},
@@ -247,10 +250,9 @@ glErrorString(GLenum errorCode)
 
         {0, NULL }
     };
-
     int i;
 
-    for (i=0; errors[i].string; i++) {
+    for (i = 0; errors[i].string; i++) {
         if (errors[i].code == errorCode) {
             return errors[i].string;
         }
@@ -434,7 +436,7 @@ ShadertoyPlugin::initMesa()
 void
 ShadertoyPlugin::exitMesa()
 {
-    AutoMutex lock(_osmesaMutex.get());
+    AutoMutex lock( _osmesaMutex.get() );
 
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
         delete *it;
@@ -941,6 +943,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             _osmesa.pop_back();
         }
     }
+    if (OSMesaGetCurrentContext() != NULL) {
+        DPRINT( ("render error: %s\n", "Mesa context still attached") );
+        glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
+        glFinish(); // waits for all previously submitted commands to complete executing
+        // make sure the buffer is not referenced anymore
+        OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
+    }
     assert(OSMesaGetCurrentContext() == NULL); // the thread should have no Mesa context attached
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
 #endif // ifdef USE_OSMESA
@@ -1240,8 +1249,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 
 #if 0//ifdef GL_ARB_sync
-    // glFenceSync does not seem to work properly in OSMesa:
-    // we get random black images.
+     // glFenceSync does not seem to work properly in OSMesa:
+     // we get random black images.
     if (!glFenceSync) {
         // If Sync Objects not available (but they should always be there in Mesa)
         if ( !abort() ) {
@@ -1258,7 +1267,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glFinish(); // waits for all previously submitted commands to complete executing
         } else {
             while ( !abort() ) {
-                GLenum result = glClientWaitSync(fenceId, GL_SYNC_FLUSH_COMMANDS_BIT, GLuint64(10*1000)); // 10ms timeout
+                GLenum result = glClientWaitSync( fenceId, GL_SYNC_FLUSH_COMMANDS_BIT, GLuint64(10 * 1000) ); // 10ms timeout
                 if (result != GL_TIMEOUT_EXPIRED) {
                     break; // we ignore timeouts and wait until all OpenGL commands are processed!
                 }
@@ -1282,7 +1291,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         AutoMutex lock( _osmesaMutex.get() );
         _osmesa.push_back(osmesa);
     }
-#endif
+#endif // ifdef USE_OSMESA
 } // ShadertoyPlugin::RENDERFUNC
 
 static
@@ -1317,7 +1326,7 @@ getGlslVersion(int *major,
             *major = 1;
             *minor = 0;
         }
-    } else if (gl_major >= 2)   {
+    } else if (gl_major >= 2) {
         /* GL v2.0 and greater must parse the version string */
         const char *verstr =
             (const char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
