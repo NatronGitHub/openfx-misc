@@ -1885,9 +1885,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             param->setLabel(kParamRectangleInteractBtmLeftLabel);
             param->setDoubleType(eDoubleTypeXYAbsolute);
             param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-            param->setDefault(0.5, 0.5);
+            param->setDefault(0.25, 0.25);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+            param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
             param->setHint(kParamRectangleInteractBtmLeftHint);
             param->setDigits(0);
