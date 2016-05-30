@@ -184,9 +184,7 @@ TestOpenGLPlugin::render(const OFX::RenderArguments &args)
     bool openGLRender = false;
 #if defined(OFX_SUPPORTS_OPENGLRENDER)
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-    if (gHostDescription.supportsOpenGLRender) {
-        _useGPUIfAvailable->getValueAtTime(args.time, openGLRender);
-    }
+    openGLRender = args.openGLEnabled;
 
     // do the rendering
     if (openGLRender) {
@@ -221,6 +219,17 @@ TestOpenGLPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
     // (The OFX spec doesn't state a default value for this)
     clipPreferences.setClipComponents( *_dstClip, _srcClip->getPixelComponents() );
 }
+
+void
+TestOpenGLPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                              const std::string &paramName)
+{
+#if defined(HAVE_OSMESA)
+    if (paramName == kParamUseGPU) {
+        setNeedsOpenGLRender(_useGPUIfAvailable->getValueAtTime(args.time));
+    }
+#endif
+} // TestOpenGLPlugin::changedParam
 
 mDeclarePluginFactory(TestOpenGLPluginFactory,; , {});
 void

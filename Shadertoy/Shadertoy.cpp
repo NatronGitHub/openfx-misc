@@ -539,9 +539,7 @@ ShadertoyPlugin::render(const OFX::RenderArguments &args)
     bool openGLRender = false;
 #if defined(OFX_SUPPORTS_OPENGLRENDER)
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-    if (gHostDescription.supportsOpenGLRender) {
-        _useGPUIfAvailable->getValueAtTime(args.time, openGLRender);
-    }
+    openGLRender = args.openGLEnabled;
 
     // do the rendering
     if (openGLRender) {
@@ -850,6 +848,8 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         } else {
             sendMessage(OFX::Message::eMessageMessage, "", message);
         }
+    } else if (paramName == kParamUseGPU) {
+        setNeedsOpenGLRender(_useGPUIfAvailable->getValueAtTime(args.time));
     }
 } // ShadertoyPlugin::changedParam
 
