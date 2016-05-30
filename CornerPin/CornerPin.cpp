@@ -360,8 +360,14 @@ copyPoint(OFX::Double2DParam* from,
         from->getValue(p.x, p.y);
         to->setValue(p.x, p.y);
     }
-    // OfxParameterSuiteV1::paramCopy (does not work under Resolve)
-    to->copyFrom(*from, 0, NULL);
+    // OfxParameterSuiteV1::paramCopy (does not work under Resolve, returns kOfxStatErrUnknown under Catalyst Edit)
+    try {
+        to->copyFrom(*from, 0, NULL);
+    } catch (const OFX::Exception::Suite& e) {
+#ifdef DEBUG
+        std::cout << "OfxParameterSuiteV1 threw exception: " << e.what() << std::endl;
+#endif
+    }
 }
 
 void
