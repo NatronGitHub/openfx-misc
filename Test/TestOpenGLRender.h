@@ -27,6 +27,7 @@
 #include <cassert>
 
 #include "ofxsMacros.h"
+#include "ofxsLog.h"
 
 // first, check that the file is used in a good way
 #if !defined(USE_OPENGL) && !defined(USE_OSMESA)
@@ -76,17 +77,22 @@
 #  endif
 #endif // defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
+using namespace OFX;
+
 // put a breakpoint in glError to halt the debugger
-inline void
+inline static void
 glError() {}
 
-inline const char*
+inline static const char*
 glErrorString(GLenum errorCode)
 {
-    static const struct {
+    static const struct
+    {
         GLenum code;
         const char *string;
-    } errors[]=
+    }
+
+    errors[] =
     {
         /* GL */
         {GL_NO_ERROR, "no error"},
@@ -105,10 +111,9 @@ glErrorString(GLenum errorCode)
 
         {0, NULL }
     };
-
     int i;
 
-    for (i=0; errors[i].string; i++) {
+    for (i = 0; errors[i].string; i++) {
         if (errors[i].code == errorCode) {
             return errors[i].string;
         }
@@ -151,6 +156,7 @@ print_dbg(const char *format,
     vsnprintf(str, size, format, ap);
 #endif
     std::fwrite(str, sizeof(char), std::strlen(str), stderr);
+    std::cout << str;
     std::fflush(stderr);
 #ifdef _WIN32
     OutputDebugString(msg);
@@ -549,6 +555,359 @@ glutExtensionSupported( const char* extension )
     return 0;
 }
 
+//#define RND_GL_STATE_DEBUG 1
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
+//data for debugging the GL state by dumping it's contents
+#if RND_GL_STATE_DEBUG
+
+#define FALSE false
+#define TRUE true
+#define sdword long
+#define ubyte unsigned char
+#define dbgAssert assert
+#define dbgMessagef printf
+#define colRealToUbyte(r) ( (ubyte)( (r) * 255.0f ) )
+
+typedef struct
+{
+    const char *name;
+    GLenum enumeration;
+    bool bDefault;
+}
+
+enumentry;
+#define enumEntry(string, n)            {string, n, FALSE}
+#define enumDefaultEntry(string, n)     {string, n, TRUE}
+#define enumEnd                         {NULL, 0, FALSE}
+#define enumError                       {"ERROR", 0xffffff8, TRUE}
+enumentry rndBoolEnums[] =
+{
+    enumEntry("GL_TRUE", GL_TRUE),
+    enumDefaultEntry("GL_FALSE", GL_FALSE),
+    enumEnd
+};
+enumentry rndAlphaTestFuncEnum[] =
+{
+    enumEntry("GL_NEVER", GL_NEVER),
+    enumEntry("GL_LESS", GL_LESS),
+    enumEntry("GL_EQUAL", GL_EQUAL),
+    enumEntry("GL_LEQUAL", GL_LEQUAL),
+    enumEntry("GL_GREATER", GL_GREATER),
+    enumEntry("GL_NOTEQUAL", GL_NOTEQUAL),
+    enumEntry("GL_GEQUAL", GL_GEQUAL),
+    enumEntry("GL_ALWAYS", GL_ALWAYS),
+    enumError,
+    enumEnd
+};
+enumentry rndBlendFuncEnums[] =
+{
+    enumEntry("GL_ZERO", GL_ZERO),
+    enumEntry("GL_ONE", GL_ONE),
+    enumEntry("GL_DST_COLOR", GL_DST_COLOR),
+    enumEntry("GL_ONE_MINUS_DST_COLOR", GL_ONE_MINUS_DST_COLOR),
+    enumEntry("GL_SRC_ALPHA", GL_SRC_ALPHA),
+    enumEntry("GL_ONE_MINUS_SRC_ALPHA", GL_ONE_MINUS_SRC_ALPHA),
+    enumEntry("GL_DST_ALPHA", GL_DST_ALPHA),
+    enumEntry("GL_ONE_MINUS_DST_ALPHA", GL_ONE_MINUS_DST_ALPHA),
+    enumEntry("GL_SRC_ALPHA_SATURATE", GL_SRC_ALPHA_SATURATE),
+    enumError,
+    enumEnd
+};
+enumentry rndOrientationEnums[] =
+{
+    enumEntry("GL_CX", GL_CW),
+    enumEntry("GL_CCW", GL_CCW),
+    enumError,
+    enumEnd
+};
+enumentry rndFaceEnums[] =
+{
+    enumEntry("GL_FRONT", GL_FRONT),
+    enumEntry("GL_BACK", GL_BACK),
+    enumEntry("GL_FRONT_AND_BACK", GL_FRONT_AND_BACK),
+    enumError,
+    enumEnd
+};
+enumentry rndMatrixEnums[] =
+{
+    enumEntry("GL_MODELVIEW", GL_MODELVIEW),
+    enumEntry("GL_PROJECTION", GL_PROJECTION),
+    enumEntry("GL_TEXTURE", GL_TEXTURE),
+    enumError,
+    enumEnd
+};
+enumentry rndHintEnums[] =
+{
+    enumEntry("GL_FASTEST", GL_FASTEST),
+    enumEntry("GL_NICEST", GL_NICEST),
+    enumEntry("GL_DONT_CARE", GL_DONT_CARE),
+    enumError,
+    enumEnd
+};
+enumentry rndShadeModelEnums[] =
+{
+    enumEntry("GL_FLAT", GL_FLAT),
+    enumEntry("GL_SMOOTH", GL_SMOOTH),
+    enumError,
+    enumEnd
+};
+enumentry rndTextureEnvEnums[] =
+{
+    enumEntry("GL_MODULATE", GL_MODULATE),
+    enumEntry("GL_DECAL", GL_DECAL),
+    enumEntry("GL_BLEND", GL_BLEND),
+    enumEntry("GL_REPLACE", GL_REPLACE),
+    enumError,
+    enumEnd
+};
+
+typedef struct
+{
+    const char *heading;
+    GLenum enumeration;
+    sdword type;
+    sdword nValues;
+    enumentry *enumTable;
+}
+
+glstateentry;
+
+#define stateEntry(string, enumb, type, nValues, table)  {string, enumb, type, nValues, table}
+#define G_Bool                  0
+#define G_GetBool               1
+#define G_Integer               2
+#define G_Float                 3
+#define G_FloatByte             4
+#define G_IntFunc               5
+
+//definitions for special-case functions
+#define G_TextureEnv            0
+
+glstateentry rndStateSaveTable[] =
+{
+    stateEntry("GL_ALPHA_TEST", GL_ALPHA_TEST,                                  G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_BLEND", GL_BLEND,                                            G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_CULL_FACE", GL_CULL_FACE,                                    G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_DEPTH_TEST", GL_DEPTH_TEST,                                  G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_FOG", GL_FOG,                                                G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_LIGHT0", GL_LIGHT0,                                          G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_LIGHT1", GL_LIGHT1,                                          G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_LIGHTING", GL_LIGHTING,                                      G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_LINE_SMOOTH", GL_LINE_SMOOTH,                                G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_LINE_STIPPLE", GL_LINE_STIPPLE,                              G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_NORMALIZE", GL_NORMALIZE,                                    G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_POINT_SMOOTH", GL_POINT_SMOOTH,                              G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_POLYGON_SMOOTH", GL_POLYGON_SMOOTH,                          G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_POLYGON_STIPPLE", GL_POLYGON_STIPPLE,                        G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_SCISSOR_TEST", GL_SCISSOR_TEST,                              G_Bool, 1, rndBoolEnums),
+    stateEntry("GL_TEXTURE_2D", GL_TEXTURE_2D,                                  G_Bool, 1, rndBoolEnums),
+
+    stateEntry("GL_RED_BITS", GL_RED_BITS,                                      G_Integer,   1, NULL),
+    stateEntry("GL_GREEN_BITS", GL_GREEN_BITS,                                  G_Integer,   1, NULL),
+    stateEntry("GL_BLUE_BITS", GL_BLUE_BITS,                                    G_Integer,   1, NULL),
+    stateEntry("GL_ALPHA_BITS", GL_ALPHA_BITS,                                  G_Integer,   1, NULL),
+    stateEntry("GL_DEPTH_BITS", GL_DEPTH_BITS,                                  G_Integer,   1, NULL),
+
+    //stateEntry("GL_TEXTURE_ENV", G_TextureEnv,                                  G_IntFunc,   1, rndTextureEnvEnums),
+    //stateEntry("GL_TEXTURE_2D_BINDING", GL_TEXTURE_2D_BINDING,                  G_Integer,   1, NULL),
+    stateEntry("GL_ALPHA_TEST_FUNC", GL_ALPHA_TEST_FUNC,                        G_Integer,   1, rndAlphaTestFuncEnum),
+    stateEntry("GL_ALPHA_TEST_REF", GL_ALPHA_TEST_REF,                          G_Float,     1, NULL),
+    stateEntry("GL_BLEND_DST", GL_BLEND_DST,                                    G_Integer,   1, rndBlendFuncEnums),
+    stateEntry("GL_BLEND_SRC", GL_BLEND_SRC,                                    G_Integer,   1, rndBlendFuncEnums),
+    stateEntry("GL_BLUE_BIAS", GL_BLUE_BIAS,                                    G_FloatByte, 1, NULL),
+    stateEntry("GL_COLOR_CLEAR_VALUE", GL_COLOR_CLEAR_VALUE,                    G_Float,     4, NULL),
+    stateEntry("GL_COLOR_MATERIAL_FACE", GL_COLOR_MATERIAL_FACE,                G_Integer,   1, rndFaceEnums),
+    stateEntry("GL_CULL_FACE_MODE", GL_CULL_FACE_MODE,                          G_Integer,   1, rndFaceEnums),
+    stateEntry("GL_CURRENT_COLOR", GL_CURRENT_COLOR,                            G_FloatByte, 4, NULL),
+    stateEntry("GL_CURRENT_INDEX", GL_CURRENT_INDEX,                            G_Float,     1, NULL),
+    stateEntry("GL_CURRENT_RASTER_COLOR", GL_CURRENT_RASTER_COLOR,              G_FloatByte, 4, NULL),
+    stateEntry("GL_CURRENT_RASTER_POSITION", GL_CURRENT_RASTER_POSITION,        G_Float,     4, NULL),
+    stateEntry("GL_CURRENT_TEXTURE_COORDS", GL_CURRENT_TEXTURE_COORDS,          G_Float,     4, NULL),
+    stateEntry("GL_DEPTH_WRITEMASK", GL_DEPTH_WRITEMASK,                        G_GetBool,   1, rndBoolEnums),
+    stateEntry("GL_FOG_COLOR", GL_FOG_COLOR,                                    G_FloatByte, 4, NULL),
+    stateEntry("GL_FOG_DENSITY", GL_FOG_DENSITY,                                G_Float,     1, NULL),
+    stateEntry("GL_FRONT_FACE", GL_FRONT_FACE,                                  G_Integer,   1, rndOrientationEnums),
+    stateEntry("GL_GREEN_BIAS", GL_GREEN_BIAS,                                  G_FloatByte, 1, NULL),
+    stateEntry("GL_LIGHT_MODEL_AMBIENT", GL_LIGHT_MODEL_AMBIENT,                G_FloatByte, 4, NULL),
+    stateEntry("GL_LIGHT_MODEL_TWO_SIDE", GL_LIGHT_MODEL_TWO_SIDE,              G_GetBool,   1, rndBoolEnums),
+    stateEntry("GL_LINE_WIDTH", GL_LINE_WIDTH,                                  G_Float,     1, NULL),
+    stateEntry("GL_LINE_WIDTH_GRANULARITY", GL_LINE_WIDTH_GRANULARITY,          G_Float,     1, NULL),
+    stateEntry("GL_MATRIX_MODE", GL_MATRIX_MODE,                                G_Integer,   1, rndMatrixEnums),
+    stateEntry("GL_MAX_TEXTURE_SIZE", GL_MAX_TEXTURE_SIZE,                      G_Integer,   1, NULL),
+    stateEntry("GL_MAX_VIEWPORT_DIMS", GL_MAX_VIEWPORT_DIMS,                    G_Integer,   2, NULL),
+    stateEntry("GL_MODELVIEW_MATRIX", GL_MODELVIEW_MATRIX,                      G_Float,     16, NULL),
+    stateEntry("GL_PERSPECTIVE_CORRECTION_HINT", GL_PERSPECTIVE_CORRECTION_HINT, G_Integer,   1, rndHintEnums),
+    stateEntry("GL_POINT_SIZE", GL_POINT_SIZE,                                  G_Float,     1, NULL),
+    stateEntry("GL_POINT_SIZE_GRANULARITY", GL_POINT_SIZE_GRANULARITY,          G_Float,     1, NULL),
+    stateEntry("GL_POLYGON_MODE", GL_POLYGON_MODE,                              G_Integer,   1, rndFaceEnums),
+    stateEntry("GL_PROJECTION_MATRIX", GL_PROJECTION_MATRIX,                    G_Float,     16, NULL),
+    stateEntry("GL_RED_BIAS", GL_RED_BIAS,                                      G_FloatByte, 1, NULL),
+    stateEntry("GL_SCISSOR_BOX", GL_SCISSOR_BOX,                                G_Integer,   4, NULL),
+    stateEntry("GL_SHADE_MODEL", GL_SHADE_MODEL,                                G_Integer,   1, rndShadeModelEnums),
+    stateEntry("GL_SUBPIXEL_BITS", GL_SUBPIXEL_BITS,                            G_Integer,   1, NULL),
+    stateEntry("GL_VIEWPORT", GL_VIEWPORT,                                      G_Integer,   4, NULL),
+    {NULL, 0, 0, 0, NULL}
+};
+char rndGLStateLogFileName[128];
+
+
+/*=============================================================================
+   Functions:
+   =============================================================================*/
+
+/*-----------------------------------------------------------------------------
+   Name        : rndIntToString
+   Description : Convert a GL enumeration to a string
+   Inputs      : enumb - enumeration to convert
+   table - table of enumerations/strings
+   Outputs     :
+   Return      : name of enumeration
+   ----------------------------------------------------------------------------*/
+static
+const char *
+rndIntToString(GLenum enumb,
+               enumentry *table)
+{
+    sdword index;
+
+    for (index = 0; table[index].name != NULL; index++) {
+        if ( (enumb == table[index].enumeration) || table[index].bDefault ) {
+            return(table[index].name);
+        }
+    }
+    dbgAssert(FALSE);
+
+    return NULL;
+}
+
+/*-----------------------------------------------------------------------------
+   Name        : rndGLStateLog
+   Description : Log the state of the GL machine.
+   Inputs      : location - user-specified name for where this function is called from
+   Outputs     :
+   Return      : void
+   ----------------------------------------------------------------------------*/
+#define MAX_FLOATS          16
+#define MAX_INTS            4
+#define MAX_BOOLS           1
+static
+void
+rndGLStateLogFunction(const char *location)
+{
+    sdword index, j;
+    GLfloat floats[MAX_FLOATS];
+    GLint ints[MAX_INTS];
+    GLboolean bools[MAX_BOOLS];
+    char totalString[256];
+    char valueString[128];
+    FILE *f;
+
+    f = fopen(rndGLStateLogFileName, "at");
+    if (f == NULL) {
+        OFX::Log::error(true, "Error opening '%s' for GL state logging.", rndGLStateLogFileName);
+
+        return;
+    }
+
+    fprintf(f, "******************** %s\n", location);
+    for (index = 0; rndStateSaveTable[index].heading != NULL; index++) {
+        sprintf(totalString, "%32s:", rndStateSaveTable[index].heading);
+        switch (rndStateSaveTable[index].type) {
+        case G_Bool:
+            bools[0] = glIsEnabled(rndStateSaveTable[index].enumeration);
+            for (j = 0; j < rndStateSaveTable[index].nValues; j++) {
+                if (rndStateSaveTable[index].enumTable != NULL) {
+                    sprintf( valueString, "%s", rndIntToString(bools[j], rndStateSaveTable[index].enumTable) );
+                } else {
+                    sprintf(valueString, "%d", bools[j]);
+                }
+                strcat(totalString, valueString);
+                if (j + 1 < rndStateSaveTable[index].nValues) {
+                    strcat(totalString, ", ");
+                }
+            }
+            break;
+        case G_GetBool:
+            glGetBooleanv(rndStateSaveTable[index].enumeration, bools);
+            for (j = 0; j < rndStateSaveTable[index].nValues; j++) {
+                if (rndStateSaveTable[index].enumTable != NULL) {
+                    sprintf( valueString, "%s", rndIntToString(bools[j], rndStateSaveTable[index].enumTable) );
+                } else {
+                    sprintf(valueString, "%d", bools[j]);
+                }
+                strcat(totalString, valueString);
+                if (j + 1 < rndStateSaveTable[index].nValues) {
+                    strcat(totalString, ", ");
+                }
+            }
+            break;
+        case G_Integer:
+            glGetIntegerv(rndStateSaveTable[index].enumeration, ints);
+            for (j = 0; j < rndStateSaveTable[index].nValues; j++) {
+                if (rndStateSaveTable[index].enumTable != NULL) {
+                    sprintf( valueString, "%s", rndIntToString(ints[j], rndStateSaveTable[index].enumTable) );
+                } else {
+                    sprintf(valueString, "%d", ints[j]);
+                }
+                strcat(totalString, valueString);
+                if (j + 1 < rndStateSaveTable[index].nValues) {
+                    strcat(totalString, ", ");
+                }
+            }
+            break;
+        case G_Float:
+            glGetFloatv(rndStateSaveTable[index].enumeration, floats);
+            for (j = 0; j < rndStateSaveTable[index].nValues; j++) {
+                sprintf(valueString, "%.2g", floats[j]);
+                strcat(totalString, valueString);
+                if (j + 1 < rndStateSaveTable[index].nValues) {
+                    strcat(totalString, ", ");
+                }
+            }
+            break;
+        case G_FloatByte:
+            glGetFloatv(rndStateSaveTable[index].enumeration, floats);
+            for (j = 0; j < rndStateSaveTable[index].nValues; j++) {
+                sprintf( valueString, "%d", colRealToUbyte(floats[j]) );
+                strcat(totalString, valueString);
+                if (j + 1 < rndStateSaveTable[index].nValues) {
+                    strcat(totalString, ", ");
+                }
+            }
+            break;
+        case G_IntFunc:
+            switch (rndStateSaveTable[index].enumeration) {
+            case G_TextureEnv:
+                //                        glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, ints);
+                break;
+            default:
+                dbgAssert(FALSE);
+            }
+            for (j = 0; j < rndStateSaveTable[index].nValues; j++) {
+                if (rndStateSaveTable[index].enumTable != NULL) {
+                    sprintf( valueString, "%s", rndIntToString(ints[j], rndStateSaveTable[index].enumTable) );
+                } else {
+                    sprintf(valueString, "%d", ints[j]);
+                }
+                strcat(totalString, valueString);
+                if (j + 1 < rndStateSaveTable[index].nValues) {
+                    strcat(totalString, ", ");
+                }
+            }
+            break;
+        default:
+            dbgAssert(FALSE);
+        } // switch
+        fprintf(f, "%s\n", totalString);
+    }
+    fclose(f);
+} // rndGLStateLogFunction
+
+#endif //RND_GL_STATE_DEBUG
+OFXS_NAMESPACE_ANONYMOUS_EXIT
+
+
 void
 TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
@@ -599,6 +958,8 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #  ifdef USE_OPENGL
     // For this test, we only process in OpenGL mode.
     if (!gl_enabled) {
+        DPRINT( ("render: inside renderGL, but openGL rendering enabled\n") );
+
         OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
 
         return;
@@ -644,6 +1005,11 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     DPRINT( ( "openGL: output texture index %d, target %d, depth %s\n",
               dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth) ) );
 # endif
+    OfxRectI dstBounds = dst->getBounds();
+    DPRINT( ("dstBounds = [%d, %d - %d, %d]\n",
+             dstBounds.x1, dstBounds.y1,
+             dstBounds.x2, dstBounds.y2) );
+
 
 # ifdef USE_OPENGL
     std::auto_ptr<const OFX::Texture> src( ( _srcClip && _srcClip->isConnected() ) ?
@@ -661,6 +1027,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
     OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
     if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+        DPRINT( ( "render: (srcBitDepth=%s != dstBitDepth=%s) || (srcComponents=%s != dstComponents=%s)\n", mapBitDepthEnumToStr(srcBitDepth), mapBitDepthEnumToStr(dstBitDepth), mapPixelComponentEnumToStr(srcComponents), mapPixelComponentEnumToStr(dstComponents) ) );
         OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
 
         return;
@@ -672,6 +1039,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
               srcIndex, srcTarget, mapBitDepthEnumToStr(srcBitDepth) ) );
 # endif
     // XXX: check status for errors
+
 
 #ifdef USE_OSMESA
     GLenum format;
@@ -711,7 +1079,6 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     /* Allocate the image buffer */
     void* buffer = dst->getPixelData();
-    OfxRectI dstBounds = dst->getBounds();
     OSMesaPrivate *osmesa;
     {
         AutoMutex lock(_osmesaMutex);
@@ -721,6 +1088,13 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             osmesa = _osmesa.back();
             _osmesa.pop_back();
         }
+    }
+    if (OSMesaGetCurrentContext() != NULL) {
+        DPRINT( ("render error: %s\n", "Mesa context still attached") );
+        glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
+        glFinish(); // waits for all previously submitted commands to complete executing
+        // make sure the buffer is not referenced anymore
+        OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
     }
     assert(OSMesaGetCurrentContext() == NULL); // the thread should have no Mesa context attached
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
@@ -746,6 +1120,28 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                   srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
                   format, type, src->getPixelData() );
 
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+#endif // ifdef USE_OSMESA
+
+#if RND_GL_STATE_DEBUG
+#ifdef USE_OSMESA
+    snprintf(rndGLStateLogFileName, sizeof(rndGLStateLogFileName), "ofxGLStateLogMesa.txt");
+    rndGLStateLogFunction("TestOpenGLRender");
+#else
+    snprintf(rndGLStateLogFileName, sizeof(rndGLStateLogFileName), "ofxGLStateLogOpenGL.txt");
+    rndGLStateLogFunction("TestOpenGLRender");
+#endif
+#endif
+
+    const OfxPointD& rs = args.renderScale;
+    DPRINT( ("renderScale = [%g, %g]\n",
+             rs.x, rs.y) );
+
+    // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
+    float w = (renderWindow.x2 - renderWindow.x1);
+    float h = (renderWindow.y2 - renderWindow.y1);
+
     // setup the projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -753,21 +1149,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
              dstBounds.y1, dstBounds.y2,
              -10.0 * (dstBounds.y2 - dstBounds.y1), 10.0 * (dstBounds.y2 - dstBounds.y1) );
     glMatrixMode(GL_MODELVIEW);
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-    DPRINT( ("dstBounds = [%d, %d - %d, %d]\n",
-             dstBounds.x1, dstBounds.y1,
-             dstBounds.x2, dstBounds.y2) );
-
-#endif // ifdef USE_OSMESA
-
-    const OfxPointD& rs = args.renderScale;
-    DPRINT( ("renderScale = [%g, %d]\n",
-             rs.x, rs.y) );
-
-    // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
-    float w = (renderWindow.x2 - renderWindow.x1);
-    float h = (renderWindow.y2 - renderWindow.y1);
+    glLoadIdentity();
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glDisable(GL_BLEND);
@@ -871,7 +1253,9 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
 
-    glFrontFace(GL_CW);
+    //glFrontFace(GL_CW); // the GLUT teapot is CW (default is CCW)
+    //glCullFace(GL_BACK); // GL_BACK is default value
+    //glEnable(GL_CULL_FACE); // disabled by default. the GLUT teapot does not work well with backface culling
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_AUTO_NORMAL);
@@ -914,18 +1298,6 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
      */
     glDeleteTextures(1, &srcIndex);
 
-#ifdef DEBUG
-    {
-        GLint r, g, b, a, d;
-        glGetIntegerv(GL_RED_BITS, &r);
-        glGetIntegerv(GL_GREEN_BITS, &g);
-        glGetIntegerv(GL_BLUE_BITS, &b);
-        glGetIntegerv(GL_ALPHA_BITS, &a);
-        glGetIntegerv(GL_DEPTH_BITS, &d);
-        DPRINT( ("channel sizes: %d %d %d %d\n", r, g, b, a) );
-        DPRINT( ("depth bits %d\n", d) );
-    }
-#endif
     glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
     glFinish(); // waits for all previously submitted commands to complete executing
     // make sure the buffer is not referenced anymore
@@ -973,7 +1345,7 @@ getGlslVersion(int *major,
             *major = 1;
             *minor = 0;
         }
-    } else if (gl_major >= 2)   {
+    } else if (gl_major >= 2) {
         /* GL v2.0 and greater must parse the version string */
         const char *verstr =
             (const char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
