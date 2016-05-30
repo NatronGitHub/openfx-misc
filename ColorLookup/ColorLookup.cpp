@@ -746,7 +746,7 @@ public:
     {
         _param = effect->fetchParametricParam(paramName);
     }
-    virtual bool draw(const OFX::DrawArgs &args)
+    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
     {
         glBegin (GL_POLYGON);
 
