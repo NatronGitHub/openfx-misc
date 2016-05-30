@@ -365,7 +365,10 @@ enum BBoxEnum
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamUseGPU "useGPUIfAvailable"
 #define kParamUseGPULabel "Use GPU If Available"
-#define kParamUseGPUHint "If GPU rendering is available, use it. If the checkbox is not enabled, GPU rendering is not available on this host."
+#define kParamUseGPUHint \
+    "If GPU rendering is available, use it.\n" \
+    "If the checkbox is checked but is not enabled (i.e. it cannot be unchecked), GPU rendering can not be enabled or disabled from the plugin and is probably part of the host options.\n" \
+    "If the checkbox is not checked and is not enabled (i.e. it cannot be checked), GPU rendering is not available on this host.\n"
 #endif
 
 #define kParamRendererInfo "rendererInfo"
@@ -786,7 +789,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     } else if ( ( (paramName == kParamImageShaderSource) && (args.reason != eChangeUserEdit) ) ||
                 (paramName == kParamImageShaderCompile) ) {
         {
-            AutoMutex lock(_shaderMutex.get());
+            AutoMutex lock( _shaderMutex.get() );
             // mark that image shader must be recompiled on next render
 #         ifdef HAVE_OSMESA
             ++_imageShaderID;
@@ -801,7 +804,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _imageShaderCompile->setEnabled(true);
     } else if ( (paramName == kParamCount) || starts_with(paramName, kParamName) ) {
         {
-            AutoMutex lock(_shaderMutex.get());
+            AutoMutex lock( _shaderMutex.get() );
             // mark that image shader must be recompiled on next render
 #         ifdef HAVE_OSMESA
             ++_imageShaderUniformsID;
@@ -811,7 +814,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         updateVisibility();
     } else if ( starts_with(paramName, kParamType) ) {
         {
-            AutoMutex lock(_shaderMutex.get());
+            AutoMutex lock( _shaderMutex.get() );
             // mark that image shader must be recompiled on next render
 #         ifdef HAVE_OSMESA
             ++_imageShaderUniformsID;
@@ -832,13 +835,13 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         }
 
         if (openGLRender) {
-            AutoMutex lock(_rendererInfoMutex.get());
+            AutoMutex lock( _rendererInfoMutex.get() );
             message = _rendererInfoGL;
         }
 #     endif
 #     ifdef HAVE_OSMESA
         if (!openGLRender) {
-            AutoMutex lock(_rendererInfoMutex.get());
+            AutoMutex lock( _rendererInfoMutex.get() );
             message = _rendererInfoMesa;
         }
 #     endif // HAVE_OSMESA
@@ -849,7 +852,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             sendMessage(OFX::Message::eMessageMessage, "", message);
         }
     } else if (paramName == kParamUseGPU) {
-        setNeedsOpenGLRender(_useGPUIfAvailable->getValueAtTime(args.time));
+        setNeedsOpenGLRender( _useGPUIfAvailable->getValueAtTime(args.time) );
     }
 } // ShadertoyPlugin::changedParam
 
@@ -940,7 +943,6 @@ ShadertoyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #      endif
         desc.setRenderThreadSafety(eRenderInstanceSafe);
     }
-
 } // ShadertoyPluginFactory::describe
 
 void
@@ -1395,7 +1397,19 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamUseGPU);
         param->setLabel(kParamUseGPULabel);
         param->setHint(kParamUseGPUHint);
-        param->setDefault(true);
+        const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        // Resolve advertises OpenGL support in its host description, but never calls render with OpenGL enabled
+        if ( gHostDescription.supportsOpenGLRender && (gHostDescription.hostName != "DaVinciResolveLite") ) {
+            param->setDefault(true);
+            if (gHostDescription.APIVersionMajor * 100 + gHostDescription.APIVersionMinor < 104) {
+                // Switching OpenGL render from the plugin was introduced in OFX 1.4
+                param->setEnabled(false);
+            }
+        } else {
+            param->setDefault(false);
+            param->setEnabled(false);
+        }
+
         if (page) {
             page->addChild(*param);
         }
