@@ -99,7 +99,10 @@ using namespace OFX;
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamUseGPU "useGPUIfAvailable"
 #define kParamUseGPULabel "Use GPU If Available"
-#define kParamUseGPUHint "If GPU rendering is available, use it. If the checkbox is not enabled, GPU rendering is not available on this host."
+#define kParamUseGPUHint \
+    "If GPU rendering is available, use it.\n" \
+    "If the checkbox is checked but is not enabled (i.e. it cannot be unchecked), GPU rendering can not be enabled or disabled from the plugin and is probably part of the host options.\n" \
+    "If the checkbox is not checked and is not enabled (i.e. it cannot be checked), GPU rendering is not available on this host.\n"
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -222,11 +225,11 @@ TestOpenGLPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
 
 void
 TestOpenGLPlugin::changedParam(const OFX::InstanceChangedArgs &args,
-                              const std::string &paramName)
+                               const std::string &paramName)
 {
 #if defined(HAVE_OSMESA)
     if (paramName == kParamUseGPU) {
-        setNeedsOpenGLRender(_useGPUIfAvailable->getValueAtTime(args.time));
+        setNeedsOpenGLRender( _useGPUIfAvailable->getValueAtTime(args.time) );
     }
 #endif
 } // TestOpenGLPlugin::changedParam
@@ -472,7 +475,19 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamUseGPU);
         param->setLabel(kParamUseGPULabel);
         param->setHint(kParamUseGPUHint);
-        param->setDefault(true);
+        const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        // Resolve advertises OpenGL support in its host description, but never calls render with OpenGL enabled
+        if ( gHostDescription.supportsOpenGLRender && (gHostDescription.hostName != "DaVinciResolveLite") ) {
+            param->setDefault(true);
+            if (gHostDescription.APIVersionMajor * 100 + gHostDescription.APIVersionMinor < 104) {
+                // Switching OpenGL render from the plugin was introduced in OFX 1.4
+                param->setEnabled(false);
+            }
+        } else {
+            param->setDefault(false);
+            param->setEnabled(false);
+        }
+
         if (page) {
             page->addChild(*param);
         }
