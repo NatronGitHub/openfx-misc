@@ -109,10 +109,10 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 
 * Natron
 
-OFX API version 1.3
+OFX API version 1.4
 hostName=fr.inria.Natron
 hostLabel=Natron
-hostVersion=2.0.0 (2.0.0)
+hostVersion=2.1.0 (2.1.0)
 hostIsBackground=0
 supportsOverlays=1
 supportsMultiResolution=1
@@ -122,8 +122,8 @@ supportedComponents=OfxImageComponentRGBA,OfxImageComponentAlpha,OfxImageCompone
 supportedContexts=OfxImageEffectContextGenerator,OfxImageEffectContextFilter,OfxImageEffectContextGeneral,OfxImageEffectContextTransition
 supportedPixelDepths=OfxBitDepthFloat,OfxBitDepthShort,OfxBitDepthByte
 supportsMultipleClipDepths=1
-supportsMultipleClipPARs=0
-supportsSetableFrameRate=0
+supportsMultipleClipPARs=1
+supportsSetableFrameRate=1
 supportsSetableFielding=0
 supportsStringAnimation=1
 supportsCustomInteract=1
@@ -139,7 +139,7 @@ isNatron=1
 supportsDynamicChoices=1
 supportsCascadingChoices=1
 supportsChannelSelector=1
-suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxParametricParameterSuite,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV1,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV2,OfxVegasStereoscopicImageEffectSuite
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxParametricParameterSuite,OfxImageEffectOpenGLRenderSuite,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV1,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV2,OfxVegasProgressSuite,OfxVegasStereoscopicImageEffectSuite
 
 - may give a fake hostName for plugins that don't officially support Natron, but sets an extra host property kNatronOfxHostIsNatron
 - the isidentity action may point to a frame on the output clip, which is useful for generators and readers
@@ -176,14 +176,19 @@ pageRowCount=0
 pageColumnCount=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxProgressSuite,OfxImageEffectOpenGLRenderSuite,OfxOpenCLProgramSuite,
 
-- Non-conformant behavior: OfxImageEffectSuiteV1::clipGetRegionOfDefinition() returns the RoD in pixels, and depends on the current renderScale !!! Sony wrongly implemented http://openeffects.org/standard_changes/properties-that-are-doubles-canonical-but-should-really-be-ints-in-pixels-space in OFX 1.3
+- Non-conformant behavior: OfxImageEffectSuiteV1::clipGetRegionOfDefinition() returns the RoD in pixels, and depends on the current renderScale!!! Sony wrongly implemented http://openeffects.org/standard_changes/properties-that-are-doubles-canonical-but-should-really-be-ints-in-pixels-space in OFX 1.3
 - OfxParamTypeDouble2D parameters may have optional properties OfxCatalystParamPropLinkedParameterLabel and OfxCatalystParamPropLinkedParameterType (which can only be "rectangle") it links one parameter to the next described double2D parameter to form a rectangle between both corners
-- OfxParamTypeDouble2D parameters have a maximum range of -9.99..9.99
+- OfxParamTypeDouble2D parameters have a maximum setable range of -9.99..9.99 in the Gui. Consequently, deprecated
 - Suites:
   - supports the undocumented suite OfxOpenCLProgramSuite, and the property OfxImageEffectPropOpenCLSupported on plugin descriptors
   - no OfxMessageSuiteV2
   - OfxMultiThreadSuite misses the mutex-related functions
   - OfxParameterSuiteV1::paramCopy returns kOfxStatErrUnknown and does nothing
   - the OpenGL render context has no depth buffer, the projection is identity, the image transform is all in the modelview, and a glScissor is set to the renderWindow
+  - the OpenGL actions kOfxActionOpenGLContextAttached and kOfxActionOpenGLContextDetached are never called
+- undocumented action: OfxCatalystImageEffectActionGetRegionOfDefinition (note that the kOfxImageEffectActionGetRegionOfDefinition action is never called). Only implemented by the Sony Crop plugin? inArgs seem to be kOfxPropTime  and kOfxImageEffectPropRenderScale  and outArgs seem to be OfxImageEffectPropRegionOfDefinition , which are the same as the OFX action.
+- undocumented plugin descriptor property: OfxCatalystImageEffectHidden
+- undocumented param property OfxCatalystParamPropNeedsProgress
+
 - the OFX Log is "/Applications/ofxTestLog.txt"
 - the OFX plugin cache is in "~/Library/Application Support/Sony/Catalyst Edit/2015.1/plugincache.xml
