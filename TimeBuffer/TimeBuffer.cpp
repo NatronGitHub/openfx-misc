@@ -727,6 +727,8 @@ TimeBufferReadPlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
         timeBuffer = getBuffer();
         if (!timeBuffer) {
             throwSuiteStatusException(kOfxStatFailed);
+
+            return;
         }
         // reset the buffer to a clean state
         AutoMutex guard(timeBuffer->mutex);
@@ -1091,19 +1093,27 @@ private:
         if (!timeBuffer) {
             setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBuffer exists with name \"") + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
+
+            return NULL;
         }
-        if (timeBuffer && !timeBuffer->writeInstance) {
+        if (!timeBuffer->writeInstance) {
             setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"") + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
+
+            return NULL;
         }
-        if ( timeBuffer && timeBuffer->writeInstance && (timeBuffer->writeInstance != this) ) {
+        if ( timeBuffer->writeInstance && (timeBuffer->writeInstance != this) ) {
             // a buffer already exists with that name
             setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"") + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
+
+            return NULL;
         }
-        if (timeBuffer && !timeBuffer->readInstance) {
+        if (!timeBuffer->readInstance) {
             setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBufferRead exists with name \"") + _name + "\". Create one and connect it to this TimeBufferWrite via the Sync input.");
             throwSuiteStatusException(kOfxStatFailed);
+
+            return NULL;
         }
 
         return timeBuffer;
@@ -1185,6 +1195,8 @@ TimeBufferWritePlugin::render(const OFX::RenderArguments &args)
     timeBuffer = getBuffer();
     if (!timeBuffer) {
         throwSuiteStatusException(kOfxStatFailed);
+
+        return;
     }
     // - the buffer is locked for writing, and if it doesn't have date t+1 or is not dirty, then it is unlocked, render fails and a message is posted. It may be because the TimeBufferRead plugin is not upstream - in this case a solution is to connect TimeBufferRead output to TimeBufferWrite' sync input for syncing.
     {
@@ -1230,6 +1242,8 @@ TimeBufferWritePlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
         timeBuffer = getBuffer();
         if (!timeBuffer) {
             throwSuiteStatusException(kOfxStatFailed);
+
+            return;
         }
         // reset the buffer to a clean state
         AutoMutex guard(timeBuffer->mutex);

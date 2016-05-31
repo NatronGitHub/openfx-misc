@@ -1256,9 +1256,11 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             break;
         }
     }
-    const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
     OfxRectI srcRoDPixel = {0, 0, 0, 0};
-    OFX::Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
+    if (_srcClip) {
+        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+        OFX::Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
+    }
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
                         srcRoDPixel,

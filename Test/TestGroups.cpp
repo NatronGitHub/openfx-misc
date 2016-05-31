@@ -542,9 +542,11 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
         {
             OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup2AsTab");
-            subgroup->setAsTab();
-            if (group) {
-                subgroup->setParent(*group);
+            if (subgroup) {
+                subgroup->setAsTab();
+                if (group) {
+                    subgroup->setParent(*group);
+                }
             }
             {
                 OFX::DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup2AsTab");
@@ -561,9 +563,11 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
         {
             OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup3AsTab");
-            subgroup->setAsTab();
-            if (group) {
-                subgroup->setParent(*group);
+            if (subgroup) {
+                subgroup->setAsTab();
+                if (group) {
+                    subgroup->setParent(*group);
+                }
             }
             {
                 OFX::DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup3AsTab");
