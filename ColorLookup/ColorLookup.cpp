@@ -49,7 +49,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Apply a parametric lookup curve to each channel separately.\n" \
     "The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
-    "Computation is faster for values that are within the given range."
+    "Computation is faster for values that are within the given range.\n" \
+    "\n" \
+    "Note that you can easily do color remapping by setting Source and Target colors and clicking \"Set RGB\" or \"Set RGBA\" below.\n" \
+    "This will add control points on the curve to match the target from the source. You can add as many point as you like.\n" \
+    "This is very useful for matching color of one shot to another, or adding custom colors to a black and white ramp."
+
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
