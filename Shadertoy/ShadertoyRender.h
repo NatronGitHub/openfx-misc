@@ -1059,15 +1059,18 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glBindTexture(srcTarget[i], 0);
         }
     }
+#endif
+
+    float w = (renderWindow.x2 - renderWindow.x1);
+    float h = (renderWindow.y2 - renderWindow.y1);
+
     // setup the projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho( 0, dstBounds.x2 - dstBounds.x1,
-             0, dstBounds.y2 - dstBounds.y1,
-             -10.0 * (dstBounds.y2 - dstBounds.y1), 10.0 * (dstBounds.y2 - dstBounds.y1) );
+    glOrtho(0, w, 0, h, -1, 1);
     glMatrixMode(GL_MODELVIEW);
-    glClear( GL_DEPTH_BUFFER_BIT );
-#endif
+    glLoadIdentity();
+    glClear(GL_DEPTH_BUFFER_BIT); // does not hurt, even if there is no Z-buffer (Sony Catalyst)
 
     double fps = _dstClip->getFrameRate();
     if (fps <= 0) {
@@ -1193,9 +1196,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     if (shadertoy->iRenderScaleLoc >= 0) {
         glUniform2f(shadertoy->iRenderScaleLoc, rs.x, rs.y);
     }
-
-    float w = (renderWindow.x2 - renderWindow.x1);
-    float h = (renderWindow.y2 - renderWindow.y1);
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glDisable(GL_BLEND);
