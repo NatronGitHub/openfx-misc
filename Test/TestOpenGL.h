@@ -63,11 +63,11 @@ private:
 
     /* The purpose of this action is to allow a plugin to set up any data it may need
        to do OpenGL rendering in an instance. */
-    virtual void contextAttached() OVERRIDE FINAL;
+    virtual void* contextAttached(bool createContextData) OVERRIDE FINAL;
     /* The purpose of this action is to allow a plugin to deallocate any resource
        allocated in \ref ::kOfxActionOpenGLContextAttached just before the host
        decouples a plugin from an OpenGL context. */
-    virtual void contextDetached() OVERRIDE FINAL;
+    virtual void contextDetached(void* contextData) OVERRIDE FINAL;
 
     /* The OpenGL context is also set when beginSequenceRender() and endSequenceRender()
        are called. This may be useful to allocate/deallocate sequence-specific OpenGL data. */
@@ -78,8 +78,8 @@ private:
     void exitMesa();
     void renderGL(const OFX::RenderArguments &args);
     void renderMesa(const OFX::RenderArguments &args);
-    void contextAttachedMesa();
-    void contextDetachedMesa();
+    void* contextAttachedMesa(bool createContextData);
+    void contextDetachedMesa(void* contextData);
 
     // override the rod call
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
@@ -101,8 +101,20 @@ private:
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_useGPUIfAvailable;
-    bool _haveAniso;
-    float _maxAnisoMax;
+    
+    struct OpenGLContextData {
+        OpenGLContextData()
+        : haveAniso(false)
+        , maxAnisoMax(1.)
+        {
+        }
+        
+        bool haveAniso;
+        float maxAnisoMax;
+    };
+    OpenGLContextData _openGLContextData; // (OpenGL-only) - the single openGL context, in case the host does not support kNatronOfxImageEffectPropOpenGLContextData
+    bool _openGLContextAttached; // (OpenGL-only) - set to true when the contextAttached function is executed - used for checking non-conformant hosts such as Sony Catalyst
+
 #if defined(HAVE_OSMESA)
     // A list of Mesa contexts available for rendering.
     // renderMesa() pops the last element, uses it, then pushes it back.

@@ -186,7 +186,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
             // make the context current, with a dummy buffer
             unsigned char buffer[4];
             OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
-            _effect->contextDetachedMesa();
+            _effect->contextDetachedMesa(NULL);
             OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
             OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
             OSMesaDestroyContext( _ctx );
@@ -220,7 +220,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
                 // make the context current, with a dummy buffer
                 unsigned char buffer[4];
                 OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
-                _effect->contextDetachedMesa();
+                _effect->contextDetachedMesa(NULL);
                 OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
                 OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
                 OSMesaDestroyContext( _ctx );
@@ -265,7 +265,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
         //OSMesaPixelStore(OSMESA_Y_UP, true); // default value
         //OSMesaPixelStore(OSMESA_ROW_LENGTH, dstBounds.x2 - dstBounds.x1); // default value
         if (newContext) {
-            _effect->contextAttachedMesa();
+            _effect->contextAttachedMesa(false);
         } else {
             // set viewport
             glViewport(0, 0, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1);
@@ -281,6 +281,8 @@ struct TestOpenGLPlugin::OSMesaPrivate
     GLint _ctxDepthBits;
     GLint _ctxStencilBits;
     GLint _ctxAccumBits;
+
+    OpenGLContextData _openGLContextData;
 };
 
 void
@@ -915,6 +917,7 @@ OFXS_NAMESPACE_ANONYMOUS_EXIT
 void
 TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
+
     const double time = args.time;
     double scalex = 1;
     double scaley = 1;
@@ -1102,7 +1105,25 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     assert(OSMesaGetCurrentContext() == NULL); // the thread should have no Mesa context attached
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
+#endif
 
+    OpenGLContextData* contextData = &_openGLContextData;
+#ifdef USE_OPENGL
+    if (args.openGLContextData) {
+        // host provided kNatronOfxImageEffectPropOpenGLContextData,
+        // which was returned by kOfxActionOpenGLContextAttached
+        contextData = (OpenGLContextData*)args.openGLContextData;
+    } else if (!_openGLContextAttached) {
+        // Sony Catalyst Edit never calls kOfxActionOpenGLContextAttached
+        contextAttached(false);
+        _openGLContextAttached = true;
+    }
+#endif
+#ifdef USE_OSMESA
+    contextData = &osmesa->_openGLContextData;
+#endif
+
+#ifdef USE_OSMESA
     // load the source image into a texture
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     GLuint srcIndex;
@@ -1141,6 +1162,9 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     const OfxPointD& rs = args.renderScale;
     DPRINT( ("renderScale = [%g, %g]\n",
              rs.x, rs.y) );
+
+    bool haveAniso = contextData->haveAniso;
+    float maxAnisoMax = contextData->maxAnisoMax;
 
     // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
     float w = (renderWindow.x2 - renderWindow.x1);
@@ -1191,8 +1215,8 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
     glTexParameteri(srcTarget, GL_TEXTURE_MIN_FILTER, mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-    if (anisotropic && _haveAniso) {
-        glTexParameterf(srcTarget, GL_TEXTURE_MAX_ANISOTROPY_EXT, _maxAnisoMax);
+    if (anisotropic && haveAniso) {
+        glTexParameterf(srcTarget, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisoMax);
     }
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
@@ -1373,9 +1397,13 @@ getGlslVersion(int *major,
  *  - allocate a lookup table on a GPU,
  *  - create an openCL or CUDA context that is bound to the host's OpenGL
  *    context so it can share buffers.
+ *
+ * Note: Sony Catalyst Edit never calls contextAttached or contextDetached, so the
+ * render action should call contextAttached on first openGL render if it was not
+ * called by the host.
  */
-void
-TestOpenGLPlugin::contextAttached()
+void*
+TestOpenGLPlugin::contextAttached(bool createContextData)
 {
 #ifdef DEBUG
     DPRINT( ( "GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER) ) );
@@ -1394,13 +1422,31 @@ TestOpenGLPlugin::contextAttached()
     }
     if (major < 3) {
     }
-    _haveAniso = glutExtensionSupported("GL_EXT_texture_filter_anisotropic");
-    if (_haveAniso) {
+
+    OpenGLContextData* contextData = &_openGLContextData;
+#ifdef USE_OPENGL
+    if (createContextData) {
+        contextData = new OpenGLContextData;
+    }
+#else
+    assert(!createContextData); // context data is handled differently in CPU rendering
+#endif
+
+    contextData->haveAniso = glutExtensionSupported("GL_EXT_texture_filter_anisotropic");
+    if (contextData->haveAniso) {
         GLfloat MaxAnisoMax;
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &MaxAnisoMax);
-        _maxAnisoMax = MaxAnisoMax;
-        DPRINT( ("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", _maxAnisoMax) );
+        contextData->maxAnisoMax = MaxAnisoMax;
+        DPRINT( ("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", contextData->maxAnisoMax) );
     }
+
+#ifdef USE_OPENGL
+    if (createContextData) {
+        return contextData;
+    }
+#else
+#endif
+    return NULL;
 }
 
 /*
@@ -1414,7 +1460,16 @@ TestOpenGLPlugin::contextAttached()
  * called with the corresponding ::kOfxActionOpenGLContextAttached.
  */
 void
-TestOpenGLPlugin::contextDetached()
+TestOpenGLPlugin::contextDetached(void* contextData)
 {
+#ifdef USE_OPENGL
+    if (contextData) {
+        delete (OpenGLContextData*)contextData;
+    } else {
+        _openGLContextAttached = false;
+    }
+#else
+    assert(!contextData); // context data is handled differently in CPU rendering
+#endif
 }
 

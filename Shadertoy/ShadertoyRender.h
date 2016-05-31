@@ -315,9 +315,7 @@ struct ShadertoyPlugin::OSMesaPrivate
         , _ctxDepthBits(0)
         , _ctxStencilBits(0)
         , _ctxAccumBits(0)
-        , _imageShaderID(0)
-        , _imageShaderUniformsID(0)
-        , _imageShader()
+        , _openGLContextData()
     {
     }
 
@@ -328,7 +326,7 @@ struct ShadertoyPlugin::OSMesaPrivate
             // make the context current, with a dummy buffer
             unsigned char buffer[4];
             OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
-            _effect->contextDetachedMesa();
+            _effect->contextDetachedMesa(NULL);
             OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
             OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
             OSMesaDestroyContext( _ctx );
@@ -362,7 +360,7 @@ struct ShadertoyPlugin::OSMesaPrivate
                 // make the context current, with a dummy buffer
                 unsigned char buffer[4];
                 OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
-                _effect->contextDetachedMesa();
+                _effect->contextDetachedMesa(NULL);
                 OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
                 OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
                 OSMesaDestroyContext( _ctx );
@@ -407,7 +405,7 @@ struct ShadertoyPlugin::OSMesaPrivate
         //OSMesaPixelStore(OSMESA_Y_UP, true); // default value
         //OSMesaPixelStore(OSMESA_ROW_LENGTH, dstBounds.x2 - dstBounds.x1); // default value
         if (newContext) {
-            _effect->contextAttachedMesa();
+            _effect->contextAttachedMesa(false);
         } else {
             // set viewport
             glViewport(0, 0, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1);
@@ -423,9 +421,8 @@ struct ShadertoyPlugin::OSMesaPrivate
     GLint _ctxDepthBits;
     GLint _ctxStencilBits;
     GLint _ctxAccumBits;
-    unsigned int _imageShaderID; // the shader ID compiled for this context
-    unsigned int _imageShaderUniformsID; // the ID for custom uniform locations
-    ShadertoyShader _imageShader;
+
+    OpenGLContextData _openGLContextData; // context-specific data
 };
 
 void
@@ -452,13 +449,13 @@ ShadertoyPlugin::exitMesa()
 void
 ShadertoyPlugin::initOpenGL()
 {
-    _imageShader = new ShadertoyShader;
+    _openGLContextData.imageShader = new ShadertoyShader;
 }
 
 void
 ShadertoyPlugin::exitOpenGL()
 {
-    delete _imageShader;
+    delete ((ShadertoyShader*)_openGLContextData.imageShader);
 }
 
 #endif // USE_OPENGL
@@ -895,8 +892,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
 
-    const OfxRectI dstBounds = dst->getBounds();
 #ifdef USE_OSMESA
+    const OfxRectI dstBounds = dst->getBounds();
     if (format == 0) {
         switch (dstComponents) {
         case OFX::ePixelComponentRGBA:
@@ -954,28 +951,33 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
 #endif // ifdef USE_OSMESA
 
+    OpenGLContextData* contextData = &_openGLContextData;
+    if (args.openGLContextData) {
+        // host provided kNatronOfxImageEffectPropOpenGLContextData,
+        // which was returned by kOfxActionOpenGLContextAttached
+        contextData = (OpenGLContextData*)args.openGLContextData;
+    } else if (!_openGLContextAttached) {
+        // Sony Catalyst Edit never calls kOfxActionOpenGLContextAttached
+        contextAttached(false);
+        _openGLContextAttached = true;
+    }
+#ifdef USE_OSMESA
+    contextData = &osmesa->_openGLContextData;
+#endif
+
     // compile and link the shader if necessary
     ShadertoyShader *shadertoy;
     {
         AutoMutex lock( _shaderMutex.get() );
         bool must_recompile = false;
         bool uniforms_changed = false;
-#ifdef USE_OPENGL
-        shadertoy = _imageShader;
+        shadertoy = (ShadertoyShader *)contextData->imageShader;
         assert(shadertoy);
-        must_recompile = _imageShaderChanged;
-        _imageShaderChanged = false;
-        uniforms_changed = _imageShaderUniformsChanged;
-        _imageShaderUniformsChanged = false;
-#endif
-#ifdef USE_OSMESA
-        shadertoy = &osmesa->_imageShader;
-        must_recompile = (_imageShaderID != osmesa->_imageShaderID);
-        osmesa->_imageShaderID = _imageShaderID;
-        uniforms_changed = (_imageShaderUniformsID != osmesa->_imageShaderUniformsID);
-        osmesa->_imageShaderUniformsID = _imageShaderUniformsID;
-#endif
-        assert(shadertoy);
+        must_recompile = (_imageShaderID != contextData->imageShaderID);
+        contextData->imageShaderID = _imageShaderID;
+        uniforms_changed = (_imageShaderUniformsID != contextData->imageShaderUniformsID);
+        contextData->imageShaderUniformsID = _imageShaderUniformsID;
+
         if (must_recompile) {
             if (shadertoy->program) {
                 glDeleteProgram(shadertoy->program);
@@ -998,7 +1000,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
                 return;
             }
-            _imageShaderChanged = false;
             shadertoy->iResolutionLoc        = glGetUniformLocation(shadertoy->program, "iResolution");
             shadertoy->iGlobalTimeLoc        = glGetUniformLocation(shadertoy->program, "iGlobalTime");
             shadertoy->iTimeDeltaLoc         = glGetUniformLocation(shadertoy->program, "iTimeDelta");
@@ -1351,8 +1352,8 @@ getGlslVersion(int *major,
  *  - create an openCL or CUDA context that is bound to the host's OpenGL
  *    context so it can share buffers.
  */
-void
-ShadertoyPlugin::contextAttached()
+void*
+ShadertoyPlugin::contextAttached(bool createContextData)
 {
 #ifdef DEBUG
     DPRINT( ( "GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER) ) );
@@ -1398,12 +1399,22 @@ ShadertoyPlugin::contextAttached()
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    _haveAniso = glutExtensionSupported("GL_EXT_texture_filter_anisotropic");
-    if (_haveAniso) {
+
+    OpenGLContextData* contextData = &_openGLContextData;
+#ifdef USE_OPENGL
+    if (createContextData) {
+        contextData = new OpenGLContextData;
+    }
+#else
+    assert(!createContextData); // context data is handled differently in CPU rendering
+#endif
+
+    contextData->haveAniso = glutExtensionSupported("GL_EXT_texture_filter_anisotropic");
+    if (contextData->haveAniso) {
         GLfloat MaxAnisoMax;
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &MaxAnisoMax);
-        _maxAnisoMax = MaxAnisoMax;
-        DPRINT( ("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", _maxAnisoMax) );
+        contextData->maxAnisoMax = MaxAnisoMax;
+        DPRINT( ("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", contextData->maxAnisoMax) );
     }
 
 #if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
@@ -1498,7 +1509,16 @@ ShadertoyPlugin::contextAttached()
     }
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
-    // Shadertoy:
+    contextData->imageShader = NULL;
+    contextData->imageShaderID = 0;
+    contextData->imageShaderUniformsID = 0;
+
+#ifdef USE_OPENGL
+    if (createContextData) {
+        return contextData;
+    }
+#endif
+    return NULL;
 } // ShadertoyPlugin::contextAttached
 
 /*
@@ -1512,8 +1532,17 @@ ShadertoyPlugin::contextAttached()
  * called with the corresponding ::kOfxActionOpenGLContextAttached.
  */
 void
-ShadertoyPlugin::contextDetached()
+ShadertoyPlugin::contextDetached(void* contextData)
 {
     // Shadertoy:
+#ifdef USE_OPENGL
+    if (contextData) {
+        delete (OpenGLContextData*)contextData;
+    } else {
+        _openGLContextAttached = false;
+    }
+#else
+    assert(!contextData); // context data is handled differently in CPU rendering
+#endif
 }
 

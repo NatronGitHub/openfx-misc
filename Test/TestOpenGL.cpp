@@ -90,11 +90,11 @@ using namespace OFX;
 
 #define kParamMipmap "mipmap"
 #define kParamMipmapLabel "Mipmap"
-#define kParamMipmapHint "Use mipmapping (if supported)"
+#define kParamMipmapHint "Use mipmapping (available only with CPU rendering)"
 
 #define kParamAnisotropic "anisotropic"
 #define kParamAnisotropicLabel "Anisotropic"
-#define kParamAnisotropicHint "Use anisotropic texture filtering (if supported)"
+#define kParamAnisotropicHint "Use anisotropic texture filtering (available with CPU rendering, and with GPU if supported)"
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamUseGPU "useGPUIfAvailable"
@@ -123,8 +123,8 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
     , _mipmap(0)
     , _anisotropic(0)
     , _useGPUIfAvailable(0)
-    , _haveAniso(false)
-    , _maxAnisoMax(1.)
+    , _openGLContextData()
+    , _openGLContextAttached(false)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
@@ -186,7 +186,6 @@ TestOpenGLPlugin::render(const OFX::RenderArguments &args)
 
     bool openGLRender = false;
 #if defined(OFX_SUPPORTS_OPENGLRENDER)
-    const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     openGLRender = args.openGLEnabled;
 
     // do the rendering

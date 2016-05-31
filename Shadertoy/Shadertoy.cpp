@@ -356,11 +356,11 @@ enum BBoxEnum
 
 #define kParamMipmap "mipmap"
 #define kParamMipmapLabel "Mipmap"
-#define kParamMipmapHint "Use mipmapping (if supported)"
+#define kParamMipmapHint "Use mipmapping (available only with CPU rendering)"
 
 #define kParamAnisotropic "anisotropic"
 #define kParamAnisotropicLabel "Anisotropic"
-#define kParamAnisotropicHint "Use anisotropic texture filtering (if supported)"
+#define kParamAnisotropicHint "Use anisotropic texture filtering (available with CPU rendering, and with GPU if supported)"
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamUseGPU "useGPUIfAvailable"
@@ -419,15 +419,10 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _mipmap(0)
     , _anisotropic(0)
     , _useGPUIfAvailable(0)
-    , _haveAniso(false)
-    , _maxAnisoMax(1.)
-#ifdef HAVE_OSMESA
     , _imageShaderID(1)
     , _imageShaderUniformsID(1)
-#endif
-    , _imageShader(0)
-    , _imageShaderChanged(true)
-    , _imageShaderUniformsChanged(true)
+    , _openGLContextData()
+    , _openGLContextAttached(false)
 {
     try {
         _shaderMutex.reset(new Mutex);
@@ -541,7 +536,6 @@ ShadertoyPlugin::render(const OFX::RenderArguments &args)
 
     bool openGLRender = false;
 #if defined(OFX_SUPPORTS_OPENGLRENDER)
-    const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     openGLRender = args.openGLEnabled;
 
     // do the rendering
@@ -791,10 +785,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         {
             AutoMutex lock( _shaderMutex.get() );
             // mark that image shader must be recompiled on next render
-#         ifdef HAVE_OSMESA
             ++_imageShaderID;
-#         endif
-            _imageShaderChanged = true;
         }
         _imageShaderCompile->setEnabled(false);
         // trigger a new render
@@ -806,20 +797,14 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         {
             AutoMutex lock( _shaderMutex.get() );
             // mark that image shader must be recompiled on next render
-#         ifdef HAVE_OSMESA
             ++_imageShaderUniformsID;
-#         endif
-            _imageShaderUniformsChanged = true;
         }
         updateVisibility();
     } else if ( starts_with(paramName, kParamType) ) {
         {
             AutoMutex lock( _shaderMutex.get() );
             // mark that image shader must be recompiled on next render
-#         ifdef HAVE_OSMESA
             ++_imageShaderUniformsID;
-#         endif
-            _imageShaderUniformsChanged = true;
         }
         //updateVisibilityParam(i, i < paramCount);
         updateVisibility();
