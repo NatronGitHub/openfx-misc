@@ -363,12 +363,12 @@ enum BBoxEnum
 #define kParamAnisotropicHint "Use anisotropic texture filtering (available with CPU rendering, and with GPU if supported)"
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
-#define kParamUseGPU "useGPUIfAvailable"
-#define kParamUseGPULabel "Use GPU If Available"
-#define kParamUseGPUHint \
-    "If GPU rendering is available, use it.\n" \
-    "If the checkbox is checked but is not enabled (i.e. it cannot be unchecked), GPU rendering can not be enabled or disabled from the plugin and is probably part of the host options.\n" \
-    "If the checkbox is not checked and is not enabled (i.e. it cannot be checked), GPU rendering is not available on this host.\n"
+#define kParamEnableGPU "enableGPU"
+#define kParamEnableGPULabel "Enable GPU Render"
+#define kParamEnableGPUHint \
+    "Enable GPU-based OpenGL render.\n" \
+    "If the checkbox is checked but is not enabled (i.e. it cannot be unchecked), GPU render can not be enabled or disabled from the plugin and is probably part of the host options.\n" \
+    "If the checkbox is not checked and is not enabled (i.e. it cannot be checked), GPU render is not available on this host.\n"
 #endif
 
 #define kParamRendererInfo "rendererInfo"
@@ -418,7 +418,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _paramValueVec4 (NBUNIFORMS, (OFX::RGBAParam*)    NULL)
     , _mipmap(0)
     , _anisotropic(0)
-    , _useGPUIfAvailable(0)
+    , _enableGPU(0)
     , _imageShaderID(1)
     , _imageShaderUniformsID(1)
     , _openGLContextData()
@@ -493,11 +493,11 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _anisotropic = fetchBooleanParam(kParamAnisotropic);
     assert(_mipmap && _anisotropic);
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
-    _useGPUIfAvailable = fetchBooleanParam(kParamUseGPU);
-    assert(_useGPUIfAvailable);
+    _enableGPU = fetchBooleanParam(kParamEnableGPU);
+    assert(_enableGPU);
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     if (!gHostDescription.supportsOpenGLRender) {
-        _useGPUIfAvailable->setEnabled(false);
+        _enableGPU->setEnabled(false);
     }
 #endif
     updateVisibility();
@@ -816,7 +816,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         std::string message;
 #     if defined(OFX_SUPPORTS_OPENGLRENDER)
         if (gHostDescription.supportsOpenGLRender) {
-            _useGPUIfAvailable->getValueAtTime(args.time, openGLRender);
+            _enableGPU->getValueAtTime(args.time, openGLRender);
         }
 
         if (openGLRender) {
@@ -836,8 +836,8 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         } else {
             sendMessage(OFX::Message::eMessageMessage, "", message);
         }
-    } else if (paramName == kParamUseGPU) {
-        setNeedsOpenGLRender( _useGPUIfAvailable->getValueAtTime(args.time) );
+    } else if (paramName == kParamEnableGPU) {
+        setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
     }
 } // ShadertoyPlugin::changedParam
 
@@ -1379,9 +1379,9 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamUseGPU);
-        param->setLabel(kParamUseGPULabel);
-        param->setHint(kParamUseGPUHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnableGPU);
+        param->setLabel(kParamEnableGPULabel);
+        param->setHint(kParamEnableGPUHint);
         const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
         // Resolve advertises OpenGL support in its host description, but never calls render with OpenGL enabled
         if ( gHostDescription.supportsOpenGLRender && (gHostDescription.hostName != "DaVinciResolveLite") ) {

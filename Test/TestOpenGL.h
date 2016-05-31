@@ -100,7 +100,7 @@ private:
     OFX::BooleanParam *_projective;
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
-    OFX::BooleanParam *_useGPUIfAvailable;
+    OFX::BooleanParam *_enableGPU;
     
     struct OpenGLContextData {
         OpenGLContextData()

@@ -139,7 +139,7 @@ private:
     std::vector<OFX::RGBAParam *> _paramValueVec4;
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
-    OFX::BooleanParam *_useGPUIfAvailable;
+    OFX::BooleanParam *_enableGPU;
     std::auto_ptr<Mutex> _shaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
