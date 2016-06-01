@@ -317,6 +317,7 @@ struct ShadertoyPlugin::OSMesaPrivate
         , _ctxAccumBits(0)
         , _openGLContextData()
     {
+        _openGLContextData.imageShader = new ShadertoyShader;
     }
 
     ~OSMesaPrivate()
@@ -332,6 +333,7 @@ struct ShadertoyPlugin::OSMesaPrivate
             OSMesaDestroyContext( _ctx );
             assert( !OSMesaGetCurrentContext() );
         }
+        delete (ShadertoyShader*)_openGLContextData.imageShader;
     }
 
     void setContext(GLenum format,
@@ -951,6 +953,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
 #endif // ifdef USE_OSMESA
 
+#ifdef USE_OPENGL
     OpenGLContextData* contextData = &_openGLContextData;
     if (args.openGLContextData) {
         // host provided kNatronOfxImageEffectPropOpenGLContextData,
@@ -961,8 +964,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         contextAttached(false);
         _openGLContextAttached = true;
     }
+#endif
 #ifdef USE_OSMESA
-    contextData = &osmesa->_openGLContextData;
+    OpenGLContextData* contextData = &osmesa->_openGLContextData;
 #endif
 
     // compile and link the shader if necessary
