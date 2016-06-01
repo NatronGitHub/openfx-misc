@@ -326,6 +326,7 @@ struct ShadertoyPlugin::OSMesaPrivate
         , _ctxAccumBits(0)
         , _openGLContextData()
     {
+        assert(_openGLContextData.imageShader == NULL);
         _openGLContextData.imageShader = new ShadertoyShader;
     }
 
@@ -343,6 +344,7 @@ struct ShadertoyPlugin::OSMesaPrivate
             assert( !OSMesaGetCurrentContext() );
         }
         delete (ShadertoyShader*)_openGLContextData.imageShader;
+        _openGLContextData.imageShader = NULL;
     }
 
     void setContext(GLenum format,
@@ -460,6 +462,7 @@ ShadertoyPlugin::exitMesa()
 void
 ShadertoyPlugin::initOpenGL()
 {
+    assert(_openGLContextData.imageShader == NULL);
     _openGLContextData.imageShader = new ShadertoyShader;
 }
 
@@ -467,6 +470,7 @@ void
 ShadertoyPlugin::exitOpenGL()
 {
     delete ((ShadertoyShader*)_openGLContextData.imageShader);
+    _openGLContextData.imageShader = NULL;
 }
 
 #endif // USE_OPENGL
@@ -1467,8 +1471,10 @@ ShadertoyPlugin::contextAttached(bool createContextData)
 
     OpenGLContextData* contextData = &_openGLContextData;
 #ifdef USE_OPENGL
+    assert(_openGLContextData->imageShader);
     if (createContextData) {
         contextData = new OpenGLContextData;
+        contextData->imageShader = new ShadertoyShader;
     }
 #else
     assert(!createContextData); // context data is handled differently in CPU rendering
@@ -1602,6 +1608,8 @@ ShadertoyPlugin::contextDetached(void* contextData)
     // Shadertoy:
 #ifdef USE_OPENGL
     if (contextData) {
+        delete (ShadertoyShader*)((OpenGLContextData*)contextData)->imageShader;
+        ((OpenGLContextData*)contextData)->imageShader = NULL;
         delete (OpenGLContextData*)contextData;
     } else {
         _openGLContextAttached = false;
