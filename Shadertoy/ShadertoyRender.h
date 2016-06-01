@@ -25,11 +25,20 @@
 #include <cstring> // strstr, strchr, strlen
 #include <cstdio> // sscanf, vsnprintf, fwrite
 #include <cassert>
+#include <cmath>
 #include <algorithm>
+//#define DEBUG_TIME
+#ifdef DEBUG_TIME
+#include <sys/time.h>
+#endif
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 #include "ofxsCoords.h"
+
+#ifndef M_LN2
+#define M_LN2       0.693147180559945309417232121458176568  /* loge(2)        */
+#endif
 
 // first, check that the file is used in a good way
 #if !defined(USE_OPENGL) && !defined(USE_OSMESA)
@@ -725,6 +734,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     const double time = args.time;
     bool mipmap = true;
     bool anisotropic = true;
+#ifdef DEBUG_TIME
+    struct timeval t1, t2;
+    gettimeofday(&t1, NULL);
+#endif
 
     if (_mipmap) {
         _mipmap->getValueAtTime(time, mipmap);
@@ -1065,8 +1078,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 #endif
 
-    float w = (renderWindow.x2 - renderWindow.x1);
-    float h = (renderWindow.y2 - renderWindow.y1);
+    int w = (renderWindow.x2 - renderWindow.x1);
+    int h = (renderWindow.y2 - renderWindow.y1);
 
     // setup the projection
     glMatrixMode(GL_PROJECTION);
@@ -1207,12 +1220,59 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glDepthFunc(GL_LESS);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    glBegin(GL_QUADS);
-    glVertex2f(0, 0);
-    glVertex2f(0, h);
-    glVertex2f(w, h);
-    glVertex2f(w, 0);
-    glEnd();
+    // Are your images pretty large? Maybe one approach would to render the scene in tiled chunks.
+    // For example, divide the window into an NxM grid of tiles, then render the scene into each tile with glScissor.
+    // After rendering each tile, check if there's user input and abort drawing the grid if needed.
+    // Ideally the tile size should be a multiple of llvmpipe's tile size which is 64x64.
+    // llvmpipe employs multiple threads to process tiles in parallel so your tiles should probably
+    // be 128x128 for 4 cores, 256x128 for 8 cores, etc.
+    int tile_w = w;
+    int tile_h = h;
+#ifdef USE_OSMESA
+    glEnable(GL_SCISSOR_TEST);
+    {
+        int nCPUs = OFX::MultiThread::getNumCPUs();
+        // - take the square root of nCPUs
+        // - compute the next closest power of two -> this gives the number of tiles for the x dimension
+        int pow2_x = std::ceil(std::log(std::sqrt(nCPUs)) / M_LN2);
+        tile_w = 64 * (1 << pow2_x);
+        // - compute the next power of two for the other side
+        int pow2_y = std::ceil(std::log( nCPUs / (double)(1 << pow2_x) ) / M_LN2);
+        tile_h = 64 * (1 << pow2_y);
+        DPRINT( ("Shadertoy: tile size: %d %d for %d CPUs\n", tile_w, tile_h, nCPUs) );
+    }
+#endif
+
+    bool aborted = abort();
+    for (int y1 = 0; y1 < h && !aborted; y1 += tile_h) {
+        for (int x1 = 0; x1 < w && !aborted; x1 += tile_w) {
+#ifdef DEBUG_TIME
+            struct timeval t1, t2;
+            gettimeofday(&t1, NULL);
+#endif
+            glScissor(x1, y1, tile_w, tile_h);
+            glBegin(GL_QUADS);
+            glVertex2f(0, 0);
+            glVertex2f(0, h);
+            glVertex2f(w, h);
+            glVertex2f(w, 0);
+            glEnd();
+            aborted = abort();
+#ifdef USE_OSMESA
+            // render the tile if we are using osmesa
+            if (!aborted) {
+                glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
+            }
+#endif
+#ifdef DEBUG_TIME
+            gettimeofday(&t2, NULL);
+            DPRINT( ("rendering tile: %d %d %d %d took %d us\n", x1, y1, tile_w, tile_h, 1000000*(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)) );
+#endif
+        }
+    }
+    if (aborted) {
+        DPRINT( ("Shadertoy: aborted!\n") );
+    }
 
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         if (shadertoy->iChannelLoc[i] >= 0) {
@@ -1221,12 +1281,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
 
-    if ( !abort() ) {
-        glUseProgram(0);
+    glUseProgram(0);
 
-        // done; clean up.
-        glPopAttrib();
-    }
+    // done; clean up.
+    glPopAttrib();
 
 #ifdef DEBUG_OPENGL_BITS
     {
@@ -1245,11 +1303,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     /* This is very important!!!
      * Make sure buffered commands are finished!!!
      */
-    if ( !abort() ) {
-        for (unsigned i = 0; i < NBINPUTS; ++i) {
-            if ( src[i].get() ) {
-                glDeleteTextures(1, &srcIndex[i]);
-            }
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        if ( src[i].get() ) {
+            glDeleteTextures(1, &srcIndex[i]);
         }
     }
 
@@ -1281,7 +1337,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
 #else
-    if ( !abort() ) {
+    if ( !aborted ) {
         glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
         glFinish(); // waits for all previously submitted commands to complete executing
     }
@@ -1297,6 +1353,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         _osmesa.push_back(osmesa);
     }
 #endif // ifdef USE_OSMESA
+#ifdef DEBUG_TIME
+    gettimeofday(&t2, NULL);
+    DPRINT( ("rendering took %d us\n", 1000000*(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)) );
+#endif
+
 } // ShadertoyPlugin::RENDERFUNC
 
 static
