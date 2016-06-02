@@ -115,13 +115,17 @@ private:
     OpenGLContextData _openGLContextData; // (OpenGL-only) - the single openGL context, in case the host does not support kNatronOfxImageEffectPropOpenGLContextData
     bool _openGLContextAttached; // (OpenGL-only) - set to true when the contextAttached function is executed - used for checking non-conformant hosts such as Sony Catalyst
 
+    std::auto_ptr<Mutex> _rendererInfoMutex;
+    std::string _rendererInfoGL;
+
 #if defined(HAVE_OSMESA)
     // A list of Mesa contexts available for rendering.
     // renderMesa() pops the last element, uses it, then pushes it back.
     // A new context is created if the list is empty.
     // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
     std::list<OSMesaPrivate *> _osmesa;
-    Mutex _osmesaMutex;
+    std::auto_ptr<Mutex> _osmesaMutex;
+    std::string _rendererInfoMesa;
 #endif
 };
 

@@ -25,6 +25,9 @@
 #include "TestOpenGL.h"
 
 #include <cfloat>
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
@@ -48,8 +51,8 @@ using namespace OFX;
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
@@ -94,7 +97,7 @@ using namespace OFX;
 
 #define kParamAnisotropic "anisotropic"
 #define kParamAnisotropicLabel "Anisotropic"
-#define kParamAnisotropicHint "Use anisotropic texture filtering (available with CPU rendering, and with GPU if supported)"
+#define kParamAnisotropicHint "Use anisotropic texture filtering (available with \"Mesa softpipe\" CPU rendering, and with GPU if supported)"
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamEnableGPU "enableGPU"
@@ -104,6 +107,11 @@ using namespace OFX;
     "If the checkbox is checked but is not enabled (i.e. it cannot be unchecked), GPU render can not be enabled or disabled from the plugin and is probably part of the host options.\n" \
     "If the checkbox is not checked and is not enabled (i.e. it cannot be checked), GPU render is not available on this host.\n"
 #endif
+
+#define kParamRendererInfo "rendererInfo"
+#define kParamRendererInfoLabel "Renderer Info..."
+#define kParamRendererInfoHint "Retrieve information about the current OpenGL renderer."
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -126,6 +134,17 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
     , _openGLContextData()
     , _openGLContextAttached(false)
 {
+    try {
+        _rendererInfoMutex.reset(new Mutex);
+#if defined(HAVE_OSMESA)
+        _osmesaMutex.reset(new Mutex);
+#endif
+    } catch (const std::exception& e) {
+#      ifdef DEBUG
+        std::cout << "ERROR in createInstance(): OFX::Multithread::Mutex creation returned " << e.what() << std::endl;
+#      endif
+    }
+
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
                          _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
@@ -229,11 +248,41 @@ void
 TestOpenGLPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                                const std::string &paramName)
 {
+    if (paramName == kParamRendererInfo) {
+        const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        bool openGLRender = false;
+        std::string message;
+#     if defined(OFX_SUPPORTS_OPENGLRENDER)
+        if (gHostDescription.supportsOpenGLRender) {
+#         ifdef HAVE_OSMESA
+            _enableGPU->getValueAtTime(args.time, openGLRender);
+#         else
+            openGLRender = true;
+#         endif
+        }
+
+        if (openGLRender) {
+            AutoMutex lock( _rendererInfoMutex.get() );
+            message = _rendererInfoGL;
+        }
+#     endif
+#     ifdef HAVE_OSMESA
+        if (!openGLRender) {
+            AutoMutex lock( _rendererInfoMutex.get() );
+            message = _rendererInfoMesa;
+        }
+#     endif // HAVE_OSMESA
+        if ( message.empty() ) {
+            sendMessage(OFX::Message::eMessageMessage, "", "OpenGL renderer info not yet available.\n"
+                        "Please execute at least one image render and try again.");
+        } else {
+            sendMessage(OFX::Message::eMessageMessage, "", message);
+        }
 #if defined(HAVE_OSMESA)
-    if (paramName == kParamEnableGPU) {
+    } else if (paramName == kParamEnableGPU) {
         setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
-    }
 #endif
+    }
 } // TestOpenGLPlugin::changedParam
 
 mDeclarePluginFactory(TestOpenGLPluginFactory,; , {});
@@ -471,7 +520,6 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnableGPU);
@@ -495,6 +543,15 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 #endif
+
+    {
+        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamRendererInfo);
+        param->setLabel(kParamRendererInfoLabel);
+        param->setHint(kParamRendererInfoHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 } // TestOpenGLPluginFactory::describeInContext
 
 OFX::ImageEffect*
