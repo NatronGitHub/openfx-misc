@@ -1429,7 +1429,30 @@ ShadertoyPlugin::contextAttached(bool createContextData)
     DPRINT( ( "GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION) ) );
     DPRINT( ( "GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR) ) );
     DPRINT( ( "GL_SHADING_LANGUAGE_VERSION = %s\n", (char *) glGetString(GL_SHADING_LANGUAGE_VERSION) ) );
-    DPRINT( ( "GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS) ) );
+#ifdef DEBUG
+    DPRINT( ( "GL_EXTENSIONS =" ) );
+    const char *s = (const char*)glGetString(GL_EXTENSIONS);
+    unsigned p = 0, end = 0;
+    char elem[1024];
+    while (s[p]) {
+        while (s[p] && isspace(s[p]) ) {
+            ++p;
+        }
+        end = p;
+        while (s[end] && !isspace(s[end]) ) {
+            ++end;
+        }
+        if (end != p) {
+            assert( (end - p) < (sizeof(elem) - 1) );
+            std::copy(s + p, s + end, elem);
+            elem[end - p] = 0;
+            DPRINT( ( " %s", elem ) );
+        }
+        p = end;
+    }
+    DPRINT( ( "\n" ) );
+#endif
+
 #endif
     {
         AutoMutex lock( _rendererInfoMutex.get() );
@@ -1439,7 +1462,11 @@ ShadertoyPlugin::contextAttached(bool createContextData)
         std::string &message = _rendererInfoGL;
 #endif
         if ( message.empty() ) {
-            message += "OpenGL renderer information:";
+#ifdef USE_OSMESA
+            message += "OpenGL CPU renderer information:";
+#else
+            message += "OpenGL GPU renderer information:";
+#endif
             message += "\nGL_RENDERER = ";
             message += (char *) glGetString(GL_RENDERER);
             message += "\nGL_VERSION = ";

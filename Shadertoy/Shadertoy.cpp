@@ -360,7 +360,7 @@ enum BBoxEnum
 
 #define kParamAnisotropic "anisotropic"
 #define kParamAnisotropicLabel "Anisotropic"
-#define kParamAnisotropicHint "Use anisotropic texture filtering (available with CPU rendering, and with GPU if supported)"
+#define kParamAnisotropicHint "Use anisotropic texture filtering (available with \"Mesa softpipe\" CPU rendering, and with GPU if supported)"
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamEnableGPU "enableGPU"
@@ -819,7 +819,11 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         std::string message;
 #     if defined(OFX_SUPPORTS_OPENGLRENDER)
         if (gHostDescription.supportsOpenGLRender) {
+#         ifdef HAVE_OSMESA
             _enableGPU->getValueAtTime(args.time, openGLRender);
+#         else
+            openGLRender = true;
+#         endif
         }
 
         if (openGLRender) {
@@ -839,8 +843,10 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         } else {
             sendMessage(OFX::Message::eMessageMessage, "", message);
         }
+#if defined(HAVE_OSMESA)
     } else if (paramName == kParamEnableGPU) {
         setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
+#endif
     }
 } // ShadertoyPlugin::changedParam
 
@@ -1378,7 +1384,6 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     {
