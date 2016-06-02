@@ -1471,7 +1471,7 @@ ShadertoyPlugin::contextAttached(bool createContextData)
 
     OpenGLContextData* contextData = &_openGLContextData;
 #ifdef USE_OPENGL
-    assert(_openGLContextData->imageShader);
+    assert(contextData->imageShader);
     if (createContextData) {
         contextData = new OpenGLContextData;
         contextData->imageShader = new ShadertoyShader;
