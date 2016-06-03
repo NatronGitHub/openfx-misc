@@ -306,7 +306,7 @@ print_dbg(const char *format,
     std::fwrite(str, sizeof(char), std::strlen(str), stderr);
     std::fflush(stderr);
 #ifdef _WIN32
-    OutputDebugString(msg);
+    OutputDebugString(str);
 #endif
     va_end(ap);
 }
