@@ -972,12 +972,16 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
 #ifdef USE_OPENGL
     OpenGLContextData* contextData = &_openGLContextData;
+    if (OFX::getImageEffectHostDescription()->isNatron && !args.openGLContextData) {
+        DPRINT( ("ERROR: Natron did not provide the contextData pointer to the OpenGL render func.\n") );
+    }
     if (args.openGLContextData) {
         // host provided kNatronOfxImageEffectPropOpenGLContextData,
         // which was returned by kOfxActionOpenGLContextAttached
         contextData = (OpenGLContextData*)args.openGLContextData;
     } else if (!_openGLContextAttached) {
         // Sony Catalyst Edit never calls kOfxActionOpenGLContextAttached
+        DPRINT( ("ERROR: OpenGL render() called without calling contextAttached() first. Calling it now.\n") );
         contextAttached(false);
         _openGLContextAttached = true;
     }
@@ -1499,6 +1503,11 @@ ShadertoyPlugin::contextAttached(bool createContextData)
     OpenGLContextData* contextData = &_openGLContextData;
 #ifdef USE_OPENGL
     assert(contextData->imageShader);
+#ifdef DEBUG
+    if (OFX::getImageEffectHostDescription()->isNatron && !createContextData) {
+        DPRINT( ("ERROR: Natron did not ask to create context data\n") );
+    }
+#endif
     if (createContextData) {
         contextData = new OpenGLContextData;
         contextData->imageShader = new ShadertoyShader;
