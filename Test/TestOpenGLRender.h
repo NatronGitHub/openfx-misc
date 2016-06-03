@@ -127,7 +127,7 @@ glErrorString(GLenum errorCode)
     {                                                                   \
         GLenum _glerror_ = glGetError();                                \
         if (_glerror_ != GL_NO_ERROR) {                                 \
-            std::cout << "GL_ERROR :" << __FILE__ << " " << __LINE__ << " " << glErrorString(_glerror_) << std::endl; \
+            std::cout << "GL_ERROR: " << __FILE__ << ":" << __LINE__ << " " << glErrorString(_glerror_) << std::endl; \
             glError();                                                  \
         }                                                               \
     }
@@ -1010,7 +1010,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 # ifdef USE_OPENGL
     const GLuint dstIndex = (GLuint)dst->getIndex();
     const GLenum dstTarget = (GLenum)dst->getTarget();
-    DPRINT( ( "openGL: output texture index %d, target %d, depth %s\n",
+    DPRINT( ( "openGL: output texture index %d, target 0x%04X, depth %s\n",
               dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth) ) );
 # endif
     OfxRectI dstBounds = dst->getBounds();
@@ -1043,7 +1043,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 # ifdef USE_OPENGL
     const GLuint srcIndex = (GLuint)src->getIndex();
     const GLenum srcTarget = (GLenum)src->getTarget();
-    DPRINT( ( "openGL: source texture index %d, target %d, depth %s\n",
+    DPRINT( ( "openGL: source texture index %d, target 0x%04X, depth %s\n",
               srcIndex, srcTarget, mapBitDepthEnumToStr(srcBitDepth) ) );
 # endif
     // XXX: check status for errors
@@ -1340,6 +1340,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     // done; clean up.
     glPopAttrib();
+    glCheckError();
 
 #define DEBUG_OPENGL_BITS
 #ifdef DEBUG_OPENGL_BITS
@@ -1365,6 +1366,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
         glFinish(); // waits for all previously submitted commands to complete executing
     }
+    glCheckError();
     // make sure the buffer is not referenced anymore
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, NULL, dstBounds);
     OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
