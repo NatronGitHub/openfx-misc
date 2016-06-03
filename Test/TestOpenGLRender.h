@@ -160,7 +160,7 @@ print_dbg(const char *format,
     //std::cout << str;
     std::fflush(stderr);
 #ifdef _WIN32
-    OutputDebugString(msg);
+    OutputDebugString(str);
 #endif
     va_end(ap);
 }
