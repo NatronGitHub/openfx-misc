@@ -1616,7 +1616,8 @@ ShadertoyPlugin::contextAttached(bool createContextData)
     }
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
-    contextData->imageShader = NULL;
+    assert(contextData->imageShader);
+    // force recompiling the shader
     contextData->imageShaderID = 0;
     contextData->imageShaderUniformsID = 0;
 
