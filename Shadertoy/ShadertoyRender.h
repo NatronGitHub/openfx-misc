@@ -274,7 +274,7 @@ glErrorString(GLenum errorCode)
     {                                                                   \
         GLenum _glerror_ = glGetError();                                \
         if (_glerror_ != GL_NO_ERROR) {                                 \
-            std::cout << "GL_ERROR :" << __FILE__ << " " << __LINE__ << " " << glErrorString(_glerror_) << std::endl; \
+            std::cout << "GL_ERROR: " << __FILE__ << ":" << __LINE__ << " " << glErrorString(_glerror_) << std::endl; \
             glError();                                                  \
         }                                                               \
     }
@@ -806,7 +806,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 # ifdef USE_OPENGL
     const GLuint dstIndex = (GLuint)dst->getIndex();
     const GLenum dstTarget = (GLenum)dst->getTarget();
-    DPRINT( ( "openGL: output texture index %d, target %d, depth %s\n",
+    DPRINT( ( "openGL: output texture index %d, target 0x%04X, depth %s\n",
               dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth) ) );
 # endif
 
@@ -850,7 +850,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 # ifdef USE_OPENGL
             srcIndex[i] = (GLuint)src[i]->getIndex();
             srcTarget[i] = (GLenum)src[i]->getTarget();
-            DPRINT( ( "openGL: source texture %u index %d, target %d, depth %s\n",
+            DPRINT( ( "openGL: source texture %u index %d, target 0x%04X, depth %s\n",
                       i, srcIndex[i], srcTarget[i], mapBitDepthEnumToStr(srcBitDepth[i]) ) );
 # endif
             // XXX: check status for errors
@@ -1056,7 +1056,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             }
         }
     }
-
+    glCheckError();
 
 #ifdef USE_OSMESA
     // load the source image into a texture
@@ -1084,6 +1084,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glBindTexture(srcTarget[i], 0);
         }
     }
+    glCheckError();
 #endif
 
     int w = (renderWindow.x2 - renderWindow.x1);
@@ -1096,6 +1097,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glClear(GL_DEPTH_BUFFER_BIT); // does not hurt, even if there is no Z-buffer (Sony Catalyst)
+    glCheckError();
 
     double fps = _dstClip->getFrameRate();
     if (fps <= 0) {
@@ -1107,6 +1109,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), rs, _dstClip->getPixelAspectRatio(), &dstBoundsFull);
 
     glUseProgram(shadertoy->program);
+    glCheckError();
 
     // Uniform locations may be -1 if the Uniform was optimised out by the compîler.
     // see https://www.opengl.org/wiki/GLSL_:_common_mistakes#glGetUniformLocation_and_glGetActiveUniform
@@ -1197,6 +1200,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             }
         }
     }
+    glCheckError();
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
         if ( src[i].get() && (shadertoy->iChannelLoc[i] >= 0) ) {
@@ -1207,6 +1211,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glBindTexture(srcTarget[i], 0);
         }
     }
+    glCheckError();
     if (shadertoy->iDateLoc >= 0) {
         // do not use the current date, as it may generate a different image at each render
         glUniform4f(shadertoy->iDateLoc, 1970, 1, 1, 0);
@@ -1221,12 +1226,14 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     if (shadertoy->iRenderScaleLoc >= 0) {
         glUniform2f(shadertoy->iRenderScaleLoc, rs.x, rs.y);
     }
+    glCheckError();
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glCheckError();
 
     // Are your images pretty large? Maybe one approach would to render the scene in tiled chunks.
     // For example, divide the window into an NxM grid of tiles, then render the scene into each tile with glScissor.
@@ -1281,6 +1288,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     if (aborted) {
         DPRINT( ("Shadertoy: aborted!\n") );
     }
+    glCheckError();
 
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         if (shadertoy->iChannelLoc[i] >= 0) {
@@ -1288,8 +1296,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glBindTexture(GL_TEXTURE_2D, 0);
         }
     }
+    glCheckError();
 
     glUseProgram(0);
+    glCheckError();
 
     // done; clean up.
     glPopAttrib();
@@ -1327,7 +1337,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glFinish(); // waits for all previously submitted commands to complete executing
         }
     } else if ( !abort() ) {
-        glCheckError();
         GLsync fenceId = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
         if ( !fenceId && !abort() ) {
             // glFenceSync failed for some reason
@@ -1341,7 +1350,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                     break; // we ignore timeouts and wait until all OpenGL commands are processed!
                 }
             }
-            glCheckError();
         }
     }
 #else
@@ -1350,6 +1358,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glFinish(); // waits for all previously submitted commands to complete executing
     }
 #endif
+    glCheckError();
     // make sure the buffer is not referenced anymore
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, NULL, dstBounds);
     OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
