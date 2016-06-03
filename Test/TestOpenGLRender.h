@@ -1166,19 +1166,24 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     bool haveAniso = contextData->haveAniso;
     float maxAnisoMax = contextData->maxAnisoMax;
 
-    OfxRectI dstBoundsFull;
-    OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), rs, _dstClip->getPixelAspectRatio(), &dstBoundsFull);
+    OfxRectD dstRoD = _dstClip->getRegionOfDefinition(time);
+    double dstPAR = _dstClip->getPixelAspectRatio();
+    //float w = (dstRoD.x2 - dstRoD.x1);
+    //float h = (dstRoD.y2 - dstRoD.y1);
 
     // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
-    float w = (dstBoundsFull.x2 - dstBoundsFull.x1);
-    float h = (dstBoundsFull.y2 - dstBoundsFull.y1);
 
     // setup the projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho( dstBounds.x1, dstBounds.x2,
-             dstBounds.y1, dstBounds.y2,
-             -10.0 * h, 10.0 * h );
+    {
+        // let us draw everything in canonical coordinates
+        OfxRectD dstBoundsCanonical;
+        OFX::Coords::toCanonical(dstBounds, rs, dstPAR, &dstBoundsCanonical);
+        glOrtho( dstBoundsCanonical.x1, dstBoundsCanonical.x2,
+                dstBoundsCanonical.y1, dstBoundsCanonical.y2,
+                -10.0 * (dstRoD.y2 - dstRoD.y1), 10.0 * (dstRoD.y2 - dstRoD.y1) );
+    }
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
@@ -1190,10 +1195,10 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     // Draw black into dest to start
     glBegin(GL_QUADS);
     glColor4f(0, 0, 0, 1); //Set the colour to opaque black
-    glVertex2f(0, 0);
-    glVertex2f(0, h);
-    glVertex2f(w, h);
-    glVertex2f(w, 0);
+    glVertex2f(dstRoD.x1, dstRoD.y1);
+    glVertex2f(dstRoD.x1, dstRoD.y2);
+    glVertex2f(dstRoD.x2, dstRoD.y2);
+    glVertex2f(dstRoD.x2, dstRoD.y1);
     glEnd();
 
     //
@@ -1229,35 +1234,41 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     //float tymin = 0;
     //float tymax = 1;
 
-    // now draw the textured quad containing the source
-    glBegin(GL_QUADS);
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    if (projective) {
-        glTexCoord4f (0, 0, 0, 1);
-    } else {
-        glTexCoord2f (0, 0);
-    }
-    glVertex2f   (0, 0);
-    if (projective) {
-        glTexCoord4f (1, 0, 0, 1);
-    } else {
-        glTexCoord2f (1, 0);
-    }
-    glVertex2f   (w * sourceScalex, 0);
-    if (projective) {
-        glTexCoord4f ( (1 - sourceStretch), (1 - sourceStretch), 0, (1 - sourceStretch) );
-    } else {
-        glTexCoord2f (1, 1);
-    }
-    glVertex2f   (w * sourceScalex * ( 1 + (1 - sourceStretch) ) / 2., h * sourceScaley);
-    if (projective) {
-        glTexCoord4f ( 0, (1 - sourceStretch), 0, (1 - sourceStretch) );
-    } else {
-        glTexCoord2f (0, 1);
-    }
-    glVertex2f   (w * sourceScalex * ( 1 - (1 - sourceStretch) ) / 2., h * sourceScaley);
-    glEnd ();
+    {
+        // we asked for the full src in getRegionsOfInterest()
+        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
+        double srcW = srcRoD.x2 - srcRoD.x1;
+        double srcH = srcRoD.y2 - srcRoD.y1;
 
+        // now draw the textured quad containing the source
+        glBegin(GL_QUADS);
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        if (projective) {
+            glTexCoord4f (0, 0, 0, 1);
+        } else {
+            glTexCoord2f (0, 0);
+        }
+        glVertex2f   (0, 0);
+        if (projective) {
+            glTexCoord4f (1, 0, 0, 1);
+        } else {
+            glTexCoord2f (1, 0);
+        }
+        glVertex2f   (srcW * sourceScalex, 0);
+        if (projective) {
+            glTexCoord4f ( (1 - sourceStretch), (1 - sourceStretch), 0, (1 - sourceStretch) );
+        } else {
+            glTexCoord2f (1, 1);
+        }
+        glVertex2f   (srcW * sourceScalex * ( 1 + (1 - sourceStretch) ) / 2., srcH * sourceScaley);
+        if (projective) {
+            glTexCoord4f ( 0, (1 - sourceStretch), 0, (1 - sourceStretch) );
+        } else {
+            glTexCoord2f (0, 1);
+        }
+        glVertex2f   (srcW * sourceScalex * ( 1 - (1 - sourceStretch) ) / 2., srcH * sourceScaley);
+        glEnd ();
+    }
     glDisable(srcTarget);
 
     // Now draw some stuff on top of it to show we really did something
@@ -1265,10 +1276,10 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #define HEIGHT 100
     glBegin(GL_QUADS);
     glColor3f(1.0f, 0, 0); //Set the colour to red
-    glVertex2f(10 * rs.x, 10 * rs.y);
-    glVertex2f(10 * rs.x, (10 + HEIGHT * scaley) * rs.y);
-    glVertex2f( (10 + WIDTH * scalex) * rs.x, (10 + HEIGHT * scaley) * rs.y );
-    glVertex2f( (10 + WIDTH * scalex) * rs.x, 10 * rs.y );
+    glVertex2f(10, 10);
+    glVertex2f(10, (10 + HEIGHT * scaley));
+    glVertex2f( (10 + WIDTH * scalex), (10 + HEIGHT * scaley) );
+    glVertex2f( (10 + WIDTH * scalex), 10 );
     glEnd();
 
     // Now draw a teapot
@@ -1300,7 +1311,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glMaterialfv(GL_FRONT, GL_AMBIENT, low_ambient);
     glMaterialf(GL_FRONT, GL_SHININESS, 40.0);
     glPushMatrix();
-    glTranslatef(w / 2., h / 2., 0.0);
+    glTranslatef((dstRoD.x1 + dstRoD.x2) / 2, (dstRoD.y1 + dstRoD.y2) / 2, 0.0);
     // get the angle parameters
     double angleX = 0;
     double angleY = 0;
@@ -1318,7 +1329,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glRotatef(angleY, 0., 1., 0.);
     glRotatef(angleZ, 0., 0., 1.);
     glEnable(srcTarget); // it deserves testure
-    glutSolidTeapot(teapotScale * h / 4.);
+    glutSolidTeapot(teapotScale * (dstRoD.y2 - dstRoD.y1) / 4.);
     glDisable(srcTarget);
     glPopMatrix();
 

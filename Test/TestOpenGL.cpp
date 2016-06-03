@@ -54,7 +54,7 @@ using namespace OFX;
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipPARs true 
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
@@ -223,17 +223,45 @@ TestOpenGLPlugin::render(const OFX::RenderArguments &args)
     OFX::throwSuiteStatusException(kOfxStatFailed);
 }
 
+// override the roi call
+// Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
+// (this is the case here)
+void
+TestOpenGLPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
+                                       OFX::RegionOfInterestSetter &rois)
+{
+    const double time = args.time;
+
+    if (!_srcClip) {
+        return;
+    }
+    // ask for full RoD of srcClip
+    const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+    rois.setRegionOfInterest(*_srcClip, srcRod);
+}
+
 // overriding getRegionOfDefinition is necessary to tell the host that we do not support render scale
 bool
 TestOpenGLPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
-                                        OfxRectD & /*rod*/)
+                                        OfxRectD & rod)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // use the default RoD
-    return false;
+    //return false;
+
+    // use the project RoD
+    //OfxPointD projectExtent = getProjectExtent();
+    OfxPointD projectSize = getProjectSize();
+    OfxPointD projectOffset = getProjectOffset();
+    rod.x1 = projectOffset.x;
+    rod.y1 = projectOffset.y;
+    rod.x2 = projectOffset.x + projectSize.x;
+    rod.y2 = projectOffset.y + projectSize.y;
+    
+    return true;
 }
 
 void
@@ -242,6 +270,8 @@ TestOpenGLPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
     // We have to do this because the processing code does not support varying components for srcClip and dstClip
     // (The OFX spec doesn't state a default value for this)
     clipPreferences.setClipComponents( *_dstClip, _srcClip->getPixelComponents() );
+
+    clipPreferences.setPixelAspectRatio( *_dstClip, getProjectPixelAspectRatio() );
 }
 
 void
