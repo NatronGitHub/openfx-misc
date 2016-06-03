@@ -826,10 +826,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     std::vector<OFX::BitDepthEnum> srcBitDepth(NBINPUTS, OFX::eBitDepthNone);
     std::vector<OFX::PixelComponentEnum> srcComponents(NBINPUTS, OFX::ePixelComponentNone);
-# ifdef USE_OPENGL
+    std::vector<GLenum> srcTarget(NBINPUTS, GL_TEXTURE_2D);
     std::vector<GLuint> srcIndex(NBINPUTS);
-    std::vector<GLenum> srcTarget(NBINPUTS);
-# endif
 #ifdef USE_OSMESA
     GLenum format = 0;
     GLint depthBits = 0;
@@ -1063,8 +1061,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
 
-    std::vector<GLenum> srcTarget(4, GL_TEXTURE_2D);
-    std::vector<GLuint> srcIndex(NBINPUTS);
     glActiveTexture(GL_TEXTURE0);
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         if ( src[i].get() && (shadertoy->iChannelLoc[i] >= 0) ) {
@@ -1293,7 +1289,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         if (shadertoy->iChannelLoc[i] >= 0) {
             glActiveTexture(GL_TEXTURE0 + i);
-            glBindTexture(GL_TEXTURE_2D, 0);
+            glBindTexture(srcTarget[i], 0);
         }
     }
     glCheckError();
