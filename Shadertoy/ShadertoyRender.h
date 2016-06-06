@@ -195,6 +195,7 @@ static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 //PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D = NULL;
 //PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
 //PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetFramebufferAttachmentParameteriv = NULL;
+static PFNGLGENERATEMIPMAPPROC glGenerateMipmap = NULL;
 #endif
 
 #ifdef GL_ARB_sync
@@ -434,7 +435,6 @@ struct ShadertoyPlugin::OSMesaPrivate
     GLint _ctxDepthBits;
     GLint _ctxStencilBits;
     GLint _ctxAccumBits;
-
     OpenGLContextData _openGLContextData; // context-specific data
 };
 
@@ -469,7 +469,7 @@ ShadertoyPlugin::initOpenGL()
 void
 ShadertoyPlugin::exitOpenGL()
 {
-    delete ((ShadertoyShader*)_openGLContextData.imageShader);
+    delete ( (ShadertoyShader*)_openGLContextData.imageShader );
     _openGLContextData.imageShader = NULL;
 }
 
@@ -738,6 +738,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     const double time = args.time;
     bool mipmap = true;
     bool anisotropic = true;
+
 #ifdef DEBUG_TIME
     struct timeval t1, t2;
     gettimeofday(&t1, NULL);
@@ -1067,7 +1068,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glGenTextures(1, &srcIndex[i]);
             OfxRectI srcBounds = src[i]->getBounds();
             glBindTexture(srcTarget[i], srcIndex[i]);
-            if (mipmap) {
+            // legacy mipmap generation was replaced by glGenerateMipmap from GL_ARB_framebuffer_object (see below)
+            if (mipmap && !glGenerateMipmap) {
+                DPRINT( ("Shadertoy: legacy mipmap generation!\n") );
                 // this must be done before glTexImage2D
                 glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
                 // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
@@ -1200,9 +1203,30 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
         if ( src[i].get() && (shadertoy->iChannelLoc[i] >= 0) ) {
-            glEnable(srcTarget[i]);
             glUniform1i(shadertoy->iChannelLoc[i], i);
             glBindTexture(srcTarget[i], srcIndex[i]);
+            glEnable(srcTarget[i]);
+            // TODO: filter for each texture should be user-selectable (nearest, linear, mipmap [default])
+#ifdef GL_ARB_framebuffer_object
+            // https://www.opengl.org/wiki/Common_Mistakes#Automatic_mipmap_generation
+            if (mipmap && glGenerateMipmap) {
+                glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
+                glGenerateMipmap(GL_TEXTURE_2D);  //Generate mipmaps now!!!
+                glCheckError();
+            }
+#endif
+            // nearest = GL_NEAREST/GL_NEAREST
+            // linear = GL_LINEAR/GL_LINEAR
+            // mipmap = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR
+            glTexParameteri(srcTarget[i], GL_TEXTURE_MIN_FILTER, mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+            glTexParameteri(srcTarget[i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            // TODO: wrap for each texture should be user-selectable (repeat [default], clamp)
+            // clamp = GL_CLAMP_TO_EDGE
+            glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+            // The texture parameters vflip and srgb [default = false] should be handled by the reader
         } else {
             glBindTexture(srcTarget[i], 0);
         }
@@ -1245,7 +1269,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         int nCPUs = OFX::MultiThread::getNumCPUs();
         // - take the square root of nCPUs
         // - compute the next closest power of two -> this gives the number of tiles for the x dimension
-        int pow2_x = std::ceil(std::log(std::sqrt(nCPUs)) / M_LN2);
+        int pow2_x = std::ceil(std::log( std::sqrt(nCPUs) ) / M_LN2);
         tile_w = 64 * (1 << pow2_x);
         // - compute the next power of two for the other side
         int pow2_y = std::ceil(std::log( nCPUs / (double)(1 << pow2_x) ) / M_LN2);
@@ -1277,7 +1301,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif
 #ifdef DEBUG_TIME
             gettimeofday(&t2, NULL);
-            DPRINT( ("rendering tile: %d %d %d %d took %d us\n", x1, y1, tile_w, tile_h, 1000000*(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)) );
+            DPRINT( ( "rendering tile: %d %d %d %d took %d us\n", x1, y1, tile_w, tile_h, 1000000 * (t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec) ) );
 #endif
         }
     }
@@ -1349,7 +1373,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
 #else
-    if ( !aborted ) {
+    if (!aborted) {
         glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
         glFinish(); // waits for all previously submitted commands to complete executing
     }
@@ -1368,9 +1392,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif // ifdef USE_OSMESA
 #ifdef DEBUG_TIME
     gettimeofday(&t2, NULL);
-    DPRINT( ("rendering took %d us\n", 1000000*(t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec)) );
+    DPRINT( ( "rendering took %d us\n", 1000000 * (t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec) ) );
 #endif
-
 } // ShadertoyPlugin::RENDERFUNC
 
 static
@@ -1444,11 +1467,11 @@ ShadertoyPlugin::contextAttached(bool createContextData)
     unsigned p = 0, end = 0;
     char elem[1024];
     while (s[p]) {
-        while (s[p] && isspace(s[p]) ) {
+        while ( s[p] && isspace(s[p]) ) {
             ++p;
         }
         end = p;
-        while (s[end] && !isspace(s[end]) ) {
+        while ( s[end] && !isspace(s[end]) ) {
             ++end;
         }
         if (end != p) {
@@ -1608,6 +1631,7 @@ ShadertoyPlugin::contextAttached(bool createContextData)
         //glFramebufferTexture3D = (PFNGLFRAMEBUFFERTEXTURE3DPROC)wglGetProcAddress("glFramebufferTexture3D");
         //glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)wglGetProcAddress("glFramebufferRenderbuffer");
         //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)wglGetProcAddress("glGetFramebufferAttachmentParameteriv");
+        glGenerateMipmap = (PFNGLGENERATEMIPMAPPROC)wglGetProcAddress("glGenerateMipmap");
 #endif
 
 #ifdef GL_ARB_sync
@@ -1631,6 +1655,7 @@ ShadertoyPlugin::contextAttached(bool createContextData)
         return contextData;
     }
 #endif
+
     return NULL;
 } // ShadertoyPlugin::contextAttached
 
@@ -1650,8 +1675,8 @@ ShadertoyPlugin::contextDetached(void* contextData)
     // Shadertoy:
 #ifdef USE_OPENGL
     if (contextData) {
-        delete (ShadertoyShader*)((OpenGLContextData*)contextData)->imageShader;
-        ((OpenGLContextData*)contextData)->imageShader = NULL;
+        delete (ShadertoyShader*)( (OpenGLContextData*)contextData )->imageShader;
+        ( (OpenGLContextData*)contextData )->imageShader = NULL;
         delete (OpenGLContextData*)contextData;
     } else {
         _openGLContextAttached = false;
