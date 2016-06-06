@@ -354,13 +354,31 @@ enum BBoxEnum
 #define kParamValueLabel "Value" // followed by param number
 #define kParamValueHint "Value of the parameter."
 
-#define kParamMipmap "mipmap"
-#define kParamMipmapLabel "Mipmap"
-#define kParamMipmapHint "Use mipmapping (available only with CPU rendering)"
+#define kGroupChannels "channelsGroup"
+#define kGroupChannelsLabel "Channels"
 
-#define kParamAnisotropic "anisotropic"
-#define kParamAnisotropicLabel "Anisotropic"
-#define kParamAnisotropicHint "Use anisotropic texture filtering. Available with GPU if supported (check for the presence of the GL_EXT_texture_filter_anisotropic extension in the Renderer Info) and with \"softpipe\" CPU driver."
+
+#define kParamFilter "mipmap"
+#define kParamFilterLabel "Filter"
+#define kParamFilterHint "Texture filter for this input."
+#define kParamFilterOptionNearest "Nearest"
+#define kParamFilterOptionNearestHint "MIN/MAG = GL_NEAREST/GL_NEAREST"
+#define kParamFilterOptionLinear "Linear"
+#define kParamFilterOptionLinearHint "MIN/MAG = GL_LINEAR/GL_LINEAR"
+#define kParamFilterOptionMipmap "Mipmap"
+#define kParamFilterOptionMipmapHint "MIN/MAG = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR"
+#define kParamFilterOptionAnisotropic "Anisotropic"
+#define kParamFilterOptionAnisotropicHint "Mipmap with anisotropic filtering. Available with GPU if supported (check for the presence of the GL_EXT_texture_filter_anisotropic extension in the Renderer Info) and with \"softpipe\" CPU driver."
+
+#define kParamWrap "wrap"
+#define kParamWrapLabel "Wrap"
+#define kParamWrapHint "Texture wrap parameter for this input."
+#define kParamWrapOptionRepeat "Repeat"
+#define kParamWrapOptionRepeatHint "WRAP_S/T = GL_REPEAT"
+#define kParamWrapOptionClamp "Clamp"
+#define kParamWrapOptionClampHint "WRAP_S/T = GL_CLAMP_TO_EDGE"
+
+#define kParamLabel "label"
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamEnableGPU "enableGPU"
@@ -408,6 +426,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClips(NBINPUTS, (OFX::Clip*)NULL)
+    , _filter(NBINPUTS, 0)
+    , _wrap(NBINPUTS, 0)
     , _bbox(0)
     , _format(0)
     , _formatSize(0)
@@ -425,8 +445,6 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _paramValueVec2 (NBUNIFORMS, (Double2DParam*)     NULL)
     , _paramValueVec3 (NBUNIFORMS, (OFX::Double3DParam*)NULL)
     , _paramValueVec4 (NBUNIFORMS, (OFX::RGBAParam*)    NULL)
-    , _mipmap(0)
-    , _anisotropic(0)
     , _enableGPU(0)
     , _cpuDriver(0)
     , _imageShaderID(1)
@@ -468,6 +486,10 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         assert( (!_srcClips[i] && getContext() == OFX::eContextGenerator) ||
                 ( _srcClips[i] && (_srcClips[i]->getPixelComponents() == OFX::ePixelComponentRGBA ||
                                    _srcClips[i]->getPixelComponents() == OFX::ePixelComponentAlpha) ) );
+        std::string nb = unsignedToString(i);
+        _filter[i] = fetchChoiceParam(kParamFilter + nb);
+        _wrap[i] = fetchChoiceParam(kParamWrap + nb);
+        assert(_filter[i] && _wrap[i]);
     }
 
     _bbox = fetchChoiceParam(kParamBBox);
@@ -489,19 +511,16 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
         // generate the number string
         std::string nb = unsignedToString(i);
-        _paramType[i]       = fetchChoiceParam  (std::string(kParamType) + nb);
-        _paramName[i]       = fetchStringParam  (std::string(kParamName) + nb);
-        _paramValueBool[i]  = fetchBooleanParam (std::string(kParamValueBool)  + nb);
-        _paramValueInt[i]   = fetchIntParam     (std::string(kParamValueInt)   + nb);
-        _paramValueFloat[i] = fetchDoubleParam  (std::string(kParamValueFloat) + nb);
-        _paramValueVec2[i]  = fetchDouble2DParam(std::string(kParamValueVec2)  + nb);
-        _paramValueVec3[i]  = fetchDouble3DParam(std::string(kParamValueVec3)  + nb);
-        _paramValueVec4[i]  = fetchRGBAParam    (std::string(kParamValueVec4)  + nb);
+        _paramType[i]       = fetchChoiceParam  (kParamType       + nb);
+        _paramName[i]       = fetchStringParam  (kParamName       + nb);
+        _paramValueBool[i]  = fetchBooleanParam (kParamValueBool  + nb);
+        _paramValueInt[i]   = fetchIntParam     (kParamValueInt   + nb);
+        _paramValueFloat[i] = fetchDoubleParam  (kParamValueFloat + nb);
+        _paramValueVec2[i]  = fetchDouble2DParam(kParamValueVec2  + nb);
+        _paramValueVec3[i]  = fetchDouble3DParam(kParamValueVec3  + nb);
+        _paramValueVec4[i]  = fetchRGBAParam    (kParamValueVec4  + nb);
         assert(_paramType[i] && _paramName[i] && _paramValueBool[i] && _paramValueInt[i] && _paramValueFloat[i] && _paramValueVec2[i] && _paramValueVec3[i] && _paramValueVec4[i]);
     }
-    _mipmap = fetchBooleanParam(kParamMipmap);
-    _anisotropic = fetchBooleanParam(kParamAnisotropic);
-    assert(_mipmap && _anisotropic);
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
     assert(_enableGPU);
@@ -1184,7 +1203,74 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*group);
         }
     }
+    {
+        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupChannels);
+        if (group) {
+            group->setLabel(kGroupChannelsLabel);
+            group->setOpen(false);
+            //group->setAsTab();
+        }
 
+        for (unsigned i = 0; i < NBINPUTS; ++i) {
+            std::string nb = unsignedToString(i);
+            {
+                OFX::StringParamDescriptor* param = desc.defineStringParam(kParamLabel + nb);
+                param->setLabel("");
+                param->setDefault(kClipChannel + nb);
+                param->setStringType(OFX::eStringTypeLabel);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFilter + nb);
+                param->setLabel(kParamFilterLabel);
+                param->setHint(kParamFilterHint);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterNearest);
+                param->appendOption(kParamFilterOptionNearest, kParamFilterOptionNearestHint);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterLinear);
+                param->appendOption(kParamFilterOptionLinear, kParamFilterOptionLinearHint);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterMipmap);
+                param->appendOption(kParamFilterOptionMipmap, kParamFilterOptionMipmapHint);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterAnisotropic);
+                param->appendOption(kParamFilterOptionAnisotropic, kParamFilterOptionAnisotropicHint);
+                param->setDefault((int)ShadertoyPlugin::eFilterMipmap);
+                param->setAnimates(false);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamWrap + nb);
+                param->setLabel(kParamWrapLabel);
+                param->setHint(kParamWrapHint);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapRepeat);
+                param->appendOption(kParamWrapOptionRepeat, kParamWrapOptionRepeatHint);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapClamp);
+                param->appendOption(kParamWrapOptionClamp, kParamWrapOptionClampHint);
+                param->setDefault((int)ShadertoyPlugin::eWrapRepeat);
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+        }
+
+        if (page) {
+            page->addChild(*group);
+        }
+    }
     {
         OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMousePosition);
         param->setLabel(kParamMousePositionLabel);
@@ -1383,24 +1469,6 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMipmap);
-        param->setLabel(kParamMipmapLabel);
-        param->setHint(kParamMipmapHint);
-        param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAnisotropic);
-        param->setLabel(kParamAnisotropicLabel);
-        param->setHint(kParamAnisotropicHint);
-        param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     {

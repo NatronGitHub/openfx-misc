@@ -776,24 +776,11 @@ void
 ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    bool mipmap = true;
-    bool anisotropic = true;
 
 #ifdef DEBUG_TIME
     struct timeval t1, t2;
     gettimeofday(&t1, NULL);
 #endif
-
-    if (_mipmap) {
-        _mipmap->getValueAtTime(time, mipmap);
-    }
-    if (_anisotropic) {
-        _anisotropic->getValueAtTime(time, anisotropic);
-    }
-
-    if (args.renderQualityDraft) {
-        mipmap = anisotropic = false;
-    }
 
 # ifdef OFX_SUPPORTS_OPENGLRENDER
     const int& gl_enabled = args.openGLEnabled;
@@ -1113,13 +1100,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             OfxRectI srcBounds = src[i]->getBounds();
             glBindTexture(srcTarget[i], srcIndex[i]);
             // legacy mipmap generation was replaced by glGenerateMipmap from GL_ARB_framebuffer_object (see below)
-            if (mipmap && !glGenerateMipmap) {
-                DPRINT( ("Shadertoy: legacy mipmap generation!\n") );
-                // this must be done before glTexImage2D
-                glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
-                // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
-                glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
-            }
+            //if (mipmap && !glGenerateMipmap) {
+            //    DPRINT( ("Shadertoy: legacy mipmap generation!\n") );
+            //    // this must be done before glTexImage2D
+            //    glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
+            //    // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
+            //    glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
+            //}
 
             glTexImage2D( srcTarget[i], 0, format,
                           srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
@@ -1252,32 +1239,55 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glUniform1i(shadertoy->iChannelLoc[i], i);
             glBindTexture(srcTarget[i], srcIndex[i]);
             glEnable(srcTarget[i]);
-            // TODO: filter for each texture should be user-selectable (nearest, linear, mipmap [default])
+
+            // filter for each texture (nearest, linear, mipmap [default])
+            // nearest = GL_NEAREST/GL_NEAREST
+            // linear = GL_LINEAR/GL_LINEAR
+            // mipmap = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR
+            FilterEnum filter = args.renderQualityDraft ? eFilterNearest : (FilterEnum)_filter[i]->getValueAtTime(time);
 #ifdef GL_ARB_framebuffer_object
             // https://www.opengl.org/wiki/Common_Mistakes#Automatic_mipmap_generation
-            if (mipmap && glGenerateMipmap) {
+            if ((filter == eFilterMipmap || filter == eFilterAnisotropic) && glGenerateMipmap) {
                 glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
                 glGenerateMipmap(GL_TEXTURE_2D);  //Generate mipmaps now!!!
                 glCheckError();
             }
 #endif
-            // nearest = GL_NEAREST/GL_NEAREST
-            // linear = GL_LINEAR/GL_LINEAR
-            // mipmap = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR
-            glTexParameteri(srcTarget[i], GL_TEXTURE_MIN_FILTER, mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-            glTexParameteri(srcTarget[i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            GLenum min_filter = GL_NEAREST;
+            GLenum mag_filter = GL_NEAREST;
+            switch (filter) {
+                case eFilterNearest:
+                    min_filter = GL_NEAREST;
+                    mag_filter = GL_NEAREST;
+                    break;
+                case eFilterLinear:
+                    min_filter = GL_LINEAR;
+                    mag_filter = GL_LINEAR;
+                    break;
+                case eFilterMipmap:
+                    min_filter = GL_LINEAR_MIPMAP_LINEAR;
+                    mag_filter = GL_LINEAR;
+                    break;
+                case eFilterAnisotropic:
+                    min_filter = GL_LINEAR_MIPMAP_LINEAR;
+                    mag_filter = GL_LINEAR;
+                    if (haveAniso) {
+                        glTexParameterf(srcTarget[i], GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisoMax);
+                    }
+                    break;
+            }
+            glTexParameteri(srcTarget[i], GL_TEXTURE_MIN_FILTER, min_filter);
+            glTexParameteri(srcTarget[i], GL_TEXTURE_MAG_FILTER, mag_filter);
 
-            // TODO: wrap for each texture should be user-selectable (repeat [default], clamp)
+            // wrap for each texture (repeat [default], clamp)
             // clamp = GL_CLAMP_TO_EDGE
-            glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_T, GL_REPEAT);
+            WrapEnum wrap = (WrapEnum)_wrap[i]->getValueAtTime(time);
+            GLenum wrapst = (wrap == eWrapClamp) ? GL_CLAMP_TO_EDGE : GL_REPEAT;
+            glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_S, wrapst);
+            glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_T, wrapst);
 
             // The texture parameters vflip and srgb [default = false] should be handled by the reader
 
-            if (anisotropic) {
-                if (haveAniso) {
-                    glTexParameterf(srcTarget[i], GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisoMax);
-                }            }
         } else {
             glBindTexture(srcTarget[i], 0);
         }

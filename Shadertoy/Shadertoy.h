@@ -68,6 +68,20 @@ public:
         eUniformTypeVec4,
     };
 
+    enum FilterEnum
+    {
+        eFilterNearest = 0,
+        eFilterLinear,
+        eFilterMipmap,
+        eFilterAnisotropic
+    };
+
+    enum WrapEnum
+    {
+        eWrapRepeat = 0,
+        eWrapClamp
+    };
+
 #ifdef OFX_USE_MULTITHREAD_MUTEX
     typedef OFX::MultiThread::Mutex Mutex;
     typedef OFX::MultiThread::AutoMutex AutoMutex;
@@ -128,6 +142,8 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     std::vector<OFX::Clip*> _srcClips;
+    std::vector<OFX::ChoiceParam*> _filter;
+    std::vector<OFX::ChoiceParam*> _wrap;
     OFX::ChoiceParam *_bbox;
     OFX::ChoiceParam *_format;
     OFX::Int2DParam *_formatSize;
@@ -148,8 +164,6 @@ private:
     std::vector<OFX::Double2DParam *> _paramValueVec2;
     std::vector<OFX::Double3DParam *> _paramValueVec3;
     std::vector<OFX::RGBAParam *> _paramValueVec4;
-    OFX::BooleanParam *_mipmap;
-    OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_enableGPU;
     OFX::ChoiceParam *_cpuDriver;
     std::auto_ptr<Mutex> _shaderMutex;
