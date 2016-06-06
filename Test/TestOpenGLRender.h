@@ -262,6 +262,47 @@ print_dbg(const char *format,
 
 #endif // ifndef DEBUG
 
+static
+int
+glutExtensionSupported( const char* extension )
+{
+    const char *extensions, *start;
+    const size_t len = std::strlen( extension );
+
+    /* Make sure there is a current window, and thus a current context available */
+    //FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutExtensionSupported" );
+    //freeglut_return_val_if_fail( fgStructure.CurrentWindow != NULL, 0 );
+
+    if ( std::strchr(extension, ' ') ) {
+        return 0;
+    }
+    start = extensions = (const char *) glGetString(GL_EXTENSIONS);
+
+    /* XXX consider printing a warning to stderr that there's no current
+     * rendering context.
+     */
+    //freeglut_return_val_if_fail( extensions != NULL, 0 );
+    if (extensions == NULL) {
+        return 0;
+    }
+
+    while (1) {
+        const char *p = std::strstr(extensions, extension);
+        if (!p) {
+            return 0;  /* not found */
+        }
+        /* check that the match isn't a super string */
+        if ( ( (p == start) || (p[-1] == ' ') ) && ( (p[len] == ' ') || (p[len] == 0) ) ) {
+            return 1;
+        }
+        /* skip the false match and continue */
+        extensions = p + len;
+    }
+
+    return 0;
+}
+
+
 #ifdef USE_OSMESA
 struct TestOpenGLPlugin::OSMesaPrivate
 {
@@ -272,6 +313,8 @@ struct TestOpenGLPlugin::OSMesaPrivate
         , _ctxDepthBits(0)
         , _ctxStencilBits(0)
         , _ctxAccumBits(0)
+        , _ctxCpuDriver(TestOpenGLPlugin::eCPUDriverSoftPipe)
+        , _openGLContextData()
     {
     }
 
@@ -295,6 +338,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
                     GLenum type,
                     GLint stencilBits,
                     GLint accumBits,
+                    CPUDriverEnum cpuDriver,
                     void* buffer,
                     const OfxRectI &dstBounds)
     {
@@ -306,10 +350,11 @@ struct TestOpenGLPlugin::OSMesaPrivate
 
             return;
         }
-        if ( !_ctx || ( (format      != _ctxFormat) &&
-                        ( depthBits  != _ctxDepthBits) &&
-                        ( stencilBits != _ctxStencilBits) &&
-                        ( accumBits  != _ctxAccumBits) ) ) {
+        if ( !_ctx || ( (format      != _ctxFormat) ||
+                        (depthBits   != _ctxDepthBits) ||
+                        (stencilBits != _ctxStencilBits) ||
+                        (accumBits   != _ctxAccumBits) ||
+                        (cpuDriver   != _ctxCpuDriver) ) ) {
             /* destroy the context */
             if (_ctx) {
                 //printf("%p before OSMesaDestroyContext(%p), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
@@ -326,11 +371,31 @@ struct TestOpenGLPlugin::OSMesaPrivate
             assert(!_ctx);
 
             /* Create an RGBA-mode context */
+#if defined(OSMESA_GALLIUM_DRIVER) && (OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 1102)
+            /* specify Z, stencil, accum sizes */
+            {
+                int attribs[100], n = 0;
+
+                attribs[n++] = OSMESA_FORMAT;
+                attribs[n++] = format;
+                attribs[n++] = OSMESA_DEPTH_BITS;
+                attribs[n++] = depthBits;
+                attribs[n++] = OSMESA_STENCIL_BITS;
+                attribs[n++] = stencilBits;
+                attribs[n++] = OSMESA_ACCUM_BITS;
+                attribs[n++] = accumBits;
+                attribs[n++] = OSMESA_GALLIUM_DRIVER;
+                attribs[n++] = (int)cpuDriver;
+                attribs[n++] = 0;
+                _ctx = OSMesaCreateContextAttribs( attribs, NULL );
+            }
+#else
 #if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 305
             /* specify Z, stencil, accum sizes */
             _ctx = OSMesaCreateContextExt( format, depthBits, stencilBits, accumBits, NULL );
 #else
             _ctx = OSMesaCreateContext( format, NULL );
+#endif
 #endif
             if (!_ctx) {
                 DPRINT( ("OSMesaCreateContext failed!\n") );
@@ -342,6 +407,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
             _ctxDepthBits = depthBits;
             _ctxStencilBits = stencilBits;
             _ctxAccumBits = accumBits;
+            _ctxCpuDriver = cpuDriver;
             newContext = true;
         }
         // optional: enable Gallium postprocess filters
@@ -366,6 +432,16 @@ struct TestOpenGLPlugin::OSMesaPrivate
             // set viewport
             glViewport(0, 0, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1);
         }
+        OpenGLContextData* contextData = &_openGLContextData;
+        contextData->haveAniso = glutExtensionSupported("GL_EXT_texture_filter_anisotropic");
+        if (contextData->haveAniso) {
+            GLfloat MaxAnisoMax;
+            glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &MaxAnisoMax);
+            contextData->maxAnisoMax = MaxAnisoMax;
+            DPRINT( ("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", contextData->maxAnisoMax) );
+        } else {
+            contextData->maxAnisoMax = 1.;
+        }
     } // setContext
 
     OSMesaContext ctx() { return _ctx; }
@@ -377,6 +453,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
     GLint _ctxDepthBits;
     GLint _ctxStencilBits;
     GLint _ctxAccumBits;
+    TestOpenGLPlugin::CPUDriverEnum _ctxCpuDriver;
     OpenGLContextData _openGLContextData;
 };
 
@@ -611,46 +688,6 @@ glutSolidTeapot(GLdouble scale)
 //}
 
 /* ENDCENTRY */
-
-static
-int
-glutExtensionSupported( const char* extension )
-{
-    const char *extensions, *start;
-    const size_t len = std::strlen( extension );
-
-    /* Make sure there is a current window, and thus a current context available */
-    //FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutExtensionSupported" );
-    //freeglut_return_val_if_fail( fgStructure.CurrentWindow != NULL, 0 );
-
-    if ( std::strchr(extension, ' ') ) {
-        return 0;
-    }
-    start = extensions = (const char *) glGetString(GL_EXTENSIONS);
-
-    /* XXX consider printing a warning to stderr that there's no current
-     * rendering context.
-     */
-    //freeglut_return_val_if_fail( extensions != NULL, 0 );
-    if (extensions == NULL) {
-        return 0;
-    }
-
-    while (1) {
-        const char *p = std::strstr(extensions, extension);
-        if (!p) {
-            return 0;  /* not found */
-        }
-        /* check that the match isn't a super string */
-        if ( ( (p == start) || (p[-1] == ' ') ) && ( (p[len] == ' ') || (p[len] == 0) ) ) {
-            return 1;
-        }
-        /* skip the false match and continue */
-        extensions = p + len;
-    }
-
-    return 0;
-}
 
 //#define RND_GL_STATE_DEBUG 1
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -1198,7 +1235,11 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
     }
     assert(OSMesaGetCurrentContext() == NULL); // the thread should have no Mesa context attached
-    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
+    CPUDriverEnum cpuDriver = eCPUDriverSoftPipe;
+    if (_cpuDriver) {
+        cpuDriver = (CPUDriverEnum)_cpuDriver->getValueAtTime(time);
+    }
+    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, buffer, dstBounds);
 #endif // ifdef USE_OSMESA
 
 #ifdef USE_OPENGL
@@ -1334,8 +1375,12 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 #endif
     glTexParameteri(srcTarget, GL_TEXTURE_MIN_FILTER, mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-    if (anisotropic && haveAniso) {
-        glTexParameterf(srcTarget, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisoMax);
+    if (anisotropic) {
+        if (haveAniso) {
+            glTexParameterf(srcTarget, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisoMax);
+        } else {
+            DPRINT( ("TestOpenGL: anisotropic texture filtering not available.\n") );
+        }
     }
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
@@ -1472,7 +1517,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     glCheckError();
     // make sure the buffer is not referenced anymore
-    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, NULL, dstBounds);
+    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, NULL, dstBounds);
     OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
     assert(OSMesaGetCurrentContext() == NULL);
 
@@ -1606,10 +1651,16 @@ TestOpenGLPlugin::contextAttached(bool createContextData)
     DPRINT( ( "\n" ) );
 #endif
 
+#ifdef USE_OSMESA
+    int cpuDriver = 0;
+    if (_cpuDriver) {
+        cpuDriver = _cpuDriver->getValue();
+    }
+#endif
     {
         AutoMutex lock( _rendererInfoMutex.get() );
 #ifdef USE_OSMESA
-        std::string &message = _rendererInfoMesa;
+        std::string &message = _rendererInfoMesa[cpuDriver];
 #else
         std::string &message = _rendererInfoGL;
 #endif
@@ -1648,27 +1699,30 @@ TestOpenGLPlugin::contextAttached(bool createContextData)
     //    }
     //}
 
-    OpenGLContextData* contextData = &_openGLContextData;
+
 #ifdef USE_OPENGL
 #ifdef DEBUG
     if (OFX::getImageEffectHostDescription()->isNatron && !createContextData) {
         DPRINT( ("Error: Natron did not ask to create context data\n") );
     }
 #endif
+    OpenGLContextData* contextData = &_openGLContextData;
     if (createContextData) {
         contextData = new OpenGLContextData;
     }
-#else
-    assert(!createContextData); // context data is handled differently in CPU rendering
-#endif
-
     contextData->haveAniso = glutExtensionSupported("GL_EXT_texture_filter_anisotropic");
     if (contextData->haveAniso) {
         GLfloat MaxAnisoMax;
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &MaxAnisoMax);
         contextData->maxAnisoMax = MaxAnisoMax;
         DPRINT( ("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", contextData->maxAnisoMax) );
+    } else {
+        contextData->maxAnisoMax = 1.;
     }
+#else
+    assert(!createContextData); // context data is handled differently in CPU rendering
+#endif
+
 
 #if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
     if (glGenerateMipmap == NULL) {
@@ -1797,3 +1851,14 @@ TestOpenGLPlugin::contextDetached(void* contextData)
 #endif
 }
 
+#ifdef USE_OSMESA
+bool
+TestOpenGLPlugin::OSMesaDriverSelectable()
+{
+#ifdef OSMESA_GALLIUM_DRIVER
+    return true;
+#else
+    return false;
+#endif
+}
+#endif

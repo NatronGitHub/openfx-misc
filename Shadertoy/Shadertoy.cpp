@@ -360,7 +360,7 @@ enum BBoxEnum
 
 #define kParamAnisotropic "anisotropic"
 #define kParamAnisotropicLabel "Anisotropic"
-#define kParamAnisotropicHint "Use anisotropic texture filtering (available with \"Mesa softpipe\" CPU rendering, and with GPU if supported)"
+#define kParamAnisotropicHint "Use anisotropic texture filtering. Available with GPU if supported (check for the presence of the GL_EXT_texture_filter_anisotropic extension in the Renderer Info) and with \"softpipe\" CPU driver."
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamEnableGPU "enableGPU"
@@ -369,6 +369,15 @@ enum BBoxEnum
     "Enable GPU-based OpenGL render.\n" \
     "If the checkbox is checked but is not enabled (i.e. it cannot be unchecked), GPU render can not be enabled or disabled from the plugin and is probably part of the host options.\n" \
     "If the checkbox is not checked and is not enabled (i.e. it cannot be checked), GPU render is not available on this host.\n"
+#endif
+
+#ifdef HAVE_OSMESA
+#define kParamCPUDriver "cpuDriver"
+#define kParamCPUDriverLabel "CPU Driver"
+#define kParamCPUDriverHint "Driver for CPU rendering. May be \"softpipe\" (slower, has GL_EXT_texture_filter_anisotropic GL_ARB_texture_query_lod GL_ARB_pipeline_statistics_query) or \"llvmpipe\" (faster, has GL_ARB_buffer_storage GL_EXT_polygon_offset_clamp)."
+#define kParamCPUDriverOptionSoftPipe "softpipe"
+#define kParamCPUDriverOptionLLVMPipe "llvmpipe"
+#define kParamCPUDriverDefault ShadertoyPlugin::eCPUDriverLLVMPipe
 #endif
 
 #define kParamRendererInfo "rendererInfo"
@@ -419,6 +428,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _mipmap(0)
     , _anisotropic(0)
     , _enableGPU(0)
+    , _cpuDriver(0)
     , _imageShaderID(1)
     , _imageShaderUniformsID(1)
     , _openGLContextData()
@@ -506,6 +516,9 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     updateVisibility();
     initOpenGL();
 #if defined(HAVE_OSMESA)
+    if ( OSMesaDriverSelectable() ) {
+        _cpuDriver = fetchChoiceParam(kParamCPUDriver);
+    }
     initMesa();
 #endif
     _imageShaderCompile->setEnabled(false); // always compile on first render
@@ -834,7 +847,11 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 #     ifdef HAVE_OSMESA
         if (!openGLRender) {
             AutoMutex lock( _rendererInfoMutex.get() );
-            message = _rendererInfoMesa;
+            int cpuDriver = 0;
+            if (_cpuDriver) {
+                cpuDriver = _cpuDriver->getValue();
+            }
+            message = _rendererInfoMesa[cpuDriver];
         }
 #     endif // HAVE_OSMESA
         if ( message.empty() ) {
@@ -1407,6 +1424,23 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+#endif
+#if defined(HAVE_OSMESA)
+    if ( ShadertoyPlugin::OSMesaDriverSelectable() ) {
+        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCPUDriver);
+        param->setLabel(kParamCPUDriverLabel);
+        param->setHint(kParamCPUDriverHint);
+        assert(param->getNOptions() == ShadertoyPlugin::eCPUDriverSoftPipe);
+        param->appendOption(kParamCPUDriverOptionSoftPipe);
+        assert(param->getNOptions() == ShadertoyPlugin::eCPUDriverLLVMPipe);
+        param->appendOption(kParamCPUDriverOptionLLVMPipe);
+        param->setDefault(kParamCPUDriverDefault);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
 #endif
 
     {

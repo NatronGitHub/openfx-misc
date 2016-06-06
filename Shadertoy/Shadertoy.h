@@ -50,6 +50,13 @@ class ShadertoyPlugin
 #endif
 
 public:
+#if defined(HAVE_OSMESA)
+    enum CPUDriverEnum {
+        eCPUDriverSoftPipe = 0,
+        eCPUDriverLLVMPipe
+    };
+#endif
+
     enum UniformTypeEnum
     {
         eUniformTypeNone,
@@ -61,12 +68,25 @@ public:
         eUniformTypeVec4,
     };
 
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+    typedef OFX::MultiThread::Mutex Mutex;
+    typedef OFX::MultiThread::AutoMutex AutoMutex;
+#else
+    typedef tthread::fast_mutex Mutex;
+    typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+#endif
+
 public:
     /** @brief ctor */
     ShadertoyPlugin(OfxImageEffectHandle handle);
 
     virtual ~ShadertoyPlugin();
 
+#ifdef HAVE_OSMESA
+    static bool OSMesaDriverSelectable();
+#endif
+
+public:
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -101,15 +121,6 @@ private:
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
-public:
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-    typedef OFX::MultiThread::Mutex Mutex;
-    typedef OFX::MultiThread::AutoMutex AutoMutex;
-#else
-    typedef tthread::fast_mutex Mutex;
-    typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
-#endif
-
 private:
     void updateVisibility();
     void updateVisibilityParam(unsigned i, bool visible);
@@ -140,6 +151,7 @@ private:
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_enableGPU;
+    OFX::ChoiceParam *_cpuDriver;
     std::auto_ptr<Mutex> _shaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
@@ -173,7 +185,7 @@ private:
     // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
     std::list<OSMesaPrivate *> _osmesa;
     std::auto_ptr<Mutex> _osmesaMutex;
-    std::string _rendererInfoMesa;
+    std::string _rendererInfoMesa[2];
 #endif
 };
 

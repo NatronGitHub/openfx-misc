@@ -43,18 +43,29 @@ class TestOpenGLPlugin
 #endif
 
 public:
-    /** @brief ctor */
-    TestOpenGLPlugin(OfxImageEffectHandle handle);
+#if defined(HAVE_OSMESA)
+    enum CPUDriverEnum {
+        eCPUDriverSoftPipe = 0,
+        eCPUDriverLLVMPipe
+    };
+#endif
 
-    virtual ~TestOpenGLPlugin();
-
-public:
 #ifdef OFX_USE_MULTITHREAD_MUTEX
     typedef OFX::MultiThread::Mutex Mutex;
     typedef OFX::MultiThread::AutoMutex AutoMutex;
 #else
     typedef tthread::fast_mutex Mutex;
     typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+#endif
+
+public:
+    /** @brief ctor */
+    TestOpenGLPlugin(OfxImageEffectHandle handle);
+
+    virtual ~TestOpenGLPlugin();
+
+#ifdef HAVE_OSMESA
+    static bool OSMesaDriverSelectable();
 #endif
 
 private:
@@ -103,6 +114,7 @@ private:
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_enableGPU;
+    OFX::ChoiceParam *_cpuDriver;
     struct OpenGLContextData
     {
         OpenGLContextData()
@@ -127,7 +139,7 @@ private:
     // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
     std::list<OSMesaPrivate *> _osmesa;
     std::auto_ptr<Mutex> _osmesaMutex;
-    std::string _rendererInfoMesa;
+    std::string _rendererInfoMesa[2];
 #endif
 };
 
