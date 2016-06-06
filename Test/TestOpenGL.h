@@ -103,20 +103,20 @@ private:
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_enableGPU;
-    
-    struct OpenGLContextData {
+    struct OpenGLContextData
+    {
         OpenGLContextData()
-        : haveAniso(false)
-        , maxAnisoMax(1.)
+            : haveAniso(false)
+            , maxAnisoMax(1.)
         {
         }
-        
+
         bool haveAniso;
         float maxAnisoMax;
     };
+
     OpenGLContextData _openGLContextData; // (OpenGL-only) - the single openGL context, in case the host does not support kNatronOfxImageEffectPropOpenGLContextData
     bool _openGLContextAttached; // (OpenGL-only) - set to true when the contextAttached function is executed - used for checking non-conformant hosts such as Sony Catalyst
-
     std::auto_ptr<Mutex> _rendererInfoMutex;
     std::string _rendererInfoGL;
 

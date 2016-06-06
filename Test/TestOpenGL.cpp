@@ -54,7 +54,7 @@ using namespace OFX;
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kSupportsMultipleClipPARs true 
+#define kSupportsMultipleClipPARs true
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
@@ -260,7 +260,7 @@ TestOpenGLPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     rod.y1 = projectOffset.y;
     rod.x2 = projectOffset.x + projectSize.x;
     rod.y2 = projectOffset.y + projectSize.y;
-    
+
     return true;
 }
 

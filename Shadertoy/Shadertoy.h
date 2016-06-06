@@ -143,26 +143,26 @@ private:
     std::auto_ptr<Mutex> _shaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
-
-    struct OpenGLContextData {
+    struct OpenGLContextData
+    {
         OpenGLContextData()
-        : haveAniso(false)
-        , maxAnisoMax(1.)
-        , imageShader(0)
-        , imageShaderID(0)
-        , imageShaderUniformsID(0)
+            : haveAniso(false)
+            , maxAnisoMax(1.)
+            , imageShader(0)
+            , imageShaderID(0)
+            , imageShaderUniformsID(0)
         {
         }
-        
+
         bool haveAniso;
         float maxAnisoMax;
         void *imageShader; //shader information
         unsigned int imageShaderID; // the shader ID compiled for this context
         unsigned int imageShaderUniformsID; // the ID for custom uniform locations
     };
+
     OpenGLContextData _openGLContextData; // (OpenGL-only) - the single openGL context, in case the host does not support kNatronOfxImageEffectPropOpenGLContextData
     bool _openGLContextAttached; // (OpenGL-only) - set to true when the contextAttached function is executed - used for checking non-conformant hosts such as Sony Catalyst
-
     std::auto_ptr<Mutex> _rendererInfoMutex;
     std::string _rendererInfoGL;
 
