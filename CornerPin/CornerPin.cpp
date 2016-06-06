@@ -959,7 +959,9 @@ defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
         param->setDefault(true);
         param->setAnimates(true);
         param->setHint(kParamEnableHint);
-        param->setParent(*group);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -990,7 +992,9 @@ defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
     }
     param->setDefault(x, y);
     param->setDimensionLabels("x", "y");
-    param->setParent(*group);
+    if (group) {
+        param->setParent(*group);
+    }
     if (page) {
         page->addChild(*param);
     }
@@ -1051,13 +1055,15 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyFrom);
             param->setLabel(kParamCopyFromLabel);
             param->setHint(kParamCopyFromHint);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
         }
 
-        if (page) {
+        if (page && group) {
             page->addChild(*group);
         }
     }

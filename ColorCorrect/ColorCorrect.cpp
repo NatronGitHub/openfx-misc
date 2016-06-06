@@ -1156,7 +1156,7 @@ defineColorGroup(const std::string& groupName,
     defineRGBAScaleParam(desc, groupName + kParamGamma,      kParamGamma,      hint, group, page, 1, 0.2, 5);
     defineRGBAScaleParam(desc, groupName + kParamGain,       kParamGain,       hint, group, page, 1, 0, 4);
     defineRGBAScaleParam(desc, groupName + kParamOffset,     kParamOffset,     hint, group, page, 0, -1, 1);
-    if (page) {
+    if (page && group) {
         page->addChild(*group);
     }
 }

@@ -196,10 +196,10 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle,
 void
 SwitchPlugin::render(const OFX::RenderArguments &args)
 {
-    const double time = args.time;
-
     // do nothing as this should never be called as isIdentity should always be trapped
     assert(false);
+
+    const double time = args.time;
 
     // copy input to output
     int input = 0;

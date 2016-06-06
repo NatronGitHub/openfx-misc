@@ -1605,14 +1605,14 @@ ShufflePlugin::enableComponents(PixelComponentEnum originalOutputComponents,
         std::string ofxPlane, ofxComp;
         getPlaneNeededInOutput(&ofxPlane, &ofxComp);
         std::vector<std::string> compNames;
-        bool showCreateAlpha = false;
+        //bool showCreateAlpha = false;
         if (ofxPlane == kFnOfxImagePlaneColour) {
             //std::string comp = _dstClip->getPixelComponentsProperty();
             if (outputComponentsWithCreateAlpha == OFX::ePixelComponentRGB) {
                 compNames.push_back("R");
                 compNames.push_back("G");
                 compNames.push_back("B");
-                showCreateAlpha = true;
+                //showCreateAlpha = true;
             } else if (outputComponentsWithCreateAlpha == OFX::ePixelComponentRGBA) {
                 compNames.push_back("R");
                 compNames.push_back("G");
@@ -1620,7 +1620,7 @@ ShufflePlugin::enableComponents(PixelComponentEnum originalOutputComponents,
                 compNames.push_back("A");
 
                 if (originalOutputComponents != OFX::ePixelComponentRGBA) {
-                    showCreateAlpha = true;
+                    //showCreateAlpha = true;
                 }
             } else if (outputComponentsWithCreateAlpha == OFX::ePixelComponentAlpha) {
                 compNames.push_back("Alpha");

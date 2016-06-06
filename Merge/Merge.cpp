@@ -984,7 +984,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
             // mask the srcARoD with the mask RoD. The result may be empty
             srcARoDValid = OFX::Coords::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
         }
-        if ( OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0) ) {
+        if ( srcARoDValid && OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0) ) {
             // renderWindow intersects one of the effect areas
             return false;
         }

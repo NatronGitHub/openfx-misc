@@ -289,7 +289,7 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     }
     // intersect with format RoD
     OfxRectD formatrod;
-    formatrod.x1 = formatrod.y1 = 0.;
+    formatrod.x1 = formatrod.y1 = formatrod.x2 = formatrod.y2 = 0.;
     OfxPointI boxSize = _boxSize->getValueAtTime(time);
     double boxPAR = _boxPAR->getValueAtTime(time);
 
@@ -428,7 +428,7 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
     }
 
     OfxRectD dstRod;
-    dstRod.x1 = dstRod.y1 = 0.;
+    dstRod.x1 = dstRod.y1 = dstRod.x2 = dstRod.y2 = 0.;
     if (resize == eResizeNone) {
         if (center && boxFixed) {
             // translate the source

@@ -1322,8 +1322,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     // Ideally the tile size should be a multiple of llvmpipe's tile size which is 64x64.
     // llvmpipe employs multiple threads to process tiles in parallel so your tiles should probably
     // be 128x128 for 4 cores, 256x128 for 8 cores, etc.
-    int tile_w = w;
-    int tile_h = h;
+    int tile_w;
+    int tile_h;
 #ifdef USE_OSMESA
     glEnable(GL_SCISSOR_TEST);
     {
@@ -1335,8 +1335,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         // - compute the next power of two for the other side
         int pow2_y = std::ceil(std::log( nCPUs / (double)(1 << pow2_x) ) / M_LN2);
         tile_h = 64 * (1 << pow2_y);
-        DPRINT( ("Shadertoy: tile size: %d %d for %d CPUs\n", tile_w, tile_h, nCPUs) );
+        //DPRINT( ("Shadertoy: tile size: %d %d for %d CPUs\n", tile_w, tile_h, nCPUs) );
     }
+#else
+    tile_w = w;
+    tile_h = h;
 #endif
 
     bool aborted = abort();

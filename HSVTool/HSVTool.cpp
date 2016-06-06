@@ -1486,7 +1486,7 @@ HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg,
                                    double time,
                                    const OfxRectI &analysisWindow)
 {
-    double hmean;
+    double hmean = 0.;
     HSVColor hsvmin, hsvmax;
     OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
 
@@ -1500,6 +1500,7 @@ HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg,
     } else {
         // coverity[dead_error_line]
         OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        return;
     }
 
     if ( abort() ) {

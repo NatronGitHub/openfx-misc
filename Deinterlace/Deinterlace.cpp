@@ -344,6 +344,7 @@ filter_edges(Comp *dst1,
     FILTER(w - 3, w, 0)
 }
 
+#if 0
 inline void
 interpolate(unsigned char *dst,
             const unsigned char *cur0,
@@ -369,6 +370,7 @@ interpolate(float *dst,
         dst[x] = (cur0[x] + cur2[x] ) * 0.5f; // simple average
     }
 }
+#endif
 
 template<int ch, typename Comp, typename Diff>
 static void
@@ -522,10 +524,12 @@ DeinterlacePlugin::render(const OFX::RenderArguments &args)
         // Video of less than 3 columns or lines is not supported
         // just copy src to dst
         for (int y = 0; y < height; y++) {
+            unsigned char* lineStart = (unsigned char*)dst->getPixelAddress(0, y);
+            unsigned int lineLen = std::abs( dst->getRowBytes() );
             if ( src.get() ) {
-                std::memcpy( dst->getPixelAddress(0, y), src->getPixelAddress(0, y), abs( src->getRowBytes() ) );
+                std::memcpy( lineStart, src->getPixelAddress(0, y), lineLen );
             } else {
-                std::memcpy( dst->getPixelAddress(0, y), 0, abs( dst->getRowBytes() ) );
+                std::fill( lineStart, lineStart + lineLen, 0 );
             }
         }
     } else {
