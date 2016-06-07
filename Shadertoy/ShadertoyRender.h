@@ -1023,7 +1023,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     // compile and link the shader if necessary
     ShadertoyShader *shadertoy;
     {
-        AutoMutex lock( _shaderMutex.get() );
+        AutoMutex lock( _imageShaderMutex.get() );
         bool must_recompile = false;
         bool uniforms_changed = false;
         shadertoy = (ShadertoyShader *)contextData->imageShader;
@@ -1411,37 +1411,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
 
-#if 0//ifdef GL_ARB_sync
-     // glFenceSync does not seem to work properly in OSMesa:
-     // we get random black images.
-    if (!glFenceSync) {
-        // If Sync Objects not available (but they should always be there in Mesa)
-        if ( !abort() ) {
-            glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
-            glFinish(); // waits for all previously submitted commands to complete executing
-        }
-    } else if ( !abort() ) {
-        GLsync fenceId = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
-        if ( !fenceId && !abort() ) {
-            // glFenceSync failed for some reason
-            glCheckError();
-            glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
-            glFinish(); // waits for all previously submitted commands to complete executing
-        } else {
-            while ( !abort() ) {
-                GLenum result = glClientWaitSync( fenceId, GL_SYNC_FLUSH_COMMANDS_BIT, GLuint64(10 * 1000) ); // 10ms timeout
-                if (result != GL_TIMEOUT_EXPIRED) {
-                    break; // we ignore timeouts and wait until all OpenGL commands are processed!
-                }
-            }
-        }
-    }
-#else
     if (!aborted) {
         glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
         glFinish(); // waits for all previously submitted commands to complete executing
     }
-#endif
     glCheckError();
     // make sure the buffer is not referenced anymore
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, NULL, dstBounds);

@@ -166,7 +166,7 @@ private:
     std::vector<OFX::RGBAParam *> _paramValueVec4;
     OFX::BooleanParam *_enableGPU;
     OFX::ChoiceParam *_cpuDriver;
-    std::auto_ptr<Mutex> _shaderMutex;
+    std::auto_ptr<Mutex> _imageShaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
     struct OpenGLContextData

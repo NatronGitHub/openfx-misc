@@ -453,7 +453,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _openGLContextAttached(false)
 {
     try {
-        _shaderMutex.reset(new Mutex);
+        _imageShaderMutex.reset(new Mutex);
         _rendererInfoMutex.reset(new Mutex);
 #if defined(HAVE_OSMESA)
         _osmesaMutex.reset(new Mutex);
@@ -818,7 +818,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     } else if ( ( (paramName == kParamImageShaderSource) && (args.reason != eChangeUserEdit) ) ||
                 (paramName == kParamImageShaderCompile) ) {
         {
-            AutoMutex lock( _shaderMutex.get() );
+            AutoMutex lock( _imageShaderMutex.get() );
             // mark that image shader must be recompiled on next render
             ++_imageShaderID;
         }
@@ -830,14 +830,14 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _imageShaderCompile->setEnabled(true);
     } else if ( (paramName == kParamCount) || starts_with(paramName, kParamName) ) {
         {
-            AutoMutex lock( _shaderMutex.get() );
+            AutoMutex lock( _imageShaderMutex.get() );
             // mark that image shader must be recompiled on next render
             ++_imageShaderUniformsID;
         }
         updateVisibility();
     } else if ( starts_with(paramName, kParamType) ) {
         {
-            AutoMutex lock( _shaderMutex.get() );
+            AutoMutex lock( _imageShaderMutex.get() );
             // mark that image shader must be recompiled on next render
             ++_imageShaderUniformsID;
         }
