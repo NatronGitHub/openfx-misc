@@ -196,7 +196,8 @@ public:
 
         // the macros are taken from CImg.h, with (*this) replaced by (cimg)
 #define _cimg_blur_patch2d_fast(N) \
-        cimg_for##N##XY(res,x,y) { \
+        cimg_for##N##Y(res,y) { cimg_abort_test(); \
+        cimg_for##N##X(res,x) { \
           T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
           const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
           float sum_weights = 0; \
@@ -212,10 +213,11 @@ public:
           } \
           if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights; \
           else cimg_forC(res,c) res(x,y,c) = (Tfloat)((cimg)(x,y,c)); \
-        }
+        } }
 
 #define _cimg_blur_patch2d(N) \
-        cimg_for##N##XY(res,x,y) { \
+        cimg_for##N##Y(res,y) { cimg_abort_test(); \
+        cimg_for##N##X(res,x) { \
           T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
           const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
           float sum_weights = 0, weight_max = 0; \
@@ -233,7 +235,7 @@ public:
           sum_weights+=weight_max; cimg_forC(res,c) res(x,y,c)+=weight_max*(cimg)(x,y,c); \
           if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights; \
           else cimg_forC(res,c) res(x,y,c) = (Tfloat)((cimg)(x,y,c)); \
-    }
+    } }
 
         if (cimg.is_empty() || !patch_size || !lookup_size) return;
         CImg<Tfloat> res(cimg._width,cimg._height,cimg._depth,cimg._spectrum,0);
