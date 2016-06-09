@@ -299,7 +299,11 @@ enum BBoxEnum
 #define kParamImageShaderCompileLabel "Compile"
 #define kParamImageShaderCompileHint "Compile the image shader."
 
+// parameter to trigger a new render and make sure the shader is compiled
 #define kParamImageShaderTriggerRender "imageShaderTriggerRender"
+
+// parameter used to trigger an InstanceChanged once the Shader was compiled in the render function
+#define kParamImageShaderRecompiled "imageShaderRecompiled"
 
 #define kParamImageShaderDefault                            \
     "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n" \
@@ -353,10 +357,6 @@ enum BBoxEnum
 #define kParamValueVec4 "paramValueVec4" // followed by param number
 #define kParamValueLabel "Value" // followed by param number
 #define kParamValueHint "Value of the parameter."
-
-#define kGroupChannels "channelsGroup"
-#define kGroupChannelsLabel "Channels"
-
 
 #define kParamFilter "mipmap"
 #define kParamFilterLabel "Filter"
@@ -541,6 +541,11 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     initMesa();
 #endif
     _imageShaderCompile->setEnabled(false); // always compile on first render
+
+    // Trigger a render, so that the shader is compiled and parameters are updated.
+    // OpenFX allows this, see http://openfx.sourceforge.net/Documentation/1.4/ofxProgrammingReference.html#SettingParams
+    // ... but also forbids this, see http://openfx.sourceforge.net/Documentation/1.4/ofxProgrammingReference.html#OfxParameterSuiteV1_paramSetValue
+    _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue() + 1);
 }
 
 ShadertoyPlugin::~ShadertoyPlugin()
@@ -846,33 +851,11 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     } else if ( (paramName == kParamImageShaderSource) && (args.reason == eChangeUserEdit) ) {
         _imageShaderCompile->setEnabled(true);
     } else if (paramName == kParamRendererInfo) {
-        const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-        bool openGLRender = false;
         std::string message;
-#     if defined(OFX_SUPPORTS_OPENGLRENDER)
-        if (gHostDescription.supportsOpenGLRender) {
-#         ifdef HAVE_OSMESA
-            _enableGPU->getValueAtTime(args.time, openGLRender);
-#         else
-            openGLRender = true;
-#         endif
-        }
-
-        if (openGLRender) {
+        {
             AutoMutex lock( _rendererInfoMutex.get() );
-            message = _rendererInfoGL;
+            message = _rendererInfo;
         }
-#     endif
-#     ifdef HAVE_OSMESA
-        if (!openGLRender) {
-            AutoMutex lock( _rendererInfoMutex.get() );
-            int cpuDriver = 0;
-            if (_cpuDriver) {
-                cpuDriver = _cpuDriver->getValue();
-            }
-            message = _rendererInfoMesa[cpuDriver];
-        }
-#     endif // HAVE_OSMESA
         if ( message.empty() ) {
             sendMessage(OFX::Message::eMessageMessage, "", "OpenGL renderer info not yet available.\n"
                         "Please execute at least one image render and try again.");
@@ -882,6 +865,10 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 #if defined(HAVE_OSMESA)
     } else if (paramName == kParamEnableGPU) {
         setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
+        {
+            AutoMutex lock( _rendererInfoMutex.get() );
+            _rendererInfo.clear();
+        }
 #endif
     }
 } // ShadertoyPlugin::changedParam
@@ -1185,7 +1172,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
 
         {
-            // a dummy boolean parameter, used to trigger a new render when the shader is recompiled
+            // a dummy boolean parameter, used to trigger a new render when the shader is to be recompiled
             OFX::IntParamDescriptor* param = desc.defineIntParam(kParamImageShaderTriggerRender);
             param->setEvaluateOnChange(true);
             param->setAnimates(false);
@@ -1199,16 +1186,19 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
 
-        if (page) {
-            page->addChild(*group);
-        }
-    }
-    {
-        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupChannels);
-        if (group) {
-            group->setLabel(kGroupChannelsLabel);
-            group->setOpen(false);
-            //group->setAsTab();
+        {
+            // a dummy boolean parameter, used to update parameters GUI when the shader was recompiled
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamImageShaderRecompiled);
+            param->setEvaluateOnChange(false);
+            param->setAnimates(false);
+            param->setIsSecret(true);
+            param->setIsPersistant(false);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
         }
 
         for (unsigned i = 0; i < NBINPUTS; ++i) {
@@ -1267,7 +1257,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
 
-        if (page) {
+        if (page && group) {
             page->addChild(*group);
         }
     }
@@ -1305,7 +1295,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupExtraParameters);
+        OFX::GroupParamDescriptor* group = NULL; // desc.defineGroupParam(kGroupExtraParameters);
         if (group) {
             group->setLabel(kGroupExtraParametersLabel);
             group->setHint(kGroupExtraParametersHint);
@@ -1463,7 +1453,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 }
             }
 
-            if (page) {
+            if (page && group) {
                 page->addChild(*group);
             }
         }

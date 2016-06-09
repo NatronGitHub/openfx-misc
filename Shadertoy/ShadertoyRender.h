@@ -154,6 +154,7 @@ static PFNGLVERTEXATTRIB4FVPROC glVertexAttrib4fv = NULL;
 static PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
 static PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
 static PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = NULL;
+static PFNGLGETACTIVEATTRIBPROC glGetActiveAttrib = NULL;
 static PFNGLBINDATTRIBLOCATIONPROC glBindAttribLocation = NULL;
 static PFNGLGETACTIVEUNIFORMPROC glGetActiveUniform = NULL;
 #endif
@@ -688,6 +689,47 @@ compileAndLinkProgram(const char *vertexShader,
     if (fs) {
         glDeleteShader(fs);
     }
+#ifdef DEBUG
+    {
+        GLint i;
+        GLint count;
+
+        GLint size; // size of the variable
+        GLenum type; // type of the variable (float, vec3 or mat4, etc)
+        // GL_FLOAT, GL_FLOAT_VEC3, GL_FLOAT_MAT4
+
+        GLint bufSize; // maximum name length
+        glGetProgramiv(program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &bufSize);
+
+        std::vector<GLchar> name(bufSize); // variable name in GLSL
+        GLsizei length; // name length
+
+        // Attributes
+        count = 0;
+        glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &count);
+        if (count > 0) {
+            DPRINT( ("Active Attributes: %d\n", count) );
+        }
+        for (i = 0; i < count; i++) {
+            glGetActiveAttrib(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
+
+            DPRINT( ("Attribute #%d Type: 0x%04x Name: %s\n", i, type, &name[0]) );
+        }
+
+        // Uniforms
+        count = 0;
+        glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
+        if (count > 0) {
+            DPRINT( ("Active Uniforms: %d\n", count) );
+        }
+        for (i = 0; i < count; i++) {
+            glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
+            
+            DPRINT( ("Uniform #%d Type: 0x%04x Name: %s\n", i, type, &name[0]) );
+        }
+        glCheckError();
+    }
+#endif
 
     return program;
 } // compileAndLinkProgram
@@ -1524,25 +1566,11 @@ ShadertoyPlugin::contextAttached(bool createContextData)
 
 #endif
 
-#ifdef USE_OSMESA
-    int cpuDriver = 0;
-    if (_cpuDriver) {
-        cpuDriver = _cpuDriver->getValue();
-    }
-#endif
     {
         AutoMutex lock( _rendererInfoMutex.get() );
-#ifdef USE_OSMESA
-        std::string &message = _rendererInfoMesa[cpuDriver];
-#else
-        std::string &message = _rendererInfoGL;
-#endif
+        std::string &message = _rendererInfo;
         if ( message.empty() ) {
-#ifdef USE_OSMESA
-            message += "OpenGL CPU renderer information:";
-#else
-            message += "OpenGL GPU renderer information:";
-#endif
+            message += "OpenGL renderer information:";
             message += "\nGL_RENDERER = ";
             message += (char *) glGetString(GL_RENDERER);
             message += "\nGL_VERSION = ";
@@ -1640,7 +1668,9 @@ ShadertoyPlugin::contextAttached(bool createContextData)
         glVertexAttrib4fv = (PFNGLVERTEXATTRIB4FVPROC)wglGetProcAddress("glVertexAttrib4fv");
         glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
         glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
+        glGetActiveAttrib = (PFNGLGETACTIVEATTRIBPROC)wglGetProcAddress("glGetActiveAttrib");
         glBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)wglGetProcAddress("glBindAttribLocation");
+        glGetActiveUniform = (PFNGLGETACTIVEUNIFORMPROC)wglGetProcAddress("glGetActiveUniform");
 #endif
 
         // Shader
