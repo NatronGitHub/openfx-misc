@@ -52,6 +52,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamColor0      "color0"
 #define kParamColor0Label "Color 0"
 
+#define kParamTestButton "testButton"
+#define kParamTestButtonLabel "Click me!"
+
+#define kParamLabelString "labelString"
+#define kParamDouble2 "double2"
+
 #define kParamClipInfo      "clipInfo"
 #define kParamClipInfoLabel "Clip Info..."
 #define kParamClipInfoHint  "Display information about the inputs"
@@ -73,6 +79,9 @@ public:
         , _dstClip(0)
         , _srcClip(0)
         , _maskClip(0)
+        , _testButton(0)
+        , _labelString(0)
+        , _double2(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -96,6 +105,10 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+
+        _testButton = fetchPushButtonParam(kParamTestButton);
+        _labelString = fetchStringParam(kParamLabelString);
+        _double2 = fetchDoubleParam(kParamDouble2);
     }
 
 private:
@@ -113,6 +126,9 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    OFX::PushButtonParam* _testButton;
+    OFX::StringParam* _labelString;
+    OFX::DoubleParam* _double2;
 };
 
 
@@ -333,7 +349,13 @@ void
 TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                                const std::string &paramName)
 {
-    if (paramName == kParamClipInfo) {
+    if (paramName == kParamTestButton) {
+        _testButton->setLabel("Clicked!");
+        _testButton->setHint("You clicked me!");
+        _labelString->setValue("New Label");
+        _labelString->setLabel("New labellabel");
+        _double2->setLabel("Double param got a new name");
+    } else if (paramName == kParamClipInfo) {
         std::ostringstream oss;
         oss << "Clip Info:\n\n";
         oss << "Input: ";
@@ -513,6 +535,48 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
         param->setLabel(kParamClipInfoLabel);
         param->setHint(kParamClipInfoHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // testButton
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamTestButton);
+        param->setLabel(kParamTestButtonLabel);
+        param->setHint("Please click me and see what happens.");
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // a string param of type label, followed by a double param with no label... does it work?
+    {
+        StringParamDescriptor *param = desc.defineStringParam(kParamLabelString);
+        param->setLabel("");
+        param->setDefault("The label");
+        param->setStringType(eStringTypeLabel);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam("doubleParam");
+        param->setLabel("");
+        param->setDefault(0.5);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDouble2);
+        param->setLabel("A Double Param");
+        param->setDefault(0.5);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
         if (page) {
             page->addChild(*param);
         }
