@@ -116,8 +116,50 @@ struct ShadertoyShader
 };
 
 #if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
+// for i in `fgrep "static PFN" ShadertoyRender.h |sed -e s@//@@ |awk '{print $2}'|fgrep -v i`; do fgrep $i /opt/osmesa/include/GL/glext.h ; done
+
 // Program
-#ifdef GL_VERSION_2_0
+#ifndef GL_VERSION_2_0
+typedef GLuint (APIENTRYP PFNGLCREATEPROGRAMPROC) (void);
+typedef void (APIENTRYP PFNGLDELETEPROGRAMPROC) (GLuint program);
+typedef void (APIENTRYP PFNGLUSEPROGRAMPROC) (GLuint program);
+typedef void (APIENTRYP PFNGLATTACHSHADERPROC) (GLuint program, GLuint shader);
+typedef void (APIENTRYP PFNGLDETACHSHADERPROC) (GLuint program, GLuint shader);
+typedef void (APIENTRYP PFNGLLINKPROGRAMPROC) (GLuint program);
+typedef void (APIENTRYP PFNGLGETPROGRAMIVPROC) (GLuint program, GLenum pname, GLint *params);
+typedef void (APIENTRYP PFNGLGETPROGRAMINFOLOGPROC) (GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+typedef void (APIENTRYP PFNGLGETSHADERINFOLOGPROC) (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+typedef GLint (APIENTRYP PFNGLGETUNIFORMLOCATIONPROC) (GLuint program, const GLchar *name);
+typedef void (APIENTRYP PFNGLUNIFORM1IPROC) (GLint location, GLint v0);
+typedef void (APIENTRYP PFNGLUNIFORM2IPROC) (GLint location, GLint v0, GLint v1);
+typedef void (APIENTRYP PFNGLUNIFORM3IPROC) (GLint location, GLint v0, GLint v1, GLint v2);
+typedef void (APIENTRYP PFNGLUNIFORM4IPROC) (GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
+typedef void (APIENTRYP PFNGLUNIFORM1IVPROC) (GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRYP PFNGLUNIFORM2IVPROC) (GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRYP PFNGLUNIFORM3IVPROC) (GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRYP PFNGLUNIFORM4IVPROC) (GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRYP PFNGLUNIFORM1FPROC) (GLint location, GLfloat v0);
+typedef void (APIENTRYP PFNGLUNIFORM2FPROC) (GLint location, GLfloat v0, GLfloat v1);
+typedef void (APIENTRYP PFNGLUNIFORM3FPROC) (GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+typedef void (APIENTRYP PFNGLUNIFORM4FPROC) (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+typedef void (APIENTRYP PFNGLUNIFORM1FVPROC) (GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRYP PFNGLUNIFORM2FVPROC) (GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRYP PFNGLUNIFORM3FVPROC) (GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRYP PFNGLUNIFORM4FVPROC) (GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRYP PFNGLUNIFORMMATRIX4FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+typedef GLint (APIENTRYP PFNGLGETATTRIBLOCATIONPROC) (GLuint program, const GLchar *name);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB1FPROC) (GLuint index, GLfloat x);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB1FVPROC) (GLuint index, const GLfloat *v);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB2FVPROC) (GLuint index, const GLfloat *v);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB3FVPROC) (GLuint index, const GLfloat *v);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB4FVPROC) (GLuint index, const GLfloat *v);
+typedef void (APIENTRYP PFNGLVERTEXATTRIBPOINTERPROC) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
+typedef void (APIENTRYP PFNGLENABLEVERTEXATTRIBARRAYPROC) (GLuint index);
+typedef void (APIENTRYP PFNGLDISABLEVERTEXATTRIBARRAYPROC) (GLuint index);
+typedef void (APIENTRYP PFNGLGETACTIVEATTRIBPROC) (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
+typedef void (APIENTRYP PFNGLBINDATTRIBLOCATIONPROC) (GLuint program, GLuint index, const GLchar *name);
+typedef void (APIENTRYP PFNGLGETACTIVEUNIFORMPROC) (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
+#endif
 static PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
 static PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
 static PFNGLUSEPROGRAMPROC glUseProgram = NULL;
@@ -157,35 +199,57 @@ static PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = NULL;
 static PFNGLGETACTIVEATTRIBPROC glGetActiveAttrib = NULL;
 static PFNGLBINDATTRIBLOCATIONPROC glBindAttribLocation = NULL;
 static PFNGLGETACTIVEUNIFORMPROC glGetActiveUniform = NULL;
-#endif
 
 // Shader
-#ifdef GL_VERSION_2_0
+#ifndef GL_VERSION_2_0
+typedef GLuint (APIENTRYP PFNGLCREATESHADERPROC) (GLenum type);
+typedef void (APIENTRYP PFNGLDELETESHADERPROC) (GLuint shader);
+typedef void (APIENTRYP PFNGLSHADERSOURCEPROC) (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
+typedef void (APIENTRYP PFNGLCOMPILESHADERPROC) (GLuint shader);
+typedef void (APIENTRYP PFNGLGETSHADERIVPROC) (GLuint shader, GLenum pname, GLint *params);
+#endif
 static PFNGLCREATESHADERPROC glCreateShader = NULL;
 static PFNGLDELETESHADERPROC glDeleteShader = NULL;
 static PFNGLSHADERSOURCEPROC glShaderSource = NULL;
 static PFNGLCOMPILESHADERPROC glCompileShader = NULL;
 static PFNGLGETSHADERIVPROC glGetShaderiv = NULL;
-#endif
 
 // VBO
-#ifdef GL_VERSION_1_5
+#ifndef GL_VERSION_1_5
+typedef void (APIENTRYP PFNGLGENBUFFERSPROC) (GLsizei n, GLuint *buffers);
+typedef void (APIENTRYP PFNGLBINDBUFFERPROC) (GLenum target, GLuint buffer);
+typedef void (APIENTRYP PFNGLBUFFERDATAPROC) (GLenum target, GLsizeiptr size, const void *data, GLenum usage);
+#endif
 static PFNGLGENBUFFERSPROC glGenBuffers = NULL;
 static PFNGLBINDBUFFERPROC glBindBuffer = NULL;
 static PFNGLBUFFERDATAPROC glBufferData = NULL;
-#endif
 
 //Multitexture
-#ifdef GL_VERSION_1_3
-static PFNGLACTIVETEXTUREARBPROC glActiveTexture = NULL;
+#ifndef GL_VERSION_1_3
+typedef void (APIENTRYP PFNGLACTIVETEXTUREARBPROC) (GLenum texture);
 #endif
-#ifdef GL_VERSION_1_3_DEPRECATED
+#ifndef GL_VERSION_1_3_DEPRECATED
+typedef void (APIENTRYP PFNGLCLIENTACTIVETEXTUREPROC) (GLenum texture);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2FROC) (GLenum target, GLfloat s, GLfloat t);
+#endif
+static PFNGLACTIVETEXTUREARBPROC glActiveTexture = NULL;
 //static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = NULL;
 //static PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f = NULL;
-#endif
 
-#ifdef GL_ARB_framebuffer_object
 // Framebuffers
+#ifndef GL_ARB_framebuffer_object
+typedef GLboolean (APIENTRYP PFNGLISFRAMEBUFFERPROC) (GLuint framebuffer);
+typedef void (APIENTRYP PFNGLBINDFRAMEBUFFERPROC) (GLenum target, GLuint framebuffer);
+typedef void (APIENTRYP PFNGLDELETEFRAMEBUFFERSPROC) (GLsizei n, const GLuint *framebuffers);
+typedef void (APIENTRYP PFNGLGENFRAMEBUFFERSPROC) (GLsizei n, GLuint *framebuffers);
+typedef GLenum (APIENTRYP PFNGLCHECKFRAMEBUFFERSTATUSPROC) (GLenum target);
+typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE1DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE2DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE3DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
+typedef void (APIENTRYP PFNGLFRAMEBUFFERRENDERBUFFERPROC) (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+typedef void (APIENTRYP PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC) (GLenum target, GLenum attachment, GLenum pname, GLint *params);
+typedef void (APIENTRYP PFNGLGENERATEMIPMAPPROC) (GLenum target);
+#endif
 //static PFNGLISFRAMEBUFFERPROC glIsFramebuffer = NULL;
 static PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
 static PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
@@ -197,21 +261,20 @@ static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 //PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
 //PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetFramebufferAttachmentParameteriv = NULL;
 static PFNGLGENERATEMIPMAPPROC glGenerateMipmap = NULL;
-#endif
 
-#ifdef GL_ARB_sync
 // Sync Objects https://www.opengl.org/wiki/Sync_Object
-//typedef GLsync (APIENTRYP PFNGLFENCESYNCPROC) (GLenum condition, GLbitfield flags);
-static PFNGLFENCESYNCPROC glFenceSync = NULL;
-//typedef GLboolean (APIENTRYP PFNGLISSYNCPROC) (GLsync sync);
-static PFNGLISSYNCPROC glIsSync = NULL;
-//typedef void (APIENTRYP PFNGLDELETESYNCPROC) (GLsync sync);
-static PFNGLDELETESYNCPROC glDeleteSync = NULL;
-//typedef GLenum (APIENTRYP PFNGLCLIENTWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
-static PFNGLCLIENTWAITSYNCPROC glClientWaitSync = NULL;
-//typedef void (APIENTRYP PFNGLWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
-static PFNGLWAITSYNCPROC glWaitSync = NULL;
+#ifndef GL_ARB_sync
+typedef GLsync (APIENTRYP PFNGLFENCESYNCPROC) (GLenum condition, GLbitfield flags);
+typedef GLboolean (APIENTRYP PFNGLISSYNCPROC) (GLsync sync);
+typedef void (APIENTRYP PFNGLDELETESYNCPROC) (GLsync sync);
+typedef GLenum (APIENTRYP PFNGLCLIENTWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
+typedef void (APIENTRYP PFNGLWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
 #endif
+static PFNGLFENCESYNCPROC glFenceSync = NULL;
+static PFNGLISSYNCPROC glIsSync = NULL;
+static PFNGLDELETESYNCPROC glDeleteSync = NULL;
+static PFNGLCLIENTWAITSYNCPROC glClientWaitSync = NULL;
+static PFNGLWAITSYNCPROC glWaitSync = NULL;
 
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
@@ -1287,14 +1350,14 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             // linear = GL_LINEAR/GL_LINEAR
             // mipmap = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR
             FilterEnum filter = args.renderQualityDraft ? eFilterNearest : (FilterEnum)_filter[i]->getValueAtTime(time);
-#ifdef GL_ARB_framebuffer_object
+
+            // GL_ARB_framebuffer_object
             // https://www.opengl.org/wiki/Common_Mistakes#Automatic_mipmap_generation
             if ((filter == eFilterMipmap || filter == eFilterAnisotropic) && glGenerateMipmap) {
                 glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
                 glGenerateMipmap(GL_TEXTURE_2D);  //Generate mipmaps now!!!
                 glCheckError();
             }
-#endif
             GLenum min_filter = GL_NEAREST;
             GLenum mag_filter = GL_NEAREST;
             switch (filter) {
@@ -1699,7 +1762,7 @@ ShadertoyPlugin::contextAttached(bool createContextData)
 #endif
 
         // Framebuffers
-#ifdef GL_ARB_framebuffer_object
+        // GL_ARB_framebuffer_object
         //glIsFramebuffer = (PFNGLISFRAMEBUFFERPROC)wglGetProcAddress("glIsFramebuffer");
         glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)wglGetProcAddress("glBindFramebuffer");
         glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)wglGetProcAddress("glDeleteFramebuffers");
@@ -1711,7 +1774,6 @@ ShadertoyPlugin::contextAttached(bool createContextData)
         //glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)wglGetProcAddress("glFramebufferRenderbuffer");
         //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)wglGetProcAddress("glGetFramebufferAttachmentParameteriv");
         glGenerateMipmap = (PFNGLGENERATEMIPMAPPROC)wglGetProcAddress("glGenerateMipmap");
-#endif
 
 #ifdef GL_ARB_sync
         // Sync Objects https://www.opengl.org/wiki/Sync_Object
