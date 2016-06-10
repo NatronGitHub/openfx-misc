@@ -130,7 +130,8 @@ CXXFLAGS += \
 # commit aa2f7451cfa3a881948453cce0be175acbc6ca10 is CImg 1.7.1
 # commit 81e3aebe14544ac975125a50e52dc35130dd6d0d is CImg 1.7.1 + abort fixes
 # commit 4f8f21f3cf1707e8a9b6d2100fc61d3b3768ce34 is CImg 1.7.1 + use macros for openmp
-CIMGVERSION=4f8f21f3cf1707e8a9b6d2100fc61d3b3768ce34
+# commit 72c6b1f8aad6af32f27acbedd07b0ec72475c4c6 is CImg 1.7.2
+CIMGVERSION=72c6b1f8aad6af32f27acbedd07b0ec72475c4c6
 
 CImg.h:
 	curl -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
