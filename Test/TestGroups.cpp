@@ -66,6 +66,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamForceCopyLabel "Force Copy"
 #define kParamForceCopyHint "Force copy from input to output"
 
+// test setting double param properties on the instance
+#define kParamDoubleTest "doubleTest"
+#define kParamDoubleTestLabel "doubleTestLabel"
+#define kParamDoubleTestHint "doubleTestHint"
+#define kParamDoubleTestDefault "doubleTestDefault"
+#define kParamDoubleTestMin "doubleTestMin"
+#define kParamDoubleTestMax "doubleTestMax"
+#define kParamDoubleTestDisplayMin "doubleTestDisplayMin"
+#define kParamDoubleTestDisplayMax "doubleTestDisplayMax"
+#define kParamOptionalClipLabel "optionalClipLabel"
+#define kParamOptionalClipHint "optionalClipHint"
+
+#define kClipOptional "optional"
+#define kClipOptionalLabel "Optional Clip"
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -78,6 +92,7 @@ public:
         : ImageEffect(handle)
         , _dstClip(0)
         , _srcClip(0)
+        , _optionalClip(0)
         , _maskClip(0)
         , _testButton(0)
         , _labelString(0)
@@ -92,6 +107,7 @@ public:
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
+        _optionalClip = fetchClip(kClipOptional);
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
@@ -109,6 +125,17 @@ public:
         _testButton = fetchPushButtonParam(kParamTestButton);
         _labelString = fetchStringParam(kParamLabelString);
         _double2 = fetchDoubleParam(kParamDouble2);
+        _doubleTest = fetchDoubleParam(kParamDoubleTest);
+        _doubleTestLabel = fetchStringParam(kParamDoubleTestLabel);
+        _doubleTestHint = fetchStringParam(kParamDoubleTestHint);
+        _doubleTestDefault = fetchDoubleParam(kParamDoubleTestDefault);
+        _doubleTestMin = fetchDoubleParam(kParamDoubleTestMin);
+        _doubleTestMax = fetchDoubleParam(kParamDoubleTestMax);
+        _doubleTestDisplayMin = fetchDoubleParam(kParamDoubleTestDisplayMin);
+        _doubleTestDisplayMax = fetchDoubleParam(kParamDoubleTestDisplayMax);
+        _optionalClipLabel = fetchStringParam(kParamOptionalClipLabel);
+        _optionalClipHint = fetchStringParam(kParamOptionalClipHint);
+
     }
 
 private:
@@ -120,6 +147,7 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
+    OFX::Clip *_optionalClip;
     OFX::Clip *_maskClip;
     OFX::RGBAParam* _color;
     OFX::BooleanParam *_forceCopy;
@@ -129,6 +157,16 @@ private:
     OFX::PushButtonParam* _testButton;
     OFX::StringParam* _labelString;
     OFX::DoubleParam* _double2;
+    OFX::DoubleParam* _doubleTest;
+    OFX::StringParam* _doubleTestLabel;
+    OFX::StringParam* _doubleTestHint;
+    OFX::DoubleParam* _doubleTestDefault;
+    OFX::DoubleParam* _doubleTestMin;
+    OFX::DoubleParam* _doubleTestMax;
+    OFX::DoubleParam* _doubleTestDisplayMin;
+    OFX::DoubleParam* _doubleTestDisplayMax;
+    OFX::StringParam* _optionalClipLabel;
+    OFX::StringParam* _optionalClipHint;
 };
 
 
@@ -349,6 +387,7 @@ void
 TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                                const std::string &paramName)
 {
+    const double time = args.time;
     if (paramName == kParamTestButton) {
         _testButton->setLabel("Clicked!");
         _testButton->setHint("You clicked me!");
@@ -443,7 +482,30 @@ TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
 
         sendMessage( OFX::Message::eMessageMessage, "", oss.str() );
+    } else if (paramName == kParamDoubleTestLabel) {
+        std::string s;
+        _doubleTestLabel->getValueAtTime(time, s);
+        _doubleTest->setLabel(s);
+    } else if (paramName == kParamDoubleTestHint) {
+        std::string s;
+        _doubleTestHint->getValueAtTime(time, s);
+        _doubleTest->setHint(s);
+    } else if (paramName == kParamDoubleTestDefault) {
+        _doubleTest->setDefault(_doubleTestDefault->getValueAtTime(time));
+    } else if (paramName == kParamDoubleTestMin || paramName == kParamDoubleTestMax) {
+        _doubleTest->setRange(_doubleTestMin->getValueAtTime(time), _doubleTestMax->getValueAtTime(time));
+    } else if (paramName == kParamDoubleTestDisplayMin || paramName == kParamDoubleTestMax) {
+        _doubleTest->setDisplayRange(_doubleTestDisplayMin->getValueAtTime(time), _doubleTestDisplayMax->getValueAtTime(time));
+    } else if (paramName == kParamOptionalClipLabel) {
+        std::string s;
+        _optionalClipLabel->getValueAtTime(time, s);
+        _optionalClip->setLabel(s);
+    } else if (paramName == kParamOptionalClipHint) {
+        std::string s;
+        _optionalClipHint->getValueAtTime(time, s);
+        _optionalClip->setHint(s);
     }
+
 } // TestGroupsPlugin::changedParam
 
 mDeclarePluginFactory(TestGroupsPluginFactory, {}, {});
@@ -486,6 +548,13 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setIsMask(false);
+
+    {
+        ClipDescriptor *clip = desc.defineClip(kClipOptional);
+        clip->setLabel(kClipOptionalLabel);
+        clip->addSupportedComponent(ePixelComponentRGBA);
+        clip->setOptional(true);
+    }
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -577,6 +646,85 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(0.5);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDoubleTest);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        StringParamDescriptor *param = desc.defineStringParam(kParamDoubleTestLabel);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        StringParamDescriptor *param = desc.defineStringParam(kParamDoubleTestHint);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDoubleTestDefault);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDoubleTestMin);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDoubleTestMax);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDoubleTestDisplayMin);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDoubleTestDisplayMax);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        StringParamDescriptor *param = desc.defineStringParam(kParamOptionalClipLabel);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        StringParamDescriptor *param = desc.defineStringParam(kParamOptionalClipHint);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }
