@@ -869,6 +869,11 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             AutoMutex lock( _rendererInfoMutex.get() );
             _rendererInfo.clear();
         }
+    } else if (paramName == kParamCPUDriver) {
+        {
+            AutoMutex lock( _rendererInfoMutex.get() );
+            _rendererInfo.clear();
+        }
 #endif
     }
 } // ShadertoyPlugin::changedParam
