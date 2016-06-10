@@ -98,6 +98,9 @@ supportsChannelSelector=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxParametricParameterSuite,NukeOfxCameraSuite,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV1,uk.co.thefoundry.FnOfxImageEffectPlaneSuiteV2
 
 - ChoiceParam items can only be set during description and cannot be changed afterwards
+- Parameter labels are not saved, even if they are changed after instance creation: when the project is loaded, the label set in the descriptor is used
+- Parameter hints (kOfxParamPropHint) can be set on parameter instances, but are not taken into account
+- StringParams of type kOfxParamStringIsLabel do not have their value saved, and cannot be changed after Instance creation. The label displayed is thus always the default value of the string
 - Params that are described as secret can never be "revealed", they are doomed to remain secret (fix: set them as secret at the end of effect instance creation)
 - The Modelview matrix is not identity in interacts. Moreover, it is affected by successive transforms, so that the interact itself is affected by the transform.
 - kOfxImageEffectInstancePropSequentialRender property is missing on the Image Effect descriptor (but exists on the host and on the effect instance)
