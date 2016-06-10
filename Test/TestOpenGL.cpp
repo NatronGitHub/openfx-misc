@@ -292,33 +292,11 @@ TestOpenGLPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                                const std::string &paramName)
 {
     if (paramName == kParamRendererInfo) {
-        const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-        bool openGLRender = false;
         std::string message;
-#     if defined(OFX_SUPPORTS_OPENGLRENDER)
-        if (gHostDescription.supportsOpenGLRender) {
-#         ifdef HAVE_OSMESA
-            _enableGPU->getValueAtTime(args.time, openGLRender);
-#         else
-            openGLRender = true;
-#         endif
-        }
-
-        if (openGLRender) {
+        {
             AutoMutex lock( _rendererInfoMutex.get() );
-            message = _rendererInfoGL;
+            message = _rendererInfo;
         }
-#     endif
-#     ifdef HAVE_OSMESA
-        if (!openGLRender) {
-            AutoMutex lock( _rendererInfoMutex.get() );
-            int cpuDriver = 0;
-            if (_cpuDriver) {
-                cpuDriver = _cpuDriver->getValue();
-            }
-            message = _rendererInfoMesa[cpuDriver];
-        }
-#     endif // HAVE_OSMESA
         if ( message.empty() ) {
             sendMessage(OFX::Message::eMessageMessage, "", "OpenGL renderer info not yet available.\n"
                         "Please execute at least one image render and try again.");
@@ -328,6 +306,15 @@ TestOpenGLPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 #if defined(HAVE_OSMESA)
     } else if (paramName == kParamEnableGPU) {
         setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
+        {
+            AutoMutex lock( _rendererInfoMutex.get() );
+            _rendererInfo.clear();
+        }
+    } else if (paramName == kParamCPUDriver) {
+        {
+            AutoMutex lock( _rendererInfoMutex.get() );
+            _rendererInfo.clear();
+        }
 #endif
     }
 } // TestOpenGLPlugin::changedParam
