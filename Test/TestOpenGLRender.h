@@ -64,9 +64,10 @@
 //#  include <GL/glu.h>
 #endif
 
+#include "ofxsOGLDebug.h"
+
 #ifndef DEBUG
 #define DPRINT(args) (void)0
-#define glCheckError() ( (void)0 )
 #else
 #include <cstdarg> // ...
 #include <iostream>
@@ -77,6 +78,41 @@
 #    define snprintf _snprintf
 #  endif
 #endif // defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+
+#define DPRINT(args) print_dbg args
+static
+void
+print_dbg(const char *format,
+          ...)
+{
+    char str[1024];
+    va_list ap;
+
+    va_start(ap, format);
+    size_t size = sizeof(str);
+#if defined(_MSC_VER)
+#  if _MSC_VER >= 1400
+    vsnprintf_s(str, size, _TRUNCATE, format, ap);
+#  else
+    if (size == 0) {      /* not even room for a \0? */
+        return -1;        /* not what C99 says to do, but what windows does */
+    }
+    str[size - 1] = '\0';
+    _vsnprintf(str, size - 1, format, ap);
+#  endif
+#else
+    vsnprintf(str, size, format, ap);
+#endif
+    std::fwrite(str, sizeof(char), std::strlen(str), stderr);
+    //std::cout << str;
+    std::fflush(stderr);
+#ifdef _WIN32
+    OutputDebugString(str);
+#endif
+    va_end(ap);
+}
+
+#endif // ifndef DEBUG
 
 
 #if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
@@ -240,92 +276,6 @@ typedef void (APIENTRYP PFNGLWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuin
 
 using namespace OFX;
 
-// put a breakpoint in glError to halt the debugger
-inline static void
-glError() {}
-
-inline static const char*
-glErrorString(GLenum errorCode)
-{
-    static const struct
-    {
-        GLenum code;
-        const char *string;
-    }
-
-    errors[] =
-    {
-        /* GL */
-        {GL_NO_ERROR, "no error"},
-        {GL_INVALID_ENUM, "invalid enumerant"},
-        {GL_INVALID_VALUE, "invalid value"},
-        {GL_INVALID_OPERATION, "invalid operation"},
-        {GL_STACK_OVERFLOW, "stack overflow"},
-        {GL_STACK_UNDERFLOW, "stack underflow"},
-        {GL_OUT_OF_MEMORY, "out of memory"},
-#ifdef GL_EXT_histogram
-        {GL_TABLE_TOO_LARGE, "table too large"},
-#endif
-#ifdef GL_EXT_framebuffer_object
-        {GL_INVALID_FRAMEBUFFER_OPERATION_EXT, "invalid framebuffer operation"},
-#endif
-
-        {0, NULL }
-    };
-    int i;
-
-    for (i = 0; errors[i].string; i++) {
-        if (errors[i].code == errorCode) {
-            return errors[i].string;
-        }
-    }
-
-    return NULL;
-}
-
-#define glCheckError()                                                  \
-    {                                                                   \
-        GLenum _glerror_ = glGetError();                                \
-        if (_glerror_ != GL_NO_ERROR) {                                 \
-            std::cout << "GL_ERROR: " << __FILE__ << ":" << __LINE__ << " " << glErrorString(_glerror_) << std::endl; \
-            glError();                                                  \
-        }                                                               \
-    }
-
-#define DPRINT(args) print_dbg args
-static
-void
-print_dbg(const char *format,
-          ...)
-{
-    char str[1024];
-    va_list ap;
-
-    va_start(ap, format);
-    size_t size = sizeof(str);
-#if defined(_MSC_VER)
-#  if _MSC_VER >= 1400
-    vsnprintf_s(str, size, _TRUNCATE, format, ap);
-#  else
-    if (size == 0) {      /* not even room for a \0? */
-        return -1;        /* not what C99 says to do, but what windows does */
-    }
-    str[size - 1] = '\0';
-    _vsnprintf(str, size - 1, format, ap);
-#  endif
-#else
-    vsnprintf(str, size, format, ap);
-#endif
-    std::fwrite(str, sizeof(char), std::strlen(str), stderr);
-    //std::cout << str;
-    std::fflush(stderr);
-#ifdef _WIN32
-    OutputDebugString(str);
-#endif
-    va_end(ap);
-}
-
-#endif // ifndef DEBUG
 
 static
 int
