@@ -24,6 +24,8 @@
 #define Misc_Shadertoy_h
 
 #include <memory>
+#include <climits>
+#include <cfloat>
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
@@ -82,6 +84,186 @@ public:
         eWrapClamp
     };
 
+    // a simple variant to represent an extra parameter
+    class ExtraParameter {
+    public:
+        union ExtraParameterValue {
+            bool b; // bool
+            int i; // int
+            double f[4]; // float, vec2, vec3, vec4
+        };
+    private:
+        UniformTypeEnum _type;
+        std::string _name;
+        std::string _hint;
+        ExtraParameterValue _default;
+        ExtraParameterValue _min;
+        ExtraParameterValue _max;
+        //ExtraParameterValue _displayMin;
+        //ExtraParameterValue _displayMax;
+
+    public:
+        ExtraParameter()
+        : _type(eUniformTypeNone)
+        {
+        }
+
+        void
+        init(UniformTypeEnum type, const std::string& name)
+        {
+            _type = type;
+            _name = name;
+            _hint.clear();
+            switch (type) {
+                case eUniformTypeNone:
+                    break;
+                case eUniformTypeBool:
+                    _default.b = false;
+                    break;
+                case eUniformTypeInt:
+                    _default.i = 0;
+                    _min.i = INT_MIN;
+                    _max.i = INT_MAX;
+                    //_displayMin.i = INT_MIN;
+                    //_displayMax.i = INT_MAX;
+                    break;
+                case eUniformTypeVec4:
+                    _default.f[3] = 0;
+                    _min.f[3] = -DBL_MAX;
+                    _max.f[3] = DBL_MAX;
+                    //_displayMin.f[3] = -DBL_MAX;
+                    //_displayMax.f[3] = DBL_MAX;
+                case eUniformTypeVec3:
+                    _default.f[2] = 0;
+                    _min.f[2] = -DBL_MAX;
+                    _max.f[2] = DBL_MAX;
+                    //_displayMin.f[2] = -DBL_MAX;
+                    //_displayMax.f[2] = DBL_MAX;
+                case eUniformTypeVec2:
+                    _default.f[1] = 0;
+                    _min.f[1] = -DBL_MAX;
+                    _max.f[1] = DBL_MAX;
+                    //_displayMin.f[1] = -DBL_MAX;
+                    //_displayMax.f[1] = DBL_MAX;
+                case eUniformTypeFloat:
+                    _default.f[0] = 0;
+                    _min.f[0] = -DBL_MAX;
+                    _max.f[0] = DBL_MAX;
+                    //_displayMin.f[0] = -DBL_MAX;
+                    //_displayMax.f[0] = DBL_MAX;
+                    break;
+            }
+        }
+
+        UniformTypeEnum
+        getType() const
+        {
+            return _type;
+        }
+
+        const std::string&
+        getName() const
+        {
+            return _name;
+        }
+
+        const std::string&
+        getHint() const
+        {
+            return _hint;
+        }
+
+        ExtraParameterValue&
+        getDefault()
+        {
+            return _default;
+        }
+
+        const ExtraParameterValue&
+        getDefault() const
+        {
+            return _default;
+        }
+
+        ExtraParameterValue&
+        getMin()
+        {
+            return _min;
+        }
+
+        const ExtraParameterValue&
+        getMin() const
+        {
+            return _min;
+        }
+
+        ExtraParameterValue&
+        getMax()
+        {
+            return _max;
+        }
+
+        const ExtraParameterValue&
+        getMax() const
+        {
+            return _max;
+        }
+
+        void
+        setHint(const std::string& hint)
+        {
+            _hint = hint;
+        }
+
+        void
+        set(ExtraParameterValue& val, bool b)
+        {
+            assert(_type == eUniformTypeBool);
+            val.b = b;
+        }
+
+        void
+        set(ExtraParameterValue& val, int i)
+        {
+            assert(_type == eUniformTypeInt);
+            val.i = i;
+        }
+
+        void
+        set(ExtraParameterValue& val, float f)
+        {
+            assert(_type == eUniformTypeFloat);
+            val.f[0] = f;
+        }
+
+        void
+        set(ExtraParameterValue& val, float x, float y)
+        {
+            assert(_type == eUniformTypeVec2);
+            val.f[0] = x;
+            val.f[1] = y;
+        }
+
+        void
+        set(ExtraParameterValue& val, float r, float g, float b)
+        {
+            assert(_type == eUniformTypeVec3);
+            val.f[0] = r;
+            val.f[1] = g;
+            val.f[2] = b;
+        }
+
+        void
+        set(ExtraParameterValue& val, float r, float g, float b, float a)
+        {
+            assert(_type == eUniformTypeVec4);
+            val.f[0] = r;
+            val.f[1] = g;
+            val.f[2] = b;
+            val.f[3] = a;
+        }
+    };
+
 #ifdef OFX_USE_MULTITHREAD_MUTEX
     typedef OFX::MultiThread::Mutex Mutex;
     typedef OFX::MultiThread::AutoMutex AutoMutex;
@@ -138,6 +320,7 @@ private:
 private:
     void updateVisibility();
     void updateVisibilityParam(unsigned i, bool visible);
+    void updateExtra();
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -152,23 +335,44 @@ private:
     OFX::StringParam *_imageShaderSource;
     OFX::PushButtonParam *_imageShaderCompile;
     OFX::IntParam *_imageShaderTriggerRender;
+    OFX::BooleanParam *_imageShaderRecompiled;
+    OFX::BooleanParam *_paramAuto;
+    OFX::BooleanParam *_mouseParams;
     OFX::Double2DParam *_mousePosition;
     OFX::Double2DParam *_mouseClick;
     OFX::BooleanParam *_mousePressed;
+    OFX::GroupParam *_groupExtra;
     OFX::IntParam *_paramCount;
     std::vector<OFX::ChoiceParam *> _paramType;
     std::vector<OFX::StringParam *> _paramName;
+    std::vector<OFX::StringParam *> _paramHint;
     std::vector<OFX::BooleanParam *> _paramValueBool;
     std::vector<OFX::IntParam *> _paramValueInt;
     std::vector<OFX::DoubleParam *> _paramValueFloat;
     std::vector<OFX::Double2DParam *> _paramValueVec2;
     std::vector<OFX::Double3DParam *> _paramValueVec3;
     std::vector<OFX::RGBAParam *> _paramValueVec4;
+    std::vector<OFX::BooleanParam *> _paramDefaultBool;
+    std::vector<OFX::IntParam *> _paramDefaultInt;
+    std::vector<OFX::DoubleParam *> _paramDefaultFloat;
+    std::vector<OFX::Double2DParam *> _paramDefaultVec2;
+    std::vector<OFX::Double3DParam *> _paramDefaultVec3;
+    std::vector<OFX::RGBAParam *> _paramDefaultVec4;
+    std::vector<OFX::IntParam *> _paramMinInt;
+    std::vector<OFX::DoubleParam *> _paramMinFloat;
+    std::vector<OFX::Double2DParam *> _paramMinVec2;
+    std::vector<OFX::IntParam *> _paramMaxInt;
+    std::vector<OFX::DoubleParam *> _paramMaxFloat;
+    std::vector<OFX::Double2DParam *> _paramMaxVec2;
     OFX::BooleanParam *_enableGPU;
     OFX::ChoiceParam *_cpuDriver;
     std::auto_ptr<Mutex> _imageShaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
+    std::vector<ExtraParameter> _imageShaderExtraParameters; // parameters extracted from the shader
+    bool _imageShaderHasMouse;
+    bool _imageShaderCompiled;
+
     struct OpenGLContextData
     {
         OpenGLContextData()

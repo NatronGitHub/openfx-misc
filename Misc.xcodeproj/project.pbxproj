@@ -2715,6 +2715,7 @@
 		1E52FFCD1955CE720000FB79 /* Premult.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Premult.cpp; sourceTree = "<group>"; };
 		1E52FFD31955CE890000FB79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E52FFD41955CE890000FB79 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E534A0E1D0D9BAD0007AD92 /* ofxsOGLDebug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLDebug.h; sourceTree = "<group>"; };
 		1E53BF891C75CD8100623EE0 /* ColorBars.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorBars.cpp; sourceTree = "<group>"; };
 		1E53BF8A1C75CD8100623EE0 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E53BF8B1C75CD8100623EE0 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -4344,6 +4345,7 @@
 				1E9B5F4C198A51840095C8AA /* ofxsMerging.h */,
 				1ED5373A1A234F12007966D5 /* ofxsMipmap.cpp */,
 				1ED5373B1A234F12007966D5 /* ofxsMipmap.h */,
+				1E534A0E1D0D9BAD0007AD92 /* ofxsOGLDebug.h */,
 				1E9B5F4D198A51840095C8AA /* ofxsOGLFontData.cpp */,
 				1E9B5F4E198A51840095C8AA /* ofxsOGLFontUtils.h */,
 				1E9B5F4F198A51840095C8AA /* ofxsOGLTextRenderer.cpp */,

@@ -76,6 +76,55 @@
 //#  include <GL/glu.h>
 #endif
 
+#include "ofxsOGLDebug.h"
+
+#ifndef DEBUG
+#define DPRINT(args) (void)0
+#else
+#include <cstdarg> // ...
+#include <iostream>
+#include <stdio.h> // for snprintf & _snprintf
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#  include <windows.h>
+#  if defined(_MSC_VER) && _MSC_VER < 1900
+#    define snprintf _snprintf
+#  endif
+#endif // defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+
+#define DPRINT(args) print_dbg args
+static
+void
+print_dbg(const char *format,
+          ...)
+{
+    char str[1024];
+    va_list ap;
+
+    va_start(ap, format);
+    size_t size = sizeof(str);
+#if defined(_MSC_VER)
+#  if _MSC_VER >= 1400
+    vsnprintf_s(str, size, _TRUNCATE, format, ap);
+#  else
+    if (size == 0) {      /* not even room for a \0? */
+        return -1;        /* not what C99 says to do, but what windows does */
+    }
+    str[size - 1] = '\0';
+    _vsnprintf(str, size - 1, format, ap);
+#  endif
+#else
+    vsnprintf(str, size, format, ap);
+#endif
+    std::fwrite(str, sizeof(char), std::strlen(str), stderr);
+    std::fflush(stderr);
+#ifdef _WIN32
+    OutputDebugString(str);
+#endif
+    va_end(ap);
+}
+
+#endif // ifndef DEBUG
+
 #define NBINPUTS SHADERTOY_NBINPUTS
 #define NBUNIFORMS SHADERTOY_NBUNIFORMS
 
@@ -278,105 +327,6 @@ static PFNGLWAITSYNCPROC glWaitSync = NULL;
 
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
-#ifndef DEBUG
-#define DPRINT(args) (void)0
-#define glCheckError() ( (void)0 )
-#else
-#include <cstdarg> // ...
-#include <iostream>
-#include <stdio.h> // for snprintf & _snprintf
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#  include <windows.h>
-#  if defined(_MSC_VER) && _MSC_VER < 1900
-#    define snprintf _snprintf
-#  endif
-#endif // defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-
-// put a breakpoint in glError to halt the debugger
-inline void
-glError() {}
-
-inline const char*
-glErrorString(GLenum errorCode)
-{
-    static const struct
-    {
-        GLenum code;
-        const char *string;
-    }
-
-    errors[] =
-    {
-        /* GL */
-        {GL_NO_ERROR, "no error"},
-        {GL_INVALID_ENUM, "invalid enumerant"},
-        {GL_INVALID_VALUE, "invalid value"},
-        {GL_INVALID_OPERATION, "invalid operation"},
-        {GL_STACK_OVERFLOW, "stack overflow"},
-        {GL_STACK_UNDERFLOW, "stack underflow"},
-        {GL_OUT_OF_MEMORY, "out of memory"},
-#ifdef GL_EXT_histogram
-        {GL_TABLE_TOO_LARGE, "table too large"},
-#endif
-#ifdef GL_EXT_framebuffer_object
-        {GL_INVALID_FRAMEBUFFER_OPERATION_EXT, "invalid framebuffer operation"},
-#endif
-
-        {0, NULL }
-    };
-    int i;
-
-    for (i = 0; errors[i].string; i++) {
-        if (errors[i].code == errorCode) {
-            return errors[i].string;
-        }
-    }
-
-    return NULL;
-}
-
-#define glCheckError()                                                  \
-    {                                                                   \
-        GLenum _glerror_ = glGetError();                                \
-        if (_glerror_ != GL_NO_ERROR) {                                 \
-            std::cout << "GL_ERROR: " << __FILE__ << ":" << __LINE__ << " " << glErrorString(_glerror_) << std::endl; \
-            glError();                                                  \
-        }                                                               \
-    }
-
-#define DPRINT(args) print_dbg args
-static
-void
-print_dbg(const char *format,
-          ...)
-{
-    char str[1024];
-    va_list ap;
-
-    va_start(ap, format);
-    size_t size = sizeof(str);
-#if defined(_MSC_VER)
-#  if _MSC_VER >= 1400
-    vsnprintf_s(str, size, _TRUNCATE, format, ap);
-#  else
-    if (size == 0) {      /* not even room for a \0? */
-        return -1;        /* not what C99 says to do, but what windows does */
-    }
-    str[size - 1] = '\0';
-    _vsnprintf(str, size - 1, format, ap);
-#  endif
-#else
-    vsnprintf(str, size, format, ap);
-#endif
-    std::fwrite(str, sizeof(char), std::strlen(str), stderr);
-    std::fflush(stderr);
-#ifdef _WIN32
-    OutputDebugString(str);
-#endif
-    va_end(ap);
-}
-
-#endif // ifndef DEBUG
 
 
 static
@@ -419,6 +369,13 @@ glutExtensionSupported( const char* extension )
     return 0;
 }
 
+static inline
+bool
+starts_with(const std::string &str,
+            const std::string &prefix)
+{
+    return (str.substr( 0, prefix.size() ) == prefix);
+}
 
 #ifdef USE_OSMESA
 struct ShadertoyPlugin::OSMesaPrivate
@@ -762,12 +719,13 @@ compileAndLinkProgram(const char *vertexShader,
         // GL_FLOAT, GL_FLOAT_VEC3, GL_FLOAT_MAT4
 
         GLint bufSize; // maximum name length
-        glGetProgramiv(program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &bufSize);
 
-        std::vector<GLchar> name(bufSize); // variable name in GLSL
+        std::vector<GLchar> name; // variable name in GLSL
         GLsizei length; // name length
 
         // Attributes
+        glGetProgramiv(program,  GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &bufSize);
+        name.resize(bufSize);
         count = 0;
         glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &count);
         if (count > 0) {
@@ -775,11 +733,13 @@ compileAndLinkProgram(const char *vertexShader,
         }
         for (i = 0; i < count; i++) {
             glGetActiveAttrib(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
-
-            DPRINT( ("Attribute #%d Type: 0x%04x Name: %s\n", i, type, &name[0]) );
+            glCheckError();
+            DPRINT( ("Attribute #%d Type: %s Name: %s\n", i, glGetEnumString(type), &name[0]) );
         }
 
         // Uniforms
+        glGetProgramiv(program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &bufSize);
+        name.resize(bufSize);
         count = 0;
         glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
         if (count > 0) {
@@ -787,8 +747,85 @@ compileAndLinkProgram(const char *vertexShader,
         }
         for (i = 0; i < count; i++) {
             glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
-            
-            DPRINT( ("Uniform #%d Type: 0x%04x Name: %s\n", i, type, &name[0]) );
+            glCheckError();
+            DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), &name[0]) );
+            GLint loc = glGetUniformLocation(program, &name[0]);
+            if(loc >= 0) {
+                switch (type) {
+                    case GL_FLOAT: {
+                        GLfloat v;
+                        glGetUniformfv(program, loc, &v);
+                        DPRINT( ("Value: %g\n", v) );
+                        break;
+                    }
+                    case GL_FLOAT_VEC2: {
+                        GLfloat v[2];
+                        glGetUniformfv(program, loc, v);
+                        DPRINT( ("Value: (%g, %g)\n", v[0], v[1]) );
+                        break;
+                    }
+                    case GL_FLOAT_VEC3: {
+                        GLfloat v[3];
+                        glGetUniformfv(program, loc, v);
+                        DPRINT( ("Value: (%g, %g, %g)\n", v[0], v[1], v[2]) );
+                        break;
+                    }
+                    case GL_FLOAT_VEC4: {
+                        GLfloat v[4];
+                        glGetUniformfv(program, loc, v);
+                        DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
+                        break;
+                    }
+                    case GL_INT:
+                    case GL_BOOL: {
+                        GLint v;
+                        glGetUniformiv(program, loc, &v);
+                        DPRINT( ("Value: %d\n", v) );
+                        break;
+                    }
+                    case GL_INT_VEC2:
+                    case GL_BOOL_VEC2: {
+                        GLint v[2];
+                        glGetUniformiv(program, loc, v);
+                        DPRINT( ("Value: (%d, %d)\n", v[0], v[1]) );
+                        break;
+                    }
+                    case GL_INT_VEC3:
+                    case GL_BOOL_VEC3: {
+                        GLint v[3];
+                        glGetUniformiv(program, loc, v);
+                        DPRINT( ("Value: (%d, %d, %d)\n", v[0], v[1], v[2]) );
+                        break;
+                    }
+                    case GL_BOOL_VEC4:
+                    case GL_INT_VEC4: {
+                        GLint v[4];
+                        glGetUniformiv(program, loc, v);
+                        DPRINT( ("Value: (%d, %d, %d, %d)\n", v[0], v[1], v[2], v[3]) );
+                        break;
+                    }
+                    case GL_FLOAT_MAT2: {
+                        GLfloat v[4];
+                        glGetUniformfv(program, loc, v);
+                        DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
+                        break;
+                    }
+                    case GL_FLOAT_MAT3: {
+                        GLfloat v[9];
+                        glGetUniformfv(program, loc, v);
+                        DPRINT( ("Value: (%g, %g, %g, %g, %g, %g, %g, %g, %g)\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6] , v[7], v[8]) );
+                        break;
+                    }
+                    case GL_FLOAT_MAT4: {
+                        GLfloat v[16];
+                        glGetUniformfv(program, loc, v);
+                        DPRINT( ("Value: (%g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g)\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6] , v[7], v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15]) );
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }
         }
         glCheckError();
     }
@@ -1126,6 +1163,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif
 
     // compile and link the shader if necessary
+    bool imageShaderCompiled = false;
     ShadertoyShader *shadertoy;
     {
         AutoMutex lock( _imageShaderMutex.get() );
@@ -1153,6 +1191,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             fsSource += str + '\n' + fsFooter;
             std::string errstr;
             shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fsSource.c_str(), errstr);
+            const GLuint program = shadertoy->program;
             if (shadertoy->program == 0) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
                 sendMessage( OFX::Message::eMessageError, "", errstr.c_str() );
@@ -1160,17 +1199,17 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
                 return;
             }
-            shadertoy->iResolutionLoc        = glGetUniformLocation(shadertoy->program, "iResolution");
-            shadertoy->iGlobalTimeLoc        = glGetUniformLocation(shadertoy->program, "iGlobalTime");
-            shadertoy->iTimeDeltaLoc         = glGetUniformLocation(shadertoy->program, "iTimeDelta");
-            shadertoy->iFrameLoc             = glGetUniformLocation(shadertoy->program, "iFrame");
-            shadertoy->iChannelTimeLoc       = glGetUniformLocation(shadertoy->program, "iChannelTime");
-            shadertoy->iMouseLoc             = glGetUniformLocation(shadertoy->program, "iMouse");
-            shadertoy->iDateLoc              = glGetUniformLocation(shadertoy->program, "iDate");
-            shadertoy->iSampleRateLoc        = glGetUniformLocation(shadertoy->program, "iSampleRate");
-            shadertoy->iChannelResolutionLoc = glGetUniformLocation(shadertoy->program, "iChannelResolution");
-            shadertoy->ifFragCoordOffsetUniformLoc = glGetUniformLocation(shadertoy->program, "ifFragCoordOffsetUniform");
-            shadertoy->iRenderScaleLoc = glGetUniformLocation(shadertoy->program, "iRenderScale");
+            shadertoy->iResolutionLoc        = glGetUniformLocation(program, "iResolution");
+            shadertoy->iGlobalTimeLoc        = glGetUniformLocation(program, "iGlobalTime");
+            shadertoy->iTimeDeltaLoc         = glGetUniformLocation(program, "iTimeDelta");
+            shadertoy->iFrameLoc             = glGetUniformLocation(program, "iFrame");
+            shadertoy->iChannelTimeLoc       = glGetUniformLocation(program, "iChannelTime");
+            shadertoy->iMouseLoc             = glGetUniformLocation(program, "iMouse");
+            shadertoy->iDateLoc              = glGetUniformLocation(program, "iDate");
+            shadertoy->iSampleRateLoc        = glGetUniformLocation(program, "iSampleRate");
+            shadertoy->iChannelResolutionLoc = glGetUniformLocation(program, "iChannelResolution");
+            shadertoy->ifFragCoordOffsetUniformLoc = glGetUniformLocation(program, "ifFragCoordOffsetUniform");
+            shadertoy->iRenderScaleLoc = glGetUniformLocation(program, "iRenderScale");
             char iChannelX[10] = "iChannelX"; // index 8 holds the channel character
             assert(NBINPUTS < 10 && iChannelX[8] == 'X');
             for (unsigned i = 0; i < NBINPUTS; ++i) {
@@ -1178,6 +1217,152 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 shadertoy->iChannelLoc[i] = glGetUniformLocation(shadertoy->program, iChannelX);
                 //printf("%s -> %d\n", iChannelX, (int)shadertoy->iChannelLoc[i]);
             }
+
+            // mark if shader has mouse params
+            _imageShaderHasMouse = (shadertoy->iMouseLoc >= 0);
+
+            _imageShaderExtraParameters.clear();
+            {
+                // go through the uniforms, and list extra parameters
+
+                GLint i;
+                GLint count;
+
+                GLint size; // size of the variable
+                GLenum type; // type of the variable (float, vec3 or mat4, etc)
+
+                GLint bufSize; // maximum name length
+
+                std::string name; // variable name in GLSL
+                GLsizei length; // name length
+
+                // Uniforms
+                glGetProgramiv(program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &bufSize);
+                count = 0;
+                glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
+                if (count > 0) {
+                    //DPRINT( ("Active Uniforms: %d\n", count) );
+                }
+                for (i = 0; i < count; i++) {
+                    name.resize(bufSize);
+                    glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
+                    glCheckError();
+                    name.resize(length);
+                    //DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), &name[0]) );
+                    GLint loc = glGetUniformLocation(program, &name[0]);
+                    if(loc >= 0) {
+                        if ( name == "iResolution" ||
+                            name == "iGlobalTime" ||
+                            name == "iTimeDelta" ||
+                            name == "iFrame" ||
+                            name == "iChannelTime" ||
+                            name == "iMouse" ||
+                            name == "iDate" ||
+                            name == "iSampleRate" ||
+                            name == "iChannelResolution" ||
+                            name == "ifFragCoordOffsetUniform" ||
+                            name == "iRenderScale" ||
+                            starts_with(name, "gl_") ) {
+                            // builtin uniform
+                            continue;
+                        }
+                        UniformTypeEnum t = eUniformTypeNone;
+                        switch (type) {
+                            case GL_BOOL:
+                                t = eUniformTypeBool;
+                                break;
+
+                            case GL_INT:
+                                t = eUniformTypeInt;
+                                break;
+
+                           case GL_FLOAT:
+                                t = eUniformTypeFloat;
+                                break;
+
+                            case GL_FLOAT_VEC2:
+                                t = eUniformTypeVec2;
+                                break;
+
+                            case GL_FLOAT_VEC3:
+                                t = eUniformTypeVec3;
+                                break;
+
+                            case GL_FLOAT_VEC4:
+                                t = eUniformTypeVec4;
+                                break;
+
+                            default:
+                                // ignore uniform
+                                break;
+                        }
+                        if (t == eUniformTypeNone) {
+                            DPRINT( ("Uniform #%d Type: %s Name: %s NOT SUPPORTED\n", i, glGetEnumString(type), &name[0]) );
+                            continue;
+                        }
+
+                        ExtraParameter p;
+                        p.init(t, name);
+                        
+                        switch (t) {
+                            case eUniformTypeBool: {
+                                GLint v;
+                                glGetUniformiv(program, loc, &v);
+                                //DPRINT( ("Value: %d\n", v) );
+                                p.set(p.getDefault(), (bool)v);
+                                break;
+                            }
+                            case eUniformTypeInt: {
+                                GLint v;
+                                glGetUniformiv(program, loc, &v);
+                                //DPRINT( ("Value: %d\n", v) );
+                                p.set(p.getDefault(), (int)v);
+                                break;
+                            }
+                           case eUniformTypeFloat: {
+                                GLfloat v;
+                                glGetUniformfv(program, loc, &v);
+                                //DPRINT( ("Value: %g\n", v) );
+                               p.set(p.getDefault(), (float)v);
+                                break;
+                            }
+                            case eUniformTypeVec2: {
+                                GLfloat v[2];
+                                glGetUniformfv(program, loc, v);
+                                //DPRINT( ("Value: (%g, %g)\n", v[0], v[1]) );
+                                p.set(p.getDefault(), (float)v[0], (float)v[1]);
+                                break;
+                            }
+                            case eUniformTypeVec3: {
+                                GLfloat v[3];
+                                glGetUniformfv(program, loc, v);
+                                //DPRINT( ("Value: (%g, %g, %g)\n", v[0], v[1], v[2]) );
+                                p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2]);
+                                break;
+                            }
+                            case eUniformTypeVec4: {
+                                GLfloat v[4];
+                                glGetUniformfv(program, loc, v);
+                                //DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
+                                p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2], (float)v[3]);
+                                break;
+                            }
+                            default:
+                                assert(false);
+                                break;
+                        }
+
+                        // TODO: parse hint/min/max from comment
+                        _imageShaderExtraParameters.push_back(p);
+                    }
+                }
+            }
+
+            // Note: InstanceChanged is (illegally) triggered at the end of render() using:
+            // _imageShaderRecompiled->setValue( !_imageShaderRecompiled->getValueAtTime(time) );
+            // (setValue is normally not authorized from render())
+            // Mark that setValue has to be called at the end of render():
+            _imageShaderCompiled = imageShaderCompiled = true;
         }
         if (must_recompile || uniforms_changed) {
             std::fill(shadertoy->iParamLoc, shadertoy->iParamLoc + NBUNIFORMS, -1);
@@ -1536,6 +1721,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     gettimeofday(&t2, NULL);
     DPRINT( ( "rendering took %d us\n", 1000000 * (t2.tv_sec - t1.tv_sec) + (t2.tv_usec - t1.tv_usec) ) );
 #endif
+    if (imageShaderCompiled) {
+        // Note: InstanceChanged is (illegally) triggered at the end of render() using:
+        _imageShaderRecompiled->setValue( !_imageShaderRecompiled->getValueAtTime(time) );
+        // (setValue is normally not authorized from render())
+    }
 } // ShadertoyPlugin::RENDERFUNC
 
 static

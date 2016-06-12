@@ -243,7 +243,7 @@ using namespace OFX;
     "uniform float     iSampleRate;           // sound sample rate (i.e., 44100)\n" \
     ""
 #define kParamBBox "bbox"
-#define kParamBBoxLabel "Bounding Box"
+#define kParamBBoxLabel "Output Bounding Box"
 #define kParamBBoxHint "What to use to produce the output image's bounding box. If no selected input is connected, use the project size."
 #define kParamBBoxOptionDefault "Default"
 #define kParamBBoxOptionDefaultHint "Default bounding box (project size)."
@@ -305,6 +305,11 @@ enum BBoxEnum
 // parameter used to trigger an InstanceChanged once the Shader was compiled in the render function
 #define kParamImageShaderRecompiled "imageShaderRecompiled"
 
+#define kParamAuto "autoParams"
+#define kParamAutoLabel "Auto. Params"
+#define kParamAutoHint "Automatically set the parameters from the shader source when the shader is recompiled. Toggle twice to refresh the parameters."
+
+
 #define kParamImageShaderDefault                            \
     "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n" \
     "{\n"                                                       \
@@ -313,6 +318,10 @@ enum BBoxEnum
     "}"
 
 // mouse parameters, see https://www.shadertoy.com/view/Mss3zH
+#define kParamMouseParams "mouseParams"
+#define kParamMouseParamsLabel "Mouse Params."
+#define kParamMouseParamsHint "Enable mouse parameters."
+
 #define kParamMousePosition "mousePosition"
 #define kParamMousePositionLabel "Mouse Pos."
 #define kParamMousePositionHint "Mouse position, in pixels. Gets mapped to the xy components of the iMouse input."
@@ -349,14 +358,43 @@ enum BBoxEnum
 #define kParamNameLabel "Name"
 #define kParamNameHint "Name of the parameter, as used in the shader."
 
-#define kParamValueBool "paramValueBool" // followed by param number
-#define kParamValueInt "paramValueInt" // followed by param number
-#define kParamValueFloat "paramValueFloat" // followed by param number
-#define kParamValueVec2 "paramValueVec2" // followed by param number
-#define kParamValueVec3 "paramValueVec3" // followed by param number
-#define kParamValueVec4 "paramValueVec4" // followed by param number
+#define kParamHint "paramHint" // followed by param number
+#define kParamHintLabel "Hint"
+#define kParamHintHint "Help for the parameter."
+
+#define kParamValue "paramValue"
+#define kParamValueBool kParamValue"Bool" // followed by param number
+#define kParamValueInt kParamValue"Int" // followed by param number
+#define kParamValueFloat kParamValue"Float" // followed by param number
+#define kParamValueVec2 kParamValue"Vec2" // followed by param number
+#define kParamValueVec3 kParamValue"Vec3" // followed by param number
+#define kParamValueVec4 kParamValue"Vec4" // followed by param number
 #define kParamValueLabel "Value" // followed by param number
 #define kParamValueHint "Value of the parameter."
+
+#define kParamDefault "paramDefault"
+#define kParamDefaultBool kParamDefault"Bool" // followed by param number
+#define kParamDefaultInt kParamDefault"Int" // followed by param number
+#define kParamDefaultFloat kParamDefault"Float" // followed by param number
+#define kParamDefaultVec2 kParamDefault"Vec2" // followed by param number
+#define kParamDefaultVec3 kParamDefault"Vec3" // followed by param number
+#define kParamDefaultVec4 kParamDefault"Vec4" // followed by param number
+#define kParamDefaultLabel "Default" // followed by param number
+#define kParamDefaultHint "Default value of the parameter."
+
+#define kParamMin "paramMin"
+#define kParamMinInt kParamMin"Int" // followed by param number
+#define kParamMinFloat kParamMin"Float" // followed by param number
+#define kParamMinVec2 kParamMin"Vec2" // followed by param number
+#define kParamMinLabel "Min" // followed by param number
+#define kParamMinHint "Min value of the parameter."
+
+#define kParamMax "paramMax"
+#define kParamMaxInt kParamMax"Int" // followed by param number
+#define kParamMaxFloat kParamMax"Float" // followed by param number
+#define kParamMaxVec2 kParamMax"Vec2" // followed by param number
+#define kParamMaxLabel "Max" // followed by param number
+#define kParamMaxHint "Max value of the parameter."
 
 #define kParamFilter "mipmap"
 #define kParamFilterLabel "Filter"
@@ -436,19 +474,42 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderSource(0)
     , _imageShaderCompile(0)
     , _imageShaderTriggerRender(0)
+    , _imageShaderRecompiled(0)
+    , _paramAuto(0)
+    , _mouseParams(0)
+    , _mousePosition(0)
+    , _mouseClick(0)
+    , _mousePressed(0)
+    , _groupExtra(0)
     , _paramCount(0)
     , _paramType      (NBUNIFORMS, (OFX::ChoiceParam*)  NULL)
     , _paramName      (NBUNIFORMS, (OFX::StringParam*)  NULL)
+    , _paramHint      (NBUNIFORMS, (OFX::StringParam*)  NULL)
     , _paramValueBool (NBUNIFORMS, (OFX::BooleanParam*) NULL)
     , _paramValueInt  (NBUNIFORMS, (OFX::IntParam*)     NULL)
     , _paramValueFloat(NBUNIFORMS, (OFX::DoubleParam*)  NULL)
     , _paramValueVec2 (NBUNIFORMS, (Double2DParam*)     NULL)
     , _paramValueVec3 (NBUNIFORMS, (OFX::Double3DParam*)NULL)
     , _paramValueVec4 (NBUNIFORMS, (OFX::RGBAParam*)    NULL)
+    , _paramDefaultBool (NBUNIFORMS, (OFX::BooleanParam*) NULL)
+    , _paramDefaultInt  (NBUNIFORMS, (OFX::IntParam*)     NULL)
+    , _paramDefaultFloat(NBUNIFORMS, (OFX::DoubleParam*)  NULL)
+    , _paramDefaultVec2 (NBUNIFORMS, (Double2DParam*)     NULL)
+    , _paramDefaultVec3 (NBUNIFORMS, (OFX::Double3DParam*)NULL)
+    , _paramDefaultVec4 (NBUNIFORMS, (OFX::RGBAParam*)    NULL)
+    , _paramMinInt  (NBUNIFORMS, (OFX::IntParam*)     NULL)
+    , _paramMinFloat(NBUNIFORMS, (OFX::DoubleParam*)  NULL)
+    , _paramMinVec2 (NBUNIFORMS, (Double2DParam*)     NULL)
+    , _paramMaxInt  (NBUNIFORMS, (OFX::IntParam*)     NULL)
+    , _paramMaxFloat(NBUNIFORMS, (OFX::DoubleParam*)  NULL)
+    , _paramMaxVec2 (NBUNIFORMS, (Double2DParam*)     NULL)
     , _enableGPU(0)
     , _cpuDriver(0)
     , _imageShaderID(1)
     , _imageShaderUniformsID(1)
+    , _imageShaderExtraParameters()
+    , _imageShaderHasMouse(false)
+    , _imageShaderCompiled(false)
     , _openGLContextData()
     , _openGLContextAttached(false)
 {
@@ -501,25 +562,44 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _imageShaderSource = fetchStringParam(kParamImageShaderSource);
     _imageShaderCompile = fetchPushButtonParam(kParamImageShaderCompile);
     _imageShaderTriggerRender = fetchIntParam(kParamImageShaderTriggerRender);
-    assert(_imageShaderFileName && _imageShaderSource && _imageShaderCompile && _imageShaderTriggerRender);
+    _imageShaderRecompiled = fetchBooleanParam(kParamImageShaderRecompiled);
+    assert(_imageShaderFileName && _imageShaderSource && _imageShaderCompile && _imageShaderTriggerRender && _imageShaderRecompiled);
+    _paramAuto = fetchBooleanParam(kParamAuto);
+    assert(_paramAuto);
+    _mouseParams = fetchBooleanParam(kParamMouseParams);
+    assert(_mouseParams);
     _mousePosition = fetchDouble2DParam(kParamMousePosition);
     _mouseClick = fetchDouble2DParam(kParamMouseClick);
     _mousePressed = fetchBooleanParam(kParamMousePressed);
     assert(_mousePosition && _mousePressed && _mouseClick);
+    _groupExtra = fetchGroupParam(kGroupExtraParameters);
     _paramCount = fetchIntParam(kParamCount);
-    assert(_paramCount);
+    assert(_groupExtra && _paramCount);
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
         // generate the number string
         std::string nb = unsignedToString(i);
         _paramType[i]       = fetchChoiceParam  (kParamType       + nb);
         _paramName[i]       = fetchStringParam  (kParamName       + nb);
+        _paramHint[i]       = fetchStringParam  (kParamHint       + nb);
         _paramValueBool[i]  = fetchBooleanParam (kParamValueBool  + nb);
         _paramValueInt[i]   = fetchIntParam     (kParamValueInt   + nb);
         _paramValueFloat[i] = fetchDoubleParam  (kParamValueFloat + nb);
         _paramValueVec2[i]  = fetchDouble2DParam(kParamValueVec2  + nb);
         _paramValueVec3[i]  = fetchDouble3DParam(kParamValueVec3  + nb);
         _paramValueVec4[i]  = fetchRGBAParam    (kParamValueVec4  + nb);
-        assert(_paramType[i] && _paramName[i] && _paramValueBool[i] && _paramValueInt[i] && _paramValueFloat[i] && _paramValueVec2[i] && _paramValueVec3[i] && _paramValueVec4[i]);
+        _paramDefaultBool[i]  = fetchBooleanParam (kParamDefaultBool  + nb);
+        _paramDefaultInt[i]   = fetchIntParam     (kParamDefaultInt   + nb);
+        _paramDefaultFloat[i] = fetchDoubleParam  (kParamDefaultFloat + nb);
+        _paramDefaultVec2[i]  = fetchDouble2DParam(kParamDefaultVec2  + nb);
+        _paramDefaultVec3[i]  = fetchDouble3DParam(kParamDefaultVec3  + nb);
+        _paramDefaultVec4[i]  = fetchRGBAParam    (kParamDefaultVec4  + nb);
+        _paramMinInt[i]   = fetchIntParam     (kParamMinInt   + nb);
+        _paramMinFloat[i] = fetchDoubleParam  (kParamMinFloat + nb);
+        _paramMinVec2[i]  = fetchDouble2DParam(kParamMinVec2  + nb);
+        _paramMaxInt[i]   = fetchIntParam     (kParamMaxInt   + nb);
+        _paramMaxFloat[i] = fetchDoubleParam  (kParamMaxFloat + nb);
+        _paramMaxVec2[i]  = fetchDouble2DParam(kParamMaxVec2  + nb);
+        assert(_paramType[i] && _paramName[i] && _paramHint[i] && _paramValueBool[i] && _paramValueInt[i] && _paramValueFloat[i] && _paramValueVec2[i] && _paramValueVec3[i] && _paramValueVec4[i]);
     }
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
@@ -532,6 +612,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         setSupportsOpenGLRender( _enableGPU->getValue() );
     }
 #endif
+    updateExtra();
     updateVisibility();
     initOpenGL();
 #if defined(HAVE_OSMESA)
@@ -545,6 +626,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     // Trigger a render, so that the shader is compiled and parameters are updated.
     // OpenFX allows this, see http://openfx.sourceforge.net/Documentation/1.4/ofxProgrammingReference.html#SettingParams
     // ... but also forbids this, see http://openfx.sourceforge.net/Documentation/1.4/ofxProgrammingReference.html#OfxParameterSuiteV1_paramSetValue
+    // TODO: only do if necessary
     _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue() + 1);
 }
 
@@ -608,9 +690,8 @@ ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     }
     if (bboxChoice == eBBoxFormat) {
         int w, h;
-        _formatSize->getValue(w, h);
-        double par;
-        _formatPar->getValue(par);
+        _formatSize->getValueAtTime(time, w, h);
+        double par = _formatPar->getValueAtTime(time);
         OfxRectI pixelFormat;
         pixelFormat.x1 = pixelFormat.y1 = 0;
         pixelFormat.x2 = w;
@@ -621,8 +702,8 @@ ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         return true;
     }
     /*if (bboxChoice == eBBoxSize) {
-        _size->getValue(rod.x2, rod.y2);
-        _btmLeft->getValue(rod.x1, rod.y1);
+        _size->getValueAtTime(time, rod.x2, rod.y2);
+        _btmLeft->getValueAtTime(time, rod.x1, rod.y1);
         rod.x2 += rod.x1;
         rod.y2 += rod.y1;
 
@@ -723,6 +804,15 @@ ShadertoyPlugin::updateVisibility()
     //_btmLeft->setEnabled(hasSize);
     //_btmLeft->setIsSecret(!hasSize);
 
+    bool mouseParams = _mouseParams->getValue();
+    _mousePosition->setIsSecret(!mouseParams);
+    _mouseClick->setIsSecret(!mouseParams);
+    _mousePressed->setIsSecret(!mouseParams);
+
+    bool paramAuto = _paramAuto->getValue();
+    _mouseParams->setIsSecret(paramAuto);
+    _paramCount->setIsSecret(paramAuto);
+    _groupExtra->setIsSecret(paramAuto);
     unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
         updateVisibilityParam(i, i < paramCount);
@@ -778,23 +868,311 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i,
 
     _paramType[i]->setIsSecret(!visible);
     _paramName[i]->setIsSecret(!visible);
+    _paramHint[i]->setIsSecret(!visible);
     _paramValueBool[i]->setIsSecret(!isBool);
     _paramValueInt[i]->setIsSecret(!isInt);
     _paramValueFloat[i]->setIsSecret(!isFloat);
     _paramValueVec2[i]->setIsSecret(!isVec2);
     _paramValueVec3[i]->setIsSecret(!isVec3);
     _paramValueVec4[i]->setIsSecret(!isVec4);
+    _paramDefaultBool[i]->setIsSecret(!isBool);
+    _paramDefaultInt[i]->setIsSecret(!isInt);
+    _paramDefaultFloat[i]->setIsSecret(!isFloat);
+    _paramDefaultVec2[i]->setIsSecret(!isVec2);
+    _paramDefaultVec3[i]->setIsSecret(!isVec3);
+    _paramDefaultVec4[i]->setIsSecret(!isVec4);
+    _paramMinInt[i]->setIsSecret(!isInt);
+    _paramMinFloat[i]->setIsSecret(!isFloat);
+    _paramMinVec2[i]->setIsSecret(!isVec2);
+    //_paramMinVec3[i]->setIsSecret(!isVec3);
+    //_paramMinVec4[i]->setIsSecret(!isVec4);
+    _paramMaxInt[i]->setIsSecret(!isInt);
+    _paramMaxFloat[i]->setIsSecret(!isFloat);
+    _paramMaxVec2[i]->setIsSecret(!isVec2);
+    //_paramMaxVec3[i]->setIsSecret(!isVec3);
+    //_paramMaxVec4[i]->setIsSecret(!isVec4);
 } // ShadertoyPlugin::updateVisibilityParam
+
+// for each extra parameter that has a nonempty name and a type, set the label of its Value param to its name.
+// If the label is not the default label, then it was set by the host before plugin creation, and we can assume it comes from a loaded project and there was a previous shader compilation => no need to trigger a render, and we can hide the number of params, the param type, and the param name. We can also close the "Image Shader" group.
+void
+ShadertoyPlugin::updateExtra()
+{
+    bool paramAuto = _paramAuto->getValue();
+    if (paramAuto) {
+        AutoMutex lock( _imageShaderMutex.get() );
+        // only do this if shader was actually compiled!
+        if (_imageShaderCompiled) {
+            beginEditBlock(kParamAuto);
+
+            _mouseParams->setValue(_imageShaderHasMouse);
+            _paramCount->setValue(_imageShaderExtraParameters.size());
+            for (unsigned i = 0; i < _imageShaderExtraParameters.size(); ++i) {
+                const ExtraParameter& p = _imageShaderExtraParameters[i];
+                UniformTypeEnum t = p.getType();
+                _paramType[i]->setValue( (int)t );
+                _paramName[i]->setValue( p.getName() );
+                _paramHint[i]->setValue( p.getHint() );
+                switch (t) {
+                    case eUniformTypeBool: {
+                        _paramDefaultBool[i]->setValue(p.getDefault().b);
+                        _paramDefaultInt[i]->resetToDefault();
+                        _paramMinInt[i]->resetToDefault();
+                        _paramMaxInt[i]->resetToDefault();
+                        _paramDefaultFloat[i]->resetToDefault();
+                        _paramMinFloat[i]->resetToDefault();
+                        _paramMaxFloat[i]->resetToDefault();
+                        _paramDefaultVec2[i]->resetToDefault();
+                        _paramMinVec2[i]->resetToDefault();
+                        _paramMaxVec2[i]->resetToDefault();
+                        _paramDefaultVec3[i]->resetToDefault();
+                        //_paramMinVec3[i]->resetToDefault();
+                        //_paramMaxVec3[i]->resetToDefault();
+                        _paramDefaultVec4[i]->resetToDefault();
+                        //_paramMinVec4[i]->resetToDefault();
+                        //_paramMaxVec4[i]->resetToDefault();
+                        break;
+                    }
+                    case eUniformTypeInt: {
+                        _paramDefaultBool[i]->resetToDefault();
+                        _paramDefaultInt[i]->setValue(p.getDefault().i);
+                        _paramMinInt[i]->setValue(p.getMin().i);
+                        _paramMaxInt[i]->setValue(p.getMax().i);
+                        _paramDefaultFloat[i]->resetToDefault();
+                        _paramMinFloat[i]->resetToDefault();
+                        _paramMaxFloat[i]->resetToDefault();
+                        _paramDefaultVec2[i]->resetToDefault();
+                        _paramMinVec2[i]->resetToDefault();
+                        _paramMaxVec2[i]->resetToDefault();
+                        _paramDefaultVec3[i]->resetToDefault();
+                        //_paramMinVec3[i]->resetToDefault();
+                        //_paramMaxVec3[i]->resetToDefault();
+                        _paramDefaultVec4[i]->resetToDefault();
+                        //_paramMinVec4[i]->resetToDefault();
+                        //_paramMaxVec4[i]->resetToDefault();
+                        break;
+                    }
+                    case eUniformTypeFloat: {
+                        _paramDefaultBool[i]->resetToDefault();
+                        _paramDefaultInt[i]->resetToDefault();
+                        _paramMinInt[i]->resetToDefault();
+                        _paramMaxInt[i]->resetToDefault();
+                        _paramDefaultFloat[i]->setValue(p.getDefault().f[0]);
+                        _paramMinFloat[i]->setValue(p.getMin().f[0]);
+                        _paramMaxFloat[i]->setValue(p.getMax().f[0]);
+                        _paramDefaultVec2[i]->resetToDefault();
+                        _paramMinVec2[i]->resetToDefault();
+                        _paramMaxVec2[i]->resetToDefault();
+                        _paramDefaultVec3[i]->resetToDefault();
+                        //_paramMinVec3[i]->resetToDefault();
+                        //_paramMaxVec3[i]->resetToDefault();
+                        _paramDefaultVec4[i]->setDefault(p.getDefault().f[0], p.getDefault().f[1], p.getDefault().f[2], p.getDefault().f[3]);
+                        //_paramMinVec4[i]->setValue(p.getMin().f[0], p.getMin().f[1], p.getMin().f[2], p.getMin().f[3]);
+                        //_paramMaxVec4[i]->setValue(p.getMax().f[0], p.getMax().f[1], p.getMax().f[2], p.getMax().f[3]);
+                        break;
+                    }
+                    case eUniformTypeVec2: {
+                        _paramDefaultBool[i]->resetToDefault();
+                        _paramDefaultInt[i]->resetToDefault();
+                        _paramMinInt[i]->resetToDefault();
+                        _paramMaxInt[i]->resetToDefault();
+                        _paramDefaultFloat[i]->resetToDefault();
+                        _paramMinFloat[i]->resetToDefault();
+                        _paramMaxFloat[i]->resetToDefault();
+                        _paramDefaultVec2[i]->setValue(p.getDefault().f[0], p.getDefault().f[1]);
+                        _paramMinVec2[i]->setValue(p.getMin().f[0], p.getMin().f[1]);
+                        _paramMaxVec2[i]->setValue(p.getMax().f[0], p.getMax().f[1]);
+                        _paramDefaultVec3[i]->resetToDefault();
+                        //_paramMinVec3[i]->resetToDefault();
+                        //_paramMaxVec3[i]->resetToDefault();
+                        _paramDefaultVec4[i]->resetToDefault();
+                        //_paramMinVec4[i]->resetToDefault();
+                        //_paramMaxVec4[i]->resetToDefault();
+                        break;
+                    }
+                    case eUniformTypeVec3: {
+                        _paramDefaultBool[i]->resetToDefault();
+                        _paramDefaultInt[i]->resetToDefault();
+                        _paramMinInt[i]->resetToDefault();
+                        _paramMaxInt[i]->resetToDefault();
+                        _paramDefaultFloat[i]->resetToDefault();
+                        _paramMinFloat[i]->resetToDefault();
+                        _paramMaxFloat[i]->resetToDefault();
+                        _paramDefaultVec2[i]->resetToDefault();
+                        _paramMinVec2[i]->resetToDefault();
+                        _paramMaxVec2[i]->resetToDefault();
+                        _paramDefaultVec3[i]->setValue(p.getDefault().f[0], p.getDefault().f[1], p.getDefault().f[2]);
+                        //_paramMinVec3[i]->setValue(p.getMin().f[0], p.getMin().f[1], p.getMin().f[2])
+                        //_paramMaxVec3[i]->setValue(p.getMax().f[0], p.getMax().f[1], p.getMax().f[2]);
+                        _paramDefaultVec4[i]->resetToDefault();
+                        //_paramMinVec4[i]->resetToDefault();
+                        //_paramMaxVec4[i]->resetToDefault();
+                        break;
+                    }
+                    case eUniformTypeVec4: {
+                        _paramDefaultBool[i]->resetToDefault();
+                        _paramDefaultInt[i]->resetToDefault();
+                        _paramMinInt[i]->resetToDefault();
+                        _paramMaxInt[i]->resetToDefault();
+                        _paramDefaultFloat[i]->resetToDefault();
+                        _paramMinFloat[i]->resetToDefault();
+                        _paramMaxFloat[i]->resetToDefault();
+                        _paramDefaultVec2[i]->resetToDefault();
+                        _paramMinVec2[i]->resetToDefault();
+                        _paramMaxVec2[i]->resetToDefault();
+                        _paramDefaultVec3[i]->resetToDefault();
+                        //_paramMinVec3[i]->resetToDefault();
+                        //_paramMaxVec3[i]->resetToDefault();
+                        _paramDefaultVec4[i]->setDefault(p.getDefault().f[0], p.getDefault().f[1], p.getDefault().f[2], p.getDefault().f[3]);
+                        //_paramMinVec4[i]->setValue(p.getMin().f[0], p.getMin().f[1], p.getMin().f[2], p.getMin().f[3]);
+                        //_paramMaxVec4[i]->setValue(p.getMax().f[0], p.getMax().f[1], p.getMax().f[2], p.getMax().f[3]);
+                        break;
+                    }
+                    default: {
+                        assert(false);
+                        _paramDefaultBool[i]->resetToDefault();
+                        _paramDefaultInt[i]->resetToDefault();
+                        _paramMinInt[i]->resetToDefault();
+                        _paramMaxInt[i]->resetToDefault();
+                        _paramDefaultFloat[i]->resetToDefault();
+                        _paramMinFloat[i]->resetToDefault();
+                        _paramMaxFloat[i]->resetToDefault();
+                        _paramDefaultVec2[i]->resetToDefault();
+                        _paramMinVec2[i]->resetToDefault();
+                        _paramMaxVec2[i]->resetToDefault();
+                        _paramDefaultVec3[i]->resetToDefault();
+                        //_paramMinVec3[i]->resetToDefault();
+                        //_paramMaxVec3[i]->resetToDefault();
+                        _paramDefaultVec4[i]->resetToDefault();
+                        //_paramMinVec4[i]->resetToDefault();
+                        //_paramMaxVec4[i]->resetToDefault();
+                    }
+                }
+            }
+            for (unsigned i = _imageShaderExtraParameters.size(); i < NBUNIFORMS; ++i) {
+                _paramDefaultBool[i]->resetToDefault();
+                _paramDefaultInt[i]->resetToDefault();
+                _paramMinInt[i]->resetToDefault();
+                _paramMaxInt[i]->resetToDefault();
+                _paramDefaultFloat[i]->resetToDefault();
+                _paramMinFloat[i]->resetToDefault();
+                _paramMaxFloat[i]->resetToDefault();
+                _paramDefaultVec2[i]->resetToDefault();
+                _paramMinVec2[i]->resetToDefault();
+                _paramMaxVec2[i]->resetToDefault();
+                _paramDefaultVec3[i]->resetToDefault();
+                //_paramMinVec3[i]->resetToDefault();
+                //_paramMaxVec3[i]->resetToDefault();
+                _paramDefaultVec4[i]->resetToDefault();
+                //_paramMinVec4[i]->resetToDefault();
+                //_paramMaxVec4[i]->resetToDefault();
+            }
+            endEditBlock();
+        } // if (_imageShaderCompiled)
+    } // if (paramAuto)
+
+    // update GUI
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+    for (unsigned i = 0; i < paramCount; ++i) {
+        UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
+        if (t == eUniformTypeNone) {
+            continue;
+        }
+        std::string name;
+        std::string hint;
+        _paramName[i]->getValue(name);
+        _paramHint[i]->getValue(hint);
+        switch (t) {
+            case eUniformTypeBool: {
+                bool v;
+                _paramDefaultBool[i]->getValue(v);
+                _paramValueBool[i]->setLabel(name);
+                _paramValueBool[i]->setHint(hint);
+                _paramValueBool[i]->setDefault(v);
+                break;
+            }
+            case eUniformTypeInt: {
+                int v;
+                _paramDefaultInt[i]->getValue(v);
+                int vmin, vmax;
+                _paramMinInt[i]->getValue(vmin);
+                _paramMaxInt[i]->getValue(vmax);
+                _paramValueInt[i]->setLabel(name);
+                _paramValueInt[i]->setHint(hint);
+                _paramValueInt[i]->setDefault(v);
+                _paramValueInt[i]->setRange(vmin, vmax);
+                _paramValueInt[i]->setDisplayRange(vmin, vmax);
+                break;
+            }
+            case eUniformTypeFloat: {
+                double v;
+                _paramDefaultFloat[i]->getValue(v);
+                double vmin, vmax;
+                _paramMinFloat[i]->getValue(vmin);
+                _paramMaxFloat[i]->getValue(vmax);
+                _paramValueFloat[i]->setLabel(name);
+                _paramValueFloat[i]->setHint(hint);
+                _paramValueFloat[i]->setDefault(v);
+                _paramValueFloat[i]->setRange(vmin, vmax);
+                _paramValueFloat[i]->setDisplayRange(vmin, vmax);
+                break;
+            }
+            case eUniformTypeVec2: {
+                double v0, v1;
+                _paramDefaultVec2[i]->getValue(v0, v1);
+                double v0min, v1min, v0max, v1max;
+                _paramMinVec2[i]->getValue(v0min, v1min);
+                _paramMaxVec2[i]->getValue(v0max, v1max);
+                _paramValueVec2[i]->setLabel(name);
+                _paramValueVec2[i]->setHint(hint);
+                _paramValueVec2[i]->setDefault(v0, v1);
+                _paramValueVec2[i]->setRange(v0min, v1min, v0max, v1max);
+                _paramValueVec2[i]->setDisplayRange(v0min, v1min, v0max, v1max);
+                break;
+            }
+            case eUniformTypeVec3: {
+                double v0, v1, v2;
+                _paramDefaultVec3[i]->getValue(v0, v1, v2);
+                //double v0min, v1min, v2min, v0max, v1max, v2max;
+                //_paramMinVec3[i]->getValue(v0min, v1min, v2min);
+                //_paramMaxVec3[i]->getValue(v0max, v1max, v2max);
+                _paramValueVec3[i]->setLabel(name);
+                _paramValueVec3[i]->setHint(hint);
+                _paramValueVec3[i]->setDefault(v0, v1, v2);
+                //_paramValueVec3[i]->setRange(v0min, v1min, v2min, v0max, v1max, v2max);
+                //_paramValueVec3[i]->setDisplayRange(v0min, v1min, v2min, v0max, v1max, v2max);
+                break;
+            }
+            case eUniformTypeVec4: {
+                double v0, v1, v2, v3;
+                _paramDefaultVec4[i]->getValue(v0, v1, v2, v3);
+                //double v0min, v1min, v2min, v0max, v1max, v2max;
+                //_paramMinVec4[i]->getValue(v0min, v1min, v2min);
+                //_paramMaxVec4[i]->getValue(v0max, v1max, v2max);
+                _paramValueVec4[i]->setLabel(name);
+                _paramValueVec4[i]->setHint(hint);
+                _paramValueVec4[i]->setDefault(v0, v1, v2, v3);
+                //_paramValueVec4[i]->setRange(v0min, v1min, v2min, v0max, v1max, v2max);
+                //_paramValueVec4[i]->setDisplayRange(v0min, v1min, v2min, v0max, v1max, v2max);
+                break;
+            }
+            default:
+                assert(false);
+                break;
+        }
+    }
+}
 
 void
 ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                               const std::string &paramName)
 {
+    const double time = args.time;
     if ( (paramName == kParamBBox) && (args.reason == OFX::eChangeUserEdit) ) {
         updateVisibility();
     } else if (paramName == kParamFormat) {
         //the host does not handle the format itself, do it ourselves
-        OFX::EParamFormat format = (OFX::EParamFormat)_format->getValue();
+        OFX::EParamFormat format = (OFX::EParamFormat)_format->getValueAtTime(time);
         int w = 0, h = 0;
         double par = -1;
         getFormatResolution(format, &w, &h, &par);
@@ -805,7 +1183,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 ( paramName == kParamImageShaderReload) ) {
         // load image shader from file
         std::string imageShaderFileName;
-        _imageShaderFileName->getValue(imageShaderFileName);
+        _imageShaderFileName->getValueAtTime(time, imageShaderFileName);
         if ( !imageShaderFileName.empty() ) {
             std::ifstream t( imageShaderFileName.c_str() );
             if ( t.bad() ) {
@@ -830,17 +1208,19 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _imageShaderCompile->setEnabled(false);
         // trigger a new render
         clearPersistentMessage();
-        _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue() + 1);
+        _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValueAtTime(time) + 1);
     } else if ( (paramName == kParamImageShaderSource) && (args.reason == eChangeUserEdit) ) {
         _imageShaderCompile->setEnabled(true);
-    } else if ( (paramName == kParamCount) || starts_with(paramName, kParamName) ) {
+    } else if ( ( (paramName == kParamCount) ||
+                  starts_with(paramName, kParamName) ) && !_paramAuto->getValueAtTime(time) && (args.reason == eChangeUserEdit) ) {
         {
             AutoMutex lock( _imageShaderMutex.get() );
             // mark that image shader must be recompiled on next render
             ++_imageShaderUniformsID;
         }
+        updateExtra();
         updateVisibility();
-    } else if ( starts_with(paramName, kParamType) ) {
+    } else if ( starts_with(paramName, kParamType) && !_paramAuto->getValueAtTime(time) ) {
         {
             AutoMutex lock( _imageShaderMutex.get() );
             // mark that image shader must be recompiled on next render
@@ -848,8 +1228,17 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         }
         //updateVisibilityParam(i, i < paramCount);
         updateVisibility();
+    } else if ( ( starts_with(paramName, kParamHint) ||
+                 starts_with(paramName, kParamDefault) ||
+                 starts_with(paramName, kParamMin) ||
+                 starts_with(paramName, kParamMax) ) && !_paramAuto->getValueAtTime(time) && (args.reason == eChangeUserEdit) ) {
+        updateExtra();
     } else if ( (paramName == kParamImageShaderSource) && (args.reason == eChangeUserEdit) ) {
         _imageShaderCompile->setEnabled(true);
+    } else if ( (paramName == kParamImageShaderRecompiled) || (paramName == kParamAuto) ) {
+        // shader was recompiled and auto parameters is checked
+        updateExtra();
+        updateVisibility();
     } else if (paramName == kParamRendererInfo) {
         std::string message;
         {
@@ -967,6 +1356,235 @@ ShadertoyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     }
 } // ShadertoyPluginFactory::describe
 
+
+static void
+defineBooleanSub(OFX::ImageEffectDescriptor &desc,
+                 const std::string& nb,
+                 const std::string& name,
+                 const std::string& label,
+                 const std::string& hint,
+                 bool isExtraParam,
+                 PageParamDescriptor *page,
+                 GroupParamDescriptor *group)
+{
+    OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(name + nb);
+    param->setLabel(label + nb);
+    param->setHint(hint);
+    param->setEvaluateOnChange(isExtraParam);
+    param->setAnimates(isExtraParam);
+    if (page) {
+        page->addChild(*param);
+    }
+    if (group) {
+        param->setParent(*group);
+    }
+}
+
+static void
+defineBoolean(OFX::ImageEffectDescriptor &desc,
+              const std::string& nb,
+              PageParamDescriptor *page,
+              GroupParamDescriptor *group)
+{
+    defineBooleanSub(desc, nb, kParamValueBool, kParamValueLabel, kParamValueHint, true, page, NULL);
+    defineBooleanSub(desc, nb, kParamDefaultBool, kParamDefaultLabel, kParamDefaultHint, false, page, group);
+}
+
+static void
+defineIntSub(OFX::ImageEffectDescriptor &desc,
+             const std::string& nb,
+             const std::string& name,
+             const std::string& label,
+             const std::string& hint,
+             bool isExtraParam,
+             int defaultValue,
+             PageParamDescriptor *page,
+             GroupParamDescriptor *group)
+{
+    OFX::IntParamDescriptor* param = desc.defineIntParam(name + nb);
+    param->setLabel(label + nb);
+    param->setHint(hint);
+    param->setRange(INT_MIN, INT_MAX);
+    param->setDisplayRange(INT_MIN, INT_MAX);
+    param->setDefault(defaultValue);
+    param->setEvaluateOnChange(isExtraParam);
+    param->setAnimates(isExtraParam);
+    if (page) {
+        page->addChild(*param);
+    }
+    if (group) {
+        param->setParent(*group);
+    }
+}
+
+static void
+defineInt(OFX::ImageEffectDescriptor &desc,
+             const std::string& nb,
+             PageParamDescriptor *page,
+             GroupParamDescriptor *group)
+{
+    defineIntSub(desc, nb, kParamValueInt, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+    defineIntSub(desc, nb, kParamDefaultInt, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
+    defineIntSub(desc, nb, kParamMinInt, kParamMinLabel, kParamMinHint, false, INT_MIN, page, group);
+    defineIntSub(desc, nb, kParamMaxInt, kParamMaxLabel, kParamMaxHint, false, INT_MAX, page, group);
+}
+
+static void
+defineDoubleSub(OFX::ImageEffectDescriptor &desc,
+             const std::string& nb,
+             const std::string& name,
+             const std::string& label,
+             const std::string& hint,
+             bool isExtraParam,
+             double defaultValue,
+             PageParamDescriptor *page,
+             GroupParamDescriptor *group)
+{
+    OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(name + nb);
+    param->setLabel(label + nb);
+    param->setHint(hint);
+    param->setRange(-DBL_MAX, DBL_MAX);
+    param->setDisplayRange(-DBL_MAX, DBL_MAX);
+    param->setDefault(defaultValue);
+    param->setEvaluateOnChange(isExtraParam);
+    param->setAnimates(isExtraParam);
+    if (page) {
+        page->addChild(*param);
+    }
+    if (group) {
+        param->setParent(*group);
+    }
+}
+
+static void
+defineDouble(OFX::ImageEffectDescriptor &desc,
+          const std::string& nb,
+          PageParamDescriptor *page,
+          GroupParamDescriptor *group)
+{
+    defineDoubleSub(desc, nb, kParamValueFloat, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+    defineDoubleSub(desc, nb, kParamDefaultFloat, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
+    defineDoubleSub(desc, nb, kParamMinFloat, kParamMinLabel, kParamMinHint, false, -DBL_MAX, page, group);
+    defineDoubleSub(desc, nb, kParamMaxFloat, kParamMaxLabel, kParamMaxHint, false, DBL_MAX, page, group);
+}
+
+static void
+defineDouble2DSub(OFX::ImageEffectDescriptor &desc,
+                const std::string& nb,
+                const std::string& name,
+                const std::string& label,
+                const std::string& hint,
+                bool isExtraParam,
+                double defaultValue,
+                PageParamDescriptor *page,
+                GroupParamDescriptor *group)
+{
+    OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(name + nb);
+    param->setLabel(label + nb);
+    param->setHint(hint);
+    param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
+    param->setDisplayRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
+    param->setDefault(defaultValue, defaultValue);
+    param->setEvaluateOnChange(isExtraParam);
+    param->setAnimates(isExtraParam);
+    if (page) {
+        page->addChild(*param);
+    }
+    if (group) {
+        param->setParent(*group);
+    }
+}
+
+static void
+defineDouble2D(OFX::ImageEffectDescriptor &desc,
+             const std::string& nb,
+             PageParamDescriptor *page,
+             GroupParamDescriptor *group)
+{
+    defineDouble2DSub(desc, nb, kParamValueVec2, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+    defineDouble2DSub(desc, nb, kParamDefaultVec2, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
+    defineDouble2DSub(desc, nb, kParamMinVec2, kParamMinLabel, kParamMinHint, false, -DBL_MAX, page, group);
+    defineDouble2DSub(desc, nb, kParamMaxVec2, kParamMaxLabel, kParamMaxHint, false, DBL_MAX, page, group);
+}
+
+static void
+defineDouble3DSub(OFX::ImageEffectDescriptor &desc,
+                  const std::string& nb,
+                  const std::string& name,
+                  const std::string& label,
+                  const std::string& hint,
+                  bool isExtraParam,
+                  double defaultValue,
+                  PageParamDescriptor *page,
+                  GroupParamDescriptor *group)
+{
+    OFX::Double3DParamDescriptor* param = desc.defineDouble3DParam(name + nb);
+    param->setLabel(label + nb);
+    param->setHint(hint);
+    param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
+    param->setDisplayRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
+    param->setDefault(defaultValue, defaultValue, defaultValue);
+    param->setEvaluateOnChange(isExtraParam);
+    param->setAnimates(isExtraParam);
+    if (page) {
+        page->addChild(*param);
+    }
+    if (group) {
+        param->setParent(*group);
+    }
+}
+
+static void
+defineDouble3D(OFX::ImageEffectDescriptor &desc,
+               const std::string& nb,
+               PageParamDescriptor *page,
+               GroupParamDescriptor *group)
+{
+    defineDouble3DSub(desc, nb, kParamValueVec3, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+    defineDouble3DSub(desc, nb, kParamDefaultVec3, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
+    //defineDouble3DSub(desc, nb, kParamMinVec3, kParamMinLabel, kParamMinHint, false, -DBL_MAX, page, group);
+    //defineDouble3DSub(desc, nb, kParamMaxVec3, kParamMaxLabel, kParamMaxHint, false, DBL_MAX, page, group);
+}
+
+static void
+defineRGBASub(OFX::ImageEffectDescriptor &desc,
+                  const std::string& nb,
+                  const std::string& name,
+                  const std::string& label,
+                  const std::string& hint,
+                  bool isExtraParam,
+                  double defaultValue,
+                  PageParamDescriptor *page,
+                  GroupParamDescriptor *group)
+{
+    OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(name + nb);
+    param->setLabel(label + nb);
+    param->setHint(hint);
+    param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
+    param->setDisplayRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
+    param->setDefault(defaultValue, defaultValue, defaultValue, defaultValue);
+    param->setEvaluateOnChange(isExtraParam);
+    param->setAnimates(isExtraParam);
+    if (page) {
+        page->addChild(*param);
+    }
+    if (group) {
+        param->setParent(*group);
+    }
+}
+
+static void
+defineRGBA(OFX::ImageEffectDescriptor &desc,
+               const std::string& nb,
+               PageParamDescriptor *page,
+               GroupParamDescriptor *group)
+{
+    defineRGBASub(desc, nb, kParamValueVec4, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+    defineRGBASub(desc, nb, kParamDefaultVec4, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
+    //defineRGBASub(desc, nb, kParamMinVec4, kParamMinLabel, kParamMinHint, false, -DBL_MAX, page, group);
+    //defineRGBASub(desc, nb, kParamMaxVec4, kParamMaxLabel, kParamMaxHint, false, DBL_MAX, page, group);
+}
+
 void
 ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                                           OFX::ContextEnum context)
@@ -1011,113 +1629,13 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // boundingBox
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
-        param->setLabel(kParamBBoxLabel);
-        param->setHint(kParamBBoxHint);
-        assert(param->getNOptions() == (int)eBBoxDefault);
-        param->appendOption(kParamBBoxOptionDefault, kParamBBoxOptionDefaultHint);
-        assert(param->getNOptions() == (int)eBBoxFormat);
-        param->appendOption(kParamBBoxOptionFormat, kParamBBoxOptionFormatHint);
-        //assert(param->getNOptions() == (int)eBBoxSize);
-        //param->appendOption(kParamBBoxOptionSize, kParamBBoxOptionSizeHint);
-        assert(param->getNOptions() == (int)eBBoxUnion);
-        param->appendOption(kParamBBoxOptionUnion, kParamBBoxOptionUnionHint);
-        assert(param->getNOptions() == (int)eBBoxIntersection);
-        param->appendOption(kParamBBoxOptionIntersection, kParamBBoxOptionIntersectionHint);
-        assert(param->getNOptions() == (int)eBBoxIChannel);
-        for (unsigned i = 0; i < NBINPUTS; ++i) {
-            std::string nb = unsignedToString(i);
-            param->appendOption(std::string(kParamBBoxOptionIChannel) + nb, std::string(kParamBBoxOptionIChannelHint) + nb + '.');
-        }
-        param->setAnimates(true);
-        param->setDefault( (int)eBBoxDefault );
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // format
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
-        param->setLabel(kParamFormatLabel);
-        assert(param->getNOptions() == eParamFormatPCVideo);
-        param->appendOption(kParamFormatPCVideoLabel);
-        assert(param->getNOptions() == eParamFormatNTSC);
-        param->appendOption(kParamFormatNTSCLabel);
-        assert(param->getNOptions() == eParamFormatPAL);
-        param->appendOption(kParamFormatPALLabel);
-        assert(param->getNOptions() == eParamFormatHD);
-        param->appendOption(kParamFormatHDLabel);
-        assert(param->getNOptions() == eParamFormatNTSC169);
-        param->appendOption(kParamFormatNTSC169Label);
-        assert(param->getNOptions() == eParamFormatPAL169);
-        param->appendOption(kParamFormatPAL169Label);
-        assert(param->getNOptions() == eParamFormat1kSuper35);
-        param->appendOption(kParamFormat1kSuper35Label);
-        assert(param->getNOptions() == eParamFormat1kCinemascope);
-        param->appendOption(kParamFormat1kCinemascopeLabel);
-        assert(param->getNOptions() == eParamFormat2kSuper35);
-        param->appendOption(kParamFormat2kSuper35Label);
-        assert(param->getNOptions() == eParamFormat2kCinemascope);
-        param->appendOption(kParamFormat2kCinemascopeLabel);
-        assert(param->getNOptions() == eParamFormat4kSuper35);
-        param->appendOption(kParamFormat4kSuper35Label);
-        assert(param->getNOptions() == eParamFormat4kCinemascope);
-        param->appendOption(kParamFormat4kCinemascopeLabel);
-        assert(param->getNOptions() == eParamFormatSquare256);
-        param->appendOption(kParamFormatSquare256Label);
-        assert(param->getNOptions() == eParamFormatSquare512);
-        param->appendOption(kParamFormatSquare512Label);
-        assert(param->getNOptions() == eParamFormatSquare1k);
-        param->appendOption(kParamFormatSquare1kLabel);
-        assert(param->getNOptions() == eParamFormatSquare2k);
-        param->appendOption(kParamFormatSquare2kLabel);
-        param->setDefault(eParamFormatPCVideo);
-        param->setHint(kParamFormatHint);
-        param->setAnimates(false);
-        desc.addClipPreferencesSlaveParam(*param);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    {
-        int w = 0, h = 0;
-        double par = -1.;
-        getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
-        assert(par != -1);
-        {
-            Int2DParamDescriptor* param = desc.defineInt2DParam(kParamFormatSize);
-            param->setLabel(kParamFormatSizeLabel);
-            param->setHint(kParamFormatSizeHint);
-            param->setIsSecret(true);
-            param->setDefault(w, h);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-
-        {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFormatPAR);
-            param->setLabel(kParamFormatPARLabel);
-            param->setHint(kParamFormatPARHint);
-            param->setIsSecret(true);
-            param->setRange(0., DBL_MAX);
-            param->setDisplayRange(0.5, 2.);
-            param->setDefault(par);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-    }
 
     {
         OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupImageShader);
         if (group) {
             group->setLabel(kGroupImageShaderLabel);
-            //group->setAsTab();
+            group->setOpen(false);
+           //group->setAsTab();
         }
 
         {
@@ -1262,10 +1780,249 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
 
+        // boundingBox
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
+            param->setLabel(kParamBBoxLabel);
+            param->setHint(kParamBBoxHint);
+            assert(param->getNOptions() == (int)eBBoxDefault);
+            param->appendOption(kParamBBoxOptionDefault, kParamBBoxOptionDefaultHint);
+            assert(param->getNOptions() == (int)eBBoxFormat);
+            param->appendOption(kParamBBoxOptionFormat, kParamBBoxOptionFormatHint);
+            //assert(param->getNOptions() == (int)eBBoxSize);
+            //param->appendOption(kParamBBoxOptionSize, kParamBBoxOptionSizeHint);
+            assert(param->getNOptions() == (int)eBBoxUnion);
+            param->appendOption(kParamBBoxOptionUnion, kParamBBoxOptionUnionHint);
+            assert(param->getNOptions() == (int)eBBoxIntersection);
+            param->appendOption(kParamBBoxOptionIntersection, kParamBBoxOptionIntersectionHint);
+            assert(param->getNOptions() == (int)eBBoxIChannel);
+            for (unsigned i = 0; i < NBINPUTS; ++i) {
+                std::string nb = unsignedToString(i);
+                param->appendOption(std::string(kParamBBoxOptionIChannel) + nb, std::string(kParamBBoxOptionIChannelHint) + nb + '.');
+            }
+            param->setAnimates(true);
+            param->setDefault( (int)eBBoxDefault );
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        // format
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
+            param->setLabel(kParamFormatLabel);
+            assert(param->getNOptions() == eParamFormatPCVideo);
+            param->appendOption(kParamFormatPCVideoLabel);
+            assert(param->getNOptions() == eParamFormatNTSC);
+            param->appendOption(kParamFormatNTSCLabel);
+            assert(param->getNOptions() == eParamFormatPAL);
+            param->appendOption(kParamFormatPALLabel);
+            assert(param->getNOptions() == eParamFormatHD);
+            param->appendOption(kParamFormatHDLabel);
+            assert(param->getNOptions() == eParamFormatNTSC169);
+            param->appendOption(kParamFormatNTSC169Label);
+            assert(param->getNOptions() == eParamFormatPAL169);
+            param->appendOption(kParamFormatPAL169Label);
+            assert(param->getNOptions() == eParamFormat1kSuper35);
+            param->appendOption(kParamFormat1kSuper35Label);
+            assert(param->getNOptions() == eParamFormat1kCinemascope);
+            param->appendOption(kParamFormat1kCinemascopeLabel);
+            assert(param->getNOptions() == eParamFormat2kSuper35);
+            param->appendOption(kParamFormat2kSuper35Label);
+            assert(param->getNOptions() == eParamFormat2kCinemascope);
+            param->appendOption(kParamFormat2kCinemascopeLabel);
+            assert(param->getNOptions() == eParamFormat4kSuper35);
+            param->appendOption(kParamFormat4kSuper35Label);
+            assert(param->getNOptions() == eParamFormat4kCinemascope);
+            param->appendOption(kParamFormat4kCinemascopeLabel);
+            assert(param->getNOptions() == eParamFormatSquare256);
+            param->appendOption(kParamFormatSquare256Label);
+            assert(param->getNOptions() == eParamFormatSquare512);
+            param->appendOption(kParamFormatSquare512Label);
+            assert(param->getNOptions() == eParamFormatSquare1k);
+            param->appendOption(kParamFormatSquare1kLabel);
+            assert(param->getNOptions() == eParamFormatSquare2k);
+            param->appendOption(kParamFormatSquare2kLabel);
+            param->setDefault(eParamFormatPCVideo);
+            param->setHint(kParamFormatHint);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        {
+            int w = 0, h = 0;
+            double par = -1.;
+            getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
+            assert(par != -1);
+            {
+                Int2DParamDescriptor* param = desc.defineInt2DParam(kParamFormatSize);
+                param->setLabel(kParamFormatSizeLabel);
+                param->setHint(kParamFormatSizeHint);
+                param->setIsSecret(true);
+                param->setDefault(w, h);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            {
+                DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFormatPAR);
+                param->setLabel(kParamFormatPARLabel);
+                param->setHint(kParamFormatPARHint);
+                param->setIsSecret(true);
+                param->setRange(0., DBL_MAX);
+                param->setDisplayRange(0.5, 2.);
+                param->setDefault(par);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+        }
+
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAuto);
+            param->setLabel(kParamAutoLabel);
+            param->setHint(kParamAutoHint);
+            param->setDefault(true);
+            param->setAnimates(false);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        {
+            OFX::GroupParamDescriptor* sgroup = desc.defineGroupParam(kGroupExtraParameters);
+            if (sgroup) {
+                sgroup->setLabel(kGroupExtraParametersLabel);
+                sgroup->setHint(kGroupExtraParametersHint);
+                sgroup->setOpen(false);
+            }
+
+            {
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMouseParams);
+                param->setLabel(kParamMouseParamsLabel);
+                param->setHint(kParamMouseParamsHint);
+                param->setDefault(true);
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (sgroup) {
+                    param->setParent(*sgroup);
+                }
+            }
+
+            {
+                OFX::IntParamDescriptor* param = desc.defineIntParam(kParamCount);
+                param->setLabel(kParamCountLabel);
+                param->setHint(kParamCountHint);
+                param->setRange(0, NBUNIFORMS);
+                param->setDisplayRange(0, NBUNIFORMS);
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (sgroup) {
+                    param->setParent(*sgroup);
+                }
+            }
+
+            for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+                // generate the number string
+                std::string nb = unsignedToString(i);
+                {
+                    OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(std::string(kParamType) + nb);
+                    param->setLabel(std::string(kParamTypeLabel1) + nb + kParamTypeLabel2);
+                    param->setHint(kParamTypeHint);
+                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeNone);
+                    param->appendOption(kParamTypeOptionNone);
+                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeBool);
+                    param->appendOption(kParamTypeOptionBool);
+                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeInt);
+                    param->appendOption(kParamTypeOptionInt);
+                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeFloat);
+                    param->appendOption(kParamTypeOptionFloat);
+                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec2);
+                    param->appendOption(kParamTypeOptionVec2);
+                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec3);
+                    param->appendOption(kParamTypeOptionVec3);
+                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec4);
+                    param->appendOption(kParamTypeOptionVec4);
+                    param->setEvaluateOnChange(true);
+                    param->setAnimates(false);
+                    param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (sgroup) {
+                        param->setParent(*sgroup);
+                    }
+                }
+                {
+                    OFX::StringParamDescriptor* param = desc.defineStringParam(std::string(kParamName) + nb);
+                    param->setLabel(kParamNameLabel);
+                    param->setHint(kParamNameHint);
+                    param->setEvaluateOnChange(true);
+                    param->setAnimates(false);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (sgroup) {
+                        param->setParent(*sgroup);
+                    }
+                }
+                {
+                    OFX::StringParamDescriptor* param = desc.defineStringParam(std::string(kParamHint) + nb);
+                    param->setLabel(kParamHintLabel);
+                    param->setHint(kParamHintHint);
+                    param->setEvaluateOnChange(false);
+                    param->setAnimates(false);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (sgroup) {
+                        param->setParent(*sgroup);
+                    }
+                }
+                defineBoolean(desc, nb, page, sgroup);
+                defineInt(desc, nb, page, sgroup);
+                defineDouble(desc, nb, page, sgroup);
+                defineDouble2D(desc, nb, page, sgroup);
+                defineDouble3D(desc, nb, page, sgroup);
+                defineRGBA(desc, nb, page, sgroup);
+                
+                if (page && sgroup) {
+                    page->addChild(*sgroup);
+                }
+                if (group) {
+                    sgroup->setParent(*group);
+                }
+            }
+        }
+
         if (page && group) {
             page->addChild(*group);
         }
     }
+
     {
         OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMousePosition);
         param->setLabel(kParamMousePositionLabel);
@@ -1299,171 +2056,6 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    {
-        OFX::GroupParamDescriptor* group = NULL; // desc.defineGroupParam(kGroupExtraParameters);
-        if (group) {
-            group->setLabel(kGroupExtraParametersLabel);
-            group->setHint(kGroupExtraParametersHint);
-            group->setOpen(false);
-        }
-
-        {
-            OFX::IntParamDescriptor* param = desc.defineIntParam(kParamCount);
-            param->setLabel(kParamCountLabel);
-            param->setHint(kParamCountHint);
-            param->setRange(0, NBUNIFORMS);
-            param->setDisplayRange(0, NBUNIFORMS);
-            param->setAnimates(false);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-
-        for (unsigned i = 0; i < NBUNIFORMS; ++i) {
-            // generate the number string
-            std::string nb = unsignedToString(i);
-            {
-                OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(std::string(kParamType) + nb);
-                param->setLabel(std::string(kParamTypeLabel1) + nb + kParamTypeLabel2);
-                param->setHint(kParamTypeHint);
-                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeNone);
-                param->appendOption(kParamTypeOptionNone);
-                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeBool);
-                param->appendOption(kParamTypeOptionBool);
-                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeInt);
-                param->appendOption(kParamTypeOptionInt);
-                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeFloat);
-                param->appendOption(kParamTypeOptionFloat);
-                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec2);
-                param->appendOption(kParamTypeOptionVec2);
-                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec3);
-                param->appendOption(kParamTypeOptionVec3);
-                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec4);
-                param->appendOption(kParamTypeOptionVec4);
-                param->setEvaluateOnChange(true);
-                param->setAnimates(false);
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                OFX::StringParamDescriptor* param = desc.defineStringParam(std::string(kParamName) + nb);
-                param->setLabel(kParamNameLabel);
-                param->setHint(kParamNameHint);
-                param->setEvaluateOnChange(true);
-                param->setAnimates(false);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(std::string(kParamValueBool) + nb);
-                param->setLabel(kParamValueLabel);
-                param->setHint(kParamValueHint);
-                param->setEvaluateOnChange(true);
-                param->setAnimates(true);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                OFX::IntParamDescriptor* param = desc.defineIntParam(std::string(kParamValueInt) + nb);
-                param->setLabel(kParamValueLabel);
-                param->setHint(kParamValueHint);
-                param->setRange(INT_MIN, INT_MAX);
-                param->setDisplayRange(INT_MIN, INT_MAX);
-                param->setEvaluateOnChange(true);
-                param->setAnimates(true);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(std::string(kParamValueFloat) + nb);
-                param->setLabel(kParamValueLabel);
-                param->setHint(kParamValueHint);
-                param->setRange(-DBL_MAX, DBL_MAX);
-                param->setDisplayRange(-DBL_MAX, DBL_MAX);
-                param->setEvaluateOnChange(true);
-                param->setAnimates(true);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(std::string(kParamValueVec2) + nb);
-                param->setLabel(kParamValueLabel);
-                param->setHint(kParamValueHint);
-                param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
-                param->setDisplayRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
-                param->setDimensionLabels("x", "y");
-                param->setEvaluateOnChange(true);
-                param->setAnimates(true);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                OFX::Double3DParamDescriptor* param = desc.defineDouble3DParam(std::string(kParamValueVec3) + nb);
-                param->setLabel(kParamValueLabel);
-                param->setHint(kParamValueHint);
-                param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
-                param->setDisplayRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
-                param->setDimensionLabels("x", "y", "z");
-                param->setEvaluateOnChange(true);
-                param->setAnimates(true);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(std::string(kParamValueVec4) + nb);
-                param->setLabel(kParamValueLabel);
-                param->setHint(kParamValueHint);
-                param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
-                param->setDisplayRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
-                param->setDimensionLabels("x", "y", "z", "w");
-                param->setEvaluateOnChange(true);
-                param->setAnimates(true);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-
-            if (page && group) {
-                page->addChild(*group);
-            }
-        }
-    }
-
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     {
