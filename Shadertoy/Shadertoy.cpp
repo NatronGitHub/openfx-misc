@@ -223,14 +223,10 @@ using namespace OFX;
     ""
 
 #define kPluginDescriptionMarkdown \
-    "Apply a [Shadertoy](http://www.shadertoy.com) fragment shader (multipass shaders and sound are not supported).\n\n" \
+    "Apply a [Shadertoy](http://www.shadertoy.com) fragment shader (multipass shaders and sound are not supported).\n" \
     "\n" \
-    "This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
-    "For the complete specification please have a look at [GLSL ES specification]" \
-    "(http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf) " \
-    "or pages 3 and 4 of the [OpenGL ES 2.0 quick reference card]" \
-    "(https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf).\n" \
-    "See also this [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).\n" \
+    "This help only covers the parts of GLSL ES that are relevant for Shadertoy. For the complete specification please have a look at [GLSL ES specification](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf)  or pages 3 and 4 of the [OpenGL ES 2.0 quick reference card](https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf).\n" \
+    "See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).\n" \
     "\n" \
     "### Language:\n" \
     "\n" \
@@ -470,12 +466,12 @@ enum BBoxEnum
 // parameter to trigger a new render and make sure the shader is compiled
 #define kParamImageShaderTriggerRender "imageShaderTriggerRender"
 
-// parameter used to trigger an InstanceChanged once the Shader was compiled in the render function
-#define kParamImageShaderRecompiled "imageShaderRecompiled"
+// parameter used to trigger an InstanceChanged once the Shader was compiled in the render function and parameters were updated
+#define kParamImageShaderParamsUpdated "imageShaderParamsUpdated"
 
 #define kParamAuto "autoParams"
 #define kParamAutoLabel "Auto. Params"
-#define kParamAutoHint "Automatically set the parameters from the shader source when the shader is recompiled. Toggle twice to refresh the parameters."
+#define kParamAutoHint "Automatically set the parameters from the shader source next time image is rendered. May require clicking twice, depending on the OpenFX host."
 
 
 #define kParamImageShaderDefault                            \
@@ -526,6 +522,10 @@ enum BBoxEnum
 #define kParamNameLabel "Name"
 #define kParamNameHint "Name of the parameter, as used in the shader."
 
+#define kParamLabel "paramLabel" // followed by param number
+#define kParamLabelLabel "Label"
+#define kParamLabelHint "Label of the parameter, as displayed in the user interface."
+
 #define kParamHint "paramHint" // followed by param number
 #define kParamHintLabel "Hint"
 #define kParamHintHint "Help for the parameter."
@@ -564,27 +564,39 @@ enum BBoxEnum
 #define kParamMaxLabel "Max" // followed by param number
 #define kParamMaxHint "Max value of the parameter."
 
-#define kParamFilter "mipmap"
-#define kParamFilterLabel "Filter"
-#define kParamFilterHint "Texture filter for this input."
-#define kParamFilterOptionNearest "Nearest"
-#define kParamFilterOptionNearestHint "MIN/MAG = GL_NEAREST/GL_NEAREST"
-#define kParamFilterOptionLinear "Linear"
-#define kParamFilterOptionLinearHint "MIN/MAG = GL_LINEAR/GL_LINEAR"
-#define kParamFilterOptionMipmap "Mipmap"
-#define kParamFilterOptionMipmapHint "MIN/MAG = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR"
-#define kParamFilterOptionAnisotropic "Anisotropic"
-#define kParamFilterOptionAnisotropicHint "Mipmap with anisotropic filtering. Available with GPU if supported (check for the presence of the GL_EXT_texture_filter_anisotropic extension in the Renderer Info) and with \"softpipe\" CPU driver."
+#define kParamInputFilter "mipmap"
+#define kParamInputFilterLabel "Filter"
+#define kParamInputFilterHint "Texture filter for this input."
+#define kParamInputFilterOptionNearest "Nearest"
+#define kParamInputFilterOptionNearestHint "MIN/MAG = GL_NEAREST/GL_NEAREST"
+#define kParamInputFilterOptionLinear "Linear"
+#define kParamInputFilterOptionLinearHint "MIN/MAG = GL_LINEAR/GL_LINEAR"
+#define kParamInputFilterOptionMipmap "Mipmap"
+#define kParamInputFilterOptionMipmapHint "MIN/MAG = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR"
+#define kParamInputFilterOptionAnisotropic "Anisotropic"
+#define kParamInputFilterOptionAnisotropicHint "Mipmap with anisotropic filtering. Available with GPU if supported (check for the presence of the GL_EXT_texture_filter_anisotropic extension in the Renderer Info) and with \"softpipe\" CPU driver."
 
-#define kParamWrap "wrap"
-#define kParamWrapLabel "Wrap"
-#define kParamWrapHint "Texture wrap parameter for this input."
-#define kParamWrapOptionRepeat "Repeat"
-#define kParamWrapOptionRepeatHint "WRAP_S/T = GL_REPEAT"
-#define kParamWrapOptionClamp "Clamp"
-#define kParamWrapOptionClampHint "WRAP_S/T = GL_CLAMP_TO_EDGE"
+#define kParamInputWrap "wrap"
+#define kParamInputWrapLabel "Wrap"
+#define kParamInputWrapHint "Texture wrap parameter for this input."
+#define kParamInputWrapOptionRepeat "Repeat"
+#define kParamInputWrapOptionRepeatHint "WRAP_S/T = GL_REPEAT"
+#define kParamInputWrapOptionClamp "Clamp"
+#define kParamInputWrapOptionClampHint "WRAP_S/T = GL_CLAMP_TO_EDGE"
 
-#define kParamLabel "label"
+#define kParamInputName "inputName" // name for the label for each input
+
+#define kParamInputEnable "inputEnable"
+#define kParamInputEnableLabel "Enable"
+#define kParamInputEnableHint "Enable this input."
+
+#define kParamInputLabel "inputLabel"
+#define kParamInputLabelLabel "Label"
+#define kParamInputLabelHint "Label for this input in the user interface."
+
+#define kParamInputHint "inputHint"
+#define kParamInputHintLabel "Hint"
+#define kParamInputHintHint "Help for this input."
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamEnableGPU "enableGPU"
@@ -632,8 +644,11 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClips(NBINPUTS, (OFX::Clip*)        NULL)
-    , _filter  (NBINPUTS, (OFX::ChoiceParam*) NULL)
-    , _wrap    (NBINPUTS, (OFX::ChoiceParam*) NULL)
+    , _inputEnable  (NBINPUTS, (OFX::BooleanParam*) NULL)
+    , _inputLabel   (NBINPUTS, (OFX::StringParam*) NULL)
+    , _inputHint    (NBINPUTS, (OFX::StringParam*) NULL)
+    , _inputFilter  (NBINPUTS, (OFX::ChoiceParam*) NULL)
+    , _inputWrap    (NBINPUTS, (OFX::ChoiceParam*) NULL)
     , _bbox(0)
     , _format(0)
     , _formatSize(0)
@@ -642,8 +657,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderSource(0)
     , _imageShaderCompile(0)
     , _imageShaderTriggerRender(0)
-    , _imageShaderRecompiled(0)
-    , _paramAuto(0)
+    , _imageShaderParamsUpdated(0)
     , _mouseParams(0)
     , _mousePosition(0)
     , _mouseClick(0)
@@ -652,6 +666,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _paramCount(0)
     , _paramType      (NBUNIFORMS, (OFX::ChoiceParam*)  NULL)
     , _paramName      (NBUNIFORMS, (OFX::StringParam*)  NULL)
+    , _paramLabel     (NBUNIFORMS, (OFX::StringParam*)  NULL)
     , _paramHint      (NBUNIFORMS, (OFX::StringParam*)  NULL)
     , _paramValueBool (NBUNIFORMS, (OFX::BooleanParam*) NULL)
     , _paramValueInt  (NBUNIFORMS, (OFX::IntParam*)     NULL)
@@ -675,8 +690,10 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _cpuDriver(0)
     , _imageShaderID(1)
     , _imageShaderUniformsID(1)
+    , _imageShaderUpdateParams(false)
     , _imageShaderExtraParameters()
     , _imageShaderHasMouse(false)
+    , _imageShaderUsesInput(NBINPUTS)
     , _imageShaderCompiled(false)
     , _openGLContextData()
     , _openGLContextAttached(false)
@@ -716,9 +733,12 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
                 ( _srcClips[i] && (_srcClips[i]->getPixelComponents() == OFX::ePixelComponentRGBA ||
                                    _srcClips[i]->getPixelComponents() == OFX::ePixelComponentAlpha) ) );
         std::string nb = unsignedToString(i);
-        _filter[i] = fetchChoiceParam(kParamFilter + nb);
-        _wrap[i] = fetchChoiceParam(kParamWrap + nb);
-        assert(_filter[i] && _wrap[i]);
+        _inputEnable[i] = fetchBooleanParam(kParamInputEnable + nb);
+        _inputLabel[i] = fetchStringParam(kParamInputLabel + nb);
+        _inputHint[i] = fetchStringParam(kParamInputHint + nb);
+        _inputFilter[i] = fetchChoiceParam(kParamInputFilter + nb);
+        _inputWrap[i] = fetchChoiceParam(kParamInputWrap + nb);
+        assert(_inputEnable[i] && _inputLabel[i] && _inputHint[i] && _inputFilter[i] && _inputWrap[i]);
     }
 
     _bbox = fetchChoiceParam(kParamBBox);
@@ -730,10 +750,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _imageShaderSource = fetchStringParam(kParamImageShaderSource);
     _imageShaderCompile = fetchPushButtonParam(kParamImageShaderCompile);
     _imageShaderTriggerRender = fetchIntParam(kParamImageShaderTriggerRender);
-    _imageShaderRecompiled = fetchBooleanParam(kParamImageShaderRecompiled);
-    assert(_imageShaderFileName && _imageShaderSource && _imageShaderCompile && _imageShaderTriggerRender && _imageShaderRecompiled);
-    _paramAuto = fetchBooleanParam(kParamAuto);
-    assert(_paramAuto);
+    _imageShaderParamsUpdated = fetchBooleanParam(kParamImageShaderParamsUpdated);
+    assert(_imageShaderFileName && _imageShaderSource && _imageShaderCompile && _imageShaderTriggerRender && _imageShaderParamsUpdated);
     _mouseParams = fetchBooleanParam(kParamMouseParams);
     assert(_mouseParams);
     _mousePosition = fetchDouble2DParam(kParamMousePosition);
@@ -748,6 +766,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         std::string nb = unsignedToString(i);
         _paramType[i]       = fetchChoiceParam  (kParamType       + nb);
         _paramName[i]       = fetchStringParam  (kParamName       + nb);
+        _paramLabel[i]      = fetchStringParam  (kParamLabel      + nb);
         _paramHint[i]       = fetchStringParam  (kParamHint       + nb);
         _paramValueBool[i]  = fetchBooleanParam (kParamValueBool  + nb);
         _paramValueInt[i]   = fetchIntParam     (kParamValueInt   + nb);
@@ -767,7 +786,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         _paramMaxInt[i]   = fetchIntParam     (kParamMaxInt   + nb);
         _paramMaxFloat[i] = fetchDoubleParam  (kParamMaxFloat + nb);
         _paramMaxVec2[i]  = fetchDouble2DParam(kParamMaxVec2  + nb);
-        assert(_paramType[i] && _paramName[i] && _paramHint[i] && _paramValueBool[i] && _paramValueInt[i] && _paramValueFloat[i] && _paramValueVec2[i] && _paramValueVec3[i] && _paramValueVec4[i]);
+        assert(_paramType[i] && _paramName[i] && _paramLabel[i] && _paramHint[i] && _paramValueBool[i] && _paramValueInt[i] && _paramValueFloat[i] && _paramValueVec2[i] && _paramValueVec3[i] && _paramValueVec4[i]);
     }
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
@@ -782,6 +801,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 #endif
     updateExtra();
     updateVisibility();
+    updateClips();
     initOpenGL();
 #if defined(HAVE_OSMESA)
     if ( OSMesaDriverSelectable() ) {
@@ -977,14 +997,40 @@ ShadertoyPlugin::updateVisibility()
     _mouseClick->setIsSecret(!mouseParams);
     _mousePressed->setIsSecret(!mouseParams);
 
-    bool paramAuto = _paramAuto->getValue();
-    _mouseParams->setIsSecret(paramAuto);
-    _paramCount->setIsSecret(paramAuto);
-    _groupExtra->setIsSecret(paramAuto);
     unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
         updateVisibilityParam(i, i < paramCount);
     }
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        bool enabled = _inputEnable[i]->getValue();
+        //_srcClips[i]->setIsSecret(!enabled);
+        _inputLabel[i]->setIsSecret(!enabled);
+        _inputHint[i]->setIsSecret(!enabled);
+        _inputFilter[i]->setIsSecret(!enabled);
+        _inputWrap[i]->setIsSecret(!enabled);
+    }
+
+}
+
+void
+ShadertoyPlugin::updateClips()
+{
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        bool enabled = _inputEnable[i]->getValue();
+        _srcClips[i]->setIsSecret(!enabled);
+        std::string s;
+        _inputLabel[i]->getValue(s);
+        if ( s.empty() ) {
+            std::string iChannelX(kClipChannel);
+            iChannelX += unsignedToString(i);
+            _srcClips[i]->setLabel(iChannelX);
+        } else {
+            _srcClips[i]->setLabel(s);
+        }
+        _inputHint[i]->getValue(s);
+        _srcClips[i]->setHint(s);
+    }
+    
 }
 
 void
@@ -998,8 +1044,9 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i,
     bool isVec2 = false;
     bool isVec3 = false;
     bool isVec4 = false;
-
-    if (visible) {
+    std::string name;
+    _paramName[i]->getValue(name);
+    if (visible && !name.empty()) {
         switch (paramType) {
         case eUniformTypeNone: {
             break;
@@ -1036,7 +1083,8 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i,
 
     _paramType[i]->setIsSecret(!visible);
     _paramName[i]->setIsSecret(!visible);
-    _paramHint[i]->setIsSecret(!visible);
+    _paramLabel[i]->setIsSecret(!visible || name.empty());
+    _paramHint[i]->setIsSecret(!visible || name.empty());
     _paramValueBool[i]->setIsSecret(!isBool);
     _paramValueInt[i]->setIsSecret(!isInt);
     _paramValueFloat[i]->setIsSecret(!isFloat);
@@ -1066,12 +1114,18 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i,
 void
 ShadertoyPlugin::updateExtra()
 {
-    bool paramAuto = _paramAuto->getValue();
-    if (paramAuto) {
+    bool doupdateClips = false;
+    {
         AutoMutex lock( _imageShaderMutex.get() );
-        // only do this if shader was actually compiled!
-        if (_imageShaderCompiled) {
+        // only do this if parameters were updated!
+        if (_imageShaderUpdateParams) {
+            _imageShaderUpdateParams = false;
             beginEditBlock(kParamAuto);
+            for (unsigned i = 0; i < NBINPUTS; ++i) {
+                if (_imageShaderUsesInput[i] != _inputEnable[i]->getValue()) {
+                    _inputEnable[i]->setValue(_imageShaderUsesInput[i]);
+                }
+            }
 
             _mouseParams->setValue(_imageShaderHasMouse);
             _paramCount->setValue(_imageShaderExtraParameters.size());
@@ -1080,7 +1134,17 @@ ShadertoyPlugin::updateExtra()
                 UniformTypeEnum t = p.getType();
                 _paramType[i]->setValue( (int)t );
                 _paramName[i]->setValue( p.getName() );
-                _paramHint[i]->setValue( p.getHint() );
+                _paramLabel[i]->setValue( p.getLabel() );
+                std::string hint = p.getHint();
+                if ( !p.getName().empty() ) {
+                    if (! hint.empty() ) {
+                        hint += '\n';
+                    }
+                    hint += "This parameter corresponds to 'uniform ";
+                    hint += mapUniformTypeToStr( p.getType() );
+                    hint += " " + p.getName() + "'.";
+                }
+                _paramHint[i]->setValue(hint);
                 switch (t) {
                     case eUniformTypeBool: {
                         _paramDefaultBool[i]->setValue(p.getDefault().b);
@@ -1236,8 +1300,8 @@ ShadertoyPlugin::updateExtra()
                 //_paramMaxVec4[i]->resetToDefault();
             }
             endEditBlock();
-        } // if (_imageShaderCompiled)
-    } // if (paramAuto)
+        } // if (_imageShaderUpdateParams)
+    }
 
     // update GUI
     unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
@@ -1246,79 +1310,105 @@ ShadertoyPlugin::updateExtra()
         if (t == eUniformTypeNone) {
             continue;
         }
-        std::string name;
+        //std::string name;
+        std::string label;
         std::string hint;
-        _paramName[i]->getValue(name);
+        //_paramName[i]->getValue(name);
+        _paramLabel[i]->getValue(label);
         _paramHint[i]->getValue(hint);
         switch (t) {
             case eUniformTypeBool: {
+                if ( !label.empty() ) {
+                    _paramValueBool[i]->setLabel(label);
+                }
+                if ( !hint.empty() ) {
+                    _paramValueBool[i]->setHint(hint);
+                }
                 bool v;
                 _paramDefaultBool[i]->getValue(v);
-                _paramValueBool[i]->setLabel(name);
-                _paramValueBool[i]->setHint(hint);
                 _paramValueBool[i]->setDefault(v);
                 break;
             }
             case eUniformTypeInt: {
+                if ( !label.empty() ) {
+                    _paramValueInt[i]->setLabel(label);
+                }
+                if ( !hint.empty() ) {
+                    _paramValueInt[i]->setHint(hint);
+                }
                 int v;
                 _paramDefaultInt[i]->getValue(v);
                 int vmin, vmax;
                 _paramMinInt[i]->getValue(vmin);
                 _paramMaxInt[i]->getValue(vmax);
-                _paramValueInt[i]->setLabel(name);
-                _paramValueInt[i]->setHint(hint);
                 _paramValueInt[i]->setDefault(v);
                 _paramValueInt[i]->setRange(vmin, vmax);
                 _paramValueInt[i]->setDisplayRange(vmin, vmax);
                 break;
             }
             case eUniformTypeFloat: {
+                if ( !label.empty() ) {
+                    _paramValueFloat[i]->setLabel(label);
+                }
+                if ( !hint.empty() ) {
+                    _paramValueFloat[i]->setHint(hint);
+                }
                 double v;
                 _paramDefaultFloat[i]->getValue(v);
                 double vmin, vmax;
                 _paramMinFloat[i]->getValue(vmin);
                 _paramMaxFloat[i]->getValue(vmax);
-                _paramValueFloat[i]->setLabel(name);
-                _paramValueFloat[i]->setHint(hint);
                 _paramValueFloat[i]->setDefault(v);
                 _paramValueFloat[i]->setRange(vmin, vmax);
                 _paramValueFloat[i]->setDisplayRange(vmin, vmax);
                 break;
             }
             case eUniformTypeVec2: {
+                if ( !label.empty() ) {
+                    _paramValueVec2[i]->setLabel(label);
+                }
+                if ( !hint.empty() ) {
+                    _paramValueVec2[i]->setHint(hint);
+                }
                 double v0, v1;
                 _paramDefaultVec2[i]->getValue(v0, v1);
                 double v0min, v1min, v0max, v1max;
                 _paramMinVec2[i]->getValue(v0min, v1min);
                 _paramMaxVec2[i]->getValue(v0max, v1max);
-                _paramValueVec2[i]->setLabel(name);
-                _paramValueVec2[i]->setHint(hint);
                 _paramValueVec2[i]->setDefault(v0, v1);
                 _paramValueVec2[i]->setRange(v0min, v1min, v0max, v1max);
                 _paramValueVec2[i]->setDisplayRange(v0min, v1min, v0max, v1max);
                 break;
             }
             case eUniformTypeVec3: {
+                if ( !label.empty() ) {
+                    _paramValueVec3[i]->setLabel(label);
+                }
+                if ( !hint.empty() ) {
+                    _paramValueVec3[i]->setHint(hint);
+                }
                 double v0, v1, v2;
                 _paramDefaultVec3[i]->getValue(v0, v1, v2);
                 //double v0min, v1min, v2min, v0max, v1max, v2max;
                 //_paramMinVec3[i]->getValue(v0min, v1min, v2min);
                 //_paramMaxVec3[i]->getValue(v0max, v1max, v2max);
-                _paramValueVec3[i]->setLabel(name);
-                _paramValueVec3[i]->setHint(hint);
                 _paramValueVec3[i]->setDefault(v0, v1, v2);
                 //_paramValueVec3[i]->setRange(v0min, v1min, v2min, v0max, v1max, v2max);
                 //_paramValueVec3[i]->setDisplayRange(v0min, v1min, v2min, v0max, v1max, v2max);
                 break;
             }
             case eUniformTypeVec4: {
+                if ( !label.empty() ) {
+                    _paramValueVec4[i]->setLabel(label);
+                }
+                if ( !hint.empty() ) {
+                    _paramValueVec4[i]->setHint(hint);
+                }
                 double v0, v1, v2, v3;
                 _paramDefaultVec4[i]->getValue(v0, v1, v2, v3);
                 //double v0min, v1min, v2min, v0max, v1max, v2max;
                 //_paramMinVec4[i]->getValue(v0min, v1min, v2min);
                 //_paramMaxVec4[i]->getValue(v0max, v1max, v2max);
-                _paramValueVec4[i]->setLabel(name);
-                _paramValueVec4[i]->setHint(hint);
                 _paramValueVec4[i]->setDefault(v0, v1, v2, v3);
                 //_paramValueVec4[i]->setRange(v0min, v1min, v2min, v0max, v1max, v2max);
                 //_paramValueVec4[i]->setDisplayRange(v0min, v1min, v2min, v0max, v1max, v2max);
@@ -1328,6 +1418,9 @@ ShadertoyPlugin::updateExtra()
                 assert(false);
                 break;
         }
+    }
+    if (doupdateClips) {
+        updateClips();
     }
 }
 
@@ -1366,8 +1459,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 _imageShaderSource->setValue(str);
             }
         }
-    } else if ( ( (paramName == kParamImageShaderSource) && (args.reason != eChangeUserEdit) ) ||
-                (paramName == kParamImageShaderCompile) ) {
+    } else if (paramName == kParamImageShaderCompile) {
         {
             AutoMutex lock( _imageShaderMutex.get() );
             // mark that image shader must be recompiled on next render
@@ -1377,18 +1469,50 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         // trigger a new render
         clearPersistentMessage();
         _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValueAtTime(time) + 1);
+    } else if (paramName == kParamAuto || paramName == kParamImageShaderParamsUpdated) {
+        bool recompile = true;
+        {
+            AutoMutex lock( _imageShaderMutex.get() );
+            if (_imageShaderUpdateParams) {
+                recompile = false; // parameters were updated (second click in a host that doesn'r, we just need to update the Gui
+            } else {
+                // same as kParamImageShaderCompile above
+                // mark that image shader must be recompiled on next render
+                ++_imageShaderID;
+            }
+        }
+        if (recompile) {
+            // same as kParamImageShaderCompile above
+            _imageShaderCompile->setEnabled(false);
+            // trigger a new render which updates params and inputs info
+            _imageShaderUpdateParams = true;
+            clearPersistentMessage();
+            _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValueAtTime(time) + 1);
+        } else {
+            // same as kParamImageShaderParamsUpdated below
+            updateExtra();
+            updateVisibility();
+            updateClips();
+        }
+    } else if (paramName == kParamImageShaderParamsUpdated) {
+        // shader was recompiled and auto parameters is checked
+        updateExtra();
+        updateVisibility();
+        updateClips();
     } else if ( (paramName == kParamImageShaderSource) && (args.reason == eChangeUserEdit) ) {
         _imageShaderCompile->setEnabled(true);
     } else if ( ( (paramName == kParamCount) ||
-                  starts_with(paramName, kParamName) ) && !_paramAuto->getValueAtTime(time) && (args.reason == eChangeUserEdit) ) {
+                  starts_with(paramName, kParamName) ) && (args.reason == eChangeUserEdit) ) {
         {
             AutoMutex lock( _imageShaderMutex.get() );
             // mark that image shader must be recompiled on next render
             ++_imageShaderUniformsID;
         }
-        updateExtra();
+        //updateExtra();
         updateVisibility();
-    } else if ( starts_with(paramName, kParamType) && !_paramAuto->getValueAtTime(time) ) {
+    } else if (paramName == kParamMouseParams) {
+        updateVisibility();
+    } else if ( starts_with(paramName, kParamType) && (args.reason == eChangeUserEdit) ) {
         {
             AutoMutex lock( _imageShaderMutex.get() );
             // mark that image shader must be recompiled on next render
@@ -1396,17 +1520,20 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         }
         //updateVisibilityParam(i, i < paramCount);
         updateVisibility();
-    } else if ( ( starts_with(paramName, kParamHint) ||
+    } else if ( ( starts_with(paramName, kParamLabel) ||
+                 starts_with(paramName, kParamHint) ||
                  starts_with(paramName, kParamDefault) ||
                  starts_with(paramName, kParamMin) ||
-                 starts_with(paramName, kParamMax) ) && !_paramAuto->getValueAtTime(time) && (args.reason == eChangeUserEdit) ) {
+                 starts_with(paramName, kParamMax) ) && (args.reason == eChangeUserEdit) ) {
         updateExtra();
+    } else if ( ( starts_with(paramName, kParamInputLabel) ||
+                 starts_with(paramName, kParamInputHint) ) && (args.reason == eChangeUserEdit) ) {
+        updateClips();
+    } else if ( starts_with(paramName, kParamInputEnable) && (args.reason == eChangeUserEdit) ) {
+        updateClips();
+        updateVisibility();
     } else if ( (paramName == kParamImageShaderSource) && (args.reason == eChangeUserEdit) ) {
         _imageShaderCompile->setEnabled(true);
-    } else if ( (paramName == kParamImageShaderRecompiled) || (paramName == kParamAuto) ) {
-        // shader was recompiled and auto parameters is checked
-        updateExtra();
-        updateVisibility();
     } else if (paramName == kParamRendererInfo) {
         std::string message;
         {
@@ -1802,6 +1929,39 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMousePosition);
+        param->setLabel(kParamMousePositionLabel);
+        param->setHint(kParamMousePositionHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
+        param->setUseHostNativeOverlayHandle(true);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMouseClick);
+        param->setLabel(kParamMouseClickLabel);
+        param->setHint(kParamMouseClickHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
+        param->setUseHostNativeOverlayHandle(true);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMousePressed);
+        param->setLabel(kParamMousePressedLabel);
+        param->setHint(kParamMousePressedHint);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     {
         OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupImageShader);
@@ -1884,7 +2044,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
         {
             // a dummy boolean parameter, used to update parameters GUI when the shader was recompiled
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamImageShaderRecompiled);
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamImageShaderParamsUpdated);
             param->setEvaluateOnChange(false);
             param->setAnimates(false);
             param->setIsSecret(true);
@@ -1900,7 +2060,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         for (unsigned i = 0; i < NBINPUTS; ++i) {
             std::string nb = unsignedToString(i);
             {
-                OFX::StringParamDescriptor* param = desc.defineStringParam(kParamLabel + nb);
+                OFX::StringParamDescriptor* param = desc.defineStringParam(kParamInputName + nb);
                 param->setLabel("");
                 param->setDefault(kClipChannel + nb);
                 param->setStringType(OFX::eStringTypeLabel);
@@ -1913,17 +2073,31 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 }
             }
             {
-                OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFilter + nb);
-                param->setLabel(kParamFilterLabel);
-                param->setHint(kParamFilterHint);
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInputEnable + nb);
+                param->setLabel(kParamInputEnableLabel);
+                param->setHint(kParamInputEnableHint);
+                param->setDefault(true);
+                param->setAnimates(false);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamInputFilter + nb);
+                param->setLabel(kParamInputFilterLabel);
+                param->setHint(kParamInputFilterHint);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterNearest);
-                param->appendOption(kParamFilterOptionNearest, kParamFilterOptionNearestHint);
+                param->appendOption(kParamInputFilterOptionNearest, kParamInputFilterOptionNearestHint);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterLinear);
-                param->appendOption(kParamFilterOptionLinear, kParamFilterOptionLinearHint);
+                param->appendOption(kParamInputFilterOptionLinear, kParamInputFilterOptionLinearHint);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterMipmap);
-                param->appendOption(kParamFilterOptionMipmap, kParamFilterOptionMipmapHint);
+                param->appendOption(kParamInputFilterOptionMipmap, kParamInputFilterOptionMipmapHint);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterAnisotropic);
-                param->appendOption(kParamFilterOptionAnisotropic, kParamFilterOptionAnisotropicHint);
+                param->appendOption(kParamInputFilterOptionAnisotropic, kParamInputFilterOptionAnisotropicHint);
                 param->setDefault((int)ShadertoyPlugin::eFilterMipmap);
                 param->setAnimates(false);
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -1935,13 +2109,13 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 }
             }
             {
-                OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamWrap + nb);
-                param->setLabel(kParamWrapLabel);
-                param->setHint(kParamWrapHint);
+                OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamInputWrap + nb);
+                param->setLabel(kParamInputWrapLabel);
+                param->setHint(kParamInputWrapHint);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapRepeat);
-                param->appendOption(kParamWrapOptionRepeat, kParamWrapOptionRepeatHint);
+                param->appendOption(kParamInputWrapOptionRepeat, kParamInputWrapOptionRepeatHint);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapClamp);
-                param->appendOption(kParamWrapOptionClamp, kParamWrapOptionClampHint);
+                param->appendOption(kParamInputWrapOptionClamp, kParamInputWrapOptionClampHint);
                 param->setDefault((int)ShadertoyPlugin::eWrapRepeat);
                 param->setAnimates(false);
                 if (page) {
@@ -1951,6 +2125,32 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     param->setParent(*group);
                 }
             }
+            {
+                OFX::StringParamDescriptor* param = desc.defineStringParam(kParamInputLabel + nb);
+                param->setLabel(kParamInputLabelLabel);
+                param->setHint(kParamInputLabelHint);
+                param->setDefault("");
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::StringParamDescriptor* param = desc.defineStringParam(kParamInputHint + nb);
+                param->setLabel(kParamInputHintLabel);
+                param->setDefault("");
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
         }
 
         // boundingBox
@@ -2068,9 +2268,21 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
 
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAuto);
+            OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAuto);
             param->setLabel(kParamAutoLabel);
             param->setHint(kParamAutoHint);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMouseParams);
+            param->setLabel(kParamMouseParamsLabel);
+            param->setHint(kParamMouseParamsHint);
             param->setDefault(true);
             param->setAnimates(false);
             if (page) {
@@ -2087,20 +2299,6 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 sgroup->setLabel(kGroupExtraParametersLabel);
                 sgroup->setHint(kGroupExtraParametersHint);
                 sgroup->setOpen(false);
-            }
-
-            {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMouseParams);
-                param->setLabel(kParamMouseParamsLabel);
-                param->setHint(kParamMouseParamsHint);
-                param->setDefault(true);
-                param->setAnimates(false);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (sgroup) {
-                    param->setParent(*sgroup);
-                }
             }
 
             {
@@ -2155,6 +2353,20 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     param->setHint(kParamNameHint);
                     param->setEvaluateOnChange(true);
                     param->setAnimates(false);
+                    param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (sgroup) {
+                        param->setParent(*sgroup);
+                    }
+                }
+                {
+                    OFX::StringParamDescriptor* param = desc.defineStringParam(std::string(kParamLabel) + nb);
+                    param->setLabel(kParamLabelLabel);
+                    param->setHint(kParamLabelHint);
+                    param->setEvaluateOnChange(false);
+                    param->setAnimates(false);
                     if (page) {
                         page->addChild(*param);
                     }
@@ -2196,39 +2408,6 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMousePosition);
-        param->setLabel(kParamMousePositionLabel);
-        param->setHint(kParamMousePositionHint);
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
-        param->setUseHostNativeOverlayHandle(true);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMouseClick);
-        param->setLabel(kParamMouseClickLabel);
-        param->setHint(kParamMouseClickHint);
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
-        param->setUseHostNativeOverlayHandle(true);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMousePressed);
-        param->setLabel(kParamMousePressedLabel);
-        param->setHint(kParamMousePressedHint);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     {

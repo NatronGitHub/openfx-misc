@@ -2711,6 +2711,7 @@
 		1E3E3D3617996112005F2132 /* ofxsMessage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMessage.h; sourceTree = "<group>"; };
 		1E3E3D3717996112005F2132 /* ofxsMultiThread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMultiThread.h; sourceTree = "<group>"; };
 		1E3E3D3817996112005F2132 /* ofxsParam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsParam.h; sourceTree = "<group>"; };
+		1E40E4DD1D1034C2008DAE8C /* Shadertoy-parse.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "Shadertoy-parse.cpp"; sourceTree = "<group>"; };
 		1E52FFCB1955CE120000FB79 /* Premult.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Premult.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E52FFCD1955CE720000FB79 /* Premult.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Premult.cpp; sourceTree = "<group>"; };
 		1E52FFD31955CE890000FB79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -4680,6 +4681,7 @@
 				1EDFE9F41CB79314001E68FA /* ShadertoyRender.h */,
 				1EDFE9F51CB79314001E68FA /* ShadertoyRenderGL.cpp */,
 				1EDFE9F61CB79314001E68FA /* ShadertoyRenderMesa.cpp */,
+				1E40E4DD1D1034C2008DAE8C /* Shadertoy-parse.cpp */,
 			);
 			path = Shadertoy;
 			sourceTree = "<group>";

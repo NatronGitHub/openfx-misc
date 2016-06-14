@@ -95,6 +95,7 @@ public:
     private:
         UniformTypeEnum _type;
         std::string _name;
+        std::string _label;
         std::string _hint;
         ExtraParameterValue _default;
         ExtraParameterValue _min;
@@ -113,6 +114,7 @@ public:
         {
             _type = type;
             _name = name;
+            _label = name;
             _hint.clear();
             switch (type) {
                 case eUniformTypeNone:
@@ -168,6 +170,12 @@ public:
         }
 
         const std::string&
+        getLabel() const
+        {
+            return _label;
+        }
+
+        const std::string&
         getHint() const
         {
             return _hint;
@@ -207,6 +215,12 @@ public:
         getMax() const
         {
             return _max;
+        }
+
+        void
+        setLabel(const std::string& label)
+        {
+            _label = label;
         }
 
         void
@@ -283,6 +297,27 @@ public:
 #endif
 
 public:
+    static const char*
+    mapUniformTypeToStr(UniformTypeEnum e)
+    {
+        switch (e) {
+            case eUniformTypeNone:
+                return NULL;
+            case eUniformTypeBool:
+                return "bool";
+            case eUniformTypeInt:
+                return "int";
+            case eUniformTypeFloat:
+                return "float";
+            case eUniformTypeVec2:
+                return "vec2";
+            case eUniformTypeVec3:
+                return "vec3";
+            case eUniformTypeVec4:
+                return "vec4";
+        }
+    };
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -321,12 +356,16 @@ private:
     void updateVisibility();
     void updateVisibilityParam(unsigned i, bool visible);
     void updateExtra();
+    void updateClips();
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     std::vector<OFX::Clip*> _srcClips;
-    std::vector<OFX::ChoiceParam*> _filter;
-    std::vector<OFX::ChoiceParam*> _wrap;
+    std::vector<OFX::BooleanParam*> _inputEnable;
+    std::vector<OFX::StringParam*> _inputLabel;
+    std::vector<OFX::StringParam*> _inputHint;
+    std::vector<OFX::ChoiceParam*> _inputFilter;
+    std::vector<OFX::ChoiceParam*> _inputWrap;
     OFX::ChoiceParam *_bbox;
     OFX::ChoiceParam *_format;
     OFX::Int2DParam *_formatSize;
@@ -335,8 +374,7 @@ private:
     OFX::StringParam *_imageShaderSource;
     OFX::PushButtonParam *_imageShaderCompile;
     OFX::IntParam *_imageShaderTriggerRender;
-    OFX::BooleanParam *_imageShaderRecompiled;
-    OFX::BooleanParam *_paramAuto;
+    OFX::BooleanParam *_imageShaderParamsUpdated;
     OFX::BooleanParam *_mouseParams;
     OFX::Double2DParam *_mousePosition;
     OFX::Double2DParam *_mouseClick;
@@ -345,6 +383,7 @@ private:
     OFX::IntParam *_paramCount;
     std::vector<OFX::ChoiceParam *> _paramType;
     std::vector<OFX::StringParam *> _paramName;
+    std::vector<OFX::StringParam *> _paramLabel;
     std::vector<OFX::StringParam *> _paramHint;
     std::vector<OFX::BooleanParam *> _paramValueBool;
     std::vector<OFX::IntParam *> _paramValueInt;
@@ -369,8 +408,10 @@ private:
     std::auto_ptr<Mutex> _imageShaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
+    bool _imageShaderUpdateParams; // ask to extract parameters from the shader on next compilation
     std::vector<ExtraParameter> _imageShaderExtraParameters; // parameters extracted from the shader
-    bool _imageShaderHasMouse;
+    bool _imageShaderHasMouse; // parameters extracted from the shader
+    std::vector<bool> _imageShaderUsesInput;
     bool _imageShaderCompiled;
 
     struct OpenGLContextData
