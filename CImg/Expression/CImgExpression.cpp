@@ -101,8 +101,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "         . 'y': current processed row of the associated image, if any (0 otherwise).\n" \
     "         . 'z': current processed slice of the associated image, if any (0 otherwise).\n" \
     "         . 'c': current processed channel of the associated image, if any (0 otherwise).\n" \
-    "         . 't': current time [OpenFX-only].\n" \
-    "         . 'k': render scale (1 means full scale, 0.5 means half scale) [OpenFX-only].\n" \
+    "         . 'T': current time [OpenFX-only].\n" \
+    "         . 'K': render scale (1 means full scale, 0.5 means half scale) [OpenFX-only].\n" \
     "         . 'e': value of e, i.e. 2.71828..\n" \
     "         . 'pi': value of pi, i.e. 3.1415926..\n" \
     "         . '?' or 'u': a random value between [0,1], following a uniform distribution.\n" \
@@ -149,18 +149,24 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "         . If specified formula starts with '>' or '<', the operators 'i(..)' and 'j(..)' will return\n" \
     "            values of the image currently being modified, in forward ('>') or backward ('<') order.\n" \
     "\n" \
-    "Sample expressions:\n\n" \
-    "'j(sin(y/100/k+t/10)*20*k,sin(x/100/k+t/10)*20*k)' distorts the image with time-varying waves.\n\n" \
-    "'0.5*(j(1)-j(-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n\n" \
-    "'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n\n" \
-    "'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n\n" \
-    "'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n\n" \
+    "Sample expressions:\n" \
+    "\n" \
+    "'j(sin(y/100/k+t/10)*20*k,sin(x/100/k+t/10)*20*k)' distorts the image with time-varying waves.\n" \
+    "\n" \
+    "'0.5*(j(1)-j(-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n" \
+    "\n" \
+    "'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n" \
+    "\n" \
+    "'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n" \
+    "\n" \
+    "'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n" \
+    "\n" \
     "'sqrt(zr=-1.2+2.4*x/w;zi=-1.2+2.4*y/h;for(i=0,zr*zr+zi*zi<=4&&i<256,t=zr*zr-zi*zi+0.4;zi=2*zr*zi+0.2;zr=t; i=i+1))/255' draws the Mandelbrot fractal (give it a 1024x1024 image as input).\n" \
     "\n" \
     "Uses the 'fill' function from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginDescription \
     "Quickly generate or process image from mathematical formula evaluated for each pixel.\n" \
@@ -213,8 +219,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "         . 'y': current processed row of the associated image, if any (0 otherwise).\n" \
     "         . 'z': current processed slice of the associated image, if any (0 otherwise).\n" \
     "         . 'c': current processed channel of the associated image, if any (0 otherwise).\n" \
-    "         . 't': current time [OpenFX-only].\n" \
-    "         . 'k': render scale (1 means full scale, 0.5 means half scale) [OpenFX-only].\n" \
+    "         . 'T': current time [OpenFX-only].\n" \
+    "         . 'K': render scale (1 means full scale, 0.5 means half scale) [OpenFX-only].\n" \
     "         . 'e': value of e, i.e. 2.71828..\n" \
     "         . 'pi': value of pi, i.e. 3.1415926..\n" \
     "         . '?' or 'u': a random value between [0,1], following a uniform distribution.\n" \
@@ -262,30 +268,33 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "            'i(..)' and 'j(..)' will return values of the image currently being modified, in\n" \
     "            forward ('>') or backward ('less than' character) order.\n" \
     "\n" \
-    "Sample expressions:\n\n" \
-    "'j(sin(y/100/k+t/10)*20*k,sin(x/100/k+t/10)*20*k)' distorts the image with time-varying waves.\n\n" \
-    "'0.5*(j(1)-j(-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n\n" \
-    "'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n\n" \
+    "Sample expressions:\n" \
+    "\n" \
+    "'j(sin(y/100/k+t/10)*20*k,sin(x/100/k+t/10)*20*k)' distorts the image with time-varying waves.\n" \
+    "\n" \
+    "'0.5*(j(1)-j(-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n" \
+    "\n" \
+    "'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n" \
+    "\n" \
     "\n" \
     "Uses the 'fill' function from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginDescriptionMarkdown \
     "Quickly generate or process image from mathematical formula evaluated for each pixel.\n" \
-    "Full documentation for G'MIC/CImg expressions is reproduced below and [available online](http://gmic.eu/reference.shtml#section9)\n" \
-    "The only difference is the predefined variables `T` (current time) and `K` (render scale).\n" \
+    "Full documentation for [G'MIC](http://gmic.eu/)/[CImg](http://cimg.eu/) expressions is reproduced below and available online from the [G'MIC help](http://gmic.eu/reference.shtml#section9).\n" \
+    "The only additions of this plugin are the predefined variables `T` (current time) and `K` (render scale).\n" \
     "\n" \
     "Uses the 'fill' function from the CImg library.\n" \
-    "CImg is a free, open-source library distributed under the CeCILL-C " \
-    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-    "It can be used in commercial applications (see http://cimg.sourceforge.net)." \
+    "CImg is a free, open-source library distributed under the CeCILL-C (close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. It can be used in commercial applications (see http://cimg.eu).\n" \
     "\n" \
-    "### Sample expressions:\n\n" \
-    "- `j(sin(y/100/K+T/10)*20*K,sin(x/100/K+T/10)*20*K)'` distorts the image with time-varying waves.\n\n" \
-    "- `0.5*(j(1)-j(-1))` will estimate the X-derivative of an image with a classical finite difference scheme.\n\n" \
-    "- `if(x%10==0,1,i)` will draw blank vertical lines on every 10th column of an image.\n\n" \
+    "### Sample expressions:\n" \
+    "\n" \
+    "- `j(sin(y/100/K+T/10)*20*K,sin(x/100/K+T/10)*20*K)'` distorts the image with time-varying waves.\n" \
+    "- `0.5*(j(1)-j(-1))` will estimate the X-derivative of an image with a classical finite difference scheme.\n" \
+    "- `if(x%10==0,1,i)` will draw blank vertical lines on every 10th column of an image.\n" \
     "\n" \
     "### Expression language\n" \
     "  - The expression is evaluated for each pixel of the selected images.\n" \
@@ -294,7 +303,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "    + Usual operators: `||` (logical or), `&&` (logical and), `|` (bitwise or), `&` (bitwise and), `!=`, `==`, `<=`, `>=`, `<`, `>`, `<<` (left bitwise shift), `>>` (right bitwise shift), `-`, `+`, `*`, `/`, `%` (modulo), `^` (power), `!` (logical not), `~` (bitwise not), `++`, `--`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `>>=`, `<<=` (in-place operators).\n" \
     "\n" \
-    "    + Usual functions: abs(), acos(), arg(), argmax(), argmin(), asin(), atan(), atan2(), cbrt(), cos(), cosh(), cut(), exp(), fact(), fibo(), gauss(), hypoth(), int(), isval(), isnan(), isinf(), isint(), isbool(), isfile(), isdir(), isin(), kth(), log(), log2(), log10(), max(), mean(), med(), min(), narg(), prod(), rol() (left bit rotation), ror() (right bit rotation), round(), sign(), sin(), sinc(), sinh(), sqrt(), std(), sum(), tan(), tanh(), variance().\n" \
+    "    + Usual functions: `abs()`, `acos()`, `arg()`, `argmax()`, `argmin()`, `asin()`, `atan()`, `atan2()`, `cbrt()`, `cos()`, `cosh()`, `cut()`, `exp()`, `fact()`, `fibo()`, `gauss()`, `hypoth()`, `int()`, `isval()`, `isnan()`, `isinf()`, `isint()`, `isbool()`, `isfile()`, `isdir()`, `isin()`, `kth()`, `log()`, `log2()`, `log10()`, `max()`, `mean()`, `med()`, `min()`, `narg()`, `prod()`, `rol()` (left bit rotation), `ror()` (right bit rotation), `round()`, `sign()`, `sin()`, `sinc()`, `sinh()`, `sqrt()`, `std()`, `sum()`, `tan()`, `tanh()`, `variance()`.\n" \
     "\n" \
     "       * `atan2(x,y)` is the version of `atan()` with two arguments `y` and `x` (as in C/C++).\n" \
     "       * `hypoth(x,y)` computes the square root of the sum of the squares of x and y.\n" \
@@ -332,8 +341,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "       * `z`: current processed slice of the associated image, if any (0 otherwise).\n" \
     "       * `c`: current processed channel of the associated image, if any (0 otherwise).\n" \
     "       * `t`: thread id when an expression is evaluated with multiple threads (0 means `master thread`).\n" \
-    "       * 'T': current time [OpenFX-only].\n" \
-    "       * 'k': render scale (1 means full scale, 0.5 means half scale) [OpenFX-only].\n" \
+    "       * `T`: current time [OpenFX-only].\n" \
+    "       * `K`: render scale (1 means full scale, 0.5 means half scale) [OpenFX-only].\n" \
     "       * `e`: value of e, i.e. 2.71828..\n" \
     "       * `pi`: value of pi, i.e. 3.1415926..\n" \
     "       * `u`: a random value between [0,1], following a uniform distribution.\n" \
@@ -354,7 +363,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "       * Function `find(A,B,_is_forward,_starting_indice)` returns the index where sub-vector B appears in vector A, (or -1 if B is not found in A). Argument A can be also replaced by an image indice #ind.\n" \
     "       * A 2-dimensional vector may be seen as a complex number and used in those particular functions/operators: `**` (complex multiplication), `//` (complex division), `^^` (complex exponentiation), `**=` (complex self-multiplication), `//=` (complex self-division), `^^=` (complex self-exponentiation), `cabs()` (complex modulus), `carg()` (complex argument), `cconj()` (complex conjugate), `cexp()` (complex exponential) and `clog()` (complex logarithm).\n" \
     "       * A MN-dimensional vector may be seen as a M x N matrix and used in those particular functions/operators: `**` (matrix-vector multiplication), `det(A)` (determinant), `diag(V)` (diagonal matrix from vector), `eig(A)` (eigenvalues/eigenvectors), `eye(n)` (n x n identity matrix), `inv(A)` (matrix inverse), `mul(A,B,_nb_colsB)` (matrix-matrix multiplication), `rot(x,y,z,angle)` (3d rotation matrix), `rot(angle)` (2d rotation matrix), `solve(A,B,_nb_colsB)` (least-square solver of linear system A.X = B), `trace(A)` (matrix trace) and `transp(A,nb_colsA)` (matrix transpose). Argument `nb_colsB` may be omitted if equal to 1.\n" \
-    "       * Specifying a vector-valued math expression as an argument of a command that operates on image values (e.g. `-fill`) modifies the whole spectrum range of the processed image(s), for each spatial coordinates (x,y,z). The command does not loop over the C-axis in this case.\n" \
+    "       * Specifying a vector-valued math expression as an expression modifies the whole spectrum range of the processed image(s), for each spatial coordinates (x,y,z). The command does not loop over the C-axis in this case.\n" \
     "\n" \
     "    + String manipulation: Character strings are defined and managed as vectors objects.\n" \
     "       Dedicated functions and initializers to manage strings are\n" \
@@ -373,24 +382,24 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "       * `normP(u1,...,un)` computes the LP-norm of the specified vector (P being an unsigned integer or `inf`).\n" \
     "       * `u(max)` or `u(min,max)`: return a random value between [0,max] or [min,max], following a uniform distribution.\n" \
-    "       * `i(_a,_b,_c,_d,_interpolation_type,_boundary_conditions)`: return the value of the pixel located at position (a,b,c,d) in the associated image, if any (0 otherwise). `interpolation_type` can be { 0=nearest neighbor | other=linear }. `boundary_conditions` can be { 0=dirichlet | 1=neumann | 2=periodic }. Omitted coordinates are replaced by their default values which are respectively x, y, z, c, interpolation and boundary. For instance command `-fill 0.5*(i(x+1)-i(x-1))` will estimate the X-derivative of an image with a classical finite difference scheme.\n" \
+    "       * `i(_a,_b,_c,_d,_interpolation_type,_boundary_conditions)`: return the value of the pixel located at position (a,b,c,d) in the associated image, if any (0 otherwise). `interpolation_type` can be { 0=nearest neighbor | other=linear }. `boundary_conditions` can be { 0=dirichlet | 1=neumann | 2=periodic }. Omitted coordinates are replaced by their default values which are respectively x, y, z, c, interpolation and boundary. For instance expression `0.5*(i(x+1)-i(x-1))` will estimate the X-derivative of an image with a classical finite difference scheme.\n" \
     "       * `j(_dx,_dy,_dz,_dc,_interpolation_type,_boundary_conditions)` does the same for the pixel located at position (x+dx,y+dy,z+dz,c+dc) (pixel access relative to the current coordinates).\n" \
     "       * `i[offset,_boundary_conditions]` returns the value of the pixel located at specified `offset` in the associated image buffer (or 0 if offset is out-of-bounds).\n" \
     "       * `j[offset,_boundary_conditions]` does the same for an offset relative to the current pixel (x,y,z,c).\n" \
     "       * `i(#ind,_x,_y,_z,_c,_interpolation,_boundary)`, `j(#ind,_dx,_dy,_dz,_dc,_interpolation,_boundary)`, `i[#ind,offset,_boundary]` and `i[offset,_boundary]` are similar expressions used to access pixel values for any numbered image `[ind]` of the list.\n" \
     "       * `I/J[offset,_boundary_conditions]` and `I/J(#ind,_x,_y,_z,_interpolation,_boundary)` do the same as `i/j[offset,_boundary_conditions]` and `i/j(#ind,_x,_y,_z,_c,_interpolation,_boundary)` but return a vector instead of a scalar (e.g. a vector [ R,G,B ] for a pixel at (a,b,c) in a color image).\n" \
-    "       * `crop(_#ind,_x,_y,_z,_c,_dx,_dy,_dz,_dc,_boundary)` returns a vector whose values come from the cropped region of image `[ind] (or from default image selected if `ind` is not specified). Cropped region starts from point (x,y,z,c) and has a size of dx x dy x dz x dc. Arguments for coordinates and sizes can be omitted if they are not ambiguous (e.g. `crop(#ind,x,y,dx,dy)` is a valid invokation of this function).\n" \
+    "       * `crop(_#ind,_x,_y,_z,_c,_dx,_dy,_dz,_dc,_boundary)` returns a vector whose values come from the cropped region of image `[ind]` (or from default image selected if `ind` is not specified). Cropped region starts from point (x,y,z,c) and has a size of dx x dy x dz x dc. Arguments for coordinates and sizes can be omitted if they are not ambiguous (e.g. `crop(#ind,x,y,dx,dy)` is a valid invokation of this function).\n" \
     "       * `draw(_#ind,S,x,y,z,c,dx,_dy,_dz,_dc,_opacity,_M,_max_M)` draws a sprite S in image `[ind]` (or in default image selected if `ind` is not specified) at specified coordinates (x,y,z,c). The size of the sprite dx x dy x dz x dc must be specified. You can also specify a corresponding opacity mask M if its size matches S.\n" \
-    "       * `if(condition,expr_then,_expr_else)`: return value of `expr_then` or `expr_else`, depending on the value of `condition` (0=false, other=true). `expr_else` can be omitted in which case 0 is returned if the condition does not hold. Using the ternary operator `condition?expr_then[:expr_else]` gives an equivalent expression. For instance, G`MIC commands `-fill if(x%10==0,255,i)` and `-fill x%10?i:255` both draw blank vertical lines on every 10th column of an image.\n" \
+    "       * `if(condition,expr_then,_expr_else)`: return value of `expr_then` or `expr_else`, depending on the value of `condition` (0=false, other=true). `expr_else` can be omitted in which case 0 is returned if the condition does not hold. Using the ternary operator `condition?expr_then[:expr_else]` gives an equivalent expression. For instance, G'MIC expressions `if(x%10==0,255,i)` and `x%10?i:255` both draw blank vertical lines on every 10th column of an image.\n" \
     "       * `dowhile(expression,_condition)` repeats the evaluation of `expression` until `condition` vanishes (or until `expression` vanishes if no `condition` is specified). For instance, the expression: `if(N<2,N,n=N-1;F0=0;F1=1;dowhile(F2=F0+F1;F0=F1;F1=F2,n=n-1))` returns the Nth value of the Fibonacci sequence, for N>=0 (e.g., 46368 for N=24). `dowhile(expression,condition)` always evaluates the specified expression at least once, then check for the nullity condition. When done, it returns the last value of `expression`.\n" \
     "       * `for(init,condition,_procedure,body)` first evaluates the expression `init`, then iteratively evaluates `body` (followed by `procedure` if specified) while `condition` is verified (i.e. not zero). It may happen that no iteration is done, in which case the function returns 0. Otherwise, it returns the last value of `body`. For instance, the expression: `if(N<2,N,for(n=N;F0=0;F1=1,n=n-1,F2=F0+F1;F0=F1;F1=F2))` returns the Nth value of the Fibonacci sequence, for N>=0 (e.g., 46368 for N=24).\n" \
     "       * `whiledo(condition,expression)` is exactly the same as `for(init,condition,expression)` without the specification of an initializing expression.\n" \
     "       * `date(attr,path)` returns the date attribute for the given `path` (file or directory), with `attr` being { 0=year | 1=month | 2=day | 3=day of week | 4=hour | 5=minute | 6=second }.\n" \
-    "       * `date(_attr) returns the specified attribute for the current (locale) date.\n" \
-    "       * `print(expression) prints the value of the specified expression on the console (and returns its value).\n" \
-    "       * `debug(expression) prints detailed debug information about the sequence of operations done by the math parser to evaluate the expression (and returns its value).\n" \
-    "       * `init(expression) evaluates the specified expression only once, even when multiple evaluations are required (e.g. in `-fill init(foo=0);++foo`).\n" \
-    "       * `copy(dest,src,_nb_elts,_inc_d,_inc_s) copies an entire memory block of `nb_elts` elements starting from a source value `src` to a specified destination `dest`, with increments defined by `inc_d` and `inc_s` respectively for the destination and source pointers.\n" \
+    "       * `date(_attr)` returns the specified attribute for the current (locale) date.\n" \
+    "       * `print(expression)` prints the value of the specified expression on the console (and returns its value).\n" \
+    "       * `debug(expression)` prints detailed debug information about the sequence of operations done by the math parser to evaluate the expression (and returns its value).\n" \
+    "       * `init(expression)` evaluates the specified expression only once, even when multiple evaluations are required (e.g. in `init(foo=0);++foo`).\n" \
+    "       * `copy(dest,src,_nb_elts,_inc_d,_inc_s)` copies an entire memory block of `nb_elts` elements starting from a source value `src` to a specified destination `dest`, with increments defined by `inc_d` and `inc_s` respectively for the destination and source pointers.\n" \
     "\n" \
     "    + User-defined functions:\n" \
     "\n" \
@@ -401,9 +410,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "    + Multi-threaded and in-place evaluation:\n" \
     "\n" \
-    "       * If your image data are large enough and you have several CPUs available, it is likely that the math expression passed to a `-fill` or `-input` command is evaluated in parallel, using multiple computation threads.\n" \
+    "       * If your image data are large enough and you have several CPUs available, it is likely that the math expression is evaluated in parallel, using multiple computation threads.\n" \
     "       * Starting an expression with `:` or `*` forces the evaluations required for an image to be run in parallel, even if the amount of data to process is small (beware, it may be slower to evaluate!). Specify `:` (instead of `*`) to avoid possible image copy done before evaluating the expression (this saves memory, but do this only if you are sure this step is not required!)\n" \
-    "       * If the specified expression starts with `>` or `<`, the pixel access operators `i(), i[], j()` and `j[]` return values of the image being currently modified, in forward (`>`) or backward (`<`) order. The multi-threading evaluation of the expression is also disabled in this case.\n" \
+    "       * If the specified expression starts with `>` or `<`, the pixel access operators `i()`, `i[]`, `j()` and `j[]` return values of the image being currently modified, in forward (`>`) or backward (`<`) order. The multi-threading evaluation of the expression is also disabled in this case.\n" \
     "       * Function `(operands)` forces the execution of the given operands in a single thread at a time.\n" \
     "\n" \
     "    + Expressions `i(_#ind,x,_y,_z,_c)=value`, `j(_#ind,x,_y,_z,_c)=value`, `i[_#ind,offset]=value` and `j[_#ind,offset]=value` set a pixel value at a different location than the running one in the image `[ind]` (or in the associated image if argument `#ind` is omitted), either with global coordinates/offsets (with `i(...)` and `i[...]`), or relatively to the current position (x,y,z,c) (with `j(...)` and `j[...]`). These expressions always return `value`.\n" \
