@@ -47,7 +47,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Uses the 'equalize' function from the CImg library on the 'V' channel of the HSV decomposition of the image.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgHistEQ"
 // History:

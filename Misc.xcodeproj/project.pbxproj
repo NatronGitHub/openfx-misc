@@ -2716,6 +2716,8 @@
 		1E52FFD31955CE890000FB79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E52FFD41955CE890000FB79 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E534A0E1D0D9BAD0007AD92 /* ofxsOGLDebug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLDebug.h; sourceTree = "<group>"; };
+		1E534AAB1D0FEC870007AD92 /* CImgExpression-help.gmic */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "CImgExpression-help.gmic"; path = "Expression/CImgExpression-help.gmic"; sourceTree = "<group>"; };
+		1E534AAC1D0FEC870007AD92 /* CImgExpression.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; name = CImgExpression.md; path = Expression/CImgExpression.md; sourceTree = "<group>"; };
 		1E53BF891C75CD8100623EE0 /* ColorBars.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorBars.cpp; sourceTree = "<group>"; };
 		1E53BF8A1C75CD8100623EE0 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E53BF8B1C75CD8100623EE0 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -3849,6 +3851,8 @@
 				1E868B7619E6E28E00B793BA /* CImgErode.cpp */,
 				1ECF2F5119F2CB9F00E91A38 /* CImgErodeSmooth.cpp */,
 				1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */,
+				1E534AAC1D0FEC870007AD92 /* CImgExpression.md */,
+				1E534AAB1D0FEC870007AD92 /* CImgExpression-help.gmic */,
 				1E7B38BC1B95DEAB00012B76 /* CImgFilter.cpp */,
 				1E1DDFEA1A04E432007F45B2 /* CImgGuided.cpp */,
 				1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */,

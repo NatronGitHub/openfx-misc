@@ -54,7 +54,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginNameLaplacian          "LaplacianCImg"
 #define kPluginDescriptionLaplacian \
@@ -62,7 +62,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginNameChromaBlur          "ChromaBlurCImg"
 #define kPluginDescriptionChromaBlur \
@@ -71,7 +71,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginNameBloom          "BloomCImg"
 #define kPluginGroupingBloom      "Filter"
@@ -86,7 +86,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
 #define kPluginIdentifierLaplacian    "net.sf.cimg.CImgLaplacian"
