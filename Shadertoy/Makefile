@@ -1,5 +1,5 @@
 PLUGINOBJECTS = \
-	Shadertoy.o ShadertoyRenderGL.o  ShadertoyRenderMesa.o
+	Shadertoy.o ShadertoyRenderGL.o  ShadertoyRenderMesa.o ShadertoyParse.o
 
 PLUGINNAME = Shadertoy
 
