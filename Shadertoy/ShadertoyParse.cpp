@@ -31,11 +31,20 @@
 
 using namespace std;
 
+/*
 static inline
 bool
 isspace(char c)
 {
     return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+}
+*/
+
+static inline
+bool
+isspacenonewline(char c)
+{
+    return c == ' ' || c == '\t';
 }
 
 void
@@ -56,7 +65,7 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
     //printf("found label!\n");
     const char* sstart = tokpos + strlen(tok);
     // remove spaces from start
-    while (isspace(*sstart)) {
+    while (isspacenonewline(*sstart)) {
         ++sstart;
     }
     // find a '(', a ',' or a newline, which marks the end of the label
@@ -77,7 +86,7 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
     if (send > sstart) {
         --send;
     }
-    while (send >= sstart && isspace(*send)) {
+    while (send >= sstart && isspacenonewline(*send)) {
         --send;
     }
     ++send;
@@ -92,7 +101,7 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
         //printf("found hint!\n");
         sstart = hintstart;
         // remove spaces from start
-        while (*sstart && isspace(*sstart)) {
+        while (*sstart && isspacenonewline(*sstart)) {
             ++sstart;
         }
         send = sstart;
@@ -108,7 +117,7 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
         }
 
         // remove spaces from end
-        while (send >= sstart && isspace(*send)) {
+        while (send >= sstart && isspacenonewline(*send)) {
             --send;
         }
         ++send;
@@ -121,8 +130,9 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
     while (valstart != NULL) {
         //printf("found values!\n");
         sstart = valstart;
+        valstart = NULL;
         // remove spaces from start
-        while (*sstart && isspace(*sstart)) {
+        while (*sstart && isspacenonewline(*sstart)) {
             ++sstart;
         }
         bool isFilter = (std::strncmp(sstart, "filter", 6) == 0);
@@ -135,14 +145,14 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
                 sstart += 4;
             }
 
-            while (*sstart && isspace(*sstart)) {
+            while (*sstart && isspacenonewline(*sstart)) {
                 ++sstart;
             }
             if (*sstart == '=') {
                 // parse value
                 ++sstart;
                 std::vector<double> values;
-                while (*sstart && isspace(*sstart)) {
+                while (*sstart && isspacenonewline(*sstart)) {
                     ++sstart;
                 }
                 if (isFilter) {
@@ -172,14 +182,12 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
                     }
                 }
                 // look for ','
-                while (*sstart && isspace(*sstart)) {
+                while (*sstart && isspacenonewline(*sstart)) {
                     ++sstart;
                 }
                 if ( (*sstart == ',' || *sstart == ';') && sstart[1] ) {
                     //printf("found next value\n");
                     valstart = sstart + 1;
-                } else {
-                    valstart = NULL;
                 }
             }
         }
@@ -208,7 +216,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
     }
     // skip spaces
     ++sstart;
-    while ( *sstart && isspace(*sstart) ) {
+    while ( *sstart && isspacenonewline(*sstart) ) {
         ++sstart;
     }
     // are we at a comment? if not, then there is nothing here
@@ -220,7 +228,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
     ++sstart;
     ++sstart;
     // skip the spaces
-    while ( *sstart && isspace(*sstart) ) {
+    while ( *sstart && isspacenonewline(*sstart) ) {
         ++sstart;
     }
     // find a '(', a ',' or a newline, which marks the end of the label
@@ -241,7 +249,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
     if (send > sstart) {
         --send;
     }
-    while (send >= sstart && isspace(*send)) {
+    while (send >= sstart && isspacenonewline(*send)) {
         --send;
     }
     ++send;
@@ -252,7 +260,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
         //printf("found hint!\n");
         sstart = hintstart;
         // remove spaces from start
-        while (*sstart && isspace(*sstart)) {
+        while (*sstart && isspacenonewline(*sstart)) {
             ++sstart;
         }
         send = sstart;
@@ -268,7 +276,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
         }
 
         // remove spaces from end
-        while (send >= sstart && isspace(*send)) {
+        while (send >= sstart && isspacenonewline(*send)) {
             --send;
         }
         ++send;
@@ -279,29 +287,30 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
     while (valstart != NULL) {
         //printf("found values!\n");
         sstart = valstart;
+        valstart = NULL;
         // remove spaces from start
-        while (*sstart && isspace(*sstart)) {
+        while (*sstart && isspacenonewline(*sstart)) {
             ++sstart;
         }
         bool isMin = (*sstart == 'm' && sstart[1] == 'i' && sstart[2] == 'n');
         bool isMax = (*sstart == 'm' && sstart[1] == 'a' && sstart[2] == 'x');
         if (isMin || isMax) {
             sstart += 3;
-            while (*sstart && isspace(*sstart)) {
+            while (*sstart && isspacenonewline(*sstart)) {
                 ++sstart;
             }
             if (*sstart == '=') {
                 // parse value
                 ++sstart;
                 std::vector<double> values;
-                while (*sstart && isspace(*sstart)) {
+                while (*sstart && isspacenonewline(*sstart)) {
                     ++sstart;
                 }
                 bool paren = false;
                 if (*sstart == '(') {
                     ++sstart;
                     paren = true;
-                    while (*sstart && isspace(*sstart)) {
+                    while (*sstart && isspacenonewline(*sstart)) {
                         ++sstart;
                     }
                 }
@@ -368,7 +377,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
                 }
                 // look for ','
                 sstart = send;
-                while (*sstart && isspace(*sstart)) {
+                while (*sstart && isspacenonewline(*sstart)) {
                     ++sstart;
                 }
                 if ( (*sstart == ',' || *sstart == ';') && sstart[1] ) {
