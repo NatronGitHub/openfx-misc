@@ -2003,6 +2003,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             param->setStringType(eStringTypeFilePath);
             param->setFilePathExists(true);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
             param->setAnimates(false);
             if (page) {
                 page->addChild(*param);
