@@ -1278,6 +1278,24 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     OpenGLContextData* contextData = &osmesa->_openGLContextData;
 #endif
 
+    {
+        AutoMutex lock( _rendererInfoMutex.get() );
+        std::string &message = _rendererInfo;
+        if ( message.empty() ) {
+            message += "OpenGL renderer information:";
+            message += "\nGL_RENDERER = ";
+            message += (char *) glGetString(GL_RENDERER);
+            message += "\nGL_VERSION = ";
+            message += (char *) glGetString(GL_VERSION);
+            message += "\nGL_VENDOR = ";
+            message += (char *) glGetString(GL_VENDOR);
+            message += "\nGL_SHADING_LANGUAGE_VERSION = ";
+            message += (char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
+            message += "\nGL_EXTENSIONS = ";
+            message += (char *) glGetString(GL_EXTENSIONS);
+        }
+    }
+
 #ifdef USE_OSMESA
     // load the source image into a texture
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -1664,12 +1682,6 @@ TestOpenGLPlugin::contextAttached(bool createContextData)
     DPRINT( ( "\n" ) );
 #endif
 
-#ifdef USE_OSMESA
-    int cpuDriver = 0;
-    if (_cpuDriver) {
-        cpuDriver = _cpuDriver->getValue();
-    }
-#endif
     {
         AutoMutex lock( _rendererInfoMutex.get() );
         std::string &message = _rendererInfo;
