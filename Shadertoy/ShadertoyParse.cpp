@@ -151,7 +151,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
     }
     // find a '(', a ',' or a newline, which marks the end of the label
     const char* send = sstart;
-    while (*send && *send != '(' && *send != ',' && *send != '\n') {
+    while (*send && *send != '(' && *send != ',' && *send != ';' && *send != '\n') {
         ++send;
     }
     const char* hintstart = NULL;
@@ -159,7 +159,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
         hintstart = send + 1;
     }
     const char* valstart = NULL;
-    if (*send == ',') {
+    if (*send == ',' || *send == ';') {
         valstart = send + 1;
     }
 
@@ -186,7 +186,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
             ++send;
         }
         // we tolerate either space or comma after closing paren
-        if (*send == ')' && (send[1] == ',' || send[1] == ' ')) {
+        if (*send == ')' && (send[1] == ',' || send[1] == ';' || send[1] == ' ')) {
             valstart = send + 2;
         }
         if (*send == ')') {
@@ -238,10 +238,10 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
                     sstart = valstart;
                     //printf("*sstart2=%c\n", *sstart);
                     send = sstart;
-                    while (*send && *send != ',' && (!paren || *send != ')') && *send != '\n') {
+                    while (*send && *send != ',' && *send != ';' && (!paren || *send != ')') && *send != '\n') {
                         ++send;
                     }
-                    if (paren && *send == ',') {
+                    if ( paren && (*send == ',' || *send == ';') ) {
                         // next value;
                         //printf("found next value\n");
                         valstart = send + 1;
@@ -297,7 +297,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
                 while (*sstart && isspace(*sstart)) {
                     ++sstart;
                 }
-                if (*sstart == ',' && sstart[1]) {
+                if ( (*sstart == ',' || *sstart == ';') && sstart[1] ) {
                     //printf("found next value\n");
                     valstart = sstart + 1;
                 }
