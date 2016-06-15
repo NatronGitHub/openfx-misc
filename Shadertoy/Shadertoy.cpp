@@ -583,6 +583,8 @@ enum BBoxEnum
 #define kParamInputWrapOptionRepeatHint "WRAP_S/T = GL_REPEAT"
 #define kParamInputWrapOptionClamp "Clamp"
 #define kParamInputWrapOptionClampHint "WRAP_S/T = GL_CLAMP_TO_EDGE"
+#define kParamInputWrapOptionMirror "Mirror"
+#define kParamInputWrapOptionMirrorHint "WRAP_S/T = GL_MIRRORED_REPEAT"
 
 #define kParamInputName "inputName" // name for the label for each input
 
@@ -696,6 +698,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderInputEnabled(NBINPUTS)
     , _imageShaderInputLabel(NBINPUTS)
     , _imageShaderInputHint(NBINPUTS)
+    , _imageShaderInputFilter(NBINPUTS, eFilterMipmap)
+    , _imageShaderInputWrap(NBINPUTS, eWrapRepeat)
     , _imageShaderCompiled(false)
     , _openGLContextData()
     , _openGLContextAttached(false)
@@ -1129,6 +1133,8 @@ ShadertoyPlugin::updateExtra()
                 }
                 _inputLabel[i]->setValue(_imageShaderInputLabel[i]);
                 _inputHint[i]->setValue(_imageShaderInputHint[i]);
+                _inputFilter[i]->setValue(_imageShaderInputFilter[i]);
+                _inputWrap[i]->setValue(_imageShaderInputWrap[i]);
             }
 
             _mouseParams->setValue(_imageShaderHasMouse);
@@ -1469,6 +1475,8 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             AutoMutex lock( _imageShaderMutex.get() );
             // mark that image shader must be recompiled on next render
             ++_imageShaderID;
+            _imageShaderUpdateParams = false;
+            _imageShaderCompiled = false;
         }
         _imageShaderCompile->setEnabled(false);
         // trigger a new render
@@ -1478,33 +1486,29 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         bool recompile = true;
         {
             AutoMutex lock( _imageShaderMutex.get() );
-            if (_imageShaderUpdateParams) {
-                recompile = false; // parameters were updated (second click in a host that doesn'r, we just need to update the Gui
+            if (_imageShaderUpdateParams && _imageShaderCompiled) {
+                _imageShaderCompiled = false; //_imageShaderUpdateParams is reset by updateExtra()
+                recompile = false; // parameters were updated (second click in a host that doesn't support seValue() from render(), probably), we just need to update the Gui
             } else {
-                // same as kParamImageShaderCompile above
+                // same as kParamImageShaderCompile above, except ask for param update
                 // mark that image shader must be recompiled on next render
                 ++_imageShaderID;
+                _imageShaderUpdateParams = true;
+                _imageShaderCompiled = false;
             }
         }
         if (recompile) {
             // same as kParamImageShaderCompile above
             _imageShaderCompile->setEnabled(false);
             // trigger a new render which updates params and inputs info
-            _imageShaderUpdateParams = true;
             clearPersistentMessage();
             _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValueAtTime(time) + 1);
         } else {
-            // same as kParamImageShaderParamsUpdated below
             updateExtra();
             updateVisibility();
             updateClips();
         }
-    } else if (paramName == kParamImageShaderParamsUpdated) {
-        // shader was recompiled and auto parameters is checked
-        updateExtra();
-        updateVisibility();
-        updateClips();
-    } else if ( (paramName == kParamImageShaderSource) && (args.reason == eChangeUserEdit) ) {
+    } else if (paramName == kParamImageShaderSource) {
         _imageShaderCompile->setEnabled(true);
     } else if ( ( (paramName == kParamCount) ||
                   starts_with(paramName, kParamName) ) && (args.reason == eChangeUserEdit) ) {
@@ -2024,6 +2028,19 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamImageShaderCompile);
             param->setLabel(kParamImageShaderCompileLabel);
             param->setHint(kParamImageShaderCompileHint);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        {
+            OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAuto);
+            param->setLabel(kParamAutoLabel);
+            param->setHint(kParamAutoHint);
             if (page) {
                 page->addChild(*param);
             }
@@ -2121,6 +2138,8 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 param->appendOption(kParamInputWrapOptionRepeat, kParamInputWrapOptionRepeatHint);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapClamp);
                 param->appendOption(kParamInputWrapOptionClamp, kParamInputWrapOptionClampHint);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapMirror);
+                param->appendOption(kParamInputWrapOptionMirror, kParamInputWrapOptionMirrorHint);
                 param->setDefault((int)ShadertoyPlugin::eWrapRepeat);
                 param->setAnimates(false);
                 if (page) {
@@ -2269,18 +2288,6 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 if (group) {
                     param->setParent(*group);
                 }
-            }
-        }
-
-        {
-            OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAuto);
-            param->setLabel(kParamAutoLabel);
-            param->setHint(kParamAutoHint);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
             }
         }
 

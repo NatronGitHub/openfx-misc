@@ -81,7 +81,8 @@ public:
     enum WrapEnum
     {
         eWrapRepeat = 0,
-        eWrapClamp
+        eWrapClamp,
+        eWrapMirror
     };
 
     // a simple variant to represent an extra parameter
@@ -414,6 +415,8 @@ private:
     std::vector<bool> _imageShaderInputEnabled;
     std::vector<std::string> _imageShaderInputLabel;
     std::vector<std::string> _imageShaderInputHint;
+    std::vector<FilterEnum> _imageShaderInputFilter;
+    std::vector<WrapEnum> _imageShaderInputWrap;
     bool _imageShaderCompiled;
 
     struct OpenGLContextData
@@ -449,7 +452,7 @@ private:
 #endif
 };
 
-void getChannelInfo(const char* fragmentShader, int channel, std::string& label, std::string& hint);
+void getChannelInfo(const char* fragmentShader, int channel, std::string& label, std::string& hint, ShadertoyPlugin::FilterEnum& filter, ShadertoyPlugin::WrapEnum& wrap);
 
 void getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParameter &p);
 

@@ -168,6 +168,10 @@ struct ShadertoyShader
 // for i in `fgrep "static PFN" ShadertoyRender.h |sed -e s@//@@ |awk '{print $2}'|fgrep -v i`; do fgrep $i /opt/osmesa/include/GL/glext.h ; done
 
 // Program
+#ifndef GL_VERSION_1_4
+#define GL_MIRRORED_REPEAT                0x8370
+#endif
+
 #ifndef GL_VERSION_2_0
 typedef GLuint (APIENTRYP PFNGLCREATEPROGRAMPROC) (void);
 typedef void (APIENTRYP PFNGLDELETEPROGRAMPROC) (GLuint program);
@@ -1178,6 +1182,25 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     OpenGLContextData* contextData = &osmesa->_openGLContextData;
 #endif
 
+    {
+        AutoMutex lock( _rendererInfoMutex.get() );
+        std::string &message = _rendererInfo;
+        if ( message.empty() ) {
+            message += "OpenGL renderer information:";
+            message += "\nGL_RENDERER = ";
+            message += (char *) glGetString(GL_RENDERER);
+            message += "\nGL_VERSION = ";
+            message += (char *) glGetString(GL_VERSION);
+            message += "\nGL_VENDOR = ";
+            message += (char *) glGetString(GL_VENDOR);
+            message += "\nGL_SHADING_LANGUAGE_VERSION = ";
+            message += (char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
+            message += "\nGL_EXTENSIONS = ";
+            message += (char *) glGetString(GL_EXTENSIONS);
+        }
+    }
+
+
     // compile and link the shader if necessary
     bool imageShaderParamsUpdated = false;
     ShadertoyShader *shadertoy;
@@ -1273,8 +1296,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                             for (unsigned i = 0; i < NBINPUTS; ++i) {
                                 if ( name == (std::string("iChannel") + (char)('0' + i)) ) {
                                     _imageShaderInputEnabled[i] = true;
-                                    std::string label, hint;
-                                    getChannelInfo(fragmentShader, i, label, hint);
+                                    getChannelInfo(fragmentShader, i, _imageShaderInputLabel[i], _imageShaderInputHint[i], _imageShaderInputFilter[i], _imageShaderInputWrap[i]);
                                     loc = -1; // go to next uniform
                                     break;
                                 }
@@ -1608,10 +1630,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glTexParameteri(srcTarget[i], GL_TEXTURE_MIN_FILTER, min_filter);
             glTexParameteri(srcTarget[i], GL_TEXTURE_MAG_FILTER, mag_filter);
 
-            // wrap for each texture (repeat [default], clamp)
+            // wrap for each texture (repeat [default], clamp, mirror)
             // clamp = GL_CLAMP_TO_EDGE
             WrapEnum wrap = (WrapEnum)_inputWrap[i]->getValueAtTime(time);
-            GLenum wrapst = (wrap == eWrapClamp) ? GL_CLAMP_TO_EDGE : GL_REPEAT;
+            GLenum wrapst = (wrap == eWrapClamp) ? GL_CLAMP_TO_EDGE : ((wrap == eWrapMirror) ? GL_MIRRORED_REPEAT : GL_REPEAT);
             glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_S, wrapst);
             glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_T, wrapst);
 
