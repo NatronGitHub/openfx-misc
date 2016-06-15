@@ -216,11 +216,19 @@ using namespace OFX;
     "\n" \
     "For sound shaders, the mainSound() function returns a vec2 containing the left and right (stereo) sound channel wave data.\n" \
     "\n" \
-    "OpenFX extensions\n" \
+    "OpenFX extensions to Shadertoy\n" \
     "\n" \
-    "* The pre-defined `iRenderScale`uniform contains the current render scale.\n" \
-    "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 focusPoint = (0.5, 0.5);`. These uniforms are made available as OpenFX parameters when the shader is compiled (this may require viewing the shader output), if the \"Auto. params\" option is checked.\n" \
-    ""
+    "* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect.\n" \
+    "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = (5., 5.);`.\n" \
+    "  These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).\n" \
+    "  A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.\n" \
+    "  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.)`\n" \
+    "  min/max values can also be given after a comma. The strings must be exactly `min=` and `max=`, without additional spaces, separated by a comma, and the values must have the same dimension as the uniform:\n" \
+    "  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.), min=(0.,0.), max=(1000.,1000.)`\n" \
+    "* The following comment line placed in the shader gives a label and help string to input 1 (the comment must be the only thing on the line):\n" \
+    "  `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`\n" \
+    "* This one also sets the filter and wrap parameters:\n" \
+    "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`"
 
 #define kPluginDescriptionMarkdown \
     "Apply a [Shadertoy](http://www.shadertoy.com) fragment shader (multipass shaders and sound are not supported).\n" \
@@ -376,11 +384,19 @@ using namespace OFX;
     "\n" \
     "For sound shaders, the mainSound() function returns a vec2 containing the left and right (stereo) sound channel wave data.\n" \
     "\n" \
-    "### OpenFX extensions\n" \
+    "### OpenFX extensions to Shadertoy\n" \
     "\n" \
-    "* The pre-defined `iRenderScale`uniform contains the current render scale.\n" \
-    "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 focusPoint = (0.5, 0.5);`. These uniforms are made available as OpenFX parameters when the shader is compiled (this may require viewing the shader output), if the \"Auto. params\" option is checked.\n" \
-    ""
+    "* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect.\n" \
+    "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = (5., 5.);`.\n" \
+    "  These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).\n" \
+    "  A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.\n" \
+    "  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.)`\n" \
+    "  min/max values can also be given after a comma. The strings must be exactly `min=` and `max=`, without additional spaces, separated by a comma, and the values must have the same dimension as the uniform:\n" \
+    "  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.), min=(0.,0.), max=(1000.,1000.)`\n" \
+    "* The following comment line placed in the shader gives a label and help string to input 1 (the comment must be the only thing on the line):\n" \
+    "  `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`\n" \
+    "* This one also sets the filter and wrap parameters:\n" \
+    "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`"
 
 #define kPluginIdentifier "net.sf.openfx.Shadertoy"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
