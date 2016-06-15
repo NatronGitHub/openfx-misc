@@ -411,7 +411,9 @@ private:
     bool _imageShaderUpdateParams; // ask to extract parameters from the shader on next compilation
     std::vector<ExtraParameter> _imageShaderExtraParameters; // parameters extracted from the shader
     bool _imageShaderHasMouse; // parameters extracted from the shader
-    std::vector<bool> _imageShaderUsesInput;
+    std::vector<bool> _imageShaderInputEnabled;
+    std::vector<std::string> _imageShaderInputLabel;
+    std::vector<std::string> _imageShaderInputHint;
     bool _imageShaderCompiled;
 
     struct OpenGLContextData
@@ -446,5 +448,9 @@ private:
     std::auto_ptr<Mutex> _osmesaMutex;
 #endif
 };
+
+void getChannelInfo(const char* fragmentShader, int channel, std::string& label, std::string& hint);
+
+void getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParameter &p);
 
 #endif // Misc_Shadertoy_h

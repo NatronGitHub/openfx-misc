@@ -155,10 +155,10 @@ For sound shaders, the mainSound() function returns a vec2 containing the left a
 * The pre-defined `iRenderScale` uniform contains the current render scale.
 * The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = (5., 5.);`.
   These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).
-  A parameter label and help string can be given in the comment on the same line:
+  A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.
   `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.)`
-  min/max values can also be given. The strings must be exactly `min=` and `max=`, without additional spaces, and the values must have the same dimension as the uniform:
-  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.) min=(0.,0.), max=(1000.,1000.)`
+  min/max values can also be given after a comma. The strings must be exactly `min=` and `max=`, without additional spaces, separated by a comma, and the values must have the same dimension as the uniform:
+  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.), min=(0.,0.), max=(1000.,1000.)`
   
 * The following comment line placed in the shader gives a label and help string to input 1 (the comment must be the only thing on the line):
   `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`

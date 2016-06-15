@@ -1206,7 +1206,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             fsSource += "#line 1\n";
             fsSource += str + '\n' + fsFooter;
             std::string errstr;
-            shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fsSource.c_str(), errstr);
+            const char* fragmentShader = fsSource.c_str();
+            shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fragmentShader, errstr);
             const GLuint program = shadertoy->program;
             if (shadertoy->program == 0) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
@@ -1259,7 +1260,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                     if (count > 0) {
                         //DPRINT( ("Active Uniforms: %d\n", count) );
                     }
-                    _imageShaderUsesInput.assign(NBINPUTS, false);
+                    _imageShaderInputEnabled.assign(NBINPUTS, false);
                     for (i = 0; i < count; i++) {
                         name.resize(bufSize);
                         glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
@@ -1271,7 +1272,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                         if(loc >= 0) {
                             for (unsigned i = 0; i < NBINPUTS; ++i) {
                                 if ( name == (std::string("iChannel") + (char)('0' + i)) ) {
-                                    _imageShaderUsesInput[i] = true;
+                                    _imageShaderInputEnabled[i] = true;
+                                    std::string label, hint;
+                                    getChannelInfo(fragmentShader, i, label, hint);
                                     loc = -1; // go to next uniform
                                     break;
                                 }
@@ -1384,7 +1387,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                                     break;
                             }
                             
-                            // TODO: parse hint/min/max from comment
+                            // parse hint/min/max from comment
+                            getExtraParameterInfo(fragmentShader, p);
+
                             _imageShaderExtraParameters.push_back(p);
                         }
                     }

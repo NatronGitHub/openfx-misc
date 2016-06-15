@@ -693,7 +693,9 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderUpdateParams(false)
     , _imageShaderExtraParameters()
     , _imageShaderHasMouse(false)
-    , _imageShaderUsesInput(NBINPUTS)
+    , _imageShaderInputEnabled(NBINPUTS)
+    , _imageShaderInputLabel(NBINPUTS)
+    , _imageShaderInputHint(NBINPUTS)
     , _imageShaderCompiled(false)
     , _openGLContextData()
     , _openGLContextAttached(false)
@@ -1122,9 +1124,11 @@ ShadertoyPlugin::updateExtra()
             _imageShaderUpdateParams = false;
             beginEditBlock(kParamAuto);
             for (unsigned i = 0; i < NBINPUTS; ++i) {
-                if (_imageShaderUsesInput[i] != _inputEnable[i]->getValue()) {
-                    _inputEnable[i]->setValue(_imageShaderUsesInput[i]);
+                if (_imageShaderInputEnabled[i] != _inputEnable[i]->getValue()) {
+                    _inputEnable[i]->setValue(_imageShaderInputEnabled[i]);
                 }
+                _inputLabel[i]->setValue(_imageShaderInputLabel[i]);
+                _inputHint[i]->setValue(_imageShaderInputHint[i]);
             }
 
             _mouseParams->setValue(_imageShaderHasMouse);
@@ -1135,16 +1139,7 @@ ShadertoyPlugin::updateExtra()
                 _paramType[i]->setValue( (int)t );
                 _paramName[i]->setValue( p.getName() );
                 _paramLabel[i]->setValue( p.getLabel() );
-                std::string hint = p.getHint();
-                if ( !p.getName().empty() ) {
-                    if (! hint.empty() ) {
-                        hint += '\n';
-                    }
-                    hint += "This parameter corresponds to 'uniform ";
-                    hint += mapUniformTypeToStr( p.getType() );
-                    hint += " " + p.getName() + "'.";
-                }
-                _paramHint[i]->setValue(hint);
+                _paramHint[i]->setValue( p.getHint() );
                 switch (t) {
                     case eUniformTypeBool: {
                         _paramDefaultBool[i]->setValue(p.getDefault().b);
@@ -1310,12 +1305,22 @@ ShadertoyPlugin::updateExtra()
         if (t == eUniformTypeNone) {
             continue;
         }
-        //std::string name;
+        std::string name;
         std::string label;
         std::string hint;
-        //_paramName[i]->getValue(name);
+        _paramName[i]->getValue(name);
         _paramLabel[i]->getValue(label);
         _paramHint[i]->getValue(hint);
+#if 0
+        if ( !name.empty() ) {
+            if (! hint.empty() ) {
+                hint += '\n';
+            }
+            hint += "This parameter corresponds to 'uniform ";
+            hint += mapUniformTypeToStr(t);
+            hint += " " + name + "'.";
+        }
+#endif
         switch (t) {
             case eUniformTypeBool: {
                 if ( !label.empty() ) {
