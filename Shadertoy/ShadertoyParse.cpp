@@ -39,7 +39,7 @@ isspace(char c)
 }
 
 void
-getChannelInfo(const char* fragmentShader, int channel, std::string& label, std::string& hint)
+getChannelInfo(const char* fragmentShader, int channel, std::string& label, std::string& hint, ShadertoyPlugin::FilterEnum& filter, ShadertoyPlugin::WrapEnum& wrap)
 {
     char iChannelX[14] = "// iChannelX:"; // index 11 holds the channel character
     assert(channel < 10 && iChannelX[11] == 'X');
@@ -59,14 +59,20 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
     while (isspace(*sstart)) {
         ++sstart;
     }
+    // find a '(', a ',' or a newline, which marks the end of the label
     const char* send = sstart;
-    while (*send && *send != '(' && *send != '\n') {
+    while (*send && *send != '(' && *send != ',' && *send != ';' && *send != '\n') {
         ++send;
     }
     const char* hintstart = NULL;
     if (*send == '(') {
         hintstart = send + 1;
     }
+    const char* valstart = NULL;
+    if (*send == ',' || *send == ';') {
+        valstart = send + 1;
+    }
+
     // remove spaces from end
     if (send > sstart) {
         --send;
@@ -82,33 +88,101 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
     }
     if (hintstart == NULL || !*hintstart) {
         hint.clear();
-
-        return;
-    }
-
-    //printf("found hint!\n");
-    sstart = hintstart;
-    // remove spaces from start
-    while (*sstart && isspace(*sstart)) {
-        ++sstart;
-    }
-    send = sstart;
-    while (*send && *send != ')' && *send != '\n') {
-        ++send;
-    }
-    if (*send == ')') {
-        --send;
-    }
-
-    // remove spaces from end
-    while (send >= sstart && isspace(*send)) {
-        --send;
-    }
-    ++send;
-    if (send > sstart) {
-        hint = std::string(sstart, send);
     } else {
-        hint.clear();
+        //printf("found hint!\n");
+        sstart = hintstart;
+        // remove spaces from start
+        while (*sstart && isspace(*sstart)) {
+            ++sstart;
+        }
+        send = sstart;
+        while (*send && *send != ')' && *send != '\n') {
+            ++send;
+        }
+        // we tolerate either space or comma after closing paren
+        if (*send == ')' && (send[1] == ',' || send[1] == ';' || send[1] == ' ')) {
+            valstart = send + 2;
+        }
+        if (*send == ')') {
+            --send;
+        }
+
+        // remove spaces from end
+        while (send >= sstart && isspace(*send)) {
+            --send;
+        }
+        ++send;
+        if (send > sstart) {
+            hint = std::string(sstart, send);
+        } else {
+            hint.clear();
+        }
+    }
+    while (valstart != NULL) {
+        //printf("found values!\n");
+        sstart = valstart;
+        // remove spaces from start
+        while (*sstart && isspace(*sstart)) {
+            ++sstart;
+        }
+        bool isFilter = (std::strncmp(sstart, "filter", 6) == 0);
+        bool isWrap = (std::strncmp(sstart, "wrap", 4) == 0);
+
+        if (isFilter || isWrap) {
+            if (isFilter) {
+                sstart += 6;
+            } else if (isWrap) {
+                sstart += 4;
+            }
+
+            while (*sstart && isspace(*sstart)) {
+                ++sstart;
+            }
+            if (*sstart == '=') {
+                // parse value
+                ++sstart;
+                std::vector<double> values;
+                while (*sstart && isspace(*sstart)) {
+                    ++sstart;
+                }
+                if (isFilter) {
+                    if (std::strncmp(sstart, "nearest", 6) == 0) {
+                        filter = ShadertoyPlugin::eFilterNearest;
+                        sstart += 6;
+                    } else if (std::strncmp(sstart, "linear", 6) == 0) {
+                        filter = ShadertoyPlugin::eFilterLinear;
+                        sstart += 6;
+                    } else if (std::strncmp(sstart, "mipmap", 6) == 0) {
+                        filter = ShadertoyPlugin::eFilterMipmap;
+                        sstart += 6;
+                    } else if (std::strncmp(sstart, "anisotropic", 11) == 0) {
+                        filter = ShadertoyPlugin::eFilterAnisotropic;
+                        sstart += 11;
+                    }
+                } else if (isWrap) {
+                    if (std::strncmp(sstart, "repeat", 6) == 0) {
+                        wrap = ShadertoyPlugin::eWrapRepeat;
+                        sstart += 6;
+                    } else if (std::strncmp(sstart, "clamp", 5) == 0) {
+                        wrap = ShadertoyPlugin::eWrapClamp;
+                        sstart += 5;
+                    } else if (std::strncmp(sstart, "mirror", 6) == 0) {
+                        wrap = ShadertoyPlugin::eWrapMirror;
+                        sstart += 6;
+                    }
+                }
+                // look for ','
+                while (*sstart && isspace(*sstart)) {
+                    ++sstart;
+                }
+                if ( (*sstart == ',' || *sstart == ';') && sstart[1] ) {
+                    //printf("found next value\n");
+                    valstart = sstart + 1;
+                } else {
+                    valstart = NULL;
+                }
+            }
+        }
     }
 }
 
@@ -204,14 +278,14 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
     }
     while (valstart != NULL) {
         //printf("found values!\n");
-        bool ismax = false;
         sstart = valstart;
         // remove spaces from start
         while (*sstart && isspace(*sstart)) {
             ++sstart;
         }
-        if ((*sstart == 'm' && sstart[1] == 'i' && sstart[2] == 'n') || (*sstart == 'm' && sstart[1] == 'a' && sstart[2] == 'x')) {
-            ismax = (*sstart == 'm' && sstart[1] == 'a' && sstart[2] == 'x');
+        bool isMin = (*sstart == 'm' && sstart[1] == 'i' && sstart[2] == 'n');
+        bool isMax = (*sstart == 'm' && sstart[1] == 'a' && sstart[2] == 'x');
+        if (isMin || isMax) {
             sstart += 3;
             while (*sstart && isspace(*sstart)) {
                 ++sstart;
@@ -258,7 +332,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
                     values.push_back(v);
                 }
                 //printf("setting\n");
-                ShadertoyPlugin::ExtraParameter::ExtraParameterValue& v = ismax ? p.getMax() : p.getMin();
+                ShadertoyPlugin::ExtraParameter::ExtraParameterValue& v = isMax ? p.getMax() : p.getMin();
                 switch (p.getType()) {
                     case ShadertoyPlugin::eUniformTypeNone:
                         assert(false);
@@ -316,6 +390,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
 const char* s1 =
 "// A shader better than any other\n"
 "// iChannel0: ChannelLabel (Channel hint.)\n"
+"// iChannel1: Source (the source.); wrap=mirror, filter=linear\n"
 "uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.), min=(0.1,1.2), max=(1000.,1000.)\n"
 "uniform float value = 2.; // ValueLabel (Value hint.) max=10, min=-10\n";
 
@@ -324,12 +399,16 @@ int main(int argc, char **argv)
 {
     std::string label;
     std::string hint;
+    ShadertoyPlugin::WrapEnum wrap = ShadertoyPlugin::eWrapRepeat;
+    ShadertoyPlugin::FilterEnum filter = ShadertoyPlugin::eFilterNearest;
 
     for (int i = 0; i < SHADERTOY_NBINPUTS; ++i) {
-        getChannelInfo(s1, i, label, hint);
+        getChannelInfo(s1, i, label, hint, filter, wrap);
         std::cout << "channel " << i << ":\n";
         std::cout << "label: '" << label << "'\n";
         std::cout << "hint: '" << hint << "'\n";
+        std::cout << "filter: '" << (int)filter << "'\n";
+        std::cout << "wrap: '" << (int)wrap << "'\n";
     }
     ShadertoyPlugin::ExtraParameter p;
     p.init(ShadertoyPlugin::eUniformTypeVec2, "blurSize");
