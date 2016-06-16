@@ -1,4 +1,4 @@
-SUBDIRS = Misc
+SUBDIRS = Misc Shadertoy
 
 SUBDIRS_NOMULTI = \
 TimeBuffer \

@@ -48,6 +48,7 @@ script:
       exit 0;
     fi
   - make $J CONFIG=debug
+  - make $J -C Shadertoy CONFIG=debug
   - make $J nomulti CONFIG=debug
   - if [ "$CC" = "gcc" ]; then
       make -C CImg clean;
@@ -69,6 +70,6 @@ addons:
     #build_command_prepend: ./configure
     # This command will be added as an argument to "cov-build" to compile
     # the project for analysis
-    build_command: "make $J CONFIG=debug"
+    build_command: "make $J CONFIG=debug; make $J -C Shadertoy CONFIG=debug"
     # Pattern to match selecting branches that will run analysis
     branch_pattern: coverity_scan
