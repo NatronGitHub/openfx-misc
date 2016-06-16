@@ -216,6 +216,7 @@ protected:
     {
         switch (_luminanceMath) {
         case eLuminanceMathRec709:
+        default:
 
             return 0.2126 * r + 0.7152 * g + 0.0722 * b;
         case eLuminanceMathCcir601:

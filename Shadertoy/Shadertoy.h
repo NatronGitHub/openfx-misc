@@ -317,6 +317,7 @@ public:
             case eUniformTypeVec4:
                 return "vec4";
         }
+        return NULL;
     };
 
 private:
