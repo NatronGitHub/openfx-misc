@@ -938,6 +938,11 @@ void
 ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
     const double time = args.time;
+#if GL_ARB_framebuffer_object && !defined(GL_GLEXT_FUNCTION_POINTERS)
+    const bool supportsMipmap = true;
+#else
+    const bool supportsMipmap = (bool)glGenerateMipmap;
+#endif
 
 #ifdef DEBUG_TIME
     struct timeval t1, t2;
@@ -1018,6 +1023,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     std::vector<OFX::PixelComponentEnum> srcComponents(NBINPUTS, OFX::ePixelComponentNone);
     std::vector<GLenum> srcTarget(NBINPUTS, GL_TEXTURE_2D);
     std::vector<GLuint> srcIndex(NBINPUTS);
+    std::vector<FilterEnum> filter(NBINPUTS, eFilterNearest);
+    std::vector<WrapEnum> wrap(NBINPUTS, eWrapRepeat);
 #ifdef USE_OSMESA
     GLenum format = 0;
     GLint depthBits = 0;
@@ -1035,6 +1042,16 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
                 return;
             }
+            // filter for each texture (nearest, linear, mipmap [default])
+            // nearest = GL_NEAREST/GL_NEAREST
+            // linear = GL_LINEAR/GL_LINEAR
+            // mipmap = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR
+            filter[i] = args.renderQualityDraft ? eFilterNearest : (FilterEnum)_inputFilter[i]->getValueAtTime(time);
+
+            // wrap for each texture (repeat [default], clamp, mirror)
+            // clamp = GL_CLAMP_TO_EDGE
+            wrap[i] = (WrapEnum)_inputWrap[i]->getValueAtTime(time);
+
 # ifdef USE_OPENGL
             srcIndex[i] = (GLuint)src[i]->getIndex();
             srcTarget[i] = (GLenum)src[i]->getTarget();
@@ -1451,13 +1468,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             OfxRectI srcBounds = src[i]->getBounds();
             glBindTexture(srcTarget[i], srcIndex[i]);
             // legacy mipmap generation was replaced by glGenerateMipmap from GL_ARB_framebuffer_object (see below)
-            //if (mipmap && !glGenerateMipmap) {
-            //    DPRINT( ("Shadertoy: legacy mipmap generation!\n") );
-            //    // this must be done before glTexImage2D
-            //    glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
-            //    // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
-            //    glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
-            //}
+            if ((filter[i] == eFilterMipmap || filter[i] == eFilterAnisotropic) && !supportsMipmap) {
+                DPRINT( ("Shadertoy: legacy mipmap generation!\n") );
+                // this must be done before glTexImage2D
+                glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
+                // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
+                glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
+            }
 
             glTexImage2D( srcTarget[i], 0, format,
                           srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
@@ -1591,22 +1608,16 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glBindTexture(srcTarget[i], srcIndex[i]);
             glEnable(srcTarget[i]);
 
-            // filter for each texture (nearest, linear, mipmap [default])
-            // nearest = GL_NEAREST/GL_NEAREST
-            // linear = GL_LINEAR/GL_LINEAR
-            // mipmap = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR
-            FilterEnum filter = args.renderQualityDraft ? eFilterNearest : (FilterEnum)_inputFilter[i]->getValueAtTime(time);
-
             // GL_ARB_framebuffer_object
             // https://www.opengl.org/wiki/Common_Mistakes#Automatic_mipmap_generation
-            if ((filter == eFilterMipmap || filter == eFilterAnisotropic) && glGenerateMipmap) {
+            if ((filter[i] == eFilterMipmap || filter[i] == eFilterAnisotropic) && supportsMipmap) {
                 glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
                 glGenerateMipmap(GL_TEXTURE_2D);  //Generate mipmaps now!!!
                 glCheckError();
             }
             GLenum min_filter = GL_NEAREST;
             GLenum mag_filter = GL_NEAREST;
-            switch (filter) {
+            switch (filter[i]) {
                 case eFilterNearest:
                     min_filter = GL_NEAREST;
                     mag_filter = GL_NEAREST;
@@ -1630,10 +1641,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glTexParameteri(srcTarget[i], GL_TEXTURE_MIN_FILTER, min_filter);
             glTexParameteri(srcTarget[i], GL_TEXTURE_MAG_FILTER, mag_filter);
 
-            // wrap for each texture (repeat [default], clamp, mirror)
-            // clamp = GL_CLAMP_TO_EDGE
-            WrapEnum wrap = (WrapEnum)_inputWrap[i]->getValueAtTime(time);
-            GLenum wrapst = (wrap == eWrapClamp) ? GL_CLAMP_TO_EDGE : ((wrap == eWrapMirror) ? GL_MIRRORED_REPEAT : GL_REPEAT);
+            GLenum wrapst = (wrap[i] == eWrapClamp) ? GL_CLAMP_TO_EDGE : ((wrap[i] == eWrapMirror) ? GL_MIRRORED_REPEAT : GL_REPEAT);
             glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_S, wrapst);
             glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_T, wrapst);
 

@@ -1074,6 +1074,12 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     bool projective = true;
     bool mipmap = true;
     bool anisotropic = true;
+#if GL_ARB_framebuffer_object && !defined(GL_GLEXT_FUNCTION_POINTERS)
+    const bool supportsMipmap = true;
+#else
+    const bool supportsMipmap = (bool)glGenerateMipmap;
+#endif
+
 
     if (_scale) {
         _scale->getValueAtTime(time, scalex, scaley);
@@ -1308,7 +1314,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glActiveTextureARB(GL_TEXTURE0_ARB);
     glBindTexture(srcTarget, srcIndex);
     // legacy mipmap generation was replaced by glGenerateMipmap from GL_ARB_framebuffer_object (see below)
-    if (mipmap && !glGenerateMipmap) {
+    if (mipmap && !supportsMipmap) {
         DPRINT( ("TestOpenGL: legacy mipmap generation!\n") );
         // this must be done before glTexImage2D
         glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
@@ -1391,7 +1397,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     // GL_ARB_framebuffer_object
     // https://www.opengl.org/wiki/Common_Mistakes#Automatic_mipmap_generation
-    if (mipmap && glGenerateMipmap) {
+    if (mipmap && supportsMipmap) {
         glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
         glGenerateMipmap(GL_TEXTURE_2D);  //Generate mipmaps now!!!
         glCheckError();
