@@ -1310,12 +1310,14 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                         GLint loc = glGetUniformLocation(program, &name[0]);
 
                         if(loc >= 0) {
-                            for (unsigned i = 0; i < NBINPUTS; ++i) {
-                                if ( name == (std::string("iChannel") + (char)('0' + i)) ) {
-                                    _imageShaderInputEnabled[i] = true;
-                                    getChannelInfo(fragmentShader, i, _imageShaderInputLabel[i], _imageShaderInputHint[i], _imageShaderInputFilter[i], _imageShaderInputWrap[i]);
-                                    loc = -1; // go to next uniform
-                                    break;
+                            if (starts_with(name, "iChannel")) {
+                                for (unsigned j = 0; j < NBINPUTS; ++j) {
+                                    if ( name == (std::string("iChannel") + (char)('0' + j)) ) {
+                                        _imageShaderInputEnabled[i] = true;
+                                        getChannelInfo(fragmentShader, j, _imageShaderInputLabel[j], _imageShaderInputHint[j], _imageShaderInputFilter[j], _imageShaderInputWrap[j]);
+                                        loc = -1; // go to next uniform
+                                        break;
+                                    }
                                 }
                             }
 
