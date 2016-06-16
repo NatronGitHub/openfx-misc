@@ -677,58 +677,53 @@ compileAndLinkProgram(const char *vertexShader,
         return 0;
     }
 
-    if (vs && fs) {
-        glAttachShader(program, vs);
-        glAttachShader(program, fs);
-        glLinkProgram(program);
+    assert(fs && vs);
+    glAttachShader(program, vs);
+    glAttachShader(program, fs);
+    glLinkProgram(program);
 
-        GLint param;
-        glGetProgramiv(program, GL_LINK_STATUS, &param);
-        if (param != GL_TRUE) {
-            errstr = "Failed to link shader program\n";
-            glCheckError();
-            glGetError();
-            int infologLength = 0;
-            char *infoLog;
+    GLint param;
+    glGetProgramiv(program, GL_LINK_STATUS, &param);
+    if (param != GL_TRUE) {
+        errstr = "Failed to link shader program\n";
+        glCheckError();
+        //glGetError();
+        int infologLength = 0;
+        char *infoLog;
 
-            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLength);
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLength);
 
-            if (infologLength > 0) {
-                infoLog = new char[infologLength];
-                glGetProgramInfoLog(program, infologLength, NULL, infoLog);
-                errstr += "\nError Log:\n";
-                errstr += infoLog;
-                delete [] infoLog;
-            } else {
-                errstr += "(no error log)";
-            }
-            //errstr += "\n==== Vertex shader source:\n";
-            //errstr += vertexShader;
-            //errstr += "\n==== Fragment shader source:\n";
-            //errstr += fragmentShader;
-
-            glDetachShader(program, vs);
-            glDeleteShader(vs);
-
-            glDetachShader(program, fs);
-            glDeleteShader(fs);
-
-            glDeleteProgram(program);
-            DPRINT( ( "%s\n", errstr.c_str() ) );
-
-            return 0;
+        if (infologLength > 0) {
+            infoLog = new char[infologLength];
+            glGetProgramInfoLog(program, infologLength, NULL, infoLog);
+            errstr += "\nError Log:\n";
+            errstr += infoLog;
+            delete [] infoLog;
+        } else {
+            errstr += "(no error log)";
         }
-    } else {
-        glDeleteProgram(program);
-    }
+        //errstr += "\n==== Vertex shader source:\n";
+        //errstr += vertexShader;
+        //errstr += "\n==== Fragment shader source:\n";
+        //errstr += fragmentShader;
 
-    if (vs) {
+        glDetachShader(program, vs);
         glDeleteShader(vs);
+
+        glDetachShader(program, fs);
+        glDeleteShader(fs);
+
+        glDeleteProgram(program);
+        DPRINT( ( "%s\n", errstr.c_str() ) );
+
+        return 0;
     }
 
-    if (fs) {
-        glDeleteShader(fs);
-    }
+    assert(vs);
+    glDeleteShader(vs);
+    assert(fs);
+    glDeleteShader(fs);
+
 #ifdef DEBUG
     {
         GLint i;

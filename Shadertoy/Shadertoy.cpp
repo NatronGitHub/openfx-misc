@@ -1136,7 +1136,6 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i,
 void
 ShadertoyPlugin::updateExtra()
 {
-    bool doupdateClips = false;
     {
         AutoMutex lock( _imageShaderMutex.get() );
         // only do this if parameters were updated!
@@ -1445,9 +1444,6 @@ ShadertoyPlugin::updateExtra()
                 assert(false);
                 break;
         }
-    }
-    if (doupdateClips) {
-        updateClips();
     }
 }
 
