@@ -37,7 +37,7 @@
 #endif
 
 #define SHADERTOY_NBINPUTS 4 // number of input channels (the standard shadertoy has 4 inputs)
-#define SHADERTOY_NBUNIFORMS 10 // number of additional uniforms
+#define SHADERTOY_NBUNIFORMS 7 // number of additional uniforms (if more than 7, Nuke's parameter page goes blank when unfolding the Extra Parameters group)
 
 void getShadertoyPluginID(OFX::PluginFactoryArray &ids);
 
@@ -383,6 +383,7 @@ private:
     OFX::BooleanParam *_mousePressed;
     OFX::GroupParam *_groupExtra;
     OFX::IntParam *_paramCount;
+    std::vector<OFX::GroupParam *> _paramGroup;
     std::vector<OFX::ChoiceParam *> _paramType;
     std::vector<OFX::StringParam *> _paramName;
     std::vector<OFX::StringParam *> _paramLabel;

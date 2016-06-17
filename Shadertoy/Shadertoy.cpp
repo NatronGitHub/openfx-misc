@@ -518,13 +518,15 @@ enum BBoxEnum
 #define kGroupExtraParametersLabel "Extra Parameters"
 #define kGroupExtraParametersHint "Description of extra parameters (a.k.a. uniforms) used by the shader source. Note that these parameters must be explicitely declared as uniforms in the shader (to keep compatibility with shadertoy, they may also have a default value set in the shader source)."
 
+#define kGroupParameter "extraParameterGroup"
+#define kGroupParameterLabel "Param "
+
 #define kParamCount "paramCount"
 #define kParamCountLabel "No. of Params"
 #define kParamCountHint "Number of extra parameters."
 
 #define kParamType "paramType" // followed by param number
-#define kParamTypeLabel1 "Param "
-#define kParamTypeLabel2 " Type"
+#define kParamTypeLabel "Type"
 #define kParamTypeHint "Type of the parameter."
 #define kParamTypeOptionNone "none"
 #define kParamTypeOptionBool "bool"
@@ -682,6 +684,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _mousePressed(0)
     , _groupExtra(0)
     , _paramCount(0)
+    , _paramGroup     (NBUNIFORMS, (OFX::GroupParam*)   NULL)
     , _paramType      (NBUNIFORMS, (OFX::ChoiceParam*)  NULL)
     , _paramName      (NBUNIFORMS, (OFX::StringParam*)  NULL)
     , _paramLabel     (NBUNIFORMS, (OFX::StringParam*)  NULL)
@@ -786,6 +789,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
         // generate the number string
         std::string nb = unsignedToString(i);
+        _paramGroup[i]      = fetchGroupParam   (kGroupParameter  + nb);
         _paramType[i]       = fetchChoiceParam  (kParamType       + nb);
         _paramName[i]       = fetchStringParam  (kParamName       + nb);
         _paramLabel[i]      = fetchStringParam  (kParamLabel      + nb);
@@ -808,7 +812,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         _paramMaxInt[i]   = fetchIntParam     (kParamMaxInt   + nb);
         _paramMaxFloat[i] = fetchDoubleParam  (kParamMaxFloat + nb);
         _paramMaxVec2[i]  = fetchDouble2DParam(kParamMaxVec2  + nb);
-        assert(_paramType[i] && _paramName[i] && _paramLabel[i] && _paramHint[i] && _paramValueBool[i] && _paramValueInt[i] && _paramValueFloat[i] && _paramValueVec2[i] && _paramValueVec3[i] && _paramValueVec4[i]);
+        assert(_paramGroup[i] && _paramType[i] && _paramName[i] && _paramLabel[i] && _paramHint[i] && _paramValueBool[i] && _paramValueInt[i] && _paramValueFloat[i] && _paramValueVec2[i] && _paramValueVec3[i] && _paramValueVec4[i]);
     }
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
@@ -1103,6 +1107,11 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i,
         }
     }
 
+    // close the group if it becomes invisible
+    if (!visible) {
+        _paramGroup[i]->setOpen(false);
+    }
+    _paramGroup[i]->setIsSecret(!visible);
     _paramType[i]->setIsSecret(!visible);
     _paramName[i]->setIsSecret(!visible);
     _paramLabel[i]->setIsSecret(!visible || name.empty());
@@ -1397,6 +1406,9 @@ ShadertoyPlugin::updateExtra()
         _paramName[i]->getValue(name);
         _paramLabel[i]->getValue(label);
         _paramHint[i]->getValue(hint);
+        if ( label.empty() ) {
+            label = name;
+        }
 #if 0
         if ( !name.empty() ) {
             if (! hint.empty() ) {
@@ -1407,6 +1419,11 @@ ShadertoyPlugin::updateExtra()
             hint += " " + name + "'.";
         }
 #endif
+        if ( name.empty() ) {
+            _paramGroup[i]->setLabel( kGroupParameterLabel + unsignedToString(i) );
+        } else {
+            _paramGroup[i]->setLabel(name);
+        }
         switch (t) {
             case eUniformTypeBool: {
                 if ( !label.empty() ) {
@@ -1606,7 +1623,8 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         }
         //updateVisibilityParam(i, i < paramCount);
         updateVisibility();
-    } else if ( ( starts_with(paramName, kParamLabel) ||
+    } else if ( ( starts_with(paramName, kParamName) ||
+                 starts_with(paramName, kParamLabel) ||
                  starts_with(paramName, kParamHint) ||
                  starts_with(paramName, kParamDefault) ||
                  starts_with(paramName, kParamMin) ||
@@ -1772,7 +1790,6 @@ defineBoolean(OFX::ImageEffectDescriptor &desc,
               PageParamDescriptor *page,
               GroupParamDescriptor *group)
 {
-    defineBooleanSub(desc, nb, kParamValueBool, kParamValueLabel, kParamValueHint, true, page, NULL);
     defineBooleanSub(desc, nb, kParamDefaultBool, kParamDefaultLabel, kParamDefaultHint, false, page, group);
 }
 
@@ -1809,7 +1826,6 @@ defineInt(OFX::ImageEffectDescriptor &desc,
              PageParamDescriptor *page,
              GroupParamDescriptor *group)
 {
-    defineIntSub(desc, nb, kParamValueInt, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
     defineIntSub(desc, nb, kParamDefaultInt, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
     defineIntSub(desc, nb, kParamMinInt, kParamMinLabel, kParamMinHint, false, INT_MIN, page, group);
     defineIntSub(desc, nb, kParamMaxInt, kParamMaxLabel, kParamMaxHint, false, INT_MAX, page, group);
@@ -1848,7 +1864,6 @@ defineDouble(OFX::ImageEffectDescriptor &desc,
           PageParamDescriptor *page,
           GroupParamDescriptor *group)
 {
-    defineDoubleSub(desc, nb, kParamValueFloat, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
     defineDoubleSub(desc, nb, kParamDefaultFloat, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
     defineDoubleSub(desc, nb, kParamMinFloat, kParamMinLabel, kParamMinHint, false, -DBL_MAX, page, group);
     defineDoubleSub(desc, nb, kParamMaxFloat, kParamMaxLabel, kParamMaxHint, false, DBL_MAX, page, group);
@@ -1887,7 +1902,6 @@ defineDouble2D(OFX::ImageEffectDescriptor &desc,
              PageParamDescriptor *page,
              GroupParamDescriptor *group)
 {
-    defineDouble2DSub(desc, nb, kParamValueVec2, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
     defineDouble2DSub(desc, nb, kParamDefaultVec2, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
     defineDouble2DSub(desc, nb, kParamMinVec2, kParamMinLabel, kParamMinHint, false, -DBL_MAX, page, group);
     defineDouble2DSub(desc, nb, kParamMaxVec2, kParamMaxLabel, kParamMaxHint, false, DBL_MAX, page, group);
@@ -1926,7 +1940,6 @@ defineDouble3D(OFX::ImageEffectDescriptor &desc,
                PageParamDescriptor *page,
                GroupParamDescriptor *group)
 {
-    defineDouble3DSub(desc, nb, kParamValueVec3, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
     defineDouble3DSub(desc, nb, kParamDefaultVec3, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
     //defineDouble3DSub(desc, nb, kParamMinVec3, kParamMinLabel, kParamMinHint, false, -DBL_MAX, page, group);
     //defineDouble3DSub(desc, nb, kParamMaxVec3, kParamMaxLabel, kParamMaxHint, false, DBL_MAX, page, group);
@@ -1965,7 +1978,6 @@ defineRGBA(OFX::ImageEffectDescriptor &desc,
                PageParamDescriptor *page,
                GroupParamDescriptor *group)
 {
-    defineRGBASub(desc, nb, kParamValueVec4, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
     defineRGBASub(desc, nb, kParamDefaultVec4, kParamDefaultLabel, kParamDefaultHint, false, 0, page, group);
     //defineRGBASub(desc, nb, kParamMinVec4, kParamMinLabel, kParamMinHint, false, -DBL_MAX, page, group);
     //defineRGBASub(desc, nb, kParamMaxVec4, kParamMaxLabel, kParamMaxHint, false, DBL_MAX, page, group);
@@ -2047,6 +2059,17 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         if (page) {
             page->addChild(*param);
         }
+    }
+
+    for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+        // generate the number string
+        std::string nb = unsignedToString(i);
+        defineBooleanSub(desc, nb, kParamValueBool, kParamValueLabel, kParamValueHint, true, page, NULL);
+        defineIntSub(desc, nb, kParamValueInt, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+        defineDoubleSub(desc, nb, kParamValueFloat, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+        defineDouble2DSub(desc, nb, kParamValueVec2, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+        defineDouble3DSub(desc, nb, kParamValueVec3, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+        defineRGBASub(desc, nb, kParamValueVec4, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
     }
 
     {
@@ -2409,9 +2432,15 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             for (unsigned i = 0; i < NBUNIFORMS; ++i) {
                 // generate the number string
                 std::string nb = unsignedToString(i);
+                OFX::GroupParamDescriptor* pgroup = desc.defineGroupParam(kGroupParameter + nb);
+                if (pgroup) {
+                    pgroup->setLabel(kGroupParameterLabel + nb);
+                    pgroup->setOpen(false);
+                }
+
                 {
                     OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(std::string(kParamType) + nb);
-                    param->setLabel(std::string(kParamTypeLabel1) + nb + kParamTypeLabel2);
+                    param->setLabel(kParamTypeLabel);
                     param->setHint(kParamTypeHint);
                     assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeNone);
                     param->appendOption(kParamTypeOptionNone);
@@ -2433,8 +2462,8 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     if (page) {
                         page->addChild(*param);
                     }
-                    if (sgroup) {
-                        param->setParent(*sgroup);
+                    if (pgroup) {
+                        param->setParent(*pgroup);
                     }
                 }
                 {
@@ -2447,8 +2476,8 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     if (page) {
                         page->addChild(*param);
                     }
-                    if (sgroup) {
-                        param->setParent(*sgroup);
+                    if (pgroup) {
+                        param->setParent(*pgroup);
                     }
                 }
                 {
@@ -2460,8 +2489,8 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     if (page) {
                         page->addChild(*param);
                     }
-                    if (sgroup) {
-                        param->setParent(*sgroup);
+                    if (pgroup) {
+                        param->setParent(*pgroup);
                     }
                 }
                 {
@@ -2473,23 +2502,30 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     if (page) {
                         page->addChild(*param);
                     }
-                    if (sgroup) {
-                        param->setParent(*sgroup);
+                    if (pgroup) {
+                        param->setParent(*pgroup);
                     }
                 }
-                defineBoolean(desc, nb, page, sgroup);
-                defineInt(desc, nb, page, sgroup);
-                defineDouble(desc, nb, page, sgroup);
-                defineDouble2D(desc, nb, page, sgroup);
-                defineDouble3D(desc, nb, page, sgroup);
-                defineRGBA(desc, nb, page, sgroup);
+                defineBoolean(desc, nb, page, pgroup);
+                defineInt(desc, nb, page, pgroup);
+                defineDouble(desc, nb, page, pgroup);
+                defineDouble2D(desc, nb, page, pgroup);
+                defineDouble3D(desc, nb, page, pgroup);
+                defineRGBA(desc, nb, page, pgroup);
                 
-                if (page && sgroup) {
-                    page->addChild(*sgroup);
+                if (page && pgroup) {
+                    page->addChild(*pgroup);
                 }
-                if (group) {
-                    sgroup->setParent(*group);
+                if (sgroup) {
+                    pgroup->setParent(*sgroup);
                 }
+            }
+
+            if (page && sgroup) {
+                page->addChild(*sgroup);
+            }
+            if (group) {
+                sgroup->setParent(*group);
             }
         }
 
