@@ -2758,6 +2758,7 @@
 		1E6E6FF81BD4F22E00B5A00F /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E6E6FF91BD4F22E00B5A00F /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E6E700F1BD4F26700B5A00F /* TimeDissolve.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeDissolve.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E74F1F61D140B2F00E88491 /* Shadertoy.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = Shadertoy.md; sourceTree = "<group>"; };
 		1E75A0121A87A94D005BAA36 /* CheckerBoard.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CheckerBoard.cpp; sourceTree = "<group>"; };
 		1E75A0141A87A94D005BAA36 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E75A0151A87A94D005BAA36 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -4677,6 +4678,7 @@
 			children = (
 				1EDFE9F01CB79314001E68FA /* Info.plist */,
 				1EDFE9F11CB79314001E68FA /* Makefile */,
+				1E74F1F61D140B2F00E88491 /* Shadertoy.md */,
 				1EDFE9F21CB79314001E68FA /* Shadertoy.cpp */,
 				1EDFE9F31CB79314001E68FA /* Shadertoy.h */,
 				1EDFE9F41CB79314001E68FA /* ShadertoyRender.h */,

@@ -1234,6 +1234,19 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             }
             std::string str;
             _imageShaderSource->getValue(str);
+            {
+                // for compatibility with ShaderToy, remove the first line that starts with "const vec2 iRenderScale"
+                std::size_t found = str.find("const vec2 iRenderScale");
+                if ( found != std::string::npos && (found == 0 || (str[found-1] == '\n' || str[found-1] == '\r') ) ) {
+                    std::size_t eol = str.find('\n', found);
+                    if (eol == std::string::npos) {
+                        // last line
+                        eol = str.size();
+                    }
+                    // replace by an empty line
+                    str.replace(found, eol - found, std::string());
+                }
+            }
             std::string fsSource = fsHeader;
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 fsSource += std::string("uniform sampler2D iChannel") + (char)('0' + i) + ";\n";

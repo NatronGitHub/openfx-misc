@@ -152,7 +152,7 @@ For sound shaders, the mainSound() function returns a vec2 containing the left a
 
 ### OpenFX extensions to Shadertoy
 
-* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect.
+* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect. For compatibility with Shadertoy, the first line that starts with `const vec2 iRenderScale` is ignored (the full line should be `const vec2 iRenderScale = vec2(1.,1.);`).
 * The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = (5., 5.);`.
   These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).
   A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.
