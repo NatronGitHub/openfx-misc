@@ -1142,135 +1142,195 @@ ShadertoyPlugin::updateExtra()
         if (_imageShaderUpdateParams) {
             _imageShaderUpdateParams = false;
             beginEditBlock(kParamAuto);
+            // Try to avoid setting parameters to the same value, since this maytrigger an unnecessary instancechanged on some hosts
             for (unsigned i = 0; i < NBINPUTS; ++i) {
-                if (_imageShaderInputEnabled[i] != _inputEnable[i]->getValue()) {
+                if ( _imageShaderInputEnabled[i] != _inputEnable[i]->getValue() ) {
                     _inputEnable[i]->setValue(_imageShaderInputEnabled[i]);
                 }
-                _inputLabel[i]->setValue(_imageShaderInputLabel[i]);
-                _inputHint[i]->setValue(_imageShaderInputHint[i]);
-                _inputFilter[i]->setValue(_imageShaderInputFilter[i]);
-                _inputWrap[i]->setValue(_imageShaderInputWrap[i]);
+                std::string s;
+                _inputLabel[i]->getValue(s);
+                if (_imageShaderInputLabel[i] != s) {
+                    _inputLabel[i]->setValue(_imageShaderInputLabel[i]);
+                }
+                _inputHint[i]->getValue(s);
+                if (_imageShaderInputHint[i] != s) {
+                    _inputHint[i]->setValue(_imageShaderInputHint[i]);
+                }
+                if ( _imageShaderInputFilter[i] != _inputFilter[i]->getValue() ) {
+                    _inputFilter[i]->setValue(_imageShaderInputFilter[i]);
+                }
+                if ( _imageShaderInputWrap[i] != _inputWrap[i]->getValue() ) {
+                    _inputWrap[i]->setValue(_imageShaderInputWrap[i]);
+                }
             }
-
-            _mouseParams->setValue(_imageShaderHasMouse);
-            _paramCount->setValue(_imageShaderExtraParameters.size());
+            if ( _imageShaderHasMouse != _mouseParams->getValue() ) {
+                _mouseParams->setValue(_imageShaderHasMouse);
+            }
+            if ( (int)_imageShaderExtraParameters.size() != _paramCount->getValue() ) {
+                _paramCount->setValue( _imageShaderExtraParameters.size() );
+            }
             for (unsigned i = 0; i < _imageShaderExtraParameters.size(); ++i) {
                 const ExtraParameter& p = _imageShaderExtraParameters[i];
                 UniformTypeEnum t = p.getType();
-                _paramType[i]->setValue( (int)t );
-                _paramName[i]->setValue( p.getName() );
-                _paramLabel[i]->setValue( p.getLabel() );
-                _paramHint[i]->setValue( p.getHint() );
+                bool tChanged = ( t != (UniformTypeEnum)_paramType[i]->getValue() );
+                if (tChanged) {
+                    _paramType[i]->setValue( (int)t );
+                }
+                std::string s;
+                _paramName[i]->getValue(s);
+                if (p.getName() != s) {
+                    _paramName[i]->setValue( p.getName() );
+                }
+                _paramLabel[i]->getValue(s);
+                if (p.getLabel() != s) {
+                    _paramLabel[i]->setValue( p.getLabel() );
+                }
+                _paramHint[i]->getValue(s);
+                if (p.getHint() != s) {
+                    _paramHint[i]->setValue( p.getHint() );
+                }
                 switch (t) {
+                    case eUniformTypeNone: {
+                        if (tChanged) {
+                            _paramDefaultBool[i]->resetToDefault();
+                            _paramDefaultInt[i]->resetToDefault();
+                            _paramMinInt[i]->resetToDefault();
+                            _paramMaxInt[i]->resetToDefault();
+                            _paramDefaultFloat[i]->resetToDefault();
+                            _paramMinFloat[i]->resetToDefault();
+                            _paramMaxFloat[i]->resetToDefault();
+                            _paramDefaultVec2[i]->resetToDefault();
+                            _paramMinVec2[i]->resetToDefault();
+                            _paramMaxVec2[i]->resetToDefault();
+                            _paramDefaultVec3[i]->resetToDefault();
+                            //_paramMinVec3[i]->resetToDefault();
+                            //_paramMaxVec3[i]->resetToDefault();
+                            _paramDefaultVec4[i]->resetToDefault();
+                            //_paramMinVec4[i]->resetToDefault();
+                            //_paramMaxVec4[i]->resetToDefault();
+                        }
+                    }
                     case eUniformTypeBool: {
+                        if (tChanged) {
+                            _paramDefaultInt[i]->resetToDefault();
+                            _paramMinInt[i]->resetToDefault();
+                            _paramMaxInt[i]->resetToDefault();
+                            _paramDefaultFloat[i]->resetToDefault();
+                            _paramMinFloat[i]->resetToDefault();
+                            _paramMaxFloat[i]->resetToDefault();
+                            _paramDefaultVec2[i]->resetToDefault();
+                            _paramMinVec2[i]->resetToDefault();
+                            _paramMaxVec2[i]->resetToDefault();
+                            _paramDefaultVec3[i]->resetToDefault();
+                            //_paramMinVec3[i]->resetToDefault();
+                            //_paramMaxVec3[i]->resetToDefault();
+                            _paramDefaultVec4[i]->resetToDefault();
+                            //_paramMinVec4[i]->resetToDefault();
+                            //_paramMaxVec4[i]->resetToDefault();
+                        }
                         _paramDefaultBool[i]->setValue(p.getDefault().b);
-                        _paramDefaultInt[i]->resetToDefault();
-                        _paramMinInt[i]->resetToDefault();
-                        _paramMaxInt[i]->resetToDefault();
-                        _paramDefaultFloat[i]->resetToDefault();
-                        _paramMinFloat[i]->resetToDefault();
-                        _paramMaxFloat[i]->resetToDefault();
-                        _paramDefaultVec2[i]->resetToDefault();
-                        _paramMinVec2[i]->resetToDefault();
-                        _paramMaxVec2[i]->resetToDefault();
-                        _paramDefaultVec3[i]->resetToDefault();
-                        //_paramMinVec3[i]->resetToDefault();
-                        //_paramMaxVec3[i]->resetToDefault();
-                        _paramDefaultVec4[i]->resetToDefault();
-                        //_paramMinVec4[i]->resetToDefault();
-                        //_paramMaxVec4[i]->resetToDefault();
                         break;
                     }
                     case eUniformTypeInt: {
-                        _paramDefaultBool[i]->resetToDefault();
+                        if (tChanged) {
+                            _paramDefaultBool[i]->resetToDefault();
+                            _paramDefaultFloat[i]->resetToDefault();
+                            _paramMinFloat[i]->resetToDefault();
+                            _paramMaxFloat[i]->resetToDefault();
+                            _paramDefaultVec2[i]->resetToDefault();
+                            _paramMinVec2[i]->resetToDefault();
+                            _paramMaxVec2[i]->resetToDefault();
+                            _paramDefaultVec3[i]->resetToDefault();
+                            //_paramMinVec3[i]->resetToDefault();
+                            //_paramMaxVec3[i]->resetToDefault();
+                            _paramDefaultVec4[i]->resetToDefault();
+                            //_paramMinVec4[i]->resetToDefault();
+                            //_paramMaxVec4[i]->resetToDefault();
+                        }
                         _paramDefaultInt[i]->setValue(p.getDefault().i);
                         _paramMinInt[i]->setValue(p.getMin().i);
                         _paramMaxInt[i]->setValue(p.getMax().i);
-                        _paramDefaultFloat[i]->resetToDefault();
-                        _paramMinFloat[i]->resetToDefault();
-                        _paramMaxFloat[i]->resetToDefault();
-                        _paramDefaultVec2[i]->resetToDefault();
-                        _paramMinVec2[i]->resetToDefault();
-                        _paramMaxVec2[i]->resetToDefault();
-                        _paramDefaultVec3[i]->resetToDefault();
-                        //_paramMinVec3[i]->resetToDefault();
-                        //_paramMaxVec3[i]->resetToDefault();
-                        _paramDefaultVec4[i]->resetToDefault();
-                        //_paramMinVec4[i]->resetToDefault();
-                        //_paramMaxVec4[i]->resetToDefault();
                         break;
                     }
                     case eUniformTypeFloat: {
-                        _paramDefaultBool[i]->resetToDefault();
-                        _paramDefaultInt[i]->resetToDefault();
-                        _paramMinInt[i]->resetToDefault();
-                        _paramMaxInt[i]->resetToDefault();
+                        if (tChanged) {
+                            _paramDefaultBool[i]->resetToDefault();
+                            _paramDefaultInt[i]->resetToDefault();
+                            _paramMinInt[i]->resetToDefault();
+                            _paramMaxInt[i]->resetToDefault();
+                            _paramDefaultVec2[i]->resetToDefault();
+                            _paramMinVec2[i]->resetToDefault();
+                            _paramMaxVec2[i]->resetToDefault();
+                            _paramDefaultVec3[i]->resetToDefault();
+                            //_paramMinVec3[i]->resetToDefault();
+                            //_paramMaxVec3[i]->resetToDefault();
+                            _paramDefaultVec4[i]->resetToDefault();
+                            //_paramMinVec4[i]->resetToDefault();
+                            //_paramMaxVec4[i]->resetToDefault();
+                        }
                         _paramDefaultFloat[i]->setValue(p.getDefault().f[0]);
                         _paramMinFloat[i]->setValue(p.getMin().f[0]);
                         _paramMaxFloat[i]->setValue(p.getMax().f[0]);
-                        _paramDefaultVec2[i]->resetToDefault();
-                        _paramMinVec2[i]->resetToDefault();
-                        _paramMaxVec2[i]->resetToDefault();
-                        _paramDefaultVec3[i]->resetToDefault();
-                        //_paramMinVec3[i]->resetToDefault();
-                        //_paramMaxVec3[i]->resetToDefault();
-                        _paramDefaultVec4[i]->setDefault(p.getDefault().f[0], p.getDefault().f[1], p.getDefault().f[2], p.getDefault().f[3]);
-                        //_paramMinVec4[i]->setValue(p.getMin().f[0], p.getMin().f[1], p.getMin().f[2], p.getMin().f[3]);
-                        //_paramMaxVec4[i]->setValue(p.getMax().f[0], p.getMax().f[1], p.getMax().f[2], p.getMax().f[3]);
                         break;
                     }
                     case eUniformTypeVec2: {
-                        _paramDefaultBool[i]->resetToDefault();
-                        _paramDefaultInt[i]->resetToDefault();
-                        _paramMinInt[i]->resetToDefault();
-                        _paramMaxInt[i]->resetToDefault();
-                        _paramDefaultFloat[i]->resetToDefault();
-                        _paramMinFloat[i]->resetToDefault();
-                        _paramMaxFloat[i]->resetToDefault();
+                        if (tChanged) {
+                            _paramDefaultBool[i]->resetToDefault();
+                            _paramDefaultInt[i]->resetToDefault();
+                            _paramMinInt[i]->resetToDefault();
+                            _paramMaxInt[i]->resetToDefault();
+                            _paramDefaultFloat[i]->resetToDefault();
+                            _paramMinFloat[i]->resetToDefault();
+                            _paramMaxFloat[i]->resetToDefault();
+                            _paramDefaultVec3[i]->resetToDefault();
+                            //_paramMinVec3[i]->resetToDefault();
+                            //_paramMaxVec3[i]->resetToDefault();
+                            _paramDefaultVec4[i]->resetToDefault();
+                            //_paramMinVec4[i]->resetToDefault();
+                            //_paramMaxVec4[i]->resetToDefault();
+                        }
                         _paramDefaultVec2[i]->setValue(p.getDefault().f[0], p.getDefault().f[1]);
                         _paramMinVec2[i]->setValue(p.getMin().f[0], p.getMin().f[1]);
                         _paramMaxVec2[i]->setValue(p.getMax().f[0], p.getMax().f[1]);
-                        _paramDefaultVec3[i]->resetToDefault();
-                        //_paramMinVec3[i]->resetToDefault();
-                        //_paramMaxVec3[i]->resetToDefault();
-                        _paramDefaultVec4[i]->resetToDefault();
-                        //_paramMinVec4[i]->resetToDefault();
-                        //_paramMaxVec4[i]->resetToDefault();
                         break;
                     }
                     case eUniformTypeVec3: {
-                        _paramDefaultBool[i]->resetToDefault();
-                        _paramDefaultInt[i]->resetToDefault();
-                        _paramMinInt[i]->resetToDefault();
-                        _paramMaxInt[i]->resetToDefault();
-                        _paramDefaultFloat[i]->resetToDefault();
-                        _paramMinFloat[i]->resetToDefault();
-                        _paramMaxFloat[i]->resetToDefault();
-                        _paramDefaultVec2[i]->resetToDefault();
-                        _paramMinVec2[i]->resetToDefault();
-                        _paramMaxVec2[i]->resetToDefault();
+                        if (tChanged) {
+                            _paramDefaultBool[i]->resetToDefault();
+                            _paramDefaultInt[i]->resetToDefault();
+                            _paramMinInt[i]->resetToDefault();
+                            _paramMaxInt[i]->resetToDefault();
+                            _paramDefaultFloat[i]->resetToDefault();
+                            _paramMinFloat[i]->resetToDefault();
+                            _paramMaxFloat[i]->resetToDefault();
+                            _paramDefaultVec2[i]->resetToDefault();
+                            _paramMinVec2[i]->resetToDefault();
+                            _paramMaxVec2[i]->resetToDefault();
+                            _paramDefaultVec4[i]->resetToDefault();
+                            //_paramMinVec4[i]->resetToDefault();
+                            //_paramMaxVec4[i]->resetToDefault();
+                        }
                         _paramDefaultVec3[i]->setValue(p.getDefault().f[0], p.getDefault().f[1], p.getDefault().f[2]);
                         //_paramMinVec3[i]->setValue(p.getMin().f[0], p.getMin().f[1], p.getMin().f[2])
                         //_paramMaxVec3[i]->setValue(p.getMax().f[0], p.getMax().f[1], p.getMax().f[2]);
-                        _paramDefaultVec4[i]->resetToDefault();
-                        //_paramMinVec4[i]->resetToDefault();
-                        //_paramMaxVec4[i]->resetToDefault();
                         break;
                     }
                     case eUniformTypeVec4: {
-                        _paramDefaultBool[i]->resetToDefault();
-                        _paramDefaultInt[i]->resetToDefault();
-                        _paramMinInt[i]->resetToDefault();
-                        _paramMaxInt[i]->resetToDefault();
-                        _paramDefaultFloat[i]->resetToDefault();
-                        _paramMinFloat[i]->resetToDefault();
-                        _paramMaxFloat[i]->resetToDefault();
-                        _paramDefaultVec2[i]->resetToDefault();
-                        _paramMinVec2[i]->resetToDefault();
-                        _paramMaxVec2[i]->resetToDefault();
-                        _paramDefaultVec3[i]->resetToDefault();
-                        //_paramMinVec3[i]->resetToDefault();
-                        //_paramMaxVec3[i]->resetToDefault();
+                        if (tChanged) {
+                            _paramDefaultBool[i]->resetToDefault();
+                            _paramDefaultInt[i]->resetToDefault();
+                            _paramMinInt[i]->resetToDefault();
+                            _paramMaxInt[i]->resetToDefault();
+                            _paramDefaultFloat[i]->resetToDefault();
+                            _paramMinFloat[i]->resetToDefault();
+                            _paramMaxFloat[i]->resetToDefault();
+                            _paramDefaultVec2[i]->resetToDefault();
+                            _paramMinVec2[i]->resetToDefault();
+                            _paramMaxVec2[i]->resetToDefault();
+                            _paramDefaultVec3[i]->resetToDefault();
+                            //_paramMinVec3[i]->resetToDefault();
+                            //_paramMaxVec3[i]->resetToDefault();
+                        }
                         _paramDefaultVec4[i]->setDefault(p.getDefault().f[0], p.getDefault().f[1], p.getDefault().f[2], p.getDefault().f[3]);
                         //_paramMinVec4[i]->setValue(p.getMin().f[0], p.getMin().f[1], p.getMin().f[2], p.getMin().f[3]);
                         //_paramMaxVec4[i]->setValue(p.getMax().f[0], p.getMax().f[1], p.getMax().f[2], p.getMax().f[3]);
@@ -1278,42 +1338,47 @@ ShadertoyPlugin::updateExtra()
                     }
                     default: {
                         assert(false);
-                        _paramDefaultBool[i]->resetToDefault();
-                        _paramDefaultInt[i]->resetToDefault();
-                        _paramMinInt[i]->resetToDefault();
-                        _paramMaxInt[i]->resetToDefault();
-                        _paramDefaultFloat[i]->resetToDefault();
-                        _paramMinFloat[i]->resetToDefault();
-                        _paramMaxFloat[i]->resetToDefault();
-                        _paramDefaultVec2[i]->resetToDefault();
-                        _paramMinVec2[i]->resetToDefault();
-                        _paramMaxVec2[i]->resetToDefault();
-                        _paramDefaultVec3[i]->resetToDefault();
-                        //_paramMinVec3[i]->resetToDefault();
-                        //_paramMaxVec3[i]->resetToDefault();
-                        _paramDefaultVec4[i]->resetToDefault();
-                        //_paramMinVec4[i]->resetToDefault();
-                        //_paramMaxVec4[i]->resetToDefault();
+                        if (tChanged) {
+                            _paramDefaultBool[i]->resetToDefault();
+                            _paramDefaultInt[i]->resetToDefault();
+                            _paramMinInt[i]->resetToDefault();
+                            _paramMaxInt[i]->resetToDefault();
+                            _paramDefaultFloat[i]->resetToDefault();
+                            _paramMinFloat[i]->resetToDefault();
+                            _paramMaxFloat[i]->resetToDefault();
+                            _paramDefaultVec2[i]->resetToDefault();
+                            _paramMinVec2[i]->resetToDefault();
+                            _paramMaxVec2[i]->resetToDefault();
+                            _paramDefaultVec3[i]->resetToDefault();
+                            //_paramMinVec3[i]->resetToDefault();
+                            //_paramMaxVec3[i]->resetToDefault();
+                            _paramDefaultVec4[i]->resetToDefault();
+                            //_paramMinVec4[i]->resetToDefault();
+                            //_paramMaxVec4[i]->resetToDefault();
+                        }
                     }
                 }
             }
             for (unsigned i = _imageShaderExtraParameters.size(); i < NBUNIFORMS; ++i) {
-                _paramDefaultBool[i]->resetToDefault();
-                _paramDefaultInt[i]->resetToDefault();
-                _paramMinInt[i]->resetToDefault();
-                _paramMaxInt[i]->resetToDefault();
-                _paramDefaultFloat[i]->resetToDefault();
-                _paramMinFloat[i]->resetToDefault();
-                _paramMaxFloat[i]->resetToDefault();
-                _paramDefaultVec2[i]->resetToDefault();
-                _paramMinVec2[i]->resetToDefault();
-                _paramMaxVec2[i]->resetToDefault();
-                _paramDefaultVec3[i]->resetToDefault();
-                //_paramMinVec3[i]->resetToDefault();
-                //_paramMaxVec3[i]->resetToDefault();
-                _paramDefaultVec4[i]->resetToDefault();
-                //_paramMinVec4[i]->resetToDefault();
-                //_paramMaxVec4[i]->resetToDefault();
+                bool tChanged = ((UniformTypeEnum)_paramType[i]->getValue() != eUniformTypeNone);
+                if (tChanged) {
+                    _paramDefaultBool[i]->resetToDefault();
+                    _paramDefaultInt[i]->resetToDefault();
+                    _paramMinInt[i]->resetToDefault();
+                    _paramMaxInt[i]->resetToDefault();
+                    _paramDefaultFloat[i]->resetToDefault();
+                    _paramMinFloat[i]->resetToDefault();
+                    _paramMaxFloat[i]->resetToDefault();
+                    _paramDefaultVec2[i]->resetToDefault();
+                    _paramMinVec2[i]->resetToDefault();
+                    _paramMaxVec2[i]->resetToDefault();
+                    _paramDefaultVec3[i]->resetToDefault();
+                    //_paramMinVec3[i]->resetToDefault();
+                    //_paramMaxVec3[i]->resetToDefault();
+                    _paramDefaultVec4[i]->resetToDefault();
+                    //_paramMinVec4[i]->resetToDefault();
+                    //_paramMaxVec4[i]->resetToDefault();
+                }
             }
             endEditBlock();
         } // if (_imageShaderUpdateParams)
