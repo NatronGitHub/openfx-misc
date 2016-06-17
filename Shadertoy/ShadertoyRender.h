@@ -1308,7 +1308,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                             if (starts_with(name, "iChannel")) {
                                 for (unsigned j = 0; j < NBINPUTS; ++j) {
                                     if ( name == (std::string("iChannel") + (char)('0' + j)) ) {
-                                        _imageShaderInputEnabled[i] = true;
+                                        _imageShaderInputEnabled[j] = true;
                                         getChannelInfo(fragmentShader, j, _imageShaderInputLabel[j], _imageShaderInputHint[j], _imageShaderInputFilter[j], _imageShaderInputWrap[j]);
                                         loc = -1; // go to next uniform
                                         break;
