@@ -13,9 +13,11 @@ TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.master
 
 ## Enable these if you installed a mangled OSMesa (preferably with 32 bits FP support)
-#CXXFLAGS += -DHAVE_OSMESA
-#LINKFLAGS += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
+#CXXFLAGS_MESA += -DHAVE_OSMESA
+#LDFLAGS_MESA += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
 
+CXXFLAGS_EXTRA = ${CXXFLAGS_MESA}
+LDFLAGS_EXTRA = ${LDFLAGS_MESA}
 
 $(OBJECTPATH)/TestOpenGL.o: TestOpenGL.cpp TestOpenGL.h
 
