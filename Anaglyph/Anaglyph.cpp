@@ -244,7 +244,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
     OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-         ( dstComponents != _dstClip->getPixelComponents() ) ) {
+         ( dstComponents != _dstClip->getPixelComponents() || dstComponents != ePixelComponentRGBA ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
