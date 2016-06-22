@@ -742,7 +742,6 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args,
     }
 }
 
-#ifdef DEBUG
 class ColorLookupInteract
     : public OFX::ParamInteract
 {
@@ -752,24 +751,41 @@ public:
                         const std::string& paramName) :
         OFX::ParamInteract(handle, effect)
     {
-        _param = effect->fetchParametricParam(paramName);
+        _lookupTableParam = effect->fetchParametricParam(paramName);
+        _range = effect->fetchDouble2DParam(kParamRange);
     }
 
-    virtual bool draw(const OFX::DrawArgs &/*args*/) OVERRIDE FINAL
+    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
     {
-        glBegin (GL_POLYGON);
+        const double time = args.time;
+        double rangeMin, rangeMax;
 
-        glColor3f (0.0f, 0.0f, 0.0f);
-        glVertex2f (0.f, 0.f);
+        _range->getValueAtTime(time, rangeMin, rangeMax);
 
-        glColor3f (1.0f, 0.0f, 0.0f);
-        glVertex2f (0.f, 1.f);
+        // let us draw one slice every 8 pixels
+        const int sliceWidth = 8;
+        int nbValues = args.pixelScale.x > 0 ? std::ceil( (rangeMax - rangeMin) / (sliceWidth * args.pixelScale.x) ) : 1;
+        const int nComponents = 3;
+        GLfloat color[nComponents];
 
-        glColor3f (0.0f, 1.0f, 0.0f);
-        glVertex2f (1.f, 1.f);
+        glBegin (GL_TRIANGLE_STRIP);
+        
+        for (int position = 0; position <= nbValues; ++position) {
+            // position to evaluate the param at
+            double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
 
-        glColor3f (0.0f, 0.0f, 1.0f);
-        glVertex2f (1.f, 0.f);
+            for (int component = 0; component < nComponents; ++component) {
+                int lutIndex = componentToCurve(component); // special case for components == alpha only
+                // evaluate the parametric param
+                double value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
+                value += _lookupTableParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
+                // set that in the lut
+                color[component] = value;
+            }
+            glColor3f(color[0], color[1], color[2]);
+            glVertex2f(parametricPos, 0.f);
+            glVertex2f(parametricPos, 1.f);
+        }
 
         glEnd();
 
@@ -779,7 +795,8 @@ public:
     virtual ~ColorLookupInteract() {}
 
 protected:
-    OFX::ParametricParam* _param;
+    OFX::ParametricParam* _lookupTableParam;
+    OFX::Double2DParam* _range;
 };
 
 // We are lucky, there's only one lookupTable param, so we need only one interact
@@ -789,8 +806,6 @@ class ColorLookupInteractDescriptor
     : public OFX::DefaultParamInteractDescriptor<ColorLookupInteractDescriptor, ColorLookupInteract>
 {
 };
-
-#endif // DEBUG
 
 mDeclarePluginFactory(ColorLookupPluginFactory, {}, {});
 
@@ -889,9 +904,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         assert(param);
         param->setLabel(kParamLookupTableLabel);
         param->setHint(kParamLookupTableHint);
-#ifdef DEBUG
         param->setInteractDescriptor(new ColorLookupInteractDescriptor);
-#endif // DEBUG
        // define it as three dimensional
         param->setDimension(kCurveNb);
 
