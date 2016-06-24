@@ -934,7 +934,12 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         assert(param);
         param->setLabel(kParamLookupTableLabel);
         param->setHint(kParamLookupTableHint);
-        param->setInteractDescriptor(new ColorLookupInteractDescriptor, true);
+        {
+            ColorLookupInteractDescriptor* interact = new ColorLookupInteractDescriptor;
+            interact->setColourPicking(true);
+            param->setInteractDescriptor(interact);
+        }
+
        // define it as three dimensional
         param->setDimension(kCurveNb);
 
