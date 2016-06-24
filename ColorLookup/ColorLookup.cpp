@@ -753,6 +753,7 @@ public:
     {
         _lookupTableParam = effect->fetchParametricParam(paramName);
         _range = effect->fetchDouble2DParam(kParamRange);
+        setColourPicking(true); // we always want colour picking if the host has it
     }
 
     virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
@@ -783,12 +784,36 @@ public:
                 color[component] = value;
             }
             glColor3f(color[0], color[1], color[2]);
-            glVertex2f(parametricPos, 0.f);
-            glVertex2f(parametricPos, 1.f);
+            glVertex2f(parametricPos, rangeMin);
+            glVertex2f(parametricPos, rangeMax);
         }
 
         glEnd();
 
+        if (args.hasPickerColour) {
+            glLineWidth(1);
+            glBegin(GL_LINES);
+            {
+                // the following are magic colors, they all have the same luminance
+                const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};      //set red color to red curve
+                const OfxRGBColourD green = {0., 0.546986106552894, 0.};        //set green color to green curve
+                const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};      //set blue color to blue curve
+                const OfxRGBColourD alpha  = {0.398979, 0.398979, 0.398979};
+                glColor3f(red.r, red.g, red.b);
+                glVertex2f(args.pickerColour.r, rangeMin);
+                glVertex2f(args.pickerColour.r, rangeMax);
+                glColor3f(green.r, green.g, green.b);
+                glVertex2f(args.pickerColour.g, rangeMin);
+                glVertex2f(args.pickerColour.g, rangeMax);
+                glColor3f(blue.r, blue.g, blue.b);
+                glVertex2f(args.pickerColour.b, rangeMin);
+                glVertex2f(args.pickerColour.b, rangeMax);
+                glColor3f(alpha.r, alpha.g, alpha.b);
+                glVertex2f(args.pickerColour.a, rangeMin);
+                glVertex2f(args.pickerColour.a, rangeMax);
+            }
+            glEnd();
+        }
         return true;
     }
 
@@ -805,6 +830,11 @@ protected:
 class ColorLookupInteractDescriptor
     : public OFX::DefaultParamInteractDescriptor<ColorLookupInteractDescriptor, ColorLookupInteract>
 {
+public:
+    ColorLookupInteractDescriptor()
+    {
+        setColourPicking(true);
+    }
 };
 
 mDeclarePluginFactory(ColorLookupPluginFactory, {}, {});
