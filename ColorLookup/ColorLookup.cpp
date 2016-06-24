@@ -936,7 +936,6 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamLookupTableHint);
         {
             ColorLookupInteractDescriptor* interact = new ColorLookupInteractDescriptor;
-            interact->setColourPicking(true);
             param->setInteractDescriptor(interact);
         }
 
