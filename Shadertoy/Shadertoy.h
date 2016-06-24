@@ -85,6 +85,16 @@ public:
         eWrapMirror
     };
 
+    enum BBoxEnum
+    {
+        eBBoxDefault,
+        eBBoxFormat,
+        //eBBoxSize,
+        eBBoxUnion,
+        eBBoxIntersection,
+        eBBoxIChannel
+    };
+
     // a simple variant to represent an extra parameter
     class ExtraParameter {
     public:
@@ -419,6 +429,7 @@ private:
     std::vector<std::string> _imageShaderInputHint;
     std::vector<FilterEnum> _imageShaderInputFilter;
     std::vector<WrapEnum> _imageShaderInputWrap;
+    BBoxEnum _imageShaderBBox;
     bool _imageShaderCompiled;
 
     struct OpenGLContextData
@@ -455,6 +466,8 @@ private:
 };
 
 void getChannelInfo(const char* fragmentShader, int channel, std::string& label, std::string& hint, ShadertoyPlugin::FilterEnum& filter, ShadertoyPlugin::WrapEnum& wrap);
+
+void getBboxInfo(const char* fragmentShader, ShadertoyPlugin::BBoxEnum& bbox);
 
 void getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParameter &p);
 

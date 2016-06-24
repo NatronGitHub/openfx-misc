@@ -163,4 +163,6 @@ For sound shaders, the mainSound() function returns a vec2 containing the left a
   `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`
 * This one also sets the filter and wrap parameters:
   `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`
+* And this one sets the output bouding box (possible values are Default, Union, Interection, and iChannel0 to iChannel3):
+  `// BBox: iChannel0`
 

@@ -228,7 +228,10 @@ using namespace OFX;
     "* The following comment line placed in the shader gives a label and help string to input 1 (the comment must be the only thing on the line):\n" \
     "  `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`\n" \
     "* This one also sets the filter and wrap parameters:\n" \
-    "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`"
+    "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`\n" \
+    "* And this one sets the output bouding box (possible values are Default, Union, Interection, and iChannel0 to iChannel3):\n" \
+    "  `// BBox: iChannel0`"
+
 
 #define kPluginDescriptionMarkdown \
     "Apply a [Shadertoy](http://www.shadertoy.com) fragment shader (multipass shaders and sound are not supported).\n" \
@@ -396,7 +399,9 @@ using namespace OFX;
     "* The following comment line placed in the shader gives a label and help string to input 1 (the comment must be the only thing on the line):\n" \
     "  `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`\n" \
     "* This one also sets the filter and wrap parameters:\n" \
-    "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`"
+    "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`\n" \
+    "* And this one sets the output bouding box (possible values are Default, Union, Interection, and iChannel0 to iChannel3):\n" \
+    "  `// BBox: iChannel0`"
 
 #define kPluginIdentifier "net.sf.openfx.Shadertoy"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -437,16 +442,6 @@ using namespace OFX;
 #define kParamBBoxOptionIntersectionHint "Intersection of all connected inputs."
 #define kParamBBoxOptionIChannel "iChannel"
 #define kParamBBoxOptionIChannelHint "Bounding box of iChannel"
-
-enum BBoxEnum
-{
-    eBBoxDefault,
-    eBBoxFormat,
-    //eBBoxSize,
-    eBBoxUnion,
-    eBBoxIntersection,
-    eBBoxIChannel
-};
 
 #define kParamFormat kNatronParamFormatChoice
 #define kParamFormatLabel "Format"
@@ -719,6 +714,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderInputHint(NBINPUTS)
     , _imageShaderInputFilter(NBINPUTS, eFilterMipmap)
     , _imageShaderInputWrap(NBINPUTS, eWrapRepeat)
+    , _imageShaderBBox(eBBoxDefault)
     , _imageShaderCompiled(false)
     , _openGLContextData()
     , _openGLContextAttached(false)
@@ -1389,6 +1385,7 @@ ShadertoyPlugin::updateExtra()
                     //_paramMaxVec4[i]->resetToDefault();
                 }
             }
+            _bbox->setValue((int)_imageShaderBBox);
             endEditBlock();
         } // if (_imageShaderUpdateParams)
     }
@@ -2283,23 +2280,23 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
             param->setLabel(kParamBBoxLabel);
             param->setHint(kParamBBoxHint);
-            assert(param->getNOptions() == (int)eBBoxDefault);
+            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxDefault);
             param->appendOption(kParamBBoxOptionDefault, kParamBBoxOptionDefaultHint);
-            assert(param->getNOptions() == (int)eBBoxFormat);
+            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxFormat);
             param->appendOption(kParamBBoxOptionFormat, kParamBBoxOptionFormatHint);
             //assert(param->getNOptions() == (int)eBBoxSize);
             //param->appendOption(kParamBBoxOptionSize, kParamBBoxOptionSizeHint);
-            assert(param->getNOptions() == (int)eBBoxUnion);
+            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxUnion);
             param->appendOption(kParamBBoxOptionUnion, kParamBBoxOptionUnionHint);
-            assert(param->getNOptions() == (int)eBBoxIntersection);
+            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxIntersection);
             param->appendOption(kParamBBoxOptionIntersection, kParamBBoxOptionIntersectionHint);
-            assert(param->getNOptions() == (int)eBBoxIChannel);
+            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxIChannel);
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 std::string nb = unsignedToString(i);
                 param->appendOption(std::string(kParamBBoxOptionIChannel) + nb, std::string(kParamBBoxOptionIChannelHint) + nb + '.');
             }
             param->setAnimates(true);
-            param->setDefault( (int)eBBoxDefault );
+            param->setDefault( (int)ShadertoyPlugin::eBBoxDefault );
             if (page) {
                 page->addChild(*param);
             }

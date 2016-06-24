@@ -1440,8 +1440,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                             getExtraParameterInfo(fragmentShader, p);
 
                             _imageShaderExtraParameters.push_back(p);
-                        }
-                    }
+                        } // if (loc >= 0)
+                        _imageShaderBBox = (BBoxEnum)_bbox->getValueAtTime(time);
+                        getBboxInfo(fragmentShader, _imageShaderBBox);
+                    } // for (i = 0; i < count; i++) {
                 }
                 imageShaderParamsUpdated = true;
             } // if (_imageShaderUpdateParams)

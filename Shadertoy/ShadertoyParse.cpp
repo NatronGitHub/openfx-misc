@@ -70,7 +70,7 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
     }
     // find a '(', a ',' or a newline, which marks the end of the label
     const char* send = sstart;
-    while (*send && *send != '(' && *send != ',' && *send != ';' && *send != '\n') {
+    while (*send && *send != '(' && *send != ',' && *send != ';' && *send != '\n' && *send != '\r') {
         ++send;
     }
     const char* hintstart = NULL;
@@ -105,7 +105,7 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
             ++sstart;
         }
         send = sstart;
-        while (*send && *send != ')' && *send != '\n') {
+        while (*send && *send != ')' && *send != '\n' && *send != '\r') {
             ++send;
         }
         // we tolerate either space or comma after closing paren
@@ -195,6 +195,44 @@ getChannelInfo(const char* fragmentShader, int channel, std::string& label, std:
 }
 
 void
+getBboxInfo(const char* fragmentShader, ShadertoyPlugin::BBoxEnum& bbox)
+{
+    const char* tok = "// BBox:";
+    const char* tokpos = strstr(fragmentShader, tok);
+    if (tokpos == NULL) {
+        const char* tok = "// Bbox:";
+        tokpos = strstr(fragmentShader, tok);
+        if (tokpos == NULL) {
+            const char* tok = "// bbox:";
+            tokpos = strstr(fragmentShader, tok);
+            if (tokpos == NULL) {
+                return;
+            }
+        }
+    }
+
+    //printf("found bbox!\n");
+    const char* sstart = tokpos + strlen(tok);
+    // remove spaces from start
+    while (isspacenonewline(*sstart)) {
+        ++sstart;
+    }
+    if (std::strncmp(sstart, "Default", 7) == 0 || std::strncmp(sstart, "default", 7) == 0) {
+        bbox = ShadertoyPlugin::eBBoxDefault;
+    } if (std::strncmp(sstart, "Union", 5) == 0 || std::strncmp(sstart, "union", 5) == 0) {
+            bbox = ShadertoyPlugin::eBBoxUnion;
+    } else if (std::strncmp(sstart, "Intersection", 12) == 0 || std::strncmp(sstart, "intersection", 12) == 0) {
+        bbox = ShadertoyPlugin::eBBoxIntersection;
+    } else if (std::strncmp(sstart, "iChannel", 8) == 0 || std::strncmp(sstart, "ichannel", 8) == 0) {
+        // get the channel number;
+        int num = atoi(sstart + 8);
+        if (0 <= num && num <= SHADERTOY_NBINPUTS) {
+            bbox = (ShadertoyPlugin::BBoxEnum)(ShadertoyPlugin::eBBoxIChannel + num);
+        }
+    }
+}
+
+void
 getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParameter &p)
 {
     std::string startstr = std::string("uniform ") + ShadertoyPlugin::mapUniformTypeToStr( p.getType() ) + ' ' + p.getName();
@@ -207,7 +245,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
     //printf("found uniform!\n");
     const char* sstart = tokpos + strlen(tok);
     // look for ';' before EOF
-    while (*sstart && *sstart != '\n' && *sstart != ';') {
+    while (*sstart && *sstart != '\n' && *sstart != '\r' && *sstart != ';') {
         ++sstart;
     }
     if (!*sstart || *sstart == '\n') {
@@ -233,7 +271,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
     }
     // find a '(', a ',' or a newline, which marks the end of the label
     const char* send = sstart;
-    while (*send && *send != '(' && *send != ',' && *send != ';' && *send != '\n') {
+    while (*send && *send != '(' && *send != ',' && *send != ';' && *send != '\n' && *send != '\r') {
         ++send;
     }
     const char* hintstart = NULL;
@@ -264,7 +302,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
             ++sstart;
         }
         send = sstart;
-        while (*send && *send != ')' && *send != '\n') {
+        while (*send && *send != ')' && *send != '\n' && *send != '\r') {
             ++send;
         }
         // we tolerate either space or comma after closing paren
@@ -321,7 +359,7 @@ getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParamete
                     sstart = valstart;
                     //printf("*sstart2=%c\n", *sstart);
                     send = sstart;
-                    while (*send && *send != ',' && *send != ';' && (!paren || *send != ')') && *send != '\n') {
+                    while (*send && *send != ',' && *send != ';' && (!paren || *send != ')') && *send != '\n' && *send != '\r') {
                         ++send;
                     }
                     if ( paren && (*send == ',' || *send == ';') ) {
@@ -400,6 +438,7 @@ const char* s1 =
 "// A shader better than any other\n"
 "// iChannel0: ChannelLabel (Channel hint.)\n"
 "// iChannel1: Source (the source.); wrap=mirror, filter=linear\n"
+"// BBox: iChannel3\n"
 "uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.), min=(0.1,1.2), max=(1000.,1000.)\n"
 "uniform float value = 2.; // ValueLabel (Value hint.) max=10, min=-10\n";
 
@@ -419,6 +458,9 @@ int main(int argc, char **argv)
         std::cout << "filter: '" << (int)filter << "'\n";
         std::cout << "wrap: '" << (int)wrap << "'\n";
     }
+    ShadertoyPlugin::BBoxEnum bbox;
+    getBboxInfo(s1, bbox);
+    std::cout << "bbox: " << (int)bbox << std::endl;
     ShadertoyPlugin::ExtraParameter p;
     p.init(ShadertoyPlugin::eUniformTypeVec2, "blurSize");
     getExtraParameterInfo(s1, p);
