@@ -831,7 +831,7 @@ class ColorLookupInteractDescriptor
     : public OFX::DefaultParamInteractDescriptor<ColorLookupInteractDescriptor, ColorLookupInteract>
 {
 public:
-    ColorLookupInteractDescriptor()
+    virtual void describe() OVERRIDE FINAL
     {
         setColourPicking(true);
     }
