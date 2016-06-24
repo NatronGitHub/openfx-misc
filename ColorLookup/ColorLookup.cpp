@@ -791,7 +791,7 @@ public:
         glEnd();
 
         if (args.hasPickerColour) {
-            glLineWidth(1);
+            glLineWidth(1.5);
             glBegin(GL_LINES);
             {
                 // the following are magic colors, they all have the same luminance
