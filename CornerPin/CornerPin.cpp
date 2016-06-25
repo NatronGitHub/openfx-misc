@@ -96,12 +96,20 @@ static const char* const kParamFrom[4] = {
 
 
 #define kParamCopyFrom "copyFrom"
-#define kParamCopyFromLabel "Copy \"From\" points"
-#define kParamCopyFromHint "Copy the content from the \"to\" points to the \"from\" points."
+#define kParamCopyFromLabel "Copy \"From\""
+#define kParamCopyFromHint "Copy the contents (including animation) of the \"to\" points to the \"from\" points."
+
+#define kParamCopyFromSingle "copyFromSingle"
+#define kParamCopyFromSingleLabel "Copy \"From\" (Single)"
+#define kParamCopyFromSingleHint "Copy the current values of the \"to\" points to the \"from\" points."
 
 #define kParamCopyTo "copyTo"
-#define kParamCopyToLabel "Copy \"To\" points"
-#define kParamCopyToHint "Copy the content from the \"from\" points to the \"to\" points."
+#define kParamCopyToLabel "Copy \"To\""
+#define kParamCopyToHint "Copy the contents (including animation) of the \"from\" points to the \"to\" points."
+
+#define kParamCopyToSingle "copyToSingle"
+#define kParamCopyToSingleLabel "Copy \"To\" (Single)"
+#define kParamCopyToSingleHint "Copy the current values of the \"from\" points to the \"to\" points."
 
 #define kParamCopyInputRoD "setToInputRod"
 #define kParamCopyInputRoDLabel "Set to input rod"
@@ -146,9 +154,6 @@ public:
         , _extraMatrixRow1(0)
         , _extraMatrixRow2(0)
         , _extraMatrixRow3(0)
-        , _copyFromButton(0)
-        , _copyToButton(0)
-        , _copyInputButton(0)
         , _srcClipChanged(0)
     {
         // NON-GENERIC
@@ -164,10 +169,6 @@ public:
         _extraMatrixRow3 = fetchDouble3DParam(kParamExtraMatrixRow3);
         assert(_extraMatrixRow1 && _extraMatrixRow2 && _extraMatrixRow3);
 
-        _copyFromButton = fetchPushButtonParam(kParamCopyFrom);
-        _copyToButton = fetchPushButtonParam(kParamCopyTo);
-        _copyInputButton = fetchPushButtonParam(kParamCopyInputRoD);
-        assert(_copyInputButton && _copyToButton && _copyFromButton);
         _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
     }
@@ -232,9 +233,6 @@ private:
     OFX::Double3DParam* _extraMatrixRow2;
     OFX::Double3DParam* _extraMatrixRow3;
     OFX::Double2DParam* _from[4];
-    OFX::PushButtonParam* _copyFromButton;
-    OFX::PushButtonParam* _copyToButton;
-    OFX::PushButtonParam* _copyInputButton;
     OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
@@ -374,13 +372,15 @@ void
 CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                               const std::string &paramName)
 {
+    const double time = args.time;
+
     // If any parameter is set by the user, set srcClipChanged to true so that from/to is not reset when
     // connecting the input.
     //printf("srcClipChanged=%s\n", _srcClipChanged->getValue() ? "true" : "false");
     if (paramName == kParamCopyInputRoD) {
         if ( _srcClip && _srcClip->isConnected() ) {
             beginEditBlock(paramName);
-            const OfxRectD & srcRoD = _srcClip->getRegionOfDefinition(args.time);
+            const OfxRectD & srcRoD = _srcClip->getRegionOfDefinition(time);
             _from[0]->setValue(srcRoD.x1, srcRoD.y1);
             _from[1]->setValue(srcRoD.x2, srcRoD.y1);
             _from[2]->setValue(srcRoD.x2, srcRoD.y2);
@@ -401,10 +401,30 @@ CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             _srcClipChanged->setValue(true);
         }
         endEditBlock();
+    } else if (paramName == kParamCopyFromSingle) {
+        beginEditBlock(paramName);
+        for (int i = 0; i < 4; ++i) {
+            _to[i]->setValue(_from[i]->getValueAtTime(time));
+        }
+        changedTransform(args);
+        if ( (args.reason == OFX::eChangeUserEdit) && !_srcClipChanged->getValue() ) {
+            _srcClipChanged->setValue(true);
+        }
+        endEditBlock();
     } else if (paramName == kParamCopyTo) {
         beginEditBlock(paramName);
         for (int i = 0; i < 4; ++i) {
             copyPoint(_to[i], _from[i]);
+        }
+        changedTransform(args);
+        if ( (args.reason == OFX::eChangeUserEdit) && !_srcClipChanged->getValue() ) {
+            _srcClipChanged->setValue(true);
+        }
+        endEditBlock();
+    } else if (paramName == kParamCopyToSingle) {
+        beginEditBlock(paramName);
+        for (int i = 0; i < 4; ++i) {
+            _from[i]->setValue(_to[i]->getValueAtTime(time));
         }
         changedTransform(args);
         if ( (args.reason == OFX::eChangeUserEdit) && !_srcClipChanged->getValue() ) {
@@ -441,11 +461,13 @@ void
 CornerPinPlugin::changedClip(const InstanceChangedArgs &args,
                              const std::string &clipName)
 {
+    const double time = args.time;
+
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_srcClipChanged->getValue() &&
          ( args.reason == OFX::eChangeUserEdit) ) {
-        const OfxRectD & srcRoD = _srcClip->getRegionOfDefinition(args.time);
+        const OfxRectD & srcRoD = _srcClip->getRegionOfDefinition(time);
         beginEditBlock(clipName);
         _from[0]->setValue(srcRoD.x1, srcRoD.y1);
         _from[1]->setValue(srcRoD.x2, srcRoD.y1);
@@ -826,7 +848,7 @@ CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
         _overlayPoints->getValueAtTime(time, v);
         useFrom = (v == 1);
         if (_interactive) {
-            _interactive->getValueAtTime(args.time, _interactiveDrag);
+            _interactive->getValueAtTime(time, _interactiveDrag);
         }
     } else {
         for (int i = 0; i < 4; ++i) {
@@ -1055,6 +1077,19 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyFrom);
             param->setLabel(kParamCopyFromLabel);
             param->setHint(kParamCopyFromHint);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // copyFromSingle
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyFromSingle);
+            param->setLabel(kParamCopyFromSingleLabel);
+            param->setHint(kParamCopyFromSingleHint);
             if (group) {
                 param->setParent(*group);
             }
@@ -1100,6 +1135,19 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyTo);
             param->setLabel(kParamCopyToLabel);
             param->setHint(kParamCopyToHint);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // copyToSingle
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyToSingle);
+            param->setLabel(kParamCopyToSingleLabel);
+            param->setHint(kParamCopyToSingleHint);
             if (group) {
                 param->setParent(*group);
             }
