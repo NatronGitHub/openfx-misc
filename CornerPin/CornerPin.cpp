@@ -33,7 +33,7 @@
  */
 
 #include <cmath>
-#include <cfloat>
+#include <cfloat> // DBL_MAX
 #include <vector>
 #ifdef DEBUG
 #include <iostream>

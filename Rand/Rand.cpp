@@ -22,7 +22,7 @@
 
 #include <limits>
 #include <cmath>
-#include <cfloat>
+#include <cfloat> // DBL_MAX
 
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"

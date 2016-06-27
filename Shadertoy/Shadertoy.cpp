@@ -31,7 +31,7 @@
 
 #include "Shadertoy.h"
 
-#include <cfloat>
+#include <cfloat> // DBL_MAX
 #include <cstddef>
 #include <climits>
 #include <string>

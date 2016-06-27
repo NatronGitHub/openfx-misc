@@ -21,6 +21,7 @@
  */
 
 #include <cmath>
+#include <cfloat> // DBL_MAX
 #include <iostream>
 #include <limits>
 #include <algorithm>

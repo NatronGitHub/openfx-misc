@@ -34,6 +34,7 @@
 // This node concatenates transforms upstream.
 
 #include <cmath>
+#include <cfloat> // DBL_MAX
 #include <iostream>
 #include <sstream>
 #include <set>

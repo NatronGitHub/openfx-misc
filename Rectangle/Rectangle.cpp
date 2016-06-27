@@ -24,6 +24,7 @@
 
 #include <cmath>
 #include <climits>
+#include <cfloat> // DBL_MAX
 #include <algorithm>
 
 //#define DEBUG_HOSTDESCRIPTION
