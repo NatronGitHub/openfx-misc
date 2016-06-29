@@ -83,7 +83,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #endif
 #if defined(__APPLE__)
 #define OFX_PATH "/Library/OFX/Plugins/"
-#define BINARY_PATH "/Library/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/MacOS/Sapphire.ofx"
+#define BINARY_PATH "/Library/OFX/Plugins.disabled.tmp/DEFlicker/DEFlickerAutoLevels.ofx.bundle/Contents/MacOS/DEFlickerAutoLevels.ofx"
 #endif
 #endif
 
@@ -1410,11 +1410,12 @@ pluginMain(int nth,
                                 ssr << ',';
                             }
                             firstrange = false;
-                            ssr << name << '(' << range[0] << ',' << range[1] << ')';
+                            ssr << '(' << range[0] << ',' << range[1] << ')';
                         }
                         ssr << ')';
                     }
                 }
+                ssr << ')';
 #else
                 ssr << "(N/A)";
 #endif

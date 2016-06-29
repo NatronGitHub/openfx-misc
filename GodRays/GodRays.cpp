@@ -21,6 +21,7 @@
  */
 
 #include <cmath>
+#include <cfloat> // DBL_MAX
 #include <iostream>
 #include <algorithm>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)

@@ -25,7 +25,7 @@
 #include <windows.h>
 #endif
 #include <climits>
-#include <cfloat>
+#include <cfloat> // DBL_MAX
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"

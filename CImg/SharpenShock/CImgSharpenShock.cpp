@@ -22,6 +22,7 @@
 
 #include <memory>
 #include <cmath>
+#include <cfloat> // DBL_MAX
 #include <cstring>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>

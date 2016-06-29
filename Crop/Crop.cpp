@@ -21,6 +21,7 @@
  */
 
 #include <cmath>
+#include <cfloat> // DBL_MAX
 #include <algorithm>
 
 #include "ofxsProcessing.H"

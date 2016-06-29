@@ -24,7 +24,7 @@
 
 #include "TestOpenGL.h"
 
-#include <cfloat>
+#include <cfloat> // DBL_MAX
 #ifdef DEBUG
 #include <iostream>
 #endif

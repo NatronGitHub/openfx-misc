@@ -31,7 +31,7 @@
  */
 
 #include <cmath> // for floor
-#include <cfloat> // for FLT_MAX
+#include <cfloat> // DBL_MAX
 #include <cassert>
 
 #include "ofxsImageEffect.h"

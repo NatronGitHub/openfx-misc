@@ -131,6 +131,7 @@ private:
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -140,6 +141,22 @@ private:
     OFX::ChoiceParam *_after;
     OFX::StringParam *_sublabel;
 };
+
+
+void
+FrameRangePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // setting an image to black outside of the frame range means that the effect is frame varying
+    BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
+    if (before == eBeforeAfterBlack) {
+        clipPreferences.setOutputFrameVarying(true);
+    } else {
+        BeforeAfterEnum after = (BeforeAfterEnum)_after->getValue();
+        if (after == eBeforeAfterBlack) {
+            clipPreferences.setOutputFrameVarying(true);
+        }
+    }
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////

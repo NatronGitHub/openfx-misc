@@ -21,6 +21,7 @@
  */
 
 #include <cmath>
+#include <cfloat> // DBL_MAX
 #include <algorithm>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
@@ -103,6 +104,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamResetCtrlPts "resetCtrlPts"
 #define kParamResetCtrlPtsLabel "Reset"
 #endif
+
+#define kParamHasBackgroundInteract "hasBackgroundInteract"
+
+#define kParamShowRamp "showRamp"
+#define kParamShowRampLabel "Display Color Ramp"
+#define kParamShowRampHint "Display the color ramp under the curves."
 
 #define kParamRange "range"
 #define kParamRangeLabel "Range"
@@ -383,9 +390,11 @@ public:
 
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+        _hasBackgroundInteract = fetchBooleanParam(kParamHasBackgroundInteract);
         _lookupTable = fetchParametricParam(kParamLookupTable);
+        _showRamp = fetchBooleanParam(kParamShowRamp);
         _range = fetchDouble2DParam(kParamRange);
-        assert(_lookupTable && _range);
+        assert(_hasBackgroundInteract && _lookupTable && _showRamp && _range);
         _source = fetchRGBAParam(kParamSource);
         _target = fetchRGBAParam(kParamTarget);
         assert(_source && _target);
@@ -401,6 +410,9 @@ public:
         assert(_mix && _maskInvert);
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
+
+        bool hasBackgroundInteract = _hasBackgroundInteract->getValue();
+        _showRamp->setIsSecret(!hasBackgroundInteract);
     }
 
 private:
@@ -418,16 +430,21 @@ private:
     virtual void changedParam(const OFX::InstanceChangedArgs &args,
                               const std::string &paramName) OVERRIDE FINAL
     {
+        const double time = args.time;
+        if ( (paramName == kParamHasBackgroundInteract) ) {
+            bool hasBackgroundInteract = _hasBackgroundInteract->getValueAtTime(time);
+            _showRamp->setIsSecret(!hasBackgroundInteract);
+        }
         if ( (paramName == kParamSetMaster) && (args.reason == eChangeUserEdit) ) {
             double source[4];
             double target[4];
-            _source->getValueAtTime(args.time, source[0], source[1], source[2], source[3]);
-            _target->getValueAtTime(args.time, target[0], target[1], target[2], target[3]);
+            _source->getValueAtTime(time, source[0], source[1], source[2], source[3]);
+            _target->getValueAtTime(time, target[0], target[1], target[2], target[3]);
 
             double s = 0.2126 * source[0] + 0.7152 * source[1] + 0.0722 * source[2];
             double t = 0.2126 * target[0] + 0.7152 * target[1] + 0.0722 * target[2];
             _lookupTable->addControlPoint(kCurveMaster, // curve to set
-                                          args.time,   // time, ignored in this case, as we are not adding a key
+                                          time,   // time, ignored in this case, as we are not adding a key
                                           s,   // parametric position
                                           t,   // value to be
                                           false);   // don't add a key
@@ -435,15 +452,15 @@ private:
         if ( ( (paramName == kParamSetRGB) || (paramName == kParamSetRGBA) || (paramName == kParamSetA) ) && (args.reason == eChangeUserEdit) ) {
             double source[4];
             double target[4];
-            _source->getValueAtTime(args.time, source[0], source[1], source[2], source[3]);
-            _target->getValueAtTime(args.time, target[0], target[1], target[2], target[3]);
+            _source->getValueAtTime(time, source[0], source[1], source[2], source[3]);
+            _target->getValueAtTime(time, target[0], target[1], target[2], target[3]);
 
             int cbegin = (paramName == kParamSetA) ? 3 : 0;
             int cend = (paramName == kParamSetRGB) ? 3 : 4;
             for (int c = cbegin; c < cend; ++c) {
                 int curve = componentToCurve(c);
                 _lookupTable->addControlPoint(curve, // curve to set
-                                              args.time,   // time, ignored in this case, as we are not adding a key
+                                              time,   // time, ignored in this case, as we are not adding a key
                                               source[c],   // parametric position
                                               target[c],   // value to be
                                               false);   // don't add a key
@@ -452,28 +469,28 @@ private:
 #ifdef COLORLOOKUP_ADD
         if ( (paramName == kParamAddCtrlPts) && (args.reason == eChangeUserEdit) ) {
             for (int component = 0; component < kCurveNb; ++component) {
-                int n = _lookupTable->getNControlPoints(component, args.time);
+                int n = _lookupTable->getNControlPoints(component, time);
                 if (n <= 1) {
                     // less than two points: add the two default control points
                     // add a control point at 0, value is 0
                     _lookupTable->addControlPoint(component, // curve to set
-                                                  args.time,  // time, ignored in this case, as we are not adding a key
+                                                  time,  // time, ignored in this case, as we are not adding a key
                                                   0.0,  // parametric position, zero
                                                   0.0,  // value to be, 0
                                                   false);  // don't add a key
                     // add a control point at 1, value is 1
-                    _lookupTable->addControlPoint(component, args.time, 1.0, 1.0, false);
+                    _lookupTable->addControlPoint(component, time, 1.0, 1.0, false);
                 } else {
-                    std::pair<double, double> prev = _lookupTable->getNthControlPoint(component, args.time, 0);
+                    std::pair<double, double> prev = _lookupTable->getNthControlPoint(component, time, 0);
                     std::list<std::pair<double, double> > newCtrlPts;
 
                     // compute new points, put them in a list
                     for (int i = 1; i < n; ++i) {
-                        std::pair<double, double> next = _lookupTable->getNthControlPoint(component, args.time, i);
+                        std::pair<double, double> next = _lookupTable->getNthControlPoint(component, time, i);
                         if (prev.first != next.first) { // don't create additional points if there is no space for one
                             // create a new control point between two existing control points
                             double parametricPos = (prev.first + next.first) / 2.;
-                            double parametricVal = _lookupTable->getValueAtTime(time, component, args.time, parametricPos);
+                            double parametricVal = _lookupTable->getValueAtTime(time, component, time, parametricPos);
                             newCtrlPts.push_back( std::make_pair(parametricPos, parametricVal) );
                         }
                         prev = next;
@@ -483,7 +500,7 @@ private:
                          it != newCtrlPts.end();
                          ++it) {
                         _lookupTable->addControlPoint(component, // curve to set
-                                                      args.time,   // time, ignored in this case, as we are not adding a key
+                                                      time,   // time, ignored in this case, as we are not adding a key
                                                       it->first,   // parametric position
                                                       it->second,   // value to be, 0
                                                       false);
@@ -515,19 +532,19 @@ private:
                     _lookupTable->deleteControlPoint(component);
                     // add a control point at 0, value is 0
                     _lookupTable->addControlPoint(component, // curve to set
-                                                  args.time,  // time, ignored in this case, as we are not adding a key
+                                                  time,  // time, ignored in this case, as we are not adding a key
                                                   0.0,  // parametric position, zero
                                                   0.0,  // value to be, 0
                                                   false);  // don't add a key
                     // add a control point at 1, value is 1
-                    lookupTable->addControlPoint(component, args.time, 1.0, 1.0, false);
+                    lookupTable->addControlPoint(component, time, 1.0, 1.0, false);
                 }
             }
         }
 #endif
         if ( (paramName == kParamRange) && (args.reason == eChangeUserEdit) ) {
             double rmin, rmax;
-            _range->getValueAtTime(args.time, rmin, rmax);
+            _range->getValueAtTime(time, rmin, rmax);
             if (rmax < rmin) {
                 _range->setValue(rmax, rmin);
             }
@@ -540,7 +557,9 @@ private:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_maskClip;
+    OFX::BooleanParam* _hasBackgroundInteract;
     OFX::ParametricParam  *_lookupTable;
+    OFX::BooleanParam* _showRamp;
     OFX::Double2DParam* _range;
     OFX::RGBAParam* _source;
     OFX::RGBAParam* _target;
@@ -559,8 +578,9 @@ void
 ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
                                    const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     assert(_dstClip);
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -578,7 +598,7 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+                                         _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
@@ -592,8 +612,8 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
@@ -604,7 +624,7 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
             }
         }
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
@@ -626,10 +646,10 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
     processor.setRenderWindow(args.renderWindow);
     bool premult;
     int premultChannel;
-    _premult->getValueAtTime(args.time, premult);
-    _premultChannel->getValueAtTime(args.time, premultChannel);
+    _premult->getValueAtTime(time, premult);
+    _premultChannel->getValueAtTime(time, premultChannel);
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
     processor.setValues(premult, premultChannel, mix);
     processor.process();
 } // ColorLookupPlugin::setupAndProcess
@@ -642,10 +662,11 @@ ColorLookupPlugin::renderForComponents(const OFX::RenderArguments &args,
 {
     double rangeMin, rangeMax;
     bool clampBlack, clampWhite;
+    const double time = args.time;
 
-    _range->getValueAtTime(args.time, rangeMin, rangeMax);
-    _clampBlack->getValueAtTime(args.time, clampBlack);
-    _clampWhite->getValueAtTime(args.time, clampWhite);
+    _range->getValueAtTime(time, rangeMin, rangeMax);
+    _clampBlack->getValueAtTime(time, clampBlack);
+    _clampWhite->getValueAtTime(time, clampWhite);
     switch (dstBitDepth) {
     case OFX::eBitDepthUByte: {
         ColorLookupProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
@@ -692,17 +713,18 @@ ColorLookupPlugin::isIdentity(const IsIdentityArguments &args,
                               Clip * &identityClip,
                               double & /*identityTime*/)
 {
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+    const double time = args.time;
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
 
     if (doMasking) {
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
             if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
                 if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
@@ -751,14 +773,23 @@ public:
                         const std::string& paramName) :
         OFX::ParamInteract(handle, effect)
     {
+        _hasBackgroundInteract = effect->fetchBooleanParam(kParamHasBackgroundInteract);
+        _showRamp = effect->fetchBooleanParam(kParamShowRamp);
         _lookupTableParam = effect->fetchParametricParam(paramName);
         _range = effect->fetchDouble2DParam(kParamRange);
         setColourPicking(true); // we always want colour picking if the host has it
+        addParamToSlaveTo(_showRamp);
     }
 
     virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
     {
         const double time = args.time;
+
+        bool hasBackgroundInteract = _hasBackgroundInteract->getValueAtTime(time);
+        if (!hasBackgroundInteract) {
+            _hasBackgroundInteract->setValue(true);
+        }
+
         double rangeMin, rangeMax;
 
         _range->getValueAtTime(time, rangeMin, rangeMax);
@@ -769,26 +800,28 @@ public:
         const int nComponents = 3;
         GLfloat color[nComponents];
 
-        glBegin (GL_TRIANGLE_STRIP);
-        
-        for (int position = 0; position <= nbValues; ++position) {
-            // position to evaluate the param at
-            double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
+        if ( _showRamp->getValueAtTime(time) ) {
+            glBegin (GL_TRIANGLE_STRIP);
 
-            for (int component = 0; component < nComponents; ++component) {
-                int lutIndex = componentToCurve(component); // special case for components == alpha only
-                // evaluate the parametric param
-                double value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
-                value += _lookupTableParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
-                // set that in the lut
-                color[component] = value;
+            for (int position = 0; position <= nbValues; ++position) {
+                // position to evaluate the param at
+                double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
+
+                for (int component = 0; component < nComponents; ++component) {
+                    int lutIndex = componentToCurve(component); // special case for components == alpha only
+                    // evaluate the parametric param
+                    double value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
+                    value += _lookupTableParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
+                    // set that in the lut
+                    color[component] = value;
+                }
+                glColor3f(color[0], color[1], color[2]);
+                glVertex2f(parametricPos, rangeMin);
+                glVertex2f(parametricPos, rangeMax);
             }
-            glColor3f(color[0], color[1], color[2]);
-            glVertex2f(parametricPos, rangeMin);
-            glVertex2f(parametricPos, rangeMax);
+            
+            glEnd();
         }
-
-        glEnd();
 
         if (args.hasPickerColour) {
             glLineWidth(1.5);
@@ -820,6 +853,8 @@ public:
     virtual ~ColorLookupInteract() {}
 
 protected:
+    OFX::BooleanParam* _hasBackgroundInteract;
+    OFX::BooleanParam* _showRamp;
     OFX::ParametricParam* _lookupTableParam;
     OFX::Double2DParam* _range;
 };
@@ -916,6 +951,17 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // define it
     {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamHasBackgroundInteract);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setIsPersistant(true);
+        param->setEvaluateOnChange(false);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
         Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamRange);
         param->setLabel(kParamRangeLabel);
         param->setDimensionLabels("min", "max");
@@ -979,6 +1025,19 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
            }
          */
         param->setIdentity();
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamShowRamp);
+        param->setLabel(kParamShowRampLabel);
+        param->setHint(kParamShowRampHint);
+        param->setDefault(true);
+        param->setIsSecret(false);
+        param->setIsPersistant(true);
+        param->setEvaluateOnChange(false);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }

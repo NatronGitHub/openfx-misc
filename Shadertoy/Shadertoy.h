@@ -25,7 +25,7 @@
 
 #include <memory>
 #include <climits>
-#include <cfloat>
+#include <cfloat> // DBL_MAX
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
