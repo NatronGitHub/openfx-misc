@@ -43,8 +43,6 @@ Version   Date       Author       Description
 use the ratios between matte balance's channels for this
 not their absolute values
 
-* TODO possible bug: garbage matte is multiplying, negating core matte.
-need to look into this further.
 */
 
 #include "INK.h"
