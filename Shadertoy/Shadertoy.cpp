@@ -484,6 +484,10 @@ using namespace OFX;
 #define kParamAutoLabel "Auto. Params"
 #define kParamAutoHint "Automatically set the parameters from the shader source next time image is rendered. May require clicking twice, depending on the OpenFX host."
 
+#define kParamResetParams "resetParams"
+#define kParamResetParamsLabel "Reset Params Values"
+#define kParamResetParamsHint "Set the extra parameters to their default values, as set automatically by the \"Auto. Params\", or in the \"Extra Parameters\" group."
+
 
 #define kParamImageShaderDefault                            \
     "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n" \
@@ -1526,6 +1530,62 @@ ShadertoyPlugin::updateExtra()
     }
 }
 
+// reset the extra parameters to their default value
+void
+ShadertoyPlugin::resetParamsValues()
+{
+    beginEditBlock(kParamResetParams);
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+    for (unsigned i = 0; i < paramCount; ++i) {
+        UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
+        if (t == eUniformTypeNone) {
+            continue;
+        }
+        switch (t) {
+            case eUniformTypeBool: {
+                bool v;
+                _paramDefaultBool[i]->getValue(v);
+                _paramValueBool[i]->setValue(v);
+                break;
+            }
+            case eUniformTypeInt: {
+                int v;
+                _paramDefaultInt[i]->getValue(v);
+                _paramValueInt[i]->setValue(v);
+                break;
+            }
+            case eUniformTypeFloat: {
+                double v;
+                _paramDefaultFloat[i]->getValue(v);
+                _paramValueFloat[i]->setValue(v);
+                break;
+            }
+            case eUniformTypeVec2: {
+                double v0, v1;
+                _paramDefaultVec2[i]->getValue(v0, v1);
+                _paramValueVec2[i]->setValue(v0, v1);
+                break;
+            }
+            case eUniformTypeVec3: {
+                double v0, v1, v2;
+                _paramDefaultVec3[i]->getValue(v0, v1, v2);
+                _paramValueVec3[i]->setValue(v0, v1, v2);
+                break;
+            }
+            case eUniformTypeVec4: {
+                double v0, v1, v2, v3;
+                _paramDefaultVec4[i]->getValue(v0, v1, v2, v3);
+                _paramValueVec4[i]->setValue(v0, v1, v2, v3);
+                break;
+            }
+            default:
+                assert(false);
+                break;
+        }
+    }
+    endEditBlock();
+}
+
 void
 ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                               const std::string &paramName)
@@ -1599,6 +1659,8 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             updateVisibility();
             updateClips();
         }
+    } else if (paramName == kParamResetParams) {
+        resetParamsValues();
     } else if (paramName == kParamImageShaderSource) {
         _imageShaderCompile->setEnabled(true);
     } else if ( ( (paramName == kParamCount) ||
@@ -2139,6 +2201,19 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAuto);
             param->setLabel(kParamAutoLabel);
             param->setHint(kParamAutoHint);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        {
+            OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetParams);
+            param->setLabel(kParamResetParamsLabel);
+            param->setHint(kParamResetParamsHint);
             if (page) {
                 page->addChild(*param);
             }

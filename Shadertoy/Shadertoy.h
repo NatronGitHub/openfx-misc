@@ -369,6 +369,7 @@ private:
     void updateVisibilityParam(unsigned i, bool visible);
     void updateExtra();
     void updateClips();
+    void resetParamsValues();
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
