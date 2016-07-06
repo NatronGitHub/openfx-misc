@@ -820,10 +820,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     if (!gHostDescription.supportsOpenGLRender) {
         _enableGPU->setEnabled(false);
-        setSupportsOpenGLRender(false);
-    } else {
-        setSupportsOpenGLRender( _enableGPU->getValue() );
     }
+    setSupportsOpenGLRender( _enableGPU->getValue() );
 #endif
     updateExtra();
     updateVisibility();
