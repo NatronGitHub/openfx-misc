@@ -44,7 +44,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This plugin concatenates transforms."
 #define kPluginIdentifier "net.sf.openfx.Reformat"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kParamType "reformatType"
 #define kParamTypeLabel "Type"
@@ -67,7 +67,16 @@ enum ReformatTypeEnum
 #define kParamFormatHint "The output format"
 #define kParamFormatDefault eParamFormatPCVideo
 
-#define kParamBoxSize kNatronParamFormatSize
+
+#define kParamFormatBoxSize kNatronParamFormatSize
+#define kParamFormatBoxSizeLabel "Size"
+#define kParamFormatBoxSizeHint "The output dimensions of the image in pixels."
+
+#define kParamFormatBoxPAR kNatronParamFormatPar
+#define kParamFormatBoxPARLabel "Pixel Aspect Ratio"
+#define kParamFormatBoxPARHint "Output pixel aspect ratio."
+
+#define kParamBoxSize "boxSize"
 #define kParamBoxSizeLabel "Size"
 #define kParamBoxSizeHint "The output dimensions of the image in pixels."
 
@@ -75,7 +84,7 @@ enum ReformatTypeEnum
 #define kParamBoxFixedLabel "Force This Shape"
 #define kParamBoxFixedHint "If checked, the output image is cropped to this size. Else, image is resized according to the resize type but the whole image is kept."
 
-#define kParamBoxPAR kNatronParamFormatPar
+#define kParamBoxPAR "boxPar"
 #define kParamBoxPARLabel "Pixel Aspect Ratio"
 #define kParamBoxPARHint "Output pixel aspect ratio."
 
@@ -173,6 +182,8 @@ public:
         // NON-GENERIC
         _type = fetchChoiceParam(kParamType);
         _format = fetchChoiceParam(kParamFormat);
+        _formatBoxSize = fetchInt2DParam(kParamFormatBoxSize);
+        _formatBoxPAR = fetchDoubleParam(kParamFormatBoxPAR);
         _boxSize = fetchInt2DParam(kParamBoxSize);
         _boxFixed = fetchBooleanParam(kParamBoxFixed);
         _boxPAR = fetchDoubleParam(kParamBoxPAR);
@@ -186,9 +197,6 @@ public:
         _turn = fetchBooleanParam(kParamTurn);
         assert(_type && _format && _boxSize && _boxFixed && _boxPAR && _scale && _scaleUniform && _preserveBB && _resize && _center && _flip && _flop && _turn);
 
-        _boxSize_saved = _boxSize->getValue();
-        _boxPAR_saved = _boxPAR->getValue();
-        _boxFixed_saved = _boxFixed->getValue();
 
         if (!gHostIsNatron) {
             // try to guess the output format from the project size
@@ -208,7 +216,9 @@ public:
                     _type->setValue( (int)eReformatTypeToFormat );
                     _format->setValue( (OFX::EParamFormat)i );
                     _boxSize->setValue(width, height);
+                    _formatBoxSize->setValue(width, height);
                     _boxPAR->setValue(par);
+                    _formatBoxPAR->setValue(par);
                     foundFormat = true;
                     break;
                 }
@@ -216,12 +226,10 @@ public:
             if (!foundFormat) {
                 _type->setValue( (int)eReformatTypeToBox );
                 _boxSize->setValue(projectSize.x / projectPAR, projectSize.y);
+                _formatBoxSize->setValue(projectSize.x / projectPAR, projectSize.y);
                 _boxPAR->setValue(projectPAR);
+                _formatBoxPAR->setValue(projectPAR);
                 _boxFixed->setValue(true);
-                _boxSize_saved.x = projectSize.x / projectPAR;
-                _boxSize_saved.y = projectSize.y;
-                _boxPAR_saved = projectPAR;
-                _boxFixed_saved = true;
             }
         }
         // On Natron, hide the uniform parameter if it is false and not animated,
@@ -255,9 +263,12 @@ private:
     // NON-GENERIC
     OFX::ChoiceParam *_type;
     OFX::ChoiceParam *_format;
+    OFX::Int2DParam *_formatBoxSize;
+    OFX::DoubleParam* _formatBoxPAR;
     OFX::Int2DParam *_boxSize;
     OFX::BooleanParam* _boxFixed;
     OFX::DoubleParam* _boxPAR;
+
     OFX::Double2DParam *_scale;
     OFX::BooleanParam* _scaleUniform;
     OFX::BooleanParam* _preserveBB;
@@ -267,10 +278,6 @@ private:
     OFX::BooleanParam* _flop;
     OFX::BooleanParam* _turn;
 
-    // saved values for user-specified box
-    OfxPointI _boxSize_saved;
-    double _boxPAR_saved;
-    bool _boxFixed_saved;
 };
 
 // override the rod call
@@ -291,8 +298,32 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     // intersect with format RoD
     OfxRectD formatrod;
     formatrod.x1 = formatrod.y1 = formatrod.x2 = formatrod.y2 = 0.;
-    OfxPointI boxSize = _boxSize->getValueAtTime(time);
-    double boxPAR = _boxPAR->getValueAtTime(time);
+
+    int type_i;
+    _type->getValue(type_i);
+    ReformatTypeEnum typeVal = (ReformatTypeEnum)type_i;
+
+    OfxPointI boxSize;
+    double boxPAR;
+    bool boxFixed;
+    switch (typeVal) {
+        case eReformatTypeToFormat:
+            boxFixed = true;
+            boxSize = _formatBoxSize->getValueAtTime(time);
+            boxPAR = _formatBoxPAR->getValueAtTime(time);
+            break;
+        case eReformatTypeScale:
+            boxFixed = true;
+            boxSize = _boxSize->getValueAtTime(time);
+            boxPAR = _boxPAR->getValueAtTime(time);
+            break;
+        case eReformatTypeToBox:
+            boxFixed = _boxFixed->getValue();
+            boxSize = _boxSize->getValueAtTime(time);
+            boxPAR = _boxPAR->getValueAtTime(time);
+            break;
+    }
+
 
     // convert the source RoD to pixels
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
@@ -325,7 +356,6 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         }
     }
 
-    bool boxFixed = _boxFixed->getValue();
     if ( (resize == eResizeNone) ||
          ( resize == eResizeDistort) ||
          boxFixed ) {
@@ -382,12 +412,37 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
         return false;
     }
 
+
+    int type_i;
+    _type->getValue(type_i);
+    ReformatTypeEnum typeVal = (ReformatTypeEnum)type_i;
+
+    OfxPointI boxSize;
+    double boxPAR;
+    bool boxFixed;
+    switch (typeVal) {
+        case eReformatTypeToFormat:
+            boxFixed = true;
+            boxSize = _formatBoxSize->getValueAtTime(time);
+            boxPAR = _formatBoxPAR->getValueAtTime(time);
+            break;
+        case eReformatTypeScale:
+            boxFixed = true;
+            boxSize = _boxSize->getValueAtTime(time);
+            boxPAR = _boxPAR->getValueAtTime(time);
+            break;
+        case eReformatTypeToBox:
+            boxFixed = _boxFixed->getValue();
+            boxSize = _boxSize->getValueAtTime(time);
+            boxPAR = _boxPAR->getValueAtTime(time);
+            break;
+    }
+
     ResizeEnum resize = (ResizeEnum)_resize->getValueAtTime(time);
     bool center = _center->getValueAtTime(time);
     bool flip = _flip->getValueAtTime(time);
     bool flop = _flop->getValueAtTime(time);
     bool turn = _turn->getValueAtTime(time);
-    bool boxFixed = _boxFixed->getValueAtTime(time);
     if ( (resize == eResizeNone) &&
          !( (center && boxFixed) || flip || flop || turn ) ) {
         invtransform->setIdentity();
@@ -396,12 +451,12 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
     }
     // same as getRegionOfDefinition, but without rounding, and without conversion to pixels
 
-    OfxPointI boxSize = _boxSize->getValueAtTime(time);
+
+
     if ( (boxSize.x == 0) && (boxSize.y == 0) ) {
         //probably scale is 0
         return false;
     }
-    double boxPAR = _boxPAR->getValueAtTime(time);
     OfxRectD boxRod = { 0., 0., boxSize.x * boxPAR, boxSize.y};
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
     if ( Coords::rectIsEmpty(srcRod) ) {
@@ -550,8 +605,8 @@ ReformatPlugin::setBoxValues(const double time)
             double par = -1;
             getFormatResolution(format, &w, &h, &par);
             assert(par != -1);
-            _boxSize->setValue(w, h);
-            _boxPAR->setValue(par);
+            _formatBoxSize->setValue(w, h);
+            _formatBoxPAR->setValue(par);
         }
 
 
@@ -559,9 +614,6 @@ ReformatPlugin::setBoxValues(const double time)
         break;
     }
     case eReformatTypeToBox:
-        _boxSize->setValue(_boxSize_saved);
-        _boxPAR->setValue(_boxPAR_saved);
-        _boxFixed->setValue(_boxFixed_saved);
         // nothing to do, the user sets the box
         break;
     case eReformatTypeScale: {
@@ -595,29 +647,11 @@ ReformatPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 {
     if (paramName == kParamType) {
         refreshVisibility();
-        ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
-        if (type == eReformatTypeToBox) {
-            // restore saved values
-            _boxSize->setValue(_boxSize_saved);
-            _boxPAR->setValue(_boxPAR_saved);
-            _boxFixed->setValue(_boxFixed_saved);
-        }
     }
     if ( (paramName == kParamType) || (paramName == kParamFormat) || (paramName == kParamScale) || (paramName == kParamScaleUniform) ) {
         setBoxValues(args.time);
 
         return;
-    }
-    if ( (paramName == kParamBoxSize) && (args.reason == eChangeUserEdit) ) {
-        _boxSize_saved = _boxSize->getValue();
-
-        return;
-    }
-    if ( (paramName == kParamBoxPAR) && (args.reason == eChangeUserEdit) ) {
-        _boxPAR_saved = _boxPAR->getValue();
-    }
-    if ( (paramName == kParamBoxFixed) && (args.reason == eChangeUserEdit) ) {
-        _boxFixed_saved = _boxFixed->getValue();
     }
 
     if (paramName == kParamPreserveBoundingBox) {
@@ -788,6 +822,32 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    {
+        Int2DParamDescriptor* param = desc.defineInt2DParam(kParamFormatBoxSize);
+        param->setLabel(kParamFormatBoxSizeLabel);
+        param->setHint(kParamFormatBoxSizeHint);
+        param->setDefault(200, 200);
+        param->setIsSecret(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFormatBoxPAR);
+        param->setLabel(kParamFormatBoxPARLabel);
+        param->setHint(kParamFormatBoxPARHint);
+        param->setRange(0., 10);
+        param->setDisplayRange(0.5, 2.);
+        param->setDefault(1.);
+        param->setIsSecret(true);
+        desc.addClipPreferencesSlaveParam(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
 
     {
         Int2DParamDescriptor* param = desc.defineInt2DParam(kParamBoxSize);
