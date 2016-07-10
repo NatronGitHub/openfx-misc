@@ -100,7 +100,7 @@ class CImgErodePlugin
 public:
 
     CImgErodePlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgErodeParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgErodeParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ true)
     {
         _size  = fetchInt2DParam(kParamSize);
         _expandRod = fetchBooleanParam(kParamExpandRoD);
@@ -212,6 +212,10 @@ CImgErodePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(OFX::ePixelComponentRGBA); // Enable alpha by default, so it works OK on masks
+#endif
 }
 
 void
@@ -226,7 +230,7 @@ CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                                              kSupportsAlpha,
                                                                              kSupportsTiles,
                                                                              /*processRGB=*/ true,
-                                                                             /*processAlpha*/ false,
+                                                                             /*processAlpha*/ true, // Enable alpha by default, so it works OK on masks
                                                                              /*processIsSecret=*/ false);
 
     {

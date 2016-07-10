@@ -99,7 +99,7 @@ class CImgDilatePlugin
 public:
 
     CImgDilatePlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgDilateParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgDilateParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ true)
     {
         _size  = fetchInt2DParam(kParamSize);
         _expandRod = fetchBooleanParam(kParamExpandRoD);
@@ -224,7 +224,7 @@ CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                                               kSupportsAlpha,
                                                                               kSupportsTiles,
                                                                               /*processRGB=*/ true,
-                                                                              /*processAlpha*/ false,
+                                                                              /*processAlpha*/ true, // Enable alpha by default, so it works OK on masks
                                                                               /*processIsSecret=*/ false);
 
     {
