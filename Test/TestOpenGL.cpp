@@ -182,10 +182,8 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     if (!gHostDescription.supportsOpenGLRender) {
         _enableGPU->setEnabled(false);
-        setSupportsOpenGLRender(false);
-    } else {
-        setSupportsOpenGLRender( _enableGPU->getValue() );
     }
+    setSupportsOpenGLRender(true);
 #endif
 #if defined(HAVE_OSMESA)
     if ( OSMesaDriverSelectable() ) {
