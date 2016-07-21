@@ -428,7 +428,7 @@ CImgFilterPluginHelperBase::maskColumnIsZero(const OFX::Image* mask,
     }
 
     assert(mask->getPixelComponents() == OFX::ePixelComponentAlpha && mask->getPixelDepth() == OFX::eBitDepthFloat);
-    const int rowElems = mask->getRowBytes() / sizeof(float);
+    const int rowElems = mask->getRowBytes() / sizeof(float); // may be negative, @see kOfxImagePropRowBytes
 
     if (maskInvert) {
         const OfxRectI& maskBounds = mask->getBounds();
