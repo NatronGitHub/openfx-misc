@@ -1210,7 +1210,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(true);
         param->setEvaluateOnChange(false);
         param->setIsSecret(true);
-        param->setIsPersistant(true);
+        param->setIsPersistent(true);
         param->setAnimates(false);
         if (page) {
             page->addChild(*param);

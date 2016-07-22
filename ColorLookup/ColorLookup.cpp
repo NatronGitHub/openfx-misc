@@ -954,7 +954,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamHasBackgroundInteract);
         param->setDefault(false);
         param->setIsSecret(true);
-        param->setIsPersistant(true);
+        param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setAnimates(false);
         if (page) {
@@ -1035,7 +1035,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamShowRampHint);
         param->setDefault(true);
         param->setIsSecret(false);
-        param->setIsPersistant(true);
+        param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setAnimates(false);
         if (page) {
@@ -1049,7 +1049,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
-        param->setIsPersistant(false);
+        param->setIsPersistent(false);
         if (page) {
             page->addChild(*param);
         }
@@ -1061,7 +1061,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
-        param->setIsPersistant(false);
+        param->setIsPersistent(false);
         if (page) {
             page->addChild(*param);
         }

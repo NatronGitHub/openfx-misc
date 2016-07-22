@@ -2226,7 +2226,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             param->setEvaluateOnChange(true);
             param->setAnimates(false);
             param->setIsSecret(true);
-            param->setIsPersistant(false);
+            param->setIsPersistent(false);
             if (page) {
                 page->addChild(*param);
             }
@@ -2241,7 +2241,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             param->setEvaluateOnChange(false);
             param->setAnimates(false);
             param->setIsSecret(true);
-            param->setIsPersistant(false);
+            param->setIsPersistent(false);
             if (page) {
                 page->addChild(*param);
             }

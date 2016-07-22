@@ -930,7 +930,7 @@ KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecret(true); // always secret
         param->setEnabled(false);
-        param->setIsPersistant(true);
+        param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setDefault(kParamKeyerModeOptionLuminance);
         if (page) {
