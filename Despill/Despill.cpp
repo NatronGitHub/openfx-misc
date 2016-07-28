@@ -201,15 +201,19 @@ private:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(procWindow.x1, y) : 0);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 double spillmap;
                 if (srcPix) {
                     tmpPix[0] = (double)srcPix[0] / maxValue;
                     tmpPix[1] = (double)srcPix[1] / maxValue;
                     tmpPix[2] = (double)srcPix[2] / maxValue;
-                    tmpPix[3] = (double)srcPix[3] / maxValue;
+                    if (nComponents == 4) {
+                        tmpPix[3] = (double)srcPix[3] / maxValue;
+                    } else {
+                        tmpPix[3] = 0.;
+                    }
                     if (screen == eScreenTypeGreenScreen) {
                         spillmap = std::max(tmpPix[1] - ( tmpPix[0] * _spillMix + tmpPix[2] * (1 - _spillMix) ) * (1 - _spillExpand), 0.);
                     } else {
@@ -233,6 +237,7 @@ private:
 
                 // increment the dst pixel
                 dstPix += nComponents;
+                srcPix += nComponents;
             }
         }
     }
@@ -361,8 +366,9 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
         OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents  = src->getPixelComponents();
         //OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
+        if (srcBitDepth != dstBitDepth  || srcComponents != dstComponents) { // Keyer outputs RGBA but may have RGB input
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     } else {
@@ -493,10 +499,14 @@ void
 DespillPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     bool createAlpha;
-
     _outputToAlpha->getValue(createAlpha);
+    // Set input and output to the same components
     if (createAlpha) {
         clipPreferences.setClipComponents(*_dstClip, OFX::ePixelComponentRGBA);
+        clipPreferences.setClipComponents(*_srcClip, OFX::ePixelComponentRGBA);
+    } else {
+        OFX::PixelComponentEnum srcComps = _srcClip->getPixelComponents();
+        clipPreferences.setClipComponents(*_dstClip, srcComps);
     }
 }
 
