@@ -682,7 +682,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // RotoPluginFactory::describeInContext
 
-static RotoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-mRegisterPluginFactoryInstance(p)
+/*static RotoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)*/
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
