@@ -55,8 +55,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: add expand rod parameter
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsComponentRemapping 1
 #define kSupportsTiles 1
@@ -80,12 +81,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSizeHint "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0)."
 #define kParamSizeDefault 1
 
+#define kParamExpandRoD "expandRoD"
+#define kParamExpandRoDLabel "Expand RoD"
+#define kParamExpandRoDHint "Expand the source region of definition by 2*size pixels if size is positive"
 
 /// Dilate plugin
 struct CImgDilateParams
 {
     int sx;
     int sy;
+    bool expandRod;
 };
 
 class CImgDilatePlugin
@@ -94,16 +99,18 @@ class CImgDilatePlugin
 public:
 
     CImgDilatePlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgDilateParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgDilateParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ true)
     {
         _size  = fetchInt2DParam(kParamSize);
-        assert(_size);
+        _expandRod = fetchBooleanParam(kParamExpandRoD);
+        assert(_size && _expandRod);
     }
 
     virtual void getValuesAtTime(double time,
                                  CImgDilateParams& params) OVERRIDE FINAL
     {
         _size->getValueAtTime(time, params.sx, params.sy);
+        _expandRod->getValueAtTime(time, params.expandRod);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -120,6 +127,26 @@ public:
         roi->x2 = rect.x2 + delta_pix_x;
         roi->y1 = rect.y1 - delta_pix_y;
         roi->y2 = rect.y2 + delta_pix_y;
+    }
+
+    bool getRegionOfDefinition(const OfxRectI& srcRoD,
+                               const OfxPointD& renderScale,
+                               const CImgDilateParams& params,
+                               OfxRectI* dstRoD) OVERRIDE FINAL
+    {
+        if (params.expandRod) {
+            int delta_pix_x = params.sx > 0 ? (int)std::ceil(std::abs(params.sx) * renderScale.x) : 0;
+            int delta_pix_y = params.sy > 0 ? (int)std::ceil(std::abs(params.sy) * renderScale.y) : 0;
+            *dstRoD = srcRoD;
+            dstRoD->x1 = dstRoD->x1 - delta_pix_x;
+            dstRoD->x2 = dstRoD->x2 + delta_pix_x;
+            dstRoD->y1 = dstRoD->y1 - delta_pix_y;
+            dstRoD->y2 = dstRoD->y2 + delta_pix_y;
+            return true;
+        } else {
+            return false;
+        }
+
     }
 
     virtual void render(const OFX::RenderArguments &args,
@@ -150,6 +177,7 @@ private:
 
     // params
     OFX::Int2DParam *_size;
+    OFX::BooleanParam* _expandRod;
 };
 
 
@@ -196,7 +224,7 @@ CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                                               kSupportsAlpha,
                                                                               kSupportsTiles,
                                                                               /*processRGB=*/ true,
-                                                                              /*processAlpha*/ false,
+                                                                              /*processAlpha*/ true, // Enable alpha by default, so it works OK on masks
                                                                               /*processIsSecret=*/ false);
 
     {
@@ -206,6 +234,15 @@ CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         param->setRange(-1000, -1000, 1000, 1000);
         param->setDisplayRange(-100, -100, 100, 100);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        param->setLabel(kParamExpandRoDLabel);
+        param->setHint(kParamExpandRoDHint);
+        param->setDefault(true);
         if (page) {
             page->addChild(*param);
         }

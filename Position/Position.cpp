@@ -143,7 +143,7 @@ PositionPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum srcBitDepth;
     int srcRowBytes;
     getImageData(src.get(), &srcPixelData, &srcBounds, &srcPixelComponents, &srcBitDepth, &srcRowBytes);
-    int srcPixelComponentCount = src->getPixelComponentCount();
+    int srcPixelComponentCount = src.get() ? src->getPixelComponentCount() : 0;
 
     // translate srcBounds
     const double time = args.time;

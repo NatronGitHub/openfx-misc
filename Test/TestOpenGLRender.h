@@ -355,7 +355,10 @@ struct TestOpenGLPlugin::OSMesaPrivate
                     GLint accumBits,
                     CPUDriverEnum cpuDriver,
                     void* buffer,
-                    const OfxRectI &dstBounds)
+                    GLsizei width,
+                    GLsizei height,
+                    GLsizei rowLength,
+                    GLboolean yUp)
     {
         bool newContext = false;
 
@@ -433,19 +436,19 @@ struct TestOpenGLPlugin::OSMesaPrivate
         //printf("%p before OSMesaMakeCurrent(%p), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
 
         /* Bind the buffer to the context and make it current */
-        if ( !OSMesaMakeCurrent( _ctx, buffer, type, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1 ) ) {
+        if ( !OSMesaMakeCurrent(_ctx, buffer, type, width, height) ) {
             DPRINT( ("OSMesaMakeCurrent failed!\n") );
             OFX::throwSuiteStatusException(kOfxStatFailed);
 
             return;
         }
-        //OSMesaPixelStore(OSMESA_Y_UP, true); // default value
-        //OSMesaPixelStore(OSMESA_ROW_LENGTH, dstBounds.x2 - dstBounds.x1); // default value
+        OSMesaPixelStore(OSMESA_Y_UP, yUp);
+        OSMesaPixelStore(OSMESA_ROW_LENGTH, rowLength);
         if (newContext) {
             _effect->contextAttachedMesa(false);
         } else {
             // set viewport
-            glViewport(0, 0, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1);
+            glViewport(0, 0, width, height);
         }
         OpenGLContextData* contextData = &_openGLContextData;
         contextData->haveAniso = glutExtensionSupported("GL_EXT_texture_filter_anisotropic");
@@ -1237,7 +1240,6 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         return;
     }
     /* Allocate the image buffer */
-    void* buffer = dst->getPixelData();
     OSMesaPrivate *osmesa;
     {
         AutoMutex lock( _osmesaMutex.get() );
@@ -1260,7 +1262,13 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     if (_cpuDriver) {
         cpuDriver = (CPUDriverEnum)_cpuDriver->getValueAtTime(time);
     }
-    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, buffer, dstBounds);
+    // we pass the address of the first pixel, which depends on the sign of rowBytes
+    GLsizei bufferWidth = renderWindow.x2 - renderWindow.x1;
+    GLsizei bufferHeight = renderWindow.y2 - renderWindow.y1;
+    GLsizei bufferRowLength = std::abs( dst->getRowBytes() ) / dst->getPixelBytes();
+    GLboolean bufferYUp = (dst->getRowBytes() > 0);
+    void* buffer = bufferYUp ? dst->getPixelAddress(renderWindow.x1, renderWindow.y1) : dst->getPixelAddress(renderWindow.x1, renderWindow.y2 - 1);
+    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, buffer, bufferWidth, bufferHeight, bufferRowLength, bufferYUp);
 #endif // ifdef USE_OSMESA
 
 #ifdef USE_OPENGL
@@ -1556,7 +1564,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     glCheckError();
     // make sure the buffer is not referenced anymore
-    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, NULL, dstBounds);
+    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, NULL, 0, 0, 0, true);
     OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
     assert(OSMesaGetCurrentContext() == NULL);
 
