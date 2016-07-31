@@ -18,6 +18,7 @@
 
 /*
  * OFX Roto plugin.
+ * This plugin was used internally by Natron until Natron 2.0, and is now deprecated.
  */
 
 #include <cmath>
@@ -584,6 +585,9 @@ RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        desc.setIsDeprecated(true); // prefer Natron's internal Roto
+    }
 #endif
 }
 
@@ -682,7 +686,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // RotoPluginFactory::describeInContext
 
-/*static RotoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-mRegisterPluginFactoryInstance(p)*/
+static RotoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
