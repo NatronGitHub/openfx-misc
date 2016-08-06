@@ -135,13 +135,13 @@ enum DistortionPluginEnum
 
 #define kParamChannelA "channelA"
 #define kParamChannelALabel "Alpha Channel"
-#define kParamChannelAHint "Input Alpha channel from UV. Output is multiplied by Alpha."
+#define kParamChannelAHint "Input Alpha channel from UV. The Output alpha is set to this value. If \"Unpremult UV\" is checked, the UV values are divided by alpha."
 
 #define kParamChannelAChoice kParamChannelA "Choice"
 
 #define kParamChannelUnpremultUV "unpremultUV"
 #define kParamChannelUnpremultUVLabel "Unpremult UV"
-#define kParamChannelUnpremultUVHint "Unpremult UV by Alpha from UV. Check if UV values look small for small values of Alpha."
+#define kParamChannelUnpremultUVHint "Unpremult UV by Alpha from UV. Check if UV values look small for small values of Alpha (3D software sometimes write premultiplied UV values)."
 
 #define kParamPremultChanged "premultChanged"
 
