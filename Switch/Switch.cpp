@@ -29,10 +29,11 @@
 #endif
 
 #include "ofxsMacros.h"
-#include "ofxNatron.h"
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
-
+#ifdef OFX_EXTENSIONS_NATRON
+#include "ofxNatron.h"
+#endif
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
 #endif

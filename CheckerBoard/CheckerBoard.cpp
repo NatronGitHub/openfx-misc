@@ -32,6 +32,9 @@
 #include "ofxsMacros.h"
 #include "ofxsGenerator.h"
 #include "ofxsLut.h"
+#ifdef OFX_EXTENSIONS_NATRON
+#include "ofxNatron.h"
+#endif
 
 using namespace OFX;
 
@@ -90,8 +93,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamCenterLineWidth "centerlineWidth"
 #define kParamCenterLineWidthLabel "Centerline Width"
 #define kParamCenterLineWidthHint "Width, in pixels, of the center lines."
-
-#include "ofxNatron.h"
 
 /** @brief  Base class used to blend two images together */
 class CheckerBoardProcessorBase
@@ -491,7 +492,11 @@ CheckerBoardPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
+#ifdef OFX_EXTENSIONS_NATRON
     assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+#else
+    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha);
+#endif
 
     checkComponents(dstBitDepth, dstComponents);
 
@@ -500,8 +505,10 @@ CheckerBoardPlugin::render(const OFX::RenderArguments &args)
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == OFX::ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
+#endif
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);

@@ -31,7 +31,9 @@
 #include "ofxsMacros.h"
 #include "ofxsGenerator.h"
 #include "ofxsLut.h"
-
+#ifdef OFX_EXTENSIONS_NATRON
+#include "ofxNatron.h"
+#endif
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -60,8 +62,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamColor "color"
 #define kParamColorLabel "Color"
 #define kParamColorHint "Color to fill the image with."
-
-#include "ofxNatron.h"
 
 /** @brief  Base class used to blend two images together */
 class ConstantProcessorBase

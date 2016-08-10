@@ -31,11 +31,14 @@
 #include <iostream>
 #endif
 
-#include "ofxNatron.h"
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#ifdef OFX_EXTENSIONS_NATRON
+#include "ofxNatron.h"
+#endif
+
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef OFX::MultiThread::Mutex Mutex;

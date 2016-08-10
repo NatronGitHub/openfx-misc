@@ -47,6 +47,34 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define kParamProcessR kNatronOfxParamProcessR
+#define kParamProcessRLabel kNatronOfxParamProcessRLabel
+#define kParamProcessRHint kNatronOfxParamProcessRHint
+#define kParamProcessG kNatronOfxParamProcessG
+#define kParamProcessGLabel kNatronOfxParamProcessGLabel
+#define kParamProcessGHint kNatronOfxParamProcessGHint
+#define kParamProcessB kNatronOfxParamProcessB
+#define kParamProcessBLabel kNatronOfxParamProcessBLabel
+#define kParamProcessBHint kNatronOfxParamProcessBHint
+#define kParamProcessA kNatronOfxParamProcessA
+#define kParamProcessALabel kNatronOfxParamProcessALabel
+#define kParamProcessAHint kNatronOfxParamProcessAHint
+#else
+#define kParamProcessR      "processR"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Process red component."
+#define kParamProcessG      "processG"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Process green component."
+#define kParamProcessB      "processB"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Process blue component."
+#define kParamProcessA      "processA"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Process alpha component."
+#endif
+
 #define kParamPremult "premultiply"
 #define kParamPremultLabel "Premultiply"
 #define kParamPremultHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
@@ -273,10 +301,10 @@ public:
         // name of mask clip depends on the context
         _rotoClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Roto");
         assert( _rotoClip && (_rotoClip->getPixelComponents() == ePixelComponentAlpha || _rotoClip->getPixelComponents() == ePixelComponentRGBA) );
-        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
-        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
-        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
-        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
     }
 
@@ -645,9 +673,9 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
-        param->setLabel(kNatronOfxParamProcessRLabel);
-        param->setHint(kNatronOfxParamProcessRHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabel(kParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
         param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -655,9 +683,9 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
-        param->setLabel(kNatronOfxParamProcessGLabel);
-        param->setHint(kNatronOfxParamProcessGHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabel(kParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
         param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -665,9 +693,9 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
-        param->setLabel(kNatronOfxParamProcessBLabel);
-        param->setHint(kNatronOfxParamProcessBHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        param->setLabel(kParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
         param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -675,9 +703,9 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
-        param->setLabel(kNatronOfxParamProcessALabel);
-        param->setHint(kNatronOfxParamProcessAHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        param->setLabel(kParamProcessALabel);
+        param->setHint(kParamProcessAHint);
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {

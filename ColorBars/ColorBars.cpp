@@ -32,8 +32,9 @@
 #include "ofxsGenerator.h"
 #include "ofxsLut.h"
 #include "ofxsCoords.h"
+#ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
-
+#endif
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER

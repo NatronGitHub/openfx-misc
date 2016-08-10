@@ -25,6 +25,33 @@ thread_local OFX::ImageEffect *tls::gImageEffect = 0;
 
 #define kParamPremultChanged "premultChanged"
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define kParamProcessR kNatronOfxParamProcessR
+#define kParamProcessRLabel kNatronOfxParamProcessRLabel
+#define kParamProcessRHint kNatronOfxParamProcessRHint
+#define kParamProcessG kNatronOfxParamProcessG
+#define kParamProcessGLabel kNatronOfxParamProcessGLabel
+#define kParamProcessGHint kNatronOfxParamProcessGHint
+#define kParamProcessB kNatronOfxParamProcessB
+#define kParamProcessBLabel kNatronOfxParamProcessBLabel
+#define kParamProcessBHint kNatronOfxParamProcessBHint
+#define kParamProcessA kNatronOfxParamProcessA
+#define kParamProcessALabel kNatronOfxParamProcessALabel
+#define kParamProcessAHint kNatronOfxParamProcessAHint
+#else
+#define kParamProcessR      "processR"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Process red component."
+#define kParamProcessG      "processG"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Process green component."
+#define kParamProcessB      "processB"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Process blue component."
+#define kParamProcessA      "processA"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Process alpha component."
+#endif
 
 CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle handle,
                                                        bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
@@ -67,11 +94,11 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
     }
 
-    if ( paramExists(kNatronOfxParamProcessR) ) {
-        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
-        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
-        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
-        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+    if ( paramExists(kParamProcessR) ) {
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
     }
     _premult = fetchBooleanParam(kParamPremult);
@@ -208,9 +235,9 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
     OFX::PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
-        param->setLabel(kNatronOfxParamProcessRLabel);
-        param->setHint(kNatronOfxParamProcessRHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabel(kParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
         param->setDefault(processRGB);
         param->setIsSecret(processIsSecret);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
@@ -219,9 +246,9 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
-        param->setLabel(kNatronOfxParamProcessGLabel);
-        param->setHint(kNatronOfxParamProcessGHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabel(kParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
         param->setDefault(processRGB);
         param->setIsSecret(processIsSecret);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
@@ -230,9 +257,9 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
-        param->setLabel(kNatronOfxParamProcessBLabel);
-        param->setHint(kNatronOfxParamProcessBHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        param->setLabel(kParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
         param->setDefault(processRGB);
         param->setIsSecret(processIsSecret);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
@@ -241,9 +268,9 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
-        param->setLabel(kNatronOfxParamProcessALabel);
-        param->setHint(kNatronOfxParamProcessAHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        param->setLabel(kParamProcessALabel);
+        param->setHint(kParamProcessAHint);
         param->setDefault(processAlpha);
         param->setIsSecret(processIsSecret);
         if (page) {

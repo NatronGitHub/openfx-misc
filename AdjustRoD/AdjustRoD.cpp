@@ -237,13 +237,19 @@ AdjustRoDPlugin::render(const OFX::RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+#ifdef OFX_EXTENSIONS_NATRON
     assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+#else
+    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha);
+#endif
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == OFX::ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
+#endif
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
@@ -326,7 +332,9 @@ AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -336,7 +344,9 @@ AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

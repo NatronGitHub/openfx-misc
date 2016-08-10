@@ -53,6 +53,35 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kClipA "A"
 #define kClipB "B"
+
+#ifdef OFX_EXTENSIONS_NATRON
+#define kParamProcessR kNatronOfxParamProcessR
+#define kParamProcessRLabel kNatronOfxParamProcessRLabel
+#define kParamProcessRHint kNatronOfxParamProcessRHint
+#define kParamProcessG kNatronOfxParamProcessG
+#define kParamProcessGLabel kNatronOfxParamProcessGLabel
+#define kParamProcessGHint kNatronOfxParamProcessGHint
+#define kParamProcessB kNatronOfxParamProcessB
+#define kParamProcessBLabel kNatronOfxParamProcessBLabel
+#define kParamProcessBHint kNatronOfxParamProcessBHint
+#define kParamProcessA kNatronOfxParamProcessA
+#define kParamProcessALabel kNatronOfxParamProcessALabel
+#define kParamProcessAHint kNatronOfxParamProcessAHint
+#else
+#define kParamProcessR      "processR"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Process red component."
+#define kParamProcessG      "processG"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Process green component."
+#define kParamProcessB      "processB"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Process blue component."
+#define kParamProcessA      "processA"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Process alpha component."
+#endif
+
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
 #define kParamSoftnessHint "Size of the fade around edges of the rectangle to apply"
@@ -230,10 +259,10 @@ public:
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
-        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
-        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
-        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
-        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
         assert(_btmLeft && _size && _softness);
         _mix = fetchDoubleParam(kParamMix);
@@ -527,13 +556,19 @@ CopyRectanglePlugin::render(const OFX::RenderArguments &args)
     assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
+#ifdef OFX_EXTENSIONS_NATRON
     assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+#else
+    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha);
+#endif
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == OFX::ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
+#endif
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
@@ -612,7 +647,9 @@ CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     srcClipB->addSupportedComponent(ePixelComponentRGBA);
     srcClipB->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcClipB->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClipB->addSupportedComponent(ePixelComponentAlpha);
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(kSupportsTiles);
@@ -621,7 +658,9 @@ CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ClipDescriptor *srcClipA = desc.defineClip(kClipA);
     srcClipA->addSupportedComponent(ePixelComponentRGBA);
     srcClipA->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcClipA->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClipA->addSupportedComponent(ePixelComponentAlpha);
     srcClipA->setTemporalClipAccess(false);
     srcClipA->setSupportsTiles(kSupportsTiles);
@@ -632,7 +671,9 @@ CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
@@ -694,10 +735,10 @@ CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    defineComponentParam(desc, page, kNatronOfxParamProcessR, kNatronOfxParamProcessRLabel, false);
-    defineComponentParam(desc, page, kNatronOfxParamProcessG, kNatronOfxParamProcessGLabel, false);
-    defineComponentParam(desc, page, kNatronOfxParamProcessB, kNatronOfxParamProcessBLabel, false);
-    defineComponentParam(desc, page, kNatronOfxParamProcessA, kNatronOfxParamProcessALabel, true);
+    defineComponentParam(desc, page, kParamProcessR, kParamProcessRLabel, false);
+    defineComponentParam(desc, page, kParamProcessG, kParamProcessGLabel, false);
+    defineComponentParam(desc, page, kParamProcessB, kParamProcessBLabel, false);
+    defineComponentParam(desc, page, kParamProcessA, kParamProcessALabel, true);
 
     // softness
     {

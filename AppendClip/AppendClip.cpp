@@ -33,8 +33,9 @@
 #include "ofxsImageBlender.H"
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
+#ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
-
+#endif
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -671,9 +672,11 @@ AppendClipPlugin::render(const OFX::RenderArguments &args)
         renderForComponents<4>(args);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderForComponents<3>(args);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == OFX::ePixelComponentXY) {
         renderForComponents<2>(args);
     }  else {
+#endif
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderForComponents<1>(args);
     } // switch
@@ -944,8 +947,12 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
+#ifdef OFX_EXTENSIONS_NATRON
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
                             OFX::getImageEffectHostDescription()->versionMajor >= 2);
+#else
+    bool numerousInputs = false;
+#endif
     unsigned clipSourceCount = numerousInputs ? kClipSourceCount : 2;
 
     {
@@ -961,7 +968,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentNone);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
         srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(true);
         srcClip->setSupportsTiles(kSupportsTiles);
@@ -980,7 +989,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentNone);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
         srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(true);
         srcClip->setSupportsTiles(kSupportsTiles);
@@ -995,7 +1006,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip->addSupportedComponent(ePixelComponentNone);
             srcClip->addSupportedComponent(ePixelComponentRGBA);
             srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
             srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
             srcClip->addSupportedComponent(ePixelComponentAlpha);
             srcClip->setTemporalClipAccess(true );
             srcClip->setSupportsTiles(kSupportsTiles);
@@ -1007,7 +1020,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
@@ -1088,8 +1103,12 @@ AppendClipPluginFactory::createInstance(OfxImageEffectHandle handle,
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
+#ifdef OFX_EXTENSIONS_NATRON
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
                             OFX::getImageEffectHostDescription()->versionMajor >= 2);
+#else
+    bool numerousInputs = false;
+#endif
 
     return new AppendClipPlugin(handle, numerousInputs);
 }
