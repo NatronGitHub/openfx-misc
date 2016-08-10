@@ -121,6 +121,34 @@ enum DistortionPluginEnum
     eDistortionPluginLensDistortion,
 };
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define kParamProcessR kNatronOfxParamProcessR
+#define kParamProcessRLabel kNatronOfxParamProcessRLabel
+#define kParamProcessRHint kNatronOfxParamProcessRHint
+#define kParamProcessG kNatronOfxParamProcessG
+#define kParamProcessGLabel kNatronOfxParamProcessGLabel
+#define kParamProcessGHint kNatronOfxParamProcessGHint
+#define kParamProcessB kNatronOfxParamProcessB
+#define kParamProcessBLabel kNatronOfxParamProcessBLabel
+#define kParamProcessBHint kNatronOfxParamProcessBHint
+#define kParamProcessA kNatronOfxParamProcessA
+#define kParamProcessALabel kNatronOfxParamProcessALabel
+#define kParamProcessAHint kNatronOfxParamProcessAHint
+#else
+#define kParamProcessR      "processR"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Process red component."
+#define kParamProcessG      "processG"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Process green component."
+#define kParamProcessB      "processB"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Process blue component."
+#define kParamProcessA      "processA"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Process alpha component."
+#endif
+
 #define kParamChannelU "channelU"
 #define kParamChannelULabel "U Channel"
 #define kParamChannelUHint "Input U channel from UV."
@@ -258,6 +286,7 @@ enum DistortionModelEnum
 
 
 static bool gIsMultiPlane;
+
 struct InputPlaneChannel
 {
     OFX::Image* img;
@@ -534,7 +563,7 @@ private:
                   const PIX* pp)
     {
         if (!_planeChannels[channel].img) {
-            return _planeChannels[channel].channelIndex;
+            return _planeChannels[channel].fillZero ? 0. : 1.;
         }
         if (!p) {
             return pp ? pp[_planeChannels[channel].channelIndex] : 0.;
@@ -840,10 +869,10 @@ public:
         }
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
-        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
-        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
-        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
         if ( (plugin == eDistortionPluginIDistort) || (plugin == eDistortionPluginSTMap) ) {
             _uvChannels[0] = fetchChoiceParam(kParamChannelU);
@@ -900,7 +929,9 @@ private:
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+#ifdef OFX_EXTENSIONS_NUKE
     virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+#endif
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -1004,6 +1035,64 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+static
+int
+getChannelIndex(InputChannelEnum e, PixelComponentEnum comps)
+{
+    int retval;
+    switch (e) {
+        case eInputChannelR: {
+            if (
+#ifdef OFX_EXTENSIONS_NATRON
+                comps == ePixelComponentXY ||
+#endif
+                comps == ePixelComponentRGB || comps == ePixelComponentRGBA) {
+                retval = 0;
+            } else {
+                retval = -1;
+            }
+            break;
+        }
+        case eInputChannelG: {
+            if (
+#ifdef OFX_EXTENSIONS_NATRON
+                comps == ePixelComponentXY ||
+#endif
+                comps == ePixelComponentRGB || comps == ePixelComponentRGBA) {
+                retval = 1;
+            } else {
+                retval = -1;
+            }
+            break;
+        }
+        case eInputChannelB: {
+            if (comps == ePixelComponentRGB || comps == ePixelComponentRGBA) {
+                retval = 2;
+            } else {
+                retval = -1;
+            }
+            break;
+        }
+        case eInputChannelA: {
+            if (comps == ePixelComponentAlpha) {
+                return 0;
+            } else if (comps == ePixelComponentRGBA) {
+                retval = 3;
+            } else {
+                retval = -1;
+            }
+            break;
+        }
+        case eInputChannel0:
+        case eInputChannel1:
+        default: {
+            retval = -1;
+            break;
+        }
+    }
+    return retval;
+}
+
 /* set up and run a processor */
 void
 DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
@@ -1045,7 +1134,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     }
 
     InputImagesHolder_RAII imagesHolder;
-    std::vector<InputPlaneChannel> planes;
+    std::vector<InputPlaneChannel> planeChannels;
 
     if (gIsMultiPlane) {
         OFX::BitDepthEnum srcBitDepth = eBitDepthNone;
@@ -1075,7 +1164,11 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                     if ( foundPlane != clipPlanes.end() ) {
                         p.img = foundPlane->second;
                     } else {
-                        p.img = clip->fetchImagePlane( args.time, args.renderView, plane.c_str() );
+#ifdef OFX_EXTENSIONS_NUKE
+                        p.img = clip->fetchImagePlane( time, args.renderView, plane.c_str() );
+#else
+                        p.img = ( clip && clip->isConnected() ) ? clip->fetchImage(time) : 0;
+#endif
                         if (p.img) {
                             clipPlanes.insert( std::make_pair(plane, p.img) );
                             imagesHolder.appendImage(p.img);
@@ -1100,26 +1193,30 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                     }
                 }
             }
-            planes.push_back(p);
+            planeChannels.push_back(p);
         }
     } else { //!gIsMultiPlane
-        int uChannel_i = 0, vChannel_i = 1, aChannel_i = 3;
+        InputChannelEnum uChannel = eInputChannelR;
+        InputChannelEnum vChannel = eInputChannelG;
+        InputChannelEnum aChannel = eInputChannelA;
         if (_uvChannels[0]) {
-            uChannel_i = _uvChannels[0]->getValueAtTime(time);
+            uChannel = (InputChannelEnum)_uvChannels[0]->getValueAtTime(time);
         }
         if (_uvChannels[1]) {
-            vChannel_i = _uvChannels[1]->getValueAtTime(time);
+            vChannel = (InputChannelEnum)_uvChannels[1]->getValueAtTime(time);
         }
         if (_uvChannels[2]) {
-            aChannel_i = _uvChannels[2]->getValueAtTime(time);
+            aChannel = (InputChannelEnum)_uvChannels[2]->getValueAtTime(time);
         }
 
-
         OFX::Image* uv = 0;
-        if ( (uChannel_i <= 3) || (vChannel_i <= 3) || (aChannel_i <= 3) ) {
+        if ( (uChannel != eInputChannel0 && uChannel != eInputChannel1) ||
+             (vChannel != eInputChannel0 && vChannel != eInputChannel1) ||
+             (aChannel != eInputChannel0 && aChannel != eInputChannel1) ) {
             uv = ( _uvClip && _uvClip->isConnected() ) ? _uvClip->fetchImage(time) : 0;
         }
 
+        OFX::PixelComponentEnum uvComponents = ePixelComponentNone;
         if (uv) {
             imagesHolder.appendImage(uv);
             if ( (uv->getRenderScale().x != args.renderScale.x) ||
@@ -1129,40 +1226,43 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
             OFX::BitDepthEnum uvBitDepth      = uv->getPixelDepth();
-            OFX::PixelComponentEnum uvComponents = uv->getPixelComponents();
-            if ( (uvBitDepth != dstBitDepth) || (uvComponents != dstComponents) ) {
+            uvComponents = uv->getPixelComponents();
+            // only eBitDepthFloat is supported for now (other types require special processing for uv values)
+            if ( (uvBitDepth != eBitDepthFloat) /*|| (uvComponents != dstComponents)*/ ) {
                 OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
 
-
+        // fillZero is only used when the channelIndex is -1 (i.e. it does not exist), and in this case:
+        // - it is true if the inputchannel is 0, R, G or B
+        // - it is false if the inputchannel is 1, A (images without alpha are considered opaque)
         {
             InputPlaneChannel u;
-            u.img = uv;
-            u.fillZero = uChannel_i == eInputChannel0;
-            u.channelIndex = uChannel_i <= 3 ? uChannel_i : -1;
-            planes.push_back(u);
+            u.channelIndex = getChannelIndex(uChannel, uvComponents);
+            u.img = (u.channelIndex >= 0) ? uv : NULL;
+            u.fillZero = (u.channelIndex >= 0) ? false : !(uChannel == eInputChannel1 || uChannel == eInputChannelA);
+            planeChannels.push_back(u);
         }
         {
             InputPlaneChannel v;
-            v.img = uv;
-            v.fillZero = vChannel_i == eInputChannel0;
-            v.channelIndex = vChannel_i <= 3 ? vChannel_i : -1;
-            planes.push_back(v);
+            v.channelIndex = getChannelIndex(vChannel, uvComponents);
+            v.img = (v.channelIndex >= 0) ? uv : NULL;
+            v.fillZero = (v.channelIndex >= 0) ? false : !(vChannel == eInputChannel1 || vChannel == eInputChannelA);
+            planeChannels.push_back(v);
         }
         {
             InputPlaneChannel a;
-            a.img = uv;
-            a.fillZero = aChannel_i == eInputChannel0;
-            a.channelIndex = aChannel_i <= 3 ? aChannel_i : -1;
-            planes.push_back(a);
+            a.channelIndex = getChannelIndex(aChannel, uvComponents);
+            a.img = (a.channelIndex >= 0) ? uv : NULL;
+            a.fillZero = (a.channelIndex >= 0) ? false : !(aChannel == eInputChannel1 || aChannel == eInputChannelA);
+            planeChannels.push_back(a);
         }
     }
 
 
     // auto ptr for the mask.
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     // do we do masking
     if (doMasking) {
         if ( mask.get() ) {
@@ -1209,8 +1309,12 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     double mix;
     _mix->getValueAtTime(time, mix);
 
-    bool transformIsIdentity = src.get() ? src->getTransformIsIdentity() : true;
+    bool transformIsIdentity = true;
     OFX::Matrix3x3 srcTransformInverse;
+#ifdef OFX_EXTENSIONS_NUKE
+    if ( src.get() ) {
+        transformIsIdentity = src->getTransformIsIdentity();
+    }
     if (!transformIsIdentity) {
         double srcTransform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
         src->getTransform(srcTransform);
@@ -1232,6 +1336,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             transformIsIdentity = true; // no transform
         }
     }
+#endif
     if (_plugin == eDistortionPluginIDistort) {
         // in IDistort, displacement is given in full-scale pixels
         uScale *= args.renderScale.x;
@@ -1265,7 +1370,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
                         srcRoDPixel,
-                        planes,
+                        planeChannels,
                         unpremultUV,
                         uOffset, vOffset,
                         uScale, vScale,
@@ -1390,7 +1495,11 @@ DistortionPlugin::render(const OFX::RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+#ifdef OFX_EXTENSIONS_NATRON
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
+#else
+    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
+#endif
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (_plugin) {
         case eDistortionPluginSTMap:
@@ -1415,6 +1524,7 @@ DistortionPlugin::render(const OFX::RenderArguments &args)
             renderInternal<3, eDistortionPluginLensDistortion>(args, dstBitDepth);
             break;
         }
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == OFX::ePixelComponentXY) {
         switch (_plugin) {
         case eDistortionPluginSTMap:
@@ -1427,6 +1537,7 @@ DistortionPlugin::render(const OFX::RenderArguments &args)
             renderInternal<2, eDistortionPluginLensDistortion>(args, dstBitDepth);
             break;
         }
+#endif
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         switch (_plugin) {
@@ -1497,16 +1608,16 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
             if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
                 if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
@@ -1575,6 +1686,7 @@ DistortionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     return false;
 }
 
+#ifdef OFX_EXTENSIONS_NUKE
 void
 DistortionPlugin::getClipComponents(const OFX::ClipComponentsArguments& args,
                                     OFX::ClipComponentsSetter& clipComponents)
@@ -1622,6 +1734,7 @@ DistortionPlugin::getClipComponents(const OFX::ClipComponentsArguments& args,
         }
     }
 } // getClipComponents
+#endif
 
 void
 DistortionPlugin::updateVisibility()
@@ -1703,9 +1816,24 @@ DistortionPluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
     //desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     //desc.addSupportedContext(eContextPaint);
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthFloat);
+    switch (plugin) {
+        case eDistortionPluginSTMap:
+            //desc.addSupportedBitDepth(eBitDepthUByte); // not yet supported (requires special processing for uv clip values)
+            //desc.addSupportedBitDepth(eBitDepthUShort);
+            desc.addSupportedBitDepth(eBitDepthFloat);
+            break;
+        case eDistortionPluginIDistort:
+            //desc.addSupportedBitDepth(eBitDepthUByte); // not yet supported (requires special processing for uv clip values)
+            //desc.addSupportedBitDepth(eBitDepthUShort);
+            desc.addSupportedBitDepth(eBitDepthFloat);
+            break;
+        case eDistortionPluginLensDistortion:
+            desc.addSupportedBitDepth(eBitDepthUByte);
+            desc.addSupportedBitDepth(eBitDepthUShort);
+            desc.addSupportedBitDepth(eBitDepthFloat);
+            break;
+    }
+
 
     // set a few flags
     desc.setSingleInstance(false);
@@ -1772,7 +1900,9 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
         ClipDescriptor *uvClip = desc.defineClip(kClipUV);
         uvClip->addSupportedComponent(ePixelComponentRGBA);
         uvClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NUKE
         uvClip->addSupportedComponent(ePixelComponentXY);
+#endif
         uvClip->addSupportedComponent(ePixelComponentAlpha);
         uvClip->setTemporalClipAccess(false);
         uvClip->setSupportsTiles(kSupportsTiles);
@@ -1782,18 +1912,24 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NUKE
     srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
+#ifdef OFX_EXTENSIONS_NUKE
     srcClip->setCanTransform(true); // we can concatenate transforms upwards on srcClip only
+#endif
     srcClip->setIsMask(false);
     if (plugin == eDistortionPluginIDistort) {
         // create the uv clip
         ClipDescriptor *uvClip = desc.defineClip(kClipUV);
         uvClip->addSupportedComponent(ePixelComponentRGBA);
         uvClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NUKE
         uvClip->addSupportedComponent(ePixelComponentXY);
+#endif
         uvClip->addSupportedComponent(ePixelComponentAlpha);
         uvClip->setTemporalClipAccess(false);
         uvClip->setSupportsTiles(kSupportsTiles);
@@ -1804,7 +1940,9 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NUKE
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
@@ -1821,39 +1959,45 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
-        param->setLabel(kNatronOfxParamProcessRLabel);
-        param->setHint(kNatronOfxParamProcessRHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabel(kParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
         param->setDefault(true);
+#ifdef OFX_EXTENSIONS_NUKE
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
-        param->setLabel(kNatronOfxParamProcessGLabel);
-        param->setHint(kNatronOfxParamProcessGHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabel(kParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
         param->setDefault(true);
+#ifdef OFX_EXTENSIONS_NUKE
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
-        param->setLabel(kNatronOfxParamProcessBLabel);
-        param->setHint(kNatronOfxParamProcessBHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        param->setLabel(kParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
         param->setDefault(true);
+#ifdef OFX_EXTENSIONS_NUKE
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
-        param->setLabel(kNatronOfxParamProcessALabel);
-        param->setHint(kNatronOfxParamProcessAHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        param->setLabel(kParamProcessALabel);
+        param->setHint(kParamProcessAHint);
         param->setDefault(true);
         if (page) {
             page->addChild(*param);
@@ -1868,7 +2012,9 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
         if (gIsMultiPlane) {
             {
                 ChoiceParamDescriptor* param = OFX::MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
+#ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
                 param->setDefault(eInputChannelR);
             }
             {
@@ -1884,7 +2030,9 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelU);
                 param->setLabel(kParamChannelULabel);
                 param->setHint(kParamChannelUHint);
+#ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
                 OFX::MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
                 param->setDefault(eInputChannelR);
                 if (page) {
@@ -1954,7 +2102,9 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapU);
                 param->setLabel(kParamWrapULabel);
                 param->setHint(kParamWrapUHint);
+#ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
                 addWrapOptions(param, eWrapClamp);
                 if (page) {
                     page->addChild(*param);
@@ -1989,7 +2139,9 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
             param->setHint(kParamK1Hint);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.3, 0.3);
+#ifdef OFX_EXTENSIONS_NUKE
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
             if (page) {
                 page->addChild(*param);
             }
@@ -2000,7 +2152,9 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
             param->setHint(kParamK2Hint);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
+#ifdef OFX_EXTENSIONS_NUKE
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
             if (page) {
                 page->addChild(*param);
             }
@@ -2021,7 +2175,9 @@ DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &d
             param->setHint(kParamP1Hint);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
+#ifdef OFX_EXTENSIONS_NUKE
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
             if (page) {
                 page->addChild(*param);
             }
