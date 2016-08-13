@@ -137,7 +137,7 @@ public:
         if ( (params.iterations <= 0) || (params.amplitude == 0.) || cimg.is_empty() ) {
             return;
         }
-        for (int i = 1; i < params.iterations; ++i) {
+        for (int i = 0; i < params.iterations; ++i) {
             if ( abort() ) {
                 return;
             }
