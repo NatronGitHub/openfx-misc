@@ -44,7 +44,7 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName          "BilateralCImg"
+#define kPluginName          "SmoothBilateralCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
     "Blur input stream by bilateral filtering.\n" \
@@ -60,7 +60,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kPluginGuidedName          "BilateralGuidedCImg"
+#define kPluginGuidedName          "SmoothBilateralGuidedCImg"
 #define kPluginGuidedIdentifier    "net.sf.cimg.CImgBilateralGuided"
 #define kPluginGuidedDescription \
     "Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B. " \
@@ -87,14 +87,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsAlpha true
 
 #define kParamSigmaS "sigma_s"
-#define kParamSigmaSLabel "Sigma_s"
+#define kParamSigmaSLabel "Spatial Std Dev"
 #define kParamSigmaSHint "Standard deviation of the spatial kernel (positional sigma), in pixel units (>=0). A reasonable value is 1/16 of the image dimension. Small values (1 pixel and below) will slow down filtering."
-#define kParamSigmaSDefault 0.4
+#define kParamSigmaSDefault 10.
 
 #define kParamSigmaR "sigma_r"
-#define kParamSigmaRLabel "Sigma_r"
+#define kParamSigmaRLabel "Value Std Dev"
 #define kParamSigmaRHint "Standard deviation of the range kernel (color sigma), in intensity units (>=0). A reasonable value is 1/10 of the intensity range. Small values (1/256 of the intensity range and below) will slow down filtering."
-#define kParamSigmaRDefault 0.4
+#define kParamSigmaRDefault 0.3
+
+#define kParamIterations "iterations"
+#define kParamIterationsLabel "Iterations"
+#define kParamIterationsHint "Number of iterations."
+#define kParamIterationsDefault 2
 
 #define kClipImage kOfxImageEffectSimpleSourceClipName
 #define kClipGuide "Guide"
@@ -105,6 +110,7 @@ struct CImgBilateralParams
 {
     double sigma_s;
     double sigma_r;
+    int iterations;
 };
 
 class CImgBilateralPlugin
@@ -117,7 +123,8 @@ public:
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
-        assert(_sigma_s && _sigma_r);
+        _iterations = fetchIntParam(kParamIterations);
+        assert(_sigma_s && _sigma_r && _iterations);
     }
 
     virtual void getValuesAtTime(double time,
@@ -125,6 +132,7 @@ public:
     {
         _sigma_s->getValueAtTime(time, params.sigma_s);
         _sigma_r->getValueAtTime(time, params.sigma_r);
+        _iterations->getValueAtTime(time, params.iterations);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -153,7 +161,12 @@ public:
         if (params.sigma_s == 0.) {
             return;
         }
-        cimg.blur_bilateral(cimg, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
+        for (int i = 0; i < params.iterations; ++i) {
+            if ( abort() ) {
+                return;
+            }
+            cimg.blur_bilateral(cimg, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
+        }
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
@@ -167,6 +180,7 @@ private:
     // params
     OFX::DoubleParam *_sigma_s;
     OFX::DoubleParam *_sigma_r;
+    OFX::IntParam *_iterations;
 };
 
 class CImgBilateralGuidedPlugin
@@ -214,10 +228,21 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if (params.sigma_s == 0.) {
+        if ( (params.iterations <= 0) || (params.sigma_s <= 0.) ) {
             return;
         }
-        dst = srcA.get_blur_bilateral(srcB, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
+
+        for (int i = 0; i < params.iterations; ++i) {
+            if ( abort() ) {
+                return;
+            }
+
+            if (i == 0) {
+                dst = srcA.get_blur_bilateral(srcB, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
+            } else {
+                dst.blur_bilateral(srcB, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
+            }
+        }
     }
 
     virtual int isIdentity(const OFX::IsIdentityArguments & /*args*/,
@@ -231,6 +256,7 @@ private:
     // params
     OFX::DoubleParam *_sigma_s;
     OFX::DoubleParam *_sigma_r;
+    OFX::IntParam *_iterations;
 };
 
 mDeclarePluginFactory(CImgBilateralPluginFactory, {}, {});
@@ -299,6 +325,17 @@ CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        param->setLabel(kParamIterationsLabel);
+        param->setHint(kParamIterationsHint);
+        param->setRange(0, 10);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamIterationsDefault);
         if (page) {
             page->addChild(*param);
         }
@@ -377,6 +414,17 @@ CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        param->setLabel(kParamIterationsLabel);
+        param->setHint(kParamIterationsHint);
+        param->setRange(0, 10);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamIterationsDefault);
         if (page) {
             page->addChild(*param);
         }

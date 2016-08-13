@@ -39,7 +39,7 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName          "SmoothCImg"
+#define kPluginName          "SmoothAnisotropicCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
     "Smooth/Denoise input stream using anisotropic PDE-based smoothing.\n" \
@@ -88,27 +88,27 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamAnisotropyDefault 0.3
 
 #define kParamAlpha "alpha"
-#define kParamAlphaLabel "Alpha"
+#define kParamAlphaLabel "Gradient Smoothness"
 #define kParamAlphaHint "Noise scale, in pixels units (>=0)"
 #define kParamAlphaDefault 0.6
 
 #define kParamSigma "sigma"
-#define kParamSigmaLabel "Sigma"
+#define kParamSigmaLabel "Tensor Smoothness"
 #define kParamSigmaHint "Geometry regularity, in pixels units (>=0)"
 #define kParamSigmaDefault 1.1
 
 #define kParamDl "dl"
-#define kParamDlLabel "dl"
+#define kParamDlLabel "Spatial Precision"
 #define kParamDlHint "Spatial discretization, in pixel units (0<=dl<=1)"
 #define kParamDlDefault 0.8
 
 #define kParamDa "da"
-#define kParamDaLabel "da"
+#define kParamDaLabel "Angular Precision"
 #define kParamDaHint "Angular integration step, in degrees (0<=da<=90). If da=0, Iterated oriented Laplacians is used instead of LIC-based smoothing."
 #define kParamDaDefault 30.0
 
 #define kParamGaussPrec "prec"
-#define kParamGaussPrecLabel "Precision"
+#define kParamGaussPrecLabel "Value Precision"
 #define kParamGaussPrecHint "Precision of the diffusion process (>0)."
 #define kParamGaussPrecDefault 2.0
 
@@ -130,10 +130,18 @@ enum InterpEnum
 };
 
 #define kParamFastApprox "is_fast_approximation"
-#define kParamFastApproxLabel "fast Approximation"
+#define kParamFastApproxLabel "Fast Approximation"
 #define kParamFastApproxHint "Tells if a fast approximation of the gaussian function is used or not"
-#define kParamFastApproxDafault true
+#define kParamFastApproxDefault true
 
+#define kParamIterations "iterations"
+#define kParamIterationsLabel "Iterations"
+#define kParamIterationsHint "Number of iterations."
+#define kParamIterationsDefault 1
+
+#define kParamThinBrush "thinBrush"
+#define kParamThinBrushLabel "Set Thin Brush Defaults"
+#define kParamThinBrushHint "Set the defaults to the value of the Thin Brush filter by PhotoComiX, as featured in the G'MIC Gimp plugin."
 
 /// Smooth plugin
 struct CImgSmoothParams
@@ -149,6 +157,7 @@ struct CImgSmoothParams
     int interp_i;
     //InterpEnum interp;
     bool fast_approx;
+    int iterations;
 };
 
 class CImgSmoothPlugin
@@ -169,7 +178,8 @@ public:
         _gprec      = fetchDoubleParam(kParamGaussPrec);
         _interp     = fetchChoiceParam(kParamInterp);
         _fast_approx = fetchBooleanParam(kParamFastApprox);
-        assert(_amplitude && _sharpness && _anisotropy && _alpha && _sigma && _dl && _da && _gprec && _interp && _fast_approx);
+        _iterations = fetchIntParam(kParamIterations);
+        assert(_amplitude && _sharpness && _anisotropy && _alpha && _sigma && _dl && _da && _gprec && _interp && _fast_approx && _iterations);
     }
 
     virtual void getValuesAtTime(double time,
@@ -185,6 +195,7 @@ public:
         _gprec->getValueAtTime(time, params.gprec);
         _interp->getValueAtTime(time, params.interp_i);
         _fast_approx->getValueAtTime(time, params.fast_approx);
+        _iterations->getValueAtTime(time, params.iterations);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -210,16 +221,24 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.blur_anisotropic( (float)(params.amplitude * args.renderScale.x), // in pixels
-                               (float)params.sharpness,
-                               (float)params.anisotropy,
-                               (float)(params.alpha * args.renderScale.x), // in pixels
-                               (float)(params.sigma * args.renderScale.x), // in pixels
-                               (float)params.dl, // in pixel, but we don't discretize more
-                               (float)params.da,
-                               (float)params.gprec,
-                               params.interp_i,
-                               params.fast_approx );
+        if ( (params.iterations <= 0) || (params.amplitude <= 0.) || (params.dl < 0.) || cimg.is_empty() ) {
+            return;
+        }
+        for (int i = 0; i < params.iterations; ++i) {
+            if ( abort() ) {
+                return;
+            }
+            cimg.blur_anisotropic( (float)(params.amplitude * args.renderScale.x), // in pixels
+                                  (float)params.sharpness,
+                                  (float)params.anisotropy,
+                                  (float)(params.alpha * args.renderScale.x), // in pixels
+                                  (float)(params.sigma * args.renderScale.x), // in pixels
+                                  (float)params.dl, // in pixel, but we don't discretize more
+                                  (float)params.da,
+                                  (float)params.gprec,
+                                  params.interp_i,
+                                  params.fast_approx );
+        }
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
@@ -227,6 +246,26 @@ public:
     {
         return (params.amplitude <= 0. || params.dl < 0.);
     };
+
+    virtual void changedParam(const OFX::InstanceChangedArgs &args,
+                              const std::string &paramName) OVERRIDE FINAL
+    {
+        if ( (paramName == kParamThinBrush) ) {
+            _amplitude->resetToDefault();
+            _sharpness->setValue(0.9);
+            _anisotropy->setValue(0.64);
+            _alpha->setValue(3.1);
+            _sigma->resetToDefault();
+            _dl->resetToDefault();
+            _da->resetToDefault();
+            _gprec->resetToDefault();
+            _interp->resetToDefault();
+            _fast_approx->resetToDefault();
+            _iterations->resetToDefault();
+        } else {
+            CImgFilterPluginHelper<CImgSmoothParams, false>::changedParam(args, paramName);
+        }
+    }
 
 private:
 
@@ -241,6 +280,7 @@ private:
     OFX::DoubleParam *_gprec;
     OFX::ChoiceParam *_interp;
     OFX::BooleanParam *_fast_approx;
+    OFX::IntParam *_iterations;
 };
 
 
@@ -403,10 +443,27 @@ CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFastApprox);
         param->setLabel(kParamFastApproxLabel);
         param->setHint(kParamFastApproxHint);
-        param->setDefault(kParamFastApproxDafault);
+        param->setDefault(kParamFastApproxDefault);
         if (page) {
             page->addChild(*param);
         }
+    }
+    {
+        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        param->setLabel(kParamIterationsLabel);
+        param->setHint(kParamIterationsHint);
+        param->setRange(0, 10);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamIterationsDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamThinBrush);
+        param->setLabel(kParamThinBrushLabel);
+        param->setHint(kParamThinBrushHint);
+
     }
     CImgSmoothPlugin::describeInContextEnd(desc, context, page);
 } // CImgSmoothPluginFactory::describeInContext

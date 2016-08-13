@@ -43,7 +43,7 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName          "GuidedCImg"
+#define kPluginName          "SmoothGuidedCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
     "Blur image, with the Guided Image filter.\n" \
@@ -85,9 +85,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRadiusDefault 5
 
 #define kParamEpsilon "epsilon"
-#define kParamEpsilonLabel "Epsilon"
+#define kParamEpsilonLabel "Smoothness"
 #define kParamEpsilonHint "Regularization parameter. The actual guided filter parameter is epsilon^2)."
 #define kParamEpsilonDefault 0.2
+
+#define kParamIterations "iterations"
+#define kParamIterationsLabel "Iterations"
+#define kParamIterationsHint "Number of iterations."
+#define kParamIterationsDefault 1
 
 
 /// Guided plugin
@@ -95,6 +100,7 @@ struct CImgGuidedParams
 {
     int radius;
     double epsilon;
+    int iterations;
 };
 
 class CImgGuidedPlugin
@@ -107,7 +113,8 @@ public:
     {
         _radius  = fetchIntParam(kParamRadius);
         _epsilon  = fetchDoubleParam(kParamEpsilon);
-        assert(_radius && _epsilon);
+        _iterations = fetchIntParam(kParamIterations);
+        assert(_radius && _epsilon && _iterations);
     }
 
     virtual void getValuesAtTime(double time,
@@ -115,6 +122,7 @@ public:
     {
         _radius->getValueAtTime(time, params.radius);
         _epsilon->getValueAtTime(time, params.epsilon);
+        _iterations->getValueAtTime(time, params.iterations);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -140,11 +148,17 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if (params.radius == 0) {
+        if ( (params.iterations <= 0) || (params.radius <= 0) ) {
             return;
         }
-        // blur_guided was introduced in CImg 1.6.0 on Thu Oct 30 11:47:06 2014 +0100
-        cimg.blur_guided( cimg, (float)(params.radius * args.renderScale.x), (float)(params.epsilon * params.epsilon) );
+        for (int i = 0; i < params.iterations; ++i) {
+            if ( abort() ) {
+                return;
+            }
+
+            // blur_guided was introduced in CImg 1.6.0 on Thu Oct 30 11:47:06 2014 +0100
+            cimg.blur_guided( cimg, (float)(params.radius * args.renderScale.x), (float)(params.epsilon * params.epsilon) );
+        }
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
@@ -158,6 +172,7 @@ private:
     // params
     OFX::IntParam *_radius;
     OFX::DoubleParam *_epsilon;
+    OFX::IntParam *_iterations;
 };
 
 
@@ -226,6 +241,17 @@ CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         param->setDisplayRange(0., 0.4);
         param->setDefault(kParamEpsilonDefault);
         param->setIncrement(0.005);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        param->setLabel(kParamIterationsLabel);
+        param->setHint(kParamIterationsHint);
+        param->setRange(0, 10);
+        param->setDisplayRange(0, 10);
+        param->setDefault(kParamIterationsDefault);
         if (page) {
             page->addChild(*param);
         }

@@ -41,7 +41,7 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName          "MedianCImg"
+#define kPluginName          "SmoothMedianCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
     "Apply a median filter to input images. Pixel values within a square box of the given size around the current pixel are sorted, and the median value is output if it does not differ from the current value by more than the given. Median filtering is performed per-channel.\n" \
@@ -75,7 +75,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsAlpha true
 
 #define kParamSize "size"
-#define kParamSizeLabel "size"
+#define kParamSizeLabel "Size"
 #define kParamSizeHint "Width and height of the structuring element is 2*size+1, in pixel units (>=0)."
 #define kParamSizeDefault 1
 

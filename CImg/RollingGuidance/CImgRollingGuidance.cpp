@@ -43,7 +43,7 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName          "RollingGuidanceCImg"
+#define kPluginName          "SmoothRollingGuidanceCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
     "Filter out details under a given scale using the Rolling Guidance filter.\n" \
@@ -78,12 +78,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsAlpha true
 
 #define kParamSigmaS "sigma_s"
-#define kParamSigmaSLabel "Sigma_s"
+#define kParamSigmaSLabel "Spatial Std Dev"
 #define kParamSigmaSHint "Standard deviation of the spatial kernel, in pixel units (>=0). Details smaller than this size are filtered out."
 #define kParamSigmaSDefault 10.0
 
 #define kParamSigmaR "sigma_r"
-#define kParamSigmaRLabel "Sigma_r"
+#define kParamSigmaRLabel "Value Std Dev"
 #define kParamSigmaRHint "Standard deviation of the range kernel, in intensity units (>=0). A reasonable value is 1/10 of the intensity range."
 #define kParamSigmaRDefault 0.1
 

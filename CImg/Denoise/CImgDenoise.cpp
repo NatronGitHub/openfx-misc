@@ -40,7 +40,7 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName          "DenoiseCImg"
+#define kPluginName          "SmoothPatchBasedCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
     "Denoise selected images by non-local patch averaging.\n" \
@@ -78,12 +78,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsAlpha true
 
 #define kParamSigmaS "sigma_s"
-#define kParamSigmaSLabel "Sigma_s"
+#define kParamSigmaSLabel "Spatial Std Dev"
 #define kParamSigmaSHint "Standard deviation of the spatial kernel, in pixel units (>=0)."
 #define kParamSigmaSDefault 10.0
 
 #define kParamSigmaR "sigma_r"
-#define kParamSigmaRLabel "Sigma_r"
+#define kParamSigmaRLabel "Value Std Dev"
 #define kParamSigmaRHint "Standard deviation of the range kernel, in intensity units (>=0)."
 #define kParamSigmaRDefault 0.05
 
@@ -105,7 +105,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamFastApprox "is_fast_approximation"
 #define kParamFastApproxLabel "fast Approximation"
 #define kParamFastApproxHint "Tells if a fast approximation of the gaussian function is used or not"
-#define kParamFastApproxDafault true
+#define kParamFastApproxDefault true
 
 using namespace cimg_library;
 
@@ -452,7 +452,7 @@ CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFastApprox);
         param->setLabel(kParamFastApproxLabel);
         param->setHint(kParamFastApproxHint);
-        param->setDefault(kParamFastApproxDafault);
+        param->setDefault(kParamFastApproxDefault);
         if (page) {
             page->addChild(*param);
         }
