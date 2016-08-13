@@ -34,7 +34,9 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
+#ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
+#endif
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"

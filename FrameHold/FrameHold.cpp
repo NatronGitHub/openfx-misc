@@ -31,7 +31,9 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
+#endif
 
 using namespace OFX;
 

@@ -31,13 +31,13 @@
 #include <iostream>
 #endif
 
-
+#ifdef OFX_EXTENSIONS_NATRON
+#include "ofxNatron.h"
+#endif
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
 #include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
-
-#include "ofxNatron.h"
 #include "ofxsMacros.h"
 
 using namespace OFX;

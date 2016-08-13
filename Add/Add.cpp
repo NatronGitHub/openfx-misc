@@ -31,7 +31,9 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
+#endif
 
 using namespace OFX;
 
@@ -54,6 +56,34 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
+
+#ifdef OFX_EXTENSIONS_NATRON
+#define kParamProcessR kNatronOfxParamProcessR
+#define kParamProcessRLabel kNatronOfxParamProcessRLabel
+#define kParamProcessRHint kNatronOfxParamProcessRHint
+#define kParamProcessG kNatronOfxParamProcessG
+#define kParamProcessGLabel kNatronOfxParamProcessGLabel
+#define kParamProcessGHint kNatronOfxParamProcessGHint
+#define kParamProcessB kNatronOfxParamProcessB
+#define kParamProcessBLabel kNatronOfxParamProcessBLabel
+#define kParamProcessBHint kNatronOfxParamProcessBHint
+#define kParamProcessA kNatronOfxParamProcessA
+#define kParamProcessALabel kNatronOfxParamProcessALabel
+#define kParamProcessAHint kNatronOfxParamProcessAHint
+#else
+#define kParamProcessR      "processR"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Process red component."
+#define kParamProcessG      "processG"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Process green component."
+#define kParamProcessB      "processB"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Process blue component."
+#define kParamProcessA      "processA"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Process alpha component."
+#endif
 
 #define kParamValueName  "value"
 #define kParamValueLabel "Value"
@@ -312,10 +342,10 @@ public:
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
-        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
-        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
-        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
         _value = fetchRGBAParam(kParamValueName);
         assert(_value);
@@ -476,13 +506,19 @@ AddPlugin::render(const OFX::RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+#ifdef OFX_EXTENSIONS_NATRON
     assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+#else
+    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha);
+#endif
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == OFX::ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
+#endif
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
@@ -647,9 +683,9 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
-        param->setLabel(kNatronOfxParamProcessRLabel);
-        param->setHint(kNatronOfxParamProcessRHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabel(kParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -657,9 +693,9 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
-        param->setLabel(kNatronOfxParamProcessGLabel);
-        param->setHint(kNatronOfxParamProcessGHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabel(kParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -667,9 +703,9 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
-        param->setLabel(kNatronOfxParamProcessBLabel);
-        param->setHint(kNatronOfxParamProcessBHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        param->setLabel(kParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -677,9 +713,9 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
-        param->setLabel(kNatronOfxParamProcessALabel);
-        param->setHint(kNatronOfxParamProcessAHint);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        param->setLabel(kParamProcessALabel);
+        param->setHint(kParamProcessAHint);
         param->setDefault(false);
         if (page) {
             page->addChild(*param);

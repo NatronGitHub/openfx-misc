@@ -31,7 +31,9 @@
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
+#ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
+#endif
 
 using namespace OFX;
 

@@ -34,7 +34,9 @@
 #include "ofxsPixelProcessor.h"
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
+#ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
+#endif
 
 #ifdef thread_local
 # define HAVE_THREAD_LOCAL
