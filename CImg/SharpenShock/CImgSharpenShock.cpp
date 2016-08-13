@@ -88,7 +88,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamGradientSmoothnessHint "Gradient smoothness (in pixels)."
 #define kParamGradientSmoothnessDefault 0.8
 
-#define kParamTensorSmoothness "alpha"
+#define kParamTensorSmoothness "sigma"
 #define kParamTensorSmoothnessLabel "Tensor Smoothness"
 #define kParamTensorSmoothnessHint "Tensor smoothness (in pixels)."
 #define kParamTensorSmoothnessDefault 1.1
@@ -171,7 +171,7 @@ public:
         }
         double alpha = args.renderScale.x * params.alpha;
         double sigma = args.renderScale.x * params.sigma;
-        for (int i = 1; i < params.iterations; ++i) {
+        for (int i = 0; i < params.iterations; ++i) {
             cimg_abort_test();
 #ifdef CIMG_ABORTABLE
             // args
