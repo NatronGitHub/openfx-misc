@@ -124,12 +124,12 @@ enum ColorModelEnum {
     eColorModelLinearRGB,
 };
 
-#define kParamNoiseLevelHint "Adjusts the noise variance of the selected channel in a range from 0.0 (none) to 1.0. May be estimated for image data by pressing the \"Analyze Noise\" button."
+#define kParamNoiseLevelHint "Adjusts the noise variance of the selected channel. May be estimated for image data by pressing the \"Analyze Noise\" button."
 #define kParamNoiseLevelMax 0.3 // noise level is at most 1/sqrt(12) (stddev of a uniform distribution between 0 and 1)
 
 #define kNoiseLevelBias 0.8002 // on a signal with Gaussian additive noise with sigma = 1, the stddev measured in HH1 is 0.8002. We correct this bias so that the displayed Noise levels correspond to the standard deviation of the additive Gaussian noise. This value can also be found in the dcraw source code
 
-#define kParamSoftnessHint "This adjusts the softness of the thresholding (soft as opposed to hard thresholding). The higher the softness the more noise remains in the image. Default is 0.0."
+#define kParamAmountHint "The amount of denoising to apply to the specify channel. Default is 1."
 #define kGroupSettings "channelSettings"
 #define kGroupSettingsLabel "Channel Settings"
 #define kParamYLRNoiseLevel "ylrNoiseLevel"
@@ -137,34 +137,34 @@ enum ColorModelEnum {
 #define kParamYNoiseLevelLabel "Y Noise Level"
 #define kParamLNoiseLevelLabel "L Noise Level"
 #define kParamRNoiseLevelLabel "R Noise Level"
-#define kParamYLRSoftness "ylrSoftness"
-#define kParamYLRSoftnessLabel "Y/L/R Softness"
-#define kParamYSoftnessLabel "Y Softness"
-#define kParamLSoftnessLabel "L Softness"
-#define kParamRSoftnessLabel "R Softness"
+#define kParamYLRAmount "ylrAmount"
+#define kParamYLRAmountLabel "Y/L/R Amount"
+#define kParamYAmountLabel "Y Amount"
+#define kParamLAmountLabel "L Amount"
+#define kParamRAmountLabel "R Amount"
 #define kParamCbAGNoiseLevel "cbagNoiseLevel"
 #define kParamCbAGNoiseLevelLabel "Cb/A/G Noise Level"
 #define kParamCbNoiseLevelLabel "Cb Noise Level"
 #define kParamANoiseLevelLabel "A Noise Level"
 #define kParamGNoiseLevelLabel "G Noise Level"
-#define kParamCbAGSoftness "cbagSoftness"
-#define kParamCbAGSoftnessLabel "Cb/A/G Softness"
-#define kParamCbSoftnessLabel "Cb Softness"
-#define kParamASoftnessLabel "A Softness"
-#define kParamGSoftnessLabel "G Softness"
+#define kParamCbAGAmount "cbagAmount"
+#define kParamCbAGAmountLabel "Cb/A/G Amount"
+#define kParamCbAmountLabel "Cb Amount"
+#define kParamAAmountLabel "A Amount"
+#define kParamGAmountLabel "G Amount"
 #define kParamCrBBNoiseLevel "crbbNoiseLevel"
 #define kParamCrBBNoiseLevelLabel "Cr/B/B Noise Level"
 #define kParamCrNoiseLevelLabel "Cr Noise Level"
 #define kParamBNoiseLevelLabel "B Noise Level"
-#define kParamCrBBSoftness "crbbSoftness"
-#define kParamCrBBSoftnessLabel "Cr/B/B Softness"
-#define kParamCrSoftnessLabel "Cr Softness"
-#define kParamBSoftnessLabel "B Softness"
+#define kParamCrBBAmount "crbbAmount"
+#define kParamCrBBAmountLabel "Cr/B/B Amount"
+#define kParamCrAmountLabel "Cr Amount"
+#define kParamBAmountLabel "B Amount"
 
 #define kParamAlphaNoiseLevel "alphaNoiseLevel"
 #define kParamAlphaNoiseLevelLabel "Alpha Noise Level"
-#define kParamAlphaSoftness "alphaSoftness"
-#define kParamAlphaSoftnessLabel "Alpha Softness"
+#define kParamAlphaAmount "alphaAmount"
+#define kParamAlphaAmountLabel "Alpha Amount"
 
 #define kParamAnalyzeNoiseLevels "analyzeNoiseLevels"
 #define kParamAnalyzeNoiseLevelsLabel "Analyze Noise Levels"
@@ -222,13 +222,13 @@ public:
         , _processA(0)
         , _colorModel(0)
         , _ylrNoiseLevel(0)
-        , _ylrSoftness(0)
+        , _ylrAmount(0)
         , _cbagNoiseLevel(0)
-        , _cbagSoftness(0)
+        , _cbagAmount(0)
         , _crbbNoiseLevel(0)
-        , _crbbSoftness(0)
+        , _crbbAmount(0)
         , _alphaNoiseLevel(0)
-        , _alphaSoftness(0)
+        , _alphaAmount(0)
         , _premult(0)
         , _premultChannel(0)
         , _mix(0)
@@ -266,18 +266,18 @@ public:
 
         _colorModel = fetchChoiceParam(kParamColorModel);
         _ylrNoiseLevel = fetchDoubleParam(kParamYLRNoiseLevel);
-        _ylrSoftness = fetchDoubleParam(kParamYLRSoftness);
+        _ylrAmount = fetchDoubleParam(kParamYLRAmount);
         _cbagNoiseLevel = fetchDoubleParam(kParamCbAGNoiseLevel);
-        _cbagSoftness = fetchDoubleParam(kParamCbAGSoftness);
+        _cbagAmount = fetchDoubleParam(kParamCbAGAmount);
         _crbbNoiseLevel = fetchDoubleParam(kParamCrBBNoiseLevel);
-        _crbbSoftness = fetchDoubleParam(kParamCrBBSoftness);
+        _crbbAmount = fetchDoubleParam(kParamCrBBAmount);
         _alphaNoiseLevel = fetchDoubleParam(kParamAlphaNoiseLevel);
-        _alphaSoftness = fetchDoubleParam(kParamAlphaSoftness);
+        _alphaAmount = fetchDoubleParam(kParamAlphaAmount);
         _sharpenAmount = fetchDoubleParam(kParamSharpenAmount);
         _sharpenRadius = fetchDoubleParam(kParamSharpenRadius);
         _sharpenLuminance = fetchBooleanParam(kParamSharpenLuminance);
 
-        assert(_colorModel && _ylrNoiseLevel && _ylrSoftness && _cbagNoiseLevel && _cbagSoftness && _crbbNoiseLevel && _crbbSoftness && _alphaNoiseLevel && _alphaSoftness && _sharpenAmount && _sharpenRadius && _sharpenLuminance);
+        assert(_colorModel && _ylrNoiseLevel && _ylrAmount && _cbagNoiseLevel && _cbagAmount && _crbbNoiseLevel && _crbbAmount && _alphaNoiseLevel && _alphaAmount && _sharpenAmount && _sharpenRadius && _sharpenLuminance);
 
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
@@ -327,9 +327,9 @@ private:
                          unsigned int iwidth, //!< width of the image
                          unsigned int iheight, //!< height of the image
                          float noiselevel, //!< noiselevel parameter
-                         double low, //!< softness parameter
-                         double amount, //!< constrast boost amount
-                         double radius, //!< contrast boost radius
+                         double denoise_amount, //!< amount parameter
+                         double sharpen_amount, //!< constrast boost amount
+                         double sharpen_radius, //!< contrast boost radius
                          int startLevel,
                          float a, // progress amount at start
                          float b); // progress increment
@@ -353,9 +353,9 @@ private:
         int startLevel;
         bool process[4];
         double noiseLevel[4];
-        double softness[4];
-        double amount[4];
-        double radius;
+        double denoise_amount[4];
+        double sharpen_amount[4];
+        double sharpen_radius;
         OfxRectI srcWindow;
 
         Params()
@@ -366,12 +366,12 @@ private:
         , mix(1.)
         , colorModel(eColorModelYCbCr)
         , startLevel(0)
-        , radius(0.5)
+        , sharpen_radius(0.5)
         {
             process[0] = process[1] = process[2] = process[3] = true;
             noiseLevel[0] = noiseLevel[1] = noiseLevel[2] = noiseLevel[3] = 0.;
-            softness[0] = softness[1] = softness[2] = softness[3] = 0.;
-            amount[0] = amount[1] = amount[2] = amount[3] = 0.;
+            denoise_amount[0] = denoise_amount[1] = denoise_amount[2] = denoise_amount[3] = 0.;
+            sharpen_amount[0] = sharpen_amount[1] = sharpen_amount[2] = sharpen_amount[3] = 0.;
         }
     };
 
@@ -387,13 +387,13 @@ private:
     BooleanParam* _processA;
     ChoiceParam* _colorModel;
     DoubleParam* _ylrNoiseLevel;
-    DoubleParam* _ylrSoftness;
+    DoubleParam* _ylrAmount;
     DoubleParam* _cbagNoiseLevel;
-    DoubleParam* _cbagSoftness;
+    DoubleParam* _cbagAmount;
     DoubleParam* _crbbNoiseLevel;
-    DoubleParam* _crbbSoftness;
+    DoubleParam* _crbbAmount;
     DoubleParam* _alphaNoiseLevel;
-    DoubleParam* _alphaSoftness;
+    DoubleParam* _alphaAmount;
     DoubleParam* _sharpenAmount;
     DoubleParam* _sharpenRadius;
     BooleanParam* _sharpenLuminance;
@@ -452,9 +452,9 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
                                       unsigned int iwidth, //!< width of the image
                                       unsigned int iheight, //!< height of the image
                                       float noiselevel, //!< noiselevel parameter
-                                      double low, //!< softness parameter
-                                      double amount, //!< constrast boost amount
-                                      double radius, //!< contrast boost radius
+                                      double denoise_amount, //!< amount parameter
+                                      double sharpen_amount, //!< constrast boost amount
+                                      double sharpen_radius, //!< contrast boost radius
                                       int startLevel,
                                       float a, // progress amount at start
                                       float b) // progress increment
@@ -520,7 +520,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         return;
     }
 
-    if (noiselevel <= 0. && amount <= 0.) {
+    if ( (noiselevel <= 0. || denoise_amount <= 0.) && sharpen_amount <= 0. ) {
         return;
     }
 
@@ -597,8 +597,8 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
 
         // sharpen
         double beta = 1.;
-        if (amount > 0.) {
-            beta += amount * exp (-((lev + startLevel) - radius) * ((lev + startLevel) - radius) / 1.5);
+        if (sharpen_amount > 0.) {
+            beta += sharpen_amount * exp (-((lev + startLevel) - sharpen_radius) * ((lev + startLevel) - sharpen_radius) / 1.5);
         }
 
 #ifdef _OPENMP
@@ -608,11 +608,11 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
             abort_test_loop();
             // apply smooth threshold
             if (fimg[hpass][i] < -thold) {
-                fimg[hpass][i] += thold - thold * low;
+                fimg[hpass][i] += thold * denoise_amount;
             } else if (fimg[hpass][i] >  thold) {
-                fimg[hpass][i] -= thold - thold * low;
+                fimg[hpass][i] -= thold * denoise_amount;
             } else {
-                fimg[hpass][i] *= low;
+                fimg[hpass][i] *= 1. - denoise_amount;
             }
             // add the denoised band to the final image
             if (hpass) {
@@ -851,34 +851,34 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
     p.noiseLevel[1] = _cbagNoiseLevel->getValueAtTime(time) * kNoiseLevelBias;
     p.noiseLevel[2] = _crbbNoiseLevel->getValueAtTime(time) * kNoiseLevelBias;
     p.noiseLevel[3] = _alphaNoiseLevel->getValueAtTime(time) * kNoiseLevelBias;
-    p.softness[0] = _ylrSoftness->getValueAtTime(time);
-    p.softness[1] = _cbagSoftness->getValueAtTime(time);
-    p.softness[2] = _crbbSoftness->getValueAtTime(time);
-    p.softness[3] = _alphaSoftness->getValueAtTime(time);
-    p.amount[0] = _sharpenAmount->getValueAtTime(time);
-    p.radius = _sharpenRadius->getValueAtTime(time);
+    p.denoise_amount[0] = _ylrAmount->getValueAtTime(time);
+    p.denoise_amount[1] = _cbagAmount->getValueAtTime(time);
+    p.denoise_amount[2] = _crbbAmount->getValueAtTime(time);
+    p.denoise_amount[3] = _alphaAmount->getValueAtTime(time);
+    p.sharpen_amount[0] = _sharpenAmount->getValueAtTime(time);
+    p.sharpen_radius = _sharpenRadius->getValueAtTime(time);
     bool sharpenLuminance = _sharpenLuminance->getValueAtTime(time);
 
     if (!sharpenLuminance) {
-        p.amount[1] = p.amount[2] = p.amount[3] = p.amount[0];
+        p.sharpen_amount[1] = p.sharpen_amount[2] = p.sharpen_amount[3] = p.sharpen_amount[0];
     } else if (p.colorModel == eColorModelRGB || p.colorModel == eColorModelLinearRGB) {
-        p.amount[1] = p.amount[2] = p.amount[0]; // cannot sharpen luminance only
+        p.sharpen_amount[1] = p.sharpen_amount[2] = p.sharpen_amount[0]; // cannot sharpen luminance only
     }
 
     if (p.colorModel == eColorModelRGB || p.colorModel == eColorModelLinearRGB) {
         for (int c = 0; c < 3; ++c) {
-            p.process[c] = p.process[c] && ((p.noiseLevel[c] > 0 && p.noiseLevel[c] != 1.) || p.amount[c] > 0.);
+            p.process[c] = p.process[c] && ((p.noiseLevel[c] > 0 && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0.);
         }
     } else {
         bool processcolor = false;
         for (int c = 0; c < 3; ++c) {
-            processcolor = processcolor || ((p.noiseLevel[c] > 0 && p.noiseLevel[c] != 1.) || p.amount[c] > 0.);
+            processcolor = processcolor || ((p.noiseLevel[c] > 0 && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0.);
         }
         for (int c = 0; c < 3; ++c) {
             p.process[c] = p.process[c] && processcolor;
         }
     }
-    p.process[3] = p.process[3] && ((p.noiseLevel[3] > 0 && p.noiseLevel[3] != 1.) || p.amount[3] > 0.);
+    p.process[3] = p.process[3] && ((p.noiseLevel[3] > 0 && p.denoise_amount[3] > 0.) || p.sharpen_amount[3] > 0.);
     
     // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
     int maxLev = std::max(0, kLevelMax - startLevelFromRenderScale(args.renderScale));
@@ -991,7 +991,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                 assert(fimgcolor[c]);
                 float* fimg[3] = { fimgcolor[c], fimgtmp[0], fimgtmp[1] };
                 abort_test();
-                wavelet_denoise(fimg, iwidth, iheight, p.noiseLevel[c], p.softness[c], p.amount[c], p.radius, p.startLevel, (float)c / nComponents, 1.f / nComponents);
+                wavelet_denoise(fimg, iwidth, iheight, p.noiseLevel[c], p.denoise_amount[c], p.sharpen_amount[c], p.sharpen_radius, p.startLevel, (float)c / nComponents, 1.f / nComponents);
             }
         }
     }
@@ -1000,7 +1000,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
         // process alpha
         float* fimg[3] = { fimgalpha, fimgtmp[0], fimgtmp[1] };
         abort_test();
-        wavelet_denoise(fimg, iwidth, iheight, p.noiseLevel[3], p.softness[3], p.amount[3], p.radius, p.startLevel, (float)(nComponents-1) / nComponents, 1.f / nComponents);
+        wavelet_denoise(fimg, iwidth, iheight, p.noiseLevel[3], p.denoise_amount[3], p.sharpen_amount[3], p.sharpen_radius, p.startLevel, (float)(nComponents-1) / nComponents, 1.f / nComponents);
     }
 
     // store back into the result
@@ -1144,16 +1144,16 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
     double cbagNoiseLevel = _cbagNoiseLevel->getValueAtTime(time);
     double crbbNoiseLevel = _crbbNoiseLevel->getValueAtTime(time);
     double alphaNoiseLevel = _alphaNoiseLevel->getValueAtTime(time);
-    double ylrSoftness = _ylrSoftness->getValueAtTime(time);
-    double cbagSoftness = _cbagSoftness->getValueAtTime(time);
-    double crbbSoftness = _crbbSoftness->getValueAtTime(time);
-    double alphaSoftness = _alphaSoftness->getValueAtTime(time);
+    double ylrAmount = _ylrAmount->getValueAtTime(time);
+    double cbagAmount = _cbagAmount->getValueAtTime(time);
+    double crbbAmount = _crbbAmount->getValueAtTime(time);
+    double alphaAmount = _alphaAmount->getValueAtTime(time);
     double sharpenAmount = _sharpenAmount->getValueAtTime(time);
     if ( (colorModel == eColorModelRGB || colorModel == eColorModelLinearRGB) &&
-         (!processR || ylrNoiseLevel <= 0. || ylrSoftness == 1.) &&
-         (!processG || cbagNoiseLevel <= 0. || cbagSoftness == 1.) &&
-         (!processR || crbbNoiseLevel <= 0. || crbbSoftness == 1.) &&
-         (!processA || alphaNoiseLevel <= 0. || alphaSoftness == 1.) &&
+         (!processR || ylrNoiseLevel <= 0. || ylrAmount == 0.) &&
+         (!processG || cbagNoiseLevel <= 0. || cbagAmount == 0.) &&
+         (!processR || crbbNoiseLevel <= 0. || crbbAmount == 0.) &&
+         (!processA || alphaNoiseLevel <= 0. || alphaAmount == 0.) &&
          (sharpenAmount <= 0.) ) {
         identityClip = _srcClip;
 
@@ -1162,10 +1162,10 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
                   ( (ylrNoiseLevel <= 0.) &&
                     (cbagNoiseLevel <= 0.) &&
                     (crbbNoiseLevel <= 0.) ) ||
-                  ( (ylrSoftness == 1.) &&
-                    (cbagSoftness == 1.) &&
-                    (crbbSoftness == 1.) ) ) &&
-                (!processA || alphaNoiseLevel <= 0. || alphaSoftness == 1.) &&
+                  ( (ylrAmount == 0.) &&
+                    (cbagAmount == 0.) &&
+                    (crbbAmount == 0.) ) ) &&
+                (!processA || alphaNoiseLevel <= 0. || alphaAmount == 0.) &&
                 (sharpenAmount <= 0.) ) {
         identityClip = _srcClip;
 
@@ -1445,30 +1445,30 @@ DenoiseSharpenPlugin::updateLabels()
     switch (colorModel) {
     case eColorModelYCbCr: {
         _ylrNoiseLevel->setLabel(kParamYNoiseLevelLabel);
-        _ylrSoftness->setLabel(kParamYSoftnessLabel);
         _cbagNoiseLevel->setLabel(kParamCbNoiseLevelLabel);
-        _cbagSoftness->setLabel(kParamCbSoftnessLabel);
         _crbbNoiseLevel->setLabel(kParamCrNoiseLevelLabel);
-        _crbbSoftness->setLabel(kParamCrSoftnessLabel);
+        _ylrAmount->setLabel(kParamYAmountLabel);
+        _cbagAmount->setLabel(kParamCbAmountLabel);
+        _crbbAmount->setLabel(kParamCrAmountLabel);
         break;
     }
     case eColorModelLab: {
         _ylrNoiseLevel->setLabel(kParamLNoiseLevelLabel);
-        _ylrSoftness->setLabel(kParamLSoftnessLabel);
         _cbagNoiseLevel->setLabel(kParamANoiseLevelLabel);
-        _cbagSoftness->setLabel(kParamASoftnessLabel);
         _crbbNoiseLevel->setLabel(kParamBNoiseLevelLabel);
-        _crbbSoftness->setLabel(kParamBSoftnessLabel);
+        _ylrAmount->setLabel(kParamLAmountLabel);
+        _cbagAmount->setLabel(kParamAAmountLabel);
+        _crbbAmount->setLabel(kParamBAmountLabel);
         break;
     }
     case eColorModelRGB:
     case eColorModelLinearRGB: {
         _ylrNoiseLevel->setLabel(kParamRNoiseLevelLabel);
-        _ylrSoftness->setLabel(kParamRSoftnessLabel);
         _cbagNoiseLevel->setLabel(kParamGNoiseLevelLabel);
-        _cbagSoftness->setLabel(kParamGSoftnessLabel);
         _crbbNoiseLevel->setLabel(kParamBNoiseLevelLabel);
-        _crbbSoftness->setLabel(kParamBSoftnessLabel);
+        _ylrAmount->setLabel(kParamRAmountLabel);
+        _cbagAmount->setLabel(kParamGAmountLabel);
+        _crbbAmount->setLabel(kParamBAmountLabel);
         break;
     }
     }
@@ -1657,39 +1657,11 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
         {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamYLRSoftness);
-            param->setLabel(kParamYLRSoftnessLabel);
-            param->setHint(kParamSoftnessHint);
-            param->setRange(0, 1.);
-            param->setDisplayRange(0, 1.);
-            param->setAnimates(true);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
             DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCbAGNoiseLevel);
             param->setLabel(kParamCbAGNoiseLevelLabel);
             param->setHint(kParamNoiseLevelHint);
             param->setRange(0, DBL_MAX);
             param->setDisplayRange(0, kParamNoiseLevelMax);
-            param->setAnimates(true);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCbAGSoftness);
-            param->setLabel(kParamCbAGSoftnessLabel);
-            param->setHint(kParamSoftnessHint);
-            param->setRange(0, 1.);
-            param->setDisplayRange(0, 1.);
             param->setAnimates(true);
             if (group) {
                 param->setParent(*group);
@@ -1713,20 +1685,6 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
         {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCrBBSoftness);
-            param->setLabel(kParamCrBBSoftnessLabel);
-            param->setHint(kParamSoftnessHint);
-            param->setRange(0, 1.);
-            param->setDisplayRange(0, 1.);
-            param->setAnimates(true);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
             DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAlphaNoiseLevel);
             param->setLabel(kParamAlphaNoiseLevelLabel);
             param->setHint(kParamNoiseLevelHint);
@@ -1741,11 +1699,23 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
         {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAlphaSoftness);
-            param->setLabel(kParamAlphaSoftnessLabel);
-            param->setHint(kParamSoftnessHint);
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAnalyzeNoiseLevels);
+            param->setLabel(kParamAnalyzeNoiseLevelsLabel);
+            param->setHint(kParamAnalyzeNoiseLevelsHint);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamYLRAmount);
+            param->setLabel(kParamYLRAmountLabel);
+            param->setHint(kParamAmountHint);
             param->setRange(0, 1.);
             param->setDisplayRange(0, 1.);
+            param->setDefault(1.);
             param->setAnimates(true);
             if (group) {
                 param->setParent(*group);
@@ -1755,9 +1725,43 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
         {
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAnalyzeNoiseLevels);
-            param->setLabel(kParamAnalyzeNoiseLevelsLabel);
-            param->setHint(kParamAnalyzeNoiseLevelsHint);
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCbAGAmount);
+            param->setLabel(kParamCbAGAmountLabel);
+            param->setHint(kParamAmountHint);
+            param->setRange(0, 1.);
+            param->setDisplayRange(0, 1.);
+            param->setDefault(1.);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCrBBAmount);
+            param->setLabel(kParamCrBBAmountLabel);
+            param->setHint(kParamAmountHint);
+            param->setRange(0, 1.);
+            param->setDisplayRange(0, 1.);
+            param->setDefault(1.);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAlphaAmount);
+            param->setLabel(kParamAlphaAmountLabel);
+            param->setHint(kParamAmountHint);
+            param->setRange(0, 1.);
+            param->setDisplayRange(0, 1.);
+            param->setDefault(1.);
+            param->setAnimates(true);
             if (group) {
                 param->setParent(*group);
             }
