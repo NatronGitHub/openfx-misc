@@ -21,8 +21,8 @@ Constant \
 CopyRectangle \
 CornerPin \
 Crop \
-Despill \
 Deinterlace \
+DenoiseSharpen \
 Despill \
 Difference \
 Dissolve \

@@ -19,8 +19,9 @@ Constant.o \
 CopyRectangle.o \
 CornerPin.o \
 Crop.o \
-Despill.o \
 Deinterlace.o \
+DenoiseSharpen.o \
+Despill.o \
 Difference.o \
 Dissolve.o \
 FrameBlend.o \
@@ -242,8 +243,9 @@ $(TOP_SRCDIR)/Constant \
 $(TOP_SRCDIR)/CopyRectangle \
 $(TOP_SRCDIR)/CornerPin \
 $(TOP_SRCDIR)/Crop \
-$(TOP_SRCDIR)/Despill \
 $(TOP_SRCDIR)/Deinterlace \
+$(TOP_SRCDIR)/DenoiseSharpen \
+$(TOP_SRCDIR)/Despill \
 $(TOP_SRCDIR)/Difference \
 $(TOP_SRCDIR)/Dissolve \
 $(TOP_SRCDIR)/FrameBlend \
@@ -312,6 +314,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/CornerPin \
 -I$(TOP_SRCDIR)/Crop \
 -I$(TOP_SRCDIR)/Deinterlace \
+-I$(TOP_SRCDIR)/DenoiseSharpen \
 -I$(TOP_SRCDIR)/Despill \
 -I$(TOP_SRCDIR)/Difference \
 -I$(TOP_SRCDIR)/Dissolve \

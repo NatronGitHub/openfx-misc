@@ -916,6 +916,20 @@
 		1EDFE9FB1CB79D0D001E68FA /* Shadertoy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDFE9F21CB79314001E68FA /* Shadertoy.cpp */; };
 		1EDFE9FC1CB79D14001E68FA /* ShadertoyRenderGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDFE9F51CB79314001E68FA /* ShadertoyRenderGL.cpp */; };
 		1EDFE9FD1CB79D18001E68FA /* ShadertoyRenderMesa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDFE9F61CB79314001E68FA /* ShadertoyRenderMesa.cpp */; };
+		1EE0A7901D68A60F00B69526 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EE0A7911D68A60F00B69526 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EE0A7921D68A60F00B69526 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EE0A7931D68A60F00B69526 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EE0A7941D68A60F00B69526 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EE0A7951D68A60F00B69526 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EE0A7961D68A60F00B69526 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EE0A7971D68A60F00B69526 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EE0A7991D68A60F00B69526 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EE0A79B1D68A60F00B69526 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
+		1EE0A79C1D68A60F00B69526 /* net.sf.openfx.Deinterlace.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284711A41C16500C9A4E4 /* net.sf.openfx.Deinterlace.svg */; };
+		1EE0A7A21D68A62500B69526 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
+		1EE0A7A31D68A62900B69526 /* DenoiseSharpen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE0A78C1D68A5FE00B69526 /* DenoiseSharpen.cpp */; };
+		1EE0A7A51D68B82C00B69526 /* DenoiseSharpen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE0A78C1D68A5FE00B69526 /* DenoiseSharpen.cpp */; };
 		1EE1F7811A506181002BE24B /* CImgSharpenInvDiff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */; };
 		1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */; };
 		1EE4A87019C6EC7300E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */; };
@@ -2108,6 +2122,17 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EE0A79A1D68A60F00B69526 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1EE0A79B1D68A60F00B69526 /* net.sf.openfx.Deinterlace.png in CopyFiles */,
+				1EE0A79C1D68A60F00B69526 /* net.sf.openfx.Deinterlace.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EE4A86F19C6EC6700E6E3AE /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -3008,6 +3033,12 @@
 		1EDFE9F41CB79314001E68FA /* ShadertoyRender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ShadertoyRender.h; sourceTree = "<group>"; };
 		1EDFE9F51CB79314001E68FA /* ShadertoyRenderGL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ShadertoyRenderGL.cpp; sourceTree = "<group>"; };
 		1EDFE9F61CB79314001E68FA /* ShadertoyRenderMesa.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ShadertoyRenderMesa.cpp; sourceTree = "<group>"; };
+		1EE0A7891D68A5FE00B69526 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EE0A78A1D68A5FE00B69526 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EE0A78B1D68A5FE00B69526 /* DenoiseWavelet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DenoiseWavelet.cpp; sourceTree = "<group>"; };
+		1EE0A78C1D68A5FE00B69526 /* DenoiseSharpen.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DenoiseSharpen.cpp; sourceTree = "<group>"; };
+		1EE0A7A01D68A60F00B69526 /* DenoiseSharpen.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DenoiseSharpen.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EE0A7A11D68A60F00B69526 /* Deinterlace.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Deinterlace.ofx copy-Info.plist"; path = "/Users/devernay/Development/openfx-misc/Deinterlace.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
 		1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenInvDiff.cpp; path = SharpenInvDiff/CImgSharpenInvDiff.cpp; sourceTree = "<group>"; };
 		1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenShock.cpp; path = SharpenShock/CImgSharpenShock.cpp; sourceTree = "<group>"; };
 		1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ChromaKeyerPlugin.png; sourceTree = "<group>"; };
@@ -3625,6 +3656,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EE0A7981D68A60F00B69526 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EE0A7991D68A60F00B69526 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EE72BFF1B524A6D001B0245 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -4047,6 +4086,7 @@
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
 				1E551EC217994D4000A4135C /* Products */,
+				1EE0A7A11D68A60F00B69526 /* Deinterlace.ofx copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -4122,6 +4162,7 @@
 				1E53BFA21C75D1D500623EE0 /* ColorBars.ofx.bundle */,
 				1EAD4F411C8C785100462A1A /* TimeBuffer.ofx.bundle */,
 				1EDFE9ED1CB792D1001E68FA /* Shadertoy.ofx.bundle */,
+				1EE0A7A01D68A60F00B69526 /* DenoiseSharpen.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -4163,6 +4204,7 @@
 				D74A80AD194059C0007C3E1C /* Crop */,
 				1ECE5453185F240A001ED442 /* DebugProxy */,
 				1E0831F3199FEB0600A819A5 /* Deinterlace */,
+				1EE0A7881D68A5C500B69526 /* DenoiseSharpen */,
 				1EA7BC981C5AA71B0026C46A /* Despill */,
 				1EFB4E0919461AE7005932AF /* Difference */,
 				1EA0C1FE19BA1053006AB602 /* Dissolve */,
@@ -4707,6 +4749,17 @@
 				1E40E4DE1D114A33008DAE8C /* ShadertoyParse.cpp */,
 			);
 			path = Shadertoy;
+			sourceTree = "<group>";
+		};
+		1EE0A7881D68A5C500B69526 /* DenoiseSharpen */ = {
+			isa = PBXGroup;
+			children = (
+				1EE0A78C1D68A5FE00B69526 /* DenoiseSharpen.cpp */,
+				1EE0A7891D68A5FE00B69526 /* Makefile */,
+				1EE0A78A1D68A5FE00B69526 /* Info.plist */,
+				1EE0A78B1D68A5FE00B69526 /* DenoiseWavelet.cpp */,
+			);
+			path = DenoiseSharpen;
 			sourceTree = "<group>";
 		};
 		1EE72BEB1B52499B001B0245 /* TimeBlur */ = {
@@ -5878,6 +5931,23 @@
 			productReference = 1EDFE9ED1CB792D1001E68FA /* Shadertoy.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1EE0A78D1D68A60F00B69526 /* DenoiseSharpen.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EE0A79D1D68A60F00B69526 /* Build configuration list for PBXNativeTarget "DenoiseSharpen.ofx" */;
+			buildPhases = (
+				1EE0A78E1D68A60F00B69526 /* Sources */,
+				1EE0A7981D68A60F00B69526 /* Frameworks */,
+				1EE0A79A1D68A60F00B69526 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DenoiseSharpen.ofx;
+			productName = basic.ofx;
+			productReference = 1EE0A7A01D68A60F00B69526 /* DenoiseSharpen.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1EE72BF31B524A6D001B0245 /* TimeBlur.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1EE72C041B524A6D001B0245 /* Build configuration list for PBXNativeTarget "TimeBlur.ofx" */;
@@ -6194,6 +6264,7 @@
 				D74A80B3194059CC007C3E1C /* Crop.ofx */,
 				1ECE5459185F2433001ED442 /* DebugProxy.ofx */,
 				1E0831F4199FEB1F00A819A5 /* Deinterlace.ofx */,
+				1EE0A78D1D68A60F00B69526 /* DenoiseSharpen.ofx */,
 				1EA7BC991C5AA7450026C46A /* Despill.ofx */,
 				1EFB4E0A19461B13005932AF /* Difference.ofx */,
 				1EA0C20419BA1243006AB602 /* Dissolve.ofx */,
@@ -6692,10 +6763,12 @@
 				1ED12E521A4B318400ABA348 /* ClipTest.cpp in Sources */,
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* ColorLookup.cpp in Sources */,
+				1EAFE3E71C5D092900F9E4E4 /* ColorSuppress.cpp in Sources */,
 				1ED537371A234D3C007966D5 /* ColorTransform.cpp in Sources */,
 				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
 				1E92573819EC1E140018F19A /* Clamp.cpp in Sources */,
 				1E08320D199FEB7800A819A5 /* Deinterlace.cpp in Sources */,
+				1EE0A7A51D68B82C00B69526 /* DenoiseSharpen.cpp in Sources */,
 				1EA7BCB41C5AA7980026C46A /* Despill.cpp in Sources */,
 				1EFB4E2019461B76005932AF /* Difference.cpp in Sources */,
 				1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */,
@@ -6737,6 +6810,7 @@
 				1E8B5D4E18B76A7500C31FDC /* Switch.cpp in Sources */,
 				1EE72C0C1B524AE0001B0245 /* TimeBlur.cpp in Sources */,
 				1EE72C0D1B524AE3001B0245 /* NoTimeBlur.cpp in Sources */,
+				1EAD4F491C8C78D200462A1A /* TimeBuffer.cpp in Sources */,
 				1E6E6FFA1BD4F25D00B5A00F /* TimeDissolve.cpp in Sources */,
 				1E8B5D6718B76F8700C31FDC /* TimeOffset.cpp in Sources */,
 				D780C414198938AD002470C9 /* TrackerPM.cpp in Sources */,
@@ -6747,7 +6821,6 @@
 				1EE72C131B5253A4001B0245 /* ofxsShutter.cpp in Sources */,
 				1E75A0341A87BA37005BAA36 /* ofxsGenerator.cpp in Sources */,
 				1EC1B4F91A964209001D7020 /* ofxsTransformInteract.cpp in Sources */,
-				1EAFE3E71C5D092900F9E4E4 /* ColorSuppress.cpp in Sources */,
 				1ED5373D1A2370D3007966D5 /* ofxsLut.cpp in Sources */,
 				1E9B5F5C198A51D40095C8AA /* ofxsRectangleInteract.cpp in Sources */,
 				1E9B5F5F198A51F40095C8AA /* ofxsOGLTextRenderer.cpp in Sources */,
@@ -6755,7 +6828,6 @@
 				1E9B5F61198A52060095C8AA /* ofxsTransform3x3.cpp in Sources */,
 				1E9B5F63198A52210095C8AA /* ofxsOGLFontData.cpp in Sources */,
 				1E8B5D4C18B76A7500C31FDC /* ofxsCore.cpp in Sources */,
-				1EAD4F491C8C78D200462A1A /* TimeBuffer.cpp in Sources */,
 				AC3525D81C2171380063F0C0 /* ofxsMultiPlane.cpp in Sources */,
 				1E8B5D4D18B76A7500C31FDC /* ofxsImageEffect.cpp in Sources */,
 				1E8B5D4F18B76A7500C31FDC /* ofxsInteract.cpp in Sources */,
@@ -7231,6 +7303,23 @@
 				1EDFE9FB1CB79D0D001E68FA /* Shadertoy.cpp in Sources */,
 				1EDFE9E31CB792D1001E68FA /* ofxsProperty.cpp in Sources */,
 				1EDFE9E41CB792D1001E68FA /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EE0A78E1D68A60F00B69526 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EE0A7A31D68A62900B69526 /* DenoiseSharpen.cpp in Sources */,
+				1EE0A7A21D68A62500B69526 /* ofxsLut.cpp in Sources */,
+				1EE0A7901D68A60F00B69526 /* ofxsCore.cpp in Sources */,
+				1EE0A7911D68A60F00B69526 /* ofxsImageEffect.cpp in Sources */,
+				1EE0A7921D68A60F00B69526 /* ofxsInteract.cpp in Sources */,
+				1EE0A7931D68A60F00B69526 /* ofxsLog.cpp in Sources */,
+				1EE0A7941D68A60F00B69526 /* ofxsMultiThread.cpp in Sources */,
+				1EE0A7951D68A60F00B69526 /* ofxsParams.cpp in Sources */,
+				1EE0A7961D68A60F00B69526 /* ofxsProperty.cpp in Sources */,
+				1EE0A7971D68A60F00B69526 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -9374,6 +9463,28 @@
 			};
 			name = Release;
 		};
+		1EE0A79E1D68A60F00B69526 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = DenoiseSharpen/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EE0A79F1D68A60F00B69526 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = DenoiseSharpen/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		1EE72C051B524A6D001B0245 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -10229,6 +10340,15 @@
 			buildConfigurations = (
 				1EDFE9EB1CB792D1001E68FA /* Debug */,
 				1EDFE9EC1CB792D1001E68FA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EE0A79D1D68A60F00B69526 /* Build configuration list for PBXNativeTarget "DenoiseSharpen.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EE0A79E1D68A60F00B69526 /* Debug */,
+				1EE0A79F1D68A60F00B69526 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

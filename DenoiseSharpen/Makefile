@@ -1,0 +1,6 @@
+PLUGINOBJECTS = DenoiseSharpen.o ofxsLut.o
+PLUGINNAME = DenoiseSharpen
+#RESOURCES = net.sf.openfx.DenoiseSharpen.png net.sf.openfx.DenoiseSharpen.svg
+
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.master

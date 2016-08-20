@@ -110,23 +110,24 @@ matrix.
 
 ### Filter
 
-* BilateralCImg: Blur input stream by bilateral filtering.
-* BilateralGuidedCImg: Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B.
 * BlurCImg: Blur input stream by a quasi-Gaussian or Gaussian filter (recursive implementation), or compute derivatives.
 * ChromaBlurCImg: Blur the chrominance components (usually to prep strongly compressed and chroma subsampled footage for keying).
-* DenoiseCImg: Denoise selected images by non-local patch averaging.
+* DenoiseSharpen: Denoise and/or sharpen images using wavelet-based algorithms.
 * DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann boundary conditions.
 * DirBlurOFX: Directional blur.
 * ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
 * GMICExpr: Quickly generate or process image from mathematical formula evaluated for each pixel.
 * GodRays: Average an image over a range of transforms, or create crepuscular rays.
-* GuidedCImg: Blur image, with the [Guided Image filter](http://research.microsoft.com/en-us/um/people/kahe/publications/pami12guidedfilter.pdf).
-* MedianCImg: Apply a [median filter](https://en.wikipedia.org/wiki/Median_filter) to input images.
-* RollingGuidanceCImg: Filter out details under a given scale using the [Rolling Guidance filter](http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/).
 * Shadertoy: Apply a [Shadertoy](http://www.shadertoy.com) fragment shaders (multipass shaders are not supported).
 * SharpenInvDiffCImg: Sharpen selected images by inverse diffusion.
 * SharpenShockCImg: Sharpen selected images by shock filters.
-* SmoothCImg: Smooth/Denoise input stream using anisotropic PDE-based smoothing.
+* SmoothAnisotropicCImg: Smooth/Denoise input stream using anisotropic PDE-based smoothing.
+* SmoothBilateralCImg: Blur input stream by bilateral filtering.
+* SmoothBilateralGuidedCImg: Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B.
+* SmoothGuidedCImg: Blur image, with the [Guided Image filter](http://research.microsoft.com/en-us/um/people/kahe/publications/pami12guidedfilter.pdf).
+* SmoothMedianCImg: Apply a [median filter](https://en.wikipedia.org/wiki/Median_filter) to input images.
+* SmoothPatchBasedCImg: Denoise selected images by non-local patch averaging.
+* SmoothRollingGuidanceCImg: Filter out details under a given scale using the [Rolling Guidance filter](http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/).
 
 ### Keyer
 
@@ -254,6 +255,8 @@ terminal:
 - `make nomulti [options]` to compile as separate plugins (useful if
 only a few plugins are is needed, for example). `make` can also be
 executed in any plugin's directory.
+- `make [options] CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp` to compile
+  with OpenMP support (available for CImg-based plugins and DenoiseSharpen).
 
 The most common options are `CONFIG=release` to compile a release
 version, `CONFIG=debug` to compile a debug version. Or
