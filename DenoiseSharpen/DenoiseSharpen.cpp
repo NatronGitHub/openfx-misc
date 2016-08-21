@@ -127,7 +127,7 @@ enum ColorModelEnum {
 #define kParamNoiseLevelHint "Adjusts the noise variance of the selected channel. May be estimated for image data by pressing the \"Analyze Noise\" button."
 #define kParamNoiseLevelMax 0.3 // noise level is at most 1/sqrt(12) (stddev of a uniform distribution between 0 and 1)
 
-#define kNoiseLevelBias 0.8002 // on a signal with Gaussian additive noise with sigma = 1, the stddev measured in HH1 is 0.8002. We correct this bias so that the displayed Noise levels correspond to the standard deviation of the additive Gaussian noise. This value can also be found in the dcraw source code
+#define kNoiseLevelBias (noise[0]) // on a signal with Gaussian additive noise with sigma = 1, the stddev measured in HH1 is 0.8002. We correct this bias so that the displayed Noise levels correspond to the standard deviation of the additive Gaussian noise. This value can also be found in the dcraw source code
 
 #define kParamAmountHint "The amount of denoising to apply to the specify channel. Default is 1."
 #define kGroupSettings "channelSettings"
@@ -188,6 +188,11 @@ enum ColorModelEnum {
 #define kParamPremultChanged "premultChanged"
 
 #define kLevelMax 4 // 7 // maximum level for denoising
+
+
+// those are the noise levels on HHi subands that correspond to a
+// Gaussian noise, with the dcraw "a trous" wavelets.
+static const float noise[] = { 0.8002,0.2735,0.1202,0.0585,0.0291,0.0152,0.0080,0.0044 };
 
 #ifdef _OPENMP
 #define abort_test() if (!omp_get_thread_num() && abort()) { OFX::throwSuiteStatusException(kOfxStatFailed); }
@@ -588,11 +593,13 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         // \sigma_{y,i}^2 = 1/N \sum{p} d_i(p)^2 (standard deviation of the signal with the noise for this detail subband)
         // \sigma_{n,i} = \sigma_n . 2^{-i} (standard deviation of the noise)
 
-        double sigma_n_i = ( noiselevel / ( 1 << (lev + startLevel) ) );
+        //double sigma_n_i = ( noiselevel * noise[0] / ( 1 << (lev + startLevel) ) );
+        double sigma_n_i = noiselevel * noise[lev + startLevel];
         double sigma_n_i_sq = sigma_n_i * sigma_n_i;
 
         float thold = sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / size - sigma_n_i_sq) );
 
+        // uncomment to check the values of the noise[] array
         //printf("level=%u stdev=%g noiselevel=%g\n", lev, std::sqrt(sumsq / size), noiselevel);
 
         // sharpen
@@ -847,10 +854,10 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
     // fetch parameter values
     p.colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
     p.startLevel = startLevelFromRenderScale(args.renderScale);
-    p.noiseLevel[0] = _ylrNoiseLevel->getValueAtTime(time) * kNoiseLevelBias;
-    p.noiseLevel[1] = _cbagNoiseLevel->getValueAtTime(time) * kNoiseLevelBias;
-    p.noiseLevel[2] = _crbbNoiseLevel->getValueAtTime(time) * kNoiseLevelBias;
-    p.noiseLevel[3] = _alphaNoiseLevel->getValueAtTime(time) * kNoiseLevelBias;
+    p.noiseLevel[0] = _ylrNoiseLevel->getValueAtTime(time);
+    p.noiseLevel[1] = _cbagNoiseLevel->getValueAtTime(time);
+    p.noiseLevel[2] = _crbbNoiseLevel->getValueAtTime(time);
+    p.noiseLevel[3] = _alphaNoiseLevel->getValueAtTime(time);
     p.denoise_amount[0] = _ylrAmount->getValueAtTime(time);
     p.denoise_amount[1] = _cbagAmount->getValueAtTime(time);
     p.denoise_amount[2] = _crbbAmount->getValueAtTime(time);
