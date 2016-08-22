@@ -59,7 +59,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Filter"
 #define kPluginDescriptionShort \
 "Denoise and/or sharpen images using wavelet-based algorithms.\n" \
-"This plugin allows the separate denoising of image channels in multiple color spaces using wavelets, using the BayesShrink algorithm, and can also sharpen the image details. Noise levels for each channel may be either set manually, or analyzed from the image data using the MAD (median absolute deviation) estimator."
+"This plugin allows the separate denoising of image channels in multiple color spaces using wavelets, using the BayesShrink algorithm, and can also sharpen the image details.\n" \
+"Noise levels for each channel may be either set manually, or analyzed from the image data using the MAD (median absolute deviation) estimator.\n" \
+"Noise analysis is based on a Gaussian noise assumption. If there is also speckle noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
+"The color model specifies the channels and the transforms used. Noise levels have to be re-adjusted or re-analyzed when changing the color model."
+
 #ifdef _OPENMP
 #define kPluginDescription kPluginDescriptionShort "\nThis plugin was compiled with OpenMP support."
 #else
@@ -108,7 +112,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamColorModel "colorModel"
 #define kParamColorModelLabel "Color Model"
-#define kParamColorModelHint "The colorspace where denoising is performed."
+#define kParamColorModelHint "The colorspace where denoising is performed. Noise levels must be re-adjusted, or the noise analysis must be re-run, when the color model is changed."
 #define kParamColorModelOptionYCbCr "Y'CbCr(A)"
 #define kParamColorModelOptionYCbCrHint "The YCbCr color model has one luminance channel (Y) which contains most of the detail information of an image (such as brightness and contrast) and two chroma channels (Cb = blueness, Cr = reddness) that hold the color information. Note that this choice drastically affects the result."
 #define kParamColorModelOptionLab "CIE L*a*b(A)"
@@ -168,7 +172,7 @@ enum ColorModelEnum {
 
 #define kParamAnalyzeNoiseLevels "analyzeNoiseLevels"
 #define kParamAnalyzeNoiseLevelsLabel "Analyze Noise Levels"
-#define kParamAnalyzeNoiseLevelsHint "Computes the noise levels from the current frame. To use the same settings for the whole sequence, analyze a frame that is representative of the sequence. If a mask is set, it is used to compute the noise levels from areas where the mask is non-zero. If there are keyframes on the noise level parameters, this sets a keyframe at the current frame. The noise levels can then be fine-tuned."
+#define kParamAnalyzeNoiseLevelsHint "Computes the noise levels from the current frame and current color model. To use the same settings for the whole sequence, analyze a frame that is representative of the sequence. If a mask is set, it is used to compute the noise levels from areas where the mask is non-zero. If there are keyframes on the noise level parameters, this sets a keyframe at the current frame. The noise levels can then be fine-tuned."
 
 #define kGroupSharpen "sharpen"
 #define kGroupSharpenLabel "Sharpen"
@@ -464,11 +468,8 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
                                       float a, // progress amount at start
                                       float b) // progress increment
 {
-    // not sure where these thesholds come from...
-    // maybe these could be replaced by BayesShrink (as in <https://jo.dreggn.org/home/2011_atrous.pdf>)
-    // or SureShrink <http://statweb.stanford.edu/~imj/WEBLIST/1995/ausws.pdf>
     //
-    // BayesShrink:
+    // BayesShrink (as describred in <https://jo.dreggn.org/home/2011_atrous.pdf>):
     // compute sigma_n using the MAD (median absolute deviation at the finest level:
     // sigma_n = median(|d_0|)/0.6745 (could be computed in an analysis step from the first detail subband)
     // The soft shrinkage threshold is
@@ -476,11 +477,8 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
     // with
     // \sigma_{y,i}^2 = 1/N \sum{p} d_i(p)^2 (standard deviation of the signal with the noise for this detail subband)
     // \sigma_{n,i} = \sigma_n . 2^{-i} (standard deviation of the noise)
-    // S. G. Chang, Bin Yu and M. Vetterli, "Adaptive wavelet thresholding for image denoising and compression," in IEEE Transactions on Image Processing, vol. 9, no. 9, pp. 1532-1546, Sep 2000. doi: 10.1109/83.862633
     //
-    // SureShrink:
-    // Donoho, D. L., & Johnstone, I. M. (1995). Adapting to unknown smoothness via wavelet shrinkage. Journal of the american statistical association, 90(432), 1200-1224. doi: 10.1080/01621459.1995.10476626
-
+    // S. G. Chang, Bin Yu and M. Vetterli, "Adaptive wavelet thresholding for image denoising and compression," in IEEE Transactions on Image Processing, vol. 9, no. 9, pp. 1532-1546, Sep 2000. doi: 10.1109/83.862633
     // http://www.csee.wvu.edu/~xinl/courses/ee565/TIP2000.pdf
 
 
@@ -593,7 +591,9 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         // \sigma_{y,i}^2 = 1/N \sum{p} d_i(p)^2 (standard deviation of the signal with the noise for this detail subband)
         // \sigma_{n,i} = \sigma_n . 2^{-i} (standard deviation of the noise)
 
+        // The following corresponds to <https://jo.dreggn.org/home/2011_atrous.pdf>:
         //double sigma_n_i = ( noiselevel * noise[0] / ( 1 << (lev + startLevel) ) );
+        // The following uses levels obtained by filtering an actual Gaussian noise:
         double sigma_n_i = noiselevel * noise[lev + startLevel];
         double sigma_n_i_sq = sigma_n_i * sigma_n_i;
 
