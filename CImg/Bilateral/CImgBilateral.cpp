@@ -256,7 +256,6 @@ private:
     // params
     OFX::DoubleParam *_sigma_s;
     OFX::DoubleParam *_sigma_r;
-    OFX::IntParam *_iterations;
 };
 
 mDeclarePluginFactory(CImgBilateralPluginFactory, {}, {});
