@@ -20,6 +20,13 @@
  * OFX DenoiseSharpen plugin.
  */
 
+/*
+ TODO:
+ - the current levels are for high-frequency Gaussian IID noise. Add settings for lower frequency noise levels (high/medium/low/very low), and analyze these levels too (compute sigma_MAD, compute the expected sigma_n_i from previous levels, and use sqrt(max(0,sigma_mad^2-sigma_n_i^2))/noise[level]
+ - add "Luminance Blend [0.7]" and "Chrominance Blend [1.0]" settings to YCbCr and Lab, which is like "mix", but only on luminance or chrominance.
+ - add possibility to save/load noise settings
+ */
+
 #ifdef _OPENMP
 #include <omp.h>
 #define _GLIBCXX_PARALLEL // enable libstdc++ parallel STL algorithm (eg nth_element, sort...)
@@ -35,6 +42,7 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
+#include "ofxsRectangleInteract.h"
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
@@ -82,6 +90,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
+#define kClipAnalysisSource "AnalysisSource"
+#define kClipAnalysisSourceHint "An optional noise source. If connected, this is used instead of the Source input for the noise analysis. This is used to analyse noise from some footage by apply it on another footage."
+#define kClipAnalysisMask "AnalysisMask"
+#define kClipAnalysisMaskHint "An optional mask for the analysis area. This mask is intersected with the Analysis Rectangle. Non-zero pixels are taken into account in the noise analysis phase."
+
 #ifdef OFX_EXTENSIONS_NATRON
 #define kParamProcessR kNatronOfxParamProcessR
 #define kParamProcessRLabel kNatronOfxParamProcessRLabel
@@ -110,9 +123,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamProcessAHint  "Process alpha component."
 #endif
 
+#define kParamOutputMode "outputMode"
+#define kParamOutputModeLabel "Output"
+#define kParamOutputModeHint "Select"
+#define kParamOutputModeOptionResult "Result"
+#define kParamOutputModeOptionResultHint "The result of denoising and sharpening the Source image."
+#define kParamOutputModeOptionNoise "Noise"
+#define kParamOutputModeOptionNoiseHint "Only noise should be visible in this image. If you can see a lot of picture detail in the noise output, it means the current settings are denoising too hard and remove too much of the image, which leads to a smoothed result. Try to lower the noise levels or the noise level gain."
+enum OutputModeEnum {
+    eOutputModeResult = 0,
+    eOutputModeNoise,
+};
+
 #define kParamColorModel "colorModel"
 #define kParamColorModelLabel "Color Model"
-#define kParamColorModelHint "The colorspace where denoising is performed. Noise levels must be re-adjusted, or the noise analysis must be re-run, when the color model is changed."
+#define kParamColorModelHint "The colorspace where denoising is performed. Noise levels are reset when the color model is changed."
 #define kParamColorModelOptionYCbCr "Y'CbCr(A)"
 #define kParamColorModelOptionYCbCrHint "The YCbCr color model has one luminance channel (Y) which contains most of the detail information of an image (such as brightness and contrast) and two chroma channels (Cb = blueness, Cr = reddness) that hold the color information. Note that this choice drastically affects the result."
 #define kParamColorModelOptionLab "CIE L*a*b(A)"
@@ -133,14 +158,27 @@ enum ColorModelEnum {
 
 #define kNoiseLevelBias (noise[0]) // on a signal with Gaussian additive noise with sigma = 1, the stddev measured in HH1 is 0.8002. We correct this bias so that the displayed Noise levels correspond to the standard deviation of the additive Gaussian noise. This value can also be found in the dcraw source code
 
-#define kParamAmountHint "The amount of denoising to apply to the specify channel. Default is 1."
-#define kGroupSettings "channelSettings"
-#define kGroupSettingsLabel "Channel Settings"
+#define kParamAmountHint "The amount of denoising to apply to the specified channel. 0 means no denoising. Default is 1."
+#define kGroupAnalysis "analysis"
+#define kGroupAnalysisLabel "Analysis"
+#define kParamAnalysisLock "analysisLock"
+#define kParamAnalysisLockLabel "Lock Noise Analysis"
+#define kParamAnalysisLockHint "Lock all noise analysis parameters."
+#define kParamAnalysisFrame "analysisFrame"
+#define kParamAnalysisFrameLabel "Analysis Frame"
+#define kParamAnalysisFrameHint "The frame number where the noise levels were analyzed."
+#define kGroupNoiseLevels "noiseLevels"
+#define kGroupNoiseLevelsLabel "Noise Levels"
+#define kParamNoiseLevelGain "noiseLevelGain"
+#define kParamNoiseLevelGainLabel "Noise Level Gain"
+#define kParamNoiseLevelGainHint "Global gain to apply to the noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds."
 #define kParamYLRNoiseLevel "ylrNoiseLevel"
 #define kParamYLRNoiseLevelLabel "Y/L/R Noise Level"
 #define kParamYNoiseLevelLabel "Y Noise Level"
 #define kParamLNoiseLevelLabel "L Noise Level"
 #define kParamRNoiseLevelLabel "R Noise Level"
+#define kGroupAmounts "amounts"
+#define kGroupAmountsLabel "Correction Amounts"
 #define kParamYLRAmount "ylrAmount"
 #define kParamYLRAmountLabel "Y/L/R Amount"
 #define kParamYAmountLabel "Y Amount"
@@ -193,6 +231,28 @@ enum ColorModelEnum {
 
 #define kLevelMax 4 // 7 // maximum level for denoising
 
+#define kProgressAnalysis // define to enable progress for analysis
+//#define kProgressRender // define to enable progress for render
+
+#ifdef kProgressAnalysis
+#define progressStartAnalysis(x) progressStart(x)
+#define progressUpdateAnalysis(x) progressUpdate(x)
+#define progressEndAnalysis() progressEnd()
+#else
+#define progressStartAnalysis(x) ((void)0)
+#define progressUpdateAnalysis(x) ((void)0)
+#define progressEndAnalysis() ((void)0)
+#endif
+
+#ifdef kProgressRender
+#define progressStartRender(x) progressStart(x)
+#define progressUpdateRender(x) progressUpdate(x)
+#define progressEndRender() progressEnd()
+#else
+#define progressStartRender(x) ((void)0)
+#define progressUpdateRender(x) ((void)0)
+#define progressEndRender() ((void)0)
+#endif
 
 // those are the noise levels on HHi subands that correspond to a
 // Gaussian noise, with the dcraw "a trous" wavelets.
@@ -225,11 +285,14 @@ public:
         , _dstClip(0)
         , _srcClip(0)
         , _maskClip(0)
+        , _analysisSrcClip(0)
+        , _analysisMaskClip(0)
         , _processR(0)
         , _processG(0)
         , _processB(0)
         , _processA(0)
         , _colorModel(0)
+        , _noiseLevelGain(0)
         , _ylrNoiseLevel(0)
         , _ylrAmount(0)
         , _cbagNoiseLevel(0)
@@ -256,8 +319,12 @@ public:
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-
-        // TODO: fetch noise parameters
+        _analysisSrcClip = fetchClip(kClipAnalysisSource);
+        assert(( _analysisSrcClip && (_analysisSrcClip->getPixelComponents() == ePixelComponentRGB ||
+                              _analysisSrcClip->getPixelComponents() == ePixelComponentRGBA ||
+                              _analysisSrcClip->getPixelComponents() == ePixelComponentAlpha) ) );
+        _analysisMaskClip = fetchClip(kClipAnalysisMask);
+        assert(!_analysisMaskClip || _analysisMaskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
@@ -273,7 +340,16 @@ public:
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
 
+
+        // fetch noise parameters
+        _outputMode = fetchChoiceParam(kParamOutputMode);
         _colorModel = fetchChoiceParam(kParamColorModel);
+        _analysisLock = fetchBooleanParam(kParamAnalysisLock);
+        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
+        _size = fetchDouble2DParam(kParamRectangleInteractSize);
+        _analysisFrame = fetchIntParam(kParamAnalysisFrame);
+        _analyze = fetchPushButtonParam(kParamAnalyzeNoiseLevels);
+        _noiseLevelGain = fetchDoubleParam(kParamNoiseLevelGain);
         _ylrNoiseLevel = fetchDoubleParam(kParamYLRNoiseLevel);
         _ylrAmount = fetchDoubleParam(kParamYLRAmount);
         _cbagNoiseLevel = fetchDoubleParam(kParamCbAGNoiseLevel);
@@ -286,13 +362,26 @@ public:
         _sharpenRadius = fetchDoubleParam(kParamSharpenRadius);
         _sharpenLuminance = fetchBooleanParam(kParamSharpenLuminance);
 
-        assert(_colorModel && _ylrNoiseLevel && _ylrAmount && _cbagNoiseLevel && _cbagAmount && _crbbNoiseLevel && _crbbAmount && _alphaNoiseLevel && _alphaAmount && _sharpenAmount && _sharpenRadius && _sharpenLuminance);
+        assert(_outputMode && _colorModel && _noiseLevelGain && _analysisLock && _btmLeft && _size && _analysisFrame && _analyze && _ylrNoiseLevel && _ylrAmount && _cbagNoiseLevel && _cbagAmount && _crbbNoiseLevel && _crbbAmount && _alphaNoiseLevel && _alphaAmount && _sharpenAmount && _sharpenRadius && _sharpenLuminance);
 
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
 
         // update the channel labels
         updateLabels();
+
+        bool locked = _analysisLock->getValue();
+        // lock the color model
+        _colorModel->setEnabled( !locked );
+        // disable the interact
+        _btmLeft->setEnabled( !locked );
+        _size->setEnabled( !locked );
+        // lock the noise levels
+        _ylrNoiseLevel->setEnabled( !locked );
+        _cbagNoiseLevel->setEnabled( !locked );
+        _crbbNoiseLevel->setEnabled( !locked );
+        _alphaNoiseLevel->setEnabled( !locked );
+        _analyze->setEnabled( !locked );
     }
 
 private:
@@ -358,6 +447,7 @@ private:
         bool premult;
         int premultChannel;
         double mix;
+        OutputModeEnum outputMode;
         ColorModelEnum colorModel;
         int startLevel;
         bool process[4];
@@ -390,11 +480,20 @@ private:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_maskClip;
+    OFX::Clip *_analysisSrcClip;
+    OFX::Clip *_analysisMaskClip;
     BooleanParam* _processR;
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
+    ChoiceParam* _outputMode;
+    BooleanParam* _analysisLock;
+    Double2DParam* _btmLeft;
+    Double2DParam* _size;
+    IntParam* _analysisFrame;
+    PushButtonParam* _analyze;
     ChoiceParam* _colorModel;
+    DoubleParam* _noiseLevelGain;
     DoubleParam* _ylrNoiseLevel;
     DoubleParam* _ylrAmount;
     DoubleParam* _cbagNoiseLevel;
@@ -534,7 +633,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
     for (int lev = 0; lev <= maxLevel; lev++) {
         abort_test();
         if (b != 0) {
-            //progressUpdate(a + b * lev / 5.0);
+            progressUpdateRender(a + b * lev / 5.0);
         }
         lpass = ( (lev & 1) + 1 );
 
@@ -548,13 +647,14 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
             float* temp = new float[iwidth];
             hat_transform (temp, fimg[hpass] + row * iwidth, 1, iwidth, 1 << lev);
             for (unsigned int col = 0; col < iwidth; ++col) {
-                fimg[lpass][row * iwidth + col] = temp[col] * 0.25;
+                unsigned int i = row * iwidth + col;
+                fimg[lpass][i] = temp[col] * 0.25;
             }
             delete [] temp;
         }
         abort_test();
         if (b != 0) {
-            //progressUpdate(a + b * (lev + 0.25) / 5.0);
+            progressUpdateRender(a + b * (lev + 0.25) / 5.0);
         }
 
         // b- smooth cols, result is in fimg[lpass]
@@ -580,7 +680,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         }
         abort_test();
         if (b != 0) {
-            //progressUpdate(a + b * (lev + 0.5) / 5.0);
+            progressUpdateRender(a + b * (lev + 0.5) / 5.0);
         }
 
 
@@ -600,7 +700,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         float thold = sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / size - sigma_n_i_sq) );
 
         // uncomment to check the values of the noise[] array
-        //printf("level=%u stdev=%g noiselevel=%g\n", lev, std::sqrt(sumsq / size), noiselevel);
+        printf("width=%u level=%u stdev=%g noiselevel=%g sigma_n_i=%g\n", iwidth, lev, std::sqrt(sumsq / size), noiselevel, sigma_n_i);
 
         // sharpen
         double beta = 1.;
@@ -612,7 +712,6 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
 #pragma omp parallel for
 #endif
         for (unsigned int i = 0; i < size; ++i) {
-            abort_test_loop();
             // apply smooth threshold
             if (fimg[hpass][i] < -thold) {
                 fimg[hpass][i] += thold * denoise_amount;
@@ -632,6 +731,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         hpass = lpass;
     } // for(lev)
 
+    abort_test();
     // add the last smoothed image to the image
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -672,7 +772,7 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[2], //!< fimg[0] is the channel to p
     }
     abort_test();
     if (b != 0) {
-        //progressUpdate(a + b * 0.25);
+        progressUpdateAnalysis(a + b * 0.25);
     }
 
     // b- smooth cols, result is in fimg[lpass]
@@ -694,7 +794,7 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[2], //!< fimg[0] is the channel to p
     }
     abort_test();
     if (b != 0) {
-        //progressUpdate(a + b * 0.5);
+        progressUpdateAnalysis(a + b * 0.5);
     }
     unsigned int n = size;
     if (bimgmask) {
@@ -711,7 +811,7 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[2], //!< fimg[0] is the channel to p
         std::nth_element(&fimg[1][0], &fimg[1][n/2], &fimg[1][n]);
     }
     if (b != 0) {
-        //progressUpdate(a + b);
+        progressUpdateAnalysis(a + b);
     }
 
     return n == 0 ? 0. : fimg[1][size/2] / 0.6745;
@@ -733,6 +833,8 @@ DenoiseSharpenPlugin::render(const OFX::RenderArguments &args)
 #endif
 
     //std::cout << "render!\n";
+    progressStartRender(kPluginName" (render)");
+
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
@@ -758,7 +860,9 @@ DenoiseSharpenPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
-      //std::cout << "render! OK\n";
+    progressEndRender();
+
+    //std::cout << "render! OK\n";
 }
 
 template<int nComponents>
@@ -852,17 +956,19 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
     p.process[3] = _processA->getValueAtTime(time);
 
     // fetch parameter values
+    p.outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     p.colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
     p.startLevel = startLevelFromRenderScale(args.renderScale);
-    p.noiseLevel[0] = _ylrNoiseLevel->getValueAtTime(time);
-    p.noiseLevel[1] = _cbagNoiseLevel->getValueAtTime(time);
-    p.noiseLevel[2] = _crbbNoiseLevel->getValueAtTime(time);
-    p.noiseLevel[3] = _alphaNoiseLevel->getValueAtTime(time);
+    double noiseLevelGain = _noiseLevelGain->getValueAtTime(time);
+    p.noiseLevel[0] = noiseLevelGain * _ylrNoiseLevel->getValueAtTime(time);
+    p.noiseLevel[1] = noiseLevelGain * _cbagNoiseLevel->getValueAtTime(time);
+    p.noiseLevel[2] = noiseLevelGain * _crbbNoiseLevel->getValueAtTime(time);
+    p.noiseLevel[3] = noiseLevelGain * _alphaNoiseLevel->getValueAtTime(time);
     p.denoise_amount[0] = _ylrAmount->getValueAtTime(time);
     p.denoise_amount[1] = _cbagAmount->getValueAtTime(time);
     p.denoise_amount[2] = _crbbAmount->getValueAtTime(time);
     p.denoise_amount[3] = _alphaAmount->getValueAtTime(time);
-    p.sharpen_amount[0] = _sharpenAmount->getValueAtTime(time);
+    p.sharpen_amount[0] = p.outputMode == eOutputModeNoise ? 0. : _sharpenAmount->getValueAtTime(time);
     p.sharpen_radius = _sharpenRadius->getValueAtTime(time);
     bool sharpenLuminance = _sharpenLuminance->getValueAtTime(time);
 
@@ -1066,6 +1172,11 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
             }
 
             ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, p.premult, p.premultChannel, x, y, srcPix, p.doMasking, mask.get(), p.mix, p.maskInvert, dstPix);
+            if (p.outputMode == eOutputModeNoise && srcPix) {
+                for (int c = 0; c < nComponents; ++c) {
+                    dstPix[c] -= srcPix[c];
+                }
+            }
             // copy back original values from unprocessed channels
             if (nComponents == 1) {
                 if (!p.process[3]) {
@@ -1142,11 +1253,16 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
 
     // which plugin parameter values give identity?
 
+    if ( (OutputModeEnum)_outputMode->getValueAtTime(time) == eOutputModeNoise ) {
+        return false;
+    }
+
     if (processA && _alphaNoiseLevel->getValueAtTime(time) > 0.) {
         return false;
     }
 
     ColorModelEnum colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
+    double noiseLevelGain = _noiseLevelGain->getValueAtTime(time);
     double ylrNoiseLevel = _ylrNoiseLevel->getValueAtTime(time);
     double cbagNoiseLevel = _cbagNoiseLevel->getValueAtTime(time);
     double crbbNoiseLevel = _crbbNoiseLevel->getValueAtTime(time);
@@ -1156,7 +1272,12 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
     double crbbAmount = _crbbAmount->getValueAtTime(time);
     double alphaAmount = _alphaAmount->getValueAtTime(time);
     double sharpenAmount = _sharpenAmount->getValueAtTime(time);
-    if ( (colorModel == eColorModelRGB || colorModel == eColorModelLinearRGB) &&
+    if ( (noiseLevelGain <= 0.) &&
+         (sharpenAmount <= 0.) ) {
+        identityClip = _srcClip;
+
+        return true;
+    } else if ( (colorModel == eColorModelRGB || colorModel == eColorModelLinearRGB) &&
          (!processR || ylrNoiseLevel <= 0. || ylrAmount == 0.) &&
          (!processG || cbagNoiseLevel <= 0. || cbagAmount == 0.) &&
          (!processR || crbbNoiseLevel <= 0. || crbbAmount == 0.) &&
@@ -1235,6 +1356,27 @@ DenoiseSharpenPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _premultChanged->setValue(true);
     } else if (paramName == kParamColorModel) {
         updateLabels();
+        if (args.reason == eChangeUserEdit) {
+            _ylrNoiseLevel->setValue(0.);
+            _cbagNoiseLevel->setValue(0.);
+            _crbbNoiseLevel->setValue(0.);
+            _ylrAmount->setValue(1.);
+            _cbagAmount->setValue(1.);
+            _crbbAmount->setValue(1.);
+        }
+    } else if (paramName == kParamAnalysisLock) {
+        bool locked = _analysisLock->getValue();
+        // lock the color model
+        _colorModel->setEnabled( !locked );
+        // disable the interact
+        _btmLeft->setEnabled( !locked );
+        _size->setEnabled( !locked );
+        // lock the noise levels
+        _ylrNoiseLevel->setEnabled( !locked );
+        _cbagNoiseLevel->setEnabled( !locked );
+        _crbbNoiseLevel->setEnabled( !locked );
+        _alphaNoiseLevel->setEnabled( !locked );
+        _analyze->setEnabled( !locked );
     } else if (paramName == kParamAnalyzeNoiseLevels) {
         analyzeNoiseLevels(args);
     }
@@ -1243,9 +1385,14 @@ DenoiseSharpenPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 void
 DenoiseSharpenPlugin::analyzeNoiseLevels(const OFX::InstanceChangedArgs &args)
 {
-    //std::cout << "render!\n";
+    //std::cout << "analysis!\n";
+    assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
+    progressStartAnalysis(kPluginName" (noise analysis)");
+
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+
+    assert( !_analysisLock->getValue() );
 
 #ifdef _OPENMP
     // set the number of OpenMP threads to a reasonable value
@@ -1275,7 +1422,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const OFX::InstanceChangedArgs &args)
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
             break;
     } // switch
-    //std::cout << "render! OK\n";
+    _analysisFrame->setValue( (int)args.time );
+    progressEndAnalysis();
+    //std::cout << "analysis! OK\n";
 }
 
 template<int nComponents>
@@ -1313,8 +1462,12 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
     std::auto_ptr<const OFX::Image> src;
     std::auto_ptr<const OFX::Image> mask;
 
-    src.reset( ( _srcClip && _srcClip->isConnected() ) ?
-              _srcClip->fetchImage(time) : 0 );
+    if ( _analysisSrcClip && _analysisSrcClip->isConnected() ) {
+        src.reset( _analysisSrcClip->fetchImage(time) );
+    } else {
+        src.reset( ( _srcClip && _srcClip->isConnected() ) ?
+                  _srcClip->fetchImage(time) : 0 );
+    }
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
             ( src->getRenderScale().y != args.renderScale.y) ) {
@@ -1322,8 +1475,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    mask.reset(doMasking ? _maskClip->fetchImage(time) : 0);
+    bool doMasking = _analysisMaskClip && _analysisMaskClip->isConnected();
+    mask.reset(doMasking ? _analysisMaskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
             ( mask->getRenderScale().y != args.renderScale.y) ) {
@@ -1331,13 +1484,31 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    bool maskInvert = doMasking ? _maskInvert->getValueAtTime(time) : false;
+    bool maskInvert = false;//doMasking ? _maskInvert->getValueAtTime(time) : false;
     bool premult = _premult->getValueAtTime(time);
     int premultChannel = _premultChannel->getValueAtTime(time);
     ColorModelEnum colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
 
-    const OfxRectI& srcWindow = src->getBounds();
 
+    OfxRectD cropRect;
+    _btmLeft->getValueAtTime(time, cropRect.x1, cropRect.y1);
+    double w, h;
+    _size->getValueAtTime(time, w, h);
+    cropRect.x2 = cropRect.x1 + w;
+    cropRect.y2 = cropRect.y1 + h;
+
+    OfxRectI cropRectI;
+    cropRectI.x1 = std::ceil(cropRect.x1);
+    cropRectI.x2 = std::floor(cropRect.x2);
+    cropRectI.y1 = std::ceil(cropRect.y1);
+    cropRectI.y2 = std::floor(cropRect.x2);
+
+    OfxRectI srcWindow;
+    bool intersect = OFX::Coords::rectIntersection(src->getBounds(), cropRectI, &srcWindow);
+    if (!intersect || (srcWindow.x2 - srcWindow.x1) < 80 || (srcWindow.y2 - srcWindow.y1) < 80) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "The analysis window must be at least 80x80 pixels.");
+        throwSuiteStatusException(kOfxStatFailed);
+    }
 
     // temporary buffers: one for each channel plus 2 for processing
     unsigned int iwidth = srcWindow.x2 - srcWindow.x1;
@@ -1355,6 +1526,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
     fimgtmp = tmpPixelData + nComponents * isize;
     std::auto_ptr<OFX::ImageMemory> maskData( doMasking ? new OFX::ImageMemory(sizeof(bool) * isize, this) : NULL );
     bool* bimgmask = doMasking ? (bool*)maskData->lock() : NULL;
+
 
     // - extract the color components and convert them to the appropriate color model
     //
@@ -1481,6 +1653,12 @@ DenoiseSharpenPlugin::updateLabels()
     }
 }
 
+
+class DenoiseSharpenOverlayDescriptor
+: public DefaultEffectOverlayDescriptor<DenoiseSharpenOverlayDescriptor, RectangleInteract>
+{
+};
+
 class DenoiseSharpenPluginFactory : public OFX::PluginFactoryHelper<DenoiseSharpenPluginFactory>
 {
 public:
@@ -1537,6 +1715,7 @@ DenoiseSharpenPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    desc.setOverlayInteractDescriptor(new DenoiseSharpenOverlayDescriptor);
 
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
@@ -1577,6 +1756,25 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
     maskClip->setSupportsTiles(kSupportsTiles);
     maskClip->setIsMask(true);
+
+    ClipDescriptor *analysisSrcClip = desc.defineClip(kClipAnalysisSource);
+    analysisSrcClip->setHint(kClipAnalysisSourceHint);
+    analysisSrcClip->addSupportedComponent(ePixelComponentRGBA);
+    analysisSrcClip->addSupportedComponent(ePixelComponentRGB);
+    //analysisSrcClip->addSupportedComponent(ePixelComponentXY);
+    analysisSrcClip->addSupportedComponent(ePixelComponentAlpha);
+    analysisSrcClip->setTemporalClipAccess(false);
+    analysisSrcClip->setOptional(true);
+    analysisSrcClip->setSupportsTiles(kSupportsTiles);
+    analysisSrcClip->setIsMask(false);
+
+    ClipDescriptor *analysisMaskClip = desc.defineClip(kClipAnalysisMask);
+    analysisMaskClip->setHint(kClipAnalysisMaskHint);
+    analysisMaskClip->addSupportedComponent(ePixelComponentAlpha);
+    analysisMaskClip->setTemporalClipAccess(false);
+    analysisMaskClip->setOptional(true);
+    analysisMaskClip->setSupportsTiles(kSupportsTiles);
+    analysisMaskClip->setIsMask(true);
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
@@ -1623,6 +1821,21 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // describe plugin params
     {
+        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputMode);
+        param->setLabel(kParamOutputModeLabel);
+        param->setHint(kParamOutputModeHint);
+        param->setAnimates(false);
+        assert(param->getNOptions() == (int)eOutputModeResult);
+        param->appendOption(kParamOutputModeOptionResult, kParamOutputModeOptionResultHint);
+        assert(param->getNOptions() == (int)eOutputModeNoise);
+        param->appendOption(kParamOutputModeOptionNoise, kParamOutputModeOptionNoiseHint);
+        param->setDefault((int)eOutputModeResult);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
         OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamColorModel);
         param->setLabel(kParamColorModelLabel);
         param->setHint(kParamColorModelHint);
@@ -1642,13 +1855,128 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupSettings);
+        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupAnalysis);
         if (group) {
-            group->setLabel(kGroupSettingsLabel);
-            //group->setHint(kGroupSettingsHint);
+            group->setLabel(kGroupAnalysisLabel);
+            //group->setHint(kGroupAnalysisHint);
             group->setEnabled(true);
         }
 
+
+        // analysisLock
+        {
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAnalysisLock);
+            param->setLabel(kParamAnalysisLockLabel);
+            param->setHint(kParamAnalysisLockHint);
+            param->setDefault(false);
+            param->setEvaluateOnChange(false);
+            param->setAnimates(false);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // btmLeft
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+            param->setLabel(kParamRectangleInteractBtmLeftLabel);
+            param->setDoubleType(eDoubleTypeXYAbsolute);
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            param->setDefault(0., 0.);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+            param->setIncrement(1.);
+            param->setHint("Coordinates of the bottom left corner of the analysis rectangle. This rectangle is intersected with the AnalysisMask input, if connected.");
+            param->setDigits(0);
+            param->setEvaluateOnChange(false);
+            param->setAnimates(false);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // size
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
+            param->setLabel(kParamRectangleInteractSizeLabel);
+            param->setDoubleType(eDoubleTypeXY);
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            param->setDefault(1., 1.);
+            param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+            param->setIncrement(1.);
+            param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+            param->setHint("Width and height of the analysis rectangle. This rectangle is intersected with the AnalysisMask input, if connected.");
+            param->setIncrement(1.);
+            param->setDigits(0);
+            param->setEvaluateOnChange(false);
+            param->setAnimates(false);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        {
+            IntParamDescriptor* param = desc.defineIntParam(kParamAnalysisFrame);
+            param->setLabel(kParamAnalysisFrameLabel);
+            param->setHint(kParamAnalysisFrameHint);
+            param->setEnabled(false);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            param->setDefault(-1);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAnalyzeNoiseLevels);
+            param->setLabel(kParamAnalyzeNoiseLevelsLabel);
+            param->setHint(kParamAnalyzeNoiseLevelsHint);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    }
+
+    {
+        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupNoiseLevels);
+        if (group) {
+            group->setLabel(kGroupNoiseLevelsLabel);
+            //group->setHint(kGroupNoiseLevelsHint);
+            group->setOpen(false);
+            group->setEnabled(true);
+        }
+
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamNoiseLevelGain);
+            param->setLabel(kParamNoiseLevelGainLabel);
+            param->setHint(kParamNoiseLevelGainHint);
+            param->setRange(0, DBL_MAX);
+            param->setDisplayRange(0, 10.);
+            param->setDefault(1.);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
         {
             DoubleParamDescriptor* param = desc.defineDoubleParam(kParamYLRNoiseLevel);
             param->setLabel(kParamYLRNoiseLevelLabel);
@@ -1705,17 +2033,16 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
-        {
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAnalyzeNoiseLevels);
-            param->setLabel(kParamAnalyzeNoiseLevelsLabel);
-            param->setHint(kParamAnalyzeNoiseLevelsHint);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupAmounts);
+        if (group) {
+            group->setLabel(kGroupAmountsLabel);
+            //group->setHint(kGroupAmountsHint);
+            group->setOpen(false);
+            group->setEnabled(true);
         }
+
         {
             DoubleParamDescriptor* param = desc.defineDoubleParam(kParamYLRAmount);
             param->setLabel(kParamYLRAmountLabel);
