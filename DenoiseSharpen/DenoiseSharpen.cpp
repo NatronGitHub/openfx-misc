@@ -67,17 +67,26 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescriptionShort \
 "Denoise and/or sharpen images using wavelet-based algorithms.\n" \
 "\n" \
+"## Description\n" \
+"\n" \
 "This plugin allows the separate denoising of image channels in multiple color spaces using wavelets, using the BayesShrink algorithm, and can also sharpen the image details.\n" \
 "\n" \
 "Noise levels for each channel may be either set manually, or analyzed from the image data in each wavelet subband using the MAD (median absolute deviation) estimator.\n" \
 "Noise analysis is based on a Gaussian noise assumption. If there is speckle noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
 "The color model specifies the channels and the transforms used. Noise levels have to be re-adjusted or re-analyzed when changing the color model.\n" \
 "\n" \
-"# Basic Usage\n" \
+"## Basic Usage\n" \
 "\n" \
-"The simplest way to use this plugin is to leave the noise analysis area to the whole image, click \"Analyze Noise Levels\", and then adjust the Noise Level Gain to get the desired denoising amount.\n" \
+"For most footage, the effect works best by keeping the default Y'CbCr color model.\n" \
 "\n" \
-"If the image has many textured areas, it may be preferable to select an analysis area with flat colors."
+"The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\".\n" \
+"\n" \
+"If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only.\n" \
+"\n" \
+"To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left. You can then reset the Sharpen Amount, unless you actually want to enhance the contrast of your denoised footage.\n" \
+"\n" \
+"You can also check what was actually removed from the original image by selecting the \"Noise\" Output mode (instead of \"Result\"). If too many image details are visible in the noise, noise parameters may need to be adjusted.\n"
+
 
 #ifdef _OPENMP
 #define kPluginDescription kPluginDescriptionShort "\nThis plugin was compiled with OpenMP support."
@@ -97,8 +106,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
+#define kClipSourceHint "The footage to be denoised. If nothing is connected to the AnalysisSource input, this is also used for noise analysis."
+#define kClipMaskHint "An optional image to use as a mask. By default, the effect is limited to the non-black areas of the mask."
 #define kClipAnalysisSource "AnalysisSource"
-#define kClipAnalysisSourceHint "An optional noise source. If connected, this is used instead of the Source input for the noise analysis. This is used to analyse noise from some footage by apply it on another footage."
+#define kClipAnalysisSourceHint "An optional noise source. If connected, this is used instead of the Source input for the noise analysis. This is used to analyse noise from some footage by apply it on another footage, in case the footage to be denoised does not have enough flat areas."
 #define kClipAnalysisMask "AnalysisMask"
 #define kClipAnalysisMaskHint "An optional mask for the analysis area. This mask is intersected with the Analysis Rectangle. Non-zero pixels are taken into account in the noise analysis phase."
 
@@ -166,7 +177,7 @@ enum ColorModelEnum {
 
 #define kNoiseLevelBias (noise[0]) // on a signal with Gaussian additive noise with sigma = 1, the stddev measured in HH1 is 0.8002. We correct this bias so that the displayed Noise levels correspond to the standard deviation of the additive Gaussian noise. This value can also be found in the dcraw source code
 
-#define kParamAmountHint "The amount of denoising to apply to the specified channel. 0 means no denoising. Default is 1."
+#define kParamAmountHint "The amount of denoising to apply to the specified channel. 0 means no denoising, between 0 and 1 does a soft thresholding of below the thresholds, thus keeping some noise, and 1 applies the threshold strictly and removes everything below the thresholds. This should be used only if you want to keep some noise, for example for noise matching. Remember that the thresholds ar multiplied by the per-frequency gain and the Noise Level Gain first."
 #define kGroupAnalysis "analysis"
 #define kGroupAnalysisLabel "Analysis"
 #define kParamAnalysisLock "analysisLock"
@@ -217,19 +228,19 @@ enum ColorModelEnum {
 #define kParamEnableHighLabel "Denoise High Frequencies"
 #define kParamEnableHighHint "Check to enable the high frequency noise level thresholds."
 #define kParamGainHighLabel "High Gain"
-#define kParamGainHighHint "Gain to apply to the high frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied."
+#define kParamGainHighHint "Gain to apply to the high frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the Noise Level Gain."
 #define kParamEnableMediumLabel "Denoise Medium Frequencies"
 #define kParamEnableMediumHint "Check to enable the medium frequency noise level thresholds."
 #define kParamGainMediumLabel "Medium Gain"
-#define kParamGainMediumHint "Gain to apply to the medium frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied."
+#define kParamGainMediumHint "Gain to apply to the medium frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the Noise Level Gain."
 #define kParamEnableLowLabel "Denoise Low Frequencies"
 #define kParamEnableLowHint "Check to enable the low frequency noise level thresholds."
 #define kParamGainLowLabel "Low Gain"
-#define kParamGainLowHint "Gain to apply to the low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied."
+#define kParamGainLowHint "Gain to apply to the low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the Noise Level Gain."
 #define kParamEnableVeryLowLabel "Denoise Very Low Frequencies"
 #define kParamEnableVeryLowHint "Check to enable the very low frequency noise level thresholds."
 #define kParamGainVeryLowLabel "Very Low Gain"
-#define kParamGainVeryLowHint "Gain to apply to the very low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied."
+#define kParamGainVeryLowHint "Gain to apply to the very low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the Noise Level Gain."
 
 #define kGroupAmounts "amounts"
 #define kGroupAmountsLabel "Correction Amounts"
@@ -278,8 +289,8 @@ enum ColorModelEnum {
 #define progressUpdateAnalysis(x) progressUpdate(x)
 #define progressEndAnalysis() progressEnd()
 #else
-#define progressStartAnalysis(x) ((void)0)
-#define progressUpdateAnalysis(x) ((void)0)
+#define progressStartAnalysis(x) unused(x)
+#define progressUpdateAnalysis(x) unused(x)
 #define progressEndAnalysis() ((void)0)
 #endif
 
@@ -288,8 +299,8 @@ enum ColorModelEnum {
 #define progressUpdateRender(x) progressUpdate(x)
 #define progressEndRender() progressEnd()
 #else
-#define progressStartRender(x) ((void)0)
-#define progressUpdateRender(x) ((void)0)
+#define progressStartRender(x) unused(x)
+#define progressUpdateRender(x) unused(x)
 #define progressEndRender() ((void)0)
 #endif
 
@@ -307,6 +318,8 @@ static const float noise[] = { 0.8002,0.2735,0.1202,0.0585,0.0291,0.0152,0.0080,
 #define abort_test_loop() abort_test()
 #endif
 
+template<typename T>
+inline void unused(const T&) {}
 
 static
 const char*
@@ -1903,6 +1916,7 @@ DenoiseSharpenPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    desc.setDescriptionIsMarkdown(true);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -1940,7 +1954,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-
+    srcClip->setHint(kClipSourceHint);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     //srcClip->addSupportedComponent(ePixelComponentXY);
@@ -1958,6 +1972,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     dstClip->setSupportsTiles(kSupportsTiles);
 
     ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
+    maskClip->setHint(kClipMaskHint);
     maskClip->addSupportedComponent(ePixelComponentAlpha);
     maskClip->setTemporalClipAccess(false);
     if (context != eContextPaint) {
