@@ -559,7 +559,7 @@ CImgExpressionPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setPluginGrouping(kPluginGrouping);
     if (desc.getPropertySet().propGetDimension(kNatronOfxPropDescriptionIsMarkdown, false)) {
         desc.setPluginDescription(kPluginDescriptionMarkdown, false);
-        desc.getPropertySet().propSetInt(kNatronOfxPropDescriptionIsMarkdown, 1);
+        desc.setDescriptionIsMarkdown(true);
     } else if ( OFX::getImageEffectHostDescription()->isNatron &&
          ( OFX::getImageEffectHostDescription()->versionMajor >= 2) ) {
         desc.setPluginDescription(kPluginDescriptionUnsafe);
