@@ -79,13 +79,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "\n" \
 "For most footage, the effect works best by keeping the default Y'CbCr color model.\n" \
 "\n" \
-"The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\".\n" \
+"The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, it is best to check \"Lock Noise Analysis\" in order to avoid modifying the essential parameters by mistake.\n" \
 "\n" \
-"If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only.\n" \
+"If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate.\n" \
+"\n" \
+"If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, it is preferable to disable medium, low and very low frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
 "\n" \
 "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left. You can then reset the Sharpen Amount, unless you actually want to enhance the contrast of your denoised footage.\n" \
 "\n" \
-"You can also check what was actually removed from the original image by selecting the \"Noise\" Output mode (instead of \"Result\"). If too many image details are visible in the noise, noise parameters may need to be adjusted.\n"
+"You can also check what was actually removed from the original image by selecting the \"Noise\" Output mode (instead of \"Result\"). If too many image details are visible in the noise, noise parameters may need to be tuned.\n"
 
 
 #ifdef _OPENMP
@@ -173,11 +175,10 @@ enum ColorModelEnum {
 };
 
 #define kParamNoiseLevelHint "Adjusts the noise variance of the selected channel for the given noise frequency. May be estimated for image data by pressing the \"Analyze Noise\" button."
-#define kParamNoiseLevelMax 0.3 // noise level is at most 1/sqrt(12) (stddev of a uniform distribution between 0 and 1)
+#define kParamNoiseLevelMax 0.05 // noise level is at most 1/sqrt(12) ~=0.29 (stddev of a uniform distribution between 0 and 1)
 
 #define kNoiseLevelBias (noise[0]) // on a signal with Gaussian additive noise with sigma = 1, the stddev measured in HH1 is 0.8002. We correct this bias so that the displayed Noise levels correspond to the standard deviation of the additive Gaussian noise. This value can also be found in the dcraw source code
 
-#define kParamAmountHint "The amount of denoising to apply to the specified channel. 0 means no denoising, between 0 and 1 does a soft thresholding of below the thresholds, thus keeping some noise, and 1 applies the threshold strictly and removes everything below the thresholds. This should be used only if you want to keep some noise, for example for noise matching. Remember that the thresholds ar multiplied by the per-frequency gain and the Noise Level Gain first."
 #define kGroupAnalysis "analysis"
 #define kGroupAnalysisLabel "Analysis"
 #define kParamAnalysisLock "analysisLock"
@@ -219,7 +220,7 @@ enum ColorModelEnum {
 
 #define kParamNoiseLevelGain "noiseLevelGain"
 #define kParamNoiseLevelGainLabel "Noise Level Gain"
-#define kParamNoiseLevelGainHint "Global gain to apply to the noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the per-frequency gain."
+#define kParamNoiseLevelGainHint "Global gain to apply to the noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the per-frequency gain and the channel gain."
 
 #define kGroupTuning "freqTuning"
 #define kGroupTuningLabel "Frequency Tuning"
@@ -228,22 +229,41 @@ enum ColorModelEnum {
 #define kParamEnableHighLabel "Denoise High Frequencies"
 #define kParamEnableHighHint "Check to enable the high frequency noise level thresholds."
 #define kParamGainHighLabel "High Gain"
-#define kParamGainHighHint "Gain to apply to the high frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the Noise Level Gain."
+#define kParamGainHighHint "Gain to apply to the high frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the Noise Level Gain."
 #define kParamEnableMediumLabel "Denoise Medium Frequencies"
 #define kParamEnableMediumHint "Check to enable the medium frequency noise level thresholds."
 #define kParamGainMediumLabel "Medium Gain"
-#define kParamGainMediumHint "Gain to apply to the medium frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the Noise Level Gain."
+#define kParamGainMediumHint "Gain to apply to the medium frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the Noise Level Gain."
 #define kParamEnableLowLabel "Denoise Low Frequencies"
 #define kParamEnableLowHint "Check to enable the low frequency noise level thresholds."
 #define kParamGainLowLabel "Low Gain"
-#define kParamGainLowHint "Gain to apply to the low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the Noise Level Gain."
+#define kParamGainLowHint "Gain to apply to the low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the Noise Level Gain."
 #define kParamEnableVeryLowLabel "Denoise Very Low Frequencies"
 #define kParamEnableVeryLowHint "Check to enable the very low frequency noise level thresholds."
 #define kParamGainVeryLowLabel "Very Low Gain"
-#define kParamGainVeryLowHint "Gain to apply to the very low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the Noise Level Gain."
+#define kParamGainVeryLowHint "Gain to apply to the very low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the global Noise Level Gain."
 
-#define kGroupAmounts "amounts"
-#define kGroupAmountsLabel "Correction Amounts"
+#define kGroupChannelTuning "channelTuning"
+#define kGroupChannelTuningLabel "Channel Tuning"
+#define kParamChannelGainHint "Gain to apply to the thresholds for this channel. 0 means no denoising, 1 means use the estimated thresholds multiplied by the per-frequency gain and the global Noise Level Gain."
+#define kParamYLRGain "ylrGain"
+#define kParamYLRGainLabel "Y/L/R Gain"
+#define kParamYGainLabel "Y Gain"
+#define kParamLGainLabel "L Gain"
+#define kParamRGainLabel "R Gain"
+#define kParamCbAGGain "cbagGain"
+#define kParamCbAGGainLabel "Cb/A/G Gain"
+#define kParamCbGainLabel "Cb Gain"
+#define kParamAGainLabel "A Gain"
+#define kParamGGainLabel "G Gain"
+#define kParamCrBBGain "crbbGain"
+#define kParamCrBBGainLabel "Cr/B/B Gain"
+#define kParamCrGainLabel "Cr Gain"
+#define kParamBGainLabel "B Gain"
+#define kParamAlphaGain "alphaGain"
+#define kParamAlphaGainLabel "Alpha Gain"
+
+#define kParamAmountHint "The amount of denoising to apply to the specified channel. 0 means no denoising, between 0 and 1 does a soft thresholding of below the thresholds, thus keeping some noise, and 1 applies the threshold strictly and removes everything below the thresholds. This should be used only if you want to keep some noise, for example for noise matching. Remember that the thresholds ar multiplied by the per-frequency gain, the channel gain, and the Noise Level Gain first."
 #define kParamYLRAmount "ylrAmount"
 #define kParamYLRAmountLabel "Y/L/R Amount"
 #define kParamYAmountLabel "Y Amount"
@@ -463,6 +483,136 @@ channelLabel(ColorModelEnum e, unsigned c, unsigned f)
     return std::string();
 }
 
+static
+const char*
+amountLabel(ColorModelEnum e, unsigned c)
+{
+    if (c == 3) {
+        return kParamAlphaAmountLabel;
+    }
+    switch (e) {
+        case eColorModelYCbCr:
+            switch (c) {
+                case 0:
+                    return kParamYAmountLabel;
+                case 1:
+                    return kParamCbAmountLabel;
+                case 2:
+                    return kParamCrAmountLabel;
+                default:
+                    break;
+            }
+            break;
+
+        case eColorModelLab:
+            switch (c) {
+                case 0:
+                    return kParamLAmountLabel;
+                case 1:
+                    return kParamAAmountLabel;
+                case 2:
+                    return kParamBAmountLabel;
+                default:
+                    break;
+            }
+            break;
+
+        case eColorModelRGB:
+        case eColorModelLinearRGB:
+            switch (c) {
+                case 0:
+                    return kParamRAmountLabel;
+                case 1:
+                    return kParamGAmountLabel;
+                case 2:
+                    return kParamBAmountLabel;
+                default:
+                    break;
+            }
+            break;
+
+        case eColorModelAny:
+            switch (c) {
+                case 0:
+                    return kParamYLRAmountLabel;
+                case 1:
+                    return kParamCbAGAmountLabel;
+                case 2:
+                    return kParamCrBBAmountLabel;
+                default:
+                    break;
+            }
+            break;
+    }
+    assert(false);
+    return "";
+}
+
+static
+const char*
+channelGainLabel(ColorModelEnum e, unsigned c)
+{
+    if (c == 3) {
+        return kParamAlphaGainLabel;
+    }
+    switch (e) {
+        case eColorModelYCbCr:
+            switch (c) {
+                case 0:
+                    return kParamYGainLabel;
+                case 1:
+                    return kParamCbGainLabel;
+                case 2:
+                    return kParamCrGainLabel;
+                default:
+                    break;
+            }
+            break;
+
+        case eColorModelLab:
+            switch (c) {
+                case 0:
+                    return kParamLGainLabel;
+                case 1:
+                    return kParamAGainLabel;
+                case 2:
+                    return kParamBGainLabel;
+                default:
+                    break;
+            }
+            break;
+
+        case eColorModelRGB:
+        case eColorModelLinearRGB:
+            switch (c) {
+                case 0:
+                    return kParamRGainLabel;
+                case 1:
+                    return kParamGGainLabel;
+                case 2:
+                    return kParamBGainLabel;
+                default:
+                    break;
+            }
+            break;
+
+        case eColorModelAny:
+            switch (c) {
+                case 0:
+                    return kParamYLRGainLabel;
+                case 1:
+                    return kParamCbAGGainLabel;
+                case 2:
+                    return kParamCrBBGainLabel;
+                default:
+                    break;
+            }
+            break;
+    }
+    assert(false);
+    return "";
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class DenoiseSharpenPlugin
@@ -541,15 +691,20 @@ public:
             }
         }
 
-        // tuning
         _noiseLevelGain = fetchDoubleParam(kParamNoiseLevelGain);
+
+        // frequency tuning
         for (unsigned int f = 0; f < 4; ++f) {
                 _enableFreq[f] = fetchBooleanParam(enableParam(f));
                 _gainFreq[f] = fetchDoubleParam(gainParam(f));
         }
 
-        // amount
+        // channel tuning
         for (unsigned c = 0; c < 4; ++c) {
+            _channelGain[c] = fetchDoubleParam((c == 0 ? kParamYLRGain :
+                                           (c == 1 ? kParamCbAGGain :
+                                            (c == 2 ? kParamCrBBGain :
+                                             kParamAlphaGain))));
             _amount[c] = fetchDoubleParam((c == 0 ? kParamYLRAmount :
                                            (c == 1 ? kParamCbAGAmount :
                                             (c == 2 ? kParamCrBBAmount :
@@ -566,6 +721,7 @@ public:
 
         // update the channel labels
         updateLabels();
+        updateSecret();
         analysisLock();
     }
 
@@ -602,9 +758,10 @@ private:
 
     template <class PIX, int nComponents, int maxValue>
     void analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedArgs &args);
-    
 
     void updateLabels();
+
+    void updateSecret();
 
     void wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with intensities between 0. and 1., of size iwidth*iheight, fimg[1] and fimg[2] are working space images of the same size
                          unsigned int iwidth, //!< width of the image
@@ -704,6 +861,7 @@ private:
     DoubleParam* _noiseLevelGain;
     BooleanParam* _enableFreq[4];
     DoubleParam* _gainFreq[4];
+    DoubleParam* _channelGain[4];
     DoubleParam* _amount[4];
     DoubleParam* _sharpenAmount;
     DoubleParam* _sharpenRadius;
@@ -1207,8 +1365,9 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
     }
 
     for (unsigned int c = 0; c < 4; ++c) {
+        double channelGain = _channelGain[c]->getValueAtTime(time);
         for (unsigned int f = 0; f < 4; ++f) {
-            p.noiseLevel[c][f] = gainFreq[f] * _noiseLevel[c][f]->getValueAtTime(time);
+            p.noiseLevel[c][f] = channelGain * gainFreq[f] * _noiseLevel[c][f]->getValueAtTime(time);
         }
         p.denoise_amount[c] = _amount[c]->getValueAtTime(time);
     }
@@ -1605,7 +1764,12 @@ void
 DenoiseSharpenPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                                        const std::string &paramName)
 {
-    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (paramName == kParamProcessR ||
+          paramName == kParamProcessG ||
+          paramName == kParamProcessB ||
+          paramName == kParamProcessA)  && (args.reason == OFX::eChangeUserEdit) ) {
+        updateSecret();
+    } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     } else if (paramName == kParamColorModel) {
         updateLabels();
@@ -1862,19 +2026,41 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
     }
 }
 
-
-
 void
 DenoiseSharpenPlugin::updateLabels()
 {
     ColorModelEnum colorModel = (ColorModelEnum)_colorModel->getValue();
-    for (unsigned f = 0; f < 4; ++f) {
-        for (unsigned c = 0; c < 4; ++c) {
+    for (unsigned c = 0; c < 4; ++c) {
+        for (unsigned f = 0; f < 4; ++f) {
             _noiseLevel[c][f]->setLabel(channelLabel(colorModel, c, f));
         }
+        _channelGain[c]->setLabel(channelGainLabel(colorModel, c));
+        _amount[c]->setLabel(amountLabel(colorModel, c));
     }
 }
 
+void
+DenoiseSharpenPlugin::updateSecret()
+{
+    bool process[4];
+    process[0] = _processR->getValue();
+    process[1] = _processG->getValue();
+    process[2] = _processB->getValue();
+    process[3] = _processA->getValue();
+
+    ColorModelEnum colorModel = (ColorModelEnum)_colorModel->getValue();
+    if (colorModel == eColorModelYCbCr || colorModel == eColorModelLab) {
+        bool processColor = process[0] || process[1] || process[2];
+        process[0] = process[1] = process[2] = processColor;
+    }
+    for (unsigned c = 0; c < 4; ++c) {
+        for (unsigned f = 0; f < 4; ++f) {
+            _noiseLevel[c][f]->setIsSecret(!process[c]);
+        }
+        _channelGain[c]->setIsSecret(!process[c]);
+        _amount[c]->setIsSecret(!process[c]);
+    }
+}
 
 class DenoiseSharpenOverlayDescriptor
 : public DefaultEffectOverlayDescriptor<DenoiseSharpenOverlayDescriptor, RectangleInteract>
@@ -2290,72 +2476,50 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupAmounts);
+        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupChannelTuning);
         if (group) {
-            group->setLabel(kGroupAmountsLabel);
-            //group->setHint(kGroupAmountsHint);
+            group->setLabel(kGroupChannelTuningLabel);
+            //group->setHint(kGroupChannelTuningHint);
             group->setOpen(false);
             group->setEnabled(true);
         }
 
-        {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamYLRAmount);
-            param->setLabel(kParamYLRAmountLabel);
-            param->setHint(kParamAmountHint);
-            param->setRange(0, 1.);
-            param->setDisplayRange(0, 1.);
-            param->setDefault(1.);
-            param->setAnimates(true);
-            if (group) {
-                param->setParent(*group);
+        for (unsigned c = 0; c < 4; ++c) {
+            {
+                DoubleParamDescriptor* param = desc.defineDoubleParam(c == 0 ? kParamYLRGain :
+                                                                      (c == 1 ? kParamCbAGGain :
+                                                                       (c == 2 ? kParamCrBBGain :
+                                                                        kParamAlphaGain)));
+                param->setLabel( channelGainLabel(eColorModelAny, c) );
+                param->setHint(kParamChannelGainHint);
+                param->setRange(0, DBL_MAX);
+                param->setDisplayRange(0, 10.);
+                param->setDefault(1.);
+                param->setAnimates(true);
+                if (group) {
+                    param->setParent(*group);
+                }
+                if (page) {
+                    page->addChild(*param);
+                }
             }
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCbAGAmount);
-            param->setLabel(kParamCbAGAmountLabel);
-            param->setHint(kParamAmountHint);
-            param->setRange(0, 1.);
-            param->setDisplayRange(0, 1.);
-            param->setDefault(1.);
-            param->setAnimates(true);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCrBBAmount);
-            param->setLabel(kParamCrBBAmountLabel);
-            param->setHint(kParamAmountHint);
-            param->setRange(0, 1.);
-            param->setDisplayRange(0, 1.);
-            param->setDefault(1.);
-            param->setAnimates(true);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAlphaAmount);
-            param->setLabel(kParamAlphaAmountLabel);
-            param->setHint(kParamAmountHint);
-            param->setRange(0, 1.);
-            param->setDisplayRange(0, 1.);
-            param->setDefault(1.);
-            param->setAnimates(true);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
+            {
+                DoubleParamDescriptor* param = desc.defineDoubleParam(c == 0 ? kParamYLRAmount :
+                                                                      (c == 1 ? kParamCbAGAmount :
+                                                                       (c == 2 ? kParamCrBBAmount :
+                                                                        kParamAlphaAmount)));
+                param->setLabel( amountLabel(eColorModelAny, c) );
+                param->setHint(kParamAmountHint);
+                param->setRange(0, 1.);
+                param->setDisplayRange(0, 1.);
+                param->setDefault(1.);
+                param->setAnimates(true);
+                if (group) {
+                    param->setParent(*group);
+                }
+                if (page) {
+                    page->addChild(*param);
+                }
             }
         }
     }
