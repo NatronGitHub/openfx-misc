@@ -1201,13 +1201,16 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
         double sigma_fullres = sigma_this / noise[lev];
         if (noiselevel_prev_fullres <= 0.) {
             noiselevels[lev] = sigma_fullres;
+            noiselevel_prev_fullres = sigma_fullres;
         } else if (sigma_fullres > noiselevel_prev_fullres) {
             // subtract the contribution from previous levels
             noiselevels[lev] = std::sqrt(sigma_fullres * sigma_fullres - noiselevel_prev_fullres * noiselevel_prev_fullres);
+            noiselevel_prev_fullres = sigma_fullres;
         } else {
             noiselevels[lev] = 0.;
+            // cumulated noiselevel is unchanged
+            //noiselevel_prev_fullres = noiselevel_prev_fullres;
         }
-        noiselevel_prev_fullres = sigma_fullres;
         hpass = lpass;
     }
 }
