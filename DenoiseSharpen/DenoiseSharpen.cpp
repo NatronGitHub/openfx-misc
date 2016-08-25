@@ -1142,7 +1142,7 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
         for (unsigned int row = 0; row < iheight; ++row) {
             float* temp = new float[iwidth];
             abort_test_loop();
-            hat_transform (temp, fimg[hpass] + row * iwidth, 1, iwidth, 1);
+            hat_transform (temp, fimg[hpass] + row * iwidth, 1, iwidth, 1 << lev);
             for (unsigned int col = 0; col < iwidth; ++col) {
                 unsigned int i = row * iwidth + col;
                 fimg[lpass][i] = temp[col] * 0.25;
@@ -1155,14 +1155,14 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
         }
 
         // b- smooth cols, result is in fimg[lpass]
-        // compute HH1
+        // compute HHlev
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
         for (unsigned int col = 0; col < iwidth; ++col) {
             float* temp = new float[iheight];
             abort_test_loop();
-            hat_transform (temp, fimg[lpass] + col, iwidth, iheight, 1);
+            hat_transform (temp, fimg[lpass] + col, iwidth, iheight, 1 << lev);
             for (unsigned int row = 0; row < iheight; ++row) {
                 unsigned int i = row * iwidth + col;
                 fimg[lpass][i] = temp[row] * 0.25;
