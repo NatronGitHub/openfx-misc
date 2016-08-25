@@ -23,7 +23,22 @@
 /*
  TODO:
  - add "Luminance Blend [0.7]" and "Chrominance Blend [1.0]" settings to YCbCr and Lab, which is like "mix", but only on luminance or chrominance.
- - add possibility to save/load noise settings
+ - edge-aware version
+
+ Notes on edge-aware version:
+
+   - multiply side weights (which are 1 for now) by exp(-||c_i(p)-c_i(q)||^2/(2sigma_r^2) and normalize the total weight
+   - can be color or luminance difference
+
+ - Hanika et al. test several values of sigma_r and
+
+ - In the context of denoising by bilateral filtering,
+ Liu et al. [41] show that adapting the range parameter σr to estimates of the local noise level yields
+ more satisfying results. The authors recommend a linear dependence:
+ σ_r = 1.95 σ_n, where σ_n is the local noise level estimate.
+ [41]  C. Liu, W. T. Freeman, R. Szeliski, and S. Kang, “Noise estimation from a single image,” in Proceedings of the Conference on IEEE Computer Vision and Pattern Recognition, volume 1, pp. 901–908, 2006.
+ 
+ - as an estimate of sigma_n, we can use the
  */
 
 #ifdef _OPENMP
@@ -174,10 +189,9 @@ enum ColorModelEnum {
     eColorModelAny, // used for channelLabel()
 };
 
-#define kParamNoiseLevelHint "Adjusts the noise variance of the selected channel for the given noise frequency. May be estimated for image data by pressing the \"Analyze Noise\" button."
-#define kParamNoiseLevelMax 0.05 // noise level is at most 1/sqrt(12) ~=0.29 (stddev of a uniform distribution between 0 and 1)
-
-#define kNoiseLevelBias (noise[0]) // on a signal with Gaussian additive noise with sigma = 1, the stddev measured in HH1 is 0.8002. We correct this bias so that the displayed Noise levels correspond to the standard deviation of the additive Gaussian noise. This value can also be found in the dcraw source code
+#define kParamB3 "useB3Spline"
+#define kParamB3Label "B3 Spline Interpolation (experimental)"
+#define kParamB3Hint "Use a 5x5 filter based on B3 spline interpolation rather than a 3x3 Lagrange linear filter. Analysis must be re-run after changing this setting. Please test this setting."
 
 #define kGroupAnalysis "analysis"
 #define kGroupAnalysisLabel "Analysis"
@@ -190,6 +204,8 @@ enum ColorModelEnum {
 
 #define kGroupNoiseLevels "noiseLevels"
 #define kGroupNoiseLevelsLabel "Noise Levels"
+#define kParamNoiseLevelHint "Adjusts the noise variance of the selected channel for the given noise frequency. May be estimated for image data by pressing the \"Analyze Noise\" button."
+#define kParamNoiseLevelMax 0.05 // noise level is at most 1/sqrt(12) ~=0.29 (stddev of a uniform distribution between 0 and 1)
 #define kParamYLRNoiseLevel "ylrNoiseLevel"
 #define kParamYLRNoiseLevelLabel "Y/L/R Level"
 #define kParamYNoiseLevelLabel "Y Level"
@@ -326,7 +342,26 @@ enum ColorModelEnum {
 
 // those are the noise levels on HHi subands that correspond to a
 // Gaussian noise, with the dcraw "a trous" wavelets.
-static const float noise[] = { 0.8002,0.2735,0.1202,0.0585,0.0291,0.0152,0.0080,0.0044 };
+// dcraw's version:
+//static const float noise[] = { 0.8002,   0.2735,   0.1202,   0.0585,    0.0291,    0.0152,    0.0080,     0.0044 };
+// my version (use a NoiseCImg with sigma=1 on input, and uncomment the printf below to get stdev
+//static const float noise[] = { 0.800519, 0.272892, 0.119716, 0.0577944, 0.0285969, 0.0143022, 0.00723830, 0.00372276 };
+//static const float noise[] = { 0.800635, 0.272677, 0.119736, 0.0578772, 0.0288094, 0.0143987, 0.00715343, 0.00360457 };
+//static const float noise[] = { 0.800487, 0.272707, 0.11954,  0.0575443, 0.0285203, 0.0142214, 0.00711241, 0.00362163 };
+//static const float noise[] = { 0.800539, 0.273004, 0.119987, 0.0578018, 0.0285823, 0.0143751, 0.00710835, 0.00360699 };
+//static const float noise[] = { 0.800521, 0.272831, 0.119881, 0.0578049, 0.0287941, 0.0144411, 0.00739661, 0.00370236 };
+//static const float noise[] = { 0.800543, 0.272880, 0.119764, 0.0577759, 0.0285594, 0.0143134, 0.00717619, 0.00366561 };
+//static const float noise[] = { 0.800370, 0.272859, 0.119750, 0.0577506, 0.0285429, 0.0144341, 0.00733049, 0.00362141 };
+static const float noise[] = { 0.8005,   0.2729,   0.1197,   0.0578,    0.0286,    0.0144,    0.0073,     0.0037 };
+
+// for B3 Splines, the noise levels are different
+//static const float noise_b3[] = { 0.890983, 0.200605, 0.0855252, 0.0412078, 0.0204200, 0.0104461, 0.00657528, 0.00447530 };
+//static const float noise_b3[] = { 0.890774, 0.200587, 0.0855374, 0.0411216, 0.0205889, 0.0104974, 0.00661727, 0.00445607 };
+//static const float noise_b3[] = { 0.890663, 0.200599, 0.0854052, 0.0412852, 0.0207739, 0.0104784, 0.00634701, 0.00447869  };
+//static const float noise_b3[] = { 0.890611, 0.200791, 0.0856202, 0.0412572, 0.0206385, 0.0103060, 0.00653794, 0.00458579  };
+//static const float noise_b3[] = { 0.890800, 0.200619, 0.0856033, 0.0412239, 0.0206324, 0.0104488, 0.00664716, 0.00440302  };
+//static const float noise_b3[] = { 0.890912, 0.200739, 0.0856778, 0.0412566, 0.0205922, 0.0103516, 0.00650336, 0.00445504  };
+static const float noise_b3[] = { 0.8908,   0.2007,   0.0855,    0.0412,    0.0206,    0.0104,    0.0065,     0.0045  };
 
 #ifdef _OPENMP
 #define abort_test() if (!omp_get_thread_num() && abort()) { OFX::throwSuiteStatusException(kOfxStatFailed); }
@@ -719,6 +754,8 @@ public:
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
 
+        _b3 = fetchBooleanParam(kParamB3);
+
         // update the channel labels
         updateLabels();
         updateSecret();
@@ -766,6 +803,7 @@ private:
     void wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with intensities between 0. and 1., of size iwidth*iheight, fimg[1] and fimg[2] are working space images of the same size
                          unsigned int iwidth, //!< width of the image
                          unsigned int iheight, //!< height of the image
+                         bool b3,
                          const double noiselevels[4], //!< noise levels for high/medium/low/very low frequencies
                          double denoise_amount, //!< amount parameter
                          double sharpen_amount, //!< constrast boost amount
@@ -778,6 +816,7 @@ private:
                    bool *bimgmask,
                    unsigned int iwidth, //!< width of the image
                    unsigned int iheight, //!< height of the image
+                   bool b3,
                    double noiselevels[4], //!< output: the sigma for each frequency
                    float a, //!< progress amount at start
                    float b); //!< progress increment
@@ -787,6 +826,7 @@ private:
         bool locked = _analysisLock->getValue();
         // lock the color model
         _colorModel->setEnabled( !locked );
+        _b3->setEnabled( !locked );
         // disable the interact
         _btmLeft->setEnabled( !locked );
         _size->setEnabled( !locked );
@@ -809,6 +849,7 @@ private:
         double mix;
         OutputModeEnum outputMode;
         ColorModelEnum colorModel;
+        bool b3;
         int startLevel;
         bool process[4];
         double noiseLevel[4][4]; // first index: channel second index: frequency
@@ -824,6 +865,7 @@ private:
         , premultChannel(3)
         , mix(1.)
         , colorModel(eColorModelYCbCr)
+        , b3(false)
         , startLevel(0)
         , sharpen_radius(0.5)
         {
@@ -872,6 +914,7 @@ private:
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
     OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _b3;
 };
 
 // compute the maximum level used in wavelet_denoise (not the number of levels)
@@ -889,7 +932,7 @@ startLevelFromRenderScale(const OfxPointD& renderScale)
 
 // functions hat_transform and wavelet_denoise are from LibRaw 0.17.2 (LGPL 2.1) with local modifications.
 
-// h = (0.25,0.5,0.25) linear Lagrange interpolation, with some hocus-pocus at the edges.
+// h = (0.25,0.5,0.25) linear Lagrange interpolation, with mirroring at the edges.
 // could be made edge-aware, maybe?
 // - https://www.darktable.org/wp-content/uploads/2011/11/hdl11_talk.pdf
 // - https://jo.dreggn.org/home/2011_atrous.pdf
@@ -898,19 +941,67 @@ startLevelFromRenderScale(const OfxPointD& renderScale)
 // where dist2 is the squared color distance with the center, and sigma_r = 0.1
 static
 void
-hat_transform (float *temp, //!< output vector
+hat_transform_linear (float *temp, //!< output vector
                const float *base, //!< input vector
                int st, //!< input stride (1 for line, iwidth for column)
                int size, //!< vector size
                int sc) //!< scale
 {
+    assert(sc - 1 + sc < size);
     int i;
-    for (i=0; i < sc; i++)
-        temp[i] = 2*base[st*i] + base[st*(sc-i)] + base[st*(i+sc)];
-    for (; i+sc < size; i++)
-        temp[i] = 2*base[st*i] + base[st*(i-sc)] + base[st*(i+sc)];
-    for (; i < size; i++)
-        temp[i] = 2*base[st*i] + base[st*(i-sc)] + base[st*(2*size-2-(i+sc))];
+    for (i=0; i < sc; ++i) {
+        temp[i] = (2*base[st*i] + base[st*(sc-i)] + base[st*(i+sc)])/4;
+    }
+    for (; i+sc < size; ++i) {
+        temp[i] = (2*base[st*i] + base[st*(i-sc)] + base[st*(i+sc)])/4;
+    }
+    for (; i < size; ++i) {
+        temp[i] = (2*base[st*i] + base[st*(i-sc)] + base[st*(2*size-2-(i+sc))])/4;
+    }
+}
+
+// h = (1/16, 1/4, 3/8, 1/4, 1/16) (Murtagh F.:  Multiscale transform methods in data analysis)
+static
+void
+hat_transform_b3 (float *temp, //!< output vector
+               const float *base, //!< input vector
+               int st, //!< input stride (1 for line, iwidth for column)
+               int size, //!< vector size
+               int sc) //!< scale
+{
+    assert(2* sc - 1 + 2 * sc < size);
+    int i;
+    for (i=0; i < sc; ++i) {
+        temp[i] = (6*base[st*i] + 4*base[st*(sc-i)] + 4*base[st*(i+sc)] + 1*base[st*(2*sc-i)] + 1*base[st*(i+2*sc)])/16;
+    }
+    for (; i < 2*sc; ++i) {
+        temp[i] = (6*base[st*i] + 4*base[st*(i-sc)] + 4*base[st*(i+sc)] + 1*base[st*(2*sc-i)] + 1*base[st*(i+2*sc)])/16;
+    }
+    for (; i + 2*sc < size; ++i) {
+        temp[i] = (6*base[st*i] + 4*base[st*(i-sc)] + 4*base[st*(i+sc)] + 1*base[st*(i-2*sc)] + 1*base[st*(i+2*sc)])/16;
+    }
+    for (; i + sc < size; ++i) {
+        temp[i] = (6*base[st*i] + 4*base[st*(i-sc)] + 4*base[st*(i+sc)] + 1*base[st*(i-2*sc)] + 1*base[st*(2*size-2-(i+2*sc))])/16;
+    }
+    for (; i < size; ++i) {
+        temp[i] = (6*base[st*i] + 4*base[st*(i-sc)] + 4*base[st*(2*size-2-(i+sc))] + 1*base[st*(2*sc-i)] + 1*base[st*(2*size-2-(i+2*sc))])/16;
+    }
+}
+
+static
+void
+hat_transform (float *temp, //!< output vector
+               const float *base, //!< input vector
+               int st, //!< input stride (1 for line, iwidth for column)
+               int size, //!< vector size
+               bool b3,
+               int sc) //!< scale
+{
+    if (b3) {
+        hat_transform_b3(temp, base, st, size, sc);
+    } else {
+        hat_transform_linear(temp, base, st, size, sc);
+    }
 }
 
 // "A trous" algorithm with a linear interpolation filter.
@@ -920,6 +1011,7 @@ void
 DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with intensities between 0. and 1., of size iwidth*iheight, fimg[1] and fimg[2] are working space images of the same size
                                       unsigned int iwidth, //!< width of the image
                                       unsigned int iheight, //!< height of the image
+                                      bool b3,
                                       const double noiselevels[4], //!< noise levels for high/medium/low/very low frequencies
                                       double denoise_amount, //!< amount parameter
                                       double sharpen_amount, //!< constrast boost amount
@@ -1006,10 +1098,10 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         for (unsigned int row = 0; row < iheight; ++row) {
             abort_test_loop();
             float* temp = new float[iwidth];
-            hat_transform (temp, fimg[hpass] + row * iwidth, 1, iwidth, 1 << lev);
+            hat_transform (temp, fimg[hpass] + row * iwidth, 1, iwidth, b3, 1 << lev);
             for (unsigned int col = 0; col < iwidth; ++col) {
                 unsigned int i = row * iwidth + col;
-                fimg[lpass][i] = temp[col] * 0.25;
+                fimg[lpass][i] = temp[col];
             }
             delete [] temp;
         }
@@ -1027,11 +1119,11 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         for (unsigned int col = 0; col < iwidth; ++col) {
             abort_test_loop();
             float* temp = new float[iheight];
-            hat_transform (temp, fimg[lpass] + col, iwidth, iheight, 1 << lev);
+            hat_transform (temp, fimg[lpass] + col, iwidth, iheight, b3, 1 << lev);
             double sumsqrow = 0.;
             for (unsigned int row = 0; row < iheight; ++row) {
                 unsigned int i = row * iwidth + col;
-                fimg[lpass][i] = temp[row] * 0.25;
+                fimg[lpass][i] = temp[row];
                 // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
                 fimg[hpass][i] -= fimg[lpass][i];
                 sumsqrow += fimg[hpass][i] * fimg[hpass][i];
@@ -1059,14 +1151,15 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         // sum up the noise from different frequencies
         for (unsigned f = 0; f < 4; ++f) {
             if (lev + startLevel >= (int)f) {
-                double sigma_n_i = noiselevels[f] * noise[lev + startLevel];
+                double k = b3 ? noise_b3[lev + startLevel] : noise[lev + startLevel];
+                double sigma_n_i = noiselevels[f] * k;
                 sigma_n_i_sq += sigma_n_i * sigma_n_i;
             }
         }
         float thold = sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / size - sigma_n_i_sq) );
 
         // uncomment to check the values of the noise[] array
-        //printf("width=%u level=%u stdev=%g sigma_n_i=%g\n", iwidth, lev, std::sqrt(sumsq / size), std::sqrt(sigma_n_i_sq));
+        printf("width=%u level=%u stdev=%g sigma_n_i=%g\n", iwidth, lev, std::sqrt(sumsq / size), std::sqrt(sigma_n_i_sq));
 
         // sharpen
         double beta = 1.;
@@ -1113,6 +1206,7 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
                                 bool *bimgmask,
                                 unsigned int iwidth, //!< width of the image
                                 unsigned int iheight, //!< height of the image
+                                bool b3,
                                 double noiselevels[4], //!< output: the sigma for each frequency
                                 float a, // progress amount at start
                                 float b) // progress increment
@@ -1142,10 +1236,10 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
         for (unsigned int row = 0; row < iheight; ++row) {
             float* temp = new float[iwidth];
             abort_test_loop();
-            hat_transform (temp, fimg[hpass] + row * iwidth, 1, iwidth, 1 << lev);
+            hat_transform (temp, fimg[hpass] + row * iwidth, 1, iwidth, b3, 1 << lev);
             for (unsigned int col = 0; col < iwidth; ++col) {
                 unsigned int i = row * iwidth + col;
-                fimg[lpass][i] = temp[col] * 0.25;
+                fimg[lpass][i] = temp[col];
             }
             delete [] temp;
         }
@@ -1162,10 +1256,10 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
         for (unsigned int col = 0; col < iwidth; ++col) {
             float* temp = new float[iheight];
             abort_test_loop();
-            hat_transform (temp, fimg[lpass] + col, iwidth, iheight, 1 << lev);
+            hat_transform (temp, fimg[lpass] + col, iwidth, iheight, b3, 1 << lev);
             for (unsigned int row = 0; row < iheight; ++row) {
                 unsigned int i = row * iwidth + col;
-                fimg[lpass][i] = temp[row] * 0.25;
+                fimg[lpass][i] = temp[row];
                 // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
                 fimg[hpass][i] -= fimg[lpass][i];
             }
@@ -1198,7 +1292,8 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
 
         double sigma_this = (n == 0) ? 0. : fimg[3][n/2] / 0.6745;
         // compute the sigma at image resolution
-        double sigma_fullres = sigma_this / noise[lev];
+        double k = b3 ? noise_b3[lev] : noise[lev];
+        double sigma_fullres = sigma_this / k;
         if (noiselevel_prev_fullres <= 0.) {
             noiselevels[lev] = sigma_fullres;
             noiselevel_prev_fullres = sigma_fullres;
@@ -1316,6 +1411,9 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
     }
     src.reset( ( _srcClip && _srcClip->isConnected() ) ?
               _srcClip->fetchImage(time) : 0 );
+    if ( !src.get() ) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
             ( src->getRenderScale().y != args.renderScale.y) ||
@@ -1356,6 +1454,7 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
     // fetch parameter values
     p.outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     p.colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
+    p.b3 = _b3->getValueAtTime(time);
     p.startLevel = startLevelFromRenderScale(args.renderScale);
     double noiseLevelGain = _noiseLevelGain->getValueAtTime(time);
     double gainFreq[4];
@@ -1510,7 +1609,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                 assert(fimgcolor[c]);
                 float* fimg[3] = { fimgcolor[c], fimgtmp[0], fimgtmp[1] };
                 abort_test();
-                wavelet_denoise(fimg, iwidth, iheight, p.noiseLevel[c], p.denoise_amount[c], p.sharpen_amount[c], p.sharpen_radius, p.startLevel, (float)c / nComponents, 1.f / nComponents);
+                wavelet_denoise(fimg, iwidth, iheight, p.b3, p.noiseLevel[c], p.denoise_amount[c], p.sharpen_amount[c], p.sharpen_radius, p.startLevel, (float)c / nComponents, 1.f / nComponents);
             }
         }
     }
@@ -1519,7 +1618,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
         // process alpha
         float* fimg[3] = { fimgalpha, fimgtmp[0], fimgtmp[1] };
         abort_test();
-        wavelet_denoise(fimg, iwidth, iheight, p.noiseLevel[3], p.denoise_amount[3], p.sharpen_amount[3], p.sharpen_radius, p.startLevel, (float)(nComponents-1) / nComponents, 1.f / nComponents);
+        wavelet_denoise(fimg, iwidth, iheight, p.b3, p.noiseLevel[3], p.denoise_amount[3], p.sharpen_amount[3], p.sharpen_radius, p.startLevel, (float)(nComponents-1) / nComponents, 1.f / nComponents);
     }
 
     // store back into the result
@@ -1774,7 +1873,7 @@ DenoiseSharpenPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         updateSecret();
     } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
-    } else if (paramName == kParamColorModel) {
+    } else if (paramName == kParamColorModel || paramName == kParamB3) {
         updateLabels();
         if (args.reason == eChangeUserEdit) {
             for (unsigned int c = 0; c < 4; ++c) {
@@ -1900,7 +1999,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
     bool premult = _premult->getValueAtTime(time);
     int premultChannel = _premultChannel->getValueAtTime(time);
     ColorModelEnum colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
-
+    bool b3 = _b3->getValueAtTime(time);
 
     OfxRectD cropRect;
     _btmLeft->getValueAtTime(time, cropRect.x1, cropRect.y1);
@@ -2011,7 +2110,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
             assert(fimgcolor[c]);
             float* fimg[4] = { fimgcolor[c], fimgtmp[0], fimgtmp[1], fimgtmp[2] };
             double sigma_n[4];
-            sigma_mad(fimg, bimgmask, iwidth, iheight, sigma_n, (float)c / nComponents, 1.f / nComponents);
+            sigma_mad(fimg, bimgmask, iwidth, iheight, b3, sigma_n, (float)c / nComponents, 1.f / nComponents);
             for (unsigned f = 0; f < 4; ++f) {
                 _noiseLevel[c][f]->setValue(sigma_n[f]);
             }
@@ -2022,7 +2121,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
         // process alpha
         float* fimg[4] = { fimgalpha, fimgtmp[0], fimgtmp[1], fimgtmp[2] };
         double sigma_n[4];
-        sigma_mad(fimg, bimgmask, iwidth, iheight, sigma_n, (float)(nComponents-1) / nComponents, 1.f / nComponents);
+        sigma_mad(fimg, bimgmask, iwidth, iheight, b3, sigma_n, (float)(nComponents-1) / nComponents, 1.f / nComponents);
         for (unsigned f = 0; f < 4; ++f) {
             _noiseLevel[3][f]->setValue(sigma_n[f]);
         }
@@ -2285,6 +2384,20 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamB3);
+        param->setLabel(kParamB3Label);
+        param->setHint(kParamB3Hint);
+        param->setAnimates(false);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
 
     {
         OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupAnalysis);
@@ -2582,7 +2695,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
     }
-    
+
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 
