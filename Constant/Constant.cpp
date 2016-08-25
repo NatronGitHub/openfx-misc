@@ -383,7 +383,7 @@ ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(solid ? ePixelComponentRGB : ePixelComponentRGBA);
+    desc.setChannelSelector(ePixelComponentRGBA);
 #endif
 
     generatorDescribe(desc);
