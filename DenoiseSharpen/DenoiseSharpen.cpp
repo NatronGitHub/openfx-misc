@@ -984,7 +984,7 @@ hat_transform_b3 (float *temp, //!< output vector
         temp[i] = (6*base[st*i] + 4*base[st*(i-sc)] + 4*base[st*(i+sc)] + 1*base[st*(i-2*sc)] + 1*base[st*(2*size-2-(i+2*sc))])/16;
     }
     for (; i < size; ++i) {
-        temp[i] = (6*base[st*i] + 4*base[st*(i-sc)] + 4*base[st*(2*size-2-(i+sc))] + 1*base[st*(2*sc-i)] + 1*base[st*(2*size-2-(i+2*sc))])/16;
+        temp[i] = (6*base[st*i] + 4*base[st*(i-sc)] + 4*base[st*(2*size-2-(i+sc))] + 1*base[st*(i-2*sc)] + 1*base[st*(2*size-2-(i+2*sc))])/16;
     }
 }
 
@@ -1159,7 +1159,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         float thold = sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / size - sigma_n_i_sq) );
 
         // uncomment to check the values of the noise[] array
-        printf("width=%u level=%u stdev=%g sigma_n_i=%g\n", iwidth, lev, std::sqrt(sumsq / size), std::sqrt(sigma_n_i_sq));
+        //printf("width=%u level=%u stdev=%g sigma_n_i=%g\n", iwidth, lev, std::sqrt(sumsq / size), std::sqrt(sigma_n_i_sq));
 
         // sharpen
         double beta = 1.;
