@@ -41,10 +41,12 @@
  - as an estimate of sigma_n, we can use the
  */
 
-#ifdef _OPENMP
+//#define kUseMultithread // define to use the multithread suite
+
+#if defined(_OPENMP) && !defined(kUseMultithread)
 #include <omp.h>
-#define _GLIBCXX_PARALLEL // enable libstdc++ parallel STL algorithm (eg nth_element, sort...)
 #endif
+#define _GLIBCXX_PARALLEL // enable libstdc++ parallel STL algorithm (eg nth_element, sort...)
 #include <cmath>
 #include <algorithm>
 //#include <iostream>
@@ -172,7 +174,7 @@ enum OutputModeEnum {
 
 #define kParamColorModel "colorModel"
 #define kParamColorModelLabel "Color Model"
-#define kParamColorModelHint "The colorspace where denoising is performed. Noise levels are reset when the color model is changed."
+#define kParamColorModelHint "The colorspace where denoising is performed. These colorspaces assume that input and output use the Rec.709/sRGB chromaticities and the D65 illuminant, but should tolerate other input colorspaces (the output colorspace will always be the same as the input colorspace). Noise levels are reset when the color model is changed."
 #define kParamColorModelOptionYCbCr "Y'CbCr(A)"
 #define kParamColorModelOptionYCbCrHint "The YCbCr color model has one luminance channel (Y) which contains most of the detail information of an image (such as brightness and contrast) and two chroma channels (Cb = blueness, Cr = reddness) that hold the color information. Note that this choice drastically affects the result."
 #define kParamColorModelOptionLab "CIE L*a*b(A)"
@@ -190,8 +192,8 @@ enum ColorModelEnum {
 };
 
 #define kParamB3 "useB3Spline"
-#define kParamB3Label "B3 Spline Interpolation (experimental)"
-#define kParamB3Hint "Use a 5x5 filter based on B3 spline interpolation rather than a 3x3 Lagrange linear filter. Analysis must be re-run after changing this setting. Please test this setting."
+#define kParamB3Label "Use B3 Spline (experimental)"
+#define kParamB3Hint "Use a 5x5 filter based on B3 spline interpolation rather than a 3x3 Lagrange linear filter. Noise levels are reset when this setting is changed. [EXPERIMENTAL (Please test this setting)]."
 
 #define kGroupAnalysis "analysis"
 #define kGroupAnalysisLabel "Analysis"
@@ -320,6 +322,7 @@ enum ColorModelEnum {
 #define kProgressAnalysis // define to enable progress for analysis
 //#define kProgressRender // define to enable progress for render
 
+
 #ifdef kProgressAnalysis
 #define progressStartAnalysis(x) progressStart(x)
 #define progressUpdateAnalysis(x) progressUpdate(x)
@@ -363,7 +366,7 @@ static const float noise[] = { 0.8005,   0.2729,   0.1197,   0.0578,    0.0286, 
 //static const float noise_b3[] = { 0.890912, 0.200739, 0.0856778, 0.0412566, 0.0205922, 0.0103516, 0.00650336, 0.00445504  };
 static const float noise_b3[] = { 0.8908,   0.2007,   0.0855,    0.0412,    0.0206,    0.0104,    0.0065,     0.0045  };
 
-#ifdef _OPENMP
+#if defined(_OPENMP) && !defined(kUseMultithread)
 #define abort_test() if (!omp_get_thread_num() && abort()) { OFX::throwSuiteStatusException(kOfxStatFailed); }
 #define abort_test_loop() if (abort()) { if (!omp_get_thread_num()) OFX::throwSuiteStatusException(kOfxStatFailed); else continue; }
 #define abort_test() ((void)0)
@@ -1004,6 +1007,275 @@ hat_transform (float *temp, //!< output vector
     }
 }
 
+#ifdef kUseMultithread
+
+// multithread processing classes for various stages of the algorithm
+class ProcessRowsColsBase : public OFX::MultiThread::Processor
+{
+public:
+    ProcessRowsColsBase(OFX::ImageEffect &instance,
+                        float* fimg_hpass,
+                        float* fimg_lpass,
+                        unsigned int iwidth,
+                        unsigned int iheight,
+                        bool b3,
+                        int sc) // 1 << lev
+    : _effect(instance)
+    , _fimg_hpass(fimg_hpass)
+    , _fimg_lpass(fimg_lpass)
+    , _iwidth(iwidth)
+    , _iheight(iheight)
+    , _b3(b3)
+    , _sc(sc)
+    {
+        assert(_fimg_hpass && _fimg_lpass && _iwidth > 0 && _iheight > 0 && sc > 0);
+    }
+
+    /** @brief called to process everything */
+    void process(void)
+    {
+        // make sure there are at least 4096 pixels per CPU and at least 1 line par CPU
+        unsigned int nCPUs = ( std::min(_iwidth, 4096u) * _iheight ) / 4096u;
+        // make sure the number of CPUs is valid (and use at least 1 CPU)
+        nCPUs = std::max( 1u, std::min( nCPUs, OFX::MultiThread::getNumCPUs() ) );
+
+        // call the base multi threading code, should put a pre & post thread calls in too
+        multiThread(nCPUs);
+    }
+
+protected:
+    OFX::ImageEffect &_effect;      /**< @brief effect to render with */
+
+    float * const _fimg_hpass;
+    float * const _fimg_lpass;
+    unsigned int const _iwidth;
+    unsigned int const _iheight;
+    bool const _b3;
+    int const _sc;
+};
+
+class SmoothRows : public ProcessRowsColsBase
+{
+public:
+    SmoothRows(OFX::ImageEffect &instance,
+               float* fimg_hpass,
+               float* fimg_lpass,
+               unsigned int iwidth,
+               unsigned int iheight,
+               bool b3,
+               int sc) // 1 << lev
+    : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
+    {
+    }
+
+private:
+    /** @brief function that will be called in each thread. ID is from 0..nThreads-1 nThreads are the number of threads it is being run over */
+    virtual void multiThreadFunction(unsigned int threadID, unsigned int nThreads) OVERRIDE FINAL
+    {
+        int row_begin = 0;
+        int row_end = 0;
+        OFX::MultiThread::getThreadRange(threadID, nThreads, 0, _iheight, &row_begin, &row_end);
+        if (row_end <= row_begin) {
+            return;
+        }
+        std::vector<float> temp(_iwidth);
+        for (int row = row_begin; row < row_end; ++row) {
+            if ( _effect.abort() ) {
+                return;
+            }
+            hat_transform (&temp[0], _fimg_hpass + row * _iwidth, 1, _iwidth, _b3, _sc);
+            for (unsigned int col = 0; col < _iwidth; ++col) {
+                unsigned int i = row * _iwidth + col;
+                _fimg_lpass[i] = temp[col];
+            }
+        }
+    }
+};
+
+class SmoothCols : public ProcessRowsColsBase
+{
+public:
+    SmoothCols(OFX::ImageEffect &instance,
+               float* fimg_hpass,
+               float* fimg_lpass,
+               unsigned int iwidth,
+               unsigned int iheight,
+               bool b3,
+               int sc, // 1 << lev
+               double* sumsq)
+    : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
+    , _sumsq(sumsq)
+    {
+    }
+
+private:
+    /** @brief function that will be called in each thread. ID is from 0..nThreads-1 nThreads are the number of threads it is being run over */
+    virtual void multiThreadFunction(unsigned int threadID, unsigned int nThreads) OVERRIDE FINAL
+    {
+        int col_begin = 0;
+        int col_end = 0;
+        OFX::MultiThread::getThreadRange(threadID, nThreads, 0, _iwidth, &col_begin, &col_end);
+        if (col_end <= col_begin) {
+            return;
+        }
+        std::vector<float> temp(_iheight);
+        for (int col = col_begin; col < col_end; ++col) {
+            if ( _effect.abort() ) {
+                return;
+            }
+            hat_transform (&temp[0], _fimg_lpass + col, _iwidth, _iheight, _b3, _sc);
+            double sumsqrow = 0.;
+            for (unsigned int row = 0; row < _iheight; ++row) {
+                unsigned int i = row * _iwidth + col;
+                _fimg_lpass[i] = temp[row];
+                // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
+                _fimg_hpass[i] -= _fimg_lpass[i];
+                sumsqrow += _fimg_hpass[i] * _fimg_hpass[i];
+            }
+            {
+                AutoMutex l(&_sumsq_mutex);
+                *_sumsq += sumsqrow;
+            }
+        }
+    }
+
+    Mutex _sumsq_mutex;
+    double *_sumsq;
+};
+
+class ApplyThreshold : public OFX::MultiThread::Processor
+{
+public:
+    ApplyThreshold(OFX::ImageEffect &instance,
+                   float* fimg_hpass,
+                   float* fimg_0,
+                   unsigned int size,
+                   float thold,
+                   double denoise_amount,
+                   double beta)
+    : _effect(instance)
+    , _fimg_hpass(fimg_hpass)
+    , _fimg_0(fimg_0)
+    , _size(size)
+    , _thold(thold)
+    , _denoise_amount(denoise_amount)
+    , _beta(beta)
+    {
+        assert(_fimg_hpass && _size > 0);
+    }
+
+    /** @brief called to process everything */
+    void process(void)
+    {
+        // make sure there are at least 4096 pixels per CPU
+        unsigned int nCPUs = _size / 4096u;
+        // make sure the number of CPUs is valid (and use at least 1 CPU)
+        nCPUs = std::max( 1u, std::min( nCPUs, OFX::MultiThread::getNumCPUs() ) );
+
+        // call the base multi threading code, should put a pre & post thread calls in too
+        multiThread(nCPUs);
+    }
+
+private:
+    /** @brief function that will be called in each thread. ID is from 0..nThreads-1 nThreads are the number of threads it is being run over */
+    virtual void multiThreadFunction(unsigned int threadID, unsigned int nThreads) OVERRIDE FINAL
+    {
+        int i_begin = 0;
+        int i_end = 0;
+        OFX::MultiThread::getThreadRange(threadID, nThreads, 0, _size, &i_begin, &i_end);
+        if (i_end <= i_begin) {
+            return;
+        }
+        if ( _effect.abort() ) {
+            return;
+        }
+        for (int i = i_begin; i < i_end; ++i) {
+            // apply smooth threshold
+            if (_fimg_hpass[i] < -_thold) {
+                _fimg_hpass[i] += _thold * _denoise_amount;
+            } else if (_fimg_hpass[i] >  _thold) {
+                _fimg_hpass[i] -= _thold * _denoise_amount;
+            } else {
+                _fimg_hpass[i] *= 1. - _denoise_amount;
+            }
+            // add the denoised band to the final image
+            if (_fimg_0) { // if (hpass != 0)
+                // note: local contrast boost could be applied here, by multiplying fimg[hpass][i] by a factor beta
+                // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5) + 1
+
+                _fimg_0[i] += _beta * _fimg_hpass[i];
+            }
+        }
+    }
+
+private:
+    OFX::ImageEffect &_effect;      /**< @brief effect to render with */
+
+    float * const _fimg_hpass;
+    float * const _fimg_0;
+    unsigned int const _size;
+    float const _thold;
+    double const _denoise_amount;
+    double const _beta;
+};
+
+
+class AddLowPass : public OFX::MultiThread::Processor
+{
+public:
+    AddLowPass(OFX::ImageEffect &instance,
+                   float* fimg_0,
+               float* fimg_lpass,
+                   unsigned int size)
+    : _effect(instance)
+    , _fimg_0(fimg_0)
+    , _fimg_lpass(fimg_lpass)
+    , _size(size)
+    {
+        assert(_fimg_0 && _fimg_lpass && _size > 0);
+    }
+
+    /** @brief called to process everything */
+    void process(void)
+    {
+        // make sure there are at least 4096 pixels per CPU
+        unsigned int nCPUs = _size / 4096u;
+        // make sure the number of CPUs is valid (and use at least 1 CPU)
+        nCPUs = std::max( 1u, std::min( nCPUs, OFX::MultiThread::getNumCPUs() ) );
+
+        // call the base multi threading code, should put a pre & post thread calls in too
+        multiThread(nCPUs);
+    }
+
+private:
+    /** @brief function that will be called in each thread. ID is from 0..nThreads-1 nThreads are the number of threads it is being run over */
+    virtual void multiThreadFunction(unsigned int threadID, unsigned int nThreads) OVERRIDE FINAL
+    {
+        int i_begin = 0;
+        int i_end = 0;
+        OFX::MultiThread::getThreadRange(threadID, nThreads, 0, _size, &i_begin, &i_end);
+        if (i_end <= i_begin) {
+            return;
+        }
+        if ( _effect.abort() ) {
+            return;
+        }
+        for (int i = i_begin; i < i_end; ++i) {
+            _fimg_0[i] += _fimg_lpass[i];
+        }
+    }
+
+private:
+    OFX::ImageEffect &_effect;      /**< @brief effect to render with */
+
+    float * const _fimg_0;
+    float * const _fimg_lpass;
+    unsigned int const _size;
+};
+
+#endif
+
+
 // "A trous" algorithm with a linear interpolation filter.
 // from dcraw/UFRaw/LibRaw, with enhancements from GIMP wavelet denoise
 // https://sourceforge.net/p/ufraw/mailman/message/24069162/
@@ -1092,9 +1364,15 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
 
         // smooth fimg[hpass], result is in fimg[lpass]:
         // a- smooth rows, result is in fimg[lpass]
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+#ifdef kUseMultithread
+        {
+            SmoothRows processor(*this, fimg[hpass], fimg[lpass], iwidth, iheight, b3, 1 << lev);
+            processor.process();
+        }
+#else
+#       ifdef _OPENMP
+#       pragma omp parallel for
+#       endif
         for (unsigned int row = 0; row < iheight; ++row) {
             abort_test_loop();
             float* temp = new float[iwidth];
@@ -1105,6 +1383,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
             }
             delete [] temp;
         }
+#endif
         abort_test();
         if (b != 0) {
             progressUpdateRender(a + b * (lev + 0.25) / (maxLevel + 1.));
@@ -1113,9 +1392,15 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         // b- smooth cols, result is in fimg[lpass]
         // compute HHi + its variance
         double sumsq = 0.;
-#ifdef _OPENMP
-#pragma omp parallel for reduction (+:sumsq)
-#endif
+#ifdef kUseMultithread
+        {
+            SmoothCols processor(*this, fimg[hpass], fimg[lpass], iwidth, iheight, b3, 1 << lev, &sumsq);
+            processor.process();
+        }
+#else
+#       ifdef _OPENMP
+#       pragma omp parallel for reduction (+:sumsq)
+#       endif
         for (unsigned int col = 0; col < iwidth; ++col) {
             abort_test_loop();
             float* temp = new float[iheight];
@@ -1131,6 +1416,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
             sumsq += sumsqrow;
             delete [] temp;
         }
+#endif
         abort_test();
         if (b != 0) {
             progressUpdateRender(a + b * (lev + 0.5) / (maxLevel + 1.));
@@ -1167,9 +1453,15 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
             beta += sharpen_amount * exp (-((lev + startLevel) - sharpen_radius) * ((lev + startLevel) - sharpen_radius) / 1.5);
         }
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+#ifdef kUseMultithread
+        {
+            ApplyThreshold processor(*this, fimg[hpass], hpass ? fimg[0] : NULL, size, thold, denoise_amount, beta);
+            processor.process();
+        }
+#else
+#       ifdef _OPENMP
+#       pragma omp parallel for
+#       endif
         for (unsigned int i = 0; i < size; ++i) {
             // apply smooth threshold
             if (fimg[hpass][i] < -thold) {
@@ -1180,24 +1472,32 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
                 fimg[hpass][i] *= 1. - denoise_amount;
             }
             // add the denoised band to the final image
-            if (hpass) {
+            if (hpass != 0) {
                 // note: local contrast boost could be applied here, by multiplying fimg[hpass][i] by a factor beta
                 // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5) + 1
 
                 fimg[0][i] += beta * fimg[hpass][i];
             }
         }
+#endif
         hpass = lpass;
     } // for(lev)
 
     abort_test();
     // add the last smoothed image to the image
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+#ifdef kUseMultithread
+    {
+        AddLowPass processor(*this, fimg[0], fimg[lpass], size);
+        processor.process();
+    }
+#else
+#   ifdef _OPENMP
+#   pragma omp parallel for
+#   endif
     for (unsigned int i = 0; i < size; ++i) {
         fimg[0][i] += fimg[lpass][i];
     }
+#endif
 } // wavelet_denoise
 
 
