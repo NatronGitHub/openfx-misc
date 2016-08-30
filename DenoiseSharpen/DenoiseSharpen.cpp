@@ -22,6 +22,7 @@
 
 /*
  TODO:
+ - use local variance on a 3x3, 5x5, 7x7 window (at wavelet scale) rather than the global variance to extract signal variance.
  - add "Luminance Blend [0.7]" and "Chrominance Blend [1.0]" settings to YCbCr and Lab, which is like "mix", but only on luminance or chrominance.
  - edge-aware version
 
@@ -43,7 +44,7 @@
 
 //#define kUseMultithread // define to use the multithread suite
 
-#if defined(_OPENMP) && !defined(kUseMultithread)
+#if defined(_OPENMP)
 #include <omp.h>
 #endif
 #define _GLIBCXX_PARALLEL // enable libstdc++ parallel STL algorithm (eg nth_element, sort...)
@@ -366,7 +367,7 @@ static const float noise[] = { 0.8005,   0.2729,   0.1197,   0.0578,    0.0286, 
 //static const float noise_b3[] = { 0.890912, 0.200739, 0.0856778, 0.0412566, 0.0205922, 0.0103516, 0.00650336, 0.00445504  };
 static const float noise_b3[] = { 0.8908,   0.2007,   0.0855,    0.0412,    0.0206,    0.0104,    0.0065,     0.0045  };
 
-#if defined(_OPENMP) && !defined(kUseMultithread)
+#if defined(_OPENMP)
 #define abort_test() if (!omp_get_thread_num() && abort()) { OFX::throwSuiteStatusException(kOfxStatFailed); }
 #define abort_test_loop() if (abort()) { if (!omp_get_thread_num()) OFX::throwSuiteStatusException(kOfxStatFailed); else continue; }
 #define abort_test() ((void)0)
@@ -2233,6 +2234,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const OFX::InstanceChangedArgs &args)
     } // switch
     _analysisFrame->setValue( (int)args.time );
 
+    // lock values
+    _analysisLock->setValue(true);
     endEditBlock();
     progressEndAnalysis();
     //std::cout << "analysis! OK\n";
