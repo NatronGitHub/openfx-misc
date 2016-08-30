@@ -84,7 +84,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSigmaR "sigma_r"
 #define kParamSigmaRLabel "Value Std Dev"
-#define kParamSigmaRHint "Standard deviation of the range kernel, in intensity units (>=0). A reasonable value is 1/10 of the intensity range."
+#define kParamSigmaRHint "Standard deviation of the range kernel, in intensity units (>=0). A reasonable value is 1/10 of the intensity range. In the context of denoising, Liu et al. (\"Noise estimation from a single image\", CVPR2006) recommend a value of 1.95*sigma_n, where sigma_n is the local image noise."
 #define kParamSigmaRDefault 0.1
 
 #define kParamIterations "iterations"
