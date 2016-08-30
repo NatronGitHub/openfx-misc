@@ -46,8 +46,8 @@
 
 #if defined(_OPENMP)
 #include <omp.h>
-#endif
 #define _GLIBCXX_PARALLEL // enable libstdc++ parallel STL algorithm (eg nth_element, sort...)
+#endif
 #include <cmath>
 #include <algorithm>
 //#include <iostream>
