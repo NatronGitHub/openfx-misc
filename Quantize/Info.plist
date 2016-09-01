@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>Posterize.ofx</string>
+	<string>Quantize.ofx</string>
 	<key>LSApplicationCategoryType</key>
 	<string></string>
 	<key>CFBundleIdentifier</key>

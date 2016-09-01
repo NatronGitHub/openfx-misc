@@ -97,6 +97,7 @@ black points.
 matrix.
 * Math/GammaOFX: Apply gamma function to the selected channels.
 * Math/MultiplyOFX: Multiply the selected channels by a constant.
+* Quantize: Reduce the number of color levels with posterization or dithering.
 * SaturationOFX: Modify the color saturation of an image.
 * Transform/RGBToHSV and HSVToRGB: Convert to/from HSV color representation.
 * Transform/RGBToHSL and HSLToRGB: Convert to/from HSL color representation. 

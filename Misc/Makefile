@@ -45,6 +45,7 @@ NoOp.o \
 OneView.o \
 Position.o \
 Premult.o \
+Quantize.o \
 Radial.o \
 Ramp.o \
 Rand.o \
@@ -269,6 +270,7 @@ $(TOP_SRCDIR)/NoOp \
 $(TOP_SRCDIR)/OneView \
 $(TOP_SRCDIR)/Position \
 $(TOP_SRCDIR)/Premult \
+$(TOP_SRCDIR)/Quantize \
 $(TOP_SRCDIR)/Radial \
 $(TOP_SRCDIR)/Ramp \
 $(TOP_SRCDIR)/Rand \
@@ -339,6 +341,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/OneView \
 -I$(TOP_SRCDIR)/Position \
 -I$(TOP_SRCDIR)/Premult \
+-I$(TOP_SRCDIR)/Quantize \
 -I$(TOP_SRCDIR)/Radial \
 -I$(TOP_SRCDIR)/Ramp \
 -I$(TOP_SRCDIR)/Rand \

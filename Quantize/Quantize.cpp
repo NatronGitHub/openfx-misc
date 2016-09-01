@@ -17,7 +17,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * OFX Posterize plugin.
+ * OFX Quantize plugin.
  */
 
 #include <cmath>
@@ -47,10 +47,10 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName "PosterizeOFX"
+#define kPluginName "Quantize"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Reduce the number of color levels per channel, creating abrupt changes."
-#define kPluginIdentifier "net.sf.openfx.Posterize"
+#define kPluginDescription "Reduce the number of color levels per channel."
+#define kPluginIdentifier "net.sf.openfx.Quantize"
 // History:
 // version 1.0: initial version
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -103,15 +103,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamDitherLabel "Dither"
 #define kParamDitherHint "Dithering method to apply in order to avoid the banding effect."
 #define kParamDitherOptionNone "None"
-#define kParamDitherOptionNoneHint "No dithering."
+#define kParamDitherOptionNoneHint "No dithering (posterize), creating abrupt changes."
 #define kParamDitherOptionOrderedBayer2 "Ordered (Bayer 2x2)"
 #define kParamDitherOptionOrderedBayer2Hint "Ordered dithering using a 2x2 Bayer matrix."
 #define kParamDitherOptionOrderedBayer4 "Ordered (Bayer 4x4)"
 #define kParamDitherOptionOrderedBayer4Hint "Ordered dithering using a 4x4 Bayer matrix."
 #define kParamDitherOptionOrderedBayer8 "Ordered (Bayer 8x8)"
 #define kParamDitherOptionOrderedBayer8Hint "Ordered dithering using a 8x8 Bayer matrix."
-#define kParamDitherOptionOrderedVoidAndCluster "Ordered (void-and-cluster)"
-#define kParamDitherOptionOrderedVoidAndClusterHint "Ordered dithering using a void-and-cluster matrix."
+#define kParamDitherOptionOrderedVoidAndCluster14 "Ordered (void-and-cluster 14x14)"
+#define kParamDitherOptionOrderedVoidAndCluster14Hint "Ordered dithering using a void-and-cluster 14x14 matrix."
+#define kParamDitherOptionOrderedVoidAndCluster25 "Ordered (void-and-cluster 25x25)"
+#define kParamDitherOptionOrderedVoidAndCluster25Hint "Ordered dithering using a void-and-cluster 25x25 matrix."
 #define kParamDitherOptionRandom "Random"
 #define kParamDitherOptionRandomHint "Random dithering."
 enum DitherEnum {
@@ -119,6 +121,8 @@ enum DitherEnum {
     eDitherOrderedBayer2,
     eDitherOrderedBayer4,
     eDitherOrderedBayer8,
+    eDitherOrderedVAC14,
+    eDitherOrderedVAC25,
     eDitherRandom,
 };
 
@@ -126,8 +130,56 @@ enum DitherEnum {
 #define kParamSeedLabel "Seed"
 #define kParamSeedHint "Random seed: change this if you want different instances to have different dithering (only for random dithering)."
 
+#define kParamStaticSeed "staticSeed"
+#define kParamStaticSeedLabel "Static Seed"
+#define kParamStaticSeedHint "When enabled, the dither pattern remains the same for every frame producing a constant dither effect."
 
-static const int bayer88[8][8] = {
+
+// void-and-cluster matrices from http://caca.zoy.org/study/part2.html
+static const unsigned short vac14[14][14] = {
+    {131, 187, 8, 78, 50, 18, 134, 89, 155, 102, 29, 95, 184, 73},
+    {22, 86, 113, 171, 142, 105, 34, 166, 9, 60, 151, 128, 40, 110},
+    {168, 137, 45, 28, 64, 188, 82, 54, 124, 189, 80, 13, 156, 56},
+    {7, 61, 186, 121, 154, 6, 108, 177, 24, 100, 38, 176, 93, 123},
+    {83, 148, 96, 17, 88, 133, 44, 145, 69, 161, 139, 72, 30, 181},
+    {115, 27, 163, 47, 178, 65, 164, 14, 120, 48, 5, 127, 153, 52},
+    {190, 58, 126, 81, 116, 21, 106, 77, 173, 92, 191, 63, 99, 12},
+    {76, 144, 4, 185, 37, 149, 192, 39, 135, 23, 117, 31, 170, 132},
+    {35, 172, 103, 66, 129, 79, 3, 97, 57, 159, 70, 141, 53, 94},
+    {114, 20, 49, 158, 19, 146, 169, 122, 183, 11, 104, 180, 2, 165},
+    {152, 87, 182, 118, 91, 42, 67, 25, 84, 147, 43, 85, 125, 68},
+    {16, 136, 71, 10, 193, 112, 160, 138, 51, 111, 162, 26, 194, 46},
+    {174, 107, 41, 143, 33, 74, 1, 101, 195, 15, 75, 140, 109, 90},
+    {32, 62, 157, 98, 167, 119, 179, 59, 36, 130, 175, 55, 0, 150} };
+
+static const unsigned short vac25[25][25] = {
+    {165, 530, 106, 302, 540, 219, 477, 100, 231, 417, 314, 223, 424, 37, 207, 434, 326, 22, 448, 338, 111, 454, 523, 278, 579},
+    {334, 19, 410, 495, 57, 352, 158, 318, 598, 109, 509, 157, 524, 282, 606, 83, 225, 539, 163, 234, 607, 313, 206, 71, 470},
+    {251, 608, 216, 135, 275, 609, 415, 29, 451, 204, 397, 21, 373, 107, 462, 348, 482, 120, 362, 508, 33, 147, 572, 388, 142},
+    {447, 77, 345, 565, 439, 104, 215, 546, 279, 69, 567, 311, 585, 258, 177, 17, 266, 601, 55, 428, 270, 461, 331, 26, 560},
+    {164, 271, 486, 186, 16, 336, 457, 150, 342, 471, 245, 161, 56, 396, 496, 555, 385, 146, 321, 190, 526, 97, 182, 511, 297},
+    {429, 553, 49, 374, 536, 263, 575, 43, 501, 124, 368, 538, 450, 121, 309, 84, 210, 449, 561, 79, 356, 610, 256, 378, 58},
+    {105, 315, 156, 244, 423, 118, 183, 408, 220, 611, 15, 198, 293, 596, 221, 375, 581, 39, 238, 500, 287, 14, 437, 139, 595},
+    {227, 403, 590, 478, 68, 612, 295, 517, 87, 312, 413, 515, 78, 433, 13, 476, 134, 340, 414, 160, 466, 213, 547, 324, 456},
+    {542, 141, 12, 335, 214, 357, 11, 381, 242, 469, 159, 265, 383, 176, 545, 285, 197, 503, 108, 576, 51, 187, 98, 200, 34},
+    {358, 489, 277, 570, 96, 441, 554, 123, 534, 52, 556, 112, 605, 330, 70, 392, 613, 28, 288, 361, 232, 602, 300, 502, 267},
+    {102, 195, 399, 152, 484, 264, 166, 289, 427, 192, 298, 407, 25, 249, 520, 114, 233, 444, 543, 170, 498, 131, 452, 66, 562},
+    {310, 586, 54, 531, 346, 42, 614, 354, 23, 588, 491, 151, 468, 353, 187, 483, 369, 153, 85, 425, 10, 276, 371, 174, 420},
+    {32, 459, 222, 304, 136, 421, 103, 458, 230, 339, 67, 260, 578, 93, 544, 9, 280, 594, 327, 248, 582, 472, 50, 615, 254},
+    {537, 359, 91, 600, 475, 212, 525, 168, 558, 128, 455, 370, 179, 301, 405, 209, 467, 48, 442, 127, 355, 184, 332, 481, 126},
+    {286, 175, 436, 273, 31, 377, 306, 36, 412, 294, 616, 8, 473, 60, 603, 116, 347, 532, 191, 568, 61, 522, 90, 218, 391},
+    {592, 62, 514, 122, 552, 149, 617, 241, 513, 81, 202, 272, 557, 333, 226, 507, 255, 72, 305, 402, 229, 418, 296, 551, 7},
+    {411, 317, 236, 416, 337, 480, 64, 389, 132, 350, 487, 404, 89, 162, 435, 44, 419, 618, 113, 505, 20, 604, 138, 465, 188},
+    {493, 133, 580, 6, 169, 259, 320, 548, 193, 593, 40, 178, 512, 364, 591, 144, 319, 196, 386, 261, 351, 205, 384, 76, 269},
+    {38, 349, 208, 504, 440, 99, 490, 5, 426, 243, 322, 574, 281, 4, 237, 460, 527, 3, 549, 155, 577, 47, 533, 316, 619},
+    {394, 519, 82, 268, 325, 566, 199, 299, 119, 529, 75, 400, 125, 492, 344, 86, 217, 308, 463, 80, 395, 284, 474, 117, 201},
+    {95, 235, 422, 620, 143, 45, 372, 597, 453, 343, 185, 479, 247, 569, 171, 409, 584, 129, 365, 239, 488, 94, 224, 438, 559},
+    {283, 541, 18, 194, 401, 516, 262, 148, 41, 250, 621, 24, 329, 92, 446, 27, 291, 485, 35, 622, 180, 535, 379, 30, 341},
+    {443, 145, 363, 494, 246, 101, 445, 550, 390, 499, 115, 432, 521, 211, 623, 253, 528, 189, 430, 307, 53, 323, 130, 624, 172},
+    {46, 589, 292, 63, 599, 328, 203, 74, 290, 181, 376, 274, 140, 393, 59, 367, 88, 380, 137, 506, 252, 571, 431, 240, 497},
+    {382, 228, 464, 167, 398, 2, 573, 366, 518, 1, 583, 73, 563, 303, 510, 154, 564, 257, 587, 65, 406, 173, 0, 360, 110} };
+
+static const unsigned char bayer8[8][8] = {
     { 0, 32, 8, 40, 2, 34, 10, 42},
     {48, 16, 56, 24, 50, 18, 58, 26},
     {12, 44, 4, 36, 14, 46, 6, 38},
@@ -137,13 +189,13 @@ static const int bayer88[8][8] = {
     {15, 47, 7, 39, 13, 45, 5, 37},
     {63, 31, 55, 23, 61, 29, 53, 21} };
 
-static const int bayer44[4][4] = {
+static const unsigned char bayer4[4][4] = {
     {5,   9,   6,   10},
     {13,   1,   14,   2},
     {7,   11,   4,   8},
     {15,   3,   12,   0} };
 
-static const int bayer22[2][2] = {
+static const unsigned char bayer2[2][2] = {
     {1, 2},
     {3, 0} };
 
@@ -161,7 +213,7 @@ hash(unsigned int a)
 
 using namespace OFX;
 
-class PosterizeProcessorBase
+class QuantizeProcessorBase
     : public OFX::ImageProcessor
 {
 protected:
@@ -178,7 +230,7 @@ protected:
     uint32_t _seed;       // base seed
 
 public:
-    PosterizeProcessorBase(OFX::ImageEffect &instance,
+    QuantizeProcessorBase(OFX::ImageEffect &instance,
                                 const OFX::RenderArguments & /*args*/)
         : OFX::ImageProcessor(instance)
         , _srcImg(0)
@@ -231,13 +283,13 @@ public:
 
 
 template <class PIX, int nComponents, int maxValue>
-class PosterizeProcessor
-    : public PosterizeProcessorBase
+class QuantizeProcessor
+    : public QuantizeProcessorBase
 {
 public:
-    PosterizeProcessor(OFX::ImageEffect &instance,
+    QuantizeProcessor(OFX::ImageEffect &instance,
                             const OFX::RenderArguments &args)
-        : PosterizeProcessorBase(instance, args)
+        : QuantizeProcessorBase(instance, args)
     {
         //const double time = args.time;
 
@@ -351,13 +403,13 @@ private:
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
 
+                // process the pixel (the actual computation goes here)
                 switch (_dither) {
                     case eDitherNone: {
-                        // process the pixel (the actual computation goes here)
+                        // no dithering (identical tu Nuke's Posterize)
                         for (int c = 0; c < 4; ++c) {
 
                             float rounded = (unpPix[c] <= 0) ? std::floor(unpPix[c] * _colors) : std::ceil(unpPix[c] * _colors - 1.);
-                            // no dithering (identical tu Nuke's Posterize)
                             //tmpPix[c] = std::floor(unpPix[c] * _colors) / (_colors - 1.); // ok except when unpPix[c] * _colors is a positive integer
                             tmpPix[c] = rounded / (_colors - 1.);
                         }
@@ -365,23 +417,21 @@ private:
                     }
                     case eDitherOrderedBayer2: {
                         // 2x2 Bayer
-                        int subx = x % 2;
+#undef MSIZE
+#define MSIZE 2
+                        int subx = x % MSIZE;
                         if (subx < 0) {
-                            subx += 2;
+                            subx += MSIZE;
                         }
-                        int suby = y % 2;
+                        int suby = y % MSIZE;
                         if (suby < 0) {
-                            suby += 2;
+                            suby += MSIZE;
                         }
-                        int dith = bayer22[subx][suby];
+                        int dith = bayer2[subx][suby];
                         for (int c = 0; c < 4; ++c) {
-
-                            float rounded = (unpPix[c] <= 0) ? std::floor(unpPix[c] * _colors) : std::ceil(unpPix[c] * _colors - 1.);
-                            float v = unpPix[c] * (_colors - 1.) + 1./8.; // ok for integer _colors
-                            float fv = (rounded <= v) ? rounded : (rounded - 1.);
-                            assert( (v - fv) >= 0 );
-                            assert( (v - fv) < 1 );
-                            if ( (v - fv) * 4. <= (dith + 1) ) {
+                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
+                            float fv = std::floor(v);
+                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
                                 tmpPix[c] = fv / (_colors - 1.);
                             } else {
                                 tmpPix[c] = (fv + 1) / (_colors - 1.);
@@ -391,22 +441,21 @@ private:
                     }
                     case eDitherOrderedBayer4: {
                         // 4x4 Bayer
-                        int subx = x % 4;
+#undef MSIZE
+#define MSIZE 4
+                        int subx = x % MSIZE;
                         if (subx < 0) {
-                            subx += 4;
+                            subx += MSIZE;
                         }
-                        int suby = y % 4;
+                        int suby = y % MSIZE;
                         if (suby < 0) {
-                            suby += 4;
+                            suby += MSIZE;
                         }
-                        int dith = bayer44[subx][suby];
+                        int dith = bayer4[subx][suby];
                         for (int c = 0; c < 4; ++c) {
-                            float rounded = (unpPix[c] <= 0) ? std::floor(unpPix[c] * _colors) : std::ceil(unpPix[c] * _colors - 1.);
-                            float v = unpPix[c] * (_colors - 1.) + 1./32.; // ok for integer _colors
-                            float fv = (rounded <= v) ? rounded : (rounded - 1.);
-                            assert( (v - fv) >= 0 );
-                            assert( (v - fv) < 1 );
-                            if ( (v - fv) * 16. <= (dith + 1) ) {
+                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
+                            float fv = std::floor(v);
+                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
                                 tmpPix[c] = fv / (_colors - 1.);
                             } else {
                                 tmpPix[c] = (fv + 1) / (_colors - 1.);
@@ -416,23 +465,69 @@ private:
                     }
                     case eDitherOrderedBayer8: {
                         // 8x8 Bayer
-                        int subx = x % 8;
+#undef MSIZE
+#define MSIZE 8
+                        int subx = x % MSIZE;
                         if (subx < 0) {
-                            subx += 8;
+                            subx += MSIZE;
                         }
-                        int suby = y % 8;
+                        int suby = y % MSIZE;
                         if (suby < 0) {
-                            suby += 8;
+                            suby += MSIZE;
                         }
-                        int dith = bayer88[subx][suby];
+                        int dith = bayer8[subx][suby];
                         for (int c = 0; c < 4; ++c) {
-
-                            float rounded = (unpPix[c] <= 0) ? std::floor(unpPix[c] * _colors) : std::ceil(unpPix[c] * _colors - 1.);
-                            float v = unpPix[c] * (_colors - 1.) + 1./128.; // ok for integer _colors
-                            float fv = (rounded <= v) ? rounded : (rounded - 1.);
-                            assert( (v - fv) >= 0 );
-                            assert( (v - fv) < 1 );
-                            if ( (v - fv) * 64. <= (dith + 1) ) {
+                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
+                            float fv = std::floor(v);
+                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
+                                tmpPix[c] = fv / (_colors - 1.);
+                            } else {
+                                tmpPix[c] = (fv + 1) / (_colors - 1.);
+                            }
+                        }
+                        break;
+                    }
+                    case eDitherOrderedVAC14: {
+                        // 14x14 void-and-cluster
+#undef MSIZE
+#define MSIZE 14
+                        int subx = x % MSIZE;
+                        if (subx < 0) {
+                            subx += MSIZE;
+                        }
+                        int suby = y % MSIZE;
+                        if (suby < 0) {
+                            suby += MSIZE;
+                        }
+                        int dith = vac14[subx][suby];
+                        for (int c = 0; c < 4; ++c) {
+                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
+                            float fv = std::floor(v);
+                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
+                                tmpPix[c] = fv / (_colors - 1.);
+                            } else {
+                                tmpPix[c] = (fv + 1) / (_colors - 1.);
+                            }
+                        }
+                        break;
+                    }
+                    case eDitherOrderedVAC25: {
+                        // 25x25 void-and-cluster
+#undef MSIZE
+#define MSIZE 25
+                        int subx = x % MSIZE;
+                        if (subx < 0) {
+                            subx += MSIZE;
+                        }
+                        int suby = y % MSIZE;
+                        if (suby < 0) {
+                            suby += MSIZE;
+                        }
+                        int dith = vac25[subx][suby];
+                        for (int c = 0; c < 4; ++c) {
+                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
+                            float fv = std::floor(v);
+                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
                                 tmpPix[c] = fv / (_colors - 1.);
                             } else {
                                 tmpPix[c] = (fv + 1) / (_colors - 1.);
@@ -471,13 +566,13 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class PosterizePlugin
+class QuantizePlugin
     : public OFX::ImageEffect
 {
 public:
 
     /** @brief ctor */
-    PosterizePlugin(OfxImageEffectHandle handle)
+    QuantizePlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
         , _dstClip(0)
         , _srcClip(0)
@@ -524,7 +619,8 @@ public:
         _colors = fetchDoubleParam(kParamColors);
         _dither = fetchChoiceParam(kParamDither);
         _seed   = fetchIntParam(kParamSeed);
-        assert(_colors && _dither && _seed);
+        _staticSeed = fetchBooleanParam(kParamStaticSeed);
+        assert(_colors && _dither && _seed && _staticSeed);
     }
 
 private:
@@ -538,12 +634,15 @@ private:
     void renderForBitDepth(const OFX::RenderArguments &args);
 
     /* set up and run a processor */
-    void setupAndProcess(PosterizeProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(QuantizeProcessorBase &, const OFX::RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
+    /* Override the clip preferences, we need to say we are setting the frame varying flag */
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -557,6 +656,7 @@ private:
     DoubleParam* _colors;
     ChoiceParam* _dither;
     IntParam* _seed;
+    BooleanParam* _staticSeed;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
@@ -573,7 +673,7 @@ private:
 
 /* set up and run a processor */
 void
-PosterizePlugin::setupAndProcess(PosterizeProcessorBase &processor,
+QuantizePlugin::setupAndProcess(QuantizeProcessorBase &processor,
                                       const OFX::RenderArguments &args)
 {
     const double time = args.time;
@@ -650,17 +750,20 @@ PosterizePlugin::setupAndProcess(PosterizeProcessorBase &processor,
     uint32_t seed = *( (uint32_t*)&time_f );
 
     // set the seed based on the current time, and double it we get difference seeds on different fields
-    seed = hash( seed ^ _seed->getValueAtTime(args.time) );
+    bool staticSeed = _staticSeed->getValueAtTime(time);
+    if (!staticSeed) {
+        seed = hash( seed ^ _seed->getValueAtTime(args.time) );
+    }
 
     processor.setValues(premult, premultChannel, mix,
                         processR, processG, processB, processA, colors, dither, seed);
     processor.process();
-} // PosterizePlugin::setupAndProcess
+} // QuantizePlugin::setupAndProcess
 
 
 // the overridden render function
 void
-PosterizePlugin::render(const OFX::RenderArguments &args)
+QuantizePlugin::render(const OFX::RenderArguments &args)
 {
     //std::cout << "render!\n";
     // instantiate the render code based on the pixel depth of the dst clip
@@ -693,7 +796,7 @@ PosterizePlugin::render(const OFX::RenderArguments &args)
 
 template<int nComponents>
 void
-PosterizePlugin::renderForComponents(const OFX::RenderArguments &args)
+QuantizePlugin::renderForComponents(const OFX::RenderArguments &args)
 {
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
@@ -717,14 +820,14 @@ PosterizePlugin::renderForComponents(const OFX::RenderArguments &args)
 
 template <class PIX, int nComponents, int maxValue>
 void
-PosterizePlugin::renderForBitDepth(const OFX::RenderArguments &args)
+QuantizePlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
-    PosterizeProcessor<PIX, nComponents, maxValue> fred(*this, args);
+    QuantizeProcessor<PIX, nComponents, maxValue> fred(*this, args);
     setupAndProcess(fred, args);
 }
 
 bool
-PosterizePlugin::isIdentity(const IsIdentityArguments &args,
+QuantizePlugin::isIdentity(const IsIdentityArguments &args,
                                  Clip * &identityClip,
                                  double & /*identityTime*/)
 {
@@ -781,10 +884,10 @@ PosterizePlugin::isIdentity(const IsIdentityArguments &args,
 
     //std::cout << "isIdentity! false\n";
     return false;
-} // PosterizePlugin::isIdentity
+} // QuantizePlugin::isIdentity
 
 void
-PosterizePlugin::changedClip(const InstanceChangedArgs &args,
+QuantizePlugin::changedClip(const InstanceChangedArgs &args,
                                   const std::string &clipName)
 {
     //std::cout << "changedClip!\n";
@@ -804,9 +907,24 @@ PosterizePlugin::changedClip(const InstanceChangedArgs &args,
     //std::cout << "changedClip OK!\n";
 }
 
-mDeclarePluginFactory(PosterizePluginFactory, {}, {});
+/* Override the clip preferences, we need to say we are setting the frame varying flag */
 void
-PosterizePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+QuantizePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    DitherEnum dither = (DitherEnum)_dither->getValue();
+    if (dither == eDitherRandom) {
+        bool staticSeed = _staticSeed->getValue();
+        if (!staticSeed) {
+            clipPreferences.setOutputFrameVarying(true);
+            clipPreferences.setOutputHasContinousSamples(true);
+        }
+    }
+}
+
+
+mDeclarePluginFactory(QuantizePluginFactory, {}, {});
+void
+QuantizePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
     // basic labels
@@ -839,7 +957,7 @@ PosterizePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-PosterizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                                                OFX::ContextEnum context)
 {
     //std::cout << "describeInContext!\n";
@@ -880,7 +998,7 @@ PosterizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -890,7 +1008,7 @@ PosterizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -900,7 +1018,7 @@ PosterizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -932,6 +1050,7 @@ PosterizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamDither);
         param->setLabel(kParamDitherLabel);
         param->setHint(kParamDitherHint);
+        param->setAnimates(false);
         assert(param->getNOptions() == eDitherNone);
         param->appendOption(kParamDitherOptionNone, kParamDitherOptionNoneHint);
         assert(param->getNOptions() == eDitherOrderedBayer2);
@@ -940,8 +1059,13 @@ PosterizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamDitherOptionOrderedBayer4, kParamDitherOptionOrderedBayer4Hint);
         assert(param->getNOptions() == eDitherOrderedBayer8);
         param->appendOption(kParamDitherOptionOrderedBayer8, kParamDitherOptionOrderedBayer8Hint);
+        assert(param->getNOptions() == eDitherOrderedVAC14);
+        param->appendOption(kParamDitherOptionOrderedVoidAndCluster14, kParamDitherOptionOrderedVoidAndCluster14Hint);
+        assert(param->getNOptions() == eDitherOrderedVAC25);
+        param->appendOption(kParamDitherOptionOrderedVoidAndCluster25, kParamDitherOptionOrderedVoidAndCluster25Hint);
         assert(param->getNOptions() == eDitherRandom);
         param->appendOption(kParamDitherOptionRandom, kParamDitherOptionRandomHint);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -949,10 +1073,21 @@ PosterizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // seed
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
-        param->setLabel(kParamSeed);
+        param->setLabel(kParamSeedLabel);
         param->setHint(kParamSeedHint);
         param->setDefault(2000);
         param->setAnimates(true); // can animate
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamStaticSeed);
+        param->setLabel(kParamStaticSeedLabel);
+        param->setHint(kParamStaticSeedHint);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -961,16 +1096,16 @@ PosterizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
     //std::cout << "describeInContext! OK\n";
-} // PosterizePluginFactory::describeInContext
+} // QuantizePluginFactory::describeInContext
 
 OFX::ImageEffect*
-PosterizePluginFactory::createInstance(OfxImageEffectHandle handle,
+QuantizePluginFactory::createInstance(OfxImageEffectHandle handle,
                                             OFX::ContextEnum /*context*/)
 {
-    return new PosterizePlugin(handle);
+    return new QuantizePlugin(handle);
 }
 
-static PosterizePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static QuantizePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
