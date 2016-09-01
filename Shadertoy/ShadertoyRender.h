@@ -1115,7 +1115,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 
 #ifdef USE_OSMESA
-    const OfxRectI dstBounds = dst->getBounds();
+    //const OfxRectI dstBounds = dst->getBounds();
     if (format == 0) {
         switch (dstComponents) {
         case OFX::ePixelComponentRGBA:
