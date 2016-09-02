@@ -22,9 +22,12 @@
 
 /*
  TODO:
- - use local variance on a 3x3, 5x5, 7x7 window (at wavelet scale) rather than the global variance to extract signal variance.
+ - WIP (adaptiveRadius) use local variance on a 3x3, 5x5, 7x7 window (at wavelet scale) rather than the global variance to extract signal variance.
  - add "Luminance Blend [0.7]" and "Chrominance Blend [1.0]" settings to YCbCr and Lab, which is like "mix", but only on luminance or chrominance.
  - edge-aware version
+ - estimate a per-intensity noise gain, based on analysis of the HH1 subband, in conjunction with the first smoothed level. analyze the noise in one channel only (luminance or green).
+   is this is film, analyze at 9 values from 0.1 to 1.0, with a geometric progression, thus x = 0.1*a^i for i = 0..8, whith a = (1/0.1)^(1./8) = 1.13314845307
+   if this is digital, use an arithmetic progression, x=0.1 + 0.1*i
 
  Notes on edge-aware version:
 
@@ -239,7 +242,7 @@ enum ColorModelEnum {
 #define kParamAnalyzeNoiseLevelsHint "Computes the noise levels from the current frame and current color model. To use the same settings for the whole sequence, analyze a frame that is representative of the sequence. If a mask is set, it is used to compute the noise levels from areas where the mask is non-zero. If there are keyframes on the noise level parameters, this sets a keyframe at the current frame. The noise levels can then be fine-tuned."
 
 #define kParamAdaptiveRadius "adaptiveRadius"
-#define kParamAdaptiveRadiusLabel "Adaptive Radius"
+#define kParamAdaptiveRadiusLabel "Adaptive Radius [WIP]"
 #define kParamAdaptiveRadiusHint "Radius of the window where the signal level is analyzed. If zero, the signal level is computed from the whole image."
 
 #define kParamNoiseLevelGain "noiseLevelGain"
@@ -1107,17 +1110,17 @@ private:
     }
 };
 
-class SmoothCols : public ProcessRowsColsBase<false>
+class SmoothColsSumSq : public ProcessRowsColsBase<false>
 {
 public:
-    SmoothCols(OFX::ImageEffect &instance,
-               float* fimg_hpass,
-               float* fimg_lpass,
-               unsigned int iwidth,
-               unsigned int iheight,
-               bool b3,
-               int sc, // 1 << lev
-               double* sumsq)
+    SmoothColsSumSq(OFX::ImageEffect &instance,
+                    float* fimg_hpass,
+                    float* fimg_lpass,
+                    unsigned int iwidth,
+                    unsigned int iheight,
+                    bool b3,
+                    int sc, // 1 << lev
+                    double* sumsq)
     : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
     , _sumsq(sumsq)
     {
@@ -1150,6 +1153,53 @@ private:
             {
                 AutoMutex l(&_sumsq_mutex);
                 *_sumsq += sumsqrow;
+            }
+        }
+    }
+
+    Mutex _sumsq_mutex;
+    double *_sumsq;
+};
+
+
+class SmoothCols : public ProcessRowsColsBase<false>
+{
+public:
+    SmoothCols(OFX::ImageEffect &instance,
+               float* fimg_hpass,
+               float* fimg_lpass,
+               unsigned int iwidth,
+               unsigned int iheight,
+               bool b3,
+               int sc) // 1 << lev
+    : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
+    {
+    }
+
+private:
+    /** @brief function that will be called in each thread. ID is from 0..nThreads-1 nThreads are the number of threads it is being run over */
+    virtual void multiThreadFunction(unsigned int threadID, unsigned int nThreads) OVERRIDE FINAL
+    {
+        int col_begin = 0;
+        int col_end = 0;
+        OFX::MultiThread::getThreadRange(threadID, nThreads, 0, _iwidth, &col_begin, &col_end);
+        if (col_end <= col_begin) {
+            return;
+        }
+        std::vector<float> temp(_iheight);
+        for (int col = col_begin; col < col_end; ++col) {
+            if ( _effect.abort() ) {
+                return;
+            }
+            hat_transform (&temp[0], _fimg_lpass + col, _iwidth, _iheight, _b3, _sc);
+            for (unsigned int row = 0; row < _iheight; ++row) {
+                unsigned int i = row * _iwidth + col;
+                _fimg_lpass[i] = temp[row];
+                // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
+                _fimg_hpass[i] -= _fimg_lpass[i];
+            }
+            {
+                AutoMutex l(&_sumsq_mutex);
             }
         }
     }
@@ -1537,32 +1587,51 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
         // compute HHi + its variance
         double sumsq = 0.;
 #ifdef kUseMultithread
-        {
-            SmoothCols processor(*this, fimg[hpass], fimg[lpass], iwidth, iheight, b3, 1 << lev, &sumsq);
+        if (adaptiveRadius <= 0) {
+            SmoothColsSumSq processor(*this, fimg[hpass], fimg[lpass], iwidth, iheight, b3, 1 << lev, &sumsq);
+            processor.process();
+        } else {
+            SmoothCols processor(*this, fimg[hpass], fimg[lpass], iwidth, iheight, b3, 1 << lev);
             processor.process();
         }
-#else
-#       ifdef _OPENMP
-#       pragma omp parallel for reduction (+:sumsq)
-#       endif
-        for (unsigned int col = 0; col < iwidth; ++col) {
-            abort_test_loop();
-            float* temp = new float[iheight];
-            hat_transform (temp, fimg[lpass] + col, iwidth, iheight, b3, 1 << lev);
-            double sumsqrow = 0.;
-            for (unsigned int row = 0; row < iheight; ++row) {
-                unsigned int i = row * iwidth + col;
-                fimg[lpass][i] = temp[row];
-                // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
-                fimg[hpass][i] -= fimg[lpass][i];
-                //if (p._adaptiveRadius <= 0) {
-                sumsqrow += fimg[hpass][i] * fimg[hpass][i];
-                //}
+#else // !kUseMultithread
+        if (adaptiveRadius <= 0) {
+#           ifdef _OPENMP
+#           pragma omp parallel for reduction (+:sumsq)
+#           endif
+            for (unsigned int col = 0; col < iwidth; ++col) {
+                abort_test_loop();
+                float* temp = new float[iheight];
+                hat_transform (temp, fimg[lpass] + col, iwidth, iheight, b3, 1 << lev);
+                double sumsqrow = 0.;
+                for (unsigned int row = 0; row < iheight; ++row) {
+                    unsigned int i = row * iwidth + col;
+                    fimg[lpass][i] = temp[row];
+                    // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
+                    fimg[hpass][i] -= fimg[lpass][i];
+                    sumsqrow += fimg[hpass][i] * fimg[hpass][i];
+                }
+                sumsq += sumsqrow;
+                delete [] temp;
             }
-            sumsq += sumsqrow;
-            delete [] temp;
+        } else {
+#           ifdef _OPENMP
+#           pragma omp parallel for reduction (+:sumsq)
+#           endif
+            for (unsigned int col = 0; col < iwidth; ++col) {
+                abort_test_loop();
+                float* temp = new float[iheight];
+                hat_transform (temp, fimg[lpass] + col, iwidth, iheight, b3, 1 << lev);
+                for (unsigned int row = 0; row < iheight; ++row) {
+                    unsigned int i = row * iwidth + col;
+                    fimg[lpass][i] = temp[row];
+                    // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
+                    fimg[hpass][i] -= fimg[lpass][i];
+                }
+                delete [] temp;
+            }
         }
-#endif
+#endif // !kUseMultithread
         abort_test();
         if (b != 0) {
             progressUpdateRender(a + b * (lev + 0.5) / (maxLevel + 1.));
@@ -2179,7 +2248,7 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments
 
     int adaptiveRadius = _adaptiveRadius->getValueAtTime(time);
     if (adaptiveRadius <= 0) {
-        // requires the full image to compute stats
+        // requires the full image to compute standard deviation of the signal
         rois.setRegionOfInterest(*_srcClip, srcRod);
         return;
     }
@@ -3018,6 +3087,10 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(0, 3);
         param->setDefault(0);
         param->setAnimates(false);
+#ifndef DEBUG
+#pragma message WARN("FIXME: adaptiveRadius is WIP => secret")
+        param->setIsSecret(true);
+#endif
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
