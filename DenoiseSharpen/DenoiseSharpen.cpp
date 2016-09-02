@@ -42,7 +42,7 @@
  - as an estimate of sigma_n, we can use the
  */
 
-//#define kUseMultithread // define to use the multithread suite
+#define kUseMultithread // define to use the multithread suite
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -237,6 +237,10 @@ enum ColorModelEnum {
 #define kParamAnalyzeNoiseLevelsLabel "Analyze Noise Levels"
 #define kParamAnalyzeNoiseLevelsHint "Computes the noise levels from the current frame and current color model. To use the same settings for the whole sequence, analyze a frame that is representative of the sequence. If a mask is set, it is used to compute the noise levels from areas where the mask is non-zero. If there are keyframes on the noise level parameters, this sets a keyframe at the current frame. The noise levels can then be fine-tuned."
 
+#define kParamAdaptiveRadius "adaptiveRadius"
+#define kParamAdaptiveRadiusLabel "Adaptive Radius"
+#define kParamAdaptiveRadiusHint "Radius of the window where the signal level is analyzed. If zero, the signal level is computed from the whole image."
+
 #define kParamNoiseLevelGain "noiseLevelGain"
 #define kParamNoiseLevelGainLabel "Noise Level Gain"
 #define kParamNoiseLevelGainHint "Global gain to apply to the noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the per-frequency gain and the channel gain."
@@ -378,7 +382,8 @@ static const float noise_b3[] = { 0.8908,   0.2007,   0.0855,    0.0412,    0.02
 #endif
 
 template<typename T>
-inline void unused(const T&) {}
+static inline void
+unused(const T&) {}
 
 static
 const char*
@@ -730,6 +735,8 @@ public:
             }
         }
 
+        _adaptiveRadius = fetchIntParam(kParamAdaptiveRadius);
+
         _noiseLevelGain = fetchDoubleParam(kParamNoiseLevelGain);
 
         // frequency tuning
@@ -809,6 +816,7 @@ private:
                          unsigned int iheight, //!< height of the image
                          bool b3,
                          const double noiselevels[4], //!< noise levels for high/medium/low/very low frequencies
+                         int adaptiveRadius,
                          double denoise_amount, //!< amount parameter
                          double sharpen_amount, //!< constrast boost amount
                          double sharpen_radius, //!< contrast boost radius
@@ -857,6 +865,7 @@ private:
         int startLevel;
         bool process[4];
         double noiseLevel[4][4]; // first index: channel second index: frequency
+        int adaptiveRadius;
         double denoise_amount[4];
         double sharpen_amount[4];
         double sharpen_radius;
@@ -871,6 +880,7 @@ private:
         , colorModel(eColorModelYCbCr)
         , b3(false)
         , startLevel(0)
+        , adaptiveRadius(0)
         , sharpen_radius(0.5)
         {
             for (unsigned int c = 0; c < 4; ++c) {
@@ -881,6 +891,7 @@ private:
                 denoise_amount[c] = 0.;
                 sharpen_amount[c] = 0.;
             }
+            srcWindow.x1 = srcWindow.x2 = srcWindow.y1 = srcWindow.y2 = 0;
         }
     };
 
@@ -904,6 +915,7 @@ private:
     IntParam* _analysisFrame;
     PushButtonParam* _analyze;
     DoubleParam* _noiseLevel[4][4];
+    IntParam* _adaptiveRadius;
     DoubleParam* _noiseLevelGain;
     BooleanParam* _enableFreq[4];
     DoubleParam* _gainFreq[4];
@@ -1011,6 +1023,7 @@ hat_transform (float *temp, //!< output vector
 #ifdef kUseMultithread
 
 // multithread processing classes for various stages of the algorithm
+template<bool rows>
 class ProcessRowsColsBase : public OFX::MultiThread::Processor
 {
 public:
@@ -1036,7 +1049,7 @@ public:
     void process(void)
     {
         // make sure there are at least 4096 pixels per CPU and at least 1 line par CPU
-        unsigned int nCPUs = ( std::min(_iwidth, 4096u) * _iheight ) / 4096u;
+        unsigned int nCPUs = ( std::min(rows ? _iwidth : _iheight, 4096u) * (rows ? _iheight : _iwidth) ) / 4096u;
         // make sure the number of CPUs is valid (and use at least 1 CPU)
         nCPUs = std::max( 1u, std::min( nCPUs, OFX::MultiThread::getNumCPUs() ) );
 
@@ -1055,7 +1068,7 @@ protected:
     int const _sc;
 };
 
-class SmoothRows : public ProcessRowsColsBase
+class SmoothRows : public ProcessRowsColsBase<true>
 {
 public:
     SmoothRows(OFX::ImageEffect &instance,
@@ -1093,7 +1106,7 @@ private:
     }
 };
 
-class SmoothCols : public ProcessRowsColsBase
+class SmoothCols : public ProcessRowsColsBase<false>
 {
 public:
     SmoothCols(OFX::ImageEffect &instance,
@@ -1274,6 +1287,134 @@ private:
     unsigned int const _size;
 };
 
+
+// integral images computation
+
+class IntegralRows : public OFX::MultiThread::Processor
+{
+public:
+    IntegralRows(OFX::ImageEffect &instance,
+                 float const* fimg, // img
+                 float* fimgsumrow, // sum along rows
+                 float* fimgsumsqrow, // sum along rows
+                 unsigned int iwidth,
+                 unsigned int iheight) // 1 << lev
+    : _effect(instance)
+    , _fimg(fimg)
+    , _fimgsumrow(fimgsumrow)
+    , _fimgsumsqrow(fimgsumsqrow)
+    , _iwidth(iwidth)
+    , _iheight(iheight)
+    {
+        assert(_fimg && _fimgsumrow && _fimgsumsqrow && _iwidth > 0 && _iheight > 0);
+    }
+
+    /** @brief called to process everything */
+    void process(void)
+    {
+        // make sure there are at least 4096 pixels per CPU and at least 1 line par CPU
+        unsigned int nCPUs = ( std::min(_iwidth, 4096u) * _iheight ) / 4096u;
+        // make sure the number of CPUs is valid (and use at least 1 CPU)
+        nCPUs = std::max( 1u, std::min( nCPUs, OFX::MultiThread::getNumCPUs() ) );
+
+        // call the base multi threading code, should put a pre & post thread calls in too
+        multiThread(nCPUs);
+    }
+
+private:
+    /** @brief function that will be called in each thread. ID is from 0..nThreads-1 nThreads are the number of threads it is being run over */
+    virtual void multiThreadFunction(unsigned int threadID, unsigned int nThreads) OVERRIDE FINAL
+    {
+        int row_begin = 0;
+        int row_end = 0;
+        OFX::MultiThread::getThreadRange(threadID, nThreads, 0, _iheight, &row_begin, &row_end);
+        if (row_end <= row_begin) {
+            return;
+        }
+        for (int row = row_begin; row < row_end; ++row) {
+            if ( _effect.abort() ) {
+                return;
+            }
+            float prev = 0., prevsq = 0.;
+            for (unsigned int col = 0; col < _iwidth; ++col) {
+                unsigned int i = row * _iwidth + col;
+                prev += _fimg[i];
+                _fimgsumrow[i] = prev;
+                prevsq += _fimg[i] * _fimg[i];
+                _fimgsumsqrow[i] = prevsq;
+            }
+        }
+    }
+
+private:
+    OFX::ImageEffect &_effect;      /**< @brief effect to render with */
+    float const * const _fimg;
+    float * const _fimgsumrow;
+    float * const _fimgsumsqrow;
+    unsigned int const _iwidth;
+    unsigned int const _iheight;
+};
+
+class IntegralCols : public OFX::MultiThread::Processor
+{
+public:
+    IntegralCols(OFX::ImageEffect &instance,
+                 float const* fimgsumrow, // sum along rows
+                 float* fimgsum, // integral image
+                 unsigned int iwidth,
+                 unsigned int iheight) // 1 << lev
+    : _effect(instance)
+    , _fimgsumrow(fimgsumrow)
+    , _fimgsum(fimgsum)
+    , _iwidth(iwidth)
+    , _iheight(iheight)
+    {
+        assert(_fimgsumrow && _fimgsum && _iwidth > 0 && _iheight > 0);
+    }
+
+    /** @brief called to process everything */
+    void process(void)
+    {
+        // make sure there are at least 4096 pixels per CPU and at least 1 column per CPU
+        unsigned int nCPUs = ( std::min(_iheight, 4096u) * _iwidth ) / 4096u;
+        // make sure the number of CPUs is valid (and use at least 1 CPU)
+        nCPUs = std::max( 1u, std::min( nCPUs, OFX::MultiThread::getNumCPUs() ) );
+
+        // call the base multi threading code, should put a pre & post thread calls in too
+        multiThread(nCPUs);
+    }
+
+private:
+    /** @brief function that will be called in each thread. ID is from 0..nThreads-1 nThreads are the number of threads it is being run over */
+    virtual void multiThreadFunction(unsigned int threadID, unsigned int nThreads) OVERRIDE FINAL
+    {
+        int col_begin = 0;
+        int col_end = 0;
+        OFX::MultiThread::getThreadRange(threadID, nThreads, 0, _iwidth, &col_begin, &col_end);
+        if (col_end <= col_begin) {
+            return;
+        }
+        for (int col = col_begin; col < col_end; ++col) {
+            if ( _effect.abort() ) {
+                return;
+            }
+            float prev = 0.;
+            for (unsigned int row = 0; row < _iheight; ++row) {
+                unsigned int i = row * _iwidth + col;
+                prev += _fimgsumrow[i];
+                _fimgsum[i] = prev;
+            }
+        }
+    }
+
+private:
+    OFX::ImageEffect &_effect;      /**< @brief effect to render with */
+    float const * const _fimgsumrow;
+    float * const _fimgsum;
+    unsigned int const _iwidth;
+    unsigned int const _iheight;
+};
+
 #endif
 
 
@@ -1286,6 +1427,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
                                       unsigned int iheight, //!< height of the image
                                       bool b3,
                                       const double noiselevels[4], //!< noise levels for high/medium/low/very low frequencies
+                                      int adaptiveRadius,
                                       double denoise_amount, //!< amount parameter
                                       double sharpen_amount, //!< constrast boost amount
                                       double sharpen_radius, //!< contrast boost radius
@@ -1412,7 +1554,9 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
                 fimg[lpass][i] = temp[row];
                 // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
                 fimg[hpass][i] -= fimg[lpass][i];
+                //if (p._adaptiveRadius <= 0) {
                 sumsqrow += fimg[hpass][i] * fimg[hpass][i];
+                //}
             }
             sumsq += sumsqrow;
             delete [] temp;
@@ -1443,7 +1587,6 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
                 sigma_n_i_sq += sigma_n_i * sigma_n_i;
             }
         }
-        float thold = sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / size - sigma_n_i_sq) );
 
         // uncomment to check the values of the noise[] array
         //printf("width=%u level=%u stdev=%g sigma_n_i=%g\n", iwidth, lev, std::sqrt(sumsq / size), std::sqrt(sigma_n_i_sq));
@@ -1454,33 +1597,42 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[3], //!< fimg[0] is the channe
             beta += sharpen_amount * exp (-((lev + startLevel) - sharpen_radius) * ((lev + startLevel) - sharpen_radius) / 1.5);
         }
 
-#ifdef kUseMultithread
-        {
-            ApplyThreshold processor(*this, fimg[hpass], hpass ? fimg[0] : NULL, size, thold, denoise_amount, beta);
-            processor.process();
-        }
-#else
-#       ifdef _OPENMP
-#       pragma omp parallel for
-#       endif
-        for (unsigned int i = 0; i < size; ++i) {
-            // apply smooth threshold
-            if (fimg[hpass][i] < -thold) {
-                fimg[hpass][i] += thold * denoise_amount;
-            } else if (fimg[hpass][i] >  thold) {
-                fimg[hpass][i] -= thold * denoise_amount;
-            } else {
-                fimg[hpass][i] *= 1. - denoise_amount;
-            }
-            // add the denoised band to the final image
-            if (hpass != 0) {
-                // note: local contrast boost could be applied here, by multiplying fimg[hpass][i] by a factor beta
-                // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5) + 1
+        if (adaptiveRadius <= 0) {
+            // use the signal level computed from the whole image
+            float thold = sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / size - sigma_n_i_sq) );
 
-                fimg[0][i] += beta * fimg[hpass][i];
+#ifdef kUseMultithread
+            {
+                ApplyThreshold processor(*this, fimg[hpass], hpass ? fimg[0] : NULL, size, thold, denoise_amount, beta);
+                processor.process();
             }
-        }
+#else
+#           ifdef _OPENMP
+#           pragma omp parallel for
+#           endif
+            for (unsigned int i = 0; i < size; ++i) {
+                // apply smooth threshold
+                if (fimg[hpass][i] < -thold) {
+                    fimg[hpass][i] += thold * denoise_amount;
+                } else if (fimg[hpass][i] >  thold) {
+                    fimg[hpass][i] -= thold * denoise_amount;
+                } else {
+                    fimg[hpass][i] *= 1. - denoise_amount;
+                }
+                // add the denoised band to the final image
+                if (hpass != 0) {
+                    // note: local contrast boost could be applied here, by multiplying fimg[hpass][i] by a factor beta
+                    // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5) + 1
+
+                    fimg[0][i] += beta * fimg[hpass][i];
+                }
+            }
 #endif
+        } else { // adaptiveRadius > 0
+#warning TODO
+            assert(false);
+            // use the local image level
+        }
         hpass = lpass;
     } // for(lev)
 
@@ -1757,6 +1909,8 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
     p.colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
     p.b3 = _b3->getValueAtTime(time);
     p.startLevel = startLevelFromRenderScale(args.renderScale);
+    p.adaptiveRadius = _adaptiveRadius->getValueAtTime(time);
+
     double noiseLevelGain = _noiseLevelGain->getValueAtTime(time);
     double gainFreq[4];
     for (unsigned int f = 0; f < 4; ++f) {
@@ -1810,7 +1964,8 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
     p.srcWindow.y2 = args.renderWindow.y2 + border;
 
     // intersect with srcBounds
-    OFX::Coords::rectIntersection(p.srcWindow, src->getBounds(), &p.srcWindow);
+    bool nonempty = OFX::Coords::rectIntersection(p.srcWindow, src->getBounds(), &p.srcWindow);
+    unused(nonempty);
 }
 
 template <class PIX, int nComponents, int maxValue>
@@ -1910,7 +2065,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                 assert(fimgcolor[c]);
                 float* fimg[3] = { fimgcolor[c], fimgtmp[0], fimgtmp[1] };
                 abort_test();
-                wavelet_denoise(fimg, iwidth, iheight, p.b3, p.noiseLevel[c], p.denoise_amount[c], p.sharpen_amount[c], p.sharpen_radius, p.startLevel, (float)c / nComponents, 1.f / nComponents);
+                wavelet_denoise(fimg, iwidth, iheight, p.b3, p.noiseLevel[c], p.adaptiveRadius, p.denoise_amount[c], p.sharpen_amount[c], p.sharpen_radius, p.startLevel, (float)c / nComponents, 1.f / nComponents);
             }
         }
     }
@@ -1919,7 +2074,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
         // process alpha
         float* fimg[3] = { fimgalpha, fimgtmp[0], fimgtmp[1] };
         abort_test();
-        wavelet_denoise(fimg, iwidth, iheight, p.b3, p.noiseLevel[3], p.denoise_amount[3], p.sharpen_amount[3], p.sharpen_radius, p.startLevel, (float)(nComponents-1) / nComponents, 1.f / nComponents);
+        wavelet_denoise(fimg, iwidth, iheight, p.b3, p.noiseLevel[3], p.adaptiveRadius, p.denoise_amount[3], p.sharpen_amount[3], p.sharpen_radius, p.startLevel, (float)(nComponents-1) / nComponents, 1.f / nComponents);
     }
 
     // store back into the result
@@ -2012,16 +2167,36 @@ void
 DenoiseSharpenPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
                                       OFX::RegionOfInterestSetter &rois)
 {
+    const double time = args.time;
     if (!_srcClip) {
         return;
     }
-    const OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
+    const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
     if ( OFX::Coords::rectIsEmpty(srcRod) || OFX::Coords::rectIsEmpty(args.regionOfInterest) ) {
         return;
     }
 
-    // requires the full image to compute stats
-    rois.setRegionOfInterest(*_srcClip, srcRod);
+    int adaptiveRadius = _adaptiveRadius->getValueAtTime(time);
+    if (adaptiveRadius <= 0) {
+        // requires the full image to compute stats
+        rois.setRegionOfInterest(*_srcClip, srcRod);
+        return;
+    }
+    bool b3 = _b3->getValueAtTime(time);
+    double par = _srcClip->getPixelAspectRatio();
+    OfxRectI roiPixel;
+    OFX::Coords::toPixelEnclosing(args.regionOfInterest, args.renderScale, par, &roiPixel);
+    int levels = kLevelMax - startLevelFromRenderScale(args.renderScale);
+    int radiusPixel = ( adaptiveRadius + (b3 ? 2 : 1) ) * (1 << levels);
+    roiPixel.x1 -= radiusPixel;
+    roiPixel.x2 += radiusPixel;
+    roiPixel.y1 -= radiusPixel;
+    roiPixel.y2 += radiusPixel;
+    OfxRectD roi;
+    OFX::Coords::toCanonical(roiPixel, args.renderScale, par, &roi);
+
+    OFX::Coords::rectIntersection<OfxRectD>(roi, srcRod, &roi);
+    rois.setRegionOfInterest(*_srcClip, roi);
 }
 
 bool
@@ -2298,7 +2473,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    bool maskInvert = false;//doMasking ? _maskInvert->getValueAtTime(time) : false;
+    bool maskInvert = doMasking ? _maskInvert->getValueAtTime(time) : false;
     bool premult = _premult->getValueAtTime(time);
     int premultChannel = _premultChannel->getValueAtTime(time);
     ColorModelEnum colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
@@ -2593,7 +2768,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    GroupParamDescriptor* group = NULL;
+    const GroupParamDescriptor* group = NULL;
 
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
@@ -2602,6 +2777,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2615,6 +2791,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2628,6 +2805,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2640,6 +2818,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2659,6 +2838,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamOutputModeOptionNoise, kParamOutputModeOptionNoiseHint);
         param->setDefault((int)eOutputModeResult);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2681,6 +2861,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamColorModelOptionLinearRGB, kParamColorModelOptionLinearRGBHint);
         param->setDefault((int)eColorModelYCbCr);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2694,6 +2875,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamB3Hint);
         param->setAnimates(false);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2828,6 +3010,22 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
+        IntParamDescriptor* param = desc.defineIntParam(kParamAdaptiveRadius);
+        param->setLabel(kParamAdaptiveRadiusLabel);
+        param->setHint(kParamAdaptiveRadiusHint);
+        param->setRange(0, 3);
+        param->setDisplayRange(0, 3);
+        param->setDefault(0);
+        param->setAnimates(false);
+        if (group) {
+            // coverity[dead_error_line]
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamNoiseLevelGain);
         param->setLabel(kParamNoiseLevelGainLabel);
         param->setHint(kParamNoiseLevelGainHint);
@@ -2836,6 +3034,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(1.);
         param->setAnimates(true);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -3009,6 +3208,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {

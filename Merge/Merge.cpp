@@ -52,6 +52,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "See also:\n" \
     "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
+    "- \"SVG Compositing Specification\" https://www.w3.org/TR/SVGCompositing/\n" \
+    " - \"ISO 32000-1:2008: Portable Document Format (July 2008)\", Sec. 11.3 \"Basic Compositing Operations\"  http://www.adobe.com/devnet/pdf/pdf_reference.html\n" \
     "- \"Merge Blend Modes\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge_Blend_Modes\n" \
     "- grain-extract and grain-merge are described in http://docs.gimp.org/en/gimp-concepts-layer-modes.html"
 
@@ -175,7 +177,7 @@ unsignedToString(unsigned i)
     }
     std::string nb;
     for (unsigned j = i; j != 0; j /= 10) {
-        nb += ( '0' + (j % 10) );
+        nb = (char)( '0' + (j % 10) ) + nb;
     }
 
     return nb;
@@ -1491,6 +1493,7 @@ OFX::ImageEffect*
 MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
                                            OFX::ContextEnum /*context*/)
 {
+    assert(unsignedToString(12345) == "12345");
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&

@@ -69,7 +69,7 @@ unsignedToString(unsigned i)
     }
     std::string nb;
     for (unsigned j = i; j != 0; j /= 10) {
-        nb += ( '0' + (j % 10) );
+        nb = (char)( '0' + (j % 10) ) + nb;
     }
 
     return nb;
