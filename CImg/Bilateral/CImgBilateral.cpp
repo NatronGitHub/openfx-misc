@@ -103,6 +103,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kClipImage kOfxImageEffectSimpleSourceClipName
 #define kClipGuide "Guide"
+#define kClipGuideHint "The guide image indicates where similar pixels are located in each neighborhood. The neighborhood of a pixel consists of pixels that are within a neighborhood of side sigma_s, which have an intensity/value in the Guide image that is within a range of size sigma_r around the intensity of the considered pixel."
 
 
 /// Bilateral plugin
@@ -386,7 +387,9 @@ CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgBilateralGuidedPlugin::describeInContextBegin(desc, context,
                                                                                        kClipImage,
+                                                                                       NULL/*kClipImageHint*/,
                                                                                        kClipGuide,
+                                                                                       kClipGuideHint,
                                                                                        kSupportsRGBA,
                                                                                        kSupportsRGB,
                                                                                        kSupportsXY,

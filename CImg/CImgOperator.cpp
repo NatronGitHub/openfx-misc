@@ -84,7 +84,9 @@ OFX::PageParamDescriptor*
 CImgOperatorPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor &desc,
                                                      OFX::ContextEnum /*context*/,
                                                      const char* srcAClipName,
+                                                     const char* srcAClipHint,
                                                      const char* srcBClipName,
+                                                     const char* srcBClipHint,
                                                      bool supportsRGBA,
                                                      bool supportsRGB,
                                                      bool supportsXY,
@@ -95,7 +97,13 @@ CImgOperatorPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor 
                                                      bool /*processIsSecret*/)
 {
     OFX::ClipDescriptor *srcBClip = desc.defineClip(srcBClipName);
+    if (srcBClipHint) {
+        srcBClip->setHint(srcBClipHint);
+    }
     OFX::ClipDescriptor *srcAClip = desc.defineClip(srcAClipName);
+    if (srcAClipHint) {
+        srcAClip->setHint(srcAClipHint);
+    }
     OFX::ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
 
     if (supportsRGBA) {

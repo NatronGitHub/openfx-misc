@@ -49,6 +49,7 @@
 #define _GLIBCXX_PARALLEL // enable libstdc++ parallel STL algorithm (eg nth_element, sort...)
 #endif
 #include <cmath>
+#include <cfloat> // DBL_MAX
 #include <algorithm>
 //#include <iostream>
 #ifdef _WINDOWS

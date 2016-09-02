@@ -66,7 +66,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamCurveHint "Shape of the dissolve. Horizontal value is from 0 to 1: 0 is the frame before the In frame and should have a value of 0; 1 is the frame after the Out frame and should have a value of 1."
 
 #define kClipA "A"
+#define kClipAHint "The input you intend to dissolve from."
 #define kClipB "B"
+#define kClipBHint "The input you intend to dissolve from."
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -470,6 +472,7 @@ TimeDissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         ClipDescriptor *srcClip;
         srcClip = desc.defineClip(context == eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB);
+        srcClip->setHint(kClipBHint);
         srcClip->setOptional(true);
         srcClip->addSupportedComponent(ePixelComponentNone);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -483,6 +486,7 @@ TimeDissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         ClipDescriptor *srcClip;
         srcClip = desc.defineClip(kClipA);
+        srcClip->setHint(kClipAHint);
         srcClip->setOptional(true);
         srcClip->addSupportedComponent(ePixelComponentNone);
         srcClip->addSupportedComponent(ePixelComponentRGBA);

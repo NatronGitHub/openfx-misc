@@ -56,7 +56,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamGainHint "Multiply each pixel of the output by this value"
 
 #define kClipA "A"
+#define kClipAHint "The background without the subject (a clean plate)."
 #define kClipB "B"
+#define kClipBHint "The subject with the background."
 
 
 template <class T>
@@ -368,7 +370,7 @@ DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                                            OFX::ContextEnum /*context*/)
 {
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
-
+    srcClipB->setHint(kClipBHint);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipB->addSupportedComponent( OFX::ePixelComponentXY );
@@ -378,6 +380,7 @@ DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClipB->setOptional(false);
 
     OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
+    srcClipA->setHint(kClipAHint);
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipA->addSupportedComponent( OFX::ePixelComponentXY );

@@ -117,9 +117,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSourceAlphaNormalOption "Normal"
 #define kParamSourceAlphaOptionNormalHint "Foreground key is multiplied by source alpha when compositing."
 
+#define kClipSourceHint "The foreground image to key."
 #define kClipBg "Bg"
+#define kClipBgHint "The background image to replace the blue/green screen in the foreground."
 #define kClipInsideMask "InM"
+#define kClipInsideMaskHint "The Inside Mask, or holdout matte, or core matte, used to confirm areas that are definitely foreground."
 #define kClipOutsidemask "OutM"
+#define kClipOutsideMaskHint "The Outside Mask, or garbage matte, used to remove unwanted objects (lighting rigs, and so on) from the foreground."
 
 enum OutputModeEnum
 {
@@ -827,7 +831,7 @@ ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                                             OFX::ContextEnum /*context*/)
 {
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-
+    srcClip->setHint(kClipSourceHint);
     srcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClip->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClip->setTemporalClipAccess(false);
@@ -836,6 +840,7 @@ ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // create the inside mask clip
     ClipDescriptor *inMaskClip =  desc.defineClip(kClipInsideMask);
+    inMaskClip->setHint(kClipInsideMaskHint);
     inMaskClip->addSupportedComponent(ePixelComponentAlpha);
     inMaskClip->setTemporalClipAccess(false);
     inMaskClip->setOptional(true);
@@ -844,6 +849,7 @@ ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // outside mask clip (garbage matte)
     ClipDescriptor *outMaskClip =  desc.defineClip(kClipOutsidemask);
+    outMaskClip->setHint(kClipOutsideMaskHint);
     outMaskClip->addSupportedComponent(ePixelComponentAlpha);
     outMaskClip->setTemporalClipAccess(false);
     outMaskClip->setOptional(true);
@@ -851,6 +857,7 @@ ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     outMaskClip->setIsMask(true);
 
     ClipDescriptor* bgClip = desc.defineClip(kClipBg);
+    bgClip->setHint(kClipBgHint);
     bgClip->addSupportedComponent( OFX::ePixelComponentRGBA );
     bgClip->addSupportedComponent( OFX::ePixelComponentRGB );
     bgClip->setTemporalClipAccess(false);

@@ -52,7 +52,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kClipA "A"
+#define kClipAHint "The image from which the rectangle is copied."
 #define kClipB "B"
+#define kClipBHint "The image onto which the rectangle is copied."
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define kParamProcessR kNatronOfxParamProcessR
@@ -644,7 +646,7 @@ CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                                               OFX::ContextEnum context)
 {
     ClipDescriptor *srcClipB = desc.defineClip(kClipB);
-
+    srcClipB->setHint(kClipAHint);
     srcClipB->addSupportedComponent(ePixelComponentRGBA);
     srcClipB->addSupportedComponent(ePixelComponentRGB);
 #ifdef OFX_EXTENSIONS_NATRON
@@ -656,6 +658,7 @@ CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClipB->setIsMask(false);
 
     ClipDescriptor *srcClipA = desc.defineClip(kClipA);
+    srcClipA->setHint(kClipAHint);
     srcClipA->addSupportedComponent(ePixelComponentRGBA);
     srcClipA->addSupportedComponent(ePixelComponentRGB);
 #ifdef OFX_EXTENSIONS_NATRON

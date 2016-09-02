@@ -45,7 +45,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 #define kPluginDescription \
     "Blend frames of the input clip.\n" \
-    "If a foreground matte is connected, only pixels with a negative or zero foreground value are taken into account.\n" \
+    "If a foreground matte is connected, only pixels with a negative or zero foreground value are taken into account, so that the foreground is not mixed with the background.\n" \
     "The number of values used to compute each pixel can be output to the alpha channel."
 
 #define kPluginIdentifier "net.sf.openfx.FrameBlend"
@@ -136,6 +136,7 @@ enum OperationEnum
 #define kParamOutputCountHint  "Output image count at each pixel to alpha (input must have an alpha channel)."
 
 #define kClipFgMName "FgM"
+#define kClipFgMHint "The foreground matte. If it is connected, only pixels with a negative or zero foreground value are taken into account."
 
 #define kFrameChunk 4 // how many frames to process simultaneously
 

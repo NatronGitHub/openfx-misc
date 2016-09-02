@@ -164,7 +164,9 @@ enum BBoxEnum
 #define kParamOutputChannelsAHint  "Write alpha component to output."
 
 #define kClipA "A"
+#define kClipAHint "The image sequence to merge with input B."
 #define kClipB "B"
+#define kClipBHint "The main input. This input is passed through when the merge node is disabled."
 
 #define kMaximumAInputs 64
 
@@ -1164,7 +1166,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
                             OFX::getImageEffectHostDescription()->versionMajor >= 2);
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
-
+    srcClipB->setHint(kClipBHint);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipB->addSupportedComponent( OFX::ePixelComponentXY );
@@ -1177,6 +1179,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClipB->setOptional(false); // B clip is non-optional
 
     OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
+    srcClipA->setHint(kClipAHint);
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipA->addSupportedComponent( OFX::ePixelComponentXY );
