@@ -1305,12 +1305,14 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 #             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
                 getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #             endif
+                beginEditBlock("analyzeFrame");
                 if (doAnalyzeRGBA) {
                     update(src.get(), args.time, analysisWindow);
                 }
                 if (doAnalyzeHSVL) {
                     updateHSVL(src.get(), args.time, analysisWindow);
                 }
+                endEditBlock();
 #             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
                 getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
 #             endif
@@ -1322,6 +1324,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #     endif
         progressStart("Analyzing sequence...");
+        beginEditBlock("analyzeSequence");
         OfxRangeD range = _srcClip->getFrameRange();
         //timeLineGetBounds(range.min, range.max); // wrong: we want the input frame range only
         int tmin = (int)std::ceil(range.min);
@@ -1352,6 +1355,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             }
         }
         progressEnd();
+        endEditBlock();
 #     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
 #     endif
@@ -1443,7 +1447,6 @@ ImageStatisticsPlugin::update(const OFX::Image* srcImg,
     if ( abort() ) {
         return;
     }
-    beginEditBlock("updateStatisticsRGBA");
     _statMin->setValueAtTime(time, results.min.r, results.min.g, results.min.b, results.min.a);
     _statMax->setValueAtTime(time, results.max.r, results.max.g, results.max.b, results.max.a);
     _statMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
@@ -1451,7 +1454,6 @@ ImageStatisticsPlugin::update(const OFX::Image* srcImg,
     _statSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     // printf("skewness = %g %g %g %g\n", results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
-    endEditBlock();
 }
 
 void
@@ -1473,14 +1475,12 @@ ImageStatisticsPlugin::updateHSVL(const OFX::Image* srcImg,
     if ( abort() ) {
         return;
     }
-    beginEditBlock("updateStatisticsHSVL");
     _statHSVLMin->setValueAtTime(time, results.min.r, results.min.g, results.min.b, results.min.a);
     _statHSVLMax->setValueAtTime(time, results.max.r, results.max.g, results.max.b, results.max.a);
     _statHSVLMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
     _statHSVLSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
     _statHSVLSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statHSVLKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
-    endEditBlock();
 }
 
 class ImageStatisticsInteract
