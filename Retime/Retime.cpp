@@ -66,7 +66,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSpeed "speed"
 #define kParamSpeedLabel "Speed"
-#define kParamSpeedHint "How much to changed the speed of the input clip"
+#define kParamSpeedHint "How much to change the speed of the input clip"
 
 #define kParamDuration "duration"
 #define kParamDurationLabel "Duration"
@@ -682,6 +682,7 @@ RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             param->setRange(-DBL_MAX, DBL_MAX);
             param->setDisplayRange(0.1, 10.);
             param->setAnimates(true); // can animate
+            param->setCacheInvalidation(eCacheInvalidateValueChangeToEnd); // any speed change affects all frames to end of sequence
             param->setDoubleType(eDoubleTypeScale);
             if (page) {
                 page->addChild(*param);
