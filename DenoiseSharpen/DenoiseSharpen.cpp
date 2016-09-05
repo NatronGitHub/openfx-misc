@@ -1198,14 +1198,8 @@ private:
                 // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
                 _fimg_hpass[i] -= _fimg_lpass[i];
             }
-            {
-                AutoMutex l(&_sumsq_mutex);
-            }
         }
     }
-
-    Mutex _sumsq_mutex;
-    double *_sumsq;
 };
 
 class ApplyThreshold : public OFX::MultiThread::Processor
