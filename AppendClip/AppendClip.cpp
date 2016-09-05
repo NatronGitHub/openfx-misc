@@ -1068,6 +1068,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFirstFrameLabel);
         param->setHint(kParamFirstFrameHint);
         param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range
+        param->setDisplayRange(INT_MIN, INT_MAX);
         param->setDefault(1);
         param->setAnimates(false); // used in getTimeDomain()
         if (page) {
@@ -1079,6 +1080,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamLastFrameLabel);
         param->setHint(kParamLastFrameHint);
         param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setDisplayRange(INT_MIN, INT_MAX);
         param->setDefault(0);
         param->setEnabled(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);

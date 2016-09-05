@@ -597,6 +597,7 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamSpillMapMixLabel);
         param->setHint(kParamSpillMapMixHint);
         param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
         param->setDefault(0.5);
         if (page) {
             page->addChild(*param);
@@ -608,6 +609,7 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamExpandSpillMapLabel);
         param->setHint(kParamExpandSpillMapHint);
         param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
         param->setDefault(0.);
         if (page) {
             page->addChild(*param);
