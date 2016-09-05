@@ -68,8 +68,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Other"
 #define kPluginDescription \
     "Compute image statistics over the whole image or over a rectangle. " \
-    "The statistics can be computed either on RGBA components or in the HSVL colorspace " \
-    "(which is the HSV coilorspace with an additional L component from HSL)."
+    "The statistics can be computed either on RGBA components, in the HSVL colorspace " \
+    "(which is the HSV colorspace with an additional L component from HSL), or the " \
+    "position and value of the pixels with the maximum and minimum luminance values can be computed.\n" \
+    "The color values of the minimum and maximum luma pixels for an image sequence " \
+    "can be used as black and white point in a Grade node to remove flicker from the same sequence."
 #define kPluginIdentifier "net.sf.openfx.ImageStatistics"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -201,6 +204,64 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "• The skewness is unitless.\n" \
     "• Any threshold or rule of thumb is arbitrary, but here is one: If the skewness is greater than 1.0 (or less than -1.0), the skewness is substantial and the distribution is far from symmetrical."
 
+#define kParamGroupLuma "Min/Max Luma"
+
+#define kParamAnalyzeFrameLuma "analyzeFrameLuma"
+#define kParamAnalyzeFrameLumaLabel "Analyze Frame"
+#define kParamAnalyzeFrameLumaHint "Analyze current frame and set min/max luma values."
+
+#define kParamAnalyzeSequenceLuma "analyzeSequenceLuma"
+#define kParamAnalyzeSequenceLumaLabel "Analyze Sequence"
+#define kParamAnalyzeSequenceLumaHint "Analyze all frames from the sequence aand set min/max luma values."
+
+#define kParamClearFrameLuma "clearFrameLuma"
+#define kParamClearFrameLumaLabel "Clear Frame"
+#define kParamClearFrameLumaHint "Clear luma analysis for current frame."
+
+#define kParamClearSequenceLuma "clearSequenceLuma"
+#define kParamClearSequenceLumaLabel "Clear Sequence"
+#define kParamClearSequenceLumaHint "Clear luma analysis for all frames from the sequence."
+
+#define kParamLuminanceMath "luminanceMath"
+#define kParamLuminanceMathLabel "Luminance Math"
+#define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
+#define kParamLuminanceMathOptionRec709 "Rec. 709"
+#define kParamLuminanceMathOptionRec709Hint "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b)."
+#define kParamLuminanceMathOptionRec2020 "Rec. 2020"
+#define kParamLuminanceMathOptionRec2020Hint "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b)."
+#define kParamLuminanceMathOptionACES "ACES"
+#define kParamLuminanceMathOptionACESHint "Use ACES (0.3439664498r + 0.7281660966g + -0.0721325464b)."
+#define kParamLuminanceMathOptionCcir601 "CCIR 601"
+#define kParamLuminanceMathOptionCcir601Hint "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b)."
+#define kParamLuminanceMathOptionAverage "Average"
+#define kParamLuminanceMathOptionAverageHint "Use average of r, g, b."
+#define kParamLuminanceMathOptionMaximum "Max"
+#define kParamLuminanceMathOptionMaximumHint "Use max or r, g, b."
+
+enum LuminanceMathEnum
+{
+    eLuminanceMathRec709,
+    eLuminanceMathRec2020,
+    eLuminanceMathACES,
+    eLuminanceMathCcir601,
+    eLuminanceMathAverage,
+    eLuminanceMathMaximum,
+};
+
+#define kParamMaxLumaPix "maxLumaPix"
+#define kParamMaxLumaPixLabel "Max Luma Pixel"
+#define kParamMaxLumaPixHint "Position of the pixel with the maximum luma value."
+#define kParamMaxLumaPixVal "maxLumaPixVal"
+#define kParamMaxLumaPixValLabel "Max Luma Pixel Value"
+#define kParamMaxLumaPixValHint "RGB value for the pixel with the maximum luma value."
+
+#define kParamMinLumaPix "minLumaPix"
+#define kParamMinLumaPixLabel "Min Luma Pixel"
+#define kParamMinLumaPixHint "Position of the pixel with the minimum luma value."
+#define kParamMinLumaPixVal "minLumaPixVal"
+#define kParamMinLumaPixValLabel "Min Luma Pixel Value"
+#define kParamMinLumaPixValHint "RGB value for the pixel with the minimum luma value."
+
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
@@ -221,6 +282,10 @@ struct Results
     RGBAValues sdev;
     RGBAValues skewness;
     RGBAValues kurtosis;
+    OfxPointD maxPos; // luma only
+    RGBAValues maxVal; // luma only
+    OfxPointD minPos; // luma only
+    RGBAValues minVal; // luma only
 };
 
 class ImageStatisticsProcessorBase
@@ -242,7 +307,7 @@ public:
     {
     }
 
-    virtual void setPrevResults(const Results &results) = 0;
+    virtual void setPrevResults(double time, const Results &results) = 0;
     virtual void getResults(Results *results) = 0;
 
 protected:
@@ -343,7 +408,7 @@ public:
     {
     }
 
-    void setPrevResults(const Results & /*results*/) OVERRIDE FINAL {}
+    void setPrevResults(double /* time */, const Results & /*results*/) OVERRIDE FINAL {}
 
     void getResults(Results *results) OVERRIDE FINAL
     {
@@ -434,7 +499,7 @@ public:
     {
     }
 
-    void setPrevResults(const Results &results) OVERRIDE FINAL
+    void setPrevResults(double /* time */, const Results &results) OVERRIDE FINAL
     {
         toComponents<double, nComponents, 1>(results.mean, _mean);
     }
@@ -523,7 +588,7 @@ public:
     {
     }
 
-    void setPrevResults(const Results &results) OVERRIDE FINAL
+    void setPrevResults(double /* time */, const Results &results) OVERRIDE FINAL
     {
         toComponents<double, nComponents, 1>(results.mean, _mean);
         toComponents<double, nComponents, 1>(results.sdev, _sdev);
@@ -637,7 +702,7 @@ public:
     {
     }
 
-    void setPrevResults(const Results & /*results*/) OVERRIDE FINAL {}
+    void setPrevResults(double /* time */, const Results & /*results*/) OVERRIDE FINAL {}
 
     void getResults(Results *results) OVERRIDE FINAL
     {
@@ -730,7 +795,7 @@ public:
     {
     }
 
-    void setPrevResults(const Results &results) OVERRIDE FINAL
+    void setPrevResults(double /* time */, const Results &results) OVERRIDE FINAL
     {
         toComponents<double, nComponentsHSVL, 1>(results.mean, _mean);
     }
@@ -821,7 +886,7 @@ public:
     {
     }
 
-    void setPrevResults(const Results &results) OVERRIDE FINAL
+    void setPrevResults(double /* time */, const Results &results) OVERRIDE FINAL
     {
         toComponents<double, nComponentsHSVL, 1>(results.mean, _mean);
         toComponents<double, nComponentsHSVL, 1>(results.sdev, _sdev);
@@ -909,6 +974,152 @@ private:
     }
 };
 
+template <class PIX, int nComponents, int maxValue>
+class ImageLumaProcessor
+: public ImageStatisticsProcessorBase
+{
+private:
+    OfxPointD _maxPos;
+    double _maxVal[nComponents];
+    double _maxLuma;
+    OfxPointD _minPos;
+    double _minVal[nComponents];
+    double _minLuma;
+    LuminanceMathEnum _luminanceMath;
+
+public:
+    ImageLumaProcessor(OFX::ImageEffect &instance)
+    : ImageStatisticsProcessorBase(instance)
+    {
+        _minLuma = +std::numeric_limits<double>::infinity();
+        _maxLuma = -std::numeric_limits<double>::infinity();
+    }
+
+    ImageLumaProcessor()
+    {
+    }
+
+    void setPrevResults(double time, const Results & /*results*/) OVERRIDE FINAL {
+        ChoiceParam* luminanceMath = _effect.fetchChoiceParam(kParamLuminanceMath);
+        assert(luminanceMath);
+        _luminanceMath = (LuminanceMathEnum)luminanceMath->getValueAtTime(time);
+    }
+
+    void getResults(Results *results) OVERRIDE FINAL
+    {
+        results->maxPos = _maxPos;
+        toRGBA<double, nComponents, 1>(_maxVal, &results->maxVal);
+        results->minPos = _minPos;
+        toRGBA<double, nComponents, 1>(_minVal, &results->minVal);
+    }
+
+private:
+
+    double luminance (const PIX *p)
+    {
+        if ( (nComponents == 4) || (nComponents == 3) ) {
+            float r, g, b;
+            r = p[0] / (float)maxValue;
+            g = p[1] / (float)maxValue;
+            b = p[2] / (float)maxValue;
+            switch (_luminanceMath) {
+                case eLuminanceMathRec709:
+                default:
+
+                    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
+
+                    return 0.2627 * r + 0.6780 * g + 0.0593 * b;
+                case eLuminanceMathACES: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+
+                    return 0.3439664498 * r + 0.7281660966 * g + -0.0721325464 * b;
+                case eLuminanceMathCcir601:
+
+                    return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+                case eLuminanceMathAverage:
+
+                    return (r + g + b) / 3;
+                case eLuminanceMathMaximum:
+
+                    return std::max(std::max(r, g), b);
+            }
+        }
+        return 0.;
+    }
+
+    void addResults(const OfxPointD& maxPos,
+                    double maxVal[nComponents],
+                    double maxLuma,
+                    const OfxPointD& minPos,
+                    double minVal[nComponents],
+                    double minLuma)
+    {
+        _mutex.lock();
+        if (maxLuma > _maxLuma) {
+            _maxPos = maxPos;
+            for (int c = 0; c < nComponents; ++c) {
+                _maxVal[c] = maxVal[c];
+            }
+            _maxLuma = maxLuma;
+        }
+        if (minLuma < _minLuma) {
+            _minPos = minPos;
+            for (int c = 0; c < nComponents; ++c) {
+                _minVal[c] = minVal[c];
+            }
+            _minLuma = minLuma;
+        }
+        _mutex.unlock();
+    }
+
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    {
+        OfxPointD maxPos;
+        double maxVal[nComponents];
+        double maxLuma = -std::numeric_limits<double>::infinity();
+        OfxPointD minPos;
+        double minVal[nComponents];
+        double minLuma = +std::numeric_limits<double>::infinity();
+
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if ( _effect.abort() ) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                double luma = luminance(dstPix);
+
+                if (luma > maxLuma) {
+                    maxPos.x = x;
+                    maxPos.y = y;
+                    for (int c = 0; c < nComponents; ++c) {
+                        maxVal[c] = dstPix[c] / (double)maxValue;
+                    }
+                    maxLuma = luma;
+                }
+                if (luma < minLuma) {
+                    minPos.x = x;
+                    minPos.y = y;
+                    for (int c = 0; c < nComponents; ++c) {
+                        minVal[c] = dstPix[c] / (double)maxValue;
+                    }
+                    minLuma = luma;
+                }
+
+                dstPix += nComponents;
+            }
+        }
+        
+        addResults(maxPos, maxVal, maxLuma, minPos, minVal, minLuma);
+    }
+};
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class ImageStatisticsPlugin
@@ -961,7 +1172,12 @@ public:
         _analyzeFrameHSVL = fetchPushButtonParam(kParamAnalyzeFrameHSVL);
         _analyzeSequenceHSVL = fetchPushButtonParam(kParamAnalyzeSequenceHSVL);
         assert(_analyzeFrameHSVL && _analyzeSequenceHSVL);
-
+        _luminanceMath = fetchChoiceParam(kParamLuminanceMath);
+        _maxLumaPix = fetchDouble2DParam(kParamMaxLumaPix);
+        _maxLumaPixVal = fetchRGBAParam(kParamMaxLumaPixVal);
+        _minLumaPix = fetchDouble2DParam(kParamMinLumaPix);
+        _minLumaPixVal = fetchRGBAParam(kParamMinLumaPixVal);
+        assert(_luminanceMath && _maxLumaPix && _maxLumaPixVal && _minLumaPix && _minLumaPixVal);
         // update visibility
         bool restrictToRectangle = _restrictToRectangle->getValue();
         _btmLeft->setEnabled(restrictToRectangle);
@@ -993,6 +1209,7 @@ private:
     // update image statistics
     void update(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
     void updateHSVL(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
+    void updateLuma(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, class PIX, int nComponents, int maxValue>
     void updateSubComponentsDepth(const OFX::Image* srcImg,
@@ -1080,6 +1297,11 @@ private:
     RGBAParam* _statHSVLKurtosis;
     PushButtonParam* _analyzeFrameHSVL;
     PushButtonParam* _analyzeSequenceHSVL;
+    ChoiceParam* _luminanceMath;
+    Double2DParam* _maxLumaPix;
+    RGBAParam* _maxLumaPixVal;
+    Double2DParam* _minLumaPix;
+    RGBAParam* _minLumaPixVal;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1142,6 +1364,10 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
                 k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
                 if (k != -1) {
                     updateHSVL(src.get(), args.time, analysisWindow);
+                }
+                k = _maxLumaPix->getKeyIndex(args.time, eKeySearchNear);
+                if (k != -1) {
+                    updateLuma(src.get(), args.time, analysisWindow);
                 }
             }
         }
@@ -1212,8 +1438,10 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     bool doUpdate = false;
     bool doAnalyzeRGBA = false;
     bool doAnalyzeHSVL = false;
+    bool doAnalyzeLuma = false;
     bool doAnalyzeSequenceRGBA = false;
     bool doAnalyzeSequenceHSVL = false;
+    bool doAnalyzeSequenceLuma = false;
     OfxRectI analysisWindow;
     const double time = args.time;
 
@@ -1251,6 +1479,12 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     if (paramName == kParamAnalyzeSequenceHSVL) {
         doAnalyzeSequenceHSVL = true;
     }
+    if (paramName == kParamAnalyzeFrameLuma) {
+        doAnalyzeLuma = true;
+    }
+    if (paramName == kParamAnalyzeSequenceLuma) {
+        doAnalyzeSequenceLuma = true;
+    }
     if (paramName == kParamClearFrame) {
         _statMin->deleteKeyAtTime(args.time);
         _statMax->deleteKeyAtTime(args.time);
@@ -1283,15 +1517,29 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _statHSVLSkewness->deleteAllKeys();
         _statHSVLKurtosis->deleteAllKeys();
     }
+    if (paramName == kParamClearFrameLuma) {
+        _maxLumaPix->deleteKeyAtTime(args.time);
+        _maxLumaPixVal->deleteKeyAtTime(args.time);
+        _minLumaPix->deleteKeyAtTime(args.time);
+        _minLumaPixVal->deleteKeyAtTime(args.time);
+    }
+    if (paramName == kParamClearSequenceLuma) {
+        _maxLumaPix->deleteAllKeys();
+        _maxLumaPixVal->deleteAllKeys();
+        _minLumaPix->deleteAllKeys();
+        _minLumaPixVal->deleteAllKeys();
+    }
     if (doUpdate) {
         // check if there is already a Keyframe, if yes update it
         int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
         doAnalyzeRGBA = (k != -1);
         k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
         doAnalyzeHSVL = (k != -1);
+        k = _maxLumaPix->getKeyIndex(args.time, eKeySearchNear);
+        doAnalyzeLuma = (k != -1);
     }
     // RGBA analysis
-    if ( (doAnalyzeRGBA || doAnalyzeHSVL) && _srcClip && _srcClip->isConnected() ) {
+    if ( (doAnalyzeRGBA || doAnalyzeHSVL || doAnalyzeLuma) && _srcClip && _srcClip->isConnected() ) {
         std::auto_ptr<OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                        _srcClip->fetchImage(args.time) : 0 );
         if ( src.get() ) {
@@ -1312,6 +1560,9 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 if (doAnalyzeHSVL) {
                     updateHSVL(src.get(), args.time, analysisWindow);
                 }
+                if (doAnalyzeLuma) {
+                    updateLuma(src.get(), args.time, analysisWindow);
+                }
                 endEditBlock();
 #             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
                 getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
@@ -1319,7 +1570,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             }
         }
     }
-    if ( (doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL) && _srcClip && _srcClip->isConnected() ) {
+    if ( (doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL || doAnalyzeSequenceLuma) && _srcClip && _srcClip->isConnected() ) {
 #     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #     endif
@@ -1346,6 +1597,9 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                     if (doAnalyzeSequenceHSVL) {
                         updateHSVL(src.get(), t, analysisWindow);
                     }
+                    if (doAnalyzeSequenceLuma) {
+                        updateLuma(src.get(), t, analysisWindow);
+                    }
                 }
             }
             if (tmax != tmin) {
@@ -1366,7 +1620,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 void
 ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor,
                                        const OFX::Image* srcImg,
-                                       double /*time*/,
+                                       double time,
                                        const OfxRectI &analysisWindow,
                                        const Results &prevResults,
                                        Results *results)
@@ -1377,7 +1631,7 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor,
     // set the render window
     processor.setRenderWindow(analysisWindow);
 
-    processor.setPrevResults(prevResults);
+    processor.setPrevResults(time, prevResults);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -1481,6 +1735,22 @@ ImageStatisticsPlugin::updateHSVL(const OFX::Image* srcImg,
     _statHSVLSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
     _statHSVLSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statHSVLKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
+}
+
+void
+ImageStatisticsPlugin::updateLuma(const OFX::Image* srcImg,
+                                  double time,
+                                  const OfxRectI &analysisWindow)
+{
+    Results results;
+
+    if ( !abort() ) {
+        updateSub<ImageLumaProcessor>(srcImg, time, analysisWindow, results, &results);
+    }
+    _maxLumaPix->setValueAtTime(time, results.maxPos.x, results.maxPos.y);
+    _maxLumaPixVal->setValueAtTime(time, results.maxVal.r, results.maxVal.g, results.maxVal.b, results.maxVal.a);
+    _minLumaPix->setValueAtTime(time, results.minPos.x, results.minPos.y);
+    _minLumaPixVal->setValueAtTime(time, results.minVal.r, results.minVal.g, results.minVal.b, results.minVal.a);
 }
 
 class ImageStatisticsInteract
@@ -2012,6 +2282,155 @@ ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
             }
         }
     }
+
+
+    {
+        GroupParamDescriptor* group = desc.defineGroupParam(kParamGroupLuma);
+        if (group) {
+            group->setLabel(kParamGroupLuma);
+            group->setAsTab();
+        }
+
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
+            param->setLabel(kParamLuminanceMathLabel);
+            param->setHint(kParamLuminanceMathHint);
+            assert(param->getNOptions() == eLuminanceMathRec709);
+            param->appendOption(kParamLuminanceMathOptionRec709, kParamLuminanceMathOptionRec709Hint);
+            assert(param->getNOptions() == eLuminanceMathRec2020);
+            param->appendOption(kParamLuminanceMathOptionRec2020, kParamLuminanceMathOptionRec2020Hint);
+            assert(param->getNOptions() == eLuminanceMathACES);
+            param->appendOption(kParamLuminanceMathOptionACES, kParamLuminanceMathOptionACESHint);
+            assert(param->getNOptions() == eLuminanceMathCcir601);
+            param->appendOption(kParamLuminanceMathOptionCcir601, kParamLuminanceMathOptionCcir601Hint);
+            assert(param->getNOptions() == eLuminanceMathAverage);
+            param->appendOption(kParamLuminanceMathOptionAverage, kParamLuminanceMathOptionAverageHint);
+            assert(param->getNOptions() == eLuminanceMathMaximum);
+            param->appendOption(kParamLuminanceMathOptionMaximum, kParamLuminanceMathOptionMaximumHint);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMaxLumaPix);
+            param->setDoubleType(eDoubleTypeXYAbsolute);
+            param->setUseHostNativeOverlayHandle(true);
+            param->setLabel(kParamMaxLumaPixLabel);
+            param->setHint(kParamMaxLumaPixHint);
+            param->setDimensionLabels("x", "y");
+            param->setEvaluateOnChange(false);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMaxLumaPixVal);
+            param->setLabel(kParamMaxLumaPixValLabel);
+            param->setHint(kParamMaxLumaPixValHint);
+            param->setEvaluateOnChange(false);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMinLumaPix);
+            param->setDoubleType(eDoubleTypeXYAbsolute);
+            param->setUseHostNativeOverlayHandle(true);
+            param->setLabel(kParamMinLumaPixLabel);
+            param->setHint(kParamMinLumaPixHint);
+            param->setDimensionLabels("x", "y");
+            param->setEvaluateOnChange(false);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMinLumaPixVal);
+            param->setLabel(kParamMinLumaPixValLabel);
+            param->setHint(kParamMinLumaPixValHint);
+            param->setEvaluateOnChange(false);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // analyzeFrameLuma
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeFrameLuma);
+            param->setLabel(kParamAnalyzeFrameLumaLabel);
+            param->setHint(kParamAnalyzeFrameLumaHint);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // analyzeSequenceLuma
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeSequenceLuma);
+            param->setLabel(kParamAnalyzeSequenceLumaLabel);
+            param->setHint(kParamAnalyzeSequenceLumaHint);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // clearFrameLuma
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearFrameLuma);
+            param->setLabel(kParamClearFrameLumaLabel);
+            param->setHint(kParamClearFrameLumaHint);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // clearSequenceLuma
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearSequenceLuma);
+            param->setLabel(kParamClearSequenceLumaLabel);
+            param->setHint(kParamClearSequenceLumaHint);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    }
+
 } // ImageStatisticsPluginFactory::describeInContext
 
 static ImageStatisticsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
