@@ -113,9 +113,9 @@ xcopy $(SolutionDir)..\GodRays\net.sf.openfx.GodRays.png $(OutDir)$(ProjectName)
 xcopy $(SolutionDir)..\Grade\net.sf.openfx.GradePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.HSVToRGB.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGB.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LabToRGB709.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToHSV.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToLAB.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGB709ToLab.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGB709ToXYZ.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGB709.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Distortion\net.sf.openfx.IDistort.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -195,9 +195,9 @@ xcopy $(SolutionDir)..\Grade\net.sf.openfx.GradePlugin.png $(OutDir)$(ProjectNam
 xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToLABPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGB709ToLabPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGB709ToXYZPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LabToRGB709Plugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGB709Plugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Distortion\net.sf.openfx.IDistort.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Distortion\net.sf.openfx.STMap.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -281,9 +281,9 @@ xcopy $(SolutionDir)..\Grade\net.sf.openfx.GradePlugin.png $(OutDir)$(ProjectNam
 xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToLABPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGB709ToLabPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGB709ToXYZPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LabToRGB709Plugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGB709Plugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Distortion\net.sf.openfx.IDistort.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Distortion\net.sf.openfx.STMap.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -367,9 +367,9 @@ xcopy $(SolutionDir)..\Grade\net.sf.openfx.GradePlugin.png $(OutDir)$(ProjectNam
 xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToLABPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGB709ToLabPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGB709ToXYZPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LabToRGB709Plugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGB709Plugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Distortion\net.sf.openfx.IDistort.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Distortion\net.sf.openfx.STMap.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y

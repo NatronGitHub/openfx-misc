@@ -112,20 +112,28 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 
 #define kPluginRGB709ToXYZName "RGB709ToXYZ"
-#define kPluginRGB709ToXYZDescription "Convert from RGB to XYZ color model (Rec.709 with D65 illuminant). X, Y and Z are in the same units as RGB."
+#define kPluginRGB709ToXYZDescription "Convert from RGB (Rec.709 with D65 illuminant) to XYZ color model. X, Y and Z are in the same units as RGB."
 #define kPluginRGB709ToXYZIdentifier "net.sf.openfx.RGB709ToXYZ"
 
 #define kPluginXYZToRGB709Name "XYZToRGB709"
-#define kPluginXYZToRGB709Description "Convert from XYZ color model (Rec.709 with D65 illuminant) to RGB. X, Y and Z are in the same units as RGB."
+#define kPluginXYZToRGB709Description "Convert from XYZ color model to RGB (Rec.709 with D65 illuminant). X, Y and Z are in the same units as RGB."
 #define kPluginXYZToRGB709Identifier "net.sf.openfx.XYZToRGB709"
 
 #define kPluginRGB709ToLabName "RGB709ToLab"
-#define kPluginRGB709ToLabDescription "Convert from RGB to L*a*b color model (Rec.709 with D65 illuminant). L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginRGB709ToLabDescription "Convert from RGB (Rec.709 with D65 illuminant) to L*a*b color model. L*a*b coordinates are divided by 100 for better visualization."
 #define kPluginRGB709ToLabIdentifier "net.sf.openfx.RGB709ToLab"
 
 #define kPluginLabToRGB709Name "LabToRGB709"
-#define kPluginLabToRGB709Description "Convert from L*a*b color model (Rec.709 with D65 illuminant) to RGB. L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginLabToRGB709Description "Convert from L*a*b color model to RGB (Rec.709 with D65 illuminant). L*a*b coordinates are divided by 100 for better visualization."
 #define kPluginLabToRGB709Identifier "net.sf.openfx.LabToRGB709"
+
+#define kPluginXYZToLabName "XYZToLab"
+#define kPluginXYZToLabDescription "Convert from XYZ to L*a*b color model. L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginXYZToLabIdentifier "net.sf.openfx.XYZToLab"
+
+#define kPluginLabToXYZName "LabToXYZ"
+#define kPluginLabToXYZDescription "Convert from L*a*b color model to XYZ. L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginLabToXYZIdentifier "net.sf.openfx.LabToXYZ"
 
 #define kPluginGrouping "Color/Transform"
 
@@ -175,7 +183,9 @@ enum ColorTransformEnum
     eColorTransformRGB709ToXYZ,
     eColorTransformXYZToRGB709,
     eColorTransformRGB709ToLab,
-    eColorTransformLabToRGB709
+    eColorTransformLabToRGB709,
+    eColorTransformXYZToLab,
+    eColorTransformLabToXYZ,
 };
 
 #define toRGB(e)   ( (e) == eColorTransformHSVToRGB || \
@@ -190,7 +200,7 @@ enum ColorTransformEnum
                      (e) == eColorTransformXYZToRGB709 || \
                      (e) == eColorTransformLabToRGB709 )
 
-#define fromRGB(e) ( !toRGB(e) )
+#define fromRGB(e) ( !toRGB(e) && ((e) != eColorTransformXYZToLab) && ((e) != eColorTransformLabToXYZ) )
 
 class ColorTransformProcessorBase
     : public OFX::ImageProcessor
@@ -403,6 +413,20 @@ public:
                     unpPix[2] *= 100;
                     OFX::Color::lab_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
+
+                case eColorTransformXYZToLab:
+                    OFX::Color::xyz_to_lab(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] /= 100;
+                    tmpPix[1] /= 100;
+                    tmpPix[2] /= 100;
+                    break;
+
+                case eColorTransformLabToXYZ:
+                    unpPix[0] *= 100;
+                    unpPix[1] *= 100;
+                    unpPix[2] *= 100;
+                    OFX::Color::lab_to_xyz(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    break;
                 } // switch
                 tmpPix[3] = unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, dopremult, _premultChannel, x, y, srcPix, /*doMasking=*/ false, /*maskImg=*/ NULL, /*mix=*/ 1.f, /*maskInvert=*/ false, dstPix);
@@ -426,6 +450,8 @@ public:
         : ImageEffect(handle)
         , _dstClip(0)
         , _srcClip(0)
+        , _premult(0)
+        , _premultChannel(0)
         , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -435,11 +461,13 @@ public:
         assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
-        _premult = fetchBooleanParam(kParamPremult);
-        _premultChannel = fetchChoiceParam(kParamPremultChannel);
-        assert(_premult && _premultChannel);
-        _premultChanged = fetchBooleanParam(kParamPremultChanged);
-        assert(_premultChanged);
+        if (fromRGB(transform) || toRGB(transform)) {
+            _premult = fetchBooleanParam(kParamPremult);
+            _premultChannel = fetchChoiceParam(kParamPremultChannel);
+            assert(_premult && _premultChannel);
+            _premultChanged = fetchBooleanParam(kParamPremultChanged);
+            assert(_premultChanged);
+        }
     }
 
 private:
@@ -516,10 +544,14 @@ ColorTransformPlugin<transform>::setupAndProcess(ColorTransformProcessorBase &pr
     processor.setSrcImg( src.get() );
     processor.setRenderWindow(args.renderWindow);
 
-    bool premult;
-    int premultChannel;
-    _premult->getValueAtTime(args.time, premult);
-    _premultChannel->getValueAtTime(args.time, premultChannel);
+    bool premult = false;
+    if (_premult) {
+        _premult->getValueAtTime(args.time, premult);
+    }
+    int premultChannel = 3;
+    if (_premultChannel) {
+        _premultChannel->getValueAtTime(args.time, premultChannel);
+    }
 
     processor.setValues(premult, premultChannel);
     processor.process();
@@ -586,7 +618,9 @@ template <ColorTransformEnum transform>
 void
 ColorTransformPlugin<transform>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    if ( _srcClip && ( !_srcClip->isConnected() || (_srcClip->getPixelComponents() ==  ePixelComponentRGBA) ) ) {
+    if ( ( fromRGB(transform) || toRGB(transform) ) &&
+          _srcClip &&
+          ( !_srcClip->isConnected() || (_srcClip->getPixelComponents() ==  ePixelComponentRGBA) ) ) {
         bool premult;
         _premult->getValue(premult);
         // set the premultiplication of _dstClip
@@ -605,7 +639,8 @@ void
 ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args,
                                              const std::string &clipName)
 {
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+    if ( ( fromRGB(transform) || toRGB(transform) ) &&
+         (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
          ( args.reason == OFX::eChangeUserEdit) ) {
@@ -632,7 +667,7 @@ void
 ColorTransformPlugin<transform>::changedParam(const OFX::InstanceChangedArgs &args,
                                               const std::string &paramName)
 {
-    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( ( fromRGB(transform) || toRGB(transform) ) && (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
 }
@@ -768,6 +803,16 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
         desc.setLabel(kPluginLabToRGB709Name);
         desc.setPluginDescription(kPluginLabToRGB709Description);
         break;
+
+    case eColorTransformXYZToLab:
+        desc.setLabel(kPluginXYZToLabName);
+        desc.setPluginDescription(kPluginXYZToLabDescription);
+        break;
+
+    case eColorTransformLabToXYZ:
+        desc.setLabel(kPluginLabToXYZName);
+        desc.setPluginDescription(kPluginLabToXYZDescription);
+        break;
     } // switch
     desc.setPluginGrouping(kPluginGrouping);
 
@@ -815,47 +860,49 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam("Controls");
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremult);
-        if ( fromRGB(transform) ) {
-            param->setLabel(kParamPremultRGBToXXXLabel);
-            param->setHint(kParamPremultRGBToXXXHint);
-        } else {
-            param->setLabel(kParamPremultXXXToRGBLabel);
-            param->setHint(kParamPremultXXXToRGBHint);
+    if (fromRGB(transform) || toRGB(transform)) {
+        PageParamDescriptor *page = desc.definePageParam("Controls");
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremult);
+            if ( fromRGB(transform) ) {
+                param->setLabel(kParamPremultRGBToXXXLabel);
+                param->setHint(kParamPremultRGBToXXXHint);
+            } else {
+                param->setLabel(kParamPremultXXXToRGBLabel);
+                param->setHint(kParamPremultXXXToRGBHint);
+            }
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        param->setAnimates(false);
-        desc.addClipPreferencesSlaveParam(*param);
-        if (page) {
-            page->addChild(*param);
+        {
+            // not yet implemented, for future use (whenever deep compositing is supported)
+            OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamPremultChannel);
+            param->setLabel(kParamPremultChannelLabel);
+            param->setHint(kParamPremultChannelHint);
+            param->appendOption(kParamPremultChannelR, kParamPremultChannelRHint);
+            param->appendOption(kParamPremultChannelG, kParamPremultChannelGHint);
+            param->appendOption(kParamPremultChannelB, kParamPremultChannelBHint);
+            param->appendOption(kParamPremultChannelA, kParamPremultChannelAHint);
+            param->setDefault(3); // alpha
+            param->setIsSecret(true); // not yet implemented
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        // not yet implemented, for future use (whenever deep compositing is supported)
-        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamPremultChannel);
-        param->setLabel(kParamPremultChannelLabel);
-        param->setHint(kParamPremultChannelHint);
-        param->appendOption(kParamPremultChannelR, kParamPremultChannelRHint);
-        param->appendOption(kParamPremultChannelG, kParamPremultChannelGHint);
-        param->appendOption(kParamPremultChannelB, kParamPremultChannelBHint);
-        param->appendOption(kParamPremultChannelA, kParamPremultChannelAHint);
-        param->setDefault(3); // alpha
-        param->setIsSecret(true); // not yet implemented
-        if (page) {
-            page->addChild(*param);
-        }
-    }
 
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
-        param->setDefault(false);
-        param->setIsSecret(true);
-        param->setAnimates(false);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+            param->setDefault(false);
+            param->setIsSecret(true);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 } // >::describeInContext
@@ -880,38 +927,42 @@ static ColorTransformPluginFactory<eColorTransformHSLToRGB> p4(kPluginHSLToRGBId
 static ColorTransformPluginFactory<eColorTransformRGBToHSI> p5(kPluginRGBToHSIIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // HSItoRGB
 static ColorTransformPluginFactory<eColorTransformHSIToRGB> p6(kPluginHSIToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoYCbCr601
+// RGBToYCbCr601
 static ColorTransformPluginFactory<eColorTransformRGBToYCbCr601> p7(kPluginRGBToYCbCr601Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // YCbCrToRGB601
 static ColorTransformPluginFactory<eColorTransformYCbCrToRGB601> p8(kPluginYCbCrToRGB601Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoYCbCr709
+// RGBToYCbCr709
 static ColorTransformPluginFactory<eColorTransformRGBToYCbCr709> p17(kPluginRGBToYCbCr709Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// YCbCr709toRGB
+// YCbCrToRGB709
 static ColorTransformPluginFactory<eColorTransformYCbCrToRGB709> p18(kPluginYCbCrToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoYPbPr601
+// RGBToYPbPr601
 static ColorTransformPluginFactory<eColorTransformRGBToYPbPr601> p9(kPluginRGBToYPbPr601Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// YPbPr601toRGB
+// YPbPrToRGB601
 static ColorTransformPluginFactory<eColorTransformYPbPrToRGB601> p10(kPluginYPbPrToRGB601Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoYPbPr709
+// RGBToYPbPr709
 static ColorTransformPluginFactory<eColorTransformRGBToYPbPr709> p15(kPluginRGBToYPbPr709Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// YPbPr709toRGB
+// YPbPrToRGB709
 static ColorTransformPluginFactory<eColorTransformYPbPrToRGB709> p16(kPluginYPbPrToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoYUV601
+// RGBToYUV601
 static ColorTransformPluginFactory<eColorTransformRGBToYUV601> p19(kPluginRGBToYUV601Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// YUV601toRGB
+// YUVToRGB601
 static ColorTransformPluginFactory<eColorTransformYUVToRGB601> p20(kPluginYUVToRGB601Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoYUV709
+// RGBToYUV709
 static ColorTransformPluginFactory<eColorTransformRGBToYUV709> p21(kPluginRGBToYUV709Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// YUV709toRGB
+// YUVToRGB709
 static ColorTransformPluginFactory<eColorTransformYUVToRGB709> p22(kPluginYUVToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoXYZ
+// RGB709ToXYZ
 static ColorTransformPluginFactory<eColorTransformRGB709ToXYZ> p11(kPluginRGB709ToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-// XYZtoRGB
+// XYZToRGB709
 static ColorTransformPluginFactory<eColorTransformXYZToRGB709> p12(kPluginXYZToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoLab
+// RGB709ToLab
 static ColorTransformPluginFactory<eColorTransformRGB709ToLab> p13(kPluginRGB709ToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-// LabtoRGB
+// LabToRGB709
 static ColorTransformPluginFactory<eColorTransformLabToRGB709> p14(kPluginLabToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
+// XYZToLab
+static ColorTransformPluginFactory<eColorTransformXYZToLab> p23(kPluginXYZToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// LabToXYZ
+static ColorTransformPluginFactory<eColorTransformLabToXYZ> p24(kPluginLabToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
@@ -935,5 +986,7 @@ mRegisterPluginFactoryInstance(p19)
 mRegisterPluginFactoryInstance(p20)
 mRegisterPluginFactoryInstance(p21)
 mRegisterPluginFactoryInstance(p22)
+mRegisterPluginFactoryInstance(p23)
+mRegisterPluginFactoryInstance(p24)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

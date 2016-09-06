@@ -111,10 +111,10 @@ $(TOP_SRCDIR)/ColorWheel/net.sf.openfx.ColorWheel.png \
 $(TOP_SRCDIR)/ColorWheel/net.sf.openfx.ColorWheel.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGB.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGB.svg \
-$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.LABToRGB.png \
+$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.LabToRGB709.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGBToHSV.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGBToHSV.svg \
-$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGBToLAB.png \
+$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGB709ToLab.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGB709ToXYZ.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.XYZToRGB709.png \
 $(TOP_SRCDIR)/Constant/net.sf.openfx.ConstantPlugin.png \
