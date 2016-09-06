@@ -67,7 +67,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamOutputIRE "outputIRE"
 #define kParamOutputIRELabel "Output IRE"
-#define kParamOutputIREHint "When checked, the output is scaled so that 0 is black and the max value is white."
+#define kParamOutputIREHint "When checked, the output is scaled so that 0 is black, the max value is white, and the superblack (under the middle of the magenta bar) has a negative value."
 
 
 class ColorBarsProcessorBase
