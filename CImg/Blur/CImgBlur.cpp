@@ -990,6 +990,7 @@ public:
             const cimgpix_t *pg = &cimg(0, 0, 0, 1);
             const cimgpix_t *pb = &cimg(0, 0, 0, 2);
             cimgpix_t *pu = &cimg0(0, 0, 0, 0), *pv = &cimg0(0, 0, 0, 1);
+#pragma message WARN("wrong math: work in XYZ instead of YUV, remove rec601, add rec2020")
             if (params.chrominanceMath == eChrominanceMathRec709) {
                 for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                     const float R = *pr;
