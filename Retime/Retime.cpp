@@ -66,7 +66,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSpeed "speed"
 #define kParamSpeedLabel "Speed"
-#define kParamSpeedHint "How much to change the speed of the input clip"
+#define kParamSpeedHint "How much to change the speed of the input clip. To determine which input frame is taken at a given time, the speed is integrated from the beginning of the source frame range to the given time, so that speed can be animated to locally accelerate (speed > 1), decelerate (speed < 1) or reverse (speed < 0) the source clip. Note that this is is not the same as the speed parameter of the Nuke Retime node, which just multiplies the speed value at the current time by the time to obtain the source frame number."
 
 #define kParamDuration "duration"
 #define kParamDurationLabel "Duration"
