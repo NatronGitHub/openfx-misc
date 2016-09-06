@@ -115,8 +115,8 @@ $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.LABToRGB.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGBToHSV.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGBToHSV.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGBToLAB.png \
-$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGBToXYZ.png \
-$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.XYZToRGB.png \
+$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGB709ToXYZ.png \
+$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.XYZToRGB709.png \
 $(TOP_SRCDIR)/Constant/net.sf.openfx.ConstantPlugin.png \
 $(TOP_SRCDIR)/Constant/net.sf.openfx.ConstantPlugin.svg \
 $(TOP_SRCDIR)/CornerPin/net.sf.openfx.CornerPinMaskedPlugin.png \

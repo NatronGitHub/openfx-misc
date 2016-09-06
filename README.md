@@ -102,11 +102,11 @@ matrix.
 * Transform/RGBToHSV and HSVToRGB: Convert to/from HSV color representation.
 * Transform/RGBToHSL and HSLToRGB: Convert to/from HSL color representation. 
 * Transform/RGBToHSI and HSIToRGB: Convert to/from HSI color representation. 
-* Transform/RGBToYCbCr601, YCbCr601ToRGB, RGBToYCbCr709 and YCbCr709ToRGB: Convert to/from YCbCr color representation. 
-* Transform/RGBToYPbPr601, YPbPr601ToRGB, RGBToYPbPr709 and YPbPr709ToRGB: Convert to/from YPbPr color representation. 
-* Transform/RGBToYUV601, YUV601ToRGB, RGBToYUV709 and YUV709ToRGB: Convert to/from YUV color representation. 
-* Transform/RGBToLab and LabToRGB: Convert to/from Lab color representation.
-* Transform/RGBToXYZ and XYZToRGB: Convert to/from XYZ color representation.
+* Transform/RGBToYCbCr601, YCbCrToRGB601, RGBToYCbCr709 and YCbCrToRGB709: Convert to/from YCbCr color representation. 
+* Transform/RGBToYPbPr601, YPbPrToRGB601, RGBToYPbPr709 and YPbPrToRGB709: Convert to/from YPbPr color representation. 
+* Transform/RGBToYUV601, YUVToRGB601, RGBToYUV709 and YUVToRGB709: Convert to/from YUV color representation. 
+* Transform/RGB709ToLab and LabToRGB709: Convert to/from Lab color representation.
+* Transform/RGB709ToXYZ and XYZToRGB709: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.
 
 ### Filter
@@ -226,6 +226,12 @@ DaVinci Resolve does not support parametric parameters.
 Please [file an issue](https://github.com/devernay/openfx-misc/issues) if you think openfx-misc is doing something wrong, or you know of other hosts which have problems with parametric paremeters.
 
 Although ColorCorrect uses parametric parameters, it can still be instanciated on Nuke 8 & 9 and on DaVinci Resolve, but the curve ranges are not adjustable (shadows are decreasing linearly from 0 to 0.09, and highlights are increasing linearly from 0.5 to 1.0).
+
+
+### Retime output does not contain motion blur, where is the "box" filter and the "shutter" parameter?
+
+We should take the code from FrameBlend, simplify, and incorporate it in Retime.
+
 
 Installation
 ------------

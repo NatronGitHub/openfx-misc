@@ -2084,7 +2084,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                             unpPix[c] = _lut->fromColorSpaceFloatToLinearFloat(unpPix[c]);
                         }
                     }
-                    OFX::Color::rgb_to_lab(unpPix[0], unpPix[1], unpPix[2], &unpPix[0], &unpPix[1], &unpPix[2]);
+                    OFX::Color::rgb709_to_lab(unpPix[0], unpPix[1], unpPix[2], &unpPix[0], &unpPix[1], &unpPix[2]);
                     // bring each component in the 0..1 range
                     //unpPix[0] = unpPix[0] / 116.0 + 0 * 16 * 27 / 24389.0;
                     //unpPix[1] = unpPix[1] / 500.0 / 2.0 + 0.5;
@@ -2171,7 +2171,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                     //tmpPix[1] = (tmpPix[1] - 0.5) * 500 * 2;
                     //tmpPix[2] = (tmpPix[2] - 0.5) * 200 * 2.2;
 
-                    OFX::Color::lab_to_rgb(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    OFX::Color::lab_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     if (sizeof(PIX) == 1.) {
                         // convert from linear
                         for (int c = 0; c < 3; ++c) {
@@ -2183,7 +2183,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                         // bring from 0..1 to the -0.5-0.5 range
                         //tmpPix[1] -= 0.5;
                         //tmpPix[2] -= 0.5;
-                        OFX::Color::ypbpr709_to_rgb(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        OFX::Color::ypbpr_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     }
                     if (p.colorModel != eColorModelLinearRGB) {
                         if (sizeof(PIX) != 1) {
@@ -2605,7 +2605,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const OFX::InstanceChangedAr
                             unpPix[c] = _lut->fromColorSpaceFloatToLinearFloat(unpPix[c]);
                         }
                     }
-                    OFX::Color::rgb_to_lab(unpPix[0], unpPix[1], unpPix[2], &unpPix[0], &unpPix[1], &unpPix[2]);
+                    OFX::Color::rgb709_to_lab(unpPix[0], unpPix[1], unpPix[2], &unpPix[0], &unpPix[1], &unpPix[2]);
                     // bring each component in the 0..1 range
                     //unpPix[0] = unpPix[0] / 116.0 + 0 * 16 * 27 / 24389.0;
                     //unpPix[1] = unpPix[1] / 500.0 / 2.0 + 0.5;
