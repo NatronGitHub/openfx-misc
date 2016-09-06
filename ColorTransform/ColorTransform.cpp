@@ -66,66 +66,66 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToYCbCr601Description "Convert from linear RGB to YCbCr color model (ITU.BT-601). RGB is gamma-compressed using the sRGB transfer function before conversion."
 #define kPluginRGBToYCbCr601Identifier "net.sf.openfx.RGBToYCbCr601"
 
-#define kPluginYCbCr601ToRGBName "YCbCr601ToRGB"
-#define kPluginYCbCr601ToRGBDescription "Convert from YCbCr color model (ITU.BT-601) to linear RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
-#define kPluginYCbCr601ToRGBIdentifier "net.sf.openfx.YCbCr601ToRGB"
+#define kPluginYCbCrToRGB601Name "YCbCrToRGB601"
+#define kPluginYCbCrToRGB601Description "Convert from YCbCr color model (ITU.BT-601) to linear RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
+#define kPluginYCbCrToRGB601Identifier "net.sf.openfx.YCbCrToRGB601"
 
 #define kPluginRGBToYCbCr709Name "RGBToYCbCr709"
 #define kPluginRGBToYCbCr709Description "Convert from linear RGB to YCbCr color model (ITU.BT-709). RGB is gamma-compressed using the Rec.709 transfer function before conversion."
 #define kPluginRGBToYCbCr709Identifier "net.sf.openfx.RGBToYCbCr709"
 
-#define kPluginYCbCr709ToRGBName "YCbCr709ToRGB"
-#define kPluginYCbCr709ToRGBDescription "Convert from YCbCr color model (ITU.BT-709) to linear RGB. RGB is gamma-decompressed using the Rec.709 transfer function after conversion."
-#define kPluginYCbCr709ToRGBIdentifier "net.sf.openfx.YCbCr709ToRGB"
+#define kPluginYCbCrToRGB709Name "YCbCrToRGB709"
+#define kPluginYCbCrToRGB709Description "Convert from YCbCr color model (ITU.BT-709) to linear RGB. RGB is gamma-decompressed using the Rec.709 transfer function after conversion."
+#define kPluginYCbCrToRGB709Identifier "net.sf.openfx.YCbCrToRGB709"
 
 #define kPluginRGBToYPbPr601Name "RGBToYPbPr601"
 #define kPluginRGBToYPbPr601Description "Convert from RGB to YPbPr color model (ITU.BT-601). RGB is gamma-compressed using the sRGB transfer function before conversion."
 #define kPluginRGBToYPbPr601Identifier "net.sf.openfx.RGBToYPbPr601"
 
-#define kPluginYPbPr601ToRGBName "YPbPr601ToRGB"
-#define kPluginYPbPr601ToRGBDescription "Convert from YPbPr color model (ITU.BT-601) to RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
-#define kPluginYPbPr601ToRGBIdentifier "net.sf.openfx.YPbPr601ToRGB"
+#define kPluginYPbPrToRGB601Name "YPbPrToRGB601"
+#define kPluginYPbPrToRGB601Description "Convert from YPbPr color model (ITU.BT-601) to RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
+#define kPluginYPbPrToRGB601Identifier "net.sf.openfx.YPbPrToRGB601"
 
 #define kPluginRGBToYPbPr709Name "RGBToYPbPr709"
 #define kPluginRGBToYPbPr709Description "Convert from RGB to YPbPr color model (ITU.BT-709). RGB is gamma-compressed using the Rec.709 transfer function before conversion."
 #define kPluginRGBToYPbPr709Identifier "net.sf.openfx.RGBToYPbPr709"
 
-#define kPluginYPbPr709ToRGBName "YPbPr709ToRGB"
-#define kPluginYPbPr709ToRGBDescription "Convert from YPbPr color model (ITU.BT-709) to RGB. RGB is gamma-decompressed using the Rec.709 transfer function after conversion."
-#define kPluginYPbPr709ToRGBIdentifier "net.sf.openfx.YPbPr709ToRGB"
+#define kPluginYPbPrToRGB709Name "YPbPrToRGB709"
+#define kPluginYPbPrToRGB709Description "Convert from YPbPr color model (ITU.BT-709) to RGB. RGB is gamma-decompressed using the Rec.709 transfer function after conversion."
+#define kPluginYPbPrToRGB709Identifier "net.sf.openfx.YPbPrToRGB709"
 
 #define kPluginRGBToYUV601Name "RGBToYUV601"
 #define kPluginRGBToYUV601Description "Convert from RGB to YUV color model (ITU.BT-601). RGB is gamma-compressed using the sRGB transfer function before conversion."
 #define kPluginRGBToYUV601Identifier "net.sf.openfx.RGBToYUV601"
 
-#define kPluginYUV601ToRGBName "YUV601ToRGB"
-#define kPluginYUV601ToRGBDescription "Convert from YUV color model (ITU.BT-601) to RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
-#define kPluginYUV601ToRGBIdentifier "net.sf.openfx.YUV601ToRGB"
+#define kPluginYUVToRGB601Name "YUVToRGB601"
+#define kPluginYUVToRGB601Description "Convert from YUV color model (ITU.BT-601) to RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
+#define kPluginYUVToRGB601Identifier "net.sf.openfx.YUVToRGB601"
 
 #define kPluginRGBToYUV709Name "RGBToYUV709"
 #define kPluginRGBToYUV709Description "Convert from RGB to YUV color model (ITU.BT-709). RGB is gamma-compressed using the Rec.709 transfer function before conversion."
 #define kPluginRGBToYUV709Identifier "net.sf.openfx.RGBToYUV709"
 
-#define kPluginYUV709ToRGBName "YUV709ToRGB"
-#define kPluginYUV709ToRGBDescription "Convert from YUV color model (ITU.BT-709) to RGB. RGB is gamma-decompressed using the Rec.709 transfer function after conversion."
-#define kPluginYUV709ToRGBIdentifier "net.sf.openfx.YUV709ToRGB"
+#define kPluginYUVToRGB709Name "YUVToRGB709"
+#define kPluginYUVToRGB709Description "Convert from YUV color model (ITU.BT-709) to RGB. RGB is gamma-decompressed using the Rec.709 transfer function after conversion."
+#define kPluginYUVToRGB709Identifier "net.sf.openfx.YUVToRGB709"
 
 
-#define kPluginRGBToXYZName "RGBToXYZ"
-#define kPluginRGBToXYZDescription "Convert from RGB to XYZ color model (Rec.709 with D65 illuminant). X, Y and Z are in the same units as RGB."
-#define kPluginRGBToXYZIdentifier "net.sf.openfx.RGBToXYZPlugin"
+#define kPluginRGB709ToXYZName "RGB709ToXYZ"
+#define kPluginRGB709ToXYZDescription "Convert from RGB to XYZ color model (Rec.709 with D65 illuminant). X, Y and Z are in the same units as RGB."
+#define kPluginRGB709ToXYZIdentifier "net.sf.openfx.RGB709ToXYZ"
 
-#define kPluginXYZToRGBName "XYZToRGB"
-#define kPluginXYZToRGBDescription "Convert from XYZ color model (Rec.709 with D65 illuminant) to RGB. X, Y and Z are in the same units as RGB."
-#define kPluginXYZToRGBIdentifier "net.sf.openfx.XYZToRGBPlugin"
+#define kPluginXYZToRGB709Name "XYZToRGB709"
+#define kPluginXYZToRGB709Description "Convert from XYZ color model (Rec.709 with D65 illuminant) to RGB. X, Y and Z are in the same units as RGB."
+#define kPluginXYZToRGB709Identifier "net.sf.openfx.XYZToRGB709"
 
-#define kPluginRGBToLabName "RGBToLab"
-#define kPluginRGBToLabDescription "Convert from RGB to L*a*b color model (Rec.709 with D65 illuminant). L*a*b coordinates are divided by 100 for better visualization."
-#define kPluginRGBToLabIdentifier "net.sf.openfx.RGBToLabPlugin"
+#define kPluginRGB709ToLabName "RGB709ToLab"
+#define kPluginRGB709ToLabDescription "Convert from RGB to L*a*b color model (Rec.709 with D65 illuminant). L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginRGB709ToLabIdentifier "net.sf.openfx.RGB709ToLab"
 
-#define kPluginLabToRGBName "LabToRGB"
-#define kPluginLabToRGBDescription "Convert from L*a*b color model (Rec.709 with D65 illuminant) to RGB. L*a*b coordinates are divided by 100 for better visualization."
-#define kPluginLabToRGBIdentifier "net.sf.openfx.LabToRGBPlugin"
+#define kPluginLabToRGB709Name "LabToRGB709"
+#define kPluginLabToRGB709Description "Convert from L*a*b color model (Rec.709 with D65 illuminant) to RGB. L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginLabToRGB709Identifier "net.sf.openfx.LabToRGB709"
 
 #define kPluginGrouping "Color/Transform"
 
@@ -161,34 +161,34 @@ enum ColorTransformEnum
     eColorTransformRGBToHSI,
     eColorTransformHSIToRGB,
     eColorTransformRGBToYCbCr601,
-    eColorTransformYCbCr601ToRGB,
+    eColorTransformYCbCrToRGB601,
     eColorTransformRGBToYCbCr709,
-    eColorTransformYCbCr709ToRGB,
+    eColorTransformYCbCrToRGB709,
     eColorTransformRGBToYPbPr601,
-    eColorTransformYPbPr601ToRGB,
+    eColorTransformYPbPrToRGB601,
     eColorTransformRGBToYPbPr709,
-    eColorTransformYPbPr709ToRGB,
+    eColorTransformYPbPrToRGB709,
     eColorTransformRGBToYUV601,
-    eColorTransformYUV601ToRGB,
+    eColorTransformYUVToRGB601,
     eColorTransformRGBToYUV709,
-    eColorTransformYUV709ToRGB,
-    eColorTransformRGBToXYZ,
-    eColorTransformXYZToRGB,
-    eColorTransformRGBToLab,
-    eColorTransformLabToRGB
+    eColorTransformYUVToRGB709,
+    eColorTransformRGB709ToXYZ,
+    eColorTransformXYZToRGB709,
+    eColorTransformRGB709ToLab,
+    eColorTransformLabToRGB709
 };
 
 #define toRGB(e)   ( (e) == eColorTransformHSVToRGB || \
                      (e) == eColorTransformHSLToRGB || \
                      (e) == eColorTransformHSIToRGB || \
-                     (e) == eColorTransformYCbCr601ToRGB || \
-                     (e) == eColorTransformYCbCr709ToRGB || \
-                     (e) == eColorTransformYPbPr601ToRGB || \
-                     (e) == eColorTransformYPbPr709ToRGB || \
-                     (e) == eColorTransformYUV601ToRGB || \
-                     (e) == eColorTransformYUV709ToRGB || \
-                     (e) == eColorTransformXYZToRGB || \
-                     (e) == eColorTransformLabToRGB )
+                     (e) == eColorTransformYCbCrToRGB601 || \
+                     (e) == eColorTransformYCbCrToRGB709 || \
+                     (e) == eColorTransformYPbPrToRGB601 || \
+                     (e) == eColorTransformYPbPrToRGB709 || \
+                     (e) == eColorTransformYUVToRGB601 || \
+                     (e) == eColorTransformYUVToRGB709 || \
+                     (e) == eColorTransformXYZToRGB709 || \
+                     (e) == eColorTransformLabToRGB709 )
 
 #define fromRGB(e) ( !toRGB(e) )
 
@@ -305,8 +305,8 @@ public:
                     OFX::Color::rgb_to_ycbcr601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
-                case eColorTransformYCbCr601ToRGB:
-                    OFX::Color::ycbcr601_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                case eColorTransformYCbCrToRGB601:
+                    OFX::Color::ycbcr_to_rgb601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
                     tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
                     tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
@@ -319,8 +319,8 @@ public:
                     OFX::Color::rgb_to_ycbcr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
-                case eColorTransformYCbCr709ToRGB:
-                    OFX::Color::ycbcr709_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                case eColorTransformYCbCrToRGB709:
+                    OFX::Color::ycbcr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] = OFX::Color::from_func_Rec709(tmpPix[0]);
                     tmpPix[1] = OFX::Color::from_func_Rec709(tmpPix[1]);
                     tmpPix[2] = OFX::Color::from_func_Rec709(tmpPix[2]);
@@ -333,8 +333,8 @@ public:
                     OFX::Color::rgb_to_ypbpr601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
-                case eColorTransformYPbPr601ToRGB:
-                    OFX::Color::ypbpr601_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                case eColorTransformYPbPrToRGB601:
+                    OFX::Color::ypbpr_to_rgb601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
                     tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
                     tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
@@ -347,8 +347,8 @@ public:
                     OFX::Color::rgb_to_ypbpr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
-                case eColorTransformYPbPr709ToRGB:
-                    OFX::Color::ypbpr709_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                case eColorTransformYPbPrToRGB709:
+                    OFX::Color::ypbpr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] = OFX::Color::from_func_Rec709(tmpPix[0]);
                     tmpPix[1] = OFX::Color::from_func_Rec709(tmpPix[1]);
                     tmpPix[2] = OFX::Color::from_func_Rec709(tmpPix[2]);
@@ -361,8 +361,8 @@ public:
                     OFX::Color::rgb_to_yuv601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
-                case eColorTransformYUV601ToRGB:
-                    OFX::Color::yuv601_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                case eColorTransformYUVToRGB601:
+                    OFX::Color::yuv_to_rgb601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
                     tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
                     tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
@@ -375,33 +375,33 @@ public:
                     OFX::Color::rgb_to_yuv709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
-                case eColorTransformYUV709ToRGB:
-                    OFX::Color::yuv709_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                case eColorTransformYUVToRGB709:
+                    OFX::Color::yuv_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] = OFX::Color::from_func_Rec709(tmpPix[0]);
                     tmpPix[1] = OFX::Color::from_func_Rec709(tmpPix[1]);
                     tmpPix[2] = OFX::Color::from_func_Rec709(tmpPix[2]);
                     break;
 
-                case eColorTransformRGBToXYZ:
-                    OFX::Color::rgb_to_xyz_rec709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                case eColorTransformRGB709ToXYZ:
+                    OFX::Color::rgb709_to_xyz(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
-                case eColorTransformXYZToRGB:
-                    OFX::Color::xyz_rec709_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                case eColorTransformXYZToRGB709:
+                    OFX::Color::xyz_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
-                case eColorTransformRGBToLab:
-                    OFX::Color::rgb_to_lab(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                case eColorTransformRGB709ToLab:
+                    OFX::Color::rgb709_to_lab(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] /= 100;
                     tmpPix[1] /= 100;
                     tmpPix[2] /= 100;
                     break;
 
-                case eColorTransformLabToRGB:
+                case eColorTransformLabToRGB709:
                     unpPix[0] *= 100;
                     unpPix[1] *= 100;
                     unpPix[2] *= 100;
-                    OFX::Color::lab_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    OFX::Color::lab_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
                 } // switch
                 tmpPix[3] = unpPix[3];
@@ -694,9 +694,9 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
         desc.setPluginDescription(kPluginRGBToYCbCr601Description);
         break;
 
-    case eColorTransformYCbCr601ToRGB:
-        desc.setLabel(kPluginYCbCr601ToRGBName);
-        desc.setPluginDescription(kPluginYCbCr601ToRGBDescription);
+    case eColorTransformYCbCrToRGB601:
+        desc.setLabel(kPluginYCbCrToRGB601Name);
+        desc.setPluginDescription(kPluginYCbCrToRGB601Description);
         break;
 
     case eColorTransformRGBToYCbCr709:
@@ -704,9 +704,9 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
         desc.setPluginDescription(kPluginRGBToYCbCr709Description);
         break;
 
-    case eColorTransformYCbCr709ToRGB:
-        desc.setLabel(kPluginYCbCr709ToRGBName);
-        desc.setPluginDescription(kPluginYCbCr709ToRGBDescription);
+    case eColorTransformYCbCrToRGB709:
+        desc.setLabel(kPluginYCbCrToRGB709Name);
+        desc.setPluginDescription(kPluginYCbCrToRGB709Description);
         break;
 
     case eColorTransformRGBToYPbPr601:
@@ -714,9 +714,9 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
         desc.setPluginDescription(kPluginRGBToYPbPr601Description);
         break;
 
-    case eColorTransformYPbPr601ToRGB:
-        desc.setLabel(kPluginYPbPr601ToRGBName);
-        desc.setPluginDescription(kPluginYPbPr601ToRGBDescription);
+    case eColorTransformYPbPrToRGB601:
+        desc.setLabel(kPluginYPbPrToRGB601Name);
+        desc.setPluginDescription(kPluginYPbPrToRGB601Description);
         break;
 
     case eColorTransformRGBToYPbPr709:
@@ -724,9 +724,9 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
         desc.setPluginDescription(kPluginRGBToYPbPr709Description);
         break;
 
-    case eColorTransformYPbPr709ToRGB:
-        desc.setLabel(kPluginYPbPr709ToRGBName);
-        desc.setPluginDescription(kPluginYPbPr709ToRGBDescription);
+    case eColorTransformYPbPrToRGB709:
+        desc.setLabel(kPluginYPbPrToRGB709Name);
+        desc.setPluginDescription(kPluginYPbPrToRGB709Description);
         break;
 
     case eColorTransformRGBToYUV601:
@@ -734,9 +734,9 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
         desc.setPluginDescription(kPluginRGBToYUV601Description);
         break;
 
-    case eColorTransformYUV601ToRGB:
-        desc.setLabel(kPluginYUV601ToRGBName);
-        desc.setPluginDescription(kPluginYUV601ToRGBDescription);
+    case eColorTransformYUVToRGB601:
+        desc.setLabel(kPluginYUVToRGB601Name);
+        desc.setPluginDescription(kPluginYUVToRGB601Description);
         break;
 
     case eColorTransformRGBToYUV709:
@@ -744,29 +744,29 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
         desc.setPluginDescription(kPluginRGBToYUV709Description);
         break;
 
-    case eColorTransformYUV709ToRGB:
-        desc.setLabel(kPluginYUV709ToRGBName);
-        desc.setPluginDescription(kPluginYUV709ToRGBDescription);
+    case eColorTransformYUVToRGB709:
+        desc.setLabel(kPluginYUVToRGB709Name);
+        desc.setPluginDescription(kPluginYUVToRGB709Description);
         break;
 
-    case eColorTransformRGBToXYZ:
-        desc.setLabel(kPluginRGBToXYZName);
-        desc.setPluginDescription(kPluginRGBToXYZDescription);
+    case eColorTransformRGB709ToXYZ:
+        desc.setLabel(kPluginRGB709ToXYZName);
+        desc.setPluginDescription(kPluginRGB709ToXYZDescription);
         break;
 
-    case eColorTransformXYZToRGB:
-        desc.setLabel(kPluginXYZToRGBName);
-        desc.setPluginDescription(kPluginXYZToRGBDescription);
+    case eColorTransformXYZToRGB709:
+        desc.setLabel(kPluginXYZToRGB709Name);
+        desc.setPluginDescription(kPluginXYZToRGB709Description);
         break;
 
-    case eColorTransformRGBToLab:
-        desc.setLabel(kPluginRGBToLabName);
-        desc.setPluginDescription(kPluginRGBToLabDescription);
+    case eColorTransformRGB709ToLab:
+        desc.setLabel(kPluginRGB709ToLabName);
+        desc.setPluginDescription(kPluginRGB709ToLabDescription);
         break;
 
-    case eColorTransformLabToRGB:
-        desc.setLabel(kPluginLabToRGBName);
-        desc.setPluginDescription(kPluginLabToRGBDescription);
+    case eColorTransformLabToRGB709:
+        desc.setLabel(kPluginLabToRGB709Name);
+        desc.setPluginDescription(kPluginLabToRGB709Description);
         break;
     } // switch
     desc.setPluginGrouping(kPluginGrouping);
@@ -882,36 +882,36 @@ static ColorTransformPluginFactory<eColorTransformRGBToHSI> p5(kPluginRGBToHSIId
 static ColorTransformPluginFactory<eColorTransformHSIToRGB> p6(kPluginHSIToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // RGBtoYCbCr601
 static ColorTransformPluginFactory<eColorTransformRGBToYCbCr601> p7(kPluginRGBToYCbCr601Identifier, kPluginVersionMajor, kPluginVersionMinor);
-// YCbCr601toRGB
-static ColorTransformPluginFactory<eColorTransformYCbCr601ToRGB> p8(kPluginYCbCr601ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// YCbCrToRGB601
+static ColorTransformPluginFactory<eColorTransformYCbCrToRGB601> p8(kPluginYCbCrToRGB601Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // RGBtoYCbCr709
 static ColorTransformPluginFactory<eColorTransformRGBToYCbCr709> p17(kPluginRGBToYCbCr709Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // YCbCr709toRGB
-static ColorTransformPluginFactory<eColorTransformYCbCr709ToRGB> p18(kPluginYCbCr709ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformYCbCrToRGB709> p18(kPluginYCbCrToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // RGBtoYPbPr601
 static ColorTransformPluginFactory<eColorTransformRGBToYPbPr601> p9(kPluginRGBToYPbPr601Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // YPbPr601toRGB
-static ColorTransformPluginFactory<eColorTransformYPbPr601ToRGB> p10(kPluginYPbPr601ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformYPbPrToRGB601> p10(kPluginYPbPrToRGB601Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // RGBtoYPbPr709
 static ColorTransformPluginFactory<eColorTransformRGBToYPbPr709> p15(kPluginRGBToYPbPr709Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // YPbPr709toRGB
-static ColorTransformPluginFactory<eColorTransformYPbPr709ToRGB> p16(kPluginYPbPr709ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformYPbPrToRGB709> p16(kPluginYPbPrToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // RGBtoYUV601
 static ColorTransformPluginFactory<eColorTransformRGBToYUV601> p19(kPluginRGBToYUV601Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // YUV601toRGB
-static ColorTransformPluginFactory<eColorTransformYUV601ToRGB> p20(kPluginYUV601ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformYUVToRGB601> p20(kPluginYUVToRGB601Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // RGBtoYUV709
 static ColorTransformPluginFactory<eColorTransformRGBToYUV709> p21(kPluginRGBToYUV709Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // YUV709toRGB
-static ColorTransformPluginFactory<eColorTransformYUV709ToRGB> p22(kPluginYUV709ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformYUVToRGB709> p22(kPluginYUVToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // RGBtoXYZ
-static ColorTransformPluginFactory<eColorTransformRGBToXYZ> p11(kPluginRGBToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformRGB709ToXYZ> p11(kPluginRGB709ToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // XYZtoRGB
-static ColorTransformPluginFactory<eColorTransformXYZToRGB> p12(kPluginXYZToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformXYZToRGB709> p12(kPluginXYZToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
 // RGBtoLab
-static ColorTransformPluginFactory<eColorTransformRGBToLab> p13(kPluginRGBToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformRGB709ToLab> p13(kPluginRGB709ToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // LabtoRGB
-static ColorTransformPluginFactory<eColorTransformLabToRGB> p14(kPluginLabToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformLabToRGB709> p14(kPluginLabToRGB709Identifier, kPluginVersionMajor, kPluginVersionMinor);
 
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
