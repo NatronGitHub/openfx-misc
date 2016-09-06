@@ -230,6 +230,7 @@ public:
         }
     }
 
+#pragma message WARN("wrong math: use functions from ofxsLut, let the user chose the working colorspace")
     // from Rec.2020  http://www.itu.int/rec/R-REC-BT.2020-0-201208-I/en :
     // Y' = 0.2627R' + 0.6780G' + 0.0593B'
     // Cb' = (B'-Y')/1.8814
@@ -377,6 +378,7 @@ private:
 
 
                     double fgy, fgcb, fgcr;
+#pragma message WARN("wrong math: rgb must be delinearized first, let the user chose the working colorspace")
                     rgb2ycbcr(fgr, fgg, fgb, &fgy, &fgcb, &fgcr);
                     //assert(-0.5 <= fgcb && fgcb <= 0.5); // may crash on superblacks/superwhites
                     //assert(-0.5 <= fgcr && fgcr <= 0.5);
@@ -478,6 +480,7 @@ private:
                             // convert back to r g b
                             // (note: r,g,b is premultiplied since it should be added to the suppressed background)
                             ycbcr2rgb(fgy, fgcb, fgcr, &fgr, &fgg, &fgb);
+#pragma message WARN("wrong math: rgb must be linearized last, let the user chose the working colorspace")
                             fgr = std::max( 0., std::min(fgr, 1.) );
                             fgg = std::max( 0., std::min(fgg, 1.) );
                             fgb = std::max( 0., std::min(fgb, 1.) );
