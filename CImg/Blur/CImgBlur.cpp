@@ -36,6 +36,7 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 #include "ofxsCopier.h"
+#include "ofxsLut.h"
 
 #include "CImgFilter.h"
 
@@ -67,7 +68,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginNameChromaBlur          "ChromaBlurCImg"
 #define kPluginDescriptionChromaBlur \
-    "Blur the (Rec.709) chrominance of an input stream. Used to prep strongly compressed and chroma subsampled footage for keying.\n" \
+    "Blur the chrominance of an input stream. Smoothing is done on the x and y components in the CIE xyY color space. " \
+    "Used to prep strongly compressed and chroma subsampled footage for keying.\n" \
     "The blur filter can be a quasi-Gaussian, a Gaussian, a box, a triangle or a quadratic filter.\n" \
     "Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
@@ -168,18 +170,24 @@ enum BoundaryEnum
     //eBoundaryPeriodic,
 };
 
-#define kParamChrominanceMath "chrominanceMath"
-#define kParamChrominanceMathLabel "Chrominance Math"
-#define kParamChrominanceMathHint "Formula used to compute chrominance from RGB values."
-#define kParamChrominanceMathOptionRec709 "Rec. 709"
-#define kParamChrominanceMathOptionRec709Hint "Use Rec. 709."
-#define kParamChrominanceMathOptionCcir601 "CCIR 601"
-#define kParamChrominanceMathOptionCcir601Hint "Use CCIR 601."
+#define kParamColorspace "colorspace"
+#define kParamColorspaceLabel "Colorspace"
+#define kParamColorspaceHint "Formula used to compute chrominance from RGB values."
+#define kParamColorspaceOptionRec709 "Rec. 709"
+#define kParamColorspaceOptionRec709Hint "Use Rec. 709."
+#define kParamColorspaceOptionRec2020 "Rec. 2020"
+#define kParamColorspaceOptionRec2020Hint "Use Rec. 2020."
+#define kParamColorspaceOptionACESAP0 "ACES AP0"
+#define kParamColorspaceOptionACESAP0Hint "Use ACES AP0."
+#define kParamColorspaceOptionACESAP1 "ACES AP1"
+#define kParamColorspaceOptionACESAP1Hint "Use ACES AP1."
 
-enum ChrominanceMathEnum
+enum ColorspaceEnum
 {
-    eChrominanceMathRec709,
-    eChrominanceMathCcir601,
+    eColorspaceRec709,
+    eColorspaceRec2020,
+    eColorspaceACESAP0,
+    eColorspaceACESAP1,
 };
 
 #define kParamFilter "filter"
@@ -757,7 +765,7 @@ struct CImgBlurParams
     int orderY;
     double bloomRatio;
     int bloomCount;
-    ChrominanceMathEnum chrominanceMath;
+    ColorspaceEnum colorspace;
     int boundary_i;
     FilterEnum filter;
     bool expandRoD;
@@ -786,7 +794,7 @@ public:
         , _orderY(0)
         , _bloomRatio(0)
         , _bloomCount(0)
-        , _chrominanceMath(0)
+        , _colorspace(0)
         , _boundary(0)
         , _filter(0)
         , _expandRoD(0)
@@ -805,8 +813,8 @@ public:
             assert(_bloomRatio && _bloomCount);
         }
         if (blurPlugin == eBlurPluginChromaBlur) {
-            _chrominanceMath = fetchChoiceParam(kParamChrominanceMath);
-            assert(_chrominanceMath);
+            _colorspace = fetchChoiceParam(kParamColorspace);
+            assert(_colorspace);
         } else {
             _boundary  = fetchChoiceParam(kParamBoundary);
             assert(_boundary);
@@ -860,7 +868,7 @@ public:
             params.bloomCount = 1;
         }
         if (_blurPlugin == eBlurPluginChromaBlur) {
-            params.chrominanceMath = (ChrominanceMathEnum)_chrominanceMath->getValueAtTime(time);
+            params.colorspace = (ColorspaceEnum)_colorspace->getValueAtTime(time);
             params.boundary_i = 1; // nearest
         } else {
             params.boundary_i = _boundary->getValueAtTime(time);
@@ -985,43 +993,80 @@ public:
             assert(cimg.spectrum() >= 3);
             // allocate chrominance image
             cimg0.resize(cimg.width(), cimg.height(), cimg.depth(), 2);
-            // chrominance (U+V) goes into cimg0, luminance goes into first channel of cimg
+            // we use the CIE xyZ colorspace to separate luminance from chrominance
+            // chrominance (x+y) goes into cimg0, luminance goes into first channel of cimg
             cimgpix_t *pr = &cimg(0, 0, 0, 0);
             const cimgpix_t *pg = &cimg(0, 0, 0, 1);
             const cimgpix_t *pb = &cimg(0, 0, 0, 2);
-            cimgpix_t *pu = &cimg0(0, 0, 0, 0), *pv = &cimg0(0, 0, 0, 1);
-#pragma message WARN("wrong math: work in XYZ instead of YUV, remove rec601, add rec2020")
-            if (params.chrominanceMath == eChrominanceMathRec709) {
-                for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
-                    const float R = *pr;
-                    const float G = *pg;
-                    const float B = *pb;
-                    /// YUV (Rec.709)
-                    /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
-                    *pr =  0.2126f  * R + 0.7152f  * G + 0.0722f  * B; //Y
-                    *pu = -0.09991f * R - 0.33609f * G + 0.436f   * B; //U
-                    *pv =  0.615f   * R - 0.55861f * G - 0.05639f * B; //V
-                    ++pr;
-                    ++pg;
-                    ++pb;
-                    ++pu;
-                    ++pv;
+            cimgpix_t *px = &cimg0(0, 0, 0, 0), *py = &cimg0(0, 0, 0, 1);
+            switch (params.colorspace) {
+                case eColorspaceRec709: {
+                    for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
+                        float X, Y, Z;
+                        OFX::Color::rgb709_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
+                        float XYZ = X + Y + Z;
+                        float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        *px = X * invXYZ;
+                        *pr = Y;
+                        *py = Y * invXYZ;
+                        ++pr;
+                        ++pg;
+                        ++pb;
+                        ++px;
+                        ++py;
+                    }
+                    break;
                 }
-            } else {
-                for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
-                    const float R = *pr;
-                    const float G = *pg;
-                    const float B = *pb;
-                    /// YUV (BT.601)
-                    /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
-                    *pr =  0.299f   * R + 0.587f   * G + 0.114f  * B;
-                    *pu = -0.14713f * R - 0.28886f * G + 0.114f  * B;
-                    *pv =  0.615f   * R - 0.51499f * G - 0.10001 * B;
-                    ++pr;
-                    ++pg;
-                    ++pb;
-                    ++pu;
-                    ++pv;
+                case eColorspaceRec2020: {
+                    for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
+                        float X, Y, Z;
+                        OFX::Color::rgb2020_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
+                        float XYZ = X + Y + Z;
+                        float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        *px = X * invXYZ;
+                        *pr = Y;
+                        *py = Y * invXYZ;
+                        ++pr;
+                        ++pg;
+                        ++pb;
+                        ++px;
+                        ++py;
+                    }
+                    break;
+                }
+                case eColorspaceACESAP0: {
+                    for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
+                        float X, Y, Z;
+                        OFX::Color::rgbACESAP0_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
+                        float XYZ = X + Y + Z;
+                        float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        *px = X * invXYZ;
+                        *pr = Y;
+                        *py = Y * invXYZ;
+                        ++pr;
+                        ++pg;
+                        ++pb;
+                        ++px;
+                        ++py;
+                    }
+                    break;
+                }
+                case eColorspaceACESAP1: {
+                    for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
+                        float X, Y, Z;
+                        OFX::Color::rgbACESAP1_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
+                        float XYZ = X + Y + Z;
+                        float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        *px = X * invXYZ;
+                        *pr = Y;
+                        *py = Y * invXYZ;
+                        ++pr;
+                        ++pg;
+                        ++pb;
+                        ++px;
+                        ++py;
+                    }
+                    break;
                 }
             }
         } else if (_blurPlugin == eBlurPluginBloom) {
@@ -1084,39 +1129,80 @@ public:
             cimgpix_t *pr = &cimg(0, 0, 0, 0);
             cimgpix_t *pg = &cimg(0, 0, 0, 1);
             cimgpix_t *pb = &cimg(0, 0, 0, 2);
-            const cimgpix_t *pu = &cimg0(0, 0, 0, 0);
-            const cimgpix_t *pv = &cimg0(0, 0, 0, 1);
-            if (params.chrominanceMath == eChrominanceMathRec709) {
-                for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
-                    const float Y = *pr;
-                    const float U = *pu;
-                    const float V = *pv;
-                    /// YUV (Rec.709)
-                    /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
-                    *pr = Y               + 1.28033f * V,
-                    *pg = Y - 0.21482f * U - 0.38059f * V;
-                    *pb = Y + 2.12798f * U;
-                    ++pr;
-                    ++pg;
-                    ++pb;
-                    ++pu;
-                    ++pv;
+            const cimgpix_t *px = &cimg0(0, 0, 0, 0);
+            const cimgpix_t *py = &cimg0(0, 0, 0, 1);
+            switch (params.colorspace) {
+                case eColorspaceRec709: {
+                    for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
+                        float Y = *pr;
+                        float X = *px * Y / *py;
+                        float Z = (1. - *px - *py) * Y / *py;
+                        float r, g, b;
+                        OFX::Color::xyz_to_rgb709(X, Y, Z, &r, &g, &b);
+                        *pr = r;
+                        *pg = g;
+                        *pb = b;
+                        ++pr;
+                        ++pg;
+                        ++pb;
+                        ++px;
+                        ++py;
+                    }
+                    break;
                 }
-            } else {
-                for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
-                    const float Y = *pr;
-                    const float U = *pu;
-                    const float V = *pv;
-                    /// YUV (BT.601)
-                    /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
-                    *pr = Y                + 1.13983f * V,
-                    *pg = Y - 0.39465f * U - 0.58060f * V;
-                    *pb = Y + 2.03211f * U;
-                    ++pr;
-                    ++pg;
-                    ++pb;
-                    ++pu;
-                    ++pv;
+                case eColorspaceRec2020: {
+                    for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
+                        float Y = *pr;
+                        float X = *px * Y / *py;
+                        float Z = (1. - *px - *py) * Y / *py;
+                        float r, g, b;
+                        OFX::Color::xyz_to_rgb2020(X, Y, Z, &r, &g, &b);
+                        *pr = r;
+                        *pg = g;
+                        *pb = b;
+                        ++pr;
+                        ++pg;
+                        ++pb;
+                        ++px;
+                        ++py;
+                    }
+                    break;
+                }
+                case eColorspaceACESAP0: {
+                    for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
+                        float Y = *pr;
+                        float X = *px * Y / *py;
+                        float Z = (1. - *px - *py) * Y / *py;
+                        float r, g, b;
+                        OFX::Color::xyz_to_rgbACESAP0(X, Y, Z, &r, &g, &b);
+                        *pr = r;
+                        *pg = g;
+                        *pb = b;
+                        ++pr;
+                        ++pg;
+                        ++pb;
+                        ++px;
+                        ++py;
+                    }
+                    break;
+                }
+                case eColorspaceACESAP1: {
+                    for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
+                        float Y = *pr;
+                        float X = *px * Y / *py;
+                        float Z = (1. - *px - *py) * Y / *py;
+                        float r, g, b;
+                        OFX::Color::xyz_to_rgbACESAP1(X, Y, Z, &r, &g, &b);
+                        *pr = r;
+                        *pg = g;
+                        *pb = b;
+                        ++pr;
+                        ++pg;
+                        ++pb;
+                        ++px;
+                        ++py;
+                    }
+                    break;
                 }
             }
         } else if (_blurPlugin == eBlurPluginBloom) {
@@ -1169,7 +1255,7 @@ private:
     OFX::IntParam *_orderY;
     OFX::DoubleParam *_bloomRatio;
     OFX::IntParam *_bloomCount;
-    OFX::ChoiceParam *_chrominanceMath;
+    OFX::ChoiceParam *_colorspace;
     OFX::ChoiceParam *_boundary;
     OFX::ChoiceParam *_filter;
     OFX::BooleanParam *_expandRoD;
@@ -1325,14 +1411,18 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     if (blurPlugin == eBlurPluginChromaBlur) {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChrominanceMath);
-        param->setLabel(kParamChrominanceMathLabel);
-        param->setHint(kParamChrominanceMathHint);
-        assert(param->getNOptions() == eChrominanceMathRec709 && param->getNOptions() == 0);
-        param->appendOption(kParamChrominanceMathOptionRec709, kParamChrominanceMathOptionRec709Hint);
-        assert(param->getNOptions() == eChrominanceMathCcir601 && param->getNOptions() == 1);
-        param->appendOption(kParamChrominanceMathOptionCcir601, kParamChrominanceMathOptionCcir601Hint);
-        param->setDefault( (int)eChrominanceMathRec709 );
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColorspace);
+        param->setLabel(kParamColorspaceLabel);
+        param->setHint(kParamColorspaceHint);
+        assert(param->getNOptions() == eColorspaceRec709);
+        param->appendOption(kParamColorspaceOptionRec709, kParamColorspaceOptionRec709Hint);
+        assert(param->getNOptions() == eColorspaceRec2020);
+        param->appendOption(kParamColorspaceOptionRec2020, kParamColorspaceOptionRec2020Hint);
+        assert(param->getNOptions() == eColorspaceACESAP0);
+        param->appendOption(kParamColorspaceOptionACESAP0, kParamColorspaceOptionACESAP0Hint);
+        assert(param->getNOptions() == eColorspaceACESAP1);
+        param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
+        param->setDefault( (int)eColorspaceRec709 );
         if (page) {
             page->addChild(*param);
         }
