@@ -29,6 +29,22 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsLut.h"
+#include "ofxsMultiThread.h"
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+namespace {
+    typedef OFX::MultiThread::Mutex Mutex;
+    typedef OFX::MultiThread::AutoMutex AutoMutex;
+}
+#else
+// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
+// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
+#include "fast_mutex.h"
+namespace {
+    typedef tthread::fast_mutex Mutex;
+    typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+}
+#endif
 
 using namespace OFX;
 
@@ -44,8 +60,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "[2] High Quality Chroma Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/\n"
 
 #define kPluginIdentifier "net.sf.openfx.ChromaKeyerPlugin"
+// history:
+// 1.0 initial version, works in YPbPr computed from linear RGB, with rec2020 Ypbpr equations
+// 1.1 works in nonlinear Y'PbPr, with choice of colorspace
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -67,6 +86,29 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
    A simplified version is described in:
    [2] High Quality Chroma Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/
  */
+
+#define kParamYPbPrColorspace "colorspace"
+#define kParamYPbPrColorspaceLabel "YCbCr Colorspace"
+#define kParamYPbPrColorspaceHint "Formula used to compute YCbCr from RGB values."
+#define kParamYPbPrColorspaceOptionCcir601 "CCIR 601"
+#define kParamYPbPrColorspaceOptionCCir601Hint "Use CCIR 601 (SD footage)."
+#define kParamYPbPrColorspaceOptionRec709 "Rec. 709"
+#define kParamYPbPrColorspaceOptionRec709Hint "Use Rec. 709 (HD footage)."
+#define kParamYPbPrColorspaceOptionRec2020 "Rec. 2020"
+#define kParamYPbPrColorspaceOptionRec2020Hint "Use Rec. 2020 (UltraHD/4K footage)."
+
+enum YPbPrColorspaceEnum {
+    eYPbPrColorspaceCcir601 = 0,
+    eYPbPrColorspaceRec709,
+    eYPbPrColorspaceRec2020,
+};
+
+#define kParamYPbPrColorspaceDefault eYPbPrColorspaceRec709
+
+#define kParamLinear "linearProcessing"
+#define kParamLinearLabel "Linear Processing"
+#define kParamLinearHint \
+"Do not delinearize RGB values to compute the key value."
 
 #define kParamKeyColor "keyColor"
 #define kParamKeyColorLabel "Key Color"
@@ -150,6 +192,21 @@ protected:
     const OFX::Image *_inMaskImg;
     const OFX::Image *_outMaskImg;
     OfxRGBColourD _keyColor;
+    const OFX::Color::LutBase* _lut;
+    void (*_to_ypbpr)(float r,
+                      float g,
+                      float b,
+                      float *y,
+                      float *pb,
+                      float *pr);
+    void (*_to_rgb)(float y,
+                      float pb,
+                      float pr,
+                      float *r,
+                      float *g,
+                      float *b);
+
+    bool _linear;
     double _acceptanceAngle;
     double _tan__acceptanceAngle2;
     double _suppressionAngle;
@@ -168,6 +225,8 @@ public:
         , _bgImg(0)
         , _inMaskImg(0)
         , _outMaskImg(0)
+        , _lut(0)
+        , _linear(false)
         , _acceptanceAngle(0.)
         , _tan__acceptanceAngle2(0.)
         , _suppressionAngle(0.)
@@ -196,6 +255,8 @@ public:
     }
 
     void setValues(const OfxRGBColourD& keyColor,
+                   YPbPrColorspaceEnum colorspace,
+                   bool linear,
                    double acceptanceAngle,
                    double suppressionAngle,
                    double keyLift,
@@ -210,8 +271,40 @@ public:
         _keyGain = keyGain;
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
-        double y, cb, cr;
-        rgb2ycbcr(keyColor.r, keyColor.g, keyColor.b, &y, &cb, &cr);
+        float y, cb, cr;
+        if (linear) {
+            _lut = NULL;
+        } else {
+            switch (colorspace) {
+                case eYPbPrColorspaceCcir601:
+                case eYPbPrColorspaceRec709:
+                case eYPbPrColorspaceRec2020:
+                    _lut = OFX::Color::LutManager<Mutex>::Rec709Lut();
+                    break;
+            }
+        }
+        switch (colorspace) {
+            case eYPbPrColorspaceCcir601:
+                _to_ypbpr = OFX::Color::rgb_to_ypbpr601;
+                _to_rgb = OFX::Color::ypbpr_to_rgb601;
+                break;
+            case eYPbPrColorspaceRec709:
+                _to_ypbpr = OFX::Color::rgb_to_ypbpr709;
+                _to_rgb = OFX::Color::ypbpr_to_rgb709;
+                break;
+            case eYPbPrColorspaceRec2020:
+                _to_ypbpr = OFX::Color::rgb_to_ypbpr2020;
+                _to_rgb = OFX::Color::ypbpr_to_rgb2020;
+                break;
+        }
+
+        // delinearize RGB
+        float r = _lut ? _lut->toColorSpaceFloatFromLinearFloat(keyColor.r) : keyColor.r;
+        float g = _lut ? _lut->toColorSpaceFloatFromLinearFloat(keyColor.g) : keyColor.g;
+        float b = _lut ? _lut->toColorSpaceFloatFromLinearFloat(keyColor.b) : keyColor.b;
+
+        // convert to YPbPr
+        _to_ypbpr(r, g, b, &y, &cb, &cr);
         if ( (cb == 0.) && (cr == 0.) ) {
             // no chrominance in the key is an error - default to blue screen
             cb = 1.;
@@ -228,52 +321,6 @@ public:
         if (_suppressionAngle < 180.) {
             _tan__suppressionAngle2 = std::tan( (_suppressionAngle / 2) * M_PI / 180 );
         }
-    }
-
-#pragma message WARN("wrong math: use functions from ofxsLut, let the user chose the working colorspace")
-    // from Rec.2020  http://www.itu.int/rec/R-REC-BT.2020-0-201208-I/en :
-    // Y' = 0.2627R' + 0.6780G' + 0.0593B'
-    // Cb' = (B'-Y')/1.8814
-    // Cr' = (R'-Y')/1.4746
-    //
-    // or the "constant luminance" version
-    // Yc' = (0.2627R + 0.6780G + 0.0593B)'
-    // Cbc' = (B'-Yc')/1.9404 if -0.9702<=(B'-Y')<=0
-    //        (B'-Yc')/1.5816 if 0<=(R'-Y')<=0.7908
-    // Crc' = (R'-Yc')/1.7184 if -0.8592<=(B'-Y')<=0
-    //        (R'-Yc')/0.9936 if 0<=(R'-Y')<=0.4968
-    //
-    // with
-    // E' = 4.5E if 0 <=E<=beta
-    //      alpha*E^(0.45)-(alpha-1) if beta<=E<=1
-    // α = 1.099 and β = 0.018 for 10-bit system
-    // α = 1.0993 and β = 0.0181 for 12-bit system
-    //
-    // For our purpose, we only work in the linear space (which is why
-    // we don't allow UByte bit depth), and use the first set of formulas
-    //
-    void rgb2ycbcr(double r,
-                   double g,
-                   double b,
-                   double *y,
-                   double *cb,
-                   double *cr)
-    {
-        *y = 0.2627 * r + 0.6780 * g + 0.0593 * b;
-        *cb = (b - *y) / 1.8814;
-        *cr = (r - *y) / 1.4746;
-    }
-
-    void ycbcr2rgb(double y,
-                   double cb,
-                   double cr,
-                   double *r,
-                   double *g,
-                   double *b)
-    {
-        *r = cr * 1.4746 + y;
-        *b = cb  * 1.8814 + y;
-        *g = (y - 0.2627 * *r - 0.0593 * *b) / 0.6780;
     }
 };
 
@@ -356,12 +403,12 @@ private:
                 outMask = std::max( 0.f, std::min(outMask, 1.f) );
 
                 // output of the foreground suppressor
-                double fgr = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[0]) : 0.;
-                double fgg = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[1]) : 0.;
-                double fgb = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[2]) : 0.;
-                double bgr = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[0]) : 0.;
-                double bgg = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[1]) : 0.;
-                double bgb = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[2]) : 0.;
+                float fgr = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[0]) : 0.;
+                float fgg = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[1]) : 0.;
+                float fgb = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[2]) : 0.;
+                float bgr = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[0]) : 0.;
+                float bgg = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[1]) : 0.;
+                float bgb = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[2]) : 0.;
 
                 // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {
@@ -376,10 +423,14 @@ private:
 
                     // first, we need to compute YCbCr coordinates.
 
-
-                    double fgy, fgcb, fgcr;
-#pragma message WARN("wrong math: rgb must be delinearized first, let the user chose the working colorspace")
-                    rgb2ycbcr(fgr, fgg, fgb, &fgy, &fgcb, &fgcr);
+                    // delinearize RGB
+                    if (_lut) {
+                        fgr =  _lut->toColorSpaceFloatFromLinearFloat(fgr);
+                        fgg =  _lut->toColorSpaceFloatFromLinearFloat(fgg);
+                        fgb =  _lut->toColorSpaceFloatFromLinearFloat(fgb);
+                    }
+                    float fgy, fgcb, fgcr;
+                    _to_ypbpr(fgr, fgg, fgb, &fgy, &fgcb, &fgcr);
                     //assert(-0.5 <= fgcb && fgcb <= 0.5); // may crash on superblacks/superwhites
                     //assert(-0.5 <= fgcr && fgcr <= 0.5);
 
@@ -461,8 +512,8 @@ private:
                         } else {
                             fgcb = fgcb - Kfg * _cosKey / 2;
                             fgcr = fgcr - Kfg * _sinKey / 2;
-                            fgcb = std::max( -0.5, std::min(fgcb, 0.5) );
-                            fgcr = std::max( -0.5, std::min(fgcr, 0.5) );
+                            fgcb = std::max( -0.5f, std::min(fgcb, 0.5f) );
+                            fgcr = std::max( -0.5f, std::min(fgcr, 0.5f) );
                             //assert(-0.5 <= fgcb && fgcb <= 0.5);
                             //assert(-0.5 <= fgcr && fgcr <= 0.5);
                         }
@@ -479,11 +530,16 @@ private:
                         } else {
                             // convert back to r g b
                             // (note: r,g,b is premultiplied since it should be added to the suppressed background)
-                            ycbcr2rgb(fgy, fgcb, fgcr, &fgr, &fgg, &fgb);
-#pragma message WARN("wrong math: rgb must be linearized last, let the user chose the working colorspace")
-                            fgr = std::max( 0., std::min(fgr, 1.) );
-                            fgg = std::max( 0., std::min(fgg, 1.) );
-                            fgb = std::max( 0., std::min(fgb, 1.) );
+                            _to_rgb(fgy, fgcb, fgcr, &fgr, &fgg, &fgb);
+                            fgr = std::max( 0.f, std::min(fgr, 1.f) );
+                            fgg = std::max( 0.f, std::min(fgg, 1.f) );
+                            fgb = std::max( 0.f, std::min(fgb, 1.f) );
+                            // linearize RGB
+                            if (_lut) {
+                                fgr =  _lut->fromColorSpaceFloatToLinearFloat(fgr);
+                                fgg =  _lut->fromColorSpaceFloatToLinearFloat(fgg);
+                                fgb =  _lut->fromColorSpaceFloatToLinearFloat(fgb);
+                            }
                         }
                     }
                     /////////////////////
@@ -580,6 +636,8 @@ public:
         , _inMaskClip(0)
         , _outMaskClip(0)
         , _keyColor(0)
+        , _colorspace(0)
+        , _linear(0)
         , _acceptanceAngle(0)
         , _suppressionAngle(0)
         , _keyLift(0)
@@ -601,6 +659,8 @@ public:
         _outMaskClip = fetchClip(kClipOutsidemask);;
         assert( _outMaskClip && (!_outMaskClip->isConnected() || _outMaskClip->getPixelComponents() == ePixelComponentAlpha) );
         _keyColor = fetchRGBParam(kParamKeyColor);
+        _colorspace = fetchChoiceParam(kParamYPbPrColorspace);
+        _linear = fetchBooleanParam(kParamLinear);
         _acceptanceAngle = fetchDoubleParam(kParamAcceptanceAngle);
         _suppressionAngle = fetchDoubleParam(kParamSuppressionAngle);
         _keyLift = fetchDoubleParam(kParamKeyLift);
@@ -628,6 +688,8 @@ private:
     OFX::Clip *_inMaskClip;
     OFX::Clip *_outMaskClip;
     OFX::RGBParam* _keyColor;
+    OFX::ChoiceParam* _colorspace;
+    OFX::BooleanParam* _linear;
     OFX::DoubleParam* _acceptanceAngle;
     OFX::DoubleParam* _suppressionAngle;
     OFX::DoubleParam* _keyLift;
@@ -729,7 +791,9 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
     double keyGain = _keyGain->getValueAtTime(time);
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
-    processor.setValues(keyColor, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
+    YPbPrColorspaceEnum colorspace = (YPbPrColorspaceEnum)_colorspace->getValueAtTime(time);
+    bool linear = _linear->getValueAtTime(time);
+    processor.setValues(keyColor, colorspace, linear, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -888,6 +952,33 @@ ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(kmin, kmin, kmin, kmax, kmax, kmax);
         param->setDisplayRange(0., 0., 0., 1., 1., 1.);
         param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamYPbPrColorspace);
+        param->setLabel(kParamYPbPrColorspaceLabel);
+        param->setHint(kParamYPbPrColorspaceHint);
+        assert(param->getNOptions() == (int)eYPbPrColorspaceCcir601);
+        param->appendOption(kParamYPbPrColorspaceOptionCcir601, kParamYPbPrColorspaceOptionCCir601Hint);
+        assert(param->getNOptions() == (int)eYPbPrColorspaceRec709);
+        param->appendOption(kParamYPbPrColorspaceOptionRec709, kParamYPbPrColorspaceOptionRec709Hint);
+        assert(param->getNOptions() == (int)eYPbPrColorspaceRec2020);
+        param->appendOption(kParamYPbPrColorspaceOptionRec2020, kParamYPbPrColorspaceOptionRec2020Hint);
+        param->setDefault(kParamYPbPrColorspaceDefault);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamLinear);
+        param->setLabel(kParamLinearLabel);
+        param->setHint(kParamLinearHint);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
