@@ -128,15 +128,26 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginLabToRGB709Identifier "net.sf.openfx.LabToRGB709"
 
 #define kPluginXYZToLabName "XYZToLab"
-#define kPluginXYZToLabDescription "Convert from XYZ to L*a*b color model. L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginXYZToLabDescription "Convert from CIE XYZ color space to CIE L*a*b color space. L*a*b coordinates are divided by 100 for better visualization."
 #define kPluginXYZToLabIdentifier "net.sf.openfx.XYZToLab"
 
 #define kPluginLabToXYZName "LabToXYZ"
-#define kPluginLabToXYZDescription "Convert from L*a*b color model to XYZ. L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginLabToXYZDescription "Convert from CIE L*a*b color space to CIE XYZ color space. L*a*b coordinates are divided by 100 for better visualization."
 #define kPluginLabToXYZIdentifier "net.sf.openfx.LabToXYZ"
+
+#define kPluginXYZToxyYName "XYZToxyY"
+#define kPluginXYZToxyYDescription "Convert from CIE XYZ color space to CIE xyY color space."
+#define kPluginXYZToxyYIdentifier "net.sf.openfx.XYZToxyY"
+
+#define kPluginxyYToXYZName "xyYToXYZ"
+#define kPluginxyYToXYZDescription "Convert from CIE xyY color space to CIE XYZ color space."
+#define kPluginxyYToXYZIdentifier "net.sf.openfx.xyYToXYZ"
 
 #define kPluginGrouping "Color/Transform"
 
+// history:
+// 1.0 initial version
+// 2.0 named plugins more consistently, add a few conversions
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -186,6 +197,8 @@ enum ColorTransformEnum
     eColorTransformLabToRGB709,
     eColorTransformXYZToLab,
     eColorTransformLabToXYZ,
+    eColorTransformXYZToxyY,
+    eColorTransformxyYToXYZ,
 };
 
 #define toRGB(e)   ( (e) == eColorTransformHSVToRGB || \
@@ -200,7 +213,7 @@ enum ColorTransformEnum
                      (e) == eColorTransformXYZToRGB709 || \
                      (e) == eColorTransformLabToRGB709 )
 
-#define fromRGB(e) ( !toRGB(e) && ((e) != eColorTransformXYZToLab) && ((e) != eColorTransformLabToXYZ) )
+#define fromRGB(e) ( !toRGB(e) && ((e) != eColorTransformXYZToLab) && ((e) != eColorTransformLabToXYZ) && ((e) != eColorTransformXYZToxyY) && ((e) != eColorTransformxyYToXYZ) )
 
 class ColorTransformProcessorBase
     : public OFX::ImageProcessor
@@ -427,6 +440,28 @@ public:
                     unpPix[2] *= 100;
                     OFX::Color::lab_to_xyz(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
+
+                case eColorTransformXYZToxyY: {
+                    float X = unpPix[0];
+                    float Y = unpPix[1];
+                    float Z = unpPix[2];
+                    float XYZ = X + Y + Z;
+                    float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                    tmpPix[0] = X * invXYZ;
+                    tmpPix[1] = Y * invXYZ;
+                    tmpPix[2] = Y;
+                    break;
+                }
+                case eColorTransformxyYToXYZ: {
+                    float x = unpPix[0];
+                    float y = unpPix[1];
+                    float Y = unpPix[2];
+                    float invy = (y <= 0) ? 0. : (1 / y);
+                    tmpPix[0] = x * Y * invy;
+                    tmpPix[1] = Y;
+                    tmpPix[2] = (1 - x - y) * Y * invy;
+                    break;
+                }
                 } // switch
                 tmpPix[3] = unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, dopremult, _premultChannel, x, y, srcPix, /*doMasking=*/ false, /*maskImg=*/ NULL, /*mix=*/ 1.f, /*maskInvert=*/ false, dstPix);
@@ -813,6 +848,16 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
         desc.setLabel(kPluginLabToXYZName);
         desc.setPluginDescription(kPluginLabToXYZDescription);
         break;
+
+    case eColorTransformXYZToxyY:
+        desc.setLabel(kPluginXYZToxyYName);
+        desc.setPluginDescription(kPluginXYZToxyYDescription);
+        break;
+
+    case eColorTransformxyYToXYZ:
+        desc.setLabel(kPluginxyYToXYZName);
+        desc.setPluginDescription(kPluginxyYToXYZDescription);
+        break;
     } // switch
     desc.setPluginGrouping(kPluginGrouping);
 
@@ -963,6 +1008,10 @@ static ColorTransformPluginFactory<eColorTransformLabToRGB709> p14(kPluginLabToR
 static ColorTransformPluginFactory<eColorTransformXYZToLab> p23(kPluginXYZToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // LabToXYZ
 static ColorTransformPluginFactory<eColorTransformLabToXYZ> p24(kPluginLabToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// XYZToxyY
+static ColorTransformPluginFactory<eColorTransformXYZToxyY> p25(kPluginXYZToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// xyYToXYZ
+static ColorTransformPluginFactory<eColorTransformxyYToXYZ> p26(kPluginLabToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
@@ -988,5 +1037,7 @@ mRegisterPluginFactoryInstance(p21)
 mRegisterPluginFactoryInstance(p22)
 mRegisterPluginFactoryInstance(p23)
 mRegisterPluginFactoryInstance(p24)
+mRegisterPluginFactoryInstance(p25)
+mRegisterPluginFactoryInstance(p26)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
