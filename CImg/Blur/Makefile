@@ -1,6 +1,7 @@
 PLUGINOBJECTS = \
 CImgBlur.o \
 CImgFilter.o \
+ofxsLut.o
 
 # no ofxsInteract.o
 SUPPORTOBJECTS = \
