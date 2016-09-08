@@ -263,6 +263,7 @@ $(TOP_SRCDIR)/ImageStatistics \
 $(TOP_SRCDIR)/Invert \
 $(TOP_SRCDIR)/JoinViews \
 $(TOP_SRCDIR)/Keyer \
+$(TOP_SRCDIR)/Log2Linr \
 $(TOP_SRCDIR)/MatteMonitor \
 $(TOP_SRCDIR)/Merge \
 $(TOP_SRCDIR)/Mirror \
@@ -270,6 +271,7 @@ $(TOP_SRCDIR)/MixViews \
 $(TOP_SRCDIR)/Multiply \
 $(TOP_SRCDIR)/NoOp \
 $(TOP_SRCDIR)/OneView \
+$(TOP_SRCDIR)/PLogLin \
 $(TOP_SRCDIR)/Position \
 $(TOP_SRCDIR)/Premult \
 $(TOP_SRCDIR)/Quantize \
@@ -334,6 +336,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Invert \
 -I$(TOP_SRCDIR)/JoinViews \
 -I$(TOP_SRCDIR)/Keyer \
+-I$(TOP_SRCDIR)/Log2Lin \
 -I$(TOP_SRCDIR)/MatteMonitor \
 -I$(TOP_SRCDIR)/Merge \
 -I$(TOP_SRCDIR)/Mirror \
@@ -341,6 +344,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/MixViews \
 -I$(TOP_SRCDIR)/NoOp \
 -I$(TOP_SRCDIR)/OneView \
+-I$(TOP_SRCDIR)/PLogLin \
 -I$(TOP_SRCDIR)/Position \
 -I$(TOP_SRCDIR)/Premult \
 -I$(TOP_SRCDIR)/Quantize \
