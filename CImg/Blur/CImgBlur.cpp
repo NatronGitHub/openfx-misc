@@ -174,13 +174,13 @@ enum BoundaryEnum
 #define kParamColorspaceLabel "Colorspace"
 #define kParamColorspaceHint "Formula used to compute chrominance from RGB values."
 #define kParamColorspaceOptionRec709 "Rec. 709"
-#define kParamColorspaceOptionRec709Hint "Use Rec. 709."
+#define kParamColorspaceOptionRec709Hint "Use Rec. 709 with D65 illuminant."
 #define kParamColorspaceOptionRec2020 "Rec. 2020"
-#define kParamColorspaceOptionRec2020Hint "Use Rec. 2020."
+#define kParamColorspaceOptionRec2020Hint "Use Rec. 2020 with D65 illuminant."
 #define kParamColorspaceOptionACESAP0 "ACES AP0"
-#define kParamColorspaceOptionACESAP0Hint "Use ACES AP0."
+#define kParamColorspaceOptionACESAP0Hint "Use ACES AP0 with ACES (D60) illuminant."
 #define kParamColorspaceOptionACESAP1 "ACES AP1"
-#define kParamColorspaceOptionACESAP1Hint "Use ACES AP1."
+#define kParamColorspaceOptionACESAP1Hint "Use ACES AP1 with ACES (D60) illuminant."
 
 enum ColorspaceEnum
 {

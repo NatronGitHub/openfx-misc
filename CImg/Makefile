@@ -18,7 +18,9 @@ CImgSharpenShock.o \
 CImgSmooth.o \
 ofxsLut.o \
 CImgFilter.o \
-CImgOperator.o
+CImgOperator.o \
+ofxsLut.o
+# (ofxsLut required for ChromaBlur)
 
 # no ofxsInteract.o
 SUPPORTOBJECTS = \
