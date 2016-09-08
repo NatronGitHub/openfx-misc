@@ -36,6 +36,7 @@ ImageStatistics.o \
 Invert.o \
 JoinViews.o \
 Keyer.o \
+Log2Lin.o \
 MatteMonitor.o \
 Merge.o \
 Mirror.o \
@@ -43,6 +44,7 @@ MixViews.o \
 Multiply.o \
 NoOp.o \
 OneView.o \
+PLogLin.o \
 Position.o \
 Premult.o \
 Quantize.o \

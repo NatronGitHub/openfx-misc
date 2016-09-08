@@ -38,6 +38,7 @@ ImageStatistics \
 Invert \
 JoinViews \
 Keyer \
+Log2Lin \
 MatteMonitor \
 Merge \
 Mirror \
@@ -45,6 +46,7 @@ Multiply \
 MixViews \
 NoOp \
 OneView \
+PLogLin \
 Position \
 Premult \
 Radial \
