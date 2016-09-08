@@ -82,9 +82,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamProcessAHint  "Process alpha component."
 #endif
 
-#define kParamValueName  "value"
+#define kParamValue  "value"
 #define kParamValueLabel "Value"
 #define kParamValueHint  "Gamma value to apply to the selected channels."
+
+#define kParamInvert  "invert"
+#define kParamInvertLabel "Invert"
+#define kParamInvertHint  "Invert the gamma transform."
 
 #define kParamPremultChanged "premultChanged"
 
@@ -144,6 +148,7 @@ public:
                    bool processB,
                    bool processA,
                    const RGBAValues& value,
+                   bool invert,
                    bool premult,
                    int premultChannel,
                    double mix)
@@ -152,10 +157,10 @@ public:
         _processG = processG;
         _processB = processB;
         _processA = processA;
-        _value.r = 1. / std::max(1e-8, value.r);
-        _value.g = 1. / std::max(1e-8, value.g);
-        _value.b = 1. / std::max(1e-8, value.b);
-        _value.a = 1. / std::max(1e-8, value.a);
+        _value.r = invert ? value.r : ( 1. / std::max(1e-8, value.r) );
+        _value.g = invert ? value.g : ( 1. / std::max(1e-8, value.g) );
+        _value.b = invert ? value.b : ( 1. / std::max(1e-8, value.b) );
+        _value.a = invert ? value.a : ( 1. / std::max(1e-8, value.a) );
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
@@ -341,7 +346,8 @@ public:
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
-        _value = fetchRGBAParam(kParamValueName);
+        _value = fetchRGBAParam(kParamValue);
+        _invert = fetchBooleanParam(kParamInvert);
         assert(_value);
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
@@ -377,6 +383,7 @@ private:
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
     OFX::RGBAParam *_value;
+    OFX::BooleanParam* _invert;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
@@ -397,7 +404,8 @@ void
 GammaPlugin::setupAndProcess(GammaProcessorBase &processor,
                              const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -416,7 +424,7 @@ GammaPlugin::setupAndProcess(GammaProcessorBase &processor,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+                                         _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
@@ -430,8 +438,8 @@ GammaPlugin::setupAndProcess(GammaProcessorBase &processor,
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     // do we do masking
     if (doMasking) {
         if ( mask.get() ) {
@@ -442,8 +450,7 @@ GammaPlugin::setupAndProcess(GammaProcessorBase &processor,
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
         }
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
@@ -454,21 +461,18 @@ GammaPlugin::setupAndProcess(GammaProcessorBase &processor,
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
+    bool processR = _processR->getValueAtTime(time);
+    bool processG = _processG->getValueAtTime(time);
+    bool processB = _processB->getValueAtTime(time);
+    bool processA = _processA->getValueAtTime(time);
     RGBAValues value;
-    _value->getValueAtTime(args.time, value.r, value.g, value.b, value.a);
-    bool premult;
-    int premultChannel;
-    _premult->getValueAtTime(args.time, premult);
-    _premultChannel->getValueAtTime(args.time, premultChannel);
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _value->getValueAtTime(time, value.r, value.g, value.b, value.a);
+    bool premult = _premult->getValueAtTime(time);
+    int premultChannel = _premultChannel->getValueAtTime(time);
+    double mix = _mix->getValueAtTime(time);
+    bool invert = _invert->getValueAtTime(time);
     processor.setValues(processR, processG, processB, processA,
-                        value, premult, premultChannel, mix);
+                        value, invert, premult, premultChannel, mix);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -574,9 +578,8 @@ GammaPlugin::isIdentity(const IsIdentityArguments &args,
                         Clip * &identityClip,
                         double & /*identityTime*/)
 {
-    double mix;
-
-    _mix->getValueAtTime(args.time, mix);
+    const double time = args.time;
+    double mix = _mix->getValueAtTime(time);
 
     if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = _srcClip;
@@ -585,13 +588,12 @@ GammaPlugin::isIdentity(const IsIdentityArguments &args,
     }
 
     {
-        bool processR, processG, processB, processA;
-        _processR->getValueAtTime(args.time, processR);
-        _processG->getValueAtTime(args.time, processG);
-        _processB->getValueAtTime(args.time, processB);
-        _processA->getValueAtTime(args.time, processA);
+        bool processR = _processR->getValueAtTime(time);
+        bool processG = _processG->getValueAtTime(time);
+        bool processB = _processB->getValueAtTime(time);
+        bool processA = _processA->getValueAtTime(time);
         RGBAValues value;
-        _value->getValueAtTime(args.time, value.r, value.g, value.b, value.a);
+        _value->getValueAtTime(time, value.r, value.g, value.b, value.a);
         if ( ( !processR || (value.r == 1.) ) &&
              ( !processG || ( value.g == 1.) ) &&
              ( !processB || ( value.b == 1.) ) &&
@@ -602,16 +604,16 @@ GammaPlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
             if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
                 if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
@@ -768,13 +770,25 @@ GammaPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamValueName);
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamValue);
         param->setLabel(kParamValueLabel);
         param->setHint(kParamValueHint);
         param->setDefault(1.0, 1.0, 1.0, 1.0);
         param->setRange(0., 0., 0., 0., DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0, 0, 0, 0, 4, 4, 4, 4);
         param->setAnimates(true); // can animate
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // invert
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInvert);
+        param->setLabel(kParamInvertLabel);
+        param->setHint(kParamInvertHint);
+        param->setDefault(false);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
