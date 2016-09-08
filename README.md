@@ -91,12 +91,14 @@ black points.
 * HistEqCImg: Equalize the luminance histogram. 
 * HSVToolOFX: Adjust hue, saturation and brightnes, or perform color replacement.
 * InvertOFX: Inverse the selected channels.
+* Log2LinOFX: Convert from/to the logarithmic space used by Cineon files
 * Math/AddOFX: Add a constant to the selected channels.
 * Math/ClipTestOFX: Draw zebra stripes on all pixels outside of the specified range.
 * Math/ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4
 matrix.
 * Math/GammaOFX: Apply gamma function to the selected channels.
 * Math/MultiplyOFX: Multiply the selected channels by a constant.
+* PLogLinOFX: Convert between linear and log representations using the Josh Pines log conversion.
 * Quantize: Reduce the number of color levels with posterization or dithering.
 * SaturationOFX: Modify the color saturation of an image.
 * Transform/RGBToHSV and HSVToRGB: Convert to/from HSV color representation.
