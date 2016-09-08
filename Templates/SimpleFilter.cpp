@@ -250,6 +250,26 @@ private:
                 tmpPix[2] = (float)t_b;
                 tmpPix[3] = (float)t_a;
                 ofxsPremultPix<PIX, nComponents, maxValue>(tmpPix, _premult, _premultChannel, dstPix);
+                // copy back original values from unprocessed channels
+                if (nComponents == 1) {
+                    if (!processA) {
+                        dstPix[0] = srcPix ? srcPix[0] : PIX();
+                    }
+                } else if ( (nComponents == 3) || (nComponents == 4) ) {
+                    if (!processR) {
+                        dstPix[0] = srcPix ? srcPix[0] : PIX();
+                    }
+                    if (!processG) {
+                        dstPix[1] = srcPix ? srcPix[1] : PIX();
+                    }
+                    if (!processB) {
+                        dstPix[2] = srcPix ? srcPix[2] : PIX();
+                    }
+                    if ( !processA && (nComponents == 4) ) {
+                        dstPix[3] = srcPix ? srcPix[3] : PIX();
+                    }
+                }
+                // increment the dst pixel
                 dstPix += nComponents;
             }
         }
