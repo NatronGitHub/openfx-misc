@@ -263,7 +263,7 @@ $(TOP_SRCDIR)/ImageStatistics \
 $(TOP_SRCDIR)/Invert \
 $(TOP_SRCDIR)/JoinViews \
 $(TOP_SRCDIR)/Keyer \
-$(TOP_SRCDIR)/Log2Linr \
+$(TOP_SRCDIR)/Log2Lin \
 $(TOP_SRCDIR)/MatteMonitor \
 $(TOP_SRCDIR)/Merge \
 $(TOP_SRCDIR)/Mirror \
