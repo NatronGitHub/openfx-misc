@@ -514,7 +514,7 @@ ColorWheelPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, true, context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, ePixelComponentRGBA, true, context);
 
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCenterSaturation);

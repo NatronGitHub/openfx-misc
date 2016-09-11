@@ -975,7 +975,7 @@ RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentSize, false,  context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentSize, ePixelComponentRGBA, false,  context);
 
     // softness
     {
