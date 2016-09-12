@@ -413,7 +413,7 @@ ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor &desc
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, solid ? ePixelComponentRGB : ePixelComponentRGBA, true, context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, ePixelComponentRGBA, true, context);
 
     // color
     if (solid) {
