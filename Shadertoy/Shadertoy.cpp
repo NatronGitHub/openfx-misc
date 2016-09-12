@@ -490,10 +490,17 @@ using namespace OFX;
 
 
 #define kParamImageShaderDefault                            \
+    "// iChannel0: Source (Source image.), filter=linear, wrap=clamp\n" \
+    "// BBox: iChannel0\n" \
+    "uniform float amplitude = 0.5; // Amplitude (The amplitude of the xy sine wave), min=0., max=1.\n" \
+    "uniform float frequency = 50.; // Frequency (The frequency of the xy sine wave), min = 0., max = 100.\n" \
     "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n" \
     "{\n"                                                       \
     "    vec2 uv = fragCoord.xy / iResolution.xy;\n"            \
-    "    fragColor = vec4(uv,0.5+0.5*sin(iGlobalTime),1.0);\n"  \
+    "    vec3 sinetex = vec3(0.5+0.5*amplitude*sin(frequency*uv.x),\n" \
+    "                        0.5+0.5*amplitude*sin(frequency*uv.y),\n" \
+    "                        0.5+0.5*sin(iGlobalTime));\n" \
+    "    fragColor = vec4(amplitude*sinetex + (1 - amplitude)*texture2D( iChannel0, uv ).xyz,1.0);\n"  \
     "}"
 
 // mouse parameters, see https://www.shadertoy.com/view/Mss3zH
@@ -1148,6 +1155,7 @@ ShadertoyPlugin::updateExtra()
         // only do this if parameters were updated!
         if (_imageShaderUpdateParams) {
             _imageShaderUpdateParams = false;
+            bool uniformsChanged = false;
             beginEditBlock(kParamAuto);
             // Try to avoid setting parameters to the same value, since this maytrigger an unnecessary instancechanged on some hosts
             for (unsigned i = 0; i < NBINPUTS; ++i) {
@@ -1175,10 +1183,12 @@ ShadertoyPlugin::updateExtra()
             }
             if ( (int)_imageShaderExtraParameters.size() != _paramCount->getValue() ) {
                 _paramCount->setValue( _imageShaderExtraParameters.size() );
+                uniformsChanged = true;
             }
             for (unsigned i = 0; i < _imageShaderExtraParameters.size(); ++i) {
                 const ExtraParameter& p = _imageShaderExtraParameters[i];
                 UniformTypeEnum t = p.getType();
+                bool nChanged = false; // did the param name change? (required shader recompilation to get the uniform address)
                 bool tChanged = ( t != (UniformTypeEnum)_paramType[i]->getValue() );
                 if (tChanged) {
                     _paramType[i]->setValue( (int)t );
@@ -1187,6 +1197,7 @@ ShadertoyPlugin::updateExtra()
                 _paramName[i]->getValue(s);
                 if (p.getName() != s) {
                     _paramName[i]->setValue( p.getName() );
+                    nChanged = true;
                 }
                 _paramLabel[i]->getValue(s);
                 if (p.getLabel() != s) {
@@ -1196,6 +1207,7 @@ ShadertoyPlugin::updateExtra()
                 if (p.getHint() != s) {
                     _paramHint[i]->setValue( p.getHint() );
                 }
+                uniformsChanged |= (tChanged || nChanged);
                 switch (t) {
                     case eUniformTypeNone: {
                         if (tChanged) {
@@ -1389,6 +1401,10 @@ ShadertoyPlugin::updateExtra()
             }
             _bbox->setValue((int)_imageShaderBBox);
             endEditBlock();
+            if (uniformsChanged) {
+                // mark that image shader must be recompiled on next render
+                ++_imageShaderUniformsID;
+            }
         } // if (_imageShaderUpdateParams)
     }
 
@@ -1637,7 +1653,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             AutoMutex lock( _imageShaderMutex.get() );
             if (_imageShaderUpdateParams && _imageShaderCompiled) {
                 _imageShaderCompiled = false; //_imageShaderUpdateParams is reset by updateExtra()
-                recompile = false; // parameters were updated (second click in a host that doesn't support seValue() from render(), probably), we just need to update the Gui
+                recompile = false; // parameters were updated (second click in a host that doesn't support setValue() from render(), probably), we just need to update the Gui
             } else {
                 // same as kParamImageShaderCompile above, except ask for param update
                 // mark that image shader must be recompiled on next render
