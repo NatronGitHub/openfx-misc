@@ -112,6 +112,7 @@ static const std::string kParamOffset = std::string("Offset");
 
 #define LUT_MAX_PRECISION 100
 
+#pragma message WARN("TODO: luminanceMath option")
 // Rec.709 luminance:
 //Y = 0.2126 R + 0.7152 G + 0.0722 B
 static const double s_rLum = 0.2126;

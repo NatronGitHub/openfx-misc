@@ -81,6 +81,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSetMaster "setMaster"
 #define kParamSetMasterLabel "Set Master"
+#pragma message WARN("TODO: luminanceMath option")
 #define kParamSetMasterHint "Add a new control point mapping source to target to the master curve (the relative luminance 0.2126 R + 0.7152 G + 0.0722 B is used)."
 
 #define kParamSetRGB "setRGB"
