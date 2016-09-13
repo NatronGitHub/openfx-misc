@@ -243,6 +243,7 @@ enum ColorModelEnum {
 #define kParamAdaptiveRadius "adaptiveRadius"
 #define kParamAdaptiveRadiusLabel "Adaptive Radius (experimental)"
 #define kParamAdaptiveRadiusHint "Radius of the window where the signal level is analyzed. If zero, the signal level is computed from the whole image. A good value seems to be in the range 2-4."
+#define kParamAdaptiveRadiusDefault 3
 
 #define kParamNoiseLevelGain "noiseLevelGain"
 #define kParamNoiseLevelGainLabel "Noise Level Gain"
@@ -3297,12 +3298,14 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamAdaptiveRadiusHint);
         param->setRange(0, 10);
         param->setDisplayRange(0, 10);
+#ifdef DEBUG
+        param->setDefault(kParamAdaptiveRadiusDefault);
+#else
         param->setDefault(0);
-        param->setAnimates(false);
-#ifndef DEBUG
-#pragma message WARN("FIXME: adaptiveRadius is WIP => secret")
+#pragma message WARN("FIXME: adaptiveRadius is experimental => disabled and secret")
         param->setIsSecret(true);
 #endif
+        param->setAnimates(false);
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
