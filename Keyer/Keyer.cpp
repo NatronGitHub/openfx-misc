@@ -100,6 +100,36 @@ enum KeyerModeEnum
     eKeyerModeNone,
 };
 
+#define kParamLuminanceMath "luminanceMath"
+#define kParamLuminanceMathLabel "Luminance Math"
+#define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
+#define kParamLuminanceMathOptionRec709 "Rec. 709"
+#define kParamLuminanceMathOptionRec709Hint "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b)."
+#define kParamLuminanceMathOptionRec2020 "Rec. 2020"
+#define kParamLuminanceMathOptionRec2020Hint "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b)."
+#define kParamLuminanceMathOptionACESAP0 "ACES AP0"
+#define kParamLuminanceMathOptionACESAP0Hint "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b)."
+#define kParamLuminanceMathOptionACESAP1 "ACES AP1"
+#define kParamLuminanceMathOptionACESAP1Hint "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b)."
+#define kParamLuminanceMathOptionCcir601 "CCIR 601"
+#define kParamLuminanceMathOptionCcir601Hint "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b)."
+#define kParamLuminanceMathOptionAverage "Average"
+#define kParamLuminanceMathOptionAverageHint "Use average of r, g, b."
+#define kParamLuminanceMathOptionMaximum "Max"
+#define kParamLuminanceMathOptionMaximumHint "Use max or r, g, b."
+
+enum LuminanceMathEnum
+{
+    eLuminanceMathRec709,
+    eLuminanceMathRec2020,
+    eLuminanceMathACESAP0,
+    eLuminanceMathACESAP1,
+    eLuminanceMathCcir601,
+    eLuminanceMathAverage,
+    eLuminanceMathMaximum,
+};
+
+
 #define kParamSoftnessLower "softnessLower"
 #define kParamSoftnessLowerLabel "Softness (lower)"
 #define kParamSoftnessLowerHint "Width of the lower softness range [key-tolerance-softness,key-tolerance]. Background key value goes from 0 to 1 when foreground key is  over this range."
@@ -176,16 +206,36 @@ enum SourceAlphaEnum
     eSourceAlphaNormal,
 };
 
-
-// This is for Rec.709
-// see http://www.poynton.com/notes/colour_and_gamma/GammaFAQ.html#luminance
-static inline
-double
-rgb2luminance(double r,
-              double g,
-              double b)
+static
+double luminance (LuminanceMathEnum luminanceMath,
+                  double r,
+                  double g,
+                  double b)
 {
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    switch (luminanceMath) {
+        case eLuminanceMathRec709:
+        default:
+
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
+
+            return 0.2627 * r + 0.6780 * g + 0.0593 * b;
+        case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+
+            return 0.3439664498 * r + 0.7281660966 * g + -0.0721325464 * b;
+        case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+
+            return 0.2722287168 * r +  0.6740817658 * g +  0.0536895174 * b;
+        case eLuminanceMathCcir601:
+
+            return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+        case eLuminanceMathAverage:
+
+            return (r + g + b) / 3;
+        case eLuminanceMathMaximum:
+
+            return std::max(std::max(r, g), b);
+    }
 }
 
 class KeyerProcessorBase
@@ -198,6 +248,7 @@ protected:
     const OFX::Image *_outMaskImg;
     OfxRGBColourD _keyColor;
     KeyerModeEnum _keyerMode;
+    LuminanceMathEnum _luminanceMath;
     double _softnessLower;
     double _toleranceLower;
     double _center;
@@ -217,6 +268,7 @@ public:
         , _inMaskImg(0)
         , _outMaskImg(0)
         , _keyerMode(eKeyerModeLuminance)
+        , _luminanceMath(eLuminanceMathRec709)
         , _softnessLower(-0.5)
         , _toleranceLower(0.)
         , _center(0.)
@@ -243,6 +295,7 @@ public:
 
     void setValues(const OfxRGBColourD& keyColor,
                    KeyerModeEnum keyerMode,
+                   LuminanceMathEnum luminanceMath,
                    double softnessLower,
                    double toleranceLower,
                    double center,
@@ -255,6 +308,7 @@ public:
     {
         _keyColor = keyColor;
         _keyerMode = keyerMode;
+        _luminanceMath = luminanceMath;
         _softnessLower = softnessLower;
         _toleranceLower = toleranceLower;
         _center = center;
@@ -290,6 +344,14 @@ public:
         } else {
             return 0.;
         }
+    }
+protected:
+    double
+    rgb2luminance(double r,
+                  double g,
+                  double b)
+    {
+        return luminance(_luminanceMath, r, g, b);
     }
 };
 
@@ -543,6 +605,7 @@ public:
         , _sublabel(0)
         , _keyColor(0)
         , _keyerMode(0)
+        , _luminanceMath(0)
         , _softnessLower(0)
         , _toleranceLower(0)
         , _center(0)
@@ -568,6 +631,7 @@ public:
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         _keyColor = fetchRGBParam(kParamKeyColor);
         _keyerMode = fetchChoiceParam(kParamKeyerMode);
+        _luminanceMath = fetchChoiceParam(kParamLuminanceMath);
         _softnessLower = fetchDoubleParam(kParamSoftnessLower);
         _toleranceLower = fetchDoubleParam(kParamToleranceLower);
         _center = fetchDoubleParam(kParamCenter);
@@ -575,12 +639,14 @@ public:
         _softnessUpper = fetchDoubleParam(kParamSoftnessUpper);
         _despill = fetchDoubleParam(kParamDespill);
         _despillAngle = fetchDoubleParam(kParamDespillAngle);
-        assert(_keyColor && _keyerMode && _softnessLower && _toleranceLower && _center && _toleranceUpper && _softnessUpper && _despill && _despillAngle);
+        assert(_keyColor && _keyerMode && _luminanceMath && _softnessLower && _toleranceLower && _center && _toleranceUpper && _softnessUpper && _despill && _despillAngle);
         _outputMode = fetchChoiceParam(kParamOutputMode);
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
         assert(_outputMode && _sourceAlpha);
 
         KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValue();
+        _luminanceMath->setEnabled(keyerMode == eKeyerModeLuminance);
+        _luminanceMath->setIsSecret(keyerMode != eKeyerModeLuminance);
         _softnessLower->setEnabled(keyerMode != eKeyerModeNone);
         _toleranceLower->setEnabled(keyerMode != eKeyerModeNone);
         _center->setEnabled(keyerMode != eKeyerModeNone);
@@ -602,7 +668,7 @@ private:
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
-    void setThresholdsFromKeyColor(double r, double g, double b, KeyerModeEnum keyerMode);
+    void setThresholdsFromKeyColor(double r, double g, double b, KeyerModeEnum keyerMode, LuminanceMathEnum luminanceMath);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -614,6 +680,7 @@ private:
     OFX::StringParam *_sublabel;
     OFX::RGBParam* _keyColor;
     OFX::ChoiceParam* _keyerMode;
+    OFX::ChoiceParam* _luminanceMath;
     OFX::DoubleParam* _softnessLower;
     OFX::DoubleParam* _toleranceLower;
     OFX::DoubleParam* _center;
@@ -713,6 +780,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     OfxRGBColourD keyColor;
     _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
     KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
+    LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
     double softnessLower = _softnessLower->getValueAtTime(time);
     double toleranceLower = _toleranceLower->getValueAtTime(time);
     double center = _center->getValueAtTime(time);
@@ -722,7 +790,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     double despillAngle = _despillAngle->getValueAtTime(time);
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
-    processor.setValues(keyColor, keyerMode, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
+    processor.setValues(keyColor, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -795,11 +863,12 @@ void
 KeyerPlugin::setThresholdsFromKeyColor(double r,
                                        double g,
                                        double b,
-                                       KeyerModeEnum keyerMode)
+                                       KeyerModeEnum keyerMode,
+                                       LuminanceMathEnum luminanceMath)
 {
     switch (keyerMode) {
     case eKeyerModeLuminance: {
-        double l = rgb2luminance(r, g, b);
+        double l = luminance(luminanceMath, r, g, b);
         _softnessLower->setValue(-l);
         _toleranceLower->setValue(0.);
         _center->setValue(l);
@@ -838,12 +907,15 @@ KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         OfxRGBColourD keyColor;
         _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
         KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
-        setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode);
+        LuminanceMathEnum luminanceMath = (keyerMode == eKeyerModeLuminance) ? (LuminanceMathEnum)_luminanceMath->getValueAtTime(time) : eLuminanceMathRec709;
+        setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode, luminanceMath);
     }
     if ( (paramName == kParamKeyerMode) && (args.reason == eChangeUserEdit) ) {
         OfxRGBColourD keyColor;
         _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
         KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
+        _luminanceMath->setEnabled(keyerMode == eKeyerModeLuminance);
+        _luminanceMath->setIsSecret(keyerMode != eKeyerModeLuminance);
         _softnessLower->setEnabled(keyerMode != eKeyerModeNone);
         _toleranceLower->setEnabled(keyerMode != eKeyerModeNone);
         _center->setEnabled(keyerMode != eKeyerModeNone);
@@ -851,7 +923,8 @@ KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _softnessUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
         _despill->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
         _despillAngle->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
-        setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode);
+        LuminanceMathEnum luminanceMath = (keyerMode == eKeyerModeLuminance) ? (LuminanceMathEnum)_luminanceMath->getValueAtTime(time) : eLuminanceMathRec709;
+        setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode, luminanceMath);
         std::string keyerModeString;
         _keyerMode->getOption( (int)keyerMode, keyerModeString );
         _sublabel->setValue(keyerModeString);
@@ -976,6 +1049,29 @@ KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         assert(param->getNOptions() == (int)eKeyerModeNone);
         param->appendOption(kParamKeyerModeOptionNone, kParamKeyerModeOptionNoneHint);
         param->setDefault( (int)kParamKeyerModeDefault );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // luminance math
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
+        param->setLabel(kParamLuminanceMathLabel);
+        param->setHint(kParamLuminanceMathHint);
+        assert(param->getNOptions() == eLuminanceMathRec709);
+        param->appendOption(kParamLuminanceMathOptionRec709, kParamLuminanceMathOptionRec709Hint);
+        assert(param->getNOptions() == eLuminanceMathRec2020);
+        param->appendOption(kParamLuminanceMathOptionRec2020, kParamLuminanceMathOptionRec2020Hint);
+        assert(param->getNOptions() == eLuminanceMathACESAP0);
+        param->appendOption(kParamLuminanceMathOptionACESAP0, kParamLuminanceMathOptionACESAP0Hint);
+        assert(param->getNOptions() == eLuminanceMathACESAP1);
+        param->appendOption(kParamLuminanceMathOptionACESAP1, kParamLuminanceMathOptionACESAP1Hint);
+        assert(param->getNOptions() == eLuminanceMathCcir601);
+        param->appendOption(kParamLuminanceMathOptionCcir601, kParamLuminanceMathOptionCcir601Hint);
+        assert(param->getNOptions() == eLuminanceMathAverage);
+        param->appendOption(kParamLuminanceMathOptionAverage, kParamLuminanceMathOptionAverageHint);
+        assert(param->getNOptions() == eLuminanceMathMaximum);
+        param->appendOption(kParamLuminanceMathOptionMaximum, kParamLuminanceMathOptionMaximumHint);
         if (page) {
             page->addChild(*param);
         }
