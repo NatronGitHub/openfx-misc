@@ -602,7 +602,6 @@ private:
                 tmpPix[2] = (float)t_b;
                 tmpPix[3] = (float)t_a;
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
-                dstPix += nComponents;
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
                     if (!processA) {
@@ -622,6 +621,7 @@ private:
                         dstPix[3] = srcPix ? srcPix[3] : PIX();
                     }
                 }
+                dstPix += nComponents;
             }
         }
     }
