@@ -93,6 +93,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
 #define kParamLuminanceMathOptionRec709 "Rec. 709"
 #define kParamLuminanceMathOptionRec709Hint "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b)."
+#define kParamLuminanceMathOptionRec2020 "Rec. 2020"
+#define kParamLuminanceMathOptionRec2020Hint "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b)."
+#define kParamLuminanceMathOptionACESAP0 "ACES AP0"
+#define kParamLuminanceMathOptionACESAP0Hint "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b)."
+#define kParamLuminanceMathOptionACESAP1 "ACES AP1"
+#define kParamLuminanceMathOptionACESAP1Hint "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b)."
 #define kParamLuminanceMathOptionCcir601 "CCIR 601"
 #define kParamLuminanceMathOptionCcir601Hint "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b)."
 #define kParamLuminanceMathOptionAverage "Average"
@@ -103,6 +109,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 enum LuminanceMathEnum
 {
     eLuminanceMathRec709,
+    eLuminanceMathRec2020,
+    eLuminanceMathACESAP0,
+    eLuminanceMathACESAP1,
     eLuminanceMathCcir601,
     eLuminanceMathAverage,
     eLuminanceMathMaximum,
@@ -207,12 +216,26 @@ public:
         case eLuminanceMathRec709:
             l = 0.2126 * *r + 0.7152 * *g + 0.0722 * *b;
             break;
+
+        case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
+            l = 0.2627 * *r + 0.6780 * *g + 0.0593 * *b;
+            break;
+
+        case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+            l = 0.3439664498 * *r + 0.7281660966 * *g + -0.0721325464 * *b;
+            break;
+
+        case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+            l = 0.2722287168 * *r +  0.6740817658 * *g +  0.0536895174 * *b;
+
         case eLuminanceMathCcir601:
             l = 0.2989 * *r + 0.5866 * *g + 0.1145 * *b;
             break;
+
         case eLuminanceMathAverage:
             l = (*r + *g + *b) / 3;
             break;
+
         case eLuminanceMathMaximum:
             l = std::max(std::max(*r, *g), *b);
             break;
@@ -845,6 +868,12 @@ SaturationPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamLuminanceMathHint);
         assert(param->getNOptions() == eLuminanceMathRec709);
         param->appendOption(kParamLuminanceMathOptionRec709, kParamLuminanceMathOptionRec709Hint);
+        assert(param->getNOptions() == eLuminanceMathRec2020);
+        param->appendOption(kParamLuminanceMathOptionRec2020, kParamLuminanceMathOptionRec2020Hint);
+        assert(param->getNOptions() == eLuminanceMathACESAP0);
+        param->appendOption(kParamLuminanceMathOptionACESAP0, kParamLuminanceMathOptionACESAP0Hint);
+        assert(param->getNOptions() == eLuminanceMathACESAP1);
+        param->appendOption(kParamLuminanceMathOptionACESAP1, kParamLuminanceMathOptionACESAP1Hint);
         assert(param->getNOptions() == eLuminanceMathCcir601);
         param->appendOption(kParamLuminanceMathOptionCcir601, kParamLuminanceMathOptionCcir601Hint);
         assert(param->getNOptions() == eLuminanceMathAverage);
