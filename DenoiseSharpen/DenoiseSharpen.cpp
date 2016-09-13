@@ -31,6 +31,7 @@
  Notes on edge-aware version:
 
    - multiply side weights (which are 1 for now) by exp(-||c_i(p)-c_i(q)||^2/(2sigma_r^2) and normalize the total weight
+   - the problem is that the filtering order (column, then rows, or rows, then columns) has a strong influence on the result. Check
    - can be color or luminance difference
 
  - Hanika et al. test several values of sigma_r and
@@ -100,11 +101,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "\n" \
 "For most footage, the effect works best by keeping the default Y'CbCr color model.\n" \
 "\n" \
-"The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, it is best to check \"Lock Noise Analysis\" in order to avoid modifying the essential parameters by mistake.\n" \
+"The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, \"Lock Noise Analysis\" is checked in order to avoid modifying the essential parameters by mistake.\n" \
 "\n" \
 "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate.\n" \
 "\n" \
-"If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, it is preferable to disable medium, low and very low frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
+"If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
+"If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it commes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
 "\n" \
 "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left. You can then reset the Sharpen Amount, unless you actually want to enhance the contrast of your denoised footage.\n" \
 "\n" \
@@ -186,7 +188,7 @@ enum OutputModeEnum {
 #define kParamColorModelOptionRGB "R'G'B'(A)"
 #define kParamColorModelOptionRGBHint "The R'G'B' color model (gamma-corrected RGB) separates an image into channels of red, green, and blue. Note that this choice drastically affects the result."
 #define kParamColorModelOptionLinearRGB "RGB(A)"
-#define kParamColorModelOptionLinearRGBHint "The Linear RGB color model processes the raw linear components. Usually a bad choice, except if RGB do not represent color data."
+#define kParamColorModelOptionLinearRGBHint "The Linear RGB color model processes the raw linear components. Usually a bad choice, except when denoising non-color data (e.g. depth or motion vectors)."
 enum ColorModelEnum {
     eColorModelYCbCr = 0,
     eColorModelLab,
@@ -195,15 +197,14 @@ enum ColorModelEnum {
     eColorModelAny, // used for channelLabel()
 };
 
-#define kParamB3 "useB3Spline"
-#define kParamB3Label "Use B3 Spline (experimental)"
-#define kParamB3Hint "Use a 5x5 filter based on B3 spline interpolation rather than a 3x3 Lagrange linear filter. Noise levels are reset when this setting is changed. [EXPERIMENTAL (Please test this setting)]."
-
 #define kGroupAnalysis "analysis"
 #define kGroupAnalysisLabel "Analysis"
 #define kParamAnalysisLock "analysisLock"
 #define kParamAnalysisLockLabel "Lock Noise Analysis"
 #define kParamAnalysisLockHint "Lock all noise analysis parameters."
+#define kParamB3 "useB3Spline"
+#define kParamB3Label "B3 Spline Interpolation"
+#define kParamB3Hint "For wavelet decomposition, use a 5x5 filter based on B3 spline interpolation rather than a 3x3 Lagrange linear filter. Noise levels are reset when this setting is changed. The influence of this parameter is minimal, and it should not be changed."
 #define kParamAnalysisFrame "analysisFrame"
 #define kParamAnalysisFrameLabel "Analysis Frame"
 #define kParamAnalysisFrameHint "The frame number where the noise levels were analyzed."
@@ -240,11 +241,6 @@ enum ColorModelEnum {
 #define kParamAnalyzeNoiseLevelsLabel "Analyze Noise Levels"
 #define kParamAnalyzeNoiseLevelsHint "Computes the noise levels from the current frame and current color model. To use the same settings for the whole sequence, analyze a frame that is representative of the sequence. If a mask is set, it is used to compute the noise levels from areas where the mask is non-zero. If there are keyframes on the noise level parameters, this sets a keyframe at the current frame. The noise levels can then be fine-tuned."
 
-#define kParamAdaptiveRadius "adaptiveRadius"
-#define kParamAdaptiveRadiusLabel "Adaptive Radius (experimental)"
-#define kParamAdaptiveRadiusHint "Radius of the window where the signal level is analyzed. If zero, the signal level is computed from the whole image. A good value seems to be in the range 2-4."
-#define kParamAdaptiveRadiusDefault 3
-
 #define kParamNoiseLevelGain "noiseLevelGain"
 #define kParamNoiseLevelGainLabel "Noise Level Gain"
 #define kParamNoiseLevelGainHint "Global gain to apply to the noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the per-frequency gain and the channel gain."
@@ -269,6 +265,11 @@ enum ColorModelEnum {
 #define kParamEnableVeryLowHint "Check to enable the very low frequency noise level thresholds."
 #define kParamGainVeryLowLabel "Very Low Gain"
 #define kParamGainVeryLowHint "Gain to apply to the very low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the global Noise Level Gain."
+
+#define kParamAdaptiveRadius "adaptiveRadius"
+#define kParamAdaptiveRadiusLabel "Adaptive Radius (experimental)"
+#define kParamAdaptiveRadiusHint "Radius of the window where the signal level is analyzed at each scale. If zero, the signal level is computed from the whole image, which may excessively blur the edges if the image has many flat color areas. A reasonable value should to be in the range 2-4."
+#define kParamAdaptiveRadiusDefault 4
 
 #define kGroupChannelTuning "channelTuning"
 #define kGroupChannelTuningLabel "Channel Tuning"
@@ -2100,6 +2101,14 @@ DenoiseSharpenPlugin::renderForComponents(const OFX::RenderArguments &args)
     }
 }
 
+static int
+borderSize(int adaptiveRadius, bool b3, int nlevels)
+{
+    // hat_transform gets the pixel at x+-(1<<maxLev), which is computex from x+-(1<<(maxLev-1)), etc...
+    // We thus need pixels at x +- (1<<(maxLev+1))-1
+    return ( adaptiveRadius + (b3 ? 2 : 1) ) * (1 << nlevels) - 1;
+}
+
 
 void
 DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
@@ -2220,9 +2229,7 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
     
     // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
     int maxLev = std::max(0, kLevelMax - startLevelFromRenderScale(args.renderScale));
-    // hat_transform gets the pixel at x+-(1<<maxLev), which is computex from x+-(1<<(maxLev-1)), etc...
-    // We thus need pixels at x +- (1<<(maxLev+1))-1
-    int border = (1 << (maxLev+1)) - 1;
+    int border = borderSize(p.adaptiveRadius, p.b3, maxLev + 1);
     p.srcWindow.x1 = args.renderWindow.x1 - border;
     p.srcWindow.y1 = args.renderWindow.y1 - border;
     p.srcWindow.x2 = args.renderWindow.x2 + border;
@@ -2426,7 +2433,6 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
     }
 }
 
-
 // override the roi call
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
@@ -2454,7 +2460,7 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments
     OfxRectI roiPixel;
     OFX::Coords::toPixelEnclosing(args.regionOfInterest, args.renderScale, par, &roiPixel);
     int levels = kLevelMax - startLevelFromRenderScale(args.renderScale);
-    int radiusPixel = ( adaptiveRadius + (b3 ? 2 : 1) ) * (1 << levels);
+    int radiusPixel = borderSize(adaptiveRadius, b3, levels);
     roiPixel.x1 -= radiusPixel;
     roiPixel.x2 += radiusPixel;
     roiPixel.y1 -= radiusPixel;
@@ -3152,20 +3158,6 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamB3);
-        param->setLabel(kParamB3Label);
-        param->setHint(kParamB3Hint);
-        param->setAnimates(false);
-        if (group) {
-            // coverity[dead_error_line]
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
 
     {
         OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupAnalysis);
@@ -3236,7 +3228,20 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
-
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamB3);
+            param->setLabel(kParamB3Label);
+            param->setHint(kParamB3Hint);
+            param->setDefault(true);
+            param->setAnimates(false);
+            if (group) {
+                // coverity[dead_error_line]
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
         {
             IntParamDescriptor* param = desc.defineIntParam(kParamAnalysisFrame);
             param->setLabel(kParamAnalysisFrameLabel);
@@ -3290,28 +3295,6 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     page->addChild(*param);
                 }
             }
-        }
-    }
-    {
-        IntParamDescriptor* param = desc.defineIntParam(kParamAdaptiveRadius);
-        param->setLabel(kParamAdaptiveRadiusLabel);
-        param->setHint(kParamAdaptiveRadiusHint);
-        param->setRange(0, 10);
-        param->setDisplayRange(0, 10);
-#ifdef DEBUG
-        param->setDefault(kParamAdaptiveRadiusDefault);
-#else
-        param->setDefault(0);
-#pragma message WARN("FIXME: adaptiveRadius is experimental => disabled and secret")
-        param->setIsSecret(true);
-#endif
-        param->setAnimates(false);
-        if (group) {
-            // coverity[dead_error_line]
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
         }
     }
     {
@@ -3381,6 +3364,23 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 }
             }
         }
+        {
+            IntParamDescriptor* param = desc.defineIntParam(kParamAdaptiveRadius);
+            param->setLabel(kParamAdaptiveRadiusLabel);
+            param->setHint(kParamAdaptiveRadiusHint);
+            param->setRange(0, 10);
+            param->setDisplayRange(0, 10);
+            param->setDefault(kParamAdaptiveRadiusDefault);
+            param->setAnimates(false);
+            if (group) {
+                // coverity[dead_error_line]
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
     }
     {
         OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupChannelTuning);
