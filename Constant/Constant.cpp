@@ -383,7 +383,7 @@ ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(solid ? ePixelComponentRGB : ePixelComponentRGBA);
+    desc.setChannelSelector(solid ? ePixelComponentNone : ePixelComponentRGBA);
 #endif
 
     generatorDescribe(desc);
@@ -413,7 +413,7 @@ ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor &desc
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, ePixelComponentRGBA, true, context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, solid ? ePixelComponentRGB : ePixelComponentRGBA, true, context);
 
     // color
     if (solid) {
