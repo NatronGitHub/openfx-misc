@@ -69,6 +69,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kSupportsByte true
 #define kSupportsUShort true
+#define kSupportsHalf false
 #define kSupportsFloat true
 
 #define kSupportsTiles 1
@@ -432,7 +433,7 @@ class RectanglePlugin
 public:
     /** @brief ctor */
     RectanglePlugin(OfxImageEffectHandle handle)
-        : GeneratorPlugin(handle, false, kSupportsByte, kSupportsUShort, kSupportsFloat)
+        : GeneratorPlugin(handle, false, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
         , _srcClip(0)
         , _maskClip(0)
         , _processR(0)

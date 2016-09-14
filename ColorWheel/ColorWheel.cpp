@@ -48,6 +48,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kSupportsByte true
 #define kSupportsUShort true
+#define kSupportsHalf false
 #define kSupportsFloat true
 
 #define kSupportsTiles 1
@@ -267,7 +268,7 @@ class ColorWheelPlugin
 public:
     /** @brief ctor */
     ColorWheelPlugin(OfxImageEffectHandle handle)
-        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsFloat)
+        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
         , _centerSaturation(0)
         , _edgeSaturation(0)
         , _centerValue(0)

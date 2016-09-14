@@ -49,6 +49,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kSupportsByte true
 #define kSupportsUShort true
+#define kSupportsHalf false
 #define kSupportsFloat true
 
 #define kSupportsTiles 1
@@ -337,7 +338,7 @@ class CheckerBoardPlugin
 public:
     /** @brief ctor */
     CheckerBoardPlugin(OfxImageEffectHandle handle)
-        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsFloat)
+        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
         , _boxSize(0)
         , _color0(0)
         , _color1(0)

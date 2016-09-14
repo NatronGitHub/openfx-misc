@@ -50,6 +50,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kSupportsByte true
 #define kSupportsUShort true
+#define kSupportsHalf false
 #define kSupportsFloat true
 
 #define kSupportsTiles 1
@@ -183,7 +184,7 @@ public:
     /** @brief ctor */
     ConstantPlugin(OfxImageEffectHandle handle,
                    bool solid)
-        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsFloat)
+        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
         , _color(0)
         , _colorRGB(0)
     {

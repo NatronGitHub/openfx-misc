@@ -51,6 +51,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kSupportsByte true
 #define kSupportsUShort true
+#define kSupportsHalf false
 #define kSupportsFloat true
 
 #define kSupportsTiles 1
@@ -242,7 +243,7 @@ class ColorBarsPlugin
 public:
     /** @brief ctor */
     ColorBarsPlugin(OfxImageEffectHandle handle)
-        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsFloat)
+        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
     {
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||

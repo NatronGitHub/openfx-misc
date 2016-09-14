@@ -60,6 +60,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kSupportsByte true
 #define kSupportsUShort true
+#define kSupportsHalf false
 #define kSupportsFloat true
 
 #define kSupportsTiles 1
@@ -418,7 +419,7 @@ class RadialPlugin
 public:
     /** @brief ctor */
     RadialPlugin(OfxImageEffectHandle handle)
-        : GeneratorPlugin(handle, false, kSupportsByte, kSupportsUShort, kSupportsFloat)
+        : GeneratorPlugin(handle, false, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
         , _srcClip(0)
         , _processR(0)
         , _processG(0)
