@@ -936,7 +936,10 @@ void
 MergePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
     if ( (clipName == kClipB) && _srcClipB && _srcClipB->isConnected() && !_bChannelAChanged->getValue() && ( args.reason == OFX::eChangeUserEdit) ) {
-        if (_srcClipB->getPixelComponents() == ePixelComponentRGB) {
+
+        // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
+        // If before the clip preferences pass the input is RGB then don't consider the alpha channel for the clip B and use 0 instead.
+        if (_srcClipB->getUnmappedPixelComponents() == ePixelComponentRGB) {
             _bChannels[3]->setValue(false);
         }
     }
