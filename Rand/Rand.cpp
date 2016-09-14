@@ -28,7 +28,9 @@
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
+#include "ofxsGenerator.h"
 #include "ofxsMacros.h"
+#include "ofxsMaskMix.h"
 
 //#define USE_RANDOMGENERATOR // randomGenerator is more than 10 times slower than our pseudo-random hash
 #ifdef USE_RANDOMGENERATOR
@@ -53,6 +55,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsByte true
+#define kSupportsUShort true
+#define kSupportsHalf false
+#define kSupportsFloat true
+
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -71,6 +78,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSeed "seed"
 #define kParamSeedLabel "Seed"
 #define kParamSeedHint "Random seed: change this if you want different instances to have different noise."
+
+#define kParamStaticSeed "staticSeed"
+#define kParamStaticSeedLabel "Static Seed"
+#define kParamStaticSeedHint "When enabled, the seed is not combined with the frame number, and thus the effect is the same for all frames for a given seed number."
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -123,7 +134,7 @@ hash(unsigned int a)
 }
 
 /** @brief templated class to blend between two images */
-template <class PIX, int nComponents, int max>
+template <class PIX, int nComponents, int maxValue>
 class RandGenerator
     : public RandGeneratorBase
 {
@@ -169,12 +180,8 @@ public:
 #else
                         randValue = hash(hash(hash(_seed ^ x) ^ y) ^ c) / ( (double)0x100000000ULL ) - 0.5;
 #endif
-                        randValue = _mean + max * noiseLevel * randValue;
-                        if (max == 1) { // implies floating point, so don't clamp
-                            dstPix[c] = PIX(randValue);
-                        } else { // integer base one, clamp it
-                            dstPix[c] = randValue < 0 ? 0 : ( randValue > max ? max : PIX(randValue) );
-                        }
+                        randValue = _mean + noiseLevel * randValue;
+                        dstPix[c] = ofxsClampIfInt<PIX, maxValue>(randValue * maxValue, 0, maxValue);
                     }
                 } else {
                     std::fill(dstPix, dstPix + nComponents, 0);
@@ -188,40 +195,30 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class RandPlugin
-    : public OFX::ImageEffect
+    : public GeneratorPlugin
 {
-protected:
+private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_srcClip;
-    OFX::Clip *_dstClip;
-    OFX::DoubleParam  *_noise;
-    OFX::DoubleParam  *_density;
-    OFX::IntParam  *_seed;
+    DoubleParam  *_noise;
+    DoubleParam  *_density;
+    IntParam  *_seed;
+    BooleanParam* _staticSeed;
 
 public:
     /** @brief ctor */
     RandPlugin(OfxImageEffectHandle handle)
-        : ImageEffect(handle)
-        , _srcClip(0)
-        , _dstClip(0)
+        : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
         , _noise(0)
         , _seed(0)
     {
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                             _dstClip->getPixelComponents() == ePixelComponentRGBA ||
-                             _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                               _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
         _noise   = fetchDoubleParam(kParamNoiseLevel);
         _density = fetchDoubleParam(kParamNoiseDensity);
         _seed   = fetchIntParam(kParamSeed);
-        assert(_noise && _seed);
+        _staticSeed = fetchBooleanParam(kParamStaticSeed);
+        assert(_noise && _density && _seed && _staticSeed);
     }
 
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
@@ -230,6 +227,8 @@ public:
 
     /* set up and run a processor */
     void setupAndProcess(RandGeneratorBase &, const OFX::RenderArguments &args);
+
+    virtual bool paramsNotAnimated() OVERRIDE FINAL { return false; };
 };
 
 
@@ -277,12 +276,14 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor,
     double density;
     _density->getValueAtTime(time, density);
 
-    float time_f = args.time;
-    uint32_t seed = *( (uint32_t*)&time_f );
+    bool staticSeed = _staticSeed->getValueAtTime(time);
+    uint32_t seed = hash( (unsigned int)_seed->getValueAtTime(time) );
+    if (!staticSeed) {
+        float time_f = args.time;
 
-    // set the seed based on the current time, and double it we get difference seeds on different fields
-    seed = hash( seed ^ _seed->getValueAtTime(args.time) );
-
+        // set the seed based on the current time, and double it we get difference seeds on different fields
+        seed = hash( *( (uint32_t*)&time_f ) ^ seed );
+    }
     // set the scales
     // noise level depends on the render scale
     // (the following formula is for Gaussian noise only, but we use it as an approximation)
@@ -300,8 +301,13 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor,
 void
 RandPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    clipPreferences.setOutputFrameVarying(true);
+    GeneratorPlugin::getClipPreferences(clipPreferences);
+    bool staticSeed = _staticSeed->getValue();
+    if (!staticSeed) {
+        clipPreferences.setOutputFrameVarying(true);
+    }
     clipPreferences.setOutputHasContinousSamples(true);
+    clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
 }
 
 // the overridden render function
@@ -312,8 +318,6 @@ RandPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
@@ -336,6 +340,28 @@ RandPlugin::render(const OFX::RenderArguments &args)
         }
         default:
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
+                RandGenerator<unsigned char, 3, 255> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+
+            case OFX::eBitDepthUShort: {
+                RandGenerator<unsigned short, 3, 65535> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+
+            case OFX::eBitDepthFloat: {
+                RandGenerator<float, 3, 1> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
         switch (dstBitDepth) {
@@ -373,9 +399,15 @@ RandPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     desc.addSupportedContext(eContextGenerator);
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthFloat);
+    if (kSupportsByte) {
+        desc.addSupportedBitDepth(eBitDepthUByte);
+    }
+    if (kSupportsUShort) {
+        desc.addSupportedBitDepth(eBitDepthUShort);
+    }
+    if (kSupportsFloat) {
+        desc.addSupportedBitDepth(eBitDepthFloat);
+    }
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
@@ -386,17 +418,23 @@ RandPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderTwiceAlways(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+
+    generatorDescribe(desc);
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(ePixelComponentRGBA);
+#endif
 }
 
 void
 RandPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                     ContextEnum /*context*/)
+                                     ContextEnum context)
 {
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
@@ -404,10 +442,13 @@ RandPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
+
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, ePixelComponentRGB, true, context);
 
     // noise
     {
@@ -448,10 +489,23 @@ RandPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamSeedHint);
         param->setDefault(2000);
         param->setAnimates(true); // can animate
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
     }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamStaticSeed);
+        param->setLabel(kParamStaticSeedLabel);
+        param->setHint(kParamStaticSeedHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
 } // RandPluginFactory::describeInContext
 
 ImageEffect*
