@@ -163,6 +163,8 @@ enum BBoxEnum
 #define kParamOutputChannelsALabel "A"
 #define kParamOutputChannelsAHint  "Write alpha component to output."
 
+#define kParamBChannelsAChanged "bChannelsChanged"
+
 #define kClipA "A"
 #define kClipAHint "The image sequence to merge with input B."
 #define kClipB "B"
@@ -407,6 +409,7 @@ public:
         , _srcClipB(0)
         , _maskClip(0)
         , _optionalASrcClips(0)
+        , _bChannelAChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
@@ -453,6 +456,8 @@ public:
         _outputChannels[2] = fetchBooleanParam(kParamOutputChannelsB);
         _outputChannels[3] = fetchBooleanParam(kParamOutputChannelsA);
         assert(_outputChannels[0] && _outputChannels[1] && _outputChannels[2] && _outputChannels[3]);
+
+        _bChannelAChanged = fetchBooleanParam(kParamBChannelsAChanged);
     }
 
 private:
@@ -465,6 +470,8 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(MergeProcessorBase &, const OFX::RenderArguments &args);
+
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -492,6 +499,7 @@ private:
     OFX::BooleanParam* _aChannels[4];
     OFX::BooleanParam* _bChannels[4];
     OFX::BooleanParam* _outputChannels[4];
+    OFX::BooleanParam* _bChannelAChanged;
 };
 
 
@@ -919,6 +927,18 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args,
         // depending on the operation, enable/disable alpha masking
         _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
         _operationString->setValue( MergeImages2D::getOperationString(operation) );
+    } else if ( (paramName == kParamBChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
+        _bChannelAChanged->setValue(true);
+    }
+}
+
+void
+MergePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if ( (clipName == kClipB) && _srcClipB && _srcClipB->isConnected() && !_bChannelAChanged->getValue() && ( args.reason == OFX::eChangeUserEdit) ) {
+        if (_srcClipB->getPixelComponents() == ePixelComponentRGB) {
+            _bChannels[3]->setValue(false);
+        }
     }
 }
 
@@ -1483,6 +1503,17 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamOutputChannelsAHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintDivider);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsAChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }
