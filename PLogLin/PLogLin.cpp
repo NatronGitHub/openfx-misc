@@ -340,6 +340,7 @@ private:
                 if (nComponents == 4) {
                     dstPix[3] = srcPix ? srcPix[3] : PIX();
                 }
+                // increment the dst pixel
                 dstPix += nComponents;
             }
         }
@@ -436,6 +437,7 @@ private:
                 if (nComponents == 4) {
                     dstPix[3] = srcPix ? srcPix[3] : PIX();
                 }
+                // increment the dst pixel
                 dstPix += nComponents;
             }
         }

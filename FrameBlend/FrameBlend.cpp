@@ -392,7 +392,6 @@ private:
                         std::copy(tmpPix, tmpPix + nComponents, &_accumulatorData[renderPix * nComponents]);
                     }
                 } else {
-                    // copy back original values from unprocessed channels
                     if (nComponents == 1) {
                         int c = 0;
                         if (_outputCount) {
