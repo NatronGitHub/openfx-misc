@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Rand.o randomGenerator.o
+PLUGINOBJECTS = Rand.o randomGenerator.o ofxsGenerator.o
 PLUGINNAME = Rand
 RESOURCES = net.sf.openfx.Noise.png net.sf.openfx.Noise.svg
 
