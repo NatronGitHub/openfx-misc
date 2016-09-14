@@ -993,6 +993,7 @@ private:
 public:
     ImageLumaProcessor(OFX::ImageEffect &instance)
     : ImageStatisticsProcessorBase(instance)
+    , _luminanceMath(eLuminanceMathRec709)
     {
         _minLuma = +std::numeric_limits<double>::infinity();
         _maxLuma = -std::numeric_limits<double>::infinity();

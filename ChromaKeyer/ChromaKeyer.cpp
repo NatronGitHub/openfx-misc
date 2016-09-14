@@ -226,6 +226,8 @@ public:
         , _inMaskImg(0)
         , _outMaskImg(0)
         , _lut(0)
+        , _to_ypbpr(0)
+        , _to_rgb(0)
         , _linear(false)
         , _acceptanceAngle(0.)
         , _tan__acceptanceAngle2(0.)
@@ -297,6 +299,7 @@ public:
                 _to_rgb = OFX::Color::ypbpr_to_rgb2020;
                 break;
         }
+        assert(_to_rgb && _to_ypbpr);
 
         // delinearize RGB
         float r = _lut ? _lut->toColorSpaceFloatFromLinearFloat(keyColor.r) : keyColor.r;
