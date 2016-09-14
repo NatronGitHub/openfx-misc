@@ -767,13 +767,14 @@ QuantizePlugin::setupAndProcess(QuantizeProcessorBase &processor,
 
     double colors = _colors->getValueAtTime(time);
     DitherEnum dither = (DitherEnum)_dither->getValueAtTime(time);
-    float time_f = args.time;
-    uint32_t seed = *( (uint32_t*)&time_f );
 
-    // set the seed based on the current time, and double it we get difference seeds on different fields
     bool staticSeed = _staticSeed->getValueAtTime(time);
+    uint32_t seed = hash( (unsigned int)_seed->getValueAtTime(time) );
     if (!staticSeed) {
-        seed = hash( seed ^ _seed->getValueAtTime(args.time) );
+        float time_f = args.time;
+
+        // set the seed based on the current time, and double it we get difference seeds on different fields
+        seed = hash( *( (uint32_t*)&time_f ) ^ seed );
     }
 
     processor.setValues(premult, premultChannel, mix,
@@ -937,8 +938,8 @@ QuantizePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         bool staticSeed = _staticSeed->getValue();
         if (!staticSeed) {
             clipPreferences.setOutputFrameVarying(true);
-            clipPreferences.setOutputHasContinousSamples(true);
         }
+        clipPreferences.setOutputHasContinousSamples(true);
     }
 }
 
@@ -1107,6 +1108,7 @@ QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamStaticSeed);
         param->setLabel(kParamStaticSeedLabel);
         param->setHint(kParamStaticSeedHint);
+        param->setDefault(false);
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
