@@ -99,7 +99,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "\n" \
 "## Basic Usage\n" \
 "\n" \
-"For most footage, the effect works best by keeping the default Y'CbCr color model.\n" \
+"The input image should be in linear RGB.\n" \
+"\n" \
+"For most footage, the effect works best by keeping the default Y'CbCr color model. The color models are made to work with Rec.709 data, but DenoiseSharpen will still work if the input is in another colorspace, as long as the input is linear RGB:\n" \
+"\n" \
+"- The Y'CbCr color model uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B' and the the Rec.709 primaries to convert from R'G'B' to Y'CbCr.\n" \
+"- The L*a*b color model uses the Rec.709 RGB primaries to convert from RGB to L*a*b..\n" \
+"- The R'G'B' color model uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B'.\n" \
+"- The RGB color model (linear) makes no assumption about the RGB color space.\n" \
+"- The Alpha channel, if processed, is always considered to be linear.\n" \
 "\n" \
 "The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, \"Lock Noise Analysis\" is checked in order to avoid modifying the essential parameters by mistake.\n" \
 "\n" \
@@ -182,13 +190,13 @@ enum OutputModeEnum {
 #define kParamColorModelLabel "Color Model"
 #define kParamColorModelHint "The colorspace where denoising is performed. These colorspaces assume that input and output use the Rec.709/sRGB chromaticities and the D65 illuminant, but should tolerate other input colorspaces (the output colorspace will always be the same as the input colorspace). Noise levels are reset when the color model is changed."
 #define kParamColorModelOptionYCbCr "Y'CbCr(A)"
-#define kParamColorModelOptionYCbCrHint "The YCbCr color model has one luminance channel (Y) which contains most of the detail information of an image (such as brightness and contrast) and two chroma channels (Cb = blueness, Cr = reddness) that hold the color information. Note that this choice drastically affects the result."
+#define kParamColorModelOptionYCbCrHint "The YCbCr color model has one luminance channel (Y) which contains most of the detail information of an image (such as brightness and contrast) and two chroma channels (Cb = blueness, Cr = reddness) that hold the color information. Note that this choice drastically affects the result. Uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B' and the the Rec.709 primaries to convert from R'G'B' to Y'CbCr."
 #define kParamColorModelOptionLab "CIE L*a*b(A)"
-#define kParamColorModelOptionLabHint "CIE L*a*b* is a color model in which chrominance is separated from lightness and color distances are perceptually uniform. Note that this choice drastically affects the result."
+#define kParamColorModelOptionLabHint "CIE L*a*b* is a color model in which chrominance is separated from lightness and color distances are perceptually uniform. Note that this choice drastically affects the result. Uses the Rec.709 primaries to convert from RGB to L*a*b."
 #define kParamColorModelOptionRGB "R'G'B'(A)"
-#define kParamColorModelOptionRGBHint "The R'G'B' color model (gamma-corrected RGB) separates an image into channels of red, green, and blue. Note that this choice drastically affects the result."
+#define kParamColorModelOptionRGBHint "The R'G'B' color model (gamma-corrected RGB) separates an image into channels of red, green, and blue. Note that this choice drastically affects the result. Uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B'."
 #define kParamColorModelOptionLinearRGB "RGB(A)"
-#define kParamColorModelOptionLinearRGBHint "The Linear RGB color model processes the raw linear components. Usually a bad choice, except when denoising non-color data (e.g. depth or motion vectors)."
+#define kParamColorModelOptionLinearRGBHint "The Linear RGB color model processes the raw linear components. Usually a bad choice, except when denoising non-color data (e.g. depth or motion vectors). No assumption is made about the RGB color space."
 enum ColorModelEnum {
     eColorModelYCbCr = 0,
     eColorModelLab,
@@ -211,7 +219,7 @@ enum ColorModelEnum {
 
 #define kGroupNoiseLevels "noiseLevels"
 #define kGroupNoiseLevelsLabel "Noise Levels"
-#define kParamNoiseLevelHint "Adjusts the noise variance of the selected channel for the given noise frequency. May be estimated for image data by pressing the \"Analyze Noise\" button."
+#define kParamNoiseLevelHint "Adjusts the noise variance of the selected channel for the given noise frequency. May be estimated from image data by pressing the \"Analyze Noise\" button."
 #define kParamNoiseLevelMax 0.05 // noise level is at most 1/sqrt(12) ~=0.29 (stddev of a uniform distribution between 0 and 1)
 #define kParamYLRNoiseLevel "ylrNoiseLevel"
 #define kParamYLRNoiseLevelLabel "Y/L/R Level"
@@ -250,19 +258,19 @@ enum ColorModelEnum {
 #define kParamEnable "enableFreq"
 #define kParamGain "gainFreq"
 #define kParamEnableHighLabel "Denoise High Frequencies"
-#define kParamEnableHighHint "Check to enable the high frequency noise level thresholds."
+#define kParamEnableHighHint "Check to enable the high frequency noise level thresholds. It is recommended to always leave this checked."
 #define kParamGainHighLabel "High Gain"
 #define kParamGainHighHint "Gain to apply to the high frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the Noise Level Gain."
 #define kParamEnableMediumLabel "Denoise Medium Frequencies"
-#define kParamEnableMediumHint "Check to enable the medium frequency noise level thresholds."
+#define kParamEnableMediumHint "Check to enable the medium frequency noise level thresholds. Can be disabled if the analysis area contains high frequency texture, or if the the noise is known to be IID (independent and identically distributed), for example if this is only sensor noise and lossless compression is used, and not grain or compression noise."
 #define kParamGainMediumLabel "Medium Gain"
 #define kParamGainMediumHint "Gain to apply to the medium frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the Noise Level Gain."
 #define kParamEnableLowLabel "Denoise Low Frequencies"
-#define kParamEnableLowHint "Check to enable the low frequency noise level thresholds."
+#define kParamEnableLowHint "Check to enable the low frequency noise level thresholds. Must be disabled if the analysis area contains texture, or if the noise is known to be IID (independent and identically distributed), for example if this is only sensor noise and lossless compression is used, and not grain or compression noise."
 #define kParamGainLowLabel "Low Gain"
 #define kParamGainLowHint "Gain to apply to the low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the Noise Level Gain."
 #define kParamEnableVeryLowLabel "Denoise Very Low Frequencies"
-#define kParamEnableVeryLowHint "Check to enable the very low frequency noise level thresholds."
+#define kParamEnableVeryLowHint "Check to enable the very low frequency noise level thresholds. Can be disabled in most cases. Must be disabled if the analysis area contains texture, or if the noise is known to be IID (independent and identically distributed), for example if this is only sensor noise and lossless compression is used, and not grain or compression noise."
 #define kParamGainVeryLowLabel "Very Low Gain"
 #define kParamGainVeryLowHint "Gain to apply to the very low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the global Noise Level Gain."
 
