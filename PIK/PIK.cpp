@@ -92,6 +92,7 @@ http://www.jahshaka.com/forums/archive/index.php/t-16044.html
  */
 
 #include <cmath>
+#include <cfloat> // DBL_MAX
 #include <limits>
 #include <algorithm>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
@@ -100,6 +101,7 @@ http://www.jahshaka.com/forums/archive/index.php/t-16044.html
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsMaskMix.h"
 
 #ifndef M_PI
 #define M_PI        3.14159265358979323846264338327950288   /* pi             */
@@ -207,10 +209,12 @@ enum ScreenTypeEnum {
 #define kParamClampAlphaHint "Clamp matte to 0-1."
 #define kParamClampAlphaDefault true
 
+#ifdef RGBAL
 #define kParamRGBAL "rgbal"
 #define kParamRGBALLabel "RGBA Legal"
 #define kParamRGBALHint "Legalize rgba relationship."
 #define kParamRGBALDefault false
+#endif
 
 #define kParamNoKey "noKey"
 #define kParamNoKeyLabel "No Key"
@@ -259,7 +263,9 @@ protected:
     bool _magenta; // Magenta: Override autolevel with magenta component.
     bool _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     bool _clampAlpha; // Clamp: Clamp matte to 0-1.
+#ifdef RGBAL
     bool _rgbal; // Legalize rgba relationship.
+#endif
     bool _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     bool _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     bool _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -284,7 +290,9 @@ public:
         , _magenta(kParamMagentaDefault)
         , _ss(kParamSSDefault)
         , _clampAlpha(kParamClampAlphaDefault)
+#ifdef RGBAL
         , _rgbal(kParamRGBALDefault)
+#endif
         , _noKey(kParamNoKeyDefault)
         , _ubl(kParamUBLDefault)
         , _ubc(kParamUBCDefault)
@@ -315,7 +323,9 @@ public:
                    bool magenta, // Magenta: Override autolevel with magenta component.
                    bool ss, // Screen Subtraction: Have the keyer subtract the foreground or just premult.
                    bool clampAlpha, // Clamp: Clamp matte to 0-1.
+#ifdef RGBAL
                    bool rgbal, // Legalize rgba relationship.
+#endif
                    bool noKey, // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
                    bool ubl, // Use Bg Lum: Have the output rgb be biased by the bg luminance.
                    bool ubc) // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -333,7 +343,9 @@ public:
         _magenta = magenta;
         _ss = ss;
         _clampAlpha = clampAlpha;
+#ifdef RGBAL
         _rgbal = rgbal;
+#endif
         _noKey = noKey;
         _ubl = ubl;
         _ubc = ubc;
@@ -393,18 +405,16 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        // for Color and Screen modes, how much the scalar product between RGB and the keyColor must be
-        // multiplied by to get the foreground key value 1, which corresponds to the maximum
-        // possible value, e.g. for (R,G,B)=(1,1,1)
-        // Kfg = 1 = colorKeyFactor * (1,1,1)._keyColor (where "." is the scalar product)
-        /*
-         const double keyColor111 = _keyColor.r + _keyColor.g + _keyColor.b;
-         */
-        // const double keyColorFactor = (keyColor111 == 0.) ? 1. : 1./keyColor111;
-        // squared norm of keyColor, used for Screen mode
-        /*
-         const double keyColorNorm2 = (_keyColor.r * _keyColor.r) + (_keyColor.g * _keyColor.g) + (_keyColor.b * _keyColor.b);
-         */
+        assert(nComponents == 4);
+        assert(!_fgImg || _fgImg->getPixelComponents() == ePixelComponentRGBA || _fgImg->getPixelComponents() == ePixelComponentRGB);
+        assert(!_pfgImg || _pfgImg->getPixelComponents() == ePixelComponentRGBA || _pfgImg->getPixelComponents() == ePixelComponentRGB);
+        assert(!_cImg || _cImg->getPixelComponents() == ePixelComponentRGBA || _cImg->getPixelComponents() == ePixelComponentRGB);
+        assert(!_bgImg || _bgImg->getPixelComponents() == ePixelComponentRGBA || _bgImg->getPixelComponents() == ePixelComponentRGB);
+        //assert(_fgImg); // crashes with Nuke
+        const int fgComponents = _fgImg ? (_fgImg->getPixelComponents() == ePixelComponentRGBA ? 4 : 3) : 0;
+        const int pfgComponents = _pfgImg ? (_pfgImg->getPixelComponents() == ePixelComponentRGBA ? 4 : 3) : 0;
+        const int cComponents = _cImg ? (_cImg->getPixelComponents() == ePixelComponentRGBA ? 4 : 3) : 0;
+        const int bgComponents = _bgImg ? (_bgImg->getPixelComponents() == ePixelComponentRGBA ? 4 : 3) : 0;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -420,119 +430,88 @@ private:
                 const PIX *cPix = (const PIX *)  (_cImg ? _cImg->getPixelAddress(x, y) : 0);
                 const PIX *bgPix = (const PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
 
-                /*
-                double Kbg = 0.;
+                float fg[4] = {0., 0., 0., 1.};
+                float pfg[4] = {0., 0., 0., 1.};
+                float c[4] = {0., 0., 0., 1.};
+                float bg[4] = {0., 0., 0., 1.};
 
-                // output of the foreground suppressor
-                double fgr = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[0]) : 0.;
-                double fgg = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[1]) : 0.;
-                double fgb = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[2]) : 0.;
-                double bgr = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[0]) : 0.;
-                double bgg = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[1]) : 0.;
-                double bgb = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[2]) : 0.;
-
-                // we want to be able to play with the matte even if the background is not connected
-                if (!srcPix) {
-                    // no source, take only background
-                    Kbg = 1.;
-                    fgr = fgg = fgb = 0.;
-                } else if (outMask >= 1.) { // optimize
-                    Kbg = 1.;
-                    fgr = fgg = fgb = 0.;
-                } else {
-                    // from fgr, fgg, fgb, compute Kbg and update fgr, fgg, fgb
-
-                    double Kfg;
-                    double scalarProd = 0.;
-                    double norm2 = 0.; // squared norm of fg
-                    // d is the norm of projection of fg orthogonal to keyColor.
-                    // It is norm(fg) if fg is orthogonal to keyColor, and zero if
-                    // fg is in the direction of keycolor
-                    double d = 0.;
-                        scalarProd = fgr * _keyColor.r + fgg * _keyColor.g + fgb * _keyColor.b;
-                        Kfg = (keyColor111 == 0) ? rgb2luminance(fgr, fgg, fgb) : (scalarProd / keyColor111);
-
-                    // compute Kbg from Kfg
-                    if (_keyerMode == eKeyerModeNone) {
-                        Kbg = 1.;
-                    } else {
-                        Kbg = key_bg(Kfg);
+                for (int i = 0; i < fgComponents; ++i) {
+                    fg[i] = sampleToFloat<PIX, maxValue>(fgPix[i]);
+                }
+                for (int i = 0; i < pfgComponents; ++i) {
+                    pfg[i] = sampleToFloat<PIX, maxValue>(pfgPix[i]);
+#ifdef RGBAL
+                    // I don't know what "legalize rgba" means anyway
+                    if (_rgbal && i < 3) {
+                        pfg[i] = ofxsClamp(pfg[i], 0., 1.);
                     }
+#endif
+                }
+                for (int i = 0; i < cComponents; ++i) {
+                    c[i] = sampleToFloat<PIX, maxValue>(cPix[i]);
+                }
 
-
-                    // despill fgr, fgg, fgb
-                    if ( (_despill > 0.) && ( (_keyerMode == eKeyerModeNone) || (_keyerMode == eKeyerModeScreen) ) && (_outputMode != eOutputModeIntermediate) && (keyColorNorm2 > 0.) ) {
-                        double keyColorNorm = std::sqrt(keyColorNorm2);
-                        // color in the direction of keyColor
-                        if (scalarProd / keyColorNorm > d * _despillClosing) {
-                            // maxdespill is between 0 and 1:
-                            // if despill in [0,1]: only outside regions are despilled
-                            // if despill in [1,2]: inside regions are despilled too
-                            assert(0 <= Kbg && Kbg <= 1);
-                            assert(0 <= _despill && _despill <= 2);
-                            double maxdespill = Kbg * std::min(_despill, 1.) + (1 - Kbg) * std::max(0., _despill - 1);
-                            assert(0 <= maxdespill && maxdespill <= 1);
-
-                            //// first solution: despill proportionally to the distance to the the despill cone
-                            //// in the direction on -_keyColor
-                            //double colorshift = maxdespill*(scalarProd/keyColorNorm - d * _despillClosing);
-
-                            // second solution: subtract maxdespill * _keyColor, clamping to the despill cone
-                            double colorshift = maxdespill * std::max( keyColorNorm, (scalarProd / keyColorNorm - d * _despillClosing) );
-                            // clamp: don't go beyond the despill cone
-                            colorshift = std::min(colorshift, scalarProd / keyColorNorm - d * _despillClosing);
-                            assert(colorshift >= 0);
-                            fgr -= colorshift * _keyColor.r / keyColorNorm;
-                            fgg -= colorshift * _keyColor.g / keyColorNorm;
-                            fgb -= colorshift * _keyColor.b / keyColorNorm;
+                float alpha = 0.;
+                if (_screenType == eScreenTypeGreen) {
+                    if (c[1] <= 0.) {
+                        alpha = 1.;
+                    } else {
+                        //alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
+                        //A is pfg and B is c.
+                        double pfgKey = pfg[1] - pfg[0] * _redWeight - pfg[2] * _blueGreenWeight;
+                        if (pfgKey <= 0.) {
+                            alpha = 1.;
+                        } else {
+                            double cKey = c[1] - c[0] * _redWeight - c[2] * _blueGreenWeight;
+                            alpha = 1. - pfgKey / cKey;
                         }
                     }
-
-                    // premultiply foreground
-                    if (_outputMode != eOutputModeUnpremultiplied) {
-                        fgr *= (1. - Kbg);
-                        fgg *= (1. - Kbg);
-                        fgb *= (1. - Kbg);
+                } else if (_screenType == eScreenTypeGreen) {
+                    if (c[2] <= 0.) {
+                        alpha = 1.;
+                    } else {
+                        //alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
+                        //A is pfg and B is c.
+                        double pfgKey = pfg[2] - pfg[0] * _redWeight - pfg[1] * _blueGreenWeight;
+                        if (pfgKey <= 0.) {
+                            alpha = 1.;
+                        } else {
+                            double cKey = c[2] - c[0] * _redWeight - c[1] * _blueGreenWeight;
+                            alpha = 1. - pfgKey / cKey;
+                        }
                     }
-
-                    // clamp foreground color to [0,1]
-                    fgr = std::max( 0., std::min(fgr, 1.) );
-                    fgg = std::max( 0., std::min(fgg, 1.) );
-                    fgb = std::max( 0., std::min(fgb, 1.) );
                 }
 
-                // At this point, we have Kbg,
 
-                // set the alpha channel to the complement of Kbg
-                double fga = 1. - Kbg;
-                //double fga = Kbg;
-                assert(fga >= 0. && fga <= 1.);
-                double compAlpha = (_outputMode == eOutputModeComposite &&
-                                    _sourceAlpha == eSourceAlphaNormal &&
-                                    srcPix) ? sampleToFloat<PIX, maxValue>(srcPix[3]) : 1.;
-                switch (_outputMode) {
-                case eOutputModeIntermediate:
-                    for (int c = 0; c < 3; ++c) {
-                        dstPix[c] = srcPix ? srcPix[c] : 0;
+                if (_noKey) {
+                    // TODO: use Bg Lum, use BG Chroma
+                    for (int i = 0; i < 3; ++i) {
+                        dstPix[i] = fgPix[i];
                     }
-                    break;
-                case eOutputModePremultiplied:
-                case eOutputModeUnpremultiplied:
-                    dstPix[0] = (float)floatToSample<PIX, maxValue>(fgr);
-                    dstPix[1] = (float)floatToSample<PIX, maxValue>(fgg);
-                    dstPix[2] = (float)floatToSample<PIX, maxValue>(fgb);
-                    break;
-                case eOutputModeComposite:
-                    // [FD] not sure if this is the expected way to use compAlpha
-                    dstPix[0] = (float)floatToSample<PIX, maxValue>(compAlpha * (fgr + bgr * Kbg) + (1. - compAlpha) * bgr);
-                    dstPix[1] = (float)floatToSample<PIX, maxValue>(compAlpha * (fgg + bgg * Kbg) + (1. - compAlpha) * bgg);
-                    dstPix[2] = (float)floatToSample<PIX, maxValue>(compAlpha * (fgb + bgb * Kbg) + (1. - compAlpha) * bgb);
-                    break;
+                } else if (_ss) {
+                    if (alpha >= 1) {
+                        for (int i = 0; i < 3; ++i) {
+                            dstPix[i] = fgPix[i];
+                        }
+                    } else {
+                        for (int i = 0; i < 3; ++i) {
+                            float v = fg[i] + c[i] * (alpha - 1.);
+                            dstPix[i] = v < 0. ? 0 : floatToSample<PIX, maxValue>(v);
+                        }
+                    }
+                } else {
+                    if (alpha <= 0.) {
+                        dstPix[0] = dstPix[1] = dstPix[2] = 0;
+                    } else {
+                        for (int i = 0; i < 3; ++i) {
+                            dstPix[i] = floatToSample<PIX, maxValue>(fg[i]*alpha);
+                        }
+                    }
                 }
-                if (nComponents == 4) {
-                    dstPix[3] = floatToSample<PIX, maxValue>(fga);
+                if (_clampAlpha && alpha < 0.) {
+                    alpha = 0.;
                 }
-                 */
+                dstPix[3] = floatToSample<PIX, maxValue>(alpha);
             }
         }
     } // multiThreadProcessImages
@@ -581,7 +560,9 @@ public:
         _magenta = fetchBooleanParam(kParamMagenta); // Magenta: Override autolevel with magenta component.
         _ss = fetchBooleanParam(kParamSS); // Screen Subtraction: Have the keyer subtract the foreground or just premult.
         _clampAlpha = fetchBooleanParam(kParamClampAlpha); // Clamp: Clamp matte to 0-1.
+#ifdef RGBAL
         _rgbal = fetchBooleanParam(kParamRGBAL); // Legalize rgba relationship.
+#endif
         _noKey = fetchBooleanParam(kParamNoKey); // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
         _ubl = fetchBooleanParam(kParamUBL); // Use Bg Lum: Have the output rgb be biased by the bg luminance.
         _ubc = fetchBooleanParam(kParamUBC); // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -621,7 +602,9 @@ private:
         _magenta->setEnabled(!noKey && autolevels);
         _ss->setEnabled(!noKey);
         _clampAlpha->setEnabled(!noKey);
+#ifdef RGBAL
         _rgbal->setEnabled(!noKey);
+#endif
     }
 
 private:
@@ -644,7 +627,9 @@ private:
     BooleanParam* _magenta; // Magenta: Override autolevel with magenta component.
     BooleanParam* _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     BooleanParam* _clampAlpha; // Clamp: Clamp matte to 0-1.
+#ifdef RGBAL
     BooleanParam* _rgbal; // Legalize rgba relationship.
+#endif
     BooleanParam* _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     BooleanParam* _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     BooleanParam* _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -701,6 +686,9 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         if (fgBitDepth != dstBitDepth /* || fgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+    } else {
+        // Nuke sometimes returns NULL when render is interrupted
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     if ( pfg.get() ) {
@@ -758,12 +746,18 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     bool magenta = _magenta->getValueAtTime(time);
     bool ss = _ss->getValueAtTime(time);
     bool clampAlpha = _clampAlpha->getValueAtTime(time);
+#ifdef RGBAL
     bool rgbal = _rgbal->getValueAtTime(time);
+#endif
     bool noKey = _noKey->getValueAtTime(time);
     bool ubl = _ubl->getValueAtTime(time);
     bool ubc = _ubc->getValueAtTime(time);
 
-    processor.setValues(screenType, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, noKey, ubl, ubc);
+    processor.setValues(screenType, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha,
+#ifdef RGBAL
+                        rgbal,
+#endif
+                        noKey, ubl, ubc);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), pfg.get(), c.get(), bg.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -946,7 +940,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamRedWeight);
         param->setLabel(kParamRedWeightLabel);
         param->setHint(kParamRedWeightHint);
-        param->setRange(0., 1.);
+        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamRedWeightDefault);
         param->setAnimates(true);
@@ -958,7 +952,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamBlueGreenWeight);
         param->setLabel(kParamBlueGreenWeightLabel);
         param->setHint(kParamBlueGreenWeightHint);
-        param->setRange(0., 1.);
+        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamBlueGreenWeightDefault);
         param->setAnimates(true);
@@ -983,7 +977,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLevel);
         param->setLabel(kParamLevelLabel);
         param->setHint(kParamLevelHint);
-        param->setRange(0., 1.);
+        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamLevelDefault);
         param->setAnimates(true);
@@ -995,7 +989,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLuma);
         param->setLabel(kParamLumaLabel);
         param->setHint(kParamLumaHint);
-        param->setRange(0., 1.);
+        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamLumaDefault);
         param->setAnimates(true);
@@ -1077,11 +1071,14 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamClampAlphaHint);
         param->setDefault(kParamClampAlphaDefault);
         param->setAnimates(false);
+#ifdef RGBAL
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
     }
+#ifdef RGBAL
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRGBAL);
         param->setLabel(kParamRGBALLabel);
@@ -1092,6 +1089,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+#endif
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamNoKey);
         param->setLabel(kParamNoKeyLabel);
