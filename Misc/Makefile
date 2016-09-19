@@ -44,6 +44,7 @@ MixViews.o \
 Multiply.o \
 NoOp.o \
 OneView.o \
+PIK.o \
 PLogLin.o \
 Position.o \
 Premult.o \
@@ -271,6 +272,7 @@ $(TOP_SRCDIR)/MixViews \
 $(TOP_SRCDIR)/Multiply \
 $(TOP_SRCDIR)/NoOp \
 $(TOP_SRCDIR)/OneView \
+$(TOP_SRCDIR)/PIK \
 $(TOP_SRCDIR)/PLogLin \
 $(TOP_SRCDIR)/Position \
 $(TOP_SRCDIR)/Premult \
@@ -344,6 +346,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/MixViews \
 -I$(TOP_SRCDIR)/NoOp \
 -I$(TOP_SRCDIR)/OneView \
+-I$(TOP_SRCDIR)/PIK \
 -I$(TOP_SRCDIR)/PLogLin \
 -I$(TOP_SRCDIR)/Position \
 -I$(TOP_SRCDIR)/Premult \

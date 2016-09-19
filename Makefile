@@ -46,6 +46,7 @@ Multiply \
 MixViews \
 NoOp \
 OneView \
+PIK \
 PLogLin \
 Position \
 Premult \
