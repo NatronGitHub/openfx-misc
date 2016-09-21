@@ -212,7 +212,6 @@ protected:
     const OFX::Image *_maskImg;
     std::vector<const OFX::Image*> _optionalAImages;
     bool _doMasking;
-    int _bbox;
     bool _alphaMasking;
     double _mix;
     bool _maskInvert;
@@ -228,7 +227,6 @@ public:
         , _srcImgB(0)
         , _maskImg(0)
         , _doMasking(false)
-        , _bbox(0)
         , _alphaMasking(false)
         , _mix(1.)
         , _maskInvert(false)
@@ -252,14 +250,12 @@ public:
 
     void doMasking(bool v) {_doMasking = v; }
 
-    void setValues(int bboxChoice,
-                   bool alphaMasking,
+    void setValues(bool alphaMasking,
                    double mix,
                    std::bitset<4> aChannels,
                    std::bitset<4> bChannels,
                    std::bitset<4> outputChannels)
     {
-        _bbox = bboxChoice;
         _alphaMasking = alphaMasking;
         _mix = mix;
         assert(aChannels.size() == 4 && bChannels.size() == 4 && outputChannels.size() == 4);
@@ -691,8 +687,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
 
     // do we do masking
     if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
 
         // say we are masking
         processor.doMasking(true);
@@ -701,12 +696,8 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
-    int bboxChoice;
-    bool alphaMasking;
-    _bbox->getValueAtTime(time, bboxChoice);
-    _alphaMasking->getValueAtTime(time, alphaMasking);
-    double mix;
-    _mix->getValueAtTime(time, mix);
+    bool alphaMasking = _alphaMasking->getValueAtTime(time);
+    double mix = _mix->getValueAtTime(time);
     std::bitset<4> aChannels;
     std::bitset<4> bChannels;
     std::bitset<4> outputChannels;
@@ -715,7 +706,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         bChannels[c] = _bChannels[c]->getValueAtTime(time);
         outputChannels[c] = _outputChannels[c]->getValueAtTime(time);
     }
-    processor.setValues(bboxChoice, alphaMasking, mix, aChannels, bChannels, outputChannels);
+    processor.setValues(alphaMasking, mix, aChannels, bChannels, outputChannels);
     processor.setDstImg( dst.get() );
     processor.setSrcImg(srcA.get(), srcB.get(), optionalImages.images);
     processor.setRenderWindow(args.renderWindow);
@@ -999,7 +990,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
             continue;
         }
         OfxRectD srcARoD = aClips[i]->getRegionOfDefinition(time);
-        if ( (srcARoD.x2 <= srcARoD.x1) || (srcARoD.y2 <= srcARoD.y1) ) {
+        if ( OFX::Coords::rectIsEmpty(srcARoD) ) {
             // RoD is empty
             continue;
         }
