@@ -404,6 +404,10 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+    } else {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch source image");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
     }
     const void* srcPixelData;
     OfxRectI srcBounds;
