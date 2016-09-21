@@ -38,6 +38,7 @@ ImageStatistics \
 Invert \
 JoinViews \
 Keyer \
+KeyMix \
 Log2Lin \
 MatteMonitor \
 Merge \
