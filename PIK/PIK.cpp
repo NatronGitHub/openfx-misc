@@ -16,6 +16,8 @@
  * along with openfx-misc.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
  * ***** END LICENSE BLOCK ***** */
 
+#ifdef DEBUG // not yet ready for release
+
 /*
  * OFX PIK plugin.
  */
@@ -114,7 +116,23 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "PIK"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription \
-    "Screen-Adaptive Keyer, a keyer that works by generating a clean plate from the green/blue screen sequences. Inspired by Nuke's IBK by Paul Lambert and Fusion's KAK by Pieter Van Houte."
+    "A keyer that works by generating a clean plate from the green/blue screen sequences. Inspired by Nuke's IBK by Paul Lambert and Fusion's KAK by Pieter Van Houte.\n" \
+"\n" \
+"There are 2 basic approaches to pull a key with PIK. One is to use PIKColor to extract automatically a clean plate from the images and use it as the the C input, and the other is to pick a color which best represents the area you are trying to key.\n" \
+"\n" \
+"The blue- or greenscreen image should be used as the Fg input. If that image contains significant noise, a denoised version should be used as the PFg input. The C input should either be a clean plate or the outupt of PIKColor, and is used as the screen color if the 'Screen Type' is not 'Pick'. The Bg image is used in calculating fine edge detail when either 'Use Bg Luminance' or 'Use Bg Chroma' is checked.\n" \
+"\n" \
+"The color weights deal with the hardness of the matte. If you view the output (with screen subtraction ticked on) you will typically see areas where edges have a slight discoloration due to the background not being fully removed from the original plate. This is not spill but a result of the matte being too strong. Lowering one of the weights will correct that particular edge. If it's a red foreground image with an edge problem bring down the red weight - same idea for the other weight. This may affect other edges so the use of multiple PIKs with different weights split with KeyMixes is recommended.\n" \
+"\n" \
+"The 'Luminance Match' feature adds a luminance factor to the keying algorithm which helps to capture transparent areas of the foreground which are brighter than the backing screen. It will also allow you to lessen some of the garbage area noise by bringing down the screen range - pushing this control too far will also eat into some of your foreground blacks. 'Luminance Level' allows you to make the overall effect stronger or weaker.\n" \
+"\n" \
+"'Autolevels' will perform a color correction before the image is pulled so that hard edges from a foreground subject with saturated colors are reduced. The same can be achieved with the weights but here only those saturated colors are affected whereas the use of weights will affect the entire image. When using this feature it's best to have this as a separate node which you can then split with other PIKs as the weights will no longer work as expected. You can override some of the logic for when you actually have particular foreground colors you want to keep.\n" \
+"For example when you have a saturated red subject against bluescreen you'll get a magenta transition area. Autolevels will eliminate this but if you have a magenta foreground object then this control will make the magenta more red unless you check the magenta box to keep it.\n" \
+"\n" \
+"'Screen Subtraction' will remove the backing from the rgb via a subtraction process. Unchecking this will simply premultiply the original Fg with the generated matte.\n" \
+"\n" \
+"'Use Bkg Luminance' and 'Use Bkg Chroma' allow you to affect the output rgb by the new bg. These controls are best used with the 'Luminance Match' sliders above. This feature can also sometimes really help with screens that exhibit some form of fringing artifact - usually a darkening or lightening of an edge on one of the color channels on the screen. You can offset the effect by grading the bg input up or down with a grade node just before input. If it's just an area which needs help then just bezier that area and locally grade the bg input up or down to remove the artifact.\n" \
+
 
 #define kPluginIdentifier "net.sf.openfx.PIK"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -127,41 +145,45 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kClipFg "fg"
-#define kClipFgHint "The blue- or greenscreen image. Used to compute the output color - usually the same as pfg."
-#define kClipPFg "pfg"
-#define kClipPFgHint "The blue- or greenscreen image. Used to compute the output key (alpha) - usually the same as fg."
-#define kClipC "c"
-#define kClipCHint "A clean plate, or the output of PIKColor"
-#define kClipBg "bg"
-#define kClipBgHint "The background image. This is used in calculating fine edge detail."
-
-
+#define kClipFg "Fg"
+#define kClipFgHint "The blue- or greenscreen image. Used to compute the output color."
+#define kClipPFg "PFg"
+#define kClipPFgHint "(optional) The preprocessed/denoised blue- or greenscreen image. Used to compute the output key (alpha). A denoised image usually gives a less noisy key. If not connected, the Fg input is used instead."
+#define kClipC "C"
+#define kClipCHint "(optional) A clean plate, or the output of PIKColor"
+#define kClipBg "Bg"
+#define kClipBgHint "(optional) The background image. This is used in calculating fine edge detail when the 'Use Bg Luminance' or 'Use Bg Chroma' options are checked."
 
 #define kParamScreenType "screenType"
 #define kParamScreenTypeLabel "Screen Type"
 #define kParamScreenTypeHint "The type of background screen used for the key."
-#define kParamScreenTypeOptionGreen "Green"
-#define kParamScreenTypeOptionBlue "Blue"
+#define kParamScreenTypeOptionGreen "C-Green"
+#define kParamScreenTypeOptionBlue "C-Blue"
+#define kParamScreenTypeOptionPick "Pick"
 enum ScreenTypeEnum {
   eScreenTypeGreen = 0,
-  eScreenTypeBlue,
+    eScreenTypeBlue,
+    eScreenTypePick,
 };
 #define kParamScreenTypeDefault eScreenTypeBlue
+
+#define kParamColor "color"
+#define kParamColorLabel "Color"
+#define kParamColorHint "The screen color in case 'Pick' was chosen as the 'Screen Type'."
 
 #define kParamRedWeight "redWeight"
 #define kParamRedWeightLabel "Red Weight"
 #define kParamRedWeightHint "Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation."
-#define kParamRedWeightDefault 1.
+#define kParamRedWeightDefault 0.5 // 1 in IBK, 0.5 in IBKGizmo
 
 #define kParamBlueGreenWeight "blueGreenWeight"
 #define kParamBlueGreenWeightLabel "Blue/Green Weight"
 #define kParamBlueGreenWeightHint "Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation."
-#define kParamBlueGreenWeightDefault 0.
+#define kParamBlueGreenWeightDefault 0.5 // 0 in IBK, 0.5 in IBKGizmo
 
 #define kParamLMEnable "lmEnable"
 #define kParamLMEnableLabel "Luminance Match Enable"
-#define kParamLMEnableHint "Adds a luminance factor to the colour difference algorithm."
+#define kParamLMEnableHint "Adds a luminance factor to the color difference algorithm."
 #define kParamLMEnableDefault false
 
 #define kParamLevel "level"
@@ -172,7 +194,7 @@ enum ScreenTypeEnum {
 #define kParamLuma "luma"
 #define kParamLumaLabel "Luminance Level"
 #define kParamLumaHint "Makes the matte more additive."
-#define kParamLumaDefault 0.5
+#define kParamLumaDefault 0 // 0.5 in IBK, 0 in IBKGizmo
 
 #define kParamLLEnable "llEnable"
 #define kParamLLEnableLabel "Enable"
@@ -209,12 +231,10 @@ enum ScreenTypeEnum {
 #define kParamClampAlphaHint "Clamp matte to 0-1."
 #define kParamClampAlphaDefault true
 
-#ifdef RGBAL
 #define kParamRGBAL "rgbal"
 #define kParamRGBALLabel "RGBA Legal"
 #define kParamRGBALHint "Legalize rgba relationship."
 #define kParamRGBALDefault false
-#endif
 
 #define kParamNoKey "noKey"
 #define kParamNoKeyLabel "No Key"
@@ -222,7 +242,7 @@ enum ScreenTypeEnum {
 #define kParamNoKeyDefault false
 
 #define kParamUBL "ubl"
-#define kParamUBLLabel "Use Bg Lum"
+#define kParamUBLLabel "Use Bg Luminance"
 #define kParamUBLHint "Have the output rgb be biased by the difference between the bg luminance and the c luminance). Luminance math is Rec.709." // only applied where the key is transparent
 #define kParamUBLDefault false
 
@@ -235,9 +255,9 @@ enum ScreenTypeEnum {
 // see http://www.poynton.com/notes/colour_and_gamma/GammaFAQ.html#luminance
 static inline
 double
-rgb2luminance(double r,
-              double g,
-              double b)
+rgb2luminance_rec709(double r,
+                     double g,
+                     double b)
 {
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
@@ -251,9 +271,11 @@ protected:
     const OFX::Image *_cImg;
     const OFX::Image *_bgImg;
     ScreenTypeEnum _screenType; // Screen Type: The type of background screen used for the key.
+    float _color[3];
+    bool _useColor;
     double _redWeight; // Red Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
     double _blueGreenWeight; // Blue/Green Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
-    bool _lmEnable; // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the colour difference algorithm.
+    bool _lmEnable; // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the color difference algorithm.
     double _level; // Screen Range: Helps retain blacks and shadows.
     double _luma; // Luminance Level: Makes the matte more additive.
     bool _llEnable; // Luminance Level Enable: Disable the luminance level when us bg influence.
@@ -263,9 +285,7 @@ protected:
     bool _magenta; // Magenta: Override autolevel with magenta component.
     bool _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     bool _clampAlpha; // Clamp: Clamp matte to 0-1.
-#ifdef RGBAL
     bool _rgbal; // Legalize rgba relationship.
-#endif
     bool _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     bool _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     bool _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -278,6 +298,7 @@ public:
         , _pfgImg(0)
         , _cImg(0)
         , _screenType(kParamScreenTypeDefault)
+        , _useColor(false)
         , _redWeight(kParamRedWeightDefault)
         , _blueGreenWeight(kParamBlueGreenWeightDefault)
         , _lmEnable(kParamLMEnableDefault)
@@ -290,13 +311,12 @@ public:
         , _magenta(kParamMagentaDefault)
         , _ss(kParamSSDefault)
         , _clampAlpha(kParamClampAlphaDefault)
-#ifdef RGBAL
         , _rgbal(kParamRGBALDefault)
-#endif
         , _noKey(kParamNoKeyDefault)
         , _ubl(kParamUBLDefault)
         , _ubc(kParamUBCDefault)
     {
+        _color[0] = _color[1] = _color[2] = 0.;
     }
 
     void setSrcImgs(const OFX::Image *fgImg,
@@ -311,9 +331,10 @@ public:
     }
 
     void setValues(ScreenTypeEnum screenType, // Screen Type: The type of background screen used for the key.
+                   const OfxRGBColourD& color,
                    double redWeight, // Red Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
                    double blueGreenWeight, // Blue/Green Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
-                   bool lmEnable, // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the colour difference algorithm.
+                   bool lmEnable, // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the color difference algorithm.
                    double level, // Screen Range: Helps retain blacks and shadows.
                    double luma, // Luminance Level: Makes the matte more additive.
                    bool llEnable, // Luminance Level Enable: Disable the luminance level when us bg influence.
@@ -323,14 +344,21 @@ public:
                    bool magenta, // Magenta: Override autolevel with magenta component.
                    bool ss, // Screen Subtraction: Have the keyer subtract the foreground or just premult.
                    bool clampAlpha, // Clamp: Clamp matte to 0-1.
-#ifdef RGBAL
                    bool rgbal, // Legalize rgba relationship.
-#endif
                    bool noKey, // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
                    bool ubl, // Use Bg Lum: Have the output rgb be biased by the bg luminance.
                    bool ubc) // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
     {
-        _screenType = screenType;
+        if (screenType == eScreenTypePick) {
+            screenType = color.g > color.r ? eScreenTypeGreen: eScreenTypeBlue;
+            _color[0] = color.r;
+            _color[1] = color.g;
+            _color[2] = color.b;
+            _useColor = true;
+        } else {
+            _screenType = screenType;
+            _useColor = false;
+        }
         _redWeight = redWeight;
         _blueGreenWeight = blueGreenWeight;
         _lmEnable = lmEnable;
@@ -343,9 +371,7 @@ public:
         _magenta = magenta;
         _ss = ss;
         _clampAlpha = clampAlpha;
-#ifdef RGBAL
         _rgbal = rgbal;
-#endif
         _noKey = noKey;
         _ubl = ubl;
         _ubc = ubc;
@@ -416,6 +442,8 @@ private:
         const int cComponents = _cImg ? (_cImg->getPixelComponents() == ePixelComponentRGBA ? 4 : 3) : 0;
         const int bgComponents = _bgImg ? (_bgImg->getPixelComponents() == ePixelComponentRGBA ? 4 : 3) : 0;
 
+        float c[4] = {_color[0], _color[1], _color[2], 1.};
+
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
                 break;
@@ -432,23 +460,28 @@ private:
 
                 float fg[4] = {0., 0., 0., 1.};
                 float pfg[4] = {0., 0., 0., 1.};
-                float c[4] = {0., 0., 0., 1.};
                 float bg[4] = {0., 0., 0., 1.};
 
-                for (int i = 0; i < fgComponents; ++i) {
-                    fg[i] = sampleToFloat<PIX, maxValue>(fgPix[i]);
-                }
-                for (int i = 0; i < pfgComponents; ++i) {
-                    pfg[i] = sampleToFloat<PIX, maxValue>(pfgPix[i]);
-#ifdef RGBAL
-                    // I don't know what "legalize rgba" means anyway
-                    if (_rgbal && i < 3) {
-                        pfg[i] = ofxsClamp(pfg[i], 0., 1.);
+                if (fgPix) {
+                    for (int i = 0; i < fgComponents; ++i) {
+                        fg[i] = sampleToFloat<PIX, maxValue>(fgPix[i]);
                     }
-#endif
                 }
-                for (int i = 0; i < cComponents; ++i) {
-                    c[i] = sampleToFloat<PIX, maxValue>(cPix[i]);
+                if (pfgPix) {
+                    for (int i = 0; i < pfgComponents; ++i) {
+                        pfg[i] = sampleToFloat<PIX, maxValue>(pfgPix[i]);
+                    }
+                }
+                if (cPix && !_useColor) {
+                    for (int i = 0; i < cComponents; ++i) {
+                        c[i] = sampleToFloat<PIX, maxValue>(cPix[i]);
+                    }
+                }
+
+                if (bgPix && (_ubc || _ubl)) {
+                    for (int i = 0; i < cComponents; ++i) {
+                        bg[i] = sampleToFloat<PIX, maxValue>(bgPix[i]);
+                    }
                 }
 
                 float alpha = 0.;
@@ -463,10 +496,38 @@ private:
                             alpha = 1.;
                         } else {
                             double cKey = c[1] - c[0] * _redWeight - c[2] * _blueGreenWeight;
-                            alpha = 1. - pfgKey / cKey;
+                            if (cKey <= 0) {
+                                alpha = 1.;
+                            } else {
+                                alpha = 1. - pfgKey / cKey;
+#ifdef RGBAL_IMPLEMENTED
+                                if (_rgbal) {
+                                    float k[3] = {0., 0., 0.};
+                                    for (int i = 0; i < 3; ++i) {
+                                        if (c[i] > 0) {
+                                            k[i] = pfg[i] / c[i];
+                                        }
+                                    }
+                                    double kmax = -DBL_MAX;
+                                    for (int i = 0; i < 3; ++i) {
+                                        if (k[i] > kmax) {
+                                            kmax = k[i];
+                                        }
+                                    }
+                                    float kKey = pfgKey / cKey;
+                                    if (kKey > kmax && kKey > 1.) {
+                                        alpha = 0.; // the "zero zone" is OK
+                                    } else {
+                                        // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
+                                        // the closest I could get to IBK
+                                        alpha = std::max((double)alpha, std::min((kmax - kKey) / (50*kKey), 1.));
+                                    }
+                                }
+#endif
+                            }
                         }
                     }
-                } else if (_screenType == eScreenTypeGreen) {
+                } else if (_screenType == eScreenTypeBlue) {
                     if (c[2] <= 0.) {
                         alpha = 1.;
                     } else {
@@ -477,7 +538,35 @@ private:
                             alpha = 1.;
                         } else {
                             double cKey = c[2] - c[0] * _redWeight - c[1] * _blueGreenWeight;
-                            alpha = 1. - pfgKey / cKey;
+                            if (cKey <= 0) {
+                                alpha = 1.;
+                            } else {
+                                alpha = 1. - pfgKey / cKey;
+#ifdef RGBAL_IMPLEMENTED
+                                if (_rgbal) {
+                                    float k[3] = {0., 0., 0.};
+                                    for (int i = 0; i < 3; ++i) {
+                                        if (c[i] > 0) {
+                                            k[i] = pfg[i] / c[i];
+                                        }
+                                    }
+                                    double kmax = -DBL_MAX;
+                                    for (int i = 0; i < 3; ++i) {
+                                        if (k[i] > kmax) {
+                                            kmax = k[i];
+                                        }
+                                    }
+                                    float kKey = pfgKey / cKey;
+                                    if (kKey > kmax && kKey > 1.) {
+                                        alpha = 0.; // the "zero zone" is OK
+                                    } else {
+                                        // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
+                                        // the closest I could get to IBK
+                                        alpha = std::max((double)alpha, std::min((kmax - kKey) / (50*kKey), 1.));
+                                    }
+                                }
+#endif
+                            }
                         }
                     }
                 }
@@ -499,6 +588,31 @@ private:
                             dstPix[i] = v < 0. ? 0 : floatToSample<PIX, maxValue>(v);
                         }
                     }
+                    /*
+                } else if (_rgbal) {
+                    double alphamin = DBL_MAX;
+                    for (int i = 0; i < 3; ++i) {
+                        if (c[i] > 0) {
+                            double a = 1. - pfg[i] / c[i];
+                            if (a < alphamin) {
+                                alphamin = a;
+                            }
+                        }
+                    }
+                    // alphamin, which corresponds to black is mapped to alpha=0
+                    // alpha = alphamin -> 0.
+                    // alpha = 1 -> 1.
+                    alpha = (alpha - alphamin) / (1. - alphamin);
+                    if (alpha <= 0.) {
+                        alpha = 0.;
+                        dstPix[0] = dstPix[1] = dstPix[2] = 0;
+                        dstPix[0] = dstPix[1] = dstPix[2] = 1;alpha=1;
+                    } else {
+                        for (int i = 0; i < 3; ++i) {
+                            dstPix[i] = floatToSample<PIX, maxValue>(fg[i]*alpha);
+                        }
+                    }
+                     */
                 } else {
                     if (alpha <= 0.) {
                         dstPix[0] = dstPix[1] = dstPix[2] = 0;
@@ -532,6 +646,24 @@ public:
         , _pfgClip(0)
         , _cClip(0)
         , _bgClip(0)
+        , _screenType(0)
+        , _color(0)
+        , _redWeight(0)
+        , _blueGreenWeight(0)
+        , _lmEnable(0)
+        , _level(0)
+        , _luma(0)
+        , _llEnable(0)
+        , _autolevels(0)
+        , _yellow(0)
+        , _cyan(0)
+        , _magenta(0)
+        , _ss(0)
+        , _clampAlpha(0)
+        , _rgbal(0)
+        , _noKey(0)
+        , _ubl(0)
+        , _ubc(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -548,9 +680,10 @@ public:
         assert( _bgClip && (!_bgClip->isConnected() || _bgClip->getPixelComponents() == ePixelComponentRGB || _bgClip->getPixelComponents() == ePixelComponentRGBA) );
 
         _screenType = fetchChoiceParam(kParamScreenType); // Screen Type: The type of background screen used for the key.
+        _color = fetchRGBParam(kParamColor); // Screen Type: The type of background screen used for the key.
         _redWeight = fetchDoubleParam(kParamRedWeight); // Red Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
         _blueGreenWeight = fetchDoubleParam(kParamBlueGreenWeight); // Blue/Green Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
-        _lmEnable = fetchBooleanParam(kParamLMEnable); // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the colour difference algorithm.
+        _lmEnable = fetchBooleanParam(kParamLMEnable); // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the color difference algorithm.
         _level = fetchDoubleParam(kParamLevel); // Screen Range: Helps retain blacks and shadows.
         _luma = fetchDoubleParam(kParamLuma); // Luminance Level: Makes the matte more additive.
         _llEnable = fetchBooleanParam(kParamLLEnable); // Luminance Level Enable: Disable the luminance level when us bg influence.
@@ -560,9 +693,7 @@ public:
         _magenta = fetchBooleanParam(kParamMagenta); // Magenta: Override autolevel with magenta component.
         _ss = fetchBooleanParam(kParamSS); // Screen Subtraction: Have the keyer subtract the foreground or just premult.
         _clampAlpha = fetchBooleanParam(kParamClampAlpha); // Clamp: Clamp matte to 0-1.
-#ifdef RGBAL
         _rgbal = fetchBooleanParam(kParamRGBAL); // Legalize rgba relationship.
-#endif
         _noKey = fetchBooleanParam(kParamNoKey); // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
         _ubl = fetchBooleanParam(kParamUBL); // Use Bg Lum: Have the output rgb be biased by the bg luminance.
         _ubc = fetchBooleanParam(kParamUBC); // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -584,12 +715,14 @@ private:
 
     void updateEnabled()
     {
+        ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValue();
         bool noKey = _noKey->getValue();
         bool lmEnable = _lmEnable->getValue();
         bool llEnable = _llEnable->getValue();
         bool autolevels = _autolevels->getValue();
 
         _screenType->setEnabled(!noKey);
+        _color->setEnabled(!noKey && screenType == eScreenTypePick);
         _redWeight->setEnabled(!noKey);
         _blueGreenWeight->setEnabled(!noKey);
         _lmEnable->setEnabled(!noKey);
@@ -602,9 +735,7 @@ private:
         _magenta->setEnabled(!noKey && autolevels);
         _ss->setEnabled(!noKey);
         _clampAlpha->setEnabled(!noKey);
-#ifdef RGBAL
         _rgbal->setEnabled(!noKey);
-#endif
     }
 
 private:
@@ -615,9 +746,10 @@ private:
     OFX::Clip *_cClip;
     OFX::Clip *_bgClip;
     ChoiceParam* _screenType; // Screen Type: The type of background screen used for the key.
+    RGBParam* _color;
     DoubleParam* _redWeight; // Red Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
     DoubleParam* _blueGreenWeight; // Blue/Green Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
-    BooleanParam* _lmEnable; // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the colour difference algorithm.
+    BooleanParam* _lmEnable; // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the color difference algorithm.
     DoubleParam* _level; // Screen Range: Helps retain blacks and shadows.
     DoubleParam* _luma; // Luminance Level: Makes the matte more additive.
     BooleanParam* _llEnable; // Luminance Level Enable: Disable the luminance level when us bg influence.
@@ -627,9 +759,7 @@ private:
     BooleanParam* _magenta; // Magenta: Override autolevel with magenta component.
     BooleanParam* _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     BooleanParam* _clampAlpha; // Clamp: Clamp matte to 0-1.
-#ifdef RGBAL
     BooleanParam* _rgbal; // Legalize rgba relationship.
-#endif
     BooleanParam* _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     BooleanParam* _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     BooleanParam* _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -666,13 +796,33 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+
+    ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValueAtTime(time);
+    OfxRGBColourD color = {0., 0., 1.};
+    _color->getValueAtTime(time, color.r, color.g, color.b);
+    double redWeight = _redWeight->getValueAtTime(time);
+    double blueGreenWeight = _blueGreenWeight->getValueAtTime(time);
+    bool lmEnable = _lmEnable->getValueAtTime(time);
+    double level = _level->getValueAtTime(time);
+    double luma = _luma->getValueAtTime(time);
+    bool llEnable = _llEnable->getValueAtTime(time);
+    bool autolevels = _autolevels->getValueAtTime(time);
+    bool yellow = _yellow->getValueAtTime(time);
+    bool cyan = _cyan->getValueAtTime(time);
+    bool magenta = _magenta->getValueAtTime(time);
+    bool ss = _ss->getValueAtTime(time);
+    bool clampAlpha = _clampAlpha->getValueAtTime(time);
+    bool rgbal = _rgbal->getValueAtTime(time);
+    bool noKey = _noKey->getValueAtTime(time);
+    bool ubl = _ubl->getValueAtTime(time);
+    bool ubc = _ubc->getValueAtTime(time);
     std::auto_ptr<const OFX::Image> fg( ( _fgClip && _fgClip->isConnected() ) ?
                                        _fgClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> pfg( ( _pfgClip && _pfgClip->isConnected() ) ?
+    std::auto_ptr<const OFX::Image> pfg( !noKey && ( _pfgClip && _pfgClip->isConnected() ) ?
                                        _pfgClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> c( ( _cClip && _cClip->isConnected() ) ?
+    std::auto_ptr<const OFX::Image> c( !noKey && screenType != eScreenTypePick && ( _cClip && _cClip->isConnected() ) ?
                                        _cClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
+    std::auto_ptr<const OFX::Image> bg( (ubl || ubc) && ( _bgClip && _bgClip->isConnected() ) ?
                                         _bgClip->fetchImage(time) : 0 );
     if ( fg.get() ) {
         if ( (fg->getRenderScale().x != args.renderScale.x) ||
@@ -733,33 +883,9 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         }
     }
 
-    ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValueAtTime(time);
-    double redWeight = _redWeight->getValueAtTime(time);
-    double blueGreenWeight = _blueGreenWeight->getValueAtTime(time);
-    bool lmEnable = _lmEnable->getValueAtTime(time);
-    double level = _level->getValueAtTime(time);
-    double luma = _luma->getValueAtTime(time);
-    bool llEnable = _llEnable->getValueAtTime(time);
-    bool autolevels = _autolevels->getValueAtTime(time);
-    bool yellow = _yellow->getValueAtTime(time);
-    bool cyan = _cyan->getValueAtTime(time);
-    bool magenta = _magenta->getValueAtTime(time);
-    bool ss = _ss->getValueAtTime(time);
-    bool clampAlpha = _clampAlpha->getValueAtTime(time);
-#ifdef RGBAL
-    bool rgbal = _rgbal->getValueAtTime(time);
-#endif
-    bool noKey = _noKey->getValueAtTime(time);
-    bool ubl = _ubl->getValueAtTime(time);
-    bool ubc = _ubc->getValueAtTime(time);
-
-    processor.setValues(screenType, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha,
-#ifdef RGBAL
-                        rgbal,
-#endif
-                        noKey, ubl, ubc);
+    processor.setValues(screenType, color, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, noKey, ubl, ubc);
     processor.setDstImg( dst.get() );
-    processor.setSrcImgs( fg.get(), pfg.get(), c.get(), bg.get() );
+    processor.setSrcImgs( fg.get(), ( !noKey && !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get() );
     processor.setRenderWindow(args.renderWindow);
 
     processor.process();
@@ -828,12 +954,13 @@ PIKPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 }
 
 void
-PIKPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+PIKPlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/,
                           const std::string &paramName)
 {
     //const double time = args.time;
 
-    if ( paramName == kParamNoKey ||
+    if ( paramName == kParamScreenType ||
+        paramName == kParamNoKey ||
         paramName == kParamLMEnable ||
         paramName == kParamLLEnable ||
         paramName == kParamAutolevels) {
@@ -930,12 +1057,25 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamScreenTypeOptionGreen);
         assert(param->getNOptions() == (int)eScreenTypeBlue);
         param->appendOption(kParamScreenTypeOptionBlue);
+        assert(param->getNOptions() == (int)eScreenTypePick);
+        param->appendOption(kParamScreenTypeOptionPick);
         param->setDefault( (int)kParamScreenTypeDefault );
         if (page) {
             page->addChild(*param);
         }
     }
 
+    {
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamColor);
+        param->setLabel(kParamColorLabel);
+        param->setHint(kParamColorHint);
+        param->setDefault(0., 0., 1.);
+        param->setAnimates(true);
+        param->setLayoutHint(eLayoutHintDivider);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamRedWeight);
         param->setLabel(kParamRedWeightLabel);
@@ -1071,14 +1211,11 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamClampAlphaHint);
         param->setDefault(kParamClampAlphaDefault);
         param->setAnimates(false);
-#ifdef RGBAL
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
-#endif
         if (page) {
             page->addChild(*param);
         }
     }
-#ifdef RGBAL
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRGBAL);
         param->setLabel(kParamRGBALLabel);
@@ -1089,7 +1226,6 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-#endif
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamNoKey);
         param->setLabel(kParamNoKeyLabel);
@@ -1135,3 +1271,5 @@ static PIKPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersion
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
+
+#endif // DEBUG
