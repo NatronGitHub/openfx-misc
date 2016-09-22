@@ -1771,6 +1771,15 @@ CImgErodeBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new CImgBlurPlugin(handle, eBlurPluginErodeBlur);
 }
 
+static CImgBlurPluginFactory oldp1(kPluginIdentifier, 3, 0); // for backward compatibility, has default for processAlpha set to false
+static CImgLaplacianPluginFactory oldp2(kPluginIdentifierLaplacian, 3, 0);
+static CImgChromaBlurPluginFactory oldp3(kPluginIdentifierChromaBlur, 3, 0);
+static CImgBloomPluginFactory oldp4(kPluginIdentifierBloom, 3, 0);
+mRegisterPluginFactoryInstance(oldp1)
+mRegisterPluginFactoryInstance(oldp2)
+mRegisterPluginFactoryInstance(oldp3)
+mRegisterPluginFactoryInstance(oldp4)
+
 static CImgBlurPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static CImgLaplacianPluginFactory p2(kPluginIdentifierLaplacian, kPluginVersionMajor, kPluginVersionMinor);
 static CImgChromaBlurPluginFactory p3(kPluginIdentifierChromaBlur, kPluginVersionMajor, kPluginVersionMinor);
