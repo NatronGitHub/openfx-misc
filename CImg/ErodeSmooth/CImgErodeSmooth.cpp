@@ -338,7 +338,7 @@ class CImgErodeSmoothPlugin
 public:
 
     CImgErodeSmoothPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgErodeSmoothParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgErodeSmoothParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
         , _range(0)
         , _size(0)
         , _uniform(0)

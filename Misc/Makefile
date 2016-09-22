@@ -36,6 +36,7 @@ ImageStatistics.o \
 Invert.o \
 JoinViews.o \
 Keyer.o \
+KeyMix.o \
 Log2Lin.o \
 MatteMonitor.o \
 Merge.o \
@@ -44,6 +45,7 @@ MixViews.o \
 Multiply.o \
 NoOp.o \
 OneView.o \
+PIK.o \
 PLogLin.o \
 Position.o \
 Premult.o \
@@ -263,6 +265,7 @@ $(TOP_SRCDIR)/ImageStatistics \
 $(TOP_SRCDIR)/Invert \
 $(TOP_SRCDIR)/JoinViews \
 $(TOP_SRCDIR)/Keyer \
+$(TOP_SRCDIR)/KeyMix \
 $(TOP_SRCDIR)/Log2Lin \
 $(TOP_SRCDIR)/MatteMonitor \
 $(TOP_SRCDIR)/Merge \
@@ -271,6 +274,7 @@ $(TOP_SRCDIR)/MixViews \
 $(TOP_SRCDIR)/Multiply \
 $(TOP_SRCDIR)/NoOp \
 $(TOP_SRCDIR)/OneView \
+$(TOP_SRCDIR)/PIK \
 $(TOP_SRCDIR)/PLogLin \
 $(TOP_SRCDIR)/Position \
 $(TOP_SRCDIR)/Premult \
@@ -336,6 +340,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Invert \
 -I$(TOP_SRCDIR)/JoinViews \
 -I$(TOP_SRCDIR)/Keyer \
+-I$(TOP_SRCDIR)/KeyMix \
 -I$(TOP_SRCDIR)/Log2Lin \
 -I$(TOP_SRCDIR)/MatteMonitor \
 -I$(TOP_SRCDIR)/Merge \
@@ -344,6 +349,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/MixViews \
 -I$(TOP_SRCDIR)/NoOp \
 -I$(TOP_SRCDIR)/OneView \
+-I$(TOP_SRCDIR)/PIK \
 -I$(TOP_SRCDIR)/PLogLin \
 -I$(TOP_SRCDIR)/Position \
 -I$(TOP_SRCDIR)/Premult \

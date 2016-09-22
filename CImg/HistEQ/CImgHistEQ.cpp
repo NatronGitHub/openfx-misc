@@ -91,7 +91,7 @@ class CImgHistEQPlugin
 public:
 
     CImgHistEQPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgHistEQParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgHistEQParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _nb_levels  = fetchIntParam(kParamNbLevels);
         assert(_nb_levels);

@@ -123,7 +123,7 @@ class CImgSharpenShockPlugin
 public:
 
     CImgSharpenShockPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgSharpenShockParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgSharpenShockParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _edge  = fetchDoubleParam(kParamEdgeThreshold);

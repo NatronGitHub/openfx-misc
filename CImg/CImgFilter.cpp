@@ -59,7 +59,6 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
                                                        bool supportsMultiResolution,
                                                        bool supportsRenderScale,
                                                        bool defaultUnpremult /* = true*/,
-                                                       bool defaultProcessAlphaOnRGBA /* = false*/,
                                                        bool isFilter /* = true*/)
     : ImageEffect(handle)
     , _dstClip(0)
@@ -79,7 +78,6 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     , _supportsMultiResolution(OFX::getImageEffectHostDescription()->supportsMultiResolution && supportsMultiResolution)
     , _supportsRenderScale(supportsRenderScale)
     , _defaultUnpremult(defaultUnpremult)
-    , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
     , _premultChanged(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -119,7 +117,6 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args,
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          ( args.reason == OFX::eChangeUserEdit) ) {
-        beginEditBlock("changedClip");
         if ( _defaultUnpremult && !_premultChanged->getValue() ) {
             if (_srcClip->getPixelComponents() != OFX::ePixelComponentRGBA) {
                 _premult->setValue(false);
@@ -137,27 +134,6 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args,
                 }
             }
         }
-        if (_processR) {
-            switch ( _srcClip->getPixelComponents() ) {
-            case OFX::ePixelComponentAlpha:
-                _processR->setValue(false);
-                _processG->setValue(false);
-                _processB->setValue(false);
-                _processA->setValue(true);
-                break;
-            case OFX::ePixelComponentRGBA:
-            case OFX::ePixelComponentRGB:
-                // Alpha is not processed by default on RGBA images
-                _processR->setValue(true);
-                _processG->setValue(true);
-                _processB->setValue(true);
-                _processA->setValue(_defaultProcessAlphaOnRGBA);
-                break;
-            default:
-                break;
-            }
-        }
-        endEditBlock();
     }
 }
 

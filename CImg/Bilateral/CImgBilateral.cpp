@@ -120,7 +120,7 @@ class CImgBilateralPlugin
 public:
 
     CImgBilateralPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgBilateralParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgBilateralParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -394,7 +394,10 @@ CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
                                                                                        kSupportsRGB,
                                                                                        kSupportsXY,
                                                                                        kSupportsAlpha,
-                                                                                       kSupportsTiles);
+                                                                                       kSupportsTiles,
+                                                                                       /*processRGB =*/ true,
+                                                                                       /*processAlpha =*/ false,
+                                                                                       /*processIsSecret =*/ false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);

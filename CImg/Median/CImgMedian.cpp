@@ -98,7 +98,7 @@ class CImgMedianPlugin
 public:
 
     CImgMedianPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgMedianParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgMedianParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _size  = fetchIntParam(kParamSize);
         _threshold  = fetchDoubleParam(kParamThreshold);
