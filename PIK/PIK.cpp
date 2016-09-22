@@ -350,7 +350,7 @@ public:
                    bool ubc) // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
     {
         if (screenType == eScreenTypePick) {
-            screenType = color.g > color.r ? eScreenTypeGreen: eScreenTypeBlue;
+            _screenType = (color.g > color.r) ? eScreenTypeGreen: eScreenTypeBlue;
             _color[0] = color.r;
             _color[1] = color.g;
             _color[2] = color.b;
@@ -453,14 +453,15 @@ private:
             assert(dstPix);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                const PIX *fgPix = (const PIX *)  (_fgImg ? _fgImg->getPixelAddress(x, y) : 0);
-                const PIX *pfgPix = (const PIX *)  (_pfgImg ? _pfgImg->getPixelAddress(x, y) : 0);
-                const PIX *cPix = (const PIX *)  (_cImg ? _cImg->getPixelAddress(x, y) : 0);
-                const PIX *bgPix = (const PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
+                const PIX *fgPix = (const PIX *)  ((_fgImg) ? _fgImg->getPixelAddress(x, y) : 0);
+                const PIX *pfgPix = (const PIX *)  ((!_noKey && _pfgImg) ? _pfgImg->getPixelAddress(x, y) : 0);
+                const PIX *cPix = (const PIX *)  ((!_noKey && _cImg) ? _cImg->getPixelAddress(x, y) : 0);
+                const PIX *bgPix = (const PIX *)  (((_ubc || _ubl) && _bgImg) ? _bgImg->getPixelAddress(x, y) : 0);
 
                 float fg[4] = {0., 0., 0., 1.};
                 float pfg[4] = {0., 0., 0., 1.};
                 float bg[4] = {0., 0., 0., 1.};
+                float out[4] = {0., 0., 0., 1.};
 
                 if (fgPix) {
                     for (int i = 0; i < fgComponents; ++i) {
@@ -479,153 +480,164 @@ private:
                 }
 
                 if (bgPix && (_ubc || _ubl)) {
-                    for (int i = 0; i < cComponents; ++i) {
+                    for (int i = 0; i < bgComponents; ++i) {
                         bg[i] = sampleToFloat<PIX, maxValue>(bgPix[i]);
                     }
                 }
 
-                float alpha = 0.;
-                if (_screenType == eScreenTypeGreen) {
-                    if (c[1] <= 0.) {
-                        alpha = 1.;
-                    } else {
-                        //alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
-                        //A is pfg and B is c.
-                        double pfgKey = pfg[1] - pfg[0] * _redWeight - pfg[2] * _blueGreenWeight;
-                        if (pfgKey <= 0.) {
-                            alpha = 1.;
-                        } else {
-                            double cKey = c[1] - c[0] * _redWeight - c[2] * _blueGreenWeight;
-                            if (cKey <= 0) {
-                                alpha = 1.;
-                            } else {
-                                alpha = 1. - pfgKey / cKey;
-#ifdef RGBAL_IMPLEMENTED
-                                if (_rgbal) {
-                                    float k[3] = {0., 0., 0.};
-                                    for (int i = 0; i < 3; ++i) {
-                                        if (c[i] > 0) {
-                                            k[i] = pfg[i] / c[i];
-                                        }
-                                    }
-                                    double kmax = -DBL_MAX;
-                                    for (int i = 0; i < 3; ++i) {
-                                        if (k[i] > kmax) {
-                                            kmax = k[i];
-                                        }
-                                    }
-                                    float kKey = pfgKey / cKey;
-                                    if (kKey > kmax && kKey > 1.) {
-                                        alpha = 0.; // the "zero zone" is OK
-                                    } else {
-                                        // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
-                                        // the closest I could get to IBK
-                                        alpha = std::max((double)alpha, std::min((kmax - kKey) / (50*kKey), 1.));
-                                    }
-                                }
-#endif
-                            }
-                        }
-                    }
-                } else if (_screenType == eScreenTypeBlue) {
-                    if (c[2] <= 0.) {
-                        alpha = 1.;
-                    } else {
-                        //alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
-                        //A is pfg and B is c.
-                        double pfgKey = pfg[2] - pfg[0] * _redWeight - pfg[1] * _blueGreenWeight;
-                        if (pfgKey <= 0.) {
-                            alpha = 1.;
-                        } else {
-                            double cKey = c[2] - c[0] * _redWeight - c[1] * _blueGreenWeight;
-                            if (cKey <= 0) {
-                                alpha = 1.;
-                            } else {
-                                alpha = 1. - pfgKey / cKey;
-#ifdef RGBAL_IMPLEMENTED
-                                if (_rgbal) {
-                                    float k[3] = {0., 0., 0.};
-                                    for (int i = 0; i < 3; ++i) {
-                                        if (c[i] > 0) {
-                                            k[i] = pfg[i] / c[i];
-                                        }
-                                    }
-                                    double kmax = -DBL_MAX;
-                                    for (int i = 0; i < 3; ++i) {
-                                        if (k[i] > kmax) {
-                                            kmax = k[i];
-                                        }
-                                    }
-                                    float kKey = pfgKey / cKey;
-                                    if (kKey > kmax && kKey > 1.) {
-                                        alpha = 0.; // the "zero zone" is OK
-                                    } else {
-                                        // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
-                                        // the closest I could get to IBK
-                                        alpha = std::max((double)alpha, std::min((kmax - kKey) / (50*kKey), 1.));
-                                    }
-                                }
-#endif
-                            }
-                        }
-                    }
-                }
-
-
                 if (_noKey) {
-                    // TODO: use Bg Lum, use BG Chroma
-                    for (int i = 0; i < 3; ++i) {
-                        dstPix[i] = fgPix[i];
+                    for (int i = 0; i < 4; ++i) {
+                        out[i] = fg[i];
                     }
-                } else if (_ss) {
-                    if (alpha >= 1) {
-                        for (int i = 0; i < 3; ++i) {
-                            dstPix[i] = fgPix[i];
+                } else {
+                    float alpha = 0.;
+                    if (_screenType == eScreenTypeGreen) {
+                        if (c[1] <= 0.) {
+                            alpha = 1.;
+                        } else {
+                            //alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
+                            //A is pfg and B is c.
+                            double pfgKey = pfg[1] - pfg[0] * _redWeight - pfg[2] * _blueGreenWeight;
+                            if (pfgKey <= 0.) {
+                                alpha = 1.;
+                            } else {
+                                double cKey = c[1] - c[0] * _redWeight - c[2] * _blueGreenWeight;
+                                if (cKey <= 0) {
+                                    alpha = 1.;
+                                } else {
+                                    alpha = 1. - pfgKey / cKey;
+#ifdef RGBAL_IMPLEMENTED
+                                    if (_rgbal) {
+                                        float k[3] = {0., 0., 0.};
+                                        for (int i = 0; i < 3; ++i) {
+                                            if (c[i] > 0) {
+                                                k[i] = pfg[i] / c[i];
+                                            }
+                                        }
+                                        double kmax = -DBL_MAX;
+                                        for (int i = 0; i < 3; ++i) {
+                                            if (k[i] > kmax) {
+                                                kmax = k[i];
+                                            }
+                                        }
+                                        float kKey = pfgKey / cKey;
+                                        if (kKey > kmax && kKey > 1.) {
+                                            alpha = 0.; // the "zero zone" is OK
+                                        } else {
+                                            // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
+                                            // the closest I could get to IBK
+                                            alpha = std::max((double)alpha, std::min((kmax - kKey) / (50*kKey), 1.));
+                                        }
+                                    }
+#endif
+                                }
+                            }
                         }
-                    } else {
-                        for (int i = 0; i < 3; ++i) {
-                            float v = fg[i] + c[i] * (alpha - 1.);
-                            dstPix[i] = v < 0. ? 0 : floatToSample<PIX, maxValue>(v);
-                        }
-                    }
-                    /*
-                } else if (_rgbal) {
-                    double alphamin = DBL_MAX;
-                    for (int i = 0; i < 3; ++i) {
-                        if (c[i] > 0) {
-                            double a = 1. - pfg[i] / c[i];
-                            if (a < alphamin) {
-                                alphamin = a;
+                    } else if (_screenType == eScreenTypeBlue) {
+                        if (c[2] <= 0.) {
+                            alpha = 1.;
+                        } else {
+                            //alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
+                            //A is pfg and B is c.
+                            double pfgKey = pfg[2] - pfg[0] * _redWeight - pfg[1] * _blueGreenWeight;
+                            if (pfgKey <= 0.) {
+                                alpha = 1.;
+                            } else {
+                                double cKey = c[2] - c[0] * _redWeight - c[1] * _blueGreenWeight;
+                                if (cKey <= 0) {
+                                    alpha = 1.;
+                                } else {
+                                    alpha = 1. - pfgKey / cKey;
+#ifdef RGBAL_IMPLEMENTED
+                                    if (_rgbal) {
+                                        float k[3] = {0., 0., 0.};
+                                        for (int i = 0; i < 3; ++i) {
+                                            if (c[i] > 0) {
+                                                k[i] = pfg[i] / c[i];
+                                            }
+                                        }
+                                        double kmax = -DBL_MAX;
+                                        for (int i = 0; i < 3; ++i) {
+                                            if (k[i] > kmax) {
+                                                kmax = k[i];
+                                            }
+                                        }
+                                        float kKey = pfgKey / cKey;
+                                        if (kKey > kmax && kKey > 1.) {
+                                            alpha = 0.; // the "zero zone" is OK
+                                        } else {
+                                            // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
+                                            // the closest I could get to IBK
+                                            alpha = std::max((double)alpha, std::min((kmax - kKey) / (50*kKey), 1.));
+                                        }
+                                    }
+#endif
+                                }
                             }
                         }
                     }
-                    // alphamin, which corresponds to black is mapped to alpha=0
-                    // alpha = alphamin -> 0.
-                    // alpha = 1 -> 1.
-                    alpha = (alpha - alphamin) / (1. - alphamin);
-                    if (alpha <= 0.) {
+
+                    if (_ss) {
+                        if (alpha >= 1) {
+                            for (int i = 0; i < 3; ++i) {
+                                out[i] = fg[i];
+                            }
+                        } else {
+                            for (int i = 0; i < 3; ++i) {
+                                float v = fg[i] + c[i] * (alpha - 1.);
+                                out[i] = v < 0. ? 0 : v;
+                            }
+                        }
+                        /*
+                    } else if (_rgbal) {
+                        double alphamin = DBL_MAX;
+                        for (int i = 0; i < 3; ++i) {
+                            if (c[i] > 0) {
+                                double a = 1. - pfg[i] / c[i];
+                                if (a < alphamin) {
+                                    alphamin = a;
+                                }
+                            }
+                        }
+                        // alphamin, which corresponds to black is mapped to alpha=0
+                        // alpha = alphamin -> 0.
+                        // alpha = 1 -> 1.
+                        alpha = (alpha - alphamin) / (1. - alphamin);
+                        if (alpha <= 0.) {
+                            alpha = 0.;
+                            dstPix[0] = dstPix[1] = dstPix[2] = 0;
+                            dstPix[0] = dstPix[1] = dstPix[2] = 1;alpha=1;
+                        } else {
+                            for (int i = 0; i < 3; ++i) {
+                                dstPix[i] = floatToSample<PIX, maxValue>(fg[i]*alpha);
+                            }
+                        }
+                        */
+                    } else {
+                        if (alpha <= 0.) {
+                            out[0] = out[1] = out[2] = 0;
+                        } else {
+                            for (int i = 0; i < 3; ++i) {
+                                out[i] = fg[i]*alpha;
+                            }
+                        }
+                    }
+                    if (_clampAlpha && alpha < 0.) {
                         alpha = 0.;
-                        dstPix[0] = dstPix[1] = dstPix[2] = 0;
-                        dstPix[0] = dstPix[1] = dstPix[2] = 1;alpha=1;
-                    } else {
-                        for (int i = 0; i < 3; ++i) {
-                            dstPix[i] = floatToSample<PIX, maxValue>(fg[i]*alpha);
-                        }
                     }
-                     */
-                } else {
-                    if (alpha <= 0.) {
-                        dstPix[0] = dstPix[1] = dstPix[2] = 0;
-                    } else {
-                        for (int i = 0; i < 3; ++i) {
-                            dstPix[i] = floatToSample<PIX, maxValue>(fg[i]*alpha);
-                        }
-                    }
+                    out[3] = alpha;
                 }
-                if (_clampAlpha && alpha < 0.) {
-                    alpha = 0.;
+                
+                // TODO: ubl, ubc
+                // Unpremult
+                // Convert to XYZ
+                // mix
+                // Premult
+                
+                for (int i = 0; i < nComponents; ++i) {
+                    dstPix[i] = floatToSample<PIX, maxValue>(out[i]);
                 }
-                dstPix[3] = floatToSample<PIX, maxValue>(alpha);
+
             }
         }
     } // multiThreadProcessImages
@@ -816,13 +828,13 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     bool noKey = _noKey->getValueAtTime(time);
     bool ubl = _ubl->getValueAtTime(time);
     bool ubc = _ubc->getValueAtTime(time);
-    std::auto_ptr<const OFX::Image> fg( ( _fgClip && _fgClip->isConnected() ) ?
+    std::auto_ptr<const OFX::Image> fg( ( ( _fgClip && _fgClip->isConnected() ) ) ?
                                        _fgClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> pfg( !noKey && ( _pfgClip && _pfgClip->isConnected() ) ?
+    std::auto_ptr<const OFX::Image> pfg( ( !noKey && ( _pfgClip && _pfgClip->isConnected() ) ) ?
                                        _pfgClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> c( !noKey && screenType != eScreenTypePick && ( _cClip && _cClip->isConnected() ) ?
+    std::auto_ptr<const OFX::Image> c( ( !noKey && screenType != eScreenTypePick && ( _cClip && _cClip->isConnected() ) ) ?
                                        _cClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> bg( (ubl || ubc) && ( _bgClip && _bgClip->isConnected() ) ?
+    std::auto_ptr<const OFX::Image> bg( ( (ubl || ubc) && ( _bgClip && _bgClip->isConnected() ) ) ?
                                         _bgClip->fetchImage(time) : 0 );
     if ( fg.get() ) {
         if ( (fg->getRenderScale().x != args.renderScale.x) ||
