@@ -118,6 +118,7 @@ matrix.
 * DenoiseSharpen: Denoise and/or sharpen images using wavelet-based algorithms.
 * DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann boundary conditions.
 * DirBlurOFX: Directional blur.
+* ErodeBlurCImg: Erode or dilate a mask by smoothing.
 * ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
 * GMICExpr: Quickly generate or process image from mathematical formula evaluated for each pixel.
 * GodRays: Average an image over a range of transforms, or create crepuscular rays.

@@ -77,7 +77,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginNameBloom          "BloomCImg"
-#define kPluginGroupingBloom      "Filter"
 #define kPluginDescriptionBloom \
     "Apply a Bloom filter (Kawase 2004) that sums multiple blur filters of different radii,\n" \
     "resulting in a larger but sharper glare than a simple blur.\n" \
@@ -91,16 +90,29 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
     "It can be used in commercial applications (see http://cimg.eu)."
 
+#define kPluginNameErodeBlur          "ErodeBlurCImg"
+#define kPluginDescriptionErodeBlur \
+    "Performs an operation that looks like an erosion or a dilation by smoothing the image and then remapping the values of the result.\n" \
+    "The image is first smoothed by a triangle filter of width 2*abs(size).\n" \
+    "Now suppose the image is a 0-1 step edge (I=0 for x less than 0, I=1 for x greater than 0). The intensities are linearly remapped so that the value at x=size-0.5 is mapped to 0 and the value at x=size+0.5 is mapped to 1.\n" \
+    "This process usually works well for mask images (i.e. images which are either 0 or 1), but may give strange results on images with real intensities, where another Erode filter has to be used.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.eu)."
+
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
 #define kPluginIdentifierLaplacian    "net.sf.cimg.CImgLaplacian"
 #define kPluginIdentifierChromaBlur    "net.sf.cimg.CImgChromaBlur"
 #define kPluginIdentifierBloom    "net.sf.cimg.CImgBloom"
+#define kPluginIdentifierErodeBlur    "eu.cimg.ErodeBlur"
+
 // History:
 // version 1.0: initial version
 // version 2.0: size now has two dimensions
 // version 3.0: use kNatronOfxParamProcess* parameters
+// version 3.1: the default is to blur all channels including alpha (see processAlpha in describeInContext)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsComponentRemapping 1 // except for ChromaBlur
 #define kSupportsTiles 1
@@ -127,6 +139,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No filter is applied if size < 1.2."
 #define kParamSizeDefault 0.
 #define kParamSizeDefaultLaplacian 3.
+
+#define kParamErodeSize "size"
+#define kParamErodeSizeLabel "Size"
+#define kParamErodeSizeHint "How much to shrink the black and white mask, in pixels (can be negative to dilate)."
+
+#define kParamErodeBlur "blur"
+#define kParamErodeBlurLabel "Blur"
+#define kParamErodeBlurHint "Soften the borders of the generated mask."
 
 #define kParamUniform "uniform"
 #define kParamUniformLabel "Uniform"
@@ -380,6 +400,37 @@ _cimg_box_apply(T *data,
    \param axis  Axis along which the filter is computed. Can be <tt>{ 'x' | 'y' | 'z' | 'c' }</tt>.
    \param boundary_conditions Boundary conditions. Can be <tt>{ 0=dirichlet | 1=neumann }</tt>.
  **/
+/*
+ The box filter of width s has the impulse response:
+ x < -s/2 or x > s/2: y = 0
+ x >= -s/2 and x <= s/2: y = 1/s
+
+ The triangle filter of width s has the impulse response:
+ x < -s or x > s: y = 0
+ x >= -s and x <= 0: y = 1/s + x/(s*s)
+ x > 0 and x <= s: y = 1/s - x/(s*s)
+
+ The quadratic filter of width s has the impulse response:
+ x < -s*3/2 or x > s*3/2: y = 0
+ x >= -s*3/2 and x <= -s/2: y =
+ x >= -s/2 and x <= s/2: y =
+ x >= s/2 and x <= s*3/2: y =
+
+ The equation of a step edge is:
+ x<=0: y=0
+ x>0: y=1
+
+ The convolution of the step edge with the box filter of width s is:
+ x < -s/2: y = 0
+ x >= -s/2 and x <= s/2: y = 1/2 + x/s
+ x > s/2: y = 1
+ 
+ The convolution of the step edge with the triangle filter of width s is:
+ x < -s: y = 0
+ x >= -s and x <= 0: y = 1/2 + x/s + x^2/(2*s^2)
+ x > 0 and x <= s: y = 1/2 + x/s - x^2/(2*s^2)
+ x > s: y = 1
+ */
 static void
 box(CImg<T>& img,
     const float width,
@@ -761,6 +812,8 @@ vanvliet(CImg<T>& img,
 struct CImgBlurParams
 {
     double sizex, sizey; // sizex takes PixelAspectRatio intor account
+    double erodeSize;
+    double erodeBlur;
     int orderX;
     int orderY;
     double bloomRatio;
@@ -776,8 +829,32 @@ enum BlurPluginEnum
     eBlurPluginBlur,
     eBlurPluginLaplacian,
     eBlurPluginChromaBlur,
-    eBlurPluginBloom
+    eBlurPluginBloom,
+    eBlurPluginErodeBlur
 };
+
+/*
+The convolution of the step edge with the triangle filter of width s is:
+x < -s: y = 0
+x >= -s and x <= 0: y = 1/2 + x/s + x^2/(2*s^2)
+x > 0 and x <= s: y = 1/2 + x/s - x^2/(2*s^2)
+x > s: y = 1
+*/
+static double
+blurredStep(double s, double x)
+{
+    if (s <= 0) {
+        return (x >= 0) ? 1. : 0.;
+    }
+    if (x <= -s) {
+        return 0.;
+    }
+    if (x >= s) {
+        return 1.;
+    }
+    double x_over_s = x/s;
+    return 0.5 + x_over_s * (1. + (x < 0 ? 0.5 : -0.5) * x_over_s);
+}
 
 class CImgBlurPlugin
     : public CImgFilterPluginHelper<CImgBlurParams, false>
@@ -786,9 +863,17 @@ public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle,
                    BlurPluginEnum blurPlugin = eBlurPluginBlur)
-        : CImgFilterPluginHelper<CImgBlurParams, false>(handle, blurPlugin == eBlurPluginChromaBlur ? false : kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, kDefaultUnpremult, kDefaultProcessAlphaOnRGBA)
+        : CImgFilterPluginHelper<CImgBlurParams, false>(handle,
+                                                        blurPlugin == eBlurPluginChromaBlur ? false : kSupportsComponentRemapping,
+                                                        kSupportsTiles,
+                                                        kSupportsMultiResolution,
+                                                        kSupportsRenderScale,
+                                                        kDefaultUnpremult,
+                                                        kDefaultProcessAlphaOnRGBA)
         , _blurPlugin(blurPlugin)
         , _size(0)
+        , _erodeSize(0)
+        , _erodeBlur(0)
         , _uniform(0)
         , _orderX(0)
         , _orderY(0)
@@ -799,9 +884,14 @@ public:
         , _filter(0)
         , _expandRoD(0)
     {
-        _size  = fetchDouble2DParam(kParamSize);
-        _uniform = fetchBooleanParam(kParamUniform);
-        assert(_size && _uniform);
+        if (_blurPlugin == eBlurPluginErodeBlur) {
+            _erodeSize  = fetchDoubleParam(kParamErodeSize);
+            _erodeBlur  = fetchDoubleParam(kParamErodeBlur);
+        } else {
+            _size  = fetchDouble2DParam(kParamSize);
+            _uniform = fetchBooleanParam(kParamUniform);
+            assert(_size && _uniform);
+        }
         if (blurPlugin == eBlurPluginBlur) {
             _orderX = fetchIntParam(kParamOrderX);
             _orderY = fetchIntParam(kParamOrderY);
@@ -812,24 +902,27 @@ public:
             _bloomCount = fetchIntParam(kParamBloomCount);
             assert(_bloomRatio && _bloomCount);
         }
-        if (blurPlugin == eBlurPluginChromaBlur) {
-            _colorspace = fetchChoiceParam(kParamColorspace);
-            assert(_colorspace);
-        } else {
-            _boundary  = fetchChoiceParam(kParamBoundary);
-            assert(_boundary);
-        }
-        _filter = fetchChoiceParam(kParamFilter);
-        assert(_filter);
-        if (blurPlugin != eBlurPluginChromaBlur) {
-            _expandRoD = fetchBooleanParam(kParamExpandRoD);
-            assert(_expandRoD);
+        if (_blurPlugin != eBlurPluginErodeBlur) {
+            if (blurPlugin == eBlurPluginChromaBlur) {
+                _colorspace = fetchChoiceParam(kParamColorspace);
+                assert(_colorspace);
+            } else {
+                _boundary  = fetchChoiceParam(kParamBoundary);
+                assert(_boundary);
+            }
+            _filter = fetchChoiceParam(kParamFilter);
+            assert(_filter);
+            if (blurPlugin != eBlurPluginChromaBlur) {
+                _expandRoD = fetchBooleanParam(kParamExpandRoD);
+                assert(_expandRoD);
+            }
         }
         // On Natron, hide the uniform parameter if it is false and not animated,
         // since uniform scaling is easy through Natron's GUI.
         // The parameter is kept for backward compatibility.
         // Fixes https://github.com/MrKepzie/Natron/issues/1204
         if ( getImageEffectHostDescription()->isNatron &&
+             _uniform &&
              !_uniform->getValue() &&
              ( _uniform->getNumKeys() == 0) ) {
             _uniform->setIsSecret(true);
@@ -839,10 +932,18 @@ public:
     virtual void getValuesAtTime(double time,
                                  CImgBlurParams& params) OVERRIDE FINAL
     {
-        _size->getValueAtTime(time, params.sizex, params.sizey);
-        bool uniform = _uniform->getValueAtTime(time);
-        if (uniform) {
-            params.sizey = params.sizex;
+        if (_blurPlugin == eBlurPluginErodeBlur) {
+            params.erodeSize = _erodeSize->getValueAtTime(time);
+            params.erodeBlur = _erodeBlur->getValueAtTime(time);
+            params.sizey = params.sizex = 2 * std::abs(params.erodeSize);
+        } else {
+            params.erodeSize = 0.;
+            params.erodeBlur = 0.;
+            _size->getValueAtTime(time, params.sizex, params.sizey);
+            bool uniform = _uniform->getValueAtTime(time);
+            if (uniform) {
+                params.sizey = params.sizex;
+            }
         }
         double par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
         if (par != 0.) {
@@ -870,11 +971,18 @@ public:
         if (_blurPlugin == eBlurPluginChromaBlur) {
             params.colorspace = (ColorspaceEnum)_colorspace->getValueAtTime(time);
             params.boundary_i = 1; // nearest
+        } else if (_blurPlugin == eBlurPluginErodeBlur) {
+            params.boundary_i = 0; // black
         } else {
             params.boundary_i = _boundary->getValueAtTime(time);
         }
-        params.filter = (FilterEnum)_filter->getValueAtTime(time);
-        params.expandRoD = (_blurPlugin == eBlurPluginChromaBlur) ? false : _expandRoD->getValueAtTime(time);
+        if (_blurPlugin == eBlurPluginErodeBlur) {
+            params.filter = eFilterTriangle;
+            params.expandRoD = true;
+        } else {
+            params.filter = (FilterEnum)_filter->getValueAtTime(time);
+            params.expandRoD = (_blurPlugin == eBlurPluginChromaBlur) ? false : _expandRoD->getValueAtTime(time);
+        }
     }
 
     bool getRegionOfDefinition(const OfxRectI& srcRoD,
@@ -981,6 +1089,14 @@ public:
         // This is the only place where the actual processing takes place
         double sx = args.renderScale.x * params.sizex;
         double sy = args.renderScale.y * params.sizey;
+        double t0 = 0.;
+        double t1 = 0.;
+        if (_blurPlugin == eBlurPluginErodeBlur) {
+            //t0 = blurredStep( 2 * std::abs(params.erodeSize), (params.erodeSize * ((params.erodeSize > 0) ? (1 - params.erodeBlur) : 1) - 0.5) );
+            t0 = blurredStep( 2 * std::abs(params.erodeSize), (params.erodeSize - 0.5) * ((params.erodeSize > 0) ? (1 - params.erodeBlur) : 1) );
+            //t1 = blurredStep( 2 * std::abs(params.erodeSize), (params.erodeSize * ((params.erodeSize < 0) ? (1 - params.erodeBlur) : 1) + 0.5) );
+            t1 = blurredStep( 2 * std::abs(params.erodeSize), (params.erodeSize + 0.5) * ((params.erodeSize < 0) ? (1 - params.erodeBlur) : 1) );
+        }
         //std::cout << "renderScale=" << args.renderScale.x << ',' << args.renderScale.y << std::endl;
         //std::cout << "renderWindow=" << args.renderWindow.x1 << ',' << args.renderWindow.y1 << ',' << args.renderWindow.x2 << ',' << args.renderWindow.y2 << std::endl;
         //std::cout << "cimg=" << cimg.width() << ',' << cimg.height() << std::endl;
@@ -1207,6 +1323,21 @@ public:
             }
         } else if (_blurPlugin == eBlurPluginBloom) {
             cimg = cimg1 / params.bloomCount;
+        } else if (_blurPlugin == eBlurPluginErodeBlur) {
+            /*
+            The convolution of the step edge with the triangle filter of width s is:
+            x < -s: y = 0
+            x >= -s and x <= 0: y = 1/2 + x/s + x^2/(2*s^2)
+            x > 0 and x <= s: y = 1/2 + x/s - x^2/(2*s^2)
+            x > s: y = 1
+
+            ErodeBlur works by rescaling and claping the image blurred with a triangle filter of width 2*abs(erodeSize) using two threashold:
+             - the first threshold is the value of the blurred step edge at erodeSize - 0.5, which is mapped to 0
+             - the second threshold is the value of the blurred step edge at erodeSize + 0.5, which is mapped to 1
+             */
+            cimg_for(cimg, ptr, float) {
+                *ptr = (*ptr < t0) ? 0. : ((*ptr > t1) ? 1. : (*ptr - t0) / (t1 - t0) );
+            }
         }
     } // render
 
@@ -1250,6 +1381,8 @@ private:
     // params
     const BlurPluginEnum _blurPlugin;
     OFX::Double2DParam *_size;
+    OFX::DoubleParam *_erodeSize;
+    OFX::DoubleParam *_erodeBlur;
     OFX::BooleanParam *_uniform;
     OFX::IntParam *_orderX;
     OFX::IntParam *_orderY;
@@ -1280,11 +1413,16 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
         break;
     case eBlurPluginChromaBlur:
         desc.setLabel(kPluginNameChromaBlur);
-        desc.setPluginDescription(kPluginDescriptionChromaBlur);
+
+            desc.setPluginDescription(kPluginDescriptionChromaBlur);
         break;
     case eBlurPluginBloom:
         desc.setLabel(kPluginNameBloom);
         desc.setPluginDescription(kPluginDescriptionBloom);
+        break;
+    case eBlurPluginErodeBlur:
+        desc.setLabel(kPluginNameErodeBlur);
+        desc.setPluginDescription(kPluginDescriptionErodeBlur);
         break;
     }
     desc.setPluginGrouping(kPluginGrouping);
@@ -1313,54 +1451,97 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
 void
 CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
                                   OFX::ContextEnum context,
-                                  int /*majorVersion*/,
-                                  int /*minorVersion*/,
+                                  int majorVersion,
+                                  int minorVersion,
                                   BlurPluginEnum blurPlugin)
 {
     // create the clips and params
+
+    bool processRGB;
+    bool processAlpha;
+    if (blurPlugin == eBlurPluginErodeBlur) {
+        processRGB = false;
+        processAlpha = true;
+    } else {
+        processRGB = true;
+        if ( majorVersion > 3 || (majorVersion >= 3 && minorVersion >= 1) ) {
+            processAlpha = kDefaultProcessAlphaOnRGBA;
+        } else {
+            processAlpha = false; // wrong default before 3.1
+        }
+    }
+
     OFX::PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
                                                                             kSupportsRGBA,
                                                                             kSupportsRGB,
                                                                             blurPlugin == eBlurPluginChromaBlur ? false : kSupportsXY,
                                                                             blurPlugin == eBlurPluginChromaBlur ? false : kSupportsAlpha,
                                                                             kSupportsTiles,
-                                                                            /*processRGB=*/ true,
-                                                                            /*processAlpha*/ false,
+                                                                            processRGB,
+                                                                            processAlpha,
                                                                             /*processIsSecret=*/ false);
-
-    {
-        OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
-        param->setLabel(kParamSizeLabel);
-        param->setHint(kParamSizeHint);
-        param->setRange(0, 0, 1000, 1000);
-        if (blurPlugin == eBlurPluginChromaBlur) {
-            param->setDisplayRange(0, 0, 10, 10);
-        } else {
-            param->setDisplayRange(0, 0, 100, 100);
+    if (blurPlugin == eBlurPluginErodeBlur) {
+        {
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamErodeSize);
+            param->setLabel(kParamErodeSizeLabel);
+            param->setHint(kParamErodeSizeHint);
+            param->setRange(-DBL_MAX, DBL_MAX);
+            param->setDisplayRange(-100, 100);
+            param->setDefault(-1);
+            param->setDigits(1);
+            param->setIncrement(0.1);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-        if (blurPlugin == eBlurPluginLaplacian) {
-            param->setDefault(kParamSizeDefaultLaplacian, kParamSizeDefaultLaplacian);
-        } else {
-            param->setDefault(kParamSizeDefault, kParamSizeDefault);
+        {
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamErodeBlur);
+            param->setLabel(kParamErodeBlurLabel);
+            param->setHint(kParamErodeBlurHint);
+            param->setRange(-0.5, DBL_MAX);
+            param->setDisplayRange(0, 1);
+            param->setDefault(0);
+            param->setDigits(1);
+            param->setIncrement(0.1);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-        param->setDoubleType(eDoubleTypeXY);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
-        param->setDigits(1);
-        param->setIncrement(0.1);
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        if (page) {
-            page->addChild(*param);
+    } else {
+        {
+            OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
+            param->setLabel(kParamSizeLabel);
+            param->setHint(kParamSizeHint);
+            param->setRange(0, 0, 1000, 1000);
+            if (blurPlugin == eBlurPluginChromaBlur) {
+                param->setDisplayRange(0, 0, 10, 10);
+            } else {
+                param->setDisplayRange(0, 0, 100, 100);
+            }
+            if (blurPlugin == eBlurPluginLaplacian) {
+                param->setDefault(kParamSizeDefaultLaplacian, kParamSizeDefaultLaplacian);
+            } else {
+                param->setDefault(kParamSizeDefault, kParamSizeDefault);
+            }
+            param->setDoubleType(eDoubleTypeXY);
+            param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
+            param->setDigits(1);
+            param->setIncrement(0.1);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamUniform);
-        param->setLabel(kParamUniformLabel);
-        param->setHint(kParamUniformHint);
-        // uniform parameter is false by default on Natron
-        // https://github.com/MrKepzie/Natron/issues/1204
-        param->setDefault(!OFX::getImageEffectHostDescription()->isNatron);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamUniform);
+            param->setLabel(kParamUniformLabel);
+            param->setHint(kParamUniformHint);
+            // uniform parameter is false by default on Natron
+            // https://github.com/MrKepzie/Natron/issues/1204
+            param->setDefault(!OFX::getImageEffectHostDescription()->isNatron);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 
@@ -1410,76 +1591,78 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
     }
-    if (blurPlugin == eBlurPluginChromaBlur) {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColorspace);
-        param->setLabel(kParamColorspaceLabel);
-        param->setHint(kParamColorspaceHint);
-        assert(param->getNOptions() == eColorspaceRec709);
-        param->appendOption(kParamColorspaceOptionRec709, kParamColorspaceOptionRec709Hint);
-        assert(param->getNOptions() == eColorspaceRec2020);
-        param->appendOption(kParamColorspaceOptionRec2020, kParamColorspaceOptionRec2020Hint);
-        assert(param->getNOptions() == eColorspaceACESAP0);
-        param->appendOption(kParamColorspaceOptionACESAP0, kParamColorspaceOptionACESAP0Hint);
-        assert(param->getNOptions() == eColorspaceACESAP1);
-        param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
-        param->setDefault( (int)eColorspaceRec709 );
-        if (page) {
-            page->addChild(*param);
-        }
-    } else {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
-        param->setLabel(kParamBoundaryLabel);
-        param->setHint(kParamBoundaryHint);
-        assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
-        param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
-        assert(param->getNOptions() == eBoundaryNeumann && param->getNOptions() == 1);
-        param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
-        //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
-        //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
-        if (blurPlugin == eBlurPluginLaplacian) {
-            param->setDefault( (int)kParamBoundaryDefaultLaplacian );
-        } else if (blurPlugin == eBlurPluginBloom) {
-            param->setDefault( (int)kParamBoundaryDefaultBloom );
+    if (blurPlugin != eBlurPluginErodeBlur) {
+        if (blurPlugin == eBlurPluginChromaBlur) {
+            OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColorspace);
+            param->setLabel(kParamColorspaceLabel);
+            param->setHint(kParamColorspaceHint);
+            assert(param->getNOptions() == eColorspaceRec709);
+            param->appendOption(kParamColorspaceOptionRec709, kParamColorspaceOptionRec709Hint);
+            assert(param->getNOptions() == eColorspaceRec2020);
+            param->appendOption(kParamColorspaceOptionRec2020, kParamColorspaceOptionRec2020Hint);
+            assert(param->getNOptions() == eColorspaceACESAP0);
+            param->appendOption(kParamColorspaceOptionACESAP0, kParamColorspaceOptionACESAP0Hint);
+            assert(param->getNOptions() == eColorspaceACESAP1);
+            param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
+            param->setDefault( (int)eColorspaceRec709 );
+            if (page) {
+                page->addChild(*param);
+            }
         } else {
-            param->setDefault( (int)kParamBoundaryDefault );
+            OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
+            param->setLabel(kParamBoundaryLabel);
+            param->setHint(kParamBoundaryHint);
+            assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
+            param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
+            assert(param->getNOptions() == eBoundaryNeumann && param->getNOptions() == 1);
+            param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
+            //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
+            //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
+            if (blurPlugin == eBlurPluginLaplacian) {
+                param->setDefault( (int)kParamBoundaryDefaultLaplacian );
+            } else if (blurPlugin == eBlurPluginBloom) {
+                param->setDefault( (int)kParamBoundaryDefaultBloom );
+            } else {
+                param->setDefault( (int)kParamBoundaryDefault );
+            }
+            if (page) {
+                page->addChild(*param);
+            }
         }
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
+            param->setLabel(kParamFilterLabel);
+            param->setHint(kParamFilterHint);
+            assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
+            param->appendOption(kParamFilterOptionQuasiGaussian, kParamFilterOptionQuasiGaussianHint);
+            assert(param->getNOptions() == eFilterGaussian && param->getNOptions() == 1);
+            param->appendOption(kParamFilterOptionGaussian, kParamFilterOptionGaussianHint);
+            assert(param->getNOptions() == eFilterBox && param->getNOptions() == 2);
+            param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
+            assert(param->getNOptions() == eFilterTriangle && param->getNOptions() == 3);
+            param->appendOption(kParamFilterOptionTriangle, kParamFilterOptionTriangleHint);
+            assert(param->getNOptions() == eFilterQuadratic && param->getNOptions() == 4);
+            param->appendOption(kParamFilterOptionQuadratic, kParamFilterOptionQuadraticHint);
+            if (blurPlugin == eBlurPluginBloom) {
+                param->setDefault( (int)kParamFilterDefaultBloom );
+            } else {
+                param->setDefault( (int)kParamFilterDefault );
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        if (blurPlugin != eBlurPluginChromaBlur) {
+            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+            param->setLabel(kParamExpandRoDLabel);
+            param->setHint(kParamExpandRoDHint);
+            param->setDefault(blurPlugin != eBlurPluginBloom); // the expanded RoD of Bloom may be very large
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
-    {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
-        param->setLabel(kParamFilterLabel);
-        param->setHint(kParamFilterHint);
-        assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
-        param->appendOption(kParamFilterOptionQuasiGaussian, kParamFilterOptionQuasiGaussianHint);
-        assert(param->getNOptions() == eFilterGaussian && param->getNOptions() == 1);
-        param->appendOption(kParamFilterOptionGaussian, kParamFilterOptionGaussianHint);
-        assert(param->getNOptions() == eFilterBox && param->getNOptions() == 2);
-        param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
-        assert(param->getNOptions() == eFilterTriangle && param->getNOptions() == 3);
-        param->appendOption(kParamFilterOptionTriangle, kParamFilterOptionTriangleHint);
-        assert(param->getNOptions() == eFilterQuadratic && param->getNOptions() == 4);
-        param->appendOption(kParamFilterOptionQuadratic, kParamFilterOptionQuadraticHint);
-        if (blurPlugin == eBlurPluginBloom) {
-            param->setDefault( (int)kParamFilterDefaultBloom );
-        } else {
-            param->setDefault( (int)kParamFilterDefault );
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    if (blurPlugin != eBlurPluginChromaBlur) {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
-        param->setLabel(kParamExpandRoDLabel);
-        param->setHint(kParamExpandRoDHint);
-        param->setDefault(blurPlugin != eBlurPluginBloom); // the expanded RoD of Bloom may be very large
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
+    
     CImgBlurPlugin::describeInContextEnd(desc, context, page);
 } // CImgBlurPlugin::describeInContext
 
@@ -1567,13 +1750,36 @@ CImgBloomPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new CImgBlurPlugin(handle, eBlurPluginBloom);
 }
 
+mDeclarePluginFactory(CImgErodeBlurPluginFactory, {}, {});
+void
+CImgErodeBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+{
+    return CImgBlurPlugin::describe(desc, getMajorVersion(), getMinorVersion(), eBlurPluginErodeBlur);
+}
+
+void
+CImgErodeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                          OFX::ContextEnum context)
+{
+    return CImgBlurPlugin::describeInContext(desc, context, getMajorVersion(), getMinorVersion(), eBlurPluginErodeBlur);
+}
+
+OFX::ImageEffect*
+CImgErodeBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                       OFX::ContextEnum /*context*/)
+{
+    return new CImgBlurPlugin(handle, eBlurPluginErodeBlur);
+}
+
 static CImgBlurPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static CImgLaplacianPluginFactory p2(kPluginIdentifierLaplacian, kPluginVersionMajor, kPluginVersionMinor);
 static CImgChromaBlurPluginFactory p3(kPluginIdentifierChromaBlur, kPluginVersionMajor, kPluginVersionMinor);
 static CImgBloomPluginFactory p4(kPluginIdentifierBloom, kPluginVersionMajor, kPluginVersionMinor);
+static CImgErodeBlurPluginFactory p5(kPluginIdentifierErodeBlur, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
 mRegisterPluginFactoryInstance(p4)
+mRegisterPluginFactoryInstance(p5)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
