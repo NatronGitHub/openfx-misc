@@ -160,7 +160,6 @@ public:
                                bool supportsMultiResolution,
                                bool supportsRenderScale,
                                bool defaultUnpremult /* = true*/,
-                               bool defaultProcessAlphaOnRGBA /* = false*/,
                                bool isFilter /* = true*/);
 
 
@@ -286,9 +285,8 @@ public:
                            bool supportsTiles,
                            bool supportsMultiResolution,
                            bool supportsRenderScale,
-                           bool defaultUnpremult /* = true*/,
-                           bool defaultProcessAlphaOnRGBA /* = false*/)
-        : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA, /*isFilter=*/ true)
+                           bool defaultUnpremult /* = true*/)
+        : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, /*isFilter=*/ true)
     {
     }
 

@@ -39,8 +39,7 @@ public:
                                  bool supportsTiles,
                                  bool supportsMultiResolution,
                                  bool supportsRenderScale,
-                                 bool defaultUnpremult = true,
-                                 bool defaultProcessAlphaOnRGBA = false);
+                                 bool defaultUnpremult /*= true*/);
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc,
@@ -54,9 +53,9 @@ public:
                                                             bool supportsXY,
                                                             bool supportsAlpha,
                                                             bool supportsTiles,
-                                                            bool processRGB = true,
-                                                            bool processAlpha = false,
-                                                            bool processIsSecret = false);
+                                                            bool processRGB /*= true*/,
+                                                            bool processAlpha /*= false*/,
+                                                            bool processIsSecret /*= false*/);
 
 protected:
     // do not need to delete these, the ImageEffect is managing them for us

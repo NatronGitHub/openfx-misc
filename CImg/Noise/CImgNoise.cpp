@@ -116,7 +116,7 @@ class CImgNoisePlugin
 public:
 
     CImgNoisePlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgNoiseParams, true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ false, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgNoiseParams, true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ false)
     {
         _sigma  = fetchDoubleParam(kParamSigma);
         _type = fetchChoiceParam(kParamType);

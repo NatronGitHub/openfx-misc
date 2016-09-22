@@ -109,7 +109,7 @@ class CImgGuidedPlugin
 public:
 
     CImgGuidedPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgGuidedParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgGuidedParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _radius  = fetchIntParam(kParamRadius);
         _epsilon  = fetchDoubleParam(kParamEpsilon);

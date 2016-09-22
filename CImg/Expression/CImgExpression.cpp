@@ -464,7 +464,7 @@ class CImgExpressionPlugin
 public:
 
     CImgExpressionPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgExpressionParams, true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgFilterPluginHelper<CImgExpressionParams, true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _expr  = fetchStringParam(kParamExpression);
         assert(_expr);

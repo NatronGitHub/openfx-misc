@@ -132,7 +132,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsAlpha true // except for ChromaBlue
 
 #define kDefaultUnpremult false // Blur works on premultiplied RGBA by default
-#define kDefaultProcessAlphaOnRGBA true // Alpha is processed as other channels
 
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
@@ -868,8 +867,7 @@ public:
                                                         kSupportsTiles,
                                                         kSupportsMultiResolution,
                                                         kSupportsRenderScale,
-                                                        kDefaultUnpremult,
-                                                        kDefaultProcessAlphaOnRGBA)
+                                                        kDefaultUnpremult)
         , _blurPlugin(blurPlugin)
         , _size(0)
         , _erodeSize(0)
@@ -1465,7 +1463,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
     } else {
         processRGB = true;
         if ( majorVersion > 3 || (majorVersion >= 3 && minorVersion >= 1) ) {
-            processAlpha = kDefaultProcessAlphaOnRGBA;
+            processAlpha = true;
         } else {
             processAlpha = false; // wrong default before 3.1
         }

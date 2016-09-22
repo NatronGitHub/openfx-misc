@@ -25,9 +25,8 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
                                                            bool supportsTiles,
                                                            bool supportsMultiResolution,
                                                            bool supportsRenderScale,
-                                                           bool defaultUnpremult,
-                                                           bool defaultProcessAlphaOnRGBA)
-    : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA, false)
+                                                           bool defaultUnpremult)
+    : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, false)
     , _srcAClip(0)
     , _srcBClip(0)
     , _srcAClipName(srcAClipName)
