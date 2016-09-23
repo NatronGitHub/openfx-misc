@@ -110,9 +110,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: size now has two dimensions
 // version 3.0: use kNatronOfxParamProcess* parameters
-// version 3.1: the default is to blur all channels including alpha (see processAlpha in describeInContext)
-#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
+#define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsComponentRemapping 1 // except for ChromaBlur
 #define kSupportsTiles 1
@@ -1395,10 +1395,13 @@ private:
 
 void
 CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
-                         int /*majorVersion*/,
+                         int majorVersion,
                          int /*minorVersion*/,
                          BlurPluginEnum blurPlugin)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     switch (blurPlugin) {
     case eBlurPluginBlur:
@@ -1450,7 +1453,7 @@ void
 CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
                                   OFX::ContextEnum context,
                                   int majorVersion,
-                                  int minorVersion,
+                                  int /*minorVersion*/,
                                   BlurPluginEnum blurPlugin)
 {
     // create the clips and params
@@ -1462,7 +1465,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
         processAlpha = true;
     } else {
         processRGB = true;
-        if ( majorVersion > 3 || (majorVersion >= 3 && minorVersion >= 1) ) {
+        if ( majorVersion >= 4 ) {
             processAlpha = true;
         } else {
             processAlpha = false; // wrong default before 3.1
@@ -1664,125 +1667,184 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
     CImgBlurPlugin::describeInContextEnd(desc, context, page);
 } // CImgBlurPlugin::describeInContext
 
-mDeclarePluginFactory(CImgBlurPluginFactory, {}, {});
+//
+// CImgBlurPluginFactory
+//
+mDeclarePluginFactory(CImgBlurPluginFactory0, {}, {});
+
 void
-CImgBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgBlurPluginFactory0::describe(OFX::ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe( desc, getMajorVersion(), getMinorVersion() );
 }
 
 void
-CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                         OFX::ContextEnum context)
+CImgBlurPluginFactory0::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                       OFX::ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext( desc, context, getMajorVersion(), getMinorVersion() );
 }
 
 OFX::ImageEffect*
-CImgBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                      OFX::ContextEnum /*context*/)
+CImgBlurPluginFactory0::createInstance(OfxImageEffectHandle handle,
+                                                    OFX::ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle);
 }
 
-mDeclarePluginFactory(CImgLaplacianPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgBlurPluginFactory, {}, {});
+
+template<unsigned int majorVersion>
 void
-CImgLaplacianPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgBlurPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
 {
-    return CImgBlurPlugin::describe(desc, getMajorVersion(), getMinorVersion(), eBlurPluginLaplacian);
+    return CImgBlurPlugin::describe( desc, this->getMajorVersion(), this->getMinorVersion() );
 }
 
+template<unsigned int majorVersion>
 void
-CImgLaplacianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                              OFX::ContextEnum context)
+CImgBlurPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                       OFX::ContextEnum context)
 {
-    return CImgBlurPlugin::describeInContext(desc, context, getMajorVersion(), getMinorVersion(), eBlurPluginLaplacian);
+    return CImgBlurPlugin::describeInContext( desc, context, this->getMajorVersion(), this->getMinorVersion() );
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-CImgLaplacianPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                           OFX::ContextEnum /*context*/)
+CImgBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                    OFX::ContextEnum /*context*/)
+{
+    return new CImgBlurPlugin(handle);
+}
+
+//
+// CImgLaplacianPluginFactory
+//
+mDeclarePluginFactoryVersioned(CImgLaplacianPluginFactory, {}, {});
+
+template<unsigned int majorVersion>
+void
+CImgLaplacianPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+{
+    return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginLaplacian);
+}
+
+template<unsigned int majorVersion>
+void
+CImgLaplacianPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                            OFX::ContextEnum context)
+{
+    return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginLaplacian);
+}
+
+template<unsigned int majorVersion>
+OFX::ImageEffect*
+CImgLaplacianPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                         OFX::ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginLaplacian);
 }
 
-mDeclarePluginFactory(CImgChromaBlurPluginFactory, {}, {});
+//
+// CImgChromaBlurPluginFactory
+//
+mDeclarePluginFactoryVersioned(CImgChromaBlurPluginFactory, {}, {});
+
+template<unsigned int majorVersion>
 void
-CImgChromaBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgChromaBlurPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
 {
-    return CImgBlurPlugin::describe(desc, getMajorVersion(), getMinorVersion(), eBlurPluginChromaBlur);
+    return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginChromaBlur);
 }
 
+template<unsigned int majorVersion>
 void
-CImgChromaBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                               OFX::ContextEnum context)
+CImgChromaBlurPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                             OFX::ContextEnum context)
 {
-    return CImgBlurPlugin::describeInContext(desc, context, getMajorVersion(), getMinorVersion(), eBlurPluginChromaBlur);
+    return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginChromaBlur);
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-CImgChromaBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                            OFX::ContextEnum /*context*/)
+CImgChromaBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                          OFX::ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginChromaBlur);
 }
 
-mDeclarePluginFactory(CImgBloomPluginFactory, {}, {});
+//
+// CImgBloomPluginFactory
+//
+mDeclarePluginFactoryVersioned(CImgBloomPluginFactory, {}, {});
+
+template<unsigned int majorVersion>
 void
-CImgBloomPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgBloomPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
 {
-    return CImgBlurPlugin::describe(desc, getMajorVersion(), getMinorVersion(), eBlurPluginBloom);
+    return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginBloom);
 }
 
+template<unsigned int majorVersion>
 void
-CImgBloomPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                          OFX::ContextEnum context)
+CImgBloomPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                        OFX::ContextEnum context)
 {
-    return CImgBlurPlugin::describeInContext(desc, context, getMajorVersion(), getMinorVersion(), eBlurPluginBloom);
+    return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginBloom);
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-CImgBloomPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       OFX::ContextEnum /*context*/)
+CImgBloomPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                     OFX::ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginBloom);
 }
 
-mDeclarePluginFactory(CImgErodeBlurPluginFactory, {}, {});
+//
+// CImgErodeBlurPluginFactory
+//
+mDeclarePluginFactoryVersioned(CImgErodeBlurPluginFactory, {}, {});
+
+template<unsigned int majorVersion>
 void
-CImgErodeBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgErodeBlurPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
 {
-    return CImgBlurPlugin::describe(desc, getMajorVersion(), getMinorVersion(), eBlurPluginErodeBlur);
+    return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginErodeBlur);
 }
 
+template<unsigned int majorVersion>
 void
-CImgErodeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                          OFX::ContextEnum context)
+CImgErodeBlurPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                            OFX::ContextEnum context)
 {
-    return CImgBlurPlugin::describeInContext(desc, context, getMajorVersion(), getMinorVersion(), eBlurPluginErodeBlur);
+    return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginErodeBlur);
 }
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-CImgErodeBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       OFX::ContextEnum /*context*/)
+CImgErodeBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                         OFX::ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginErodeBlur);
 }
 
-static CImgBlurPluginFactory oldp1(kPluginIdentifier, 3, 0); // for backward compatibility, has default for processAlpha set to false
-static CImgLaplacianPluginFactory oldp2(kPluginIdentifierLaplacian, 3, 0);
-static CImgChromaBlurPluginFactory oldp3(kPluginIdentifierChromaBlur, 3, 0);
-static CImgBloomPluginFactory oldp4(kPluginIdentifierBloom, 3, 0);
+// Declare old versions for backward compatibility.
+// They have default for processAlpha set to false
+static CImgBlurPluginFactory<3> oldp1(kPluginIdentifier, 0);
+static CImgLaplacianPluginFactory<3> oldp2(kPluginIdentifierLaplacian, 0);
+static CImgChromaBlurPluginFactory<3> oldp3(kPluginIdentifierChromaBlur, 0);
+static CImgBloomPluginFactory<3> oldp4(kPluginIdentifierBloom, 0);
 mRegisterPluginFactoryInstance(oldp1)
 mRegisterPluginFactoryInstance(oldp2)
 mRegisterPluginFactoryInstance(oldp3)
 mRegisterPluginFactoryInstance(oldp4)
 
-static CImgBlurPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static CImgLaplacianPluginFactory p2(kPluginIdentifierLaplacian, kPluginVersionMajor, kPluginVersionMinor);
-static CImgChromaBlurPluginFactory p3(kPluginIdentifierChromaBlur, kPluginVersionMajor, kPluginVersionMinor);
-static CImgBloomPluginFactory p4(kPluginIdentifierBloom, kPluginVersionMajor, kPluginVersionMinor);
-static CImgErodeBlurPluginFactory p5(kPluginIdentifierErodeBlur, kPluginVersionMajor, kPluginVersionMinor);
+static CImgBlurPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
+static CImgLaplacianPluginFactory<kPluginVersionMajor> p2(kPluginIdentifierLaplacian, kPluginVersionMinor);
+static CImgChromaBlurPluginFactory<kPluginVersionMajor> p3(kPluginIdentifierChromaBlur, kPluginVersionMinor);
+static CImgBloomPluginFactory<kPluginVersionMajor> p4(kPluginIdentifierBloom, kPluginVersionMinor);
+static CImgErodeBlurPluginFactory<kPluginVersionMajor> p5(kPluginIdentifierErodeBlur, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
