@@ -58,6 +58,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: do not guess checkbox values from input premult, leave kParamPremultChanged for backward compatibility
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -115,7 +116,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamClipInfoLabel "Clip Info..."
 #define kParamClipInfoHint "Display information about the inputs"
 
-#define kParamPremultChanged "premultChanged"
+#define kParamPremultChanged "premultChanged" // left for backward compatibility
 
 // TODO: sRGB conversions for short and byte types
 
@@ -359,7 +360,7 @@ public:
         , _processB(0)
         , _processA(0)
         , _premult(0)
-        , _premultChanged(0)
+        //, _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -377,8 +378,8 @@ public:
         assert(_processR && _processG && _processB && _processA);
         _premult = fetchChoiceParam(kParamPremultChannel);
         assert(_premult);
-        _premultChanged = fetchBooleanParam(kParamPremultChanged);
-        assert(_premultChanged);
+        //_premultChanged = fetchBooleanParam(kParamPremultChanged);
+        //assert(_premultChanged);
     }
 
 private:
@@ -406,7 +407,7 @@ private:
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
     OFX::ChoiceParam* _premult;
-    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    //OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -631,8 +632,8 @@ PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args,
         }
         msg += "\n";
         sendMessage(OFX::Message::eMessageMessage, "", msg);
-    } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
-        _premultChanged->setValue(true);
+    //} else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    //    _premultChanged->setValue(true);
     }
 }
 
@@ -641,6 +642,9 @@ void
 PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args,
                                       const std::string &clipName)
 {
+    // It is very dangerous to set this from the input premult, which is sometimes wrong.
+    // If the user wants to premult/unpremul, the default should always be to premult/unpremult
+    /*
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
@@ -689,8 +693,10 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args,
                 }
                 break;
             }
+            _premultChanged->setValue(true);
         }
     }
+     */
 } // >::changedClip
 
 //mDeclarePluginFactory(PremultPluginFactory, {}, {});
@@ -848,6 +854,7 @@ PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescriptor &d
         }
     }
 
+    // this parameter is left for backward-compatibility reasons, but it is never used
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
