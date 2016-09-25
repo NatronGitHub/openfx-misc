@@ -141,7 +141,7 @@ matrix.
 * DifferenceOFX: Produce a rough matte from the difference of two images.
 * KeyerOFX: A collection of simple keyers. 
 * MatteMonitor: A Matte Monitor, as described in "Digital Compositing for Film and Video" by Steve Wright.
-* PIK: A 
+* PIK: A per-pixel color difference keyer that uses a mix operation instead of a max operation to combine the non-backing screen channels.
 * note that HSVToolOFX (in the "Color" section) can also be used as a keyer.
 
 ### Merge
