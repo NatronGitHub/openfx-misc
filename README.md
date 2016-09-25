@@ -116,7 +116,7 @@ matrix.
 * BlurCImg: Blur input stream by a quasi-Gaussian or Gaussian filter (recursive implementation), or compute derivatives.
 * ChromaBlurCImg: Blur the chrominance components (usually to prep strongly compressed and chroma subsampled footage for keying).
 * DenoiseSharpen: Denoise and/or sharpen images using wavelet-based algorithms.
-* DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann boundary conditions.
+* DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann (a.k.a. nearest) boundary conditions.
 * DirBlurOFX: Directional blur.
 * ErodeBlurCImg: Erode or dilate a mask by smoothing.
 * ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
@@ -136,14 +136,13 @@ matrix.
 ### Keyer
 
 * ChromaKeyerOFX: Apply chroma keying, as described in "Video Demystified" by Keith Jack.  
-* Despill: Remove the unwanted color contamination of the foreground (spill) caused by the
-  reflected color of the bluescreen/greenscreen, as described in "Digital Compositing for
+* Despill: Remove the unwanted color contamination of the foreground (spill) caused by the reflected color of the bluescreen/greenscreen, as described in "Digital Compositing for
   Film and Video" by Steve Wright.
-* MatteMonitor: A Matte Monitor, as described in "Digital Compositing for Film and Video" by Steve Wright.
-* DifferenceOFX: Produce a rough matte from the difference of two
-  images.
+* DifferenceOFX: Produce a rough matte from the difference of two images.
 * KeyerOFX: A collection of simple keyers. 
-* HSVToolOFX (in the "Color" section) can also be used as a keyer.
+* MatteMonitor: A Matte Monitor, as described in "Digital Compositing for Film and Video" by Steve Wright.
+* PIK: A 
+* note that HSVToolOFX (in the "Color" section) can also be used as a keyer.
 
 ### Merge
 

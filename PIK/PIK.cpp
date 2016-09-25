@@ -16,8 +16,6 @@
  * along with openfx-misc.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
  * ***** END LICENSE BLOCK ***** */
 
-#ifdef DEBUG // not yet ready for release
-
 /*
  * OFX PIK plugin.
  */
@@ -52,7 +50,7 @@
  alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
 
  A is pfg and B is c. and this is the the case of "Green" keying, I mean we choose "Green" on IBK.
- rw is the value of "red weight" and gbw is the value of "green/blur weight".
+ rw is the value of "red weight" and gbw is the value of "green/blue weight".
 
  So, When preparing clean plate with IBK Colour, we need to tweak the value of the "darks" and the "lights" on itself. The "darks" is the "offset" of the Grade node which affects on input plate in IBK Colour. The "lights" is the "multiple" of the Grade node as well.
 
@@ -76,6 +74,7 @@
 
 /*
 http://www.jahshaka.com/forums/archive/index.php/t-16044.html
+http://www.jahshaka.com/forums/showthread.php?16044-Bestest-Keyer-For-Detail
 
  Keylight is definitely not a chroma keyer. It's a color difference keyer that uses a mix (in Shake-speak) i.e. blend i.e. dissolve operation instead of a max operation to combine the non-backing screen channels. For a green screen the math would be g-(r*c+b*(1-c)) where c controls the mix between the red and the blue channel. This approach generally gives better results for transparent objects, hair, motion blur, defocus, etc. compared to keyers which use max, but it's biggest problem is that it produces a weaker core matte. It's especially sensitive to secondary colors which contain the backing screen color (i.e. yellow and cyan for a green screen). 
  
@@ -104,10 +103,17 @@ http://www.jahshaka.com/forums/archive/index.php/t-16044.html
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsMaskMix.h"
+#include "ofxsLut.h"
+#include "ofxsCoords.h"
 
 #ifndef M_PI
 #define M_PI        3.14159265358979323846264338327950288   /* pi             */
 #endif
+
+#define DISABLE_LM // define to disable luminance match (not yet implemented)
+#define DISABLE_AL // define to disable autolevels (not yet implemented)
+#define DISABLE_RGBAL // define to disable RGBA legal (not yet implemented)
+
 
 using namespace OFX;
 
@@ -124,15 +130,18 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "\n" \
 "The color weights deal with the hardness of the matte. If you view the output (with screen subtraction ticked on) you will typically see areas where edges have a slight discoloration due to the background not being fully removed from the original plate. This is not spill but a result of the matte being too strong. Lowering one of the weights will correct that particular edge. If it's a red foreground image with an edge problem bring down the red weight - same idea for the other weight. This may affect other edges so the use of multiple PIKs with different weights split with KeyMixes is recommended.\n" \
 "\n" \
-"The 'Luminance Match' feature adds a luminance factor to the keying algorithm which helps to capture transparent areas of the foreground which are brighter than the backing screen. It will also allow you to lessen some of the garbage area noise by bringing down the screen range - pushing this control too far will also eat into some of your foreground blacks. 'Luminance Level' allows you to make the overall effect stronger or weaker.\n" \
-"\n" \
-"'Autolevels' will perform a color correction before the image is pulled so that hard edges from a foreground subject with saturated colors are reduced. The same can be achieved with the weights but here only those saturated colors are affected whereas the use of weights will affect the entire image. When using this feature it's best to have this as a separate node which you can then split with other PIKs as the weights will no longer work as expected. You can override some of the logic for when you actually have particular foreground colors you want to keep.\n" \
-"For example when you have a saturated red subject against bluescreen you'll get a magenta transition area. Autolevels will eliminate this but if you have a magenta foreground object then this control will make the magenta more red unless you check the magenta box to keep it.\n" \
+/*"The 'Luminance Match' feature adds a luminance factor to the keying algorithm which helps to capture transparent areas of the foreground which are brighter than the backing screen. It will also allow you to lessen some of the garbage area noise by bringing down the screen range - pushing this control too far will also eat into some of your foreground blacks. 'Luminance Level' allows you to make the overall effect stronger or weaker.\n"*/ \
+/*"\n"*/ \
+/*"'Autolevels' will perform a color correction before the image is pulled so that hard edges from a foreground subject with saturated colors are reduced. The same can be achieved with the weights but here only those saturated colors are affected whereas the use of weights will affect the entire image. When using this feature it's best to have this as a separate node which you can then split with other PIKs as the weights will no longer work as expected. You can override some of the logic for when you actually have particular foreground colors you want to keep.\n"*/ \
+/*"For example when you have a saturated red subject against bluescreen you'll get a magenta transition area. Autolevels will eliminate this but if you have a magenta foreground object then this control will make the magenta more red unless you check the magenta box to keep it.\n"*/ \
 "\n" \
 "'Screen Subtraction' will remove the backing from the rgb via a subtraction process. Unchecking this will simply premultiply the original Fg with the generated matte.\n" \
 "\n" \
 "'Use Bkg Luminance' and 'Use Bkg Chroma' allow you to affect the output rgb by the new bg. These controls are best used with the 'Luminance Match' sliders above. This feature can also sometimes really help with screens that exhibit some form of fringing artifact - usually a darkening or lightening of an edge on one of the color channels on the screen. You can offset the effect by grading the bg input up or down with a grade node just before input. If it's just an area which needs help then just bezier that area and locally grade the bg input up or down to remove the artifact.\n" \
-
+"\n" \
+"The basic equation used to extract the key in PIK is (in the case of \"green\" keying):\n" \
+"alpha = 0 if (Ag-Ar*rw-Ab*gbw) is negative, else 1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw)\n" \
+"A is input PFg and B is input C, rw is the value of \"Red Weight\" and gbw is the value of \"Green/Blue Weight\"."
 
 #define kPluginIdentifier "net.sf.openfx.PIK"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -150,7 +159,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipPFg "PFg"
 #define kClipPFgHint "(optional) The preprocessed/denoised blue- or greenscreen image. Used to compute the output key (alpha). A denoised image usually gives a less noisy key. If not connected, the Fg input is used instead."
 #define kClipC "C"
-#define kClipCHint "(optional) A clean plate, or the output of PIKColor"
+#define kClipCHint "(optional) A clean plate if available, or the output of PIKColor to generate the clean plate at each frame."
 #define kClipBg "Bg"
 #define kClipBgHint "(optional) The background image. This is used in calculating fine edge detail when the 'Use Bg Luminance' or 'Use Bg Chroma' options are checked."
 
@@ -251,6 +260,26 @@ enum ScreenTypeEnum {
 #define kParamUBCHint "Have the output rgb be biased by the bg chroma."
 #define kParamUBCDefault false
 
+#define kParamColorspace "colorspace"
+#define kParamColorspaceLabel "Colorspace"
+#define kParamColorspaceHint "Formula used to compute luminance and chrominance from RGB values for the \"Use Bg Luminance\" and \"Use Bg Choma\" options."
+#define kParamColorspaceOptionRec709 "Rec. 709"
+#define kParamColorspaceOptionRec709Hint "Use Rec. 709 with D65 illuminant."
+#define kParamColorspaceOptionRec2020 "Rec. 2020"
+#define kParamColorspaceOptionRec2020Hint "Use Rec. 2020 with D65 illuminant."
+#define kParamColorspaceOptionACESAP0 "ACES AP0"
+#define kParamColorspaceOptionACESAP0Hint "Use ACES AP0 with ACES (approx. D60) illuminant."
+#define kParamColorspaceOptionACESAP1 "ACES AP1"
+#define kParamColorspaceOptionACESAP1Hint "Use ACES AP1 with ACES (approx. D60) illuminant."
+
+enum ColorspaceEnum
+{
+    eColorspaceRec709,
+    eColorspaceRec2020,
+    eColorspaceACESAP0,
+    eColorspaceACESAP1,
+};
+
 // This is for Rec.709
 // see http://www.poynton.com/notes/colour_and_gamma/GammaFAQ.html#luminance
 static inline
@@ -289,6 +318,7 @@ protected:
     bool _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     bool _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     bool _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
+    ColorspaceEnum _colorspace;
 
 public:
 
@@ -315,6 +345,7 @@ public:
         , _noKey(kParamNoKeyDefault)
         , _ubl(kParamUBLDefault)
         , _ubc(kParamUBCDefault)
+        , _colorspace(eColorspaceRec709)
     {
         _color[0] = _color[1] = _color[2] = 0.;
     }
@@ -347,7 +378,8 @@ public:
                    bool rgbal, // Legalize rgba relationship.
                    bool noKey, // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
                    bool ubl, // Use Bg Lum: Have the output rgb be biased by the bg luminance.
-                   bool ubc) // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
+                   bool ubc, // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
+                   ColorspaceEnum colorspace)
     {
         if (screenType == eScreenTypePick) {
             _screenType = (color.g > color.r) ? eScreenTypeGreen: eScreenTypeBlue;
@@ -375,6 +407,7 @@ public:
         _noKey = noKey;
         _ubl = ubl;
         _ubc = ubc;
+        _colorspace = colorspace;
     }
 };
 
@@ -506,7 +539,9 @@ private:
                                     alpha = 1.;
                                 } else {
                                     alpha = 1. - pfgKey / cKey;
-#ifdef RGBAL_IMPLEMENTED
+#ifndef DISABLE_RGBAL
+#pragma message WARN("RGBAL is not yet properly implemented")
+                                    // wrong
                                     if (_rgbal) {
                                         float k[3] = {0., 0., 0.};
                                         for (int i = 0; i < 3; ++i) {
@@ -548,7 +583,7 @@ private:
                                     alpha = 1.;
                                 } else {
                                     alpha = 1. - pfgKey / cKey;
-#ifdef RGBAL_IMPLEMENTED
+#ifndef DISABLE_RGBAL
                                     if (_rgbal) {
                                         float k[3] = {0., 0., 0.};
                                         for (int i = 0; i < 3; ++i) {
@@ -628,12 +663,110 @@ private:
                     out[3] = alpha;
                 }
                 
-                // TODO: ubl, ubc
-                // Unpremult
-                // Convert to XYZ
-                // mix
-                // Premult
-                
+                // ubl, ubc
+                if (_ubl || _ubc) {
+                    // we use the CIE xyZ colorspace to separate luminance from chrominance
+                    float out_Y, out_x, out_y;
+                    // Convert to XYZ
+                    {
+                        float X, Y, Z, x, y, XYZ, invXYZ;
+                        switch (_colorspace) {
+                            case eColorspaceRec709:
+                            default:
+                                Color::rgb709_to_xyz(out[0], out[1], out[2], &X, &Y, &Z);
+                                break;
+
+                            case eColorspaceRec2020:
+                                Color::rgb2020_to_xyz(out[0], out[1], out[2], &X, &Y, &Z);
+                                break;
+
+                            case eColorspaceACESAP0:
+                                Color::rgbACESAP0_to_xyz(out[0], out[1], out[2], &X, &Y, &Z);
+                                break;
+
+                            case eColorspaceACESAP1:
+                                Color::rgbACESAP1_to_xyz(out[0], out[1], out[2], &X, &Y, &Z);
+                                break;
+                        }
+                        XYZ = X + Y + Z;
+                        invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        // convert to xyY
+                        x = X * invXYZ;
+                        y = Y * invXYZ;
+
+                        //out_X = X;
+                        out_Y = Y;
+                        //out_Z = Z;
+                        out_x = x;
+                        out_y = y;
+                    }
+
+                    float bg_Y, bg_x, bg_y;
+                    {
+                        float X, Y, Z, x, y, XYZ, invXYZ;
+                        Color::rgb709_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                        XYZ = X + Y + Z;
+                        invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        // convert to xyY
+                        x = X * invXYZ;
+                        y = Y * invXYZ;
+
+                        //bg_X = X;
+                        bg_Y = Y;
+                        //bg_Z = Z;
+                        bg_x = x;
+                        bg_y = y;
+                    }
+
+                    // mix
+                    float a = std::max(0.f, out[3]);
+                    if (_ubc && bg_Y > 0.) {
+                        out_x = a * out_x + (1 - a) * bg_x;
+                        out_y = a * out_y + (1 - a) * bg_y;
+                        //out_X = a * out_X + (1 - a) * bg_X;
+                        //out_Z = a * out_Z + (1 - a) * bg_Z;
+                    }
+                    if (_ubl) {
+                        // magic number (to look like IBK, really)
+                        out_Y = out_Y * (a * 1 + (1 - a) * 5.38845 * bg_Y);
+                    }
+
+                    // convert to RGB
+                    {
+                        float Y = out_Y;
+                        //float X = out_X;
+                        //float Z = out_Z;
+                        float X = out_x * Y / out_y;
+                        float Z = (1. - out_x - out_y) * Y / out_y;
+
+                        switch (_colorspace) {
+                            case eColorspaceRec709:
+                            default:
+                                Color::xyz_to_rgb709(X, Y, Z, &out[0], &out[1], &out[2]);
+                                break;
+
+                            case eColorspaceRec2020:
+                                Color::xyz_to_rgb2020(X, Y, Z, &out[0], &out[1], &out[2]);
+                                break;
+
+                            case eColorspaceACESAP0:
+                                Color::xyz_to_rgbACESAP0(X, Y, Z, &out[0], &out[1], &out[2]);
+                                break;
+
+                            case eColorspaceACESAP1:
+                                Color::xyz_to_rgbACESAP1(X, Y, Z, &out[0], &out[1], &out[2]);
+                                break;
+                        }
+                    }
+                }
+
+#ifndef DISABLE_LM
+#pragma message WARN("luminance match not yet implemented")
+#endif
+#ifndef DISABLE_AL
+#pragma message WARN("autolevels not yet implemented")
+#endif
+
                 for (int i = 0; i < nComponents; ++i) {
                     dstPix[i] = floatToSample<PIX, maxValue>(out[i]);
                 }
@@ -676,6 +809,7 @@ public:
         , _noKey(0)
         , _ubl(0)
         , _ubc(0)
+        , _colorspace(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -709,11 +843,15 @@ public:
         _noKey = fetchBooleanParam(kParamNoKey); // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
         _ubl = fetchBooleanParam(kParamUBL); // Use Bg Lum: Have the output rgb be biased by the bg luminance.
         _ubc = fetchBooleanParam(kParamUBC); // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
+        _colorspace = fetchChoiceParam(kParamColorspace);
 
         updateEnabled();
     }
 
 private:
+    /** @brief the get RoI action */
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
@@ -775,6 +913,7 @@ private:
     BooleanParam* _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     BooleanParam* _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     BooleanParam* _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
+    ChoiceParam* _colorspace;
 };
 
 
@@ -828,6 +967,8 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     bool noKey = _noKey->getValueAtTime(time);
     bool ubl = _ubl->getValueAtTime(time);
     bool ubc = _ubc->getValueAtTime(time);
+    ColorspaceEnum colorspace = (ColorspaceEnum)_colorspace->getValueAtTime(time);
+
     std::auto_ptr<const OFX::Image> fg( ( ( _fgClip && _fgClip->isConnected() ) ) ?
                                        _fgClip->fetchImage(time) : 0 );
     std::auto_ptr<const OFX::Image> pfg( ( !noKey && ( _pfgClip && _pfgClip->isConnected() ) ) ?
@@ -895,7 +1036,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         }
     }
 
-    processor.setValues(screenType, color, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, noKey, ubl, ubc);
+    processor.setValues(screenType, color, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, noKey, ubl, ubc, colorspace);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( !noKey && !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -944,6 +1085,51 @@ PIKPlugin::render(const OFX::RenderArguments &args)
     }
     default:
         OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+/** @brief the get RoI action */
+void
+PIKPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                RegionOfInterestSetter &rois)
+{
+    const double time = args.time;
+    // this action does nothing but intersecting the roi with the rod of each input clip,
+    // because Nuke forgets to do this and issues an error if one of the input clips is smaller, saying that the input RoI has negative sizes.
+    // Maybe this should always be done in libSupport's OFX::Private::regionsOfInterestAction before calling getRegionsOfInterest?
+    if ( OFX::Coords::rectIsEmpty(args.regionOfInterest) ) {
+        return;
+    }
+    const OfxRectD emptyRoD = {0, 0, 1, 1}; // Nuke's reader issues an "out of memory" error when asked for an empty RoD
+    std::vector<Clip*> inputClips;
+    inputClips.push_back(_fgClip);
+
+    bool noKey = _noKey->getValueAtTime(time);
+    if (noKey) {
+        rois.setRegionOfInterest(*_pfgClip, emptyRoD);
+        rois.setRegionOfInterest(*_cClip, emptyRoD);
+    } else {
+        inputClips.push_back(_pfgClip);
+        inputClips.push_back(_cClip);
+    }
+    bool ubl = _ubl->getValueAtTime(time);
+    bool ubc = _ubc->getValueAtTime(time);
+    if (!ubl && !ubc) {
+        rois.setRegionOfInterest(*_bgClip, emptyRoD);
+    } else {
+        inputClips.push_back(_bgClip);
+    }
+
+    for (std::vector<Clip*>::const_iterator it = inputClips.begin();
+         it != inputClips.end();
+         ++it) {
+        OfxRectD rod = (*it)->getRegionOfDefinition(args.time);
+        // intersect the rod with args.regionOfInterest
+        if (OFX::Coords::rectIntersection(rod, args.regionOfInterest, &rod)) {
+            rois.setRegionOfInterest(*(*it), rod);
+        } else {
+            rois.setRegionOfInterest(*(*it), emptyRoD);
+        }
     }
 }
 
@@ -1120,6 +1306,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamLMEnableHint);
         param->setDefault(kParamLMEnableDefault);
         param->setAnimates(false);
+#ifdef DISABLE_LM
+        param->setIsSecret(true);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1133,6 +1322,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamLevelDefault);
         param->setAnimates(true);
+#ifdef DISABLE_LM
+        param->setIsSecret(true);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1145,7 +1337,11 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamLumaDefault);
         param->setAnimates(true);
+#ifdef DISABLE_LM
+        param->setIsSecret(true);
+#else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1157,7 +1353,11 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamLLEnableHint);
         param->setDefault(kParamLLEnableDefault);
         param->setAnimates(false);
+#ifdef DISABLE_LM
+        param->setIsSecret(true);
+#else
         param->setLayoutHint(eLayoutHintDivider);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1168,7 +1368,11 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamAutolevelsHint);
         param->setDefault(kParamAutolevelsDefault);
         param->setAnimates(false);
+#ifdef DISABLE_AL
+        param->setIsSecret(true);
+#else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1179,7 +1383,11 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamYellowHint);
         param->setDefault(kParamYellowDefault);
         param->setAnimates(false);
+#ifdef DISABLE_AL
+        param->setIsSecret(true);
+#else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1190,7 +1398,11 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamCyanHint);
         param->setDefault(kParamCyanDefault);
         param->setAnimates(false);
+#ifdef DISABLE_AL
+        param->setIsSecret(true);
+#else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1201,7 +1413,11 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamMagentaHint);
         param->setDefault(kParamMagentaDefault);
         param->setAnimates(false);
+#ifdef DISABLE_AL
+        param->setIsSecret(true);
+#else
         param->setLayoutHint(eLayoutHintDivider);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1223,7 +1439,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamClampAlphaHint);
         param->setDefault(kParamClampAlphaDefault);
         param->setAnimates(false);
+#ifndef DISABLE_RGBAL
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1234,6 +1452,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamRGBALHint);
         param->setDefault(kParamRGBALDefault);
         param->setAnimates(false);
+#ifdef DISABLE_RGBAL
+        param->setIsSecret(true);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1270,6 +1491,24 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColorspace);
+        param->setLabel(kParamColorspaceLabel);
+        param->setHint(kParamColorspaceHint);
+        assert(param->getNOptions() == eColorspaceRec709);
+        param->appendOption(kParamColorspaceOptionRec709, kParamColorspaceOptionRec709Hint);
+        assert(param->getNOptions() == eColorspaceRec2020);
+        param->appendOption(kParamColorspaceOptionRec2020, kParamColorspaceOptionRec2020Hint);
+        assert(param->getNOptions() == eColorspaceACESAP0);
+        param->appendOption(kParamColorspaceOptionACESAP0, kParamColorspaceOptionACESAP0Hint);
+        assert(param->getNOptions() == eColorspaceACESAP1);
+        param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
+        param->setDefault( (int)eColorspaceRec709 );
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 } // PIKPluginFactory::describeInContext
 
 OFX::ImageEffect*
@@ -1283,5 +1522,3 @@ static PIKPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersion
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
-
-#endif // DEBUG
