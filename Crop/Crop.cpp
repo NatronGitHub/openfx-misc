@@ -664,7 +664,7 @@ CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // rectangleInteractEnable
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractEnable);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setDefault(!kParamReformatDefault);
         if (page) {
             page->addChild(*param);

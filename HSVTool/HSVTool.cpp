@@ -1062,12 +1062,9 @@ public:
 
         // update visibility
         bool enableRectangle = _enableRectangle->getValue();
-        _btmLeft->setEnabled(enableRectangle);
-        _btmLeft->setIsSecret(!enableRectangle);
-        _size->setEnabled(enableRectangle);
-        _size->setIsSecret(!enableRectangle);
-        _setSrcFromRectangle->setEnabled(enableRectangle);
-        _setSrcFromRectangle->setIsSecret(!enableRectangle);
+        _btmLeft->setIsSecretAndDisabled(!enableRectangle);
+        _size->setIsSecretAndDisabled(!enableRectangle);
+        _setSrcFromRectangle->setIsSecretAndDisabled(!enableRectangle);
         _srcColor->setEnabled(!enableRectangle);
     }
 
@@ -1623,12 +1620,9 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
     } else if (paramName == kParamEnableRectangle) {
         // update visibility
         bool enableRectangle = _enableRectangle->getValueAtTime(time);
-        _btmLeft->setEnabled(enableRectangle);
-        _btmLeft->setIsSecret(!enableRectangle);
-        _size->setEnabled(enableRectangle);
-        _size->setIsSecret(!enableRectangle);
-        _setSrcFromRectangle->setEnabled(enableRectangle);
-        _setSrcFromRectangle->setIsSecret(!enableRectangle);
+        _btmLeft->setIsSecretAndDisabled(!enableRectangle);
+        _size->setIsSecretAndDisabled(!enableRectangle);
+        _setSrcFromRectangle->setIsSecretAndDisabled(!enableRectangle);
         _srcColor->setEnabled(!enableRectangle);
     } else if ( (paramName == kParamSetSrcFromRectangle) && (args.reason == OFX::eChangeUserEdit) ) {
         std::auto_ptr<OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
@@ -2236,7 +2230,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         if (page) {

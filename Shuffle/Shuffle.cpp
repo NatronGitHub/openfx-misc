@@ -564,7 +564,7 @@ public:
         if ( (ofxComponents == kOfxImageComponentAlpha) || (ofxComponents == kOfxImageComponentRGB) || (ofxComponents == kOfxImageComponentRGBA) ) {
             secret = false;
         }
-        _outputComponents->setIsSecret(secret);
+        _outputComponents->setIsSecretAndDisabled(secret);
 
         _outputPremult = fetchChoiceParam(kParamOutputPremultiplication);
     }
@@ -1509,7 +1509,7 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args,
         } else {
             secret = true;
         }
-        _outputComponents->setIsSecret(secret);
+        _outputComponents->setIsSecretAndDisabled(secret);
     }
 
 
@@ -1643,50 +1643,34 @@ ShufflePlugin::enableComponents(PixelComponentEnum originalOutputComponents,
 
 
         if (compNames.size() == 1) {
-            _channelParam[0]->setEnabled(false);
-            _channelParam[0]->setIsSecret(true);
-            _channelParam[1]->setEnabled(false);
-            _channelParam[1]->setIsSecret(true);
-            _channelParam[2]->setEnabled(false);
-            _channelParam[2]->setIsSecret(true);
-            _channelParam[3]->setEnabled(true);
-            _channelParam[3]->setIsSecret(false);
+            _channelParam[0]->setIsSecretAndDisabled(true);
+            _channelParam[1]->setIsSecretAndDisabled(true);
+            _channelParam[2]->setIsSecretAndDisabled(true);
+            _channelParam[3]->setIsSecretAndDisabled(false);
             _channelParam[3]->setLabel(compNames[0]);
         } else if (compNames.size() == 2) {
-            _channelParam[0]->setEnabled(true);
-            _channelParam[0]->setIsSecret(false);
+            _channelParam[0]->setIsSecretAndDisabled(false);
             _channelParam[0]->setLabel(compNames[0]);
-            _channelParam[1]->setEnabled(true);
-            _channelParam[1]->setIsSecret(false);
+            _channelParam[1]->setIsSecretAndDisabled(false);
             _channelParam[1]->setLabel(compNames[1]);
-            _channelParam[2]->setEnabled(false);
-            _channelParam[2]->setIsSecret(true);
-            _channelParam[3]->setEnabled(false);
-            _channelParam[3]->setIsSecret(true);
+            _channelParam[2]->setIsSecretAndDisabled(true);
+            _channelParam[3]->setIsSecretAndDisabled(true);
         } else if (compNames.size() == 3) {
-            _channelParam[0]->setEnabled(true);
-            _channelParam[0]->setIsSecret(false);
+            _channelParam[0]->setIsSecretAndDisabled(false);
             _channelParam[0]->setLabel(compNames[0]);
-            _channelParam[1]->setEnabled(true);
             _channelParam[1]->setLabel(compNames[1]);
-            _channelParam[1]->setIsSecret(false);
-            _channelParam[2]->setEnabled(true);
-            _channelParam[2]->setIsSecret(false);
+            _channelParam[1]->setIsSecretAndDisabled(false);
+            _channelParam[2]->setIsSecretAndDisabled(false);
             _channelParam[2]->setLabel(compNames[2]);
-            _channelParam[3]->setEnabled(false);
-            _channelParam[3]->setIsSecret(true);
+            _channelParam[3]->setIsSecretAndDisabled(true);
         } else if (compNames.size() == 4) {
-            _channelParam[0]->setEnabled(true);
-            _channelParam[0]->setIsSecret(false);
             _channelParam[0]->setLabel(compNames[0]);
-            _channelParam[1]->setEnabled(true);
+            _channelParam[0]->setIsSecretAndDisabled(false);
             _channelParam[1]->setLabel(compNames[1]);
-            _channelParam[1]->setIsSecret(false);
-            _channelParam[2]->setEnabled(true);
-            _channelParam[2]->setIsSecret(false);
+            _channelParam[1]->setIsSecretAndDisabled(false);
+            _channelParam[2]->setIsSecretAndDisabled(false);
             _channelParam[2]->setLabel(compNames[2]);
-            _channelParam[3]->setEnabled(true);
-            _channelParam[3]->setIsSecret(false);
+            _channelParam[3]->setIsSecretAndDisabled(false);
             _channelParam[3]->setLabel(compNames[3]);
         } else {
             //Unsupported
@@ -1935,7 +1919,7 @@ ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #ifndef DEBUG
         // Shuffle only does linear conversion, which is useless for 8-bits and 16-bits formats.
         // Disable it for now (in the future, there may be colorspace conversion options)
-        param->setIsSecret(true); // always secret
+        param->setIsSecretAndDisabled(true); // always secret
 #endif
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);

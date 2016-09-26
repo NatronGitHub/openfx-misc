@@ -878,7 +878,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamResetTrigger);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setIsPersistent(false);
         param->setEvaluateOnChange(true);
         if (page) {
@@ -898,8 +898,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // sublabel
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
-        param->setIsSecret(true); // always secret
-        param->setEnabled(false);
+        param->setIsSecretAndDisabled(true); // always secret
         param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setDefault("");
@@ -1359,7 +1358,7 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamResetTrigger);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setIsPersistent(false);
         param->setEvaluateOnChange(true);
         param->setAnimates(false);
@@ -1380,8 +1379,7 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // sublabel
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
-        param->setIsSecret(true); // always secret
-        param->setEnabled(false);
+        param->setIsSecretAndDisabled(true); // always secret
         param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setDefault("");

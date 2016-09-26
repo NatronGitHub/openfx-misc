@@ -865,7 +865,7 @@ ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         if (page) {

@@ -474,18 +474,14 @@ public:
         switch (outputMode) {
         case eOutputModeImage:
         case eOutputModeAlphaImage: {
-            _preserveLuma->setEnabled(true);
-            _preserveLuma->setIsSecret(false);
+            _preserveLuma->setIsSecretAndDisabled(false);
             bool hasLuma = _preserveLuma->getValue();
-            _luminanceMath->setEnabled(hasLuma);
-            _luminanceMath->setIsSecret(!hasLuma);
+            _luminanceMath->setIsSecretAndDisabled(!hasLuma);
             break;
         }
         case eOutputModeAlpha: {
-            _preserveLuma->setEnabled(false);
-            _preserveLuma->setIsSecret(true);
-            _luminanceMath->setEnabled(false);
-            _luminanceMath->setIsSecret(true);
+            _preserveLuma->setIsSecretAndDisabled(true);
+            _luminanceMath->setIsSecretAndDisabled(true);
             break;
         }
         }
@@ -765,18 +761,14 @@ ColorSuppressPlugin::changedParam(const InstanceChangedArgs &args,
         switch (outputMode) {
         case eOutputModeImage:
         case eOutputModeAlphaImage: {
-            _preserveLuma->setEnabled(true);
-            _preserveLuma->setIsSecret(false);
+            _preserveLuma->setIsSecretAndDisabled(false);
             bool hasLuma = _preserveLuma->getValueAtTime(time);
-            _luminanceMath->setEnabled(hasLuma);
-            _luminanceMath->setIsSecret(!hasLuma);
+            _luminanceMath->setIsSecretAndDisabled(!hasLuma);
             break;
         }
         case eOutputModeAlpha: {
-            _preserveLuma->setEnabled(false);
-            _luminanceMath->setEnabled(false);
-            _preserveLuma->setIsSecret(true);
-            _luminanceMath->setIsSecret(true);
+            _preserveLuma->setIsSecretAndDisabled(true);
+            _luminanceMath->setIsSecretAndDisabled(true);
             break;
         }
         }
@@ -996,7 +988,7 @@ ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         if (page) {

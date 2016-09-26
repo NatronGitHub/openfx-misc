@@ -1246,8 +1246,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
     // operationString
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
-        param->setIsSecret(true); // always secret
-        param->setEnabled(false);
+        param->setIsSecretAndDisabled(true); // always secret
         param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setDefault( getOperationString(plugin) );
@@ -1505,7 +1504,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsAChanged);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         if (page) {

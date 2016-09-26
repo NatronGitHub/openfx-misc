@@ -392,7 +392,7 @@ PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
         //Do not show this parameter if the host handles the interact
         if (hostHasNativeOverlayForPosition) {
-            param->setIsSecret(true);
+            param->setIsSecretAndDisabled(true);
         }
     }
 } // PositionPluginFactory::describeInContext

@@ -2932,10 +2932,10 @@ DenoiseSharpenPlugin::updateSecret()
     }
     for (unsigned c = 0; c < 4; ++c) {
         for (unsigned f = 0; f < 4; ++f) {
-            _noiseLevel[c][f]->setIsSecret(!process[c]);
+            _noiseLevel[c][f]->setIsSecretAndDisabled(!process[c]);
         }
-        _channelGain[c]->setIsSecret(!process[c]);
-        _amount[c]->setIsSecret(!process[c]);
+        _channelGain[c]->setIsSecretAndDisabled(!process[c]);
+        _amount[c]->setIsSecretAndDisabled(!process[c]);
     }
 }
 
@@ -3501,7 +3501,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         if (group) {

@@ -239,7 +239,7 @@ public:
         if ( getImageEffectHostDescription()->isNatron &&
              !_scaleUniform->getValue() &&
              ( _scaleUniform->getNumKeys() == 0) ) {
-            _scaleUniform->setIsSecret(true);
+            _scaleUniform->setIsSecretAndDisabled(true);
         }
 
         refreshVisibility();
@@ -676,30 +676,30 @@ ReformatPlugin::refreshVisibility()
 
     switch (type) {
     case eReformatTypeToFormat:
-        _format->setIsSecret(false);
-        _boxSize->setIsSecret(true);
-        _boxPAR->setIsSecret(true);
-        _boxFixed->setIsSecret(true);
-        _scale->setIsSecret(true);
-        _scaleUniform->setIsSecret(true);
+        _format->setIsSecretAndDisabled(false);
+        _boxSize->setIsSecretAndDisabled(true);
+        _boxPAR->setIsSecretAndDisabled(true);
+        _boxFixed->setIsSecretAndDisabled(true);
+        _scale->setIsSecretAndDisabled(true);
+        _scaleUniform->setIsSecretAndDisabled(true);
         break;
 
     case eReformatTypeToBox:
-        _format->setIsSecret(true);
-        _boxSize->setIsSecret(false);
-        _boxPAR->setIsSecret(false);
-        _boxFixed->setIsSecret(false);
-        _scale->setIsSecret(true);
-        _scaleUniform->setIsSecret(true);
+        _format->setIsSecretAndDisabled(true);
+        _boxSize->setIsSecretAndDisabled(false);
+        _boxPAR->setIsSecretAndDisabled(false);
+        _boxFixed->setIsSecretAndDisabled(false);
+        _scale->setIsSecretAndDisabled(true);
+        _scaleUniform->setIsSecretAndDisabled(true);
         break;
 
     case eReformatTypeScale:
-        _format->setIsSecret(true);
-        _boxSize->setIsSecret(true);
-        _boxPAR->setIsSecret(true);
-        _boxFixed->setIsSecret(true);
-        _scale->setIsSecret(false);
-        _scaleUniform->setIsSecret(false);
+        _format->setIsSecretAndDisabled(true);
+        _boxSize->setIsSecretAndDisabled(true);
+        _boxPAR->setIsSecretAndDisabled(true);
+        _boxFixed->setIsSecretAndDisabled(true);
+        _scale->setIsSecretAndDisabled(false);
+        _scaleUniform->setIsSecretAndDisabled(false);
         break;
     }
 }
@@ -828,7 +828,7 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFormatBoxSizeLabel);
         param->setHint(kParamFormatBoxSizeHint);
         param->setDefault(200, 200);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true); // secret Natron-specific param
         if (page) {
             page->addChild(*param);
         }
@@ -841,7 +841,7 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(0., 10);
         param->setDisplayRange(0.5, 2.);
         param->setDefault(1.);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true); // secret Natron-specific param
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

@@ -1014,19 +1014,15 @@ ShadertoyPlugin::updateVisibility()
 
     //bool hasSize = (bbox == eBBoxSize);
 
-    _format->setEnabled(hasFormat);
-    _format->setIsSecret(!hasFormat);
-    //_size->setEnabled(hasSize);
-    //_size->setIsSecret(!hasSize);
-    //_recenter->setEnabled(hasSize);
-    //_recenter->setIsSecret(!hasSize);
-    //_btmLeft->setEnabled(hasSize);
-    //_btmLeft->setIsSecret(!hasSize);
+    _format->setIsSecretAndDisabled(!hasFormat);
+    //_size->setIsSecretAndDisabled(!hasSize);
+    //_recenter->setIsSecretAndDisabled(!hasSize);
+    //_btmLeft->setIsSecretAndDisabled(!hasSize);
 
     bool mouseParams = _mouseParams->getValue();
-    _mousePosition->setIsSecret(!mouseParams);
-    _mouseClick->setIsSecret(!mouseParams);
-    _mousePressed->setIsSecret(!mouseParams);
+    _mousePosition->setIsSecretAndDisabled(!mouseParams);
+    _mouseClick->setIsSecretAndDisabled(!mouseParams);
+    _mousePressed->setIsSecretAndDisabled(!mouseParams);
 
     unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
@@ -1034,11 +1030,11 @@ ShadertoyPlugin::updateVisibility()
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         bool enabled = _inputEnable[i]->getValue();
-        //_srcClips[i]->setIsSecret(!enabled);
-        _inputLabel[i]->setIsSecret(!enabled);
-        _inputHint[i]->setIsSecret(!enabled);
-        _inputFilter[i]->setIsSecret(!enabled);
-        _inputWrap[i]->setIsSecret(!enabled);
+        //_srcClips[i]->setIsSecretAndDisabled(!enabled);
+        _inputLabel[i]->setIsSecretAndDisabled(!enabled);
+        _inputHint[i]->setIsSecretAndDisabled(!enabled);
+        _inputFilter[i]->setIsSecretAndDisabled(!enabled);
+        _inputWrap[i]->setIsSecretAndDisabled(!enabled);
     }
 
 }
@@ -1116,33 +1112,33 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i,
     if (!visible) {
         _paramGroup[i]->setOpen(false);
     }
-    _paramGroup[i]->setIsSecret(!visible);
-    _paramType[i]->setIsSecret(!visible);
-    _paramName[i]->setIsSecret(!visible);
-    _paramLabel[i]->setIsSecret(!visible || name.empty());
-    _paramHint[i]->setIsSecret(!visible || name.empty());
-    _paramValueBool[i]->setIsSecret(!isBool);
-    _paramValueInt[i]->setIsSecret(!isInt);
-    _paramValueFloat[i]->setIsSecret(!isFloat);
-    _paramValueVec2[i]->setIsSecret(!isVec2);
-    _paramValueVec3[i]->setIsSecret(!isVec3);
-    _paramValueVec4[i]->setIsSecret(!isVec4);
-    _paramDefaultBool[i]->setIsSecret(!isBool);
-    _paramDefaultInt[i]->setIsSecret(!isInt);
-    _paramDefaultFloat[i]->setIsSecret(!isFloat);
-    _paramDefaultVec2[i]->setIsSecret(!isVec2);
-    _paramDefaultVec3[i]->setIsSecret(!isVec3);
-    _paramDefaultVec4[i]->setIsSecret(!isVec4);
-    _paramMinInt[i]->setIsSecret(!isInt);
-    _paramMinFloat[i]->setIsSecret(!isFloat);
-    _paramMinVec2[i]->setIsSecret(!isVec2);
-    //_paramMinVec3[i]->setIsSecret(!isVec3);
-    //_paramMinVec4[i]->setIsSecret(!isVec4);
-    _paramMaxInt[i]->setIsSecret(!isInt);
-    _paramMaxFloat[i]->setIsSecret(!isFloat);
-    _paramMaxVec2[i]->setIsSecret(!isVec2);
-    //_paramMaxVec3[i]->setIsSecret(!isVec3);
-    //_paramMaxVec4[i]->setIsSecret(!isVec4);
+    _paramGroup[i]->setIsSecretAndDisabled(!visible);
+    _paramType[i]->setIsSecretAndDisabled(!visible);
+    _paramName[i]->setIsSecretAndDisabled(!visible);
+    _paramLabel[i]->setIsSecretAndDisabled(!visible || name.empty());
+    _paramHint[i]->setIsSecretAndDisabled(!visible || name.empty());
+    _paramValueBool[i]->setIsSecretAndDisabled(!isBool);
+    _paramValueInt[i]->setIsSecretAndDisabled(!isInt);
+    _paramValueFloat[i]->setIsSecretAndDisabled(!isFloat);
+    _paramValueVec2[i]->setIsSecretAndDisabled(!isVec2);
+    _paramValueVec3[i]->setIsSecretAndDisabled(!isVec3);
+    _paramValueVec4[i]->setIsSecretAndDisabled(!isVec4);
+    _paramDefaultBool[i]->setIsSecretAndDisabled(!isBool);
+    _paramDefaultInt[i]->setIsSecretAndDisabled(!isInt);
+    _paramDefaultFloat[i]->setIsSecretAndDisabled(!isFloat);
+    _paramDefaultVec2[i]->setIsSecretAndDisabled(!isVec2);
+    _paramDefaultVec3[i]->setIsSecretAndDisabled(!isVec3);
+    _paramDefaultVec4[i]->setIsSecretAndDisabled(!isVec4);
+    _paramMinInt[i]->setIsSecretAndDisabled(!isInt);
+    _paramMinFloat[i]->setIsSecretAndDisabled(!isFloat);
+    _paramMinVec2[i]->setIsSecretAndDisabled(!isVec2);
+    //_paramMinVec3[i]->setIsSecretAndDisabled(!isVec3);
+    //_paramMinVec4[i]->setIsSecretAndDisabled(!isVec4);
+    _paramMaxInt[i]->setIsSecretAndDisabled(!isInt);
+    _paramMaxFloat[i]->setIsSecretAndDisabled(!isFloat);
+    _paramMaxVec2[i]->setIsSecretAndDisabled(!isVec2);
+    //_paramMaxVec3[i]->setIsSecretAndDisabled(!isVec3);
+    //_paramMaxVec4[i]->setIsSecretAndDisabled(!isVec4);
 } // ShadertoyPlugin::updateVisibilityParam
 
 // for each extra parameter that has a nonempty name and a type, set the label of its Value param to its name.
@@ -2241,7 +2237,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             OFX::IntParamDescriptor* param = desc.defineIntParam(kParamImageShaderTriggerRender);
             param->setEvaluateOnChange(true);
             param->setAnimates(false);
-            param->setIsSecret(true);
+            param->setIsSecretAndDisabled(true);
             param->setIsPersistent(false);
             if (page) {
                 page->addChild(*param);
@@ -2256,7 +2252,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamImageShaderParamsUpdated);
             param->setEvaluateOnChange(false);
             param->setAnimates(false);
-            param->setIsSecret(true);
+            param->setIsSecretAndDisabled(true);
             param->setIsPersistent(false);
             if (page) {
                 page->addChild(*param);
@@ -2443,6 +2439,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
 
         {
+            // two secret parameters for Natron's format handling
             int w = 0, h = 0;
             double par = -1.;
             getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
@@ -2451,7 +2448,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 Int2DParamDescriptor* param = desc.defineInt2DParam(kParamFormatSize);
                 param->setLabel(kParamFormatSizeLabel);
                 param->setHint(kParamFormatSizeHint);
-                param->setIsSecret(true);
+                param->setIsSecretAndDisabled(true);
                 param->setDefault(w, h);
                 if (page) {
                     page->addChild(*param);
@@ -2465,7 +2462,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFormatPAR);
                 param->setLabel(kParamFormatPARLabel);
                 param->setHint(kParamFormatPARHint);
-                param->setIsSecret(true);
+                param->setIsSecretAndDisabled(true);
                 param->setRange(0., DBL_MAX);
                 param->setDisplayRange(0.5, 2.);
                 param->setDefault(par);

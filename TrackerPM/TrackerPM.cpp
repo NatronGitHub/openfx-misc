@@ -1060,7 +1060,6 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-50., -50., 50., 50.);
         param->setIncrement(1.);
-        //param->setIsSecret(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
 #     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
         param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
@@ -1081,7 +1080,6 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-50., -50., 50., 50.);
         param->setIncrement(1.);
-        //innerTopRight->setIsSecret(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
 #     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
         param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
@@ -1102,7 +1100,6 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-100., -100., 100., 100.);
         param->setIncrement(1.);
-        //param->setIsSecret(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
 #     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
         param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
@@ -1123,7 +1120,6 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-100., -100., 100., 100.);
         param->setIncrement(1.);
-        //param->setIsSecret(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
 #     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
         param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);

@@ -705,14 +705,10 @@ RampPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     if ( (paramName == kParamRampType) && (args.reason == OFX::eChangeUserEdit) ) {
         RampTypeEnum type = (RampTypeEnum)_type->getValueAtTime(args.time);
         bool noramp = (type == eRampTypeNone);
-        _color0->setIsSecret(noramp);
-        _point0->setIsSecret(noramp);
-        _point1->setIsSecret(noramp);
-        _interactive->setIsSecret(noramp);
-        _color0->setEnabled(!noramp);
-        _point0->setEnabled(!noramp);
-        _point1->setEnabled(!noramp);
-        _interactive->setEnabled(!noramp);
+        _color0->setIsSecretAndDisabled(noramp);
+        _point0->setIsSecretAndDisabled(noramp);
+        _point1->setIsSecretAndDisabled(noramp);
+        _interactive->setIsSecretAndDisabled(noramp);
     }
 }
 

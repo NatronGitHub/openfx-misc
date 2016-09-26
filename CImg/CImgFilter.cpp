@@ -215,7 +215,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(processRGB);
-        param->setIsSecret(processIsSecret);
+        param->setIsSecretAndDisabled(processIsSecret);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
@@ -226,7 +226,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(processRGB);
-        param->setIsSecret(processIsSecret);
+        param->setIsSecretAndDisabled(processIsSecret);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
@@ -237,7 +237,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(processRGB);
-        param->setIsSecret(processIsSecret);
+        param->setIsSecretAndDisabled(processIsSecret);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
@@ -248,7 +248,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(processAlpha);
-        param->setIsSecret(processIsSecret);
+        param->setIsSecretAndDisabled(processIsSecret);
         if (page) {
             page->addChild(*param);
         }
@@ -269,7 +269,7 @@ CImgFilterPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &des
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         if (page) {

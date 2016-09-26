@@ -765,7 +765,7 @@ DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamModeOptionYadif, kParamModeOptionYadifHint);
         param->setDefault( int(eDeinterlaceModeYadif) );
         param->setAnimates(true); // can animate
-        param->setIsSecret(true); // Not yet implemented!
+        param->setIsSecretAndDisabled(true); // Not yet implemented!
         if (page) {
             page->addChild(*param);
         }
@@ -821,7 +821,7 @@ DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamDoubleFramerate);
         param->setLabel(kParamDoubleFramerateLabel);
         param->setHint(kParamDoubleFramerateHint);
-        param->setIsSecret(true); // Not yet implemented!
+        param->setIsSecretAndDisabled(true); // Not yet implemented!
         if (page) {
             page->addChild(*param);
         }

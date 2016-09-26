@@ -1209,7 +1209,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDefaultsNormalised);
         param->setDefault(true);
         param->setEvaluateOnChange(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setIsPersistent(true);
         param->setAnimates(false);
         if (page) {
@@ -1247,7 +1247,7 @@ CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
@@ -1294,7 +1294,7 @@ CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         page->addChild(*param);

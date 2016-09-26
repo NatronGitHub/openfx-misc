@@ -1307,7 +1307,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamLMEnableDefault);
         param->setAnimates(false);
 #ifdef DISABLE_LM
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
 #endif
         if (page) {
             page->addChild(*param);
@@ -1323,7 +1323,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamLevelDefault);
         param->setAnimates(true);
 #ifdef DISABLE_LM
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
 #endif
         if (page) {
             page->addChild(*param);
@@ -1338,7 +1338,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamLumaDefault);
         param->setAnimates(true);
 #ifdef DISABLE_LM
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
 #else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
@@ -1354,7 +1354,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamLLEnableDefault);
         param->setAnimates(false);
 #ifdef DISABLE_LM
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
 #else
         param->setLayoutHint(eLayoutHintDivider);
 #endif
@@ -1369,7 +1369,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamAutolevelsDefault);
         param->setAnimates(false);
 #ifdef DISABLE_AL
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
 #else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
@@ -1384,7 +1384,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamYellowDefault);
         param->setAnimates(false);
 #ifdef DISABLE_AL
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
 #else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
@@ -1399,7 +1399,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamCyanDefault);
         param->setAnimates(false);
 #ifdef DISABLE_AL
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
 #else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
@@ -1414,7 +1414,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamMagentaDefault);
         param->setAnimates(false);
 #ifdef DISABLE_AL
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
 #else
         param->setLayoutHint(eLayoutHintDivider);
 #endif
@@ -1453,7 +1453,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamRGBALDefault);
         param->setAnimates(false);
 #ifdef DISABLE_RGBAL
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
 #endif
         if (page) {
             page->addChild(*param);

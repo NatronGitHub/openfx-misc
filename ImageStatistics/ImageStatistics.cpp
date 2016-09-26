@@ -1187,13 +1187,10 @@ public:
         assert(_luminanceMath && _maxLumaPix && _maxLumaPixVal && _minLumaPix && _minLumaPixVal);
         // update visibility
         bool restrictToRectangle = _restrictToRectangle->getValue();
-        _btmLeft->setEnabled(restrictToRectangle);
-        _btmLeft->setIsSecret(!restrictToRectangle);
-        _size->setEnabled(restrictToRectangle);
-        _size->setIsSecret(!restrictToRectangle);
+        _btmLeft->setIsSecretAndDisabled(!restrictToRectangle);
+        _size->setIsSecretAndDisabled(!restrictToRectangle);
         bool doUpdate = _autoUpdate->getValue();
-        _interactive->setEnabled(restrictToRectangle && doUpdate);
-        _interactive->setIsSecret(!restrictToRectangle || !doUpdate);
+        _interactive->setIsSecretAndDisabled(!restrictToRectangle || !doUpdate);
     }
 
 private:
@@ -1455,19 +1452,15 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     if (paramName == kParamRestrictToRectangle) {
         // update visibility
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(time);
-        _btmLeft->setEnabled(restrictToRectangle);
-        _btmLeft->setIsSecret(!restrictToRectangle);
-        _size->setEnabled(restrictToRectangle);
-        _size->setIsSecret(!restrictToRectangle);
-        _interactive->setEnabled(restrictToRectangle);
-        _interactive->setIsSecret(!restrictToRectangle);
+        _btmLeft->setIsSecretAndDisabled(!restrictToRectangle);
+        _size->setIsSecretAndDisabled(!restrictToRectangle);
+        _interactive->setIsSecretAndDisabled(!restrictToRectangle);
         doUpdate = true;
     }
     if (paramName == kParamAutoUpdate) {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(time);
         doUpdate = _autoUpdate->getValueAtTime(time);
-        _interactive->setEnabled(restrictToRectangle && doUpdate);
-        _interactive->setIsSecret(!restrictToRectangle || !doUpdate);
+        _interactive->setIsSecretAndDisabled(!restrictToRectangle || !doUpdate);
     }
     if (//paramName == kParamRectangleInteractBtmLeft ||
         // only trigger on kParamRectangleInteractSize (the last one changed)

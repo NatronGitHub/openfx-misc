@@ -644,16 +644,7 @@ public:
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
         assert(_outputMode && _sourceAlpha);
 
-        KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValue();
-        _luminanceMath->setEnabled(keyerMode == eKeyerModeLuminance);
-        _luminanceMath->setIsSecret(keyerMode != eKeyerModeLuminance);
-        _softnessLower->setEnabled(keyerMode != eKeyerModeNone);
-        _toleranceLower->setEnabled(keyerMode != eKeyerModeNone);
-        _center->setEnabled(keyerMode != eKeyerModeNone);
-        _toleranceUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
-        _softnessUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
-        _despill->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
-        _despillAngle->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
+        updateVisibility();
     }
 
 private:
@@ -669,6 +660,19 @@ private:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     void setThresholdsFromKeyColor(double r, double g, double b, KeyerModeEnum keyerMode, LuminanceMathEnum luminanceMath);
+
+    void updateVisibility()
+    {
+        KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValue();
+        _luminanceMath->setIsSecretAndDisabled(keyerMode != eKeyerModeLuminance);
+        _softnessLower->setIsSecretAndDisabled(keyerMode == eKeyerModeNone);
+        _toleranceLower->setIsSecretAndDisabled(keyerMode == eKeyerModeNone);
+        _center->setIsSecretAndDisabled(keyerMode == eKeyerModeNone);
+        _toleranceUpper->setIsSecretAndDisabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
+        _softnessUpper->setIsSecretAndDisabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
+        _despill->setIsSecretAndDisabled( !(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen) );
+        _despillAngle->setIsSecretAndDisabled( !(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen) );
+    }
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -911,18 +915,11 @@ KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode, luminanceMath);
     }
     if ( (paramName == kParamKeyerMode) && (args.reason == eChangeUserEdit) ) {
+        updateVisibility();
+
         OfxRGBColourD keyColor;
         _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
         KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
-        _luminanceMath->setEnabled(keyerMode == eKeyerModeLuminance);
-        _luminanceMath->setIsSecret(keyerMode != eKeyerModeLuminance);
-        _softnessLower->setEnabled(keyerMode != eKeyerModeNone);
-        _toleranceLower->setEnabled(keyerMode != eKeyerModeNone);
-        _center->setEnabled(keyerMode != eKeyerModeNone);
-        _toleranceUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
-        _softnessUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
-        _despill->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
-        _despillAngle->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
         LuminanceMathEnum luminanceMath = (keyerMode == eKeyerModeLuminance) ? (LuminanceMathEnum)_luminanceMath->getValueAtTime(time) : eLuminanceMathRec709;
         setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode, luminanceMath);
         std::string keyerModeString;
@@ -1008,8 +1005,7 @@ KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // sublabel
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
-        param->setIsSecret(true); // always secret
-        param->setEnabled(false);
+        param->setIsSecretAndDisabled(true); // always secret
         param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setDefault(kParamKeyerModeOptionLuminance);

@@ -413,7 +413,7 @@ public:
         assert(_premultChanged);
 
         bool hasBackgroundInteract = _hasBackgroundInteract->getValue();
-        _showRamp->setIsSecret(!hasBackgroundInteract);
+        _showRamp->setIsSecretAndDisabled(!hasBackgroundInteract);
     }
 
 private:
@@ -434,7 +434,7 @@ private:
         const double time = args.time;
         if ( (paramName == kParamHasBackgroundInteract) ) {
             bool hasBackgroundInteract = _hasBackgroundInteract->getValueAtTime(time);
-            _showRamp->setIsSecret(!hasBackgroundInteract);
+            _showRamp->setIsSecretAndDisabled(!hasBackgroundInteract);
         }
         if ( (paramName == kParamSetMaster) && (args.reason == eChangeUserEdit) ) {
             double source[4];
@@ -954,7 +954,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamHasBackgroundInteract);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setAnimates(false);
@@ -1035,7 +1035,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamShowRampLabel);
         param->setHint(kParamShowRampHint);
         param->setDefault(true);
-        param->setIsSecret(false);
+        param->setIsSecretAndDisabled(false);
         param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setAnimates(false);
@@ -1147,7 +1147,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
-        param->setIsSecret(true);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         if (page) {

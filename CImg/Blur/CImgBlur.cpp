@@ -923,7 +923,7 @@ public:
              _uniform &&
              !_uniform->getValue() &&
              ( _uniform->getNumKeys() == 0) ) {
-            _uniform->setIsSecret(true);
+            _uniform->setIsSecretAndDisabled(true);
         }
     }
 

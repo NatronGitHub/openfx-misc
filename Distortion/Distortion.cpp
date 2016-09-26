@@ -1743,14 +1743,14 @@ DistortionPlugin::updateVisibility()
         DistortionModelEnum distortionModel = (DistortionModelEnum)_distortionModel->getValue();
         switch (distortionModel) {
         case eDistortionModelNuke:
-            _k1->setIsSecret(false);
-            _k2->setIsSecret(false);
-            _k3->setIsSecret(true);
-            _p1->setIsSecret(true);
-            _p2->setIsSecret(true);
-            _center->setIsSecret(false);
-            _squeeze->setIsSecret(false);
-            _asymmetric->setIsSecret(false);
+            _k1->setIsSecretAndDisabled(false);
+            _k2->setIsSecretAndDisabled(false);
+            _k3->setIsSecretAndDisabled(true);
+            _p1->setIsSecretAndDisabled(true);
+            _p2->setIsSecretAndDisabled(true);
+            _center->setIsSecretAndDisabled(false);
+            _squeeze->setIsSecretAndDisabled(false);
+            _asymmetric->setIsSecretAndDisabled(false);
             break;
         }
     }

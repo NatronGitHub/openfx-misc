@@ -307,8 +307,7 @@ FrameHoldPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // sublabel
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
-        param->setIsSecret(true); // always secret
-        param->setEnabled(false);
+        param->setIsSecretAndDisabled(true); // always secret
         param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
         param->setDefault("frame 0");

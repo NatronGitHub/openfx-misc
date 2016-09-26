@@ -933,7 +933,7 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
             param->appendOption(kParamPremultChannelB, kParamPremultChannelBHint);
             param->appendOption(kParamPremultChannelA, kParamPremultChannelAHint);
             param->setDefault(3); // alpha
-            param->setIsSecret(true); // not yet implemented
+            param->setIsSecretAndDisabled(true); // not yet implemented
             if (page) {
                 page->addChild(*param);
             }
@@ -942,7 +942,7 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
         {
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
             param->setDefault(false);
-            param->setIsSecret(true);
+            param->setIsSecretAndDisabled(true);
             param->setAnimates(false);
             param->setEvaluateOnChange(false);
             if (page) {
