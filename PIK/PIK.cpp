@@ -736,8 +736,8 @@ private:
                         float Y = out_Y;
                         //float X = out_X;
                         //float Z = out_Z;
-                        float X = out_x * Y / out_y;
-                        float Z = (1. - out_x - out_y) * Y / out_y;
+                        float X = (out_y == 0.) ? 0. : out_x * Y / out_y;
+                        float Z = (out_y == 0.) ? 0. : (1. - out_x - out_y) * Y / out_y;
 
                         switch (_colorspace) {
                             case eColorspaceRec709:
