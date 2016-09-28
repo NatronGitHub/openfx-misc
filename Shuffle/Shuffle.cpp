@@ -602,6 +602,7 @@ private:
         getPlaneNeededInOutput(&layerName, &ofxComps);
 
         std::string ofxComponents;
+#pragma message WARN("BUG; here, layerName is uk.co.thefoundry.OfxImagePlaneColour and none of the four tested values")
         if ( layerName.empty() ||
             ( layerName == kPlaneLabelColorRGBA) ||
             ( layerName == kPlaneLabelColorRGB) ||
@@ -612,7 +613,8 @@ private:
         if ( (ofxComponents == kOfxImageComponentAlpha) || (ofxComponents == kOfxImageComponentRGB) || (ofxComponents == kOfxImageComponentRGBA) ) {
             secret = false;
         }
-        _outputComponents->setIsSecretAndDisabled(secret);
+#pragma message WARN("uncomment the following when the above bug is fixed")
+        //_outputComponents->setIsSecretAndDisabled(secret);
     }
 
     // do not need to delete these, the ImageEffect is managing them for us
