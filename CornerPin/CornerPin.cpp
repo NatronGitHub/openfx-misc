@@ -97,23 +97,23 @@ static const char* const kParamFrom[4] = {
 
 #define kParamCopyFrom "copyFrom"
 #define kParamCopyFromLabel "Copy \"From\""
-#define kParamCopyFromHint "Copy the contents (including animation) of the \"to\" points to the \"from\" points."
+#define kParamCopyFromHint "Copy the contents (including animation) of the \"from\" points to the \"to\" points."
 
 #define kParamCopyFromSingle "copyFromSingle"
 #define kParamCopyFromSingleLabel "Copy \"From\" (Single)"
-#define kParamCopyFromSingleHint "Copy the current values of the \"to\" points to the \"from\" points."
+#define kParamCopyFromSingleHint "Copy the current values of the \"from\" points to the \"to\" points."
 
 #define kParamCopyTo "copyTo"
 #define kParamCopyToLabel "Copy \"To\""
-#define kParamCopyToHint "Copy the contents (including animation) of the \"from\" points to the \"to\" points."
+#define kParamCopyToHint "Copy the contents (including animation) of the \"to\" points to the \"from\" points."
 
 #define kParamCopyToSingle "copyToSingle"
 #define kParamCopyToSingleLabel "Copy \"To\" (Single)"
-#define kParamCopyToSingleHint "Copy the current values of the \"from\" points to the \"to\" points."
+#define kParamCopyToSingleHint "Copy the current values of the \"to\" points to the \"from\" points."
 
 #define kParamCopyInputRoD "setToInputRod"
 #define kParamCopyInputRoDLabel "Set to input rod"
-#define kParamCopyInputRoDHint "Copy the values from the source region of definition into the \"to\" points."
+#define kParamCopyInputRoDHint "Copy the values from the source region of definition into the \"from\" points."
 
 #define kParamOverlayPoints "overlayPoints"
 #define kParamOverlayPointsLabel "Overlay Points"
