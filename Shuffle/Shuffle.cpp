@@ -637,7 +637,7 @@ ShufflePlugin::getClipComponents(const OFX::ClipComponentsArguments& args,
         getPlaneNeededInOutput(&ofxPlane, &ofxComp);
         clipComponents.addClipComponents(*_dstClip, ofxComp);
     } else {
-        PixelComponentEnum outputComponents = gOutputComponentsMap[_outputLayer->getValueAtTime(time)];
+        PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
         clipComponents.addClipComponents(*_dstClip, outputComponents);
     }
 
@@ -881,7 +881,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     }
     processor.setSrcImg( srcA.get(), srcB.get() );
 
-    PixelComponentEnum outputComponents = gOutputComponentsMap[_outputLayer->getValueAtTime(time)];
+    PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
     assert(dstComponents == outputComponents);
     BitDepthEnum outputBitDepth = srcBitDepth;
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
@@ -1158,7 +1158,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == pixelComps);
     } else {
         // set the components of _dstClip
-        PixelComponentEnum outputComponents = gOutputComponentsMap[_outputLayer->getValueAtTime(time)];
+        PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
         assert(dstComponents == outputComponents);
     }
 
@@ -1178,7 +1178,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     // get the components of _dstClip
 
     if (!gIsMultiPlanar) {
-        PixelComponentEnum outputComponents = gOutputComponentsMap[_outputLayer->getValueAtTime(time)];
+        PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
         if (dstComponents != outputComponents) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: OFX Host did not take into account output components");
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
@@ -1256,13 +1256,11 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
                     ( dstPixelComps == OFX::ePixelComponentRGB) ||
                     ( dstPixelComps == OFX::ePixelComponentRGBA) ) {
             //If color plane, select the value chosen by the user from the output components choice
-            int comps_i;
-            _outputComponents->getValue(comps_i);
-            dstPixelComps = gOutputComponentsMap[comps_i];
+            dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
         }
     } else {
         // set the components of _dstClip
-        dstPixelComps = gOutputComponentsMap[_outputLayer->getValue()];
+        dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
         originalDstPixelComps = dstPixelComps;
     }
 
@@ -1278,22 +1276,26 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         clipPreferences.setClipBitDepth(*_dstClip, outputBitDepth);
     }
 
-    OFX::PreMultiplicationEnum premult;
-    int premult_i;
-    _outputPremult->getValue(premult_i);
-    switch (premult_i) {
-    case 0:
+    OFX::PreMultiplicationEnum premult = eImageUnPreMultiplied;
+    if (dstPixelComps == OFX::ePixelComponentRGB) {
         premult = OFX::eImageOpaque;
-        break;
-    case 1:
-        premult = OFX::eImagePreMultiplied;
-        break;
-    case 2:
-        premult = OFX::eImageUnPreMultiplied;
-        break;
-    default:
-        assert(false);
-        break;
+    } else {
+        int premult_i;
+        _outputPremult->getValue(premult_i);
+        switch (premult_i) {
+            case 0:
+                premult = OFX::eImageOpaque;
+                break;
+            case 1:
+                premult = OFX::eImagePreMultiplied;
+                break;
+            case 2:
+                premult = OFX::eImageUnPreMultiplied;
+                break;
+            default:
+                assert(false);
+                break;
+        }
     }
     clipPreferences.setOutputPremultiplication(premult);
 } // ShufflePlugin::getClipPreferences
@@ -1565,9 +1567,7 @@ ShufflePlugin::enableComponents(PixelComponentEnum originalOutputComponents,
                                 PixelComponentEnum outputComponentsWithCreateAlpha)
 {
     if (!gIsMultiPlanar) {
-        int outputComponents_i;
-        _outputLayer->getValue(outputComponents_i);
-        switch (gOutputComponentsMap[outputComponents_i]) {
+        switch (gOutputComponentsMap[_outputComponents->getValue()]) {
         case ePixelComponentRGBA:
             for (int i = 0; i < 4; ++i) {
                 _channelParam[i]->setEnabled(true);
@@ -1998,16 +1998,6 @@ ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    // clipInfo
-    {
-        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
-        param->setLabel(kParamClipInfoLabel);
-        param->setHint(kParamClipInfoHint);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputPremultiplication);
         param->setLabel(kParamOutputPremultiplicationLabel);
@@ -2022,6 +2012,17 @@ ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
         desc.addClipPreferencesSlaveParam(*param);
     }
+
+    // clipInfo
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
+        param->setLabel(kParamClipInfoLabel);
+        param->setHint(kParamClipInfoHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
 } // ShufflePluginFactory::describeInContext
 
 OFX::ImageEffect*
