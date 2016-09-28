@@ -859,7 +859,6 @@ def createInstance(app,group):
 
     # Start of node "Output1"
     lastNode = app.createNode("fr.inria.built-in.Output", 1, group)
-    lastNode.setScriptName("Output1")
     lastNode.setLabel("Output")
     lastNode.setPosition(272, 859)
     lastNode.setSize(104, 30)
