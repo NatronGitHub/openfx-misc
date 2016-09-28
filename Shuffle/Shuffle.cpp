@@ -549,24 +549,9 @@ public:
             fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, _dstClip);
         }
 
-        //Refresh output components secretness
-        std::string layerName, ofxComps;
-        getPlaneNeededInOutput(&layerName, &ofxComps);
-
-        std::string ofxComponents;
-        if ( layerName.empty() ||
-             ( layerName == kPlaneLabelColorRGBA) ||
-             ( layerName == kPlaneLabelColorRGB) ||
-             ( layerName == kPlaneLabelColorAlpha) ) {
-            ofxComponents = _dstClip->getPixelComponentsProperty();
-        }
-        bool secret = true;
-        if ( (ofxComponents == kOfxImageComponentAlpha) || (ofxComponents == kOfxImageComponentRGB) || (ofxComponents == kOfxImageComponentRGBA) ) {
-            secret = false;
-        }
-        _outputComponents->setIsSecretAndDisabled(secret);
-
         _outputPremult = fetchChoiceParam(kParamOutputPremultiplication);
+
+        updateVisibility();
     }
 
 private:
@@ -610,6 +595,25 @@ private:
     void setupAndProcess(ShufflerBase &, const OFX::RenderArguments &args);
     void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const OFX::RenderArguments &args);
 
+    void updateVisibility()
+    {
+        //Refresh output components secretness
+        std::string layerName, ofxComps;
+        getPlaneNeededInOutput(&layerName, &ofxComps);
+
+        std::string ofxComponents;
+        if ( layerName.empty() ||
+            ( layerName == kPlaneLabelColorRGBA) ||
+            ( layerName == kPlaneLabelColorRGB) ||
+            ( layerName == kPlaneLabelColorAlpha) ) {
+            ofxComponents = _dstClip->getPixelComponentsProperty();
+        }
+        bool secret = true;
+        if ( (ofxComponents == kOfxImageComponentAlpha) || (ofxComponents == kOfxImageComponentRGB) || (ofxComponents == kOfxImageComponentRGBA) ) {
+            secret = false;
+        }
+        _outputComponents->setIsSecretAndDisabled(secret);
+    }
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -1553,6 +1557,7 @@ ShufflePlugin::changedClip(const InstanceChangedArgs & /*args*/,
             }
         }
     }
+    updateVisibility();
 }
 
 void
