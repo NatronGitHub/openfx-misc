@@ -76,8 +76,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputBitDepthOptionFloat "Float (32 bits)"
 
 #define kParamOutputPremultiplication "outputPremult"
-#define kParamOutputPremultiplicationLabel "Premultiplication Metadata"
-#define kParamOutputPremultiplicationHint "Set the premultiplication meta-data that will flow down-stream so that further down effects " \
+#define kParamOutputPremultiplicationLabel "Output Premult"
+#define kParamOutputPremultiplicationHint "Set the premultiplication metadata on the output. This does not modify the data itself. The premultiplication metadata will flow downstream so that further down effects " \
     "know what kind of data to expect. By default it should be set to Unpremultiplied and you should always provide the Shuffle node " \
     "unpremultiplied data. Providing alpha-premultiplied data in input of the Shuffle may produce wrong results because of the potential loss " \
     "of the associated alpha channel."
@@ -595,6 +595,8 @@ private:
     void setupAndProcess(ShufflerBase &, const OFX::RenderArguments &args);
     void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const OFX::RenderArguments &args);
 
+    void getDstPixelComps(PixelComponentEnum* originalDstPixelComps, PixelComponentEnum* dstPixelComps);
+
     void updateVisibility()
     {
         //Refresh output components secretness
@@ -615,6 +617,12 @@ private:
         }
 #pragma message WARN("uncomment the following when the above bug is fixed")
         //_outputComponents->setIsSecretAndDisabled(secret);
+
+        // premult is only needed for RGBA
+        PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
+        PixelComponentEnum dstPixelComps = ePixelComponentNone;
+        getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
+        _outputPremult->setIsSecretAndDisabled( !(dstPixelComps == ePixelComponentRGBA) );
     }
 
     // do not need to delete these, the ImageEffect is managing them for us
@@ -1223,6 +1231,46 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     }
 } // ShufflePlugin::render
 
+void
+ShufflePlugin::getDstPixelComps(PixelComponentEnum* originalDstPixelComps, PixelComponentEnum* dstPixelComps)
+{
+    if (gIsMultiPlanar && gSupportsDynamicChoices) {
+        buildChannelMenus();
+        std::string ofxPlane, ofxComponents;
+        getPlaneNeededInOutput(&ofxPlane, &ofxComponents);
+
+        *dstPixelComps = mapStrToPixelComponentEnum(ofxComponents);
+        *originalDstPixelComps = *dstPixelComps;
+        if (*dstPixelComps == OFX::ePixelComponentCustom) {
+            int nComps = std::max( (int)mapPixelComponentCustomToLayerChannels(ofxComponents).size() - 1, 0 );
+            switch (nComps) {
+                case 1:
+                    *dstPixelComps = OFX::ePixelComponentAlpha;
+                    break;
+                case 2:
+                    *dstPixelComps = OFX::ePixelComponentXY;
+                    break;
+                case 3:
+                    *dstPixelComps = OFX::ePixelComponentRGB;
+                    break;
+                case 4:
+                    *dstPixelComps = OFX::ePixelComponentRGBA;
+                default:
+                    break;
+            }
+        } else if ( (*dstPixelComps == OFX::ePixelComponentAlpha) ||
+                   ( *dstPixelComps == OFX::ePixelComponentRGB) ||
+                   ( *dstPixelComps == OFX::ePixelComponentRGBA) ) {
+            //If color plane, select the value chosen by the user from the output components choice
+            *dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
+        }
+    } else {
+        // set the components of _dstClip
+        *dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
+        *originalDstPixelComps = *dstPixelComps;
+    }
+}
+
 /* Override the clip preferences */
 void
 ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
@@ -1230,41 +1278,7 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     PixelComponentEnum originalDstPixelComps = OFX::ePixelComponentNone;
     PixelComponentEnum dstPixelComps = OFX::ePixelComponentNone;
 
-    if (gIsMultiPlanar && gSupportsDynamicChoices) {
-        buildChannelMenus();
-        std::string ofxPlane, ofxComponents;
-        getPlaneNeededInOutput(&ofxPlane, &ofxComponents);
-
-        dstPixelComps = mapStrToPixelComponentEnum(ofxComponents);
-        originalDstPixelComps = dstPixelComps;
-        if (dstPixelComps == OFX::ePixelComponentCustom) {
-            int nComps = std::max( (int)mapPixelComponentCustomToLayerChannels(ofxComponents).size() - 1, 0 );
-            switch (nComps) {
-            case 1:
-                dstPixelComps = OFX::ePixelComponentAlpha;
-                break;
-            case 2:
-                dstPixelComps = OFX::ePixelComponentXY;
-                break;
-            case 3:
-                dstPixelComps = OFX::ePixelComponentRGB;
-                break;
-            case 4:
-                dstPixelComps = OFX::ePixelComponentRGBA;
-            default:
-                break;
-            }
-        } else if ( (dstPixelComps == OFX::ePixelComponentAlpha) ||
-                    ( dstPixelComps == OFX::ePixelComponentRGB) ||
-                    ( dstPixelComps == OFX::ePixelComponentRGBA) ) {
-            //If color plane, select the value chosen by the user from the output components choice
-            dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
-        }
-    } else {
-        // set the components of _dstClip
-        dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
-        originalDstPixelComps = dstPixelComps;
-    }
+    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
 
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
 
@@ -1278,26 +1292,11 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         clipPreferences.setClipBitDepth(*_dstClip, outputBitDepth);
     }
 
-    OFX::PreMultiplicationEnum premult = eImageUnPreMultiplied;
+    OFX::PreMultiplicationEnum premult = eImageUnPreMultiplied; // default for Alpha and others
     if (dstPixelComps == OFX::ePixelComponentRGB) {
         premult = OFX::eImageOpaque;
     } else {
-        int premult_i;
-        _outputPremult->getValue(premult_i);
-        switch (premult_i) {
-            case 0:
-                premult = OFX::eImageOpaque;
-                break;
-            case 1:
-                premult = OFX::eImagePreMultiplied;
-                break;
-            case 2:
-                premult = OFX::eImageUnPreMultiplied;
-                break;
-            default:
-                assert(false);
-                break;
-        }
+        PreMultiplicationEnum premult = (PreMultiplicationEnum)_outputPremult->getValue();
     }
     clipPreferences.setOutputPremultiplication(premult);
 } // ShufflePlugin::getClipPreferences
@@ -1542,6 +1541,7 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args,
             return;
         }
     }
+    updateVisibility();
 } // ShufflePlugin::changedParam
 
 void
@@ -1901,6 +1901,25 @@ ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputPremultiplication);
+        param->setLabel(kParamOutputPremultiplicationLabel);
+        param->setHint(kParamOutputPremultiplicationHint);
+        param->setAnimates(false);
+        assert(param->getNOptions() == eImageOpaque);
+        param->appendOption("Opaque");
+        assert(param->getNOptions() == eImagePreMultiplied);
+        param->appendOption("Premultiplied");
+        assert(param->getNOptions() == eImageUnPreMultiplied);
+        param->appendOption("Unpremultiplied");
+        param->setDefault((int)eImageUnPreMultiplied);
+        if (page) {
+            page->addChild(*param);
+        }
+        desc.addClipPreferencesSlaveParam(*param);
+    }
+
     // ouputBitDepth
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputBitDepth);
@@ -2000,20 +2019,6 @@ ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputPremultiplication);
-        param->setLabel(kParamOutputPremultiplicationLabel);
-        param->setHint(kParamOutputPremultiplicationHint);
-        param->setAnimates(false);
-        param->appendOption("Opaque");
-        param->appendOption("Premultiplied");
-        param->appendOption("Unpremultiplied");
-        param->setDefault(2);
-        if (page) {
-            page->addChild(*param);
-        }
-        desc.addClipPreferencesSlaveParam(*param);
-    }
 
     // clipInfo
     {
