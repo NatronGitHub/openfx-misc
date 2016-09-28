@@ -46,7 +46,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "KeyMixOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
-    "Copies the pixel from A to B only where the Mask is non-zero. Same as the Matte operation, but alpha for input A is taken from an external mask, and the output alpha is mixed between A and B. Output bounding box is the union of A and B."
+    "KeyMix takes two images and layers them together according to a third input. It can be used to lay a foreground over a background using the output of a keyer. The only disadvantage to this method is that it outputs an image with no alpha.\n" \
+"\n" \
+"It copies the pixel from A to B only where the Mask is non-zero. It is the same as the Matte operation, but alpha for input A is taken from an external mask, and the output alpha is mixed between A and B. The output bounding box is the union of A and B.\n" \
+"\n" \
+"As well as functioning as a layering node, it can also be used to integrate two color operations with one mask. This guards against 'recycled masks', where two consecutive color filters are masked using the same mask, which may generate strange artifacts.\n" \
+"\n" \
+"qSee also http://opticalenquiry.com/nuke/index.php?title=KeyMix"
 
 #define kPluginIdentifier "net.sf.openfx.KeyMix"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
