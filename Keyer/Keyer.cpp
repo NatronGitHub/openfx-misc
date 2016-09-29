@@ -180,7 +180,7 @@ enum LuminanceMathEnum
 #define kParamSourceAlphaOptionIgnoreHint "Ignore the source alpha."
 #define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask"
 #define kParamSourceAlphaOptionAddToInsideMaskHint "Source alpha is added to the inside mask. Use for multi-pass keying."
-#define kSourceAlphaNormalOption "Normal"
+#define kParamSourceAlphaOptionNormal "Normal"
 #define kParamSourceAlphaOptionNormalHint "Foreground key is multiplied by source alpha when compositing."
 
 #define kClipSourceHint "The foreground image to key."
@@ -430,12 +430,12 @@ private:
                 const PIX *bgPix = (const PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
-                float inMask = inMaskPix ? *inMaskPix : 0.f;
+                float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
                 if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && (nComponents == 4) && srcPix ) {
                     // take the max of inMask and the source Alpha
                     inMask = std::max( inMask, sampleToFloat<PIX, maxValue>(srcPix[3]) );
                 }
-                float outMask = outMaskPix ? *outMaskPix : 0.f;
+                float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
                 double Kbg = 0.;
 
                 // clamp inMask and outMask in the [0,1] range
@@ -1207,7 +1207,7 @@ KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         assert(param->getNOptions() == (int)eSourceAlphaAddToInsideMask);
         param->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
         assert(param->getNOptions() == (int)eSourceAlphaNormal);
-        param->appendOption(kSourceAlphaNormalOption, kParamSourceAlphaOptionNormalHint);
+        param->appendOption(kParamSourceAlphaOptionNormal, kParamSourceAlphaOptionNormalHint);
         param->setDefault( (int)eSourceAlphaIgnore );
         param->setAnimates(true);
         if (page) {
