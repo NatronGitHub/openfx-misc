@@ -28,6 +28,8 @@
 #include "ofxsCoords.h"
 #include "ofxsRectangleInteract.h"
 #include "ofxsMacros.h"
+#include "ofxsGenerator.h"
+#include "ofxsFormatResolution.h"
 
 using namespace OFX;
 
@@ -35,7 +37,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "CropOFX"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Removes everything outside the defined rectangle and adds black edges so everything outside is black.\n" \
+#define kPluginDescription "Removes everything outside the defined rectangle and optionally adds black edges so everything outside is black.\n" \
+    "If the 'Extent' parameter is set to 'Format', and 'Reformat' is checked, the output pixel aspect ratio is also set to this of the format.\n" \
     "This plugin does not concatenate transforms."
 #define kPluginIdentifier "net.sf.openfx.CropPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -233,8 +236,14 @@ public:
         : ImageEffect(handle)
         , _dstClip(0)
         , _srcClip(0)
+        , _extent(0)
+        , _format(0)
+        , _formatSize(0)
+        , _formatPar(0)
         , _btmLeft(0)
         , _size(0)
+        , _interactive(0)
+        , _recenter(0)
         , _softness(0)
         , _reformat(0)
         , _intersect(0)
@@ -251,14 +260,22 @@ public:
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
         _rectangleInteractEnable = fetchBooleanParam(kParamRectangleInteractEnable);
+        _extent = fetchChoiceParam(kParamGeneratorExtent);
+        _format = fetchChoiceParam(kParamGeneratorFormat);
+        _formatSize = fetchInt2DParam(kParamGeneratorSize);
+        _formatPar = fetchDoubleParam(kParamGeneratorPAR);
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
+        _recenter = fetchPushButtonParam(kParamGeneratorCenter);
+        _interactive = fetchBooleanParam(kParamRectangleInteractInteractive);
         _softness = fetchDoubleParam(kParamSoftness);
         _reformat = fetchBooleanParam(kParamReformat);
         _intersect = fetchBooleanParam(kParamIntersect);
         _blackOutside = fetchBooleanParam(kParamBlackOutside);
 
         assert(_rectangleInteractEnable && _btmLeft && _size && _softness && _reformat && _intersect && _blackOutside);
+
+        updateParamsVisibility();
     }
 
 private:
@@ -277,15 +294,30 @@ private:
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
     void getCropRectangle_canonical(OfxTime time, bool useReformat, bool forceIntersect, OfxRectD& cropRect) const;
+
+    void updateParamsVisibility();
+
+    OFX::Clip* getSrcClip() const
+    {
+        return _srcClip;
+    }
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::BooleanParam* _rectangleInteractEnable;
+    OFX::ChoiceParam* _extent;
+    OFX::ChoiceParam* _format;
+    OFX::Int2DParam* _formatSize;
+    OFX::DoubleParam* _formatPar;
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _size;
+    OFX::BooleanParam* _interactive;
+    OFX::PushButtonParam *_recenter;
     OFX::DoubleParam* _softness;
     OFX::BooleanParam* _reformat;
     OFX::BooleanParam* _intersect;
@@ -316,16 +348,63 @@ CropPlugin::getCropRectangle_canonical(OfxTime time,
     bool blackOutside;
     _blackOutside->getValueAtTime(time, blackOutside);
 
-    if (reformat) {
-        cropRect.x1 = cropRect.y1 = 0.;
-    } else {
-        _btmLeft->getValueAtTime(time, cropRect.x1, cropRect.y1);
+    OfxRectD &rod = cropRect;
+
+    // below: see GeneratorPlugin::getRegionOfDefinition
+
+    GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+
+    switch (extent) {
+        case eGeneratorExtentFormat: {
+            int w, h;
+            _formatSize->getValue(w, h);
+            double par;
+            _formatPar->getValue(par);
+            OfxRectI pixelFormat;
+            pixelFormat.x1 = pixelFormat.y1 = 0;
+            pixelFormat.x2 = w;
+            pixelFormat.y2 = h;
+            OfxPointD renderScale = {1., 1.};
+            OFX::Coords::toCanonical(pixelFormat, renderScale, par, &rod);
+            break;
+        }
+        case eGeneratorExtentSize: {
+            _size->getValueAtTime(time, rod.x2, rod.y2);
+            _btmLeft->getValue(rod.x1, rod.y1);
+            rod.x2 += rod.x1;
+            rod.y2 += rod.y1;
+            break;
+        }
+        case eGeneratorExtentProject: {
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            rod.x1 = off.x;
+            rod.x2 = off.x + siz.x;
+            rod.y1 = off.y;
+            rod.y2 = off.y + siz.y;
+            break;
+       }
+        case eGeneratorExtentDefault: {
+            if (_srcClip->isConnected()) {
+                rod = _srcClip->getRegionOfDefinition(time);
+            } else {
+                OfxPointD siz = getProjectSize();
+                OfxPointD off = getProjectOffset();
+                rod.x1 = off.x;
+                rod.x2 = off.x + siz.x;
+                rod.y1 = off.y;
+                rod.y2 = off.y + siz.y;
+            }
+            break;
+        }
     }
 
-    double w, h;
-    _size->getValueAtTime(time, w, h);
-    cropRect.x2 = cropRect.x1 + w;
-    cropRect.y2 = cropRect.y1 + h;
+    if (reformat) {
+        cropRect.x2 -= cropRect.x1;
+        cropRect.x1 = 0;
+        cropRect.y2 -= cropRect.y1;
+        cropRect.y1 = 0;
+    }
 
     if (blackOutside) {
         cropRect.x1 -= 1;
@@ -507,15 +586,95 @@ CropPlugin::render(const OFX::RenderArguments &args)
 }
 
 void
+CropPlugin::updateParamsVisibility()
+{
+    GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+    bool hasFormat = (extent == eGeneratorExtentFormat);
+    bool hasSize = (extent == eGeneratorExtentSize);
+
+    _format->setIsSecretAndDisabled(!hasFormat);
+    _size->setIsSecretAndDisabled(!hasSize);
+    _recenter->setIsSecretAndDisabled(!hasSize);
+    _btmLeft->setIsSecretAndDisabled(!hasSize);
+    _interactive->setIsSecretAndDisabled(!hasSize);
+}
+
+
+void
 CropPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                          const std::string &paramName)
 {
+    const double time = args.time;
+
     if (paramName == kParamReformat) {
         bool reformat;
         _reformat->getValueAtTime(args.time, reformat);
         _rectangleInteractEnable->setValue(!reformat);
+
+    // everything below is from GeneratorPlugin::changedParam()
+    } else if ( (paramName == kParamGeneratorExtent) && (args.reason == OFX::eChangeUserEdit) ) {
+        updateParamsVisibility();
+    } else if (paramName == kParamGeneratorFormat) {
+        //the host does not handle the format itself, do it ourselves
+        OFX::EParamFormat format = (OFX::EParamFormat)_format->getValue();
+        int w = 0, h = 0;
+        double par = -1;
+        getFormatResolution(format, &w, &h, &par);
+        assert(par != -1);
+        _formatPar->setValue(par);
+        _formatSize->setValue(w, h);
+    } else if (paramName == kParamGeneratorCenter) {
+        OFX::Clip* srcClip = getSrcClip();
+        OfxRectD srcRoD;
+        if ( srcClip && srcClip->isConnected() ) {
+            srcRoD = srcClip->getRegionOfDefinition(args.time);
+        } else {
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            srcRoD.x1 = off.x;
+            srcRoD.x2 = off.x + siz.x;
+            srcRoD.y1 = off.y;
+            srcRoD.y2 = off.y + siz.y;
+        }
+        OfxPointD center;
+        center.x = (srcRoD.x2 + srcRoD.x1) / 2.;
+        center.y = (srcRoD.y2 + srcRoD.y1) / 2.;
+
+        OfxRectD rectangle;
+        _size->getValueAtTime(time, rectangle.x2, rectangle.y2);
+        _btmLeft->getValueAtTime(time, rectangle.x1, rectangle.y1);
+        rectangle.x2 += rectangle.x1;
+        rectangle.y2 += rectangle.y1;
+
+        OfxRectD newRectangle;
+        newRectangle.x1 = center.x - (rectangle.x2 - rectangle.x1) / 2.;
+        newRectangle.y1 = center.y - (rectangle.y2 - rectangle.y1) / 2.;
+        newRectangle.x2 = newRectangle.x1 + (rectangle.x2 - rectangle.x1);
+        newRectangle.y2 = newRectangle.y1 + (rectangle.y2 - rectangle.y1);
+
+        _size->setValue(newRectangle.x2 - newRectangle.x1, newRectangle.y2 - newRectangle.y1);
+        _btmLeft->setValue(newRectangle.x1, newRectangle.y1);
+    }
+
+}
+
+void
+CropPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    if ( _reformat->getValue() ) {
+        GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+
+        if (extent == eGeneratorExtentFormat) {
+            //specific output format
+            double par = _formatPar->getValue();
+            if (par != 0.) {
+                clipPreferences.setPixelAspectRatio(*_dstClip, par);
+            }
+        }
+        
     }
 }
+
 
 class CropInteract
     : public RectangleInteract
@@ -634,7 +793,7 @@ CropPluginFactory::createInstance(OfxImageEffectHandle handle,
 
 void
 CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                     OFX::ContextEnum /*context*/)
+                                     OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -670,52 +829,7 @@ CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    // btmLeft
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-        param->setLabel(kParamRectangleInteractBtmLeftLabel);
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-        param->setDefault(0., 0.);
-        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-        param->setIncrement(1.);
-        param->setHint("Coordinates of the bottom left corner of the crop rectangle.");
-        param->setDigits(0);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // size
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
-        param->setLabel(kParamRectangleInteractSizeLabel);
-        param->setDoubleType(eDoubleTypeXY);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-        param->setDefault(1., 1.);
-        param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-        param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-        param->setIncrement(1.);
-        param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
-        param->setHint("Width and height of the crop rectangle.");
-        param->setIncrement(1.);
-        param->setDigits(0);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // interactive
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
-        param->setLabel(kParamRectangleInteractInteractiveLabel);
-        param->setHint(kParamRectangleInteractInteractiveHint);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
+    generatorDescribeInContext(page, desc, /*unused*/ *dstClip, eGeneratorExtentSize, /*unused*/ ePixelComponentRGBA, /*useOutputComponentsAndDepth=*/ false, context);
 
     // softness
     {
@@ -737,8 +851,9 @@ CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamReformatLabel);
         param->setHint(kParamReformatHint);
         param->setDefault(kParamReformatDefault);
-        param->setAnimates(true);
+        param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
