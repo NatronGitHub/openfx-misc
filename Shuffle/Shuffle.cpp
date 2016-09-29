@@ -1297,7 +1297,7 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     if (dstPixelComps == OFX::ePixelComponentRGB) {
         premult = OFX::eImageOpaque;
     } else {
-        PreMultiplicationEnum premult = (PreMultiplicationEnum)_outputPremult->getValue();
+        premult = (PreMultiplicationEnum)_outputPremult->getValue();
     }
     clipPreferences.setOutputPremultiplication(premult);
 } // ShufflePlugin::getClipPreferences
