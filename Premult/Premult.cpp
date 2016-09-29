@@ -639,8 +639,8 @@ PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args,
 
 template<bool isPremult>
 void
-PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args,
-                                      const std::string &clipName)
+PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &/*args*/,
+                                      const std::string &/*clipName*/)
 {
     // It is very dangerous to set this from the input premult, which is sometimes wrong.
     // If the user wants to premult/unpremul, the default should always be to premult/unpremult

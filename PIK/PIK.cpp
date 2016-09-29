@@ -280,17 +280,6 @@ enum ColorspaceEnum
     eColorspaceACESAP1,
 };
 
-// This is for Rec.709
-// see http://www.poynton.com/notes/colour_and_gamma/GammaFAQ.html#luminance
-static inline
-double
-rgb2luminance_rec709(double r,
-                     double g,
-                     double b)
-{
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
 class PIKProcessorBase
     : public OFX::ImageProcessor
 {

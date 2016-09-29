@@ -597,10 +597,6 @@ void
 KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                                               OFX::ContextEnum context)
 {
-    //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
-    //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
-                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
     srcClipB->setHint(kClipBHint);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
@@ -696,13 +692,8 @@ KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 OFX::ImageEffect*
 KeyMixPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                           OFX::ContextEnum /*context*/)
+                                    OFX::ContextEnum /*context*/)
 {
-    //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
-    //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
-                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
-
     return new KeyMixPlugin(handle);
 }
 
