@@ -597,33 +597,7 @@ private:
 
     void getDstPixelComps(PixelComponentEnum* originalDstPixelComps, PixelComponentEnum* dstPixelComps);
 
-    void updateVisibility()
-    {
-        //Refresh output components secretness
-        std::string layerName, ofxComps;
-        getPlaneNeededInOutput(&layerName, &ofxComps);
-
-        std::string ofxComponents;
-#pragma message WARN("BUG; here, layerName is uk.co.thefoundry.OfxImagePlaneColour and none of the four tested values")
-        if ( layerName.empty() ||
-            ( layerName == kPlaneLabelColorRGBA) ||
-            ( layerName == kPlaneLabelColorRGB) ||
-            ( layerName == kPlaneLabelColorAlpha) ) {
-            ofxComponents = _dstClip->getPixelComponentsProperty();
-        }
-        bool secret = true;
-        if ( (ofxComponents == kOfxImageComponentAlpha) || (ofxComponents == kOfxImageComponentRGB) || (ofxComponents == kOfxImageComponentRGBA) ) {
-            secret = false;
-        }
-#pragma message WARN("uncomment the following when the above bug is fixed")
-        //_outputComponents->setIsSecretAndDisabled(secret);
-
-        // premult is only needed for RGBA
-        PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
-        PixelComponentEnum dstPixelComps = ePixelComponentNone;
-        getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
-        _outputPremult->setIsSecretAndDisabled( !(dstPixelComps == ePixelComponentRGBA) );
-    }
+    void updateVisibility();
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -1261,7 +1235,8 @@ ShufflePlugin::getDstPixelComps(PixelComponentEnum* originalDstPixelComps, Pixel
         } else if ( (*dstPixelComps == OFX::ePixelComponentAlpha) ||
                    ( *dstPixelComps == OFX::ePixelComponentRGB) ||
                    ( *dstPixelComps == OFX::ePixelComponentRGBA) ) {
-            //If color plane, select the value chosen by the user from the output components choice
+            // If color plane, select the value chosen by the user from the output components choice
+            // this should be the same test as is updateVisibility()
             *dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
         }
     } else {
@@ -1269,6 +1244,32 @@ ShufflePlugin::getDstPixelComps(PixelComponentEnum* originalDstPixelComps, Pixel
         *dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
         *originalDstPixelComps = *dstPixelComps;
     }
+}
+
+void
+ShufflePlugin::updateVisibility()
+{
+    //Refresh output components secretness
+    if (gIsMultiPlanar) {
+        bool secret = true;
+        std::string ofxPlane, ofxComponents;
+        getPlaneNeededInOutput(&ofxPlane, &ofxComponents);
+        PixelComponentEnum dstPixelComps = mapStrToPixelComponentEnum(ofxComponents);
+        // same code as in getDstPixelComps: If it is a color plane, select the value chosen by the user from the output components choice
+        if ( (dstPixelComps == OFX::ePixelComponentAlpha) ||
+            ( dstPixelComps == OFX::ePixelComponentRGB) ||
+            ( dstPixelComps == OFX::ePixelComponentRGBA) ) {
+            //If color plane, select the value chosen by the user from the output components choice
+            secret = false;
+        }
+        _outputComponents->setIsSecretAndDisabled(secret);
+    }
+
+    // premult is only needed for RGBA
+    PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
+    PixelComponentEnum dstPixelComps = ePixelComponentNone;
+    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
+    _outputPremult->setIsSecretAndDisabled( !(dstPixelComps == ePixelComponentRGBA) );
 }
 
 /* Override the clip preferences */
