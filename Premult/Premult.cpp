@@ -44,16 +44,22 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginPremultName "PremultOFX"
 #define kPluginPremultGrouping "Merge"
 #define kPluginPremultDescription \
-    "Multiply the selected channels by alpha (or another channel).\n\n" \
+    "Multiply the selected channels by alpha (or another channel).\n" \
+"\n" \
     "If no channel is selected, or the premultChannel is set to None, the " \
-    "image data is left untouched, but its premultiplication state is set to PreMultiplied."
+    "image data is left untouched, but its premultiplication state is set to PreMultiplied.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Premultiplication"
+
 #define kPluginPremultIdentifier "net.sf.openfx.Premult"
 #define kPluginUnpremultName "UnpremultOFX"
 #define kPluginUnpremultGrouping "Merge"
 #define kPluginUnpremultDescription \
-    "Divide the selected channels by alpha (or another channel)\n\n" \
+    "Divide the selected channels by alpha (or another channel)\n" \
+"\n" \
     "If no channel is selected, or the premultChannel is set to None, the " \
-    "image data is left untouched, but its premultiplication state is set to UnPreMultiplied."
+"image data is left untouched, but its premultiplication state is set to UnPreMultiplied.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Premultiplication"
+
 #define kPluginUnpremultIdentifier "net.sf.openfx.Unpremult"
 // History:
 // version 1.0: initial version

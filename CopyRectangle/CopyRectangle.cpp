@@ -36,7 +36,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "CopyRectangleOFX"
 #define kPluginGrouping "Merge"
-#define kPluginDescription "Copies a rectangle from the input A to the input B in output. It can be used to limit an effect to a rectangle of the original image by plugging the original image into the input B."
+#define kPluginDescription "Copies a rectangle from the input A to the input B in output.\n" \
+"It can be used to limit an effect to a rectangle of the original image by plugging the original image into the input B.\n" \
+"See also http://opticalenquiry.com/nuke/index.php?title=CopyRectange"
+
 #define kPluginIdentifier "net.sf.openfx.CopyRectanglePlugin"
 // History:
 // version 1.0: initial version

@@ -59,7 +59,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Draw"
 #define kPluginDescription \
     "Draw a rectangle.\n" \
-    "The rectangle is composited with the source image using the 'over' operator."
+    "The rectangle is composited with the source image using the 'over' operator.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Rectangle"
+
 #define kPluginIdentifier "net.sf.openfx.Rectangle"
 // History:
 // version 1.0: initial version

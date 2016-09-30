@@ -42,7 +42,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "CheckerBoardOFX"
 #define kPluginGrouping "Image"
-#define kPluginDescription "Generate an image with a checkerboard. A frame range may be specified for operators that need it."
+#define kPluginDescription \
+"Generate an image with a checkerboard.\n" \
+"A frame range may be specified for operators that need it.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
+
 #define kPluginIdentifier "net.sf.openfx.CheckerBoardPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

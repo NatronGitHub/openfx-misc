@@ -50,7 +50,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Draw"
 #define kPluginDescription \
     "Radial ramp.\n" \
-    "The ramp is composited with the source image using the 'over' operator."
+    "The ramp is composited with the source image using the 'over' operator.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Radial"
+
 #define kPluginIdentifier "net.sf.openfx.Radial"
 // History:
 // version 1.0: initial version

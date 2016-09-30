@@ -143,7 +143,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "\n" \
 "The basic equation used to extract the key in PIK is (in the case of \"green\" keying):\n" \
 "alpha = 0 if (Ag-Ar*rw-Ab*gbw) is negative, else 1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw)\n" \
-"A is input PFg and B is input C, rw is the value of \"Red Weight\" and gbw is the value of \"Green/Blue Weight\"."
+"A is input PFg and B is input C, rw is the value of \"Red Weight\" and gbw is the value of \"Green/Blue Weight\".\n" \
+"\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#IBK"
 
 #define kPluginIdentifier "net.sf.openfx.PIK"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

@@ -41,7 +41,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ReformatOFX"
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Convert the image to another format or size\n" \
-    "This plugin concatenates transforms."
+    "This plugin concatenates transforms.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Reformat"
+
 #define kPluginIdentifier "net.sf.openfx.Reformat"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.

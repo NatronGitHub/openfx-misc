@@ -38,15 +38,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "GradeOFX"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Modify the tonal spread of an image from the white and black points. " \
+#define kPluginDescription "Modify the tonal spread of an image from the white and black points.\n" \
     "This node can also be used to match colors of 2 images: The darkest and lightest points of " \
     "the target image are converted to black and white using the blackpoint and whitepoint values. " \
     "These 2 values are then moved to new values using the black(for dark point) and white(for white point). " \
-    "You can also apply multiply/offset/gamma for other color fixing you may need. " \
-    "Here is the formula used: \n" \
-    "A = multiply * (white - black) / (whitepoint - blackpoint) \n" \
-    "B = offset + black - A * blackpoint \n" \
-    "output = pow(A * input + B, 1 / gamma)."
+    "You can also apply multiply/offset/gamma for other color fixing you may need.\n" \
+    "Here is the formula used:\n" \
+    "A = multiply * (white - black) / (whitepoint - blackpoint)\n" \
+    "B = offset + black - A * blackpoint\n" \
+    "output = pow(A * input + B, 1 / gamma).\n" \
+    "\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Grade and http://opticalenquiry.com/nuke/index.php?title=Integration#Matching_color"
 #define kPluginIdentifier "net.sf.openfx.GradePlugin"
 // History:
 // version 1.0: initial version

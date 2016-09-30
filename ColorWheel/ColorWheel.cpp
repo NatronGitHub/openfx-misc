@@ -41,7 +41,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "ColorWheelOFX"
 #define kPluginGrouping "Image"
-#define kPluginDescription "Generate an image with a color wheel."
+#define kPluginDescription "Generate an image with a color wheel.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 #define kPluginIdentifier "net.sf.openfx.ColorWheel"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

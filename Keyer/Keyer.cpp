@@ -57,7 +57,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "toleranceLower = (B-C)/2\n" \
     "center = (B+C)/2\n" \
     "toleranceUpper = (C-B)/2\n" \
-    "softnessUpper = (D-C)"
+    "softnessUpper = (D-C)\n" \
+"\n" \
+"See also:\n" \
+"- http://opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#Keyer\n" \
+"- http://opticalenquiry.com/nuke/index.php?title=Green_Screen\n" \
+"- http://opticalenquiry.com/nuke/index.php?title=Keying_Tips"
 
 #define kPluginIdentifier "net.sf.openfx.KeyerPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

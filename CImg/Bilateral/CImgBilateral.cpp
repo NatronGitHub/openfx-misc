@@ -49,6 +49,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Blur input stream by bilateral filtering.\n" \
     "Uses the 'blur_bilateral' function from the CImg library.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Bilateral\n" \
+"\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
     "It can be used in commercial applications (see http://cimg.eu)."

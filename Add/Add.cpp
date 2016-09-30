@@ -41,7 +41,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "AddOFX"
 #define kPluginGrouping "Color/Math"
-#define kPluginDescription "Add a constant to the selected channels."
+#define kPluginDescription \
+"Add a constant to the selected channels.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Add"
 #define kPluginIdentifier "net.sf.openfx.AddPlugin"
 
 // History:

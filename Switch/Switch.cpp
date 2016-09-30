@@ -58,7 +58,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "desynchronization, whereas using \"AppendClip\" instead of \"Switch\" may shift time if there is an " \
     "error in one of the FrameRange ranges (a typical error is to use the same frame number as the " \
     "last frame of shot n and the first frame of shot n+1).\n" \
-    "This plugin concatenates transforms."
+    "This plugin concatenates transforms.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Switch"
+
 #define kPluginIdentifier "net.sf.openfx.switchPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

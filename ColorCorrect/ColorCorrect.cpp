@@ -38,9 +38,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "ColorCorrectOFX"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Adjusts the saturation, constrast, gamma, gain and offset of an image. " \
+#define kPluginDescription "Adjusts the saturation, constrast, gamma, gain and offset of an image.\n" \
     "The ranges of the shadows, midtones and highlights are controlled by the curves " \
-    "in the \"Ranges\" tab. "
+"in the \"Ranges\" tab.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=ColorCorrect"
+
 #define kPluginIdentifier "net.sf.openfx.ColorCorrectPlugin"
 // History:
 // version 1.0: initial version

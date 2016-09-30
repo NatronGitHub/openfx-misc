@@ -53,8 +53,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also:\n" \
     "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
     "- \"SVG Compositing Specification\" https://www.w3.org/TR/SVGCompositing/\n" \
-    " - \"ISO 32000-1:2008: Portable Document Format (July 2008)\", Sec. 11.3 \"Basic Compositing Operations\"  http://www.adobe.com/devnet/pdf/pdf_reference.html\n" \
+    "- \"ISO 32000-1:2008: Portable Document Format (July 2008)\", Sec. 11.3 \"Basic Compositing Operations\"  http://www.adobe.com/devnet/pdf/pdf_reference.html\n" \
+    "- \"Merge\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge\n" \
     "- \"Merge Blend Modes\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge_Blend_Modes\n" \
+    "- \"Primacy of the B Feed\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Primacy_of_the_B_Feed\n" \
     "- grain-extract and grain-merge are described in http://docs.gimp.org/en/gimp-concepts-layer-modes.html"
 
 #define kPluginGroupingSub "Merge/Merges"

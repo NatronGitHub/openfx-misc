@@ -38,7 +38,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "ClampOFX"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Clamp the values of the selected channels"
+#define kPluginDescription "Clamp the values of the selected channels.\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=Clamp"
 #define kPluginIdentifier "net.sf.openfx.Clamp"
 // History:
 // version 1.0: initial version

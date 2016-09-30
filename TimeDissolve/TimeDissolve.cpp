@@ -41,7 +41,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "TimeDissolveOFX"
 #define kPluginGrouping "Merge"
-#define kPluginDescription "Dissolves between two inputs, starting the dissolve at the in frame and ending at the out frame. You can specify the dissolve curve over time, if the OFX host supports it (else it is a traditional smoothstep)."
+#define kPluginDescription "Dissolves between two inputs, starting the dissolve at the in frame and ending at the out frame.\n" \
+"You can specify the dissolve curve over time, if the OFX host supports it (else it is a traditional smoothstep).\n" \
+"See also http://opticalenquiry.com/nuke/index.php?title=TimeDissolve"
+
 #define kPluginIdentifier "net.sf.openfx.TimeDissolvePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
