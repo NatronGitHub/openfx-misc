@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Crop.o ofxsRectangleInteract.o
+PLUGINOBJECTS = Crop.o ofxsRectangleInteract.o ofxsGenerator.o
 PLUGINNAME = Crop
 RESOURCES = net.sf.openfx.CropPlugin.png net.sf.openfx.CropPlugin.svg
 

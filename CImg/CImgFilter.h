@@ -270,7 +270,6 @@ protected:
     bool _supportsMultiResolution;
     bool _supportsRenderScale;
     bool _defaultUnpremult; //!< unpremult by default
-    bool _defaultProcessAlphaOnRGBA; //!< process alpha by default on RGBA images
     OFX::BooleanParam* _premultChanged; // set to true the when user changes premult
 };
 

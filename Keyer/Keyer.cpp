@@ -501,7 +501,7 @@ private:
                         Kbg = key_bg(Kfg);
                     }
                     // nonadditive mix between the key generator and the garbage matte (outMask)
-                    // note tha in Chromakeyer this is done before on Kfg instead of Kbg.
+                    // note that in Chromakeyer this is done before on Kfg instead of Kbg.
                     if ( (inMask > 0.) && (Kbg > 1. - inMask) ) {
                         Kbg = 1. - inMask;
                     }
