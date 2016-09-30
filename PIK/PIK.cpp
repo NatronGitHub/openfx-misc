@@ -561,6 +561,16 @@ private:
                     for (int i = 0; i < 4; ++i) {
                         out[i] = fg[i];
                     }
+                    // nonadditive mix between the key generator and the garbage matte (outMask)
+                    // outside mask has priority over inside mask, treat inside first
+                    float alpha = out[3];
+                    if ( (inMask > 0.) && (alpha < inMask) ) {
+                        alpha = inMask;
+                    }
+                    if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
+                        alpha = 1. - outMask;
+                    }
+                    out[3] = alpha;
                 } else {
                     float alpha = 0.;
                     if (_screenType == eScreenTypeGreen) {
@@ -651,6 +661,15 @@ private:
                         }
                     }
 
+                    // nonadditive mix between the key generator and the garbage matte (outMask)
+                    // outside mask has priority over inside mask, treat inside first
+                    if ( (inMask > 0.) && (alpha < inMask) ) {
+                        alpha = inMask;
+                    }
+                    if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
+                        alpha = 1. - outMask;
+                    }
+
                     if (_ss) {
                         if (alpha >= 1) {
                             for (int i = 0; i < 3; ++i) {
@@ -698,19 +717,6 @@ private:
                     }
                     if (_clampAlpha && alpha < 0.) {
                         alpha = 0.;
-                    }
-                    out[3] = alpha;
-                }
-
-                {
-                    // nonadditive mix between the key generator and the garbage matte (outMask)
-                    // outside mask has priority over inside mask, treat inside first
-                    float alpha = out[3];
-                    if ( (inMask > 0.) && (alpha < inMask) ) {
-                        alpha = inMask;
-                    }
-                    if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
-                        alpha = 1. - outMask;
                     }
                     out[3] = alpha;
                 }
