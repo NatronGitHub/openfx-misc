@@ -136,7 +136,9 @@ CXXFLAGS += \
 # commit 4d607387b95ba7608b5ae451971e1a0528990bd0 is CImg 1.7.2 + windows fixes
 # commit 93d77710300f4ac96aa5bfb0a2d7a5322216fe66 is CImg 1.7.4
 # commit 1d31b3cdb7b7c102183e1e52d6d293c36a88760c is CImg 1.7.5
-CIMGVERSION=1d31b3cdb7b7c102183e1e52d6d293c36a88760c
+# commit 24d8d833b2ae937f87d88da299314b9cd4561e63 is CImg 1.7.6
+# commit 02ec481605f4dd68dec9d8c5b7b4bd763ad31cac is CImg 1.7.7
+CIMGVERSION=02ec481605f4dd68dec9d8c5b7b4bd763ad31cac
 
 CImg.h:
 	curl -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
