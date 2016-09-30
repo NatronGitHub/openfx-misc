@@ -666,18 +666,22 @@ bool
 ShufflePlugin::isIdentityInternal(double time,
                                   OFX::Clip*& identityClip)
 {
+    PixelComponentEnum srcAComponents = _srcClipA->getPixelComponents();
+    PixelComponentEnum srcBComponents = _srcClipB->getPixelComponents();
+    PixelComponentEnum dstComponents = _dstClip->getPixelComponents();
+
     if (!gSupportsDynamicChoices || !gIsMultiPlanar) {
         InputChannelEnum r = InputChannelEnum( _channelParam[0]->getValueAtTime(time) );
         InputChannelEnum g = InputChannelEnum( _channelParam[1]->getValueAtTime(time) );
         InputChannelEnum b = InputChannelEnum( _channelParam[2]->getValueAtTime(time) );
         InputChannelEnum a = InputChannelEnum( _channelParam[3]->getValueAtTime(time) );
 
-        if ( (r == eInputChannelAR) && (g == eInputChannelAG) && (b == eInputChannelAB) && (a == eInputChannelAA) && _srcClipA ) {
+        if ( (r == eInputChannelAR) && (g == eInputChannelAG) && (b == eInputChannelAB) && (a == eInputChannelAA) && _srcClipA && srcAComponents == dstComponents) {
             identityClip = _srcClipA;
 
             return true;
         }
-        if ( (r == eInputChannelBR) && (g == eInputChannelBG) && (b == eInputChannelBB) && (a == eInputChannelBA) && _srcClipB ) {
+        if ( (r == eInputChannelBR) && (g == eInputChannelBG) && (b == eInputChannelBB) && (a == eInputChannelBA) && _srcClipB && srcBComponents == dstComponents) {
             identityClip = _srcClipB;
 
             return true;
@@ -722,6 +726,9 @@ ShufflePlugin::isIdentityInternal(double time,
                 }
             }
             expectedIndex = data[i].index + 1;
+        }
+        if (data[0].components != dstComponents) {
+            return false;
         }
         identityClip = data[0].clip;
 
