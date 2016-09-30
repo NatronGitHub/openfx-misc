@@ -189,7 +189,7 @@ enum LuminanceMathEnum
 #define kClipInsideMask "InM"
 #define kClipInsideMaskHint "The Inside Mask, or holdout matte, or core matte, used to confirm areas that are definitely foreground."
 #define kClipOutsidemask "OutM"
-#define kClipOutsideMaskHint "The Outside Mask, or garbage matte, used to remove unwanted objects (lighting rigs, and so on) from the foreground."
+#define kClipOutsideMaskHint "The Outside Mask, or garbage matte, used to remove unwanted objects (lighting rigs, and so on) from the foreground. The Outside Mask has priority over the Inside Mask, so that areas where both are one are considered to be outside."
 
 enum OutputModeEnum
 {

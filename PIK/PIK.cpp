@@ -124,20 +124,22 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "A keyer that works by generating a clean plate from the green/blue screen sequences. Inspired by Nuke's IBK by Paul Lambert and Fusion's KAK by Pieter Van Houte.\n" \
 "\n" \
-"There are 2 basic approaches to pull a key with PIK. One is to use PIKColor to extract automatically a clean plate from the images and use it as the the C input, and the other is to pick a color which best represents the area you are trying to key.\n" \
+"There are 2 options to pull a key with PIK. One is to use PIKColor to automatically extract a clean plate from the foreground image and use it as the the C input, and the other is to pick a color which best represents the area you are trying to key.\n" \
 "\n" \
-"The blue- or greenscreen image should be used as the Fg input. If that image contains significant noise, a denoised version should be used as the PFg input. The C input should either be a clean plate or the outupt of PIKColor, and is used as the screen color if the 'Screen Type' is not 'Pick'. The Bg image is used in calculating fine edge detail when either 'Use Bg Luminance' or 'Use Bg Chroma' is checked.\n" \
+"The blue- or greenscreen image should be used as the Fg input, which is used to compute the output color. If that image contains significant noise, a denoised version should be used as the PFg input, which is used to pull the key. The C input should either be a clean plate or the outupt of PIKColor, and is used as the screen color if the 'Screen Type' is not 'Pick'. The Bg image is used in calculating fine edge detail when either 'Use Bg Luminance' or 'Use Bg Chroma' is checked. Optionally, an inside mask (a.k.a. holdout matte or core matte) and an outside mask (a.k.a. garbage matte) can be connected to inputs InM and OutM. Note that the outside mask takes precedence over the inside mask.\n" \
 "\n" \
-"The color weights deal with the hardness of the matte. If you view the output (with screen subtraction ticked on) you will typically see areas where edges have a slight discoloration due to the background not being fully removed from the original plate. This is not spill but a result of the matte being too strong. Lowering one of the weights will correct that particular edge. If it's a red foreground image with an edge problem bring down the red weight - same idea for the other weight. This may affect other edges so the use of multiple PIKs with different weights split with KeyMixes is recommended.\n" \
+"The color weights deal with the hardness of the matte. When viewing the output (with screen subtraction checked), one may notice areas where edges have a slight discoloration due to the background not being fully removed from the original plate. This is not spill but a result of the matte being too strong. Lowering one of the weights will correct that particular edge. For example, if it is a red foreground image with an edge problem, lower the red weight. This may affect other edges so the use of multiple PIKs with different weights, split with KeyMixes, is recommended.\n" \
 "\n" \
 /*"The 'Luminance Match' feature adds a luminance factor to the keying algorithm which helps to capture transparent areas of the foreground which are brighter than the backing screen. It will also allow you to lessen some of the garbage area noise by bringing down the screen range - pushing this control too far will also eat into some of your foreground blacks. 'Luminance Level' allows you to make the overall effect stronger or weaker.\n"*/ \
 /*"\n"*/ \
 /*"'Autolevels' will perform a color correction before the image is pulled so that hard edges from a foreground subject with saturated colors are reduced. The same can be achieved with the weights but here only those saturated colors are affected whereas the use of weights will affect the entire image. When using this feature it's best to have this as a separate node which you can then split with other PIKs as the weights will no longer work as expected. You can override some of the logic for when you actually have particular foreground colors you want to keep.\n"*/ \
 /*"For example when you have a saturated red subject against bluescreen you'll get a magenta transition area. Autolevels will eliminate this but if you have a magenta foreground object then this control will make the magenta more red unless you check the magenta box to keep it.\n"*/ \
 "\n" \
-"'Screen Subtraction' will remove the backing from the rgb via a subtraction process. Unchecking this will simply premultiply the original Fg with the generated matte.\n" \
+"'Screen Subtraction' removes the background color from the output via a subtraction process. When unchecked, the output is simply the original Fg premultiplied with the generated matte.\n" \
 "\n" \
-"'Use Bkg Luminance' and 'Use Bkg Chroma' allow you to affect the output rgb by the new bg. These controls are best used with the 'Luminance Match' sliders above. This feature can also sometimes really help with screens that exhibit some form of fringing artifact - usually a darkening or lightening of an edge on one of the color channels on the screen. You can offset the effect by grading the bg input up or down with a grade node just before input. If it's just an area which needs help then just bezier that area and locally grade the bg input up or down to remove the artifact.\n" \
+"'Use Bkg Luminance' and 'Use Bkg Chroma' affect the output color by the new background. "/*These controls are best used with the 'Luminance Match' sliders above. */"This feature can also sometimes really help with screens that exhibit some form of fringing artifact - usually a darkening or lightening of an edge on one of the color channels on the screen. The effect can be offset by grading the Bg input up or down with a grade node just before input. If it is just an area which needs help then just rotoscope that area and locally grade the Bg input up or down to remove the artifact.\n" \
+"\n" \
+"The output of PIK is the foreground matte (unless \"No Key\" is checked), and should be composited with the background using a Merge-over operation.\n" \
 "\n" \
 "The basic equation used to extract the key in PIK is (in the case of \"green\" keying):\n" \
 "alpha = 0 if (Ag-Ar*rw-Ab*gbw) is negative, else 1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw)\n" \
@@ -162,6 +164,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipCHint "(optional) A clean plate if available, or the output of PIKColor to generate the clean plate at each frame."
 #define kClipBg "Bg"
 #define kClipBgHint "(optional) The background image. This is used in calculating fine edge detail when the 'Use Bg Luminance' or 'Use Bg Chroma' options are checked."
+#define kClipInsideMask "InM"
+#define kClipInsideMaskHint "The Inside Mask, or holdout matte, or core matte, used to confirm areas that are definitely foreground."
+#define kClipOutsidemask "OutM"
+#define kClipOutsideMaskHint "The Outside Mask, or garbage matte, used to remove unwanted objects (lighting rigs, and so on) from the foreground. The Outside Mask has priority over the Inside Mask, so that areas where both are one are considered to be outside."
 
 #define kParamScreenType "screenType"
 #define kParamScreenTypeLabel "Screen Type"
@@ -245,9 +251,26 @@ enum ScreenTypeEnum {
 #define kParamRGBALHint "Legalize rgba relationship."
 #define kParamRGBALDefault false
 
+#define kParamSourceAlpha "sourceAlphaHandling"
+#define kParamSourceAlphaLabel "Source Alpha"
+#define kParamSourceAlphaHint \
+"How the alpha embedded in the Source input should be used"
+#define kParamSourceAlphaOptionIgnore "Ignore"
+#define kParamSourceAlphaOptionIgnoreHint "Ignore the source alpha."
+#define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask"
+#define kParamSourceAlphaOptionAddToInsideMaskHint "Source alpha is added to the inside mask. Use for multi-pass keying."
+//#define kParamSourceAlphaOptionNormal "Normal"
+//#define kParamSourceAlphaOptionNormalHint "Foreground key is multiplied by source alpha when compositing."
+enum SourceAlphaEnum
+{
+    eSourceAlphaIgnore,
+    eSourceAlphaAddToInsideMask,
+    //eSourceAlphaNormal,
+};
+
 #define kParamNoKey "noKey"
 #define kParamNoKeyLabel "No Key"
-#define kParamNoKeyHint "Apply background luminance and chroma to Fg rgba input - no key is pulled."
+#define kParamNoKeyHint "Apply background luminance and chroma to Fg rgba input - no key is pulled, but Inside Mask and Outside Mask are applied if connected."
 #define kParamNoKeyDefault false
 
 #define kParamUBL "ubl"
@@ -288,6 +311,8 @@ protected:
     const OFX::Image *_pfgImg;
     const OFX::Image *_cImg;
     const OFX::Image *_bgImg;
+    const OFX::Image *_inMaskImg;
+    const OFX::Image *_outMaskImg;
     ScreenTypeEnum _screenType; // Screen Type: The type of background screen used for the key.
     float _color[3];
     bool _useColor;
@@ -304,6 +329,7 @@ protected:
     bool _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     bool _clampAlpha; // Clamp: Clamp matte to 0-1.
     bool _rgbal; // Legalize rgba relationship.
+    SourceAlphaEnum _sourceAlpha;
     bool _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     bool _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     bool _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -316,6 +342,9 @@ public:
         , _fgImg(0)
         , _pfgImg(0)
         , _cImg(0)
+        , _bgImg(0)
+        , _inMaskImg(0)
+        , _outMaskImg(0)
         , _screenType(kParamScreenTypeDefault)
         , _useColor(false)
         , _redWeight(kParamRedWeightDefault)
@@ -331,6 +360,7 @@ public:
         , _ss(kParamSSDefault)
         , _clampAlpha(kParamClampAlphaDefault)
         , _rgbal(kParamRGBALDefault)
+        , _sourceAlpha(eSourceAlphaIgnore)
         , _noKey(kParamNoKeyDefault)
         , _ubl(kParamUBLDefault)
         , _ubc(kParamUBCDefault)
@@ -342,12 +372,16 @@ public:
     void setSrcImgs(const OFX::Image *fgImg,
                     const OFX::Image *pfgImg,
                     const OFX::Image *cImg,
-                    const OFX::Image *bgImg)
+                    const OFX::Image *bgImg,
+                    const OFX::Image *inMaskImg,
+                    const OFX::Image *outMaskImg)
     {
         _fgImg = fgImg;
         _pfgImg = pfgImg;
         _cImg = cImg;
         _bgImg = bgImg;
+        _inMaskImg = inMaskImg;
+        _outMaskImg = outMaskImg;
     }
 
     void setValues(ScreenTypeEnum screenType, // Screen Type: The type of background screen used for the key.
@@ -365,6 +399,7 @@ public:
                    bool ss, // Screen Subtraction: Have the keyer subtract the foreground or just premult.
                    bool clampAlpha, // Clamp: Clamp matte to 0-1.
                    bool rgbal, // Legalize rgba relationship.
+                   SourceAlphaEnum sourceAlpha,
                    bool noKey, // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
                    bool ubl, // Use Bg Lum: Have the output rgb be biased by the bg luminance.
                    bool ubc, // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -393,6 +428,7 @@ public:
         _ss = ss;
         _clampAlpha = clampAlpha;
         _rgbal = rgbal;
+        _sourceAlpha = sourceAlpha;
         _noKey = noKey;
         _ubl = ubl;
         _ubc = ubc;
@@ -479,6 +515,18 @@ private:
                 const PIX *pfgPix = (const PIX *)  ((!_noKey && _pfgImg) ? _pfgImg->getPixelAddress(x, y) : 0);
                 const PIX *cPix = (const PIX *)  ((!_noKey && _cImg) ? _cImg->getPixelAddress(x, y) : 0);
                 const PIX *bgPix = (const PIX *)  (((_ubc || _ubl) && _bgImg) ? _bgImg->getPixelAddress(x, y) : 0);
+                const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
+                const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
+                float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
+                if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && (nComponents == 4) && fgPix ) {
+                    // take the max of inMask and the source Alpha
+                    inMask = std::max( inMask, sampleToFloat<PIX, maxValue>(fgPix[3]) );
+                }
+                float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
+
+                // clamp inMask and outMask in the [0,1] range
+                inMask = std::max( 0.f, std::min(inMask, 1.f) );
+                outMask = std::max( 0.f, std::min(outMask, 1.f) );
 
                 float fg[4] = {0., 0., 0., 1.};
                 float pfg[4] = {0., 0., 0., 1.};
@@ -651,7 +699,20 @@ private:
                     }
                     out[3] = alpha;
                 }
-                
+
+                {
+                    // nonadditive mix between the key generator and the garbage matte (outMask)
+                    // outside mask has priority over inside mask, treat inside first
+                    float alpha = out[3];
+                    if ( (inMask > 0.) && (alpha < inMask) ) {
+                        alpha = inMask;
+                    }
+                    if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
+                        alpha = 1. - outMask;
+                    }
+                    out[3] = alpha;
+                }
+
                 // ubl, ubc
                 if (_ubl || _ubc) {
                     // we use the CIE xyZ colorspace to separate luminance from chrominance
@@ -780,6 +841,8 @@ public:
         , _pfgClip(0)
         , _cClip(0)
         , _bgClip(0)
+        , _inMaskClip(0)
+        , _outMaskClip(0)
         , _screenType(0)
         , _color(0)
         , _redWeight(0)
@@ -795,6 +858,7 @@ public:
         , _ss(0)
         , _clampAlpha(0)
         , _rgbal(0)
+        , _sourceAlpha(0)
         , _noKey(0)
         , _ubl(0)
         , _ubc(0)
@@ -813,6 +877,10 @@ public:
                                _cClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _bgClip = fetchClip(kClipBg);
         assert( _bgClip && (!_bgClip->isConnected() || _bgClip->getPixelComponents() == ePixelComponentRGB || _bgClip->getPixelComponents() == ePixelComponentRGBA) );
+        _inMaskClip = fetchClip(kClipInsideMask);;
+        assert( _inMaskClip && (!_inMaskClip->isConnected() || _inMaskClip->getPixelComponents() == ePixelComponentAlpha) );
+        _outMaskClip = fetchClip(kClipOutsidemask);;
+        assert( _outMaskClip && (!_outMaskClip->isConnected() || _outMaskClip->getPixelComponents() == ePixelComponentAlpha) );
 
         _screenType = fetchChoiceParam(kParamScreenType); // Screen Type: The type of background screen used for the key.
         _color = fetchRGBParam(kParamColor); // Screen Type: The type of background screen used for the key.
@@ -829,6 +897,7 @@ public:
         _ss = fetchBooleanParam(kParamSS); // Screen Subtraction: Have the keyer subtract the foreground or just premult.
         _clampAlpha = fetchBooleanParam(kParamClampAlpha); // Clamp: Clamp matte to 0-1.
         _rgbal = fetchBooleanParam(kParamRGBAL); // Legalize rgba relationship.
+        _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
         _noKey = fetchBooleanParam(kParamNoKey); // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
         _ubl = fetchBooleanParam(kParamUBL); // Use Bg Lum: Have the output rgb be biased by the bg luminance.
         _ubc = fetchBooleanParam(kParamUBC); // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -879,11 +948,13 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_fgClip;
-    OFX::Clip *_pfgClip;
-    OFX::Clip *_cClip;
-    OFX::Clip *_bgClip;
+    Clip *_dstClip;
+    Clip *_fgClip;
+    Clip *_pfgClip;
+    Clip *_cClip;
+    Clip *_bgClip;
+    Clip *_inMaskClip;
+    Clip *_outMaskClip;
     ChoiceParam* _screenType; // Screen Type: The type of background screen used for the key.
     RGBParam* _color;
     DoubleParam* _redWeight; // Red Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
@@ -899,6 +970,7 @@ private:
     BooleanParam* _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     BooleanParam* _clampAlpha; // Clamp: Clamp matte to 0-1.
     BooleanParam* _rgbal; // Legalize rgba relationship.
+    ChoiceParam* _sourceAlpha;
     BooleanParam* _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     BooleanParam* _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     BooleanParam* _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -953,6 +1025,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     bool ss = _ss->getValueAtTime(time);
     bool clampAlpha = _clampAlpha->getValueAtTime(time);
     bool rgbal = _rgbal->getValueAtTime(time);
+    SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
     bool noKey = _noKey->getValueAtTime(time);
     bool ubl = _ubl->getValueAtTime(time);
     bool ubc = _ubc->getValueAtTime(time);
@@ -966,6 +1039,10 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
                                        _cClip->fetchImage(time) : 0 );
     std::auto_ptr<const OFX::Image> bg( ( (ubl || ubc) && ( _bgClip && _bgClip->isConnected() ) ) ?
                                         _bgClip->fetchImage(time) : 0 );
+    std::auto_ptr<const OFX::Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
+                                           _inMaskClip->fetchImage(time) : 0 );
+    std::auto_ptr<const OFX::Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
+                                            _outMaskClip->fetchImage(time) : 0 );
     if ( fg.get() ) {
         if ( (fg->getRenderScale().x != args.renderScale.x) ||
             ( fg->getRenderScale().y != args.renderScale.y) ||
@@ -1024,10 +1101,26 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+    if ( inMask.get() ) {
+        if ( (inMask->getRenderScale().x != args.renderScale.x) ||
+            ( inMask->getRenderScale().y != args.renderScale.y) ||
+            ( ( inMask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( inMask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+    if ( outMask.get() ) {
+        if ( (outMask->getRenderScale().x != args.renderScale.x) ||
+            ( outMask->getRenderScale().y != args.renderScale.y) ||
+            ( ( outMask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( outMask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
 
-    processor.setValues(screenType, color, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, noKey, ubl, ubc, colorspace);
+    processor.setValues(screenType, color, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, sourceAlpha, noKey, ubl, ubc, colorspace);
     processor.setDstImg( dst.get() );
-    processor.setSrcImgs( fg.get(), ( !noKey && !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get() );
+    processor.setSrcImgs( fg.get(), ( !noKey && !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow);
 
     processor.process();
@@ -1226,6 +1319,27 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         clip->setOptional(true);
     }
 
+    // create the inside mask clip
+    {
+        ClipDescriptor *clip =  desc.defineClip(kClipInsideMask);
+        clip->setHint(kClipInsideMaskHint);
+        clip->addSupportedComponent(ePixelComponentAlpha);
+        clip->setTemporalClipAccess(false);
+        clip->setOptional(true);
+        clip->setSupportsTiles(kSupportsTiles);
+        clip->setIsMask(true);
+    }
+    {
+        // outside mask clip (garbage matte)
+        ClipDescriptor *clip =  desc.defineClip(kClipOutsidemask);
+        clip->setHint(kClipOutsideMaskHint);
+        clip->addSupportedComponent(ePixelComponentAlpha);
+        clip->setTemporalClipAccess(false);
+        clip->setOptional(true);
+        clip->setSupportsTiles(kSupportsTiles);
+        clip->setIsMask(true);
+    }
+    
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -1444,6 +1558,23 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #ifdef DISABLE_RGBAL
         param->setIsSecretAndDisabled(true);
 #endif
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // source alpha
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSourceAlpha);
+        param->setLabel(kParamSourceAlphaLabel);
+        param->setHint(kParamSourceAlphaHint);
+        assert(param->getNOptions() == (int)eSourceAlphaIgnore);
+        param->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);
+        assert(param->getNOptions() == (int)eSourceAlphaAddToInsideMask);
+        param->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
+        //assert(param->getNOptions() == (int)eSourceAlphaNormal);
+        //param->appendOption(kParamSourceAlphaOptionNormal, kParamSourceAlphaOptionNormalHint);
+        param->setDefault( (int)eSourceAlphaIgnore );
+        param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }
