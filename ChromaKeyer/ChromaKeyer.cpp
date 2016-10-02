@@ -192,7 +192,7 @@ protected:
     const OFX::Image *_inMaskImg;
     const OFX::Image *_outMaskImg;
     OfxRGBColourD _keyColor;
-    const OFX::Color::LutBase* _lut;
+    const OFX::Color::LutAccess* _lut;
     void (*_to_ypbpr)(float r,
                       float g,
                       float b,
@@ -264,7 +264,8 @@ public:
                    double keyLift,
                    double keyGain,
                    OutputModeEnum outputMode,
-                   SourceAlphaEnum sourceAlpha)
+                   SourceAlphaEnum sourceAlpha,
+                   const OFX::Color::LutAccess* rec709Lut)
     {
         _keyColor = keyColor;
         _acceptanceAngle = acceptanceAngle;
@@ -274,14 +275,12 @@ public:
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
         float y, cb, cr;
-        if (linear) {
-            _lut = NULL;
-        } else {
+        if (!linear) {
             switch (colorspace) {
                 case eYPbPrColorspaceCcir601:
                 case eYPbPrColorspaceRec709:
                 case eYPbPrColorspaceRec2020:
-                    _lut = OFX::Color::LutManager<Mutex>::Rec709Lut();
+                    _lut = rec709Lut;
                     break;
             }
         }
@@ -302,9 +301,9 @@ public:
         assert(_to_rgb && _to_ypbpr);
 
         // delinearize RGB
-        float r = _lut ? _lut->toColorSpaceFloatFromLinearFloat(keyColor.r) : keyColor.r;
-        float g = _lut ? _lut->toColorSpaceFloatFromLinearFloat(keyColor.g) : keyColor.g;
-        float b = _lut ? _lut->toColorSpaceFloatFromLinearFloat(keyColor.b) : keyColor.b;
+        float r = _lut ? (*_lut)->toColorSpaceFloatFromLinearFloat(keyColor.r) : keyColor.r;
+        float g = _lut ? (*_lut)->toColorSpaceFloatFromLinearFloat(keyColor.g) : keyColor.g;
+        float b = _lut ? (*_lut)->toColorSpaceFloatFromLinearFloat(keyColor.b) : keyColor.b;
 
         // convert to YPbPr
         _to_ypbpr(r, g, b, &y, &cb, &cr);
@@ -428,9 +427,9 @@ private:
 
                     // delinearize RGB
                     if (_lut) {
-                        fgr =  _lut->toColorSpaceFloatFromLinearFloat(fgr);
-                        fgg =  _lut->toColorSpaceFloatFromLinearFloat(fgg);
-                        fgb =  _lut->toColorSpaceFloatFromLinearFloat(fgb);
+                        fgr = (*_lut)->toColorSpaceFloatFromLinearFloat(fgr);
+                        fgg = (*_lut)->toColorSpaceFloatFromLinearFloat(fgg);
+                        fgb = (*_lut)->toColorSpaceFloatFromLinearFloat(fgb);
                     }
                     float fgy, fgcb, fgcr;
                     _to_ypbpr(fgr, fgg, fgb, &fgy, &fgcb, &fgcr);
@@ -539,9 +538,9 @@ private:
                             fgb = std::max( 0.f, std::min(fgb, 1.f) );
                             // linearize RGB
                             if (_lut) {
-                                fgr =  _lut->fromColorSpaceFloatToLinearFloat(fgr);
-                                fgg =  _lut->fromColorSpaceFloatToLinearFloat(fgg);
-                                fgb =  _lut->fromColorSpaceFloatToLinearFloat(fgb);
+                                fgr = (*_lut)->fromColorSpaceFloatToLinearFloat(fgr);
+                                fgg = (*_lut)->fromColorSpaceFloatToLinearFloat(fgg);
+                                fgb = (*_lut)->fromColorSpaceFloatToLinearFloat(fgb);
                             }
                         }
                     }
@@ -631,7 +630,7 @@ class ChromaKeyerPlugin
 {
 public:
     /** @brief ctor */
-    ChromaKeyerPlugin(OfxImageEffectHandle handle)
+    ChromaKeyerPlugin(OfxImageEffectHandle handle, const OFX::Color::LutAccess* rec709Lut)
         : ImageEffect(handle)
         , _dstClip(0)
         , _srcClip(0)
@@ -647,6 +646,7 @@ public:
         , _keyGain(0)
         , _outputMode(0)
         , _sourceAlpha(0)
+        , _rec709Lut(rec709Lut)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -699,6 +699,7 @@ private:
     OFX::DoubleParam* _keyGain;
     OFX::ChoiceParam* _outputMode;
     OFX::ChoiceParam* _sourceAlpha;
+    const OFX::Color::LutAccess* _rec709Lut;
 };
 
 
@@ -796,7 +797,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
     YPbPrColorspaceEnum colorspace = (YPbPrColorspaceEnum)_colorspace->getValueAtTime(time);
     bool linear = _linear->getValueAtTime(time);
-    processor.setValues(keyColor, colorspace, linear, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
+    processor.setValues(keyColor, colorspace, linear, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha, _rec709Lut);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -866,7 +867,34 @@ ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreference
     // note: ChromaKeyer handles correctly inputs with different components: it only uses RGB components from both clips
 }
 
-mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});
+class ChromaKeyerPluginFactory : public OFX::PluginFactoryHelper<ChromaKeyerPluginFactory>
+{
+public:
+
+    ChromaKeyerPluginFactory(const std::string& id, unsigned int verMaj, unsigned int verMin)
+    : OFX::PluginFactoryHelper<ChromaKeyerPluginFactory>(id, verMaj, verMin)
+    , _lut(0)
+    {
+    }
+
+    virtual void load()
+    {
+        _lut = new OFX::Color::Rec709Lut<Mutex>();
+    }
+
+    virtual void unload()
+    {
+        delete _lut;
+    }
+
+    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
+    virtual void describe(OFX::ImageEffectDescriptor &desc);
+    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
+private:
+    const OFX::Color::LutAccess* _lut;
+};
+
+
 void
 ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -1093,7 +1121,7 @@ OFX::ImageEffect*
 ChromaKeyerPluginFactory::createInstance(OfxImageEffectHandle handle,
                                          OFX::ContextEnum /*context*/)
 {
-    return new ChromaKeyerPlugin(handle);
+    return new ChromaKeyerPlugin(handle, _lut);
 }
 
 static ChromaKeyerPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
