@@ -711,11 +711,12 @@ ReformatPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
 
+    double par = _srcClip->getPixelAspectRatio();
+
     switch (type) {
     case eReformatTypeToFormat:
     case eReformatTypeToBox: {
         //specific output PAR
-        double par;
         _boxPAR->getValue(par);
         clipPreferences.setPixelAspectRatio(*_dstClip, par);
         break;
@@ -725,6 +726,22 @@ ReformatPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         // don't change the pixel aspect ratio
         break;
     }
+#ifdef OFX_EXTENSIONS_NATRON
+    RegionOfDefinitionArguments args;
+    args.time = 0.;
+    args.renderScale.x = 1.;
+    args.renderScale.y = 1.;
+#ifdef OFX_EXTENSIONS_NUKE
+    args.view = 0;
+#endif
+
+    OfxRectD rod;
+    getRegionOfDefinition(args, rod);
+    OfxRectI format;
+    OFX::Coords::toPixelNearest(rod, args.renderScale, par, &format);
+    clipPreferences.setOutputFormat(format);
+#endif
+
 }
 
 mDeclarePluginFactory(ReformatPluginFactory, {}, {});
@@ -831,6 +848,8 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamFormatBoxSizeHint);
         param->setDefault(200, 200);
         param->setIsSecretAndDisabled(true); // secret Natron-specific param
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -844,6 +863,7 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(0.5, 2.);
         param->setDefault(1.);
         param->setIsSecretAndDisabled(true); // secret Natron-specific param
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -857,6 +877,8 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamBoxSizeHint);
         param->setDefault(200, 200);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -866,7 +888,8 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamBoxFixedLabel);
         param->setHint(kParamBoxFixedHint);
         param->setDefault(false);
-        param->setAnimates(true);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -899,6 +922,8 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setIncrement(0.01);
         param->setUseHostNativeOverlayHandle(false);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -912,8 +937,9 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         // uniform parameter is false by default on Natron
         // https://github.com/MrKepzie/Natron/issues/1204
         param->setDefault(!OFX::getImageEffectHostDescription()->isNatron);
-        param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintDivider);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -937,7 +963,8 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         assert(param->getNOptions() == eResizeDistort);
         param->appendOption(kParamResizeOptionDistort, kParamResizeOptionDistortHint);
         param->setDefault( (int)eResizeWidth );
-        param->setAnimates(true);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -949,7 +976,8 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamReformatCenterLabel);
         param->setHint(kParamReformatCenterHint);
         param->setDefault(true);
-        param->setAnimates(true);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
@@ -962,7 +990,7 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFlipLabel);
         param->setHint(kParamFlipHint);
         param->setDefault(false);
-        param->setAnimates(true);
+        param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
@@ -975,7 +1003,7 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFlopLabel);
         param->setHint(kParamFlopHint);
         param->setDefault(false);
-        param->setAnimates(true);
+        param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
@@ -988,7 +1016,8 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamTurnLabel);
         param->setHint(kParamTurnHint);
         param->setDefault(false);
-        param->setAnimates(true);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         param->getPropertySet().propSetInt(kOfxParamPropLayoutPadWidth, 1, false);
         if (page) {
             page->addChild(*param);
@@ -1001,7 +1030,8 @@ ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamPreserveBoundingBoxLabel);
         param->setHint(kParamPreserveBoundingBoxHint);
         param->setDefault(false);
-        param->setAnimates(true);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
