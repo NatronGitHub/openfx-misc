@@ -131,6 +131,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: size now has two dimensions
 // version 3.0: use kNatronOfxParamProcess* parameters
 // version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
+// version 4.1: added cropToFormat parameter on Natron
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -261,6 +262,10 @@ enum FilterEnum
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
 #define kParamExpandRoDHint "Expand the source region of definition by 1.5*size (3.6*sigma)."
+
+#define kParamCropToFormat "cropToFormat"
+#define kParamCropToFormatLabel "Crop To Format"
+#define kParamCropToFormatHint "If the effect generates an image outside of the format, crop it to avoid unnecessary calculations. To avoid unwanted crops, only the borders that were inside of the format in the source clip will be cropped."
 
 typedef cimgpix_t T;
 using namespace cimg_library;
@@ -847,6 +852,7 @@ struct CImgBlurParams
     int boundary_i;
     FilterEnum filter;
     bool expandRoD;
+    bool cropToFormat;
 };
 
 enum BlurPluginEnum
@@ -910,6 +916,7 @@ public:
         , _boundary(0)
         , _filter(0)
         , _expandRoD(0)
+        , _cropToFormat(0)
     {
         if (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) {
             _sharpenSoftenAmount = fetchDoubleParam(kParamSharpenSoftenAmount);
@@ -945,7 +952,9 @@ public:
             if (blurPlugin != eBlurPluginChromaBlur && blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
                 _expandRoD = fetchBooleanParam(kParamExpandRoD);
                 assert(_expandRoD);
-#pragma message WARN("TODO: crop to format")
+                if ( paramExists(kParamCropToFormat) ) {
+                    _cropToFormat = fetchBooleanParam(kParamCropToFormat);
+                }
             }
         }
         // On Natron, hide the uniform parameter if it is false and not animated,
@@ -1018,7 +1027,7 @@ public:
             params.filter = (FilterEnum)_filter->getValueAtTime(time);
             params.expandRoD = _expandRoD ? _expandRoD->getValueAtTime(time) : false;
         }
-#pragma message WARN("TODO: crop to format")
+        params.cropToFormat = _cropToFormat ? _cropToFormat->getValueAtTime(time) : false;
     }
 
     bool getRegionOfDefinition(const OfxRectI& srcRoD,
@@ -1029,12 +1038,15 @@ public:
         double sx = renderScale.x * params.sizex;
         double sy = renderScale.y * params.sizey;
 
+        bool retval = false;
+
         if (_blurPlugin == eBlurPluginBloom) {
             // size of the largest blur kernel
             double scale = ipow( params.bloomRatio, (params.bloomCount - 1) );
             sx *= scale;
             sy *= scale;
         }
+        *dstRoD = srcRoD;
         if ( params.expandRoD && !isEmpty(srcRoD) ) {
             if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
                 float sigmax = (float)(sx / 2.4);
@@ -1044,10 +1056,10 @@ public:
                 }
                 int delta_pixX = std::max( 3, (int)std::ceil(sx * 1.5) );
                 int delta_pixY = std::max( 3, (int)std::ceil(sy * 1.5) );
-                dstRoD->x1 = srcRoD.x1 - delta_pixX - params.orderX;
-                dstRoD->x2 = srcRoD.x2 + delta_pixX + params.orderX;
-                dstRoD->y1 = srcRoD.y1 - delta_pixY - params.orderY;
-                dstRoD->y2 = srcRoD.y2 + delta_pixY + params.orderY;
+                dstRoD->x1 -= delta_pixX + params.orderX;
+                dstRoD->x2 += delta_pixX + params.orderX;
+                dstRoD->y1 -= delta_pixY + params.orderY;
+                dstRoD->y2 += delta_pixY + params.orderY;
             } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
                 if ( (sx <= 1) && (sy <= 1) && (params.orderX == 0) && (params.orderY == 0) ) {
                     return false; // identity
@@ -1056,19 +1068,40 @@ public:
                              (params.filter == eFilterTriangle ? 2 : 3) );
                 int delta_pixX = iter * std::ceil( (sx - 1) / 2 );
                 int delta_pixY = iter * std::ceil( (sy - 1) / 2 );
-                dstRoD->x1 = srcRoD.x1 - delta_pixX - (params.orderX > 0);
-                dstRoD->x2 = srcRoD.x2 + delta_pixX + (params.orderX > 0);
-                dstRoD->y1 = srcRoD.y1 - delta_pixY - (params.orderY > 0);
-                dstRoD->y2 = srcRoD.y2 + delta_pixY + (params.orderY > 0);
+                dstRoD->x1 -= delta_pixX + (params.orderX > 0);
+                dstRoD->x2 += delta_pixX + (params.orderX > 0);
+                dstRoD->y1 -= delta_pixY + (params.orderY > 0);
+                dstRoD->y2 += delta_pixY + (params.orderY > 0);
             } else {
                 assert(false);
             }
 
-            return true;
+            retval = true;
         }
-#pragma message WARN("TODO: crop to format")
+#ifdef OFX_EXTENSIONS_NATRON
+        if ( params.cropToFormat ) {
+            // crop to format works by clamping the output rod to the format wherever the input rod was inside the format
+            // this avoids unwanted crops (cropToFormat is checked by default)
+            OfxRectI srcFormat;
+            _srcClip->getFormat(srcFormat);
+            if (dstRoD->x1 < srcFormat.x1 && srcRoD.x1 >= srcFormat.x1) {
+                dstRoD->x1 = srcFormat.x1;
+            }
+            if (dstRoD->x2 > srcFormat.x2 && srcRoD.x2 <= srcFormat.x2) {
+                dstRoD->x2 = srcFormat.x2;
+            }
+            if (dstRoD->y1 < srcFormat.y1 && srcRoD.y1 >= srcFormat.y1) {
+                dstRoD->y1 = srcFormat.y1;
+            }
+            if (dstRoD->y2 > srcFormat.y2 && srcRoD.y2 <= srcFormat.y2) {
+                dstRoD->y2 = srcFormat.y2;
+            }
 
-        return false;
+            retval = true;
+        }
+#endif
+
+        return retval;
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -1440,6 +1473,7 @@ private:
     OFX::ChoiceParam *_boundary;
     OFX::ChoiceParam *_filter;
     OFX::BooleanParam *_expandRoD;
+    OFX::BooleanParam *_cropToFormat;
 };
 
 
@@ -1729,13 +1763,26 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             param->setLabel(kParamExpandRoDLabel);
             param->setHint(kParamExpandRoDHint);
             param->setDefault(blurPlugin != eBlurPluginBloom); // the expanded RoD of Bloom may be very large
+            param->setLayoutHint(eLayoutHintNoNewLine); // on the same line as crop to format
             if (page) {
                 page->addChild(*param);
             }
-#pragma message WARN("TODO: format")
         }
     }
-    
+#ifdef OFX_EXTENSIONS_NATRON
+    if (getImageEffectHostDescription()->isNatron) {
+        if (blurPlugin != eBlurPluginChromaBlur && blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
+            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCropToFormat);
+            param->setLabel(kParamCropToFormatLabel);
+            param->setHint(kParamCropToFormatHint);
+            param->setDefault(true);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    }
+#endif
+
     CImgBlurPlugin::describeInContextEnd(desc, context, page);
 } // CImgBlurPlugin::describeInContext
 
