@@ -1084,6 +1084,10 @@ public:
             // this avoids unwanted crops (cropToFormat is checked by default)
             OfxRectI srcFormat;
             _srcClip->getFormat(srcFormat);
+            srcFormat.x1 = std::ceil(srcFormat.x1 * renderScale.x);
+            srcFormat.x2 = std::floor(srcFormat.x2 * renderScale.x);
+            srcFormat.y1 = std::ceil(srcFormat.y1 * renderScale.y);
+            srcFormat.y2 = std::floor(srcFormat.y2 * renderScale.y);
             if (! isEmpty(srcFormat) ) {
                 if (dstRoD->x1 < srcFormat.x1 && srcRoD.x1 >= srcFormat.x1) {
                     dstRoD->x1 = srcFormat.x1;
