@@ -66,6 +66,24 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
     "It can be used in commercial applications (see http://cimg.eu)."
 
+#define kPluginNameSharpen          "SharpenCImg"
+#define kPluginDescriptionSharpen \
+    "Sharpen the input stream by enhancing its Laplacian.\n" \
+    "The effects adds the Laplacian (as computed by the Laplacian plugin) times the 'Amount' parameter to the input stream.\n" \
+    "Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.eu)."
+
+#define kPluginNameSoften          "SoftenCImg"
+#define kPluginDescriptionSoften \
+    "Soften the input stream by reducing its Laplacian.\n" \
+    "The effects subtracts the Laplacian (as computed by the Laplacian plugin) times the 'Amount' parameter from the input stream.\n" \
+    "Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.eu)."
+
 #define kPluginNameChromaBlur          "ChromaBlurCImg"
 #define kPluginDescriptionChromaBlur \
     "Blur the chrominance of an input stream. Smoothing is done on the x and y components in the CIE xyY color space. " \
@@ -102,6 +120,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
 #define kPluginIdentifierLaplacian    "net.sf.cimg.CImgLaplacian"
+#define kPluginIdentifierSharpen    "net.sf.cimg.CImgSharpen"
+#define kPluginIdentifierSoften    "net.sf.cimg.CImgSoften"
 #define kPluginIdentifierChromaBlur    "net.sf.cimg.CImgChromaBlur"
 #define kPluginIdentifierBloom    "net.sf.cimg.CImgBloom"
 #define kPluginIdentifierErodeBlur    "eu.cimg.ErodeBlur"
@@ -132,6 +152,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsAlpha true // except for ChromaBlue
 
 #define kDefaultUnpremult false // Blur works on premultiplied RGBA by default
+
+#define kParamSharpenSoftenAmount "amount"
+#define kParamSharpenSoftenAmountLabel "Amount"
+#define kParamSharpenAmountHint "Amount of sharpening to apply."
+#define kParamSoftenAmountHint "Amount of softening to apply."
 
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
@@ -813,6 +838,7 @@ struct CImgBlurParams
     double sizex, sizey; // sizex takes PixelAspectRatio intor account
     double erodeSize;
     double erodeBlur;
+    double sharpenSoftenAmount;
     int orderX;
     int orderY;
     double bloomRatio;
@@ -827,6 +853,8 @@ enum BlurPluginEnum
 {
     eBlurPluginBlur,
     eBlurPluginLaplacian,
+    eBlurPluginSharpen,
+    eBlurPluginSoften,
     eBlurPluginChromaBlur,
     eBlurPluginBloom,
     eBlurPluginErodeBlur
@@ -869,6 +897,7 @@ public:
                                                         kSupportsRenderScale,
                                                         kDefaultUnpremult)
         , _blurPlugin(blurPlugin)
+        , _sharpenSoftenAmount(0)
         , _size(0)
         , _erodeSize(0)
         , _erodeBlur(0)
@@ -882,6 +911,9 @@ public:
         , _filter(0)
         , _expandRoD(0)
     {
+        if (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) {
+            _sharpenSoftenAmount = fetchDoubleParam(kParamSharpenSoftenAmount);
+        }
         if (_blurPlugin == eBlurPluginErodeBlur) {
             _erodeSize  = fetchDoubleParam(kParamErodeSize);
             _erodeBlur  = fetchDoubleParam(kParamErodeBlur);
@@ -904,15 +936,16 @@ public:
             if (blurPlugin == eBlurPluginChromaBlur) {
                 _colorspace = fetchChoiceParam(kParamColorspace);
                 assert(_colorspace);
-            } else {
+            } else if (blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
                 _boundary  = fetchChoiceParam(kParamBoundary);
                 assert(_boundary);
             }
             _filter = fetchChoiceParam(kParamFilter);
             assert(_filter);
-            if (blurPlugin != eBlurPluginChromaBlur) {
+            if (blurPlugin != eBlurPluginChromaBlur && blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
                 _expandRoD = fetchBooleanParam(kParamExpandRoD);
                 assert(_expandRoD);
+#pragma message WARN("TODO: crop to format")
             }
         }
         // On Natron, hide the uniform parameter if it is false and not animated,
@@ -943,6 +976,10 @@ public:
                 params.sizey = params.sizex;
             }
         }
+        params.sharpenSoftenAmount = _sharpenSoftenAmount ? _sharpenSoftenAmount->getValueAtTime(time) : 0.;
+        if (_blurPlugin == eBlurPluginSoften) {
+            params.sharpenSoftenAmount = -params.sharpenSoftenAmount;
+        }
         double par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
         if (par != 0.) {
             params.sizex /= par;
@@ -972,15 +1009,16 @@ public:
         } else if (_blurPlugin == eBlurPluginErodeBlur) {
             params.boundary_i = 0; // black
         } else {
-            params.boundary_i = _boundary->getValueAtTime(time);
+            params.boundary_i = _boundary ? _boundary->getValueAtTime(time) : 1; // default is nearest for Laplacian, Sharpen, Soften
         }
         if (_blurPlugin == eBlurPluginErodeBlur) {
             params.filter = eFilterTriangle;
             params.expandRoD = true;
         } else {
             params.filter = (FilterEnum)_filter->getValueAtTime(time);
-            params.expandRoD = (_blurPlugin == eBlurPluginChromaBlur) ? false : _expandRoD->getValueAtTime(time);
+            params.expandRoD = _expandRoD ? _expandRoD->getValueAtTime(time) : false;
         }
+#pragma message WARN("TODO: crop to format")
     }
 
     bool getRegionOfDefinition(const OfxRectI& srcRoD,
@@ -1028,6 +1066,7 @@ public:
 
             return true;
         }
+#pragma message WARN("TODO: crop to format")
 
         return false;
     }
@@ -1100,7 +1139,7 @@ public:
         //std::cout << "cimg=" << cimg.width() << ',' << cimg.height() << std::endl;
         CImg<cimgpix_t> cimg0;
         CImg<cimgpix_t> cimg1;
-        if (_blurPlugin == eBlurPluginLaplacian) {
+        if (_blurPlugin == eBlurPluginLaplacian || _blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) {
             cimg0 = cimg;
         } else if (_blurPlugin == eBlurPluginChromaBlur) {
             // ChromaBlur only supports RGBA and RGBA, and components cannot be remapped
@@ -1237,6 +1276,10 @@ public:
         if (_blurPlugin == eBlurPluginLaplacian) {
             cimg *= -1;
             cimg += cimg0;
+        } else if (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) {
+            cimg *= -params.sharpenSoftenAmount;
+            cimg0 *= 1. + params.sharpenSoftenAmount;
+            cimg += cimg0;
         } else if (_blurPlugin == eBlurPluginChromaBlur) {
             // recombine luminance in cimg0 & chrominance in cimg to cimg
             // chrominance (U+V) is in cimg0, luminance is in first channel of cimg
@@ -1342,6 +1385,12 @@ public:
     virtual bool isIdentity(const OFX::IsIdentityArguments &args,
                             const CImgBlurParams& params) OVERRIDE FINAL
     {
+        if (_blurPlugin == eBlurPluginLaplacian) {
+            return false;
+        }
+        if ( (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) && params.sharpenSoftenAmount == 0. ) {
+            return true;
+        }
         double sx = args.renderScale.x * params.sizex;
         double sy = args.renderScale.y * params.sizey;
 
@@ -1378,6 +1427,7 @@ private:
 
     // params
     const BlurPluginEnum _blurPlugin;
+    OFX::DoubleParam *_sharpenSoftenAmount;
     OFX::Double2DParam *_size;
     OFX::DoubleParam *_erodeSize;
     OFX::DoubleParam *_erodeBlur;
@@ -1411,6 +1461,14 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
     case eBlurPluginLaplacian:
         desc.setLabel(kPluginNameLaplacian);
         desc.setPluginDescription(kPluginDescriptionLaplacian);
+        break;
+   case eBlurPluginSharpen:
+        desc.setLabel(kPluginNameSharpen);
+        desc.setPluginDescription(kPluginDescriptionSharpen);
+        break;
+   case eBlurPluginSoften:
+        desc.setLabel(kPluginNameSoften);
+        desc.setPluginDescription(kPluginDescriptionSoften);
         break;
     case eBlurPluginChromaBlur:
         desc.setLabel(kPluginNameChromaBlur);
@@ -1481,6 +1539,19 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                                             processRGB,
                                                                             processAlpha,
                                                                             /*processIsSecret=*/ false);
+    if (blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) {
+        {
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSharpenSoftenAmount);
+            param->setLabel(kParamSharpenSoftenAmountLabel);
+            param->setHint(blurPlugin == eBlurPluginSharpen ? kParamSharpenAmountHint : kParamSoftenAmountHint);
+            param->setRange(-DBL_MAX, DBL_MAX);
+            param->setDisplayRange(0., 1.);
+            param->setDefault(blurPlugin == eBlurPluginSharpen ? 1. : 0.5);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    }
     if (blurPlugin == eBlurPluginErodeBlur) {
         {
             OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamErodeSize);
@@ -1519,7 +1590,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             } else {
                 param->setDisplayRange(0, 0, 100, 100);
             }
-            if (blurPlugin == eBlurPluginLaplacian) {
+            if (blurPlugin == eBlurPluginLaplacian || blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) {
                 param->setDefault(kParamSizeDefaultLaplacian, kParamSizeDefaultLaplacian);
             } else {
                 param->setDefault(kParamSizeDefault, kParamSizeDefault);
@@ -1609,7 +1680,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             if (page) {
                 page->addChild(*param);
             }
-        } else {
+        } else if (blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
             OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
             param->setLabel(kParamBoundaryLabel);
             param->setHint(kParamBoundaryHint);
@@ -1619,7 +1690,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
             //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
             //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
-            if (blurPlugin == eBlurPluginLaplacian) {
+            if (blurPlugin == eBlurPluginLaplacian || blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) {
                 param->setDefault( (int)kParamBoundaryDefaultLaplacian );
             } else if (blurPlugin == eBlurPluginBloom) {
                 param->setDefault( (int)kParamBoundaryDefaultBloom );
@@ -1653,7 +1724,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
                 page->addChild(*param);
             }
         }
-        if (blurPlugin != eBlurPluginChromaBlur) {
+        if (blurPlugin != eBlurPluginChromaBlur && blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
             OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
             param->setLabel(kParamExpandRoDLabel);
             param->setHint(kParamExpandRoDHint);
@@ -1661,6 +1732,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             if (page) {
                 page->addChild(*param);
             }
+#pragma message WARN("TODO: format")
         }
     }
     
@@ -1829,6 +1901,63 @@ CImgErodeBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle ha
     return new CImgBlurPlugin(handle, eBlurPluginErodeBlur);
 }
 
+//
+// CImgSharpenPluginFactory
+//
+mDeclarePluginFactoryVersioned(CImgSharpenPluginFactory, {}, {});
+
+template<unsigned int majorVersion>
+void
+CImgSharpenPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+{
+    return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginSharpen);
+}
+
+template<unsigned int majorVersion>
+void
+CImgSharpenPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                          OFX::ContextEnum context)
+{
+    return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginSharpen);
+}
+
+template<unsigned int majorVersion>
+OFX::ImageEffect*
+CImgSharpenPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                       OFX::ContextEnum /*context*/)
+{
+    return new CImgBlurPlugin(handle, eBlurPluginSharpen);
+}
+
+//
+// CImgSoftenPluginFactory
+//
+mDeclarePluginFactoryVersioned(CImgSoftenPluginFactory, {}, {});
+
+template<unsigned int majorVersion>
+void
+CImgSoftenPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+{
+    return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginSoften);
+}
+
+template<unsigned int majorVersion>
+void
+CImgSoftenPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                         OFX::ContextEnum context)
+{
+    return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginSoften);
+}
+
+template<unsigned int majorVersion>
+OFX::ImageEffect*
+CImgSoftenPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                      OFX::ContextEnum /*context*/)
+{
+    return new CImgBlurPlugin(handle, eBlurPluginSoften);
+}
+
+
 // Declare old versions for backward compatibility.
 // They have default for processAlpha set to false
 static CImgBlurPluginFactory<3> oldp1(kPluginIdentifier, 0);
@@ -1845,10 +1974,14 @@ static CImgLaplacianPluginFactory<kPluginVersionMajor> p2(kPluginIdentifierLapla
 static CImgChromaBlurPluginFactory<kPluginVersionMajor> p3(kPluginIdentifierChromaBlur, kPluginVersionMinor);
 static CImgBloomPluginFactory<kPluginVersionMajor> p4(kPluginIdentifierBloom, kPluginVersionMinor);
 static CImgErodeBlurPluginFactory<kPluginVersionMajor> p5(kPluginIdentifierErodeBlur, kPluginVersionMinor);
+static CImgSharpenPluginFactory<kPluginVersionMajor> p6(kPluginIdentifierSharpen, kPluginVersionMinor);
+static CImgSoftenPluginFactory<kPluginVersionMajor> p7(kPluginIdentifierSoften, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
 mRegisterPluginFactoryInstance(p4)
 mRegisterPluginFactoryInstance(p5)
+mRegisterPluginFactoryInstance(p6)
+mRegisterPluginFactoryInstance(p7)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

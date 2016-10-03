@@ -123,6 +123,7 @@ matrix.
 * GMICExpr: Quickly generate or process image from mathematical formula evaluated for each pixel.
 * GodRays: Average an image over a range of transforms, or create crepuscular rays.
 * Shadertoy: Apply a [Shadertoy](http://www.shadertoy.com) fragment shaders (multipass shaders are not supported).
+* SharpenCImg: Sharpen the input stream by enhancing its Laplacian.
 * SharpenInvDiffCImg: Sharpen selected images by inverse diffusion.
 * SharpenShockCImg: Sharpen selected images by shock filters.
 * SmoothAnisotropicCImg: Smooth/Denoise input stream using anisotropic PDE-based smoothing.
@@ -132,6 +133,7 @@ matrix.
 * SmoothMedianCImg: Apply a [median filter](https://en.wikipedia.org/wiki/Median_filter) to input images.
 * SmoothPatchBasedCImg: Denoise selected images by non-local patch averaging.
 * SmoothRollingGuidanceCImg: Filter out details under a given scale using the [Rolling Guidance filter](http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/).
+* SoftenCImg: Soften the input stream by reducing its Laplacian.
 
 ### Keyer
 
