@@ -394,6 +394,8 @@ static const float noise_b3[] = { 0.8908,   0.2007,   0.0855,    0.0412,    0.02
 #define abort_test_loop() abort_test()
 #endif
 
+static OFX::Color::LutManager<Mutex>* gLutManager;
+
 template<typename T>
 static inline void
 unused(const T&) {}
@@ -679,9 +681,9 @@ class DenoiseSharpenPlugin
 public:
 
     /** @brief ctor */
-    DenoiseSharpenPlugin(OfxImageEffectHandle handle, const OFX::Color::LutBase* lut)
+    DenoiseSharpenPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _lut(lut)
+        , _lut(gLutManager->Rec709Lut()) // TODO: work in different colorspaces
         , _dstClip(0)
         , _srcClip(0)
         , _maskClip(0)
@@ -908,7 +910,7 @@ private:
         }
     };
 
-    const OFX::Color::LutBase* _lut;
+    const OFX::Color::Lut* _lut;
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -2944,32 +2946,7 @@ class DenoiseSharpenOverlayDescriptor
 {
 };
 
-class DenoiseSharpenPluginFactory : public OFX::PluginFactoryHelper<DenoiseSharpenPluginFactory>
-{
-public:
-
-    DenoiseSharpenPluginFactory(const std::string& id, unsigned int verMaj, unsigned int verMin)
-    : OFX::PluginFactoryHelper<DenoiseSharpenPluginFactory>(id, verMaj, verMin)
-    , _lut(0)
-    {
-    }
-
-    virtual void load()
-    {
-        _lut = OFX::Color::LutManager<Mutex>::Rec709Lut();
-    }
-
-    virtual void unload()
-    {
-        OFX::Color::LutManager<Mutex>::releaseLut(_lut->getName());
-    }
-
-    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
-    virtual void describe(OFX::ImageEffectDescriptor &desc);
-    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
-private:
-    const OFX::Color::LutBase* _lut;
-};
+mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new OFX::Color::LutManager<Mutex>; }, { delete gLutManager; });
 
 void
 DenoiseSharpenPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -3519,7 +3496,7 @@ OFX::ImageEffect*
 DenoiseSharpenPluginFactory::createInstance(OfxImageEffectHandle handle,
                                             OFX::ContextEnum /*context*/)
 {
-    return new DenoiseSharpenPlugin(handle, _lut);
+    return new DenoiseSharpenPlugin(handle);
 }
 
 static DenoiseSharpenPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);

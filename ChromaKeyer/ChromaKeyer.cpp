@@ -182,6 +182,8 @@ enum SourceAlphaEnum
     eSourceAlphaNormal,
 };
 
+static OFX::Color::LutManager<Mutex>* gLutManager;
+
 
 class ChromaKeyerProcessorBase
     : public OFX::ImageProcessor
@@ -192,7 +194,7 @@ protected:
     const OFX::Image *_inMaskImg;
     const OFX::Image *_outMaskImg;
     OfxRGBColourD _keyColor;
-    const OFX::Color::LutBase* _lut;
+    const OFX::Color::Lut* _lut;
     void (*_to_ypbpr)(float r,
                       float g,
                       float b,
@@ -281,7 +283,7 @@ public:
                 case eYPbPrColorspaceCcir601:
                 case eYPbPrColorspaceRec709:
                 case eYPbPrColorspaceRec2020:
-                    _lut = OFX::Color::LutManager<Mutex>::Rec709Lut();
+                    _lut = gLutManager->Rec709Lut();
                     break;
             }
         }
@@ -866,7 +868,7 @@ ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreference
     // note: ChromaKeyer handles correctly inputs with different components: it only uses RGB components from both clips
 }
 
-mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});
+mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new OFX::Color::LutManager<Mutex>; }, { delete gLutManager; });
 void
 ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
