@@ -1084,20 +1084,24 @@ public:
             // this avoids unwanted crops (cropToFormat is checked by default)
             OfxRectI srcFormat;
             _srcClip->getFormat(srcFormat);
-            if (dstRoD->x1 < srcFormat.x1 && srcRoD.x1 >= srcFormat.x1) {
-                dstRoD->x1 = srcFormat.x1;
+            if (! isEmpty(srcFormat) ) {
+                if (dstRoD->x1 < srcFormat.x1 && srcRoD.x1 >= srcFormat.x1) {
+                    dstRoD->x1 = srcFormat.x1;
+                    retval = true;
+                }
+                if (dstRoD->x2 > srcFormat.x2 && srcRoD.x2 <= srcFormat.x2) {
+                    dstRoD->x2 = srcFormat.x2;
+                    retval = true;
+                }
+                if (dstRoD->y1 < srcFormat.y1 && srcRoD.y1 >= srcFormat.y1) {
+                    dstRoD->y1 = srcFormat.y1;
+                    retval = true;
+                }
+                if (dstRoD->y2 > srcFormat.y2 && srcRoD.y2 <= srcFormat.y2) {
+                    dstRoD->y2 = srcFormat.y2;
+                    retval = true;
+                }
             }
-            if (dstRoD->x2 > srcFormat.x2 && srcRoD.x2 <= srcFormat.x2) {
-                dstRoD->x2 = srcFormat.x2;
-            }
-            if (dstRoD->y1 < srcFormat.y1 && srcRoD.y1 >= srcFormat.y1) {
-                dstRoD->y1 = srcFormat.y1;
-            }
-            if (dstRoD->y2 > srcFormat.y2 && srcRoD.y2 <= srcFormat.y2) {
-                dstRoD->y2 = srcFormat.y2;
-            }
-
-            retval = true;
         }
 #endif
 
