@@ -54,6 +54,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamReformat "reformat"
 #define kParamReformatLabel "Reformat"
 #define kParamReformatHint "Translates the bottom left corner of the crop rectangle to be in (0,0)."
+#define kParamReformatHintExtraNatron " In order to actually change the format of this image stream, use a Reformat node after this one, with the same extent, and with 'Resize Type' set to None and 'Center' unchecked."
 #define kParamReformatDefault false
 
 #define kParamIntersect "intersect"
@@ -849,7 +850,7 @@ CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReformat);
         param->setLabel(kParamReformatLabel);
-        param->setHint(kParamReformatHint);
+        param->setHint( std::string(kParamReformatHint) + (getImageEffectHostDescription()->isNatron ? "" : kParamReformatHintExtraNatron) );
         param->setDefault(kParamReformatDefault);
         param->setAnimates(false);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
