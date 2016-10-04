@@ -144,7 +144,7 @@ enum ResizeEnum
 #define kParamTurnHint "Rotate the image by 90 degrees counter-clockwise."
 
 #define kParamPreserveBoundingBox "preserveBB"
-#define kParamPreserveBoundingBoxLabel "Preserve BBox & Concat"
+#define kParamPreserveBoundingBoxLabel "Preserve BBox" // and Concat"
 #define kParamPreserveBoundingBoxHint \
     "If checked, preserve the whole image bounding box and concatenate transforms downstream.\n" \
     "Normally, all pixels outside of the outside format are clipped off. If this is checked, the whole image RoD is kept.\n" \
@@ -304,92 +304,17 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
          _preserveBB->getValue() ) {
         return ret;
     }
-#if 0
+
     const double time = args.time;
     // intersect with format RoD
+    OfxRectI rect, format;
+    double par;
+    getOutputFormat(time, &par, &rect, &format);
+    const OfxPointD rsOne = {1., 1.}; // format is with respect to unit renderscale
     OfxRectD formatrod;
-    formatrod.x1 = formatrod.y1 = formatrod.x2 = formatrod.y2 = 0.;
+    OFX::Coords::toCanonical(format, rsOne, par, &formatrod);
 
-    int type_i;
-    _type->getValue(type_i);
-    ReformatTypeEnum typeVal = (ReformatTypeEnum)type_i;
-
-    OfxPointI boxSize;
-    double boxPAR;
-    bool boxFixed;
-    switch (typeVal) {
-        case eReformatTypeToFormat:
-            boxFixed = true;
-            boxSize = _formatBoxSize->getValueAtTime(time);
-            boxPAR = _formatBoxPAR->getValueAtTime(time);
-            break;
-        case eReformatTypeScale:
-            boxFixed = true;
-            boxSize = _boxSize->getValueAtTime(time);
-            boxPAR = _boxPAR->getValueAtTime(time);
-            break;
-        case eReformatTypeToBox:
-            boxFixed = _boxFixed->getValue();
-            boxSize = _boxSize->getValueAtTime(time);
-            boxPAR = _boxPAR->getValueAtTime(time);
-            break;
-    }
-
-
-    // convert the source RoD to pixels
-    OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
-    if ( Coords::rectIsEmpty(srcRod) ) {
-        return false;
-    }
-    double srcPar = _srcClip->getPixelAspectRatio();
-    OfxRectI srcRodPixel;
-    OfxPointD rs = {1., 1.};
-    Coords::toPixelNearest(srcRod, rs, srcPar, &srcRodPixel);
-    int srcw = srcRodPixel.x2 - srcRodPixel.x1;
-    int srch = srcRodPixel.y2 - srcRodPixel.y1;
-    // if turn, inverse both dimensions
-    if ( _turn->getValueAtTime(time) ) {
-        std::swap(srcw, srch);
-    }
-    // if fit or fill, determine if it should be fit to width or height
-    ResizeEnum resize = (ResizeEnum)_resize->getValueAtTime(time);
-    if (resize == eResizeFit) {
-        if (boxSize.x * srch > boxSize.y * srcw) {
-            resize = eResizeHeight;
-        } else {
-            resize = eResizeWidth;
-        }
-    } else if (resize == eResizeFill) {
-        if (boxSize.x * srch > boxSize.y * srcw) {
-            resize = eResizeWidth;
-        } else {
-            resize = eResizeHeight;
-        }
-    }
-
-    if ( (resize == eResizeNone) ||
-         ( resize == eResizeDistort) ||
-         boxFixed ) {
-        // easy case
-        formatrod.x2 = boxSize.x * boxPAR;
-        formatrod.y2 = boxSize.y;
-    } else if (resize == eResizeWidth) {
-        double scale = boxSize.x / (double)srcw;
-        formatrod.x2 = boxSize.x * boxPAR;
-        int dsth = std::floor(srch * scale + 0.5);
-        int offset = 0;//_center->getValueAtTime(time) ? (boxSize.y - dsth) / 2 : 0;
-        formatrod.y1 = offset;
-        formatrod.y2 = offset + dsth;
-    } else if (resize == eResizeHeight) {
-        double scale = boxSize.y / (double)srch;
-        int dstw = std::floor(srcw * scale + 0.5);
-        int offset = 0;//_center->getValueAtTime(time) ? (boxSize.x - dstw) / 2 : 0;
-        formatrod.x1 = offset * boxPAR;
-        formatrod.x2 = (offset + dstw) * boxPAR;
-        formatrod.y2 = boxSize.y;
-    }
     Coords::rectIntersection(rod, formatrod, &rod);
-#endif
 
     return true;
 } // ReformatPlugin::getRegionOfDefinition
@@ -468,11 +393,6 @@ ReformatPlugin::getOutputFormat(const double time,
     //bool flip = _flip->getValueAtTime(time);
     //bool flop = _flop->getValueAtTime(time);
     bool turn = _turn->getValueAtTime(time);
-    if ( (resize == eResizeNone) &&
-        !( (center && boxFixed) /*|| flip || flop*/ || turn ) ) {
-        getInputFormat(time, par, rect); // identity
-        return;
-    }
     // same as getRegionOfDefinition, but without rounding, and without conversion to pixels
 
 
