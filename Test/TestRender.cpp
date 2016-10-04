@@ -669,6 +669,24 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::c
             oss << (c.isConnected() ? "connected" : "not connected");
             oss << "\n";
             oss << (c.hasContinuousSamples() ? "continuous samples" : "discontinuous samples");
+#ifdef OFX_EXTENSIONS_NATRON
+            oss << "\nformat: ";
+            OfxRectI format;
+            c.getFormat(format);
+            oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
+            if (format.x1 != 0 && format.y1 != 0) {
+                if (format.x1 < 0) {
+                    oss << format.x1;
+                } else {
+                    oss << '+' << format.x1;
+                }
+                if (format.y1 < 0) {
+                    oss << format.y1;
+                } else {
+                    oss << '+' << format.y1;
+                }
+            }
+#endif
             oss << "\npixel aspect ratio: ";
             oss << c.getPixelAspectRatio();
             oss << "\nframe rate: ";
@@ -710,6 +728,24 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::c
             oss << (c.isConnected() ? "connected" : "not connected");
             oss << "\n";
             oss << (c.hasContinuousSamples() ? "continuous samples" : "discontinuous samples");
+#ifdef OFX_EXTENSIONS_NATRON
+            oss << "\nformat: ";
+            OfxRectI format;
+            c.getFormat(format);
+            oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
+            if (format.x1 != 0 && format.y1 != 0) {
+                if (format.x1 < 0) {
+                    oss << format.x1;
+                } else {
+                    oss << '+' << format.x1;
+                }
+                if (format.y1 < 0) {
+                    oss << format.y1;
+                } else {
+                    oss << '+' << format.y1;
+                }
+            }
+#endif
             oss << "\npixel aspect ratio: ";
             oss << c.getPixelAspectRatio();
             oss << "\nframe rate: ";

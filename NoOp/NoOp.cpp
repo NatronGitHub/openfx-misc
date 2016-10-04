@@ -29,6 +29,8 @@
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
+#include "ofxsGenerator.h" // for format-related parameters
+#include "ofxsFormatResolution.h" // for format-related enums
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -43,7 +45,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription "Copies the input to the ouput.\n" \
     "This plugin concatenates transforms."
 #define kPluginIdentifier "net.sf.openfx.NoOpPlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+
+// History:
+// Version 2.0: introduce setFormat, deprecate setPixelAspectRatio on Natron
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -76,6 +81,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputFieldOrder "outputFieldOrder"
 #define kParamOutputFieldOrderLabel "Output Field Order"
 #define kParamOutputFieldOrderHint "Field order state of the output clip."
+
+#ifdef OFX_EXTENSIONS_NATRON
+#define kParamSetFormat "setFormat"
+#define kParamSetFormatLabel "Set Format"
+#define kParamSetFormatHint "Set the format of the output clip, without modifying the raw content."
+#endif
 
 #define kParamSetPixelAspectRatio "setPixelAspectRatio"
 #define kParamSetPixelAspectRatioLabel "Set Pixel Aspect Ratio"
@@ -110,6 +121,16 @@ public:
         , _premult(0)
         , _setFieldOrder(0)
         , _fieldOrder(0)
+#ifdef OFX_EXTENSIONS_NATRON
+        , _setFormat(0)
+        , _extent(0)
+        , _format(0)
+        , _formatSize(0)
+        , _formatPar(0)
+        , _btmLeft(0)
+        , _size(0)
+        , _recenter(0)
+#endif
         , _setPixelAspectRatio(0)
         , _pixelAspectRatio(0)
         , _setFrameRate(0)
@@ -121,27 +142,37 @@ public:
         _setPremult = fetchBooleanParam(kParamSetPremult);
         _premult = fetchChoiceParam(kParamOutputPremult);
         assert(_forceCopy && _setPremult && _premult);
-        _premult->setEnabled( _setPremult->getValue() );
 
         const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
         if (gHostDescription.supportsSetableFielding) {
             _setFieldOrder = fetchBooleanParam(kParamSetFieldOrder);
             _fieldOrder = fetchChoiceParam(kParamOutputFieldOrder);
             assert(_setFieldOrder && _fieldOrder);
-            _fieldOrder->setEnabled( _setFieldOrder->getValue() );
         }
+#ifdef OFX_EXTENSIONS_NATRON
+        if (gHostDescription.isNatron) {
+            _setFormat = fetchBooleanParam(kParamSetFormat);
+            _extent = fetchChoiceParam(kParamGeneratorExtent);
+            _format = fetchChoiceParam(kParamGeneratorFormat);
+            _formatSize = fetchInt2DParam(kParamGeneratorSize);
+            _formatPar = fetchDoubleParam(kParamGeneratorPAR);
+            _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
+            _size = fetchDouble2DParam(kParamRectangleInteractSize);
+            _recenter = fetchPushButtonParam(kParamGeneratorCenter);
+        }
+#endif
         if (gHostDescription.supportsMultipleClipPARs) {
             _setPixelAspectRatio = fetchBooleanParam(kParamSetPixelAspectRatio);
             _pixelAspectRatio = fetchDoubleParam(kParamOutputPixelAspectRatio);
             assert(_setPixelAspectRatio && _pixelAspectRatio);
-            _pixelAspectRatio->setEnabled( _setPixelAspectRatio->getValue() );
         }
         if (gHostDescription.supportsSetableFrameRate) {
             _setFrameRate = fetchBooleanParam(kParamSetFrameRate);
             _frameRate = fetchDoubleParam(kParamOutputFrameRate);
             assert(_setFrameRate && _frameRate);
-            _frameRate->setEnabled( _setFrameRate->getValue() );
         }
+
+        updateVisibility();
     }
 
 private:
@@ -163,6 +194,40 @@ private:
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    void updateVisibility()
+    {
+        const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        _premult->setEnabled( _setPremult->getValue() );
+        if (gHostDescription.supportsSetableFielding) {
+            _fieldOrder->setEnabled( _setFieldOrder->getValue() );
+        }
+#ifdef OFX_EXTENSIONS_NATRON
+        if (gHostDescription.isNatron) {
+            GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+            bool hasFormat = (extent == eGeneratorExtentFormat);
+            bool hasSize = (extent == eGeneratorExtentSize);
+
+            _format->setIsSecret(!hasFormat);
+            _size->setIsSecret(!hasSize);
+            _recenter->setIsSecret(!hasSize);
+            _btmLeft->setIsSecret(!hasSize);
+
+            bool setFormat = _setFormat->getValue();
+            _extent->setEnabled(setFormat);
+            _format->setEnabled(setFormat);
+            _size->setEnabled(setFormat);
+            _recenter->setEnabled(setFormat);
+            _btmLeft->setEnabled(setFormat);
+        }
+#endif
+        if (gHostDescription.supportsMultipleClipPARs) {
+            _pixelAspectRatio->setEnabled( _setPixelAspectRatio->getValue() );
+        }
+        if (gHostDescription.supportsSetableFrameRate) {
+            _frameRate->setEnabled( _setFrameRate->getValue() );
+        }
+
+    }
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -172,6 +237,16 @@ private:
     OFX::ChoiceParam *_premult;
     OFX::BooleanParam *_setFieldOrder;
     OFX::ChoiceParam *_fieldOrder;
+#ifdef OFX_EXTENSIONS_NATRON
+    OFX::BooleanParam *_setFormat;
+    OFX::ChoiceParam* _extent;
+    OFX::ChoiceParam* _format;
+    OFX::Int2DParam* _formatSize;
+    OFX::DoubleParam* _formatPar;
+    OFX::Double2DParam* _btmLeft;
+    OFX::Double2DParam* _size;
+    OFX::PushButtonParam *_recenter;
+#endif
     OFX::BooleanParam *_setPixelAspectRatio;
     OFX::DoubleParam *_pixelAspectRatio;
     OFX::BooleanParam *_setFrameRate;
@@ -234,7 +309,14 @@ NoOpPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
     }
     double srcPAR = _srcClip->getPixelAspectRatio();
     double pixelAspectRatio = 1.;
-    _pixelAspectRatio->getValueAtTime(args.time, pixelAspectRatio);
+    if (_pixelAspectRatio) {
+        _pixelAspectRatio->getValueAtTime(args.time, pixelAspectRatio);
+    }
+#ifdef OFX_EXTENSIONS_NATRON
+    if (_formatPar) {
+        _formatPar->getValueAtTime(args.time, pixelAspectRatio);
+    }
+#endif
     if ( (srcPAR <= 0) || (pixelAspectRatio <= 0) ) {
         return false;
     }
@@ -468,15 +550,61 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                          const std::string &paramName)
 {
     if (paramName == kParamSetPremult) {
-        _premult->setEnabled( _setPremult->getValue() );
+        updateVisibility();
     } else if (paramName == kParamSetFieldOrder) {
-        _fieldOrder->setEnabled( _setFieldOrder->getValue() );
+        updateVisibility();
     } else if (paramName == kParamSetFieldOrder) {
-        _fieldOrder->setEnabled( _setFieldOrder->getValue() );
+        updateVisibility();
+#ifdef OFX_EXTENSIONS_NATRON
+    } else if (paramName == kParamSetFormat) {
+        updateVisibility();
+    } else if (paramName == kParamGeneratorExtent) {
+        updateVisibility();
+    } else if (paramName == kParamGeneratorFormat) {
+        //the host does not handle the format itself, do it ourselves
+        OFX::EParamFormat format = (OFX::EParamFormat)_format->getValue();
+        int w = 0, h = 0;
+        double par = -1;
+        getFormatResolution(format, &w, &h, &par);
+        assert(par != -1);
+        _formatPar->setValue(par);
+        _formatSize->setValue(w, h);
+    } else if (paramName == kParamGeneratorCenter) {
+        OFX::Clip* srcClip = _srcClip;
+        OfxRectD srcRoD;
+        if ( srcClip && srcClip->isConnected() ) {
+            srcRoD = srcClip->getRegionOfDefinition(args.time);
+        } else {
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            srcRoD.x1 = off.x;
+            srcRoD.x2 = off.x + siz.x;
+            srcRoD.y1 = off.y;
+            srcRoD.y2 = off.y + siz.y;
+        }
+        OfxPointD center;
+        center.x = (srcRoD.x2 + srcRoD.x1) / 2.;
+        center.y = (srcRoD.y2 + srcRoD.y1) / 2.;
+
+        OfxRectD rectangle;
+        _size->getValue(rectangle.x2, rectangle.y2);
+        _btmLeft->getValue(rectangle.x1, rectangle.y1);
+        rectangle.x2 += rectangle.x1;
+        rectangle.y2 += rectangle.y1;
+
+        OfxRectD newRectangle;
+        newRectangle.x1 = center.x - (rectangle.x2 - rectangle.x1) / 2.;
+        newRectangle.y1 = center.y - (rectangle.y2 - rectangle.y1) / 2.;
+        newRectangle.x2 = newRectangle.x1 + (rectangle.x2 - rectangle.x1);
+        newRectangle.y2 = newRectangle.y1 + (rectangle.y2 - rectangle.y1);
+
+        _size->setValue(newRectangle.x2 - newRectangle.x1, newRectangle.y2 - newRectangle.y1);
+        _btmLeft->setValue(newRectangle.x1, newRectangle.y1);
+#endif
     } else if (paramName == kParamSetPixelAspectRatio) {
-        _pixelAspectRatio->setEnabled( _setPixelAspectRatio->getValue() );
+        updateVisibility();
     } else if (paramName == kParamSetFrameRate) {
-        _frameRate->setEnabled( _setFrameRate->getValue() );
+        updateVisibility();
     } else if (paramName == kParamClipInfo) {
         std::ostringstream oss;
         oss << "Clip Info:\n\n";
@@ -502,6 +630,24 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             oss << (c.isConnected() ? "connected" : "not connected");
             oss << "\n";
             oss << (c.hasContinuousSamples() ? "continuous samples" : "discontinuous samples");
+#ifdef OFX_EXTENSIONS_NATRON
+            oss << "\nformat: ";
+            OfxRectI format;
+            c.getFormat(format);
+            oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
+            if (format.x1 != 0 && format.y1 != 0) {
+                if (format.x1 < 0) {
+                    oss << format.x1;
+                } else {
+                    oss << '+' << format.x1;
+                }
+                if (format.y1 < 0) {
+                    oss << format.y1;
+                } else {
+                    oss << '+' << format.y1;
+                }
+            }
+#endif
             oss << "\npixel aspect ratio: ";
             oss << c.getPixelAspectRatio();
             oss << "\nframe rate: ";
@@ -543,6 +689,24 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             oss << (c.isConnected() ? "connected" : "not connected");
             oss << "\n";
             oss << (c.hasContinuousSamples() ? "continuous samples" : "discontinuous samples");
+#ifdef OFX_EXTENSIONS_NATRON
+            oss << "\nformat: ";
+            OfxRectI format;
+            c.getFormat(format);
+            oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
+            if (format.x1 != 0 && format.y1 != 0) {
+                if (format.x1 < 0) {
+                    oss << format.x1;
+                } else {
+                    oss << '+' << format.x1;
+                }
+                if (format.y1 < 0) {
+                    oss << format.y1;
+                } else {
+                    oss << '+' << format.y1;
+                }
+            }
+#endif
             oss << "\npixel aspect ratio: ";
             oss << c.getPixelAspectRatio();
             oss << "\nframe rate: ";
@@ -582,29 +746,79 @@ NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     }
     if (_setFieldOrder) {
         // set the field order of _dstClip
-        bool setFieldOrder;
-        _setFieldOrder->getValue(setFieldOrder);
+        bool setFieldOrder = _setFieldOrder->getValue();
         if (setFieldOrder) {
             FieldEnum fieldOrder = (FieldEnum)_fieldOrder->getValue();
 
             clipPreferences.setOutputFielding(fieldOrder);
         }
     }
+#ifdef OFX_EXTENSIONS_NATRON
+    if (_setFormat) {
+        bool setFormat = _setFormat->getValue();
+        if (setFormat) {
+            GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+
+            switch (extent) {
+                case eGeneratorExtentFormat: {
+                    int w, h;
+                    _formatSize->getValue(w, h);
+                    double par = _formatPar->getValue();
+                    OfxRectI pixelFormat;
+                    pixelFormat.x1 = pixelFormat.y1 = 0;
+                    pixelFormat.x2 = w;
+                    pixelFormat.y2 = h;
+                    clipPreferences.setOutputFormat(pixelFormat);
+                    clipPreferences.setPixelAspectRatio(*_dstClip, par);
+                    break;
+                }
+                case eGeneratorExtentSize: {
+                    OfxRectD rod;
+                    _size->getValue(rod.x2, rod.y2);
+                    _btmLeft->getValue(rod.x1, rod.y1);
+                    rod.x2 += rod.x1;
+                    rod.y2 += rod.y1;
+                    double par = _srcClip->getPixelAspectRatio();
+                    OfxPointD renderScale = {1., 1.};
+                    OfxRectI pixelFormat;
+                    OFX::Coords::toPixelNearest(rod, renderScale, par, &pixelFormat);
+                    clipPreferences.setOutputFormat(pixelFormat);
+                    //clipPreferences.setPixelAspectRatio(*_dstClip, par); // should be the default
+                    break;
+                }
+                case eGeneratorExtentProject: {
+                    OfxRectD rod;
+                    OfxPointD siz = getProjectSize();
+                    OfxPointD off = getProjectOffset();
+                    rod.x1 = off.x;
+                    rod.x2 = off.x + siz.x;
+                    rod.y1 = off.y;
+                    rod.y2 = off.y + siz.y;
+                    double par = getProjectPixelAspectRatio();
+                    OfxPointD renderScale = {1., 1.};
+                    OfxRectI pixelFormat;
+                    OFX::Coords::toPixelNearest(rod, renderScale, par, &pixelFormat);
+                    clipPreferences.setOutputFormat(pixelFormat);
+                    clipPreferences.setPixelAspectRatio(*_dstClip, par);
+                    break;
+                }
+                case eGeneratorExtentDefault:
+                    break;
+            }
+        }
+    }
+#endif
     if (_setPixelAspectRatio) {
-        bool setPixelAspectRatio;
-        _setPixelAspectRatio->getValue(setPixelAspectRatio);
+        bool setPixelAspectRatio = _setPixelAspectRatio->getValue();
         if (setPixelAspectRatio) {
-            double pixelAspectRatio;
-            _pixelAspectRatio->getValue(pixelAspectRatio);
+            double pixelAspectRatio = _pixelAspectRatio->getValue();
             clipPreferences.setPixelAspectRatio(*_dstClip, pixelAspectRatio);
         }
     }
     if (_setFrameRate) {
-        bool setFrameRate;
-        _setFrameRate->getValue(setFrameRate);
+        bool setFrameRate = _setFrameRate->getValue();
         if (setFrameRate) {
-            double frameRate;
-            _frameRate->getValue(frameRate);
+            double frameRate = _frameRate->getValue();
             clipPreferences.setOutputFrameRate(frameRate);
         }
     }
@@ -778,6 +992,167 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
+#ifdef OFX_EXTENSIONS_NATRON
+    if (gHostDescription.isNatron) {
+        //// setFormat
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFormat);
+            param->setLabel(kParamSetFormatLabel);
+            param->setHint(kParamSetFormatHint);
+            param->setDefault(false);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // extent
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamGeneratorExtent);
+            param->setLabel(kParamGeneratorExtentLabel);
+            param->setHint(kParamGeneratorExtentHint);
+            assert(param->getNOptions() == eGeneratorExtentFormat);
+            param->appendOption(kParamGeneratorExtentOptionFormat, kParamGeneratorExtentOptionFormatHint);
+            assert(param->getNOptions() == eGeneratorExtentSize);
+            param->appendOption(kParamGeneratorExtentOptionSize, kParamGeneratorExtentOptionSizeHint);
+            assert(param->getNOptions() == eGeneratorExtentProject);
+            param->appendOption(kParamGeneratorExtentOptionProject, kParamGeneratorExtentOptionProjectHint);
+            //assert(param->getNOptions() == eGeneratorExtentDefault);
+            //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
+            param->setDefault(eGeneratorExtentFormat);
+            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // recenter
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamGeneratorCenter);
+            param->setLabel(kParamGeneratorCenterLabel);
+            param->setHint(kParamGeneratorCenterHint);
+            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // format
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamGeneratorFormat);
+            param->setLabel(kParamGeneratorFormatLabel);
+            assert(param->getNOptions() == eParamFormatPCVideo);
+            param->appendOption(kParamFormatPCVideoLabel);
+            assert(param->getNOptions() == eParamFormatNTSC);
+            param->appendOption(kParamFormatNTSCLabel);
+            assert(param->getNOptions() == eParamFormatPAL);
+            param->appendOption(kParamFormatPALLabel);
+            assert(param->getNOptions() == eParamFormatHD);
+            param->appendOption(kParamFormatHDLabel);
+            assert(param->getNOptions() == eParamFormatNTSC169);
+            param->appendOption(kParamFormatNTSC169Label);
+            assert(param->getNOptions() == eParamFormatPAL169);
+            param->appendOption(kParamFormatPAL169Label);
+            assert(param->getNOptions() == eParamFormat1kSuper35);
+            param->appendOption(kParamFormat1kSuper35Label);
+            assert(param->getNOptions() == eParamFormat1kCinemascope);
+            param->appendOption(kParamFormat1kCinemascopeLabel);
+            assert(param->getNOptions() == eParamFormat2kSuper35);
+            param->appendOption(kParamFormat2kSuper35Label);
+            assert(param->getNOptions() == eParamFormat2kCinemascope);
+            param->appendOption(kParamFormat2kCinemascopeLabel);
+            assert(param->getNOptions() == eParamFormat4kSuper35);
+            param->appendOption(kParamFormat4kSuper35Label);
+            assert(param->getNOptions() == eParamFormat4kCinemascope);
+            param->appendOption(kParamFormat4kCinemascopeLabel);
+            assert(param->getNOptions() == eParamFormatSquare256);
+            param->appendOption(kParamFormatSquare256Label);
+            assert(param->getNOptions() == eParamFormatSquare512);
+            param->appendOption(kParamFormatSquare512Label);
+            assert(param->getNOptions() == eParamFormatSquare1k);
+            param->appendOption(kParamFormatSquare1kLabel);
+            assert(param->getNOptions() == eParamFormatSquare2k);
+            param->appendOption(kParamFormatSquare2kLabel);
+            param->setDefault(eParamFormatPCVideo);
+            param->setHint(kParamGeneratorFormatHint);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        {
+            int w = 0, h = 0;
+            double par = -1.;
+            getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
+            assert(par != -1);
+            {
+                Int2DParamDescriptor* param = desc.defineInt2DParam(kParamGeneratorSize);
+                param->setLabel(kParamGeneratorSizeLabel);
+                param->setHint(kParamGeneratorSizeHint);
+                param->setIsSecretAndDisabled(true);
+                param->setDefault(w, h);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            {
+                DoubleParamDescriptor* param = desc.defineDoubleParam(kParamGeneratorPAR);
+                param->setLabel(kParamGeneratorPARLabel);
+                param->setHint(kParamGeneratorPARHint);
+                param->setIsSecretAndDisabled(true);
+                param->setRange(0., DBL_MAX);
+                param->setDisplayRange(0.5, 2.);
+                param->setDefault(par);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+        }
+
+        // btmLeft
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+            param->setLabel(kParamRectangleInteractBtmLeftLabel);
+            param->setDoubleType(eDoubleTypeXYAbsolute);
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            param->setDefault(0., 0.);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+            param->setIncrement(1.);
+            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            param->setHint("Coordinates of the bottom left corner of the size rectangle.");
+            param->setDigits(0);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // size
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
+            param->setLabel(kParamRectangleInteractSizeLabel);
+            param->setDoubleType(eDoubleTypeXY);
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            param->setDefault(1., 1.);
+            param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+            param->setIncrement(1.);
+            param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+            param->setHint("Width and height of the size rectangle.");
+            param->setIncrement(1.);
+            param->setDigits(0);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    }
+#endif // OFX_EXTENSIONS_NATRON
+
     if (gHostDescription.supportsMultipleClipPARs) {
         //// setPixelAspectRatio
         {
@@ -791,7 +1166,6 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
-
         //// pixelAspectRatio
         {
             OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamOutputPixelAspectRatio);
