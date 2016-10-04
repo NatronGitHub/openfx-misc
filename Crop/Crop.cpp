@@ -547,7 +547,6 @@ CropPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
 {
     getCropRectangle(args.time, args.renderScale, /*forceIntersect=*/false, /*useBlackOutside=*/true, /*useReformat=*/true, &rod, NULL);
 
-    printf("%g %g %g %g\n", rod.x1, rod.y1, rod.x2, rod.y2);
     return true;
 }
 
