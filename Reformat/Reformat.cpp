@@ -828,6 +828,9 @@ ReformatPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NUKE
     if (OFX::getImageEffectHostDescription()->canTransform) {
         gHostCanTransform = true;
+        // say the effect implements getTransform(), even though transform concatenation
+        // may be disabled (see ReformatPlugin::refreshDynamicProps())
+        desc.setCanTransform(true);
     }
 #endif
 #ifdef OFX_EXTENSIONS_NATRON
