@@ -261,6 +261,14 @@ private:
 
     void setBoxValues(double time);
 
+    void getInputFormat(const double time,
+                        double* par,
+                        OfxRectI* rect) const;
+
+    void getOutputFormat(const double time,
+                         double* par,
+                         OfxRectI* rect, // the rect to which the input format is mapped
+                         OfxRectI* format) const; // the full format (only useful if host supports format, really)
 
     // NON-GENERIC
     OFX::ChoiceParam *_type;
@@ -291,12 +299,13 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         return false;
     }
 
-    const double time = args.time;
     bool ret = Transform3x3Plugin::getRegionOfDefinition(args, rod);
     if ( !ret ||
          _preserveBB->getValue() ) {
         return ret;
     }
+#if 0
+    const double time = args.time;
     // intersect with format RoD
     OfxRectD formatrod;
     formatrod.x1 = formatrod.y1 = formatrod.x2 = formatrod.y2 = 0.;
@@ -380,6 +389,7 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         formatrod.y2 = boxSize.y;
     }
     Coords::rectIntersection(rod, formatrod, &rod);
+#endif
 
     return true;
 } // ReformatPlugin::getRegionOfDefinition
@@ -403,18 +413,31 @@ ReformatPlugin::isIdentity(const double time)
     return false;
 }
 
-bool
-ReformatPlugin::getInverseTransformCanonical(const double time,
-                                             const int /*view*/,
-                                             const double /*amount*/,
-                                             const bool invert,
-                                             OFX::Matrix3x3* invtransform) const
+void
+ReformatPlugin::getInputFormat(const double time,
+                               double* par,
+                               OfxRectI* rect) const
 {
-    if ( !_srcClip || !_srcClip->isConnected() ) {
-        return false;
+    *par = _srcClip->getPixelAspectRatio();
+#ifdef OFX_EXTENSIONS_NATRON
+    _srcClip->getFormat(*rect);
+    if ( !Coords::rectIsEmpty(*rect) ) {
+        // host returned a non-empty format
+        return;
     }
+    // host does not support format
+#endif
+    OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+    const OfxPointD rsOne = {1., 1.}; // format is with respect to unit renderscale
+    OFX::Coords::toPixelNearest(srcRod, rsOne, *par, rect);
+}
 
-
+void
+ReformatPlugin::getOutputFormat(const double time,
+                                double* par,
+                                OfxRectI* rect,
+                                OfxRectI* format) const
+{
     int type_i;
     _type->getValue(type_i);
     ReformatTypeEnum typeVal = (ReformatTypeEnum)type_i;
@@ -442,32 +465,55 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
 
     ResizeEnum resize = (ResizeEnum)_resize->getValueAtTime(time);
     bool center = _center->getValueAtTime(time);
-    bool flip = _flip->getValueAtTime(time);
-    bool flop = _flop->getValueAtTime(time);
+    //bool flip = _flip->getValueAtTime(time);
+    //bool flop = _flop->getValueAtTime(time);
     bool turn = _turn->getValueAtTime(time);
     if ( (resize == eResizeNone) &&
-         !( (center && boxFixed) || flip || flop || turn ) ) {
-        invtransform->setIdentity();
-
-        return true;
+        !( (center && boxFixed) /*|| flip || flop*/ || turn ) ) {
+        getInputFormat(time, par, rect); // identity
+        return;
     }
     // same as getRegionOfDefinition, but without rounding, and without conversion to pixels
 
 
+    if (format && boxFixed) { // the non-boxFixed case is treated at the end of the function
+        format->x1 = format->y1 = 0;
+        format->x2 = boxSize.x;
+        format->y2 = boxSize.y;
+    }
 
     if ( (boxSize.x == 0) && (boxSize.y == 0) ) {
         //probably scale is 0
-        return false;
+        rect->x1 = rect->y1 = rect->x2 = rect->y2 = 0;
+        *par = 1.;
+        return;
     }
     OfxRectD boxRod = { 0., 0., boxSize.x * boxPAR, boxSize.y};
+#ifdef OFX_EXTENSIONS_NATRON
+    OfxRectD srcRod;
+    OfxRectI srcFormat;
+    _srcClip->getFormat(srcFormat);
+    if ( Coords::rectIsEmpty(srcFormat) ) {
+        srcRod = _srcClip->getRegionOfDefinition(time);
+    } else {
+        // host returned a non-empty format, use it as the src rod to compute the transform
+        double srcPar = _srcClip->getPixelAspectRatio();
+        const OfxPointD rsOne = {1., 1.}; // format is always with respect to unit renderscale
+        OFX::Coords::toCanonical(srcFormat, rsOne, srcPar, &srcRod);
+    }
+#else
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+#endif
     if ( Coords::rectIsEmpty(srcRod) ) {
-        return false;
+        // degenerate case
+        rect->x1 = rect->y1 = rect->x2 = rect->y2 = 0;
+        *par = 1.;
+        return;
     }
     double srcw = srcRod.x2 - srcRod.x1;
     double srch = srcRod.y2 - srcRod.y1;
     // if turn, inverse both dimensions
-    if ( _turn->getValueAtTime(time) ) {
+    if ( turn ) {
         std::swap(srcw, srch);
     }
     // if fit or fill, determine if it should be fit to width or height
@@ -520,6 +566,39 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
         dstRod.y2 = boxRod.y2;
     }
     assert( !Coords::rectIsEmpty(dstRod) );
+    *par = boxPAR;
+    const OfxPointD rsOne = {1., 1.}; // format is with respect to unit renderscale
+    OFX::Coords::toPixelNearest(dstRod, rsOne, *par, rect);
+    if (format && !boxFixed) {
+        *format = *rect;
+    }
+}
+
+bool
+ReformatPlugin::getInverseTransformCanonical(const double time,
+                                             const int /*view*/,
+                                             const double /*amount*/,
+                                             const bool invert,
+                                             OFX::Matrix3x3* invtransform) const
+{
+    if ( !_srcClip || !_srcClip->isConnected() ) {
+        return false;
+    }
+
+    OfxRectD srcRod, dstRod;
+    {
+        double par;
+        OfxRectI format;
+        const OfxPointD rsOne = {1., 1.}; // format is with respect to unit renderscale
+        getInputFormat(time, &par, &format);
+        OFX::Coords::toCanonical(format, rsOne, par, &srcRod);
+        getOutputFormat(time, &par, &format, NULL);
+        OFX::Coords::toCanonical(format, rsOne, par, &dstRod);
+    }
+
+    bool flip = _flip->getValueAtTime(time);
+    bool flop = _flop->getValueAtTime(time);
+    bool turn = _turn->getValueAtTime(time);
 
     // flip/flop.
     // be careful, srcRod may be empty after this, because bounds are swapped,
@@ -536,7 +615,7 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             return false;
         }
         // now, compute the transform from dstRod to srcRod
-        if ( !_turn->getValueAtTime(time) ) {
+        if ( !turn ) {
             // simple case: no rotation
             // x <- srcRod.x1 + (x - dstRod.x1) * (srcRod.x2 - srcRod.x1) / (dstRod.x2 - dstRod.x1)
             // y <- srcRod.y1 + (y - dstRod.y1) * (srcRod.y2 - srcRod.y1) / (dstRod.y2 - dstRod.y1)
@@ -563,7 +642,7 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             return false;
         }
         // now, compute the transform from srcRod to dstRod
-        if ( !_turn->getValueAtTime(time) ) {
+        if ( !turn ) {
             // simple case: no rotation
             // x <- dstRod.x1 + (x - srcRod.x1) * (dstRod.x2 - dstRod.x1) / (srcRod.x2 - srcRod.x1)
             // y <- dstRod.y1 + (y - srcRod.y1) * (dstRod.y2 - dstRod.y1) / (srcRod.y2 - srcRod.y1)
@@ -711,13 +790,15 @@ ReformatPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
 
-    double par = _srcClip->getPixelAspectRatio();
+    double par;
+    OfxRectI rect;
+    OfxRectI format;
+    getOutputFormat(0., &par, &rect, &format);
 
     switch (type) {
     case eReformatTypeToFormat:
     case eReformatTypeToBox: {
         //specific output PAR
-        _boxPAR->getValue(par);
         clipPreferences.setPixelAspectRatio(*_dstClip, par);
         break;
     }
@@ -727,21 +808,8 @@ ReformatPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         break;
     }
 #ifdef OFX_EXTENSIONS_NATRON
-    RegionOfDefinitionArguments args;
-    args.time = 0.;
-    args.renderScale.x = 1.;
-    args.renderScale.y = 1.;
-#ifdef OFX_EXTENSIONS_NUKE
-    args.view = 0;
-#endif
-
-    OfxRectD rod;
-    getRegionOfDefinition(args, rod);
-    OfxRectI format;
-    OFX::Coords::toPixelNearest(rod, args.renderScale, par, &format);
     clipPreferences.setOutputFormat(format);
 #endif
-
 }
 
 mDeclarePluginFactory(ReformatPluginFactory, {}, {});
