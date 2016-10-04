@@ -54,7 +54,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamReformat "reformat"
 #define kParamReformatLabel "Reformat"
 #define kParamReformatHint "Translates the bottom left corner of the crop rectangle to be in (0,0)."
-#define kParamReformatHintExtraNatron " In order to actually change the format of this image stream, use a Reformat node after this one, with the same extent, and with 'Resize Type' set to None and 'Center' unchecked."
+#define kParamReformatHintExtraNatron " In order to actually change the format of this image stream, feed the output of this node to a either a NoOp node which sets the proper format, or a Reformat node with the same extent and with 'Resize Type' set to None and 'Center' unchecked."
 #define kParamReformatDefault false
 
 #define kParamIntersect "intersect"
