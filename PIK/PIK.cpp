@@ -21,7 +21,7 @@
  */
 /*
  * TODO:
- * Alpha bias: divide C and PFg colors by alpha bias before computing alpha, and do the same on the Fg color before despill (remultiply after despill
+ * Alpha bias: do the same on the Fg color before despill (remultiply after despill
  * Despill Bias: use this color instead of the alpha bias for the Fg despill described above
  * *Screen Matte
  * Clip Black / Clip White: any alpha b elow clip black is set to 0, any alpha above clip white is set to 1 (using a linear ramp).
@@ -211,6 +211,18 @@ enum ScreenTypeEnum {
 #define kParamBlueGreenWeightHint "Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation."
 #define kParamBlueGreenWeightDefault 0.5 // 0 in IBK, 0.5 in IBKGizmo
 
+#define kParamAlphaBias "alphaBias"
+#define kParamAlphaBiasLabel "Alpha Bias"
+#define kParamAlphaBiasHint "Divide C and PFg colors by this color before computing alpha. This may be used when the whole scene, including the background, has a strong color cast."
+
+#define kParamDespillBias "despillBias"
+#define kParamDespillBiasLabel "Despill Bias"
+#define kParamDespillBiasHint "Divide C color by this color before despill."
+
+#define kParamDespillBiasIsAlphaBias "despillBiasIsAlphaBias"
+#define kParamDespillBiasIsAlphaBiasLabel "Use Alpha Bias for Despill"
+#define kParamDespillBiasIsAlphaBiasHint "Use alpha bias color for despill instead of despill bias color."
+
 #define kParamLMEnable "lmEnable"
 #define kParamLMEnableLabel "Luminance Match Enable"
 #define kParamLMEnableHint "Adds a luminance factor to the color difference algorithm."
@@ -358,6 +370,8 @@ protected:
     bool _useColor;
     double _redWeight; // Red Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
     double _blueGreenWeight; // Blue/Green Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
+    float _alphaBias[3];
+    float _despillBias[3];
     bool _lmEnable; // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the color difference algorithm.
     double _level; // Screen Range: Helps retain blacks and shadows.
     double _luma; // Luminance Level: Makes the matte more additive.
@@ -412,6 +426,8 @@ public:
         , _colorspace(eColorspaceRec709)
     {
         _color[0] = _color[1] = _color[2] = 0.;
+        _alphaBias[0] = _alphaBias[1] = _alphaBias[2] = 0.;
+        _despillBias[0] = _despillBias[1] = _despillBias[2] = 0.;
         _insideReplaceColor[0] = _insideReplaceColor[1] = _insideReplaceColor[2] = 0.;
     }
 
@@ -434,6 +450,8 @@ public:
                    const OfxRGBColourD& color,
                    double redWeight, // Red Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
                    double blueGreenWeight, // Blue/Green Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
+                   const OfxRGBColourD& alphaBias,
+                   const OfxRGBColourD& despillBias,
                    bool lmEnable, // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the color difference algorithm.
                    double level, // Screen Range: Helps retain blacks and shadows.
                    double luma, // Luminance Level: Makes the matte more additive.
@@ -453,11 +471,35 @@ public:
                    bool ubc, // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
                    ColorspaceEnum colorspace)
     {
+        _alphaBias[0] = alphaBias.r;
+        _alphaBias[1] = alphaBias.g;
+        _alphaBias[2] = alphaBias.b;
+        if (_alphaBias[0] == 0) {
+            _alphaBias[0] = 10000.;
+        }
+        if (_alphaBias[1] == 0) {
+            _alphaBias[1] = 10000.;
+        }
+        if (_alphaBias[2] == 0) {
+            _alphaBias[2] = 10000.;
+        }
+        _despillBias[0] = despillBias.r;
+        _despillBias[1] = despillBias.g;
+        _despillBias[2] = despillBias.b;
+        if (_despillBias[0] == 0) {
+            _despillBias[0] = 10000.;
+        }
+        if (_despillBias[1] == 0) {
+            _despillBias[1] = 10000.;
+        }
+        if (_despillBias[2] == 0) {
+            _despillBias[2] = 10000.;
+        }
         if (screenType == eScreenTypePick) {
-            _screenType = (color.g > color.r) ? eScreenTypeGreen: eScreenTypeBlue;
-            _color[0] = color.r;
-            _color[1] = color.g;
-            _color[2] = color.b;
+            _screenType = (color.g / _alphaBias[1] > color.b / _alphaBias[2]) ? eScreenTypeGreen: eScreenTypeBlue;
+            _color[0] = color.r / _alphaBias[0];
+            _color[1] = color.g / _alphaBias[1];
+            _color[2] = color.b / _alphaBias[2];
             _useColor = true;
         } else {
             _screenType = screenType;
@@ -621,12 +663,12 @@ private:
                 }
                 if (pfgPix) {
                     for (int i = 0; i < pfgComponents; ++i) {
-                        pfg[i] = sampleToFloat<PIX, maxValue>(pfgPix[i]);
+                        pfg[i] = sampleToFloat<PIX, maxValue>(pfgPix[i]) / _alphaBias[i];
                     }
                 }
                 if (cPix && !_useColor) {
                     for (int i = 0; i < cComponents; ++i) {
-                        c[i] = sampleToFloat<PIX, maxValue>(cPix[i]);
+                        c[i] = sampleToFloat<PIX, maxValue>(cPix[i]) / _alphaBias[i];
                     }
                 }
 
@@ -745,8 +787,9 @@ private:
                             out[i] = fg[i];
                         }
                     } else {
+                        // screen subtraction
                         for (int i = 0; i < 3; ++i) {
-                            float v = fg[i] + c[i] * (alpha - 1.);
+                            float v = fg[i] + c[i] * _despillBias[i] * (alpha - 1.);
                             out[i] = v < 0. ? 0 : v;
                         }
                     }
@@ -978,6 +1021,9 @@ public:
         , _color(0)
         , _redWeight(0)
         , _blueGreenWeight(0)
+        , _alphaBias(0)
+        , _despillBias(0)
+        , _despillBiasIsAlphaBias(0)
         , _lmEnable(0)
         , _level(0)
         , _luma(0)
@@ -1019,6 +1065,9 @@ public:
         _color = fetchRGBParam(kParamColor); // Screen Type: The type of background screen used for the key.
         _redWeight = fetchDoubleParam(kParamRedWeight); // Red Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
         _blueGreenWeight = fetchDoubleParam(kParamBlueGreenWeight); // Blue/Green Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
+        _alphaBias = fetchRGBParam(kParamAlphaBias);
+        _despillBias = fetchRGBParam(kParamDespillBias);
+        _despillBiasIsAlphaBias = fetchBooleanParam(kParamDespillBiasIsAlphaBias);
         _lmEnable = fetchBooleanParam(kParamLMEnable); // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the color difference algorithm.
         _level = fetchDoubleParam(kParamLevel); // Screen Range: Helps retain blacks and shadows.
         _luma = fetchDoubleParam(kParamLuma); // Luminance Level: Makes the matte more additive.
@@ -1068,6 +1117,9 @@ private:
         _color->setEnabled(!noKey && screenType == eScreenTypePick);
         _redWeight->setEnabled(!noKey);
         _blueGreenWeight->setEnabled(!noKey);
+        _alphaBias->setEnabled(!noKey);
+        _despillBias->setEnabled( !noKey && !_despillBiasIsAlphaBias->getValue() );
+        _despillBiasIsAlphaBias->setEnabled(!noKey);
         _lmEnable->setEnabled(!noKey);
         _level->setEnabled(!noKey && lmEnable);
         _llEnable->setEnabled(!noKey && lmEnable);
@@ -1098,6 +1150,9 @@ private:
     RGBParam* _color;
     DoubleParam* _redWeight; // Red Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
     DoubleParam* _blueGreenWeight; // Blue/Green Weight: Determines how the red channel and complement channel (blue for a green screen, green for a blue screen) are weighted in the keying calculation.
+    RGBParam* _alphaBias;
+    RGBParam* _despillBias;
+    BooleanParam* _despillBiasIsAlphaBias;
     BooleanParam* _lmEnable; // Luminane Match Enable: Luminance Match Enable: Adds a luminance factor to the color difference algorithm.
     DoubleParam* _level; // Screen Range: Helps retain blacks and shadows.
     DoubleParam* _luma; // Luminance Level: Makes the matte more additive.
@@ -1155,6 +1210,14 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     _color->getValueAtTime(time, color.r, color.g, color.b);
     double redWeight = _redWeight->getValueAtTime(time);
     double blueGreenWeight = _blueGreenWeight->getValueAtTime(time);
+    OfxRGBColourD alphaBias = {0.5, 0.5, 0.5};
+    _alphaBias->getValueAtTime(time, alphaBias.r, alphaBias.g, alphaBias.b);
+    OfxRGBColourD despillBias = {0.5, 0.5, 0.5};
+    if ( _despillBiasIsAlphaBias->getValueAtTime(time) ) {
+        despillBias = alphaBias;
+    } else {
+        _despillBias->getValueAtTime(time, despillBias.r, despillBias.g, despillBias.b);
+    }
     bool lmEnable = _lmEnable->getValueAtTime(time);
     double level = _level->getValueAtTime(time);
     double luma = _luma->getValueAtTime(time);
@@ -1262,7 +1325,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         }
     }
 
-    processor.setValues(screenType, color, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace);
+    processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( !noKey && !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -1552,6 +1615,47 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamBlueGreenWeightDefault);
         param->setAnimates(true);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // alpha bias
+    {
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamAlphaBias);
+        param->setLabel(kParamAlphaBiasLabel);
+        param->setHint(kParamAlphaBiasHint);
+        param->setDefault(0.5, 0.5, 0.5);
+        param->setAnimates(true);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // despill bias
+    {
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamDespillBias);
+        param->setLabel(kParamDespillBiasLabel);
+        param->setHint(kParamDespillBiasHint);
+        param->setDefault(0.5, 0.5, 0.5);
+        param->setAnimates(true);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDespillBiasIsAlphaBias);
+        param->setLabel(kParamDespillBiasIsAlphaBiasLabel);
+        param->setHint(kParamDespillBiasIsAlphaBiasHint);
+        param->setDefault(true);
+        param->setAnimates(false);
         param->setLayoutHint(eLayoutHintDivider);
         if (group) {
             param->setParent(*group);
