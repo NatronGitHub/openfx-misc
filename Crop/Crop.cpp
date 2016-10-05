@@ -96,6 +96,7 @@ protected:
     bool _blackOutside;
     double _softness;
     OfxRectI _cropRectPixel;
+    OfxRectI _cropRectFullPixel;
 
 public:
     CropProcessorBase(OFX::ImageEffect &instance)
@@ -106,7 +107,9 @@ public:
         , _softness(0)
     {
         _cropRect.x1 = _cropRect.y1 = _cropRect.x2 = _cropRect.y2 = 0.;
+        _cropRectFull.x1 = _cropRectFull.y1 = _cropRectFull.x2 = _cropRectFull.y2 = 0.;
         _cropRectPixel.x1 = _cropRectPixel.y1 = _cropRectPixel.x2 = _cropRectPixel.y2 = 0;
+        _cropRectFullPixel.x1 = _cropRectFullPixel.y1 = _cropRectFullPixel.x2 = _cropRectFullPixel.y2 = 0;
         _translation.x = _translation.y = 0;
     }
 
@@ -131,11 +134,10 @@ public:
         _blackOutside = blackOutside;
         _softness = softness;
         OFX::Coords::toPixelNearest(cropRect, renderScale, par, &_cropRectPixel);
+        OFX::Coords::toPixelNearest(cropRectFull, renderScale, par, &_cropRectFullPixel);
         if (reformat) {
-            OfxRectI cropRectFullPixel;
-            OFX::Coords::toPixelNearest(cropRectFull, renderScale, par, &cropRectFullPixel);
-            _translation.x = -cropRectFullPixel.x1;
-            _translation.y = -cropRectFullPixel.y1;
+            _translation.x = -_cropRectFullPixel.x1;
+            _translation.y = -_cropRectFullPixel.y1;
         } else {
             _translation.x = 0;
             _translation.y = 0;
@@ -164,10 +166,10 @@ private:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            bool yblack = _blackOutside && ( y == (_cropRectPixel.y1 + _translation.y) || y == (_cropRectPixel.y2 - 1 + _translation.y) );
+            bool yblack = _blackOutside && ( y == (_cropRectFullPixel.y1 + _translation.y) || y == (_cropRectFullPixel.y2 - 1 + _translation.y) );
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                bool xblack = _blackOutside && ( x == (_cropRectPixel.x1 + _translation.x) || x == (_cropRectPixel.x2 - 1 + _translation.x) );
+                bool xblack = _blackOutside && ( x == (_cropRectFullPixel.x1 + _translation.x) || x == (_cropRectFullPixel.x2 - 1 + _translation.x) );
                 // treat the black case separately
                 if (xblack || yblack || !_srcImg) {
                     for (int k = 0; k < nComponents; ++k) {
@@ -182,18 +184,19 @@ private:
                     double dx = std::min(p.x - _cropRectFull.x1, _cropRectFull.x2 - p.x);
                     double dy = std::min(p.y - _cropRectFull.y1, _cropRectFull.y2 - p.y);
 
-                    if ( (dx <= 0) || (dy <= 0) ) {
+                    if ( _blackOutside && ( (dx <= 0) || (dy <= 0) ) ) {
                         // outside of the rectangle
                         for (int k = 0; k < nComponents; ++k) {
                             dstPix[k] =  PIX();
                         }
                     } else {
-                        const PIX *srcPix = (const PIX*)_srcImg->getPixelAddress(p_pixel.x, p_pixel.y);
-                        if (!srcPix) {
-                            for (int k = 0; k < nComponents; ++k) {
-                                dstPix[k] =  PIX();
-                            }
-                        } else if ( (_softness == 0) || ( (dx >= _softness) && (dy >= _softness) ) ) {
+                        const PIX *srcPix = (const PIX*)_srcImg->getPixelAddressNearest(p_pixel.x, p_pixel.y);
+                        //if (!srcPix) {
+                        //    for (int k = 0; k < nComponents; ++k) {
+                        //        dstPix[k] =  PIX();
+                        //    }
+                        //} else
+                        if ( (_softness == 0) || ( (dx >= _softness) && (dy >= _softness) ) ) {
                             // inside of the rectangle
                             for (int k = 0; k < nComponents; ++k) {
                                 dstPix[k] =  srcPix[k];
@@ -515,7 +518,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor,
     getCropRectangle(time, args.renderScale, /*useIntersect=*/true, /*forceIntersect=*/false, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRectCanonical, &par);
     getCropRectangle(time, args.renderScale, /*useIntersect=*/false, /*forceIntersect=*/false, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRectFullCanonical, &par);
     double softness = _softness->getValueAtTime(args.time);
-    softness *= args.renderScale.x;
+    // no need to softness *= args.renderScale.x; since softness is computed on canonical coords
 
     processor.setValues(cropRectCanonical, cropRectFullCanonical, args.renderScale, par, blackOutside, reformat, softness);
 
