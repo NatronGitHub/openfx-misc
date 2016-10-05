@@ -776,6 +776,9 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 if (group) {
                     subgroup->setParent(*group);
                 }
+                if (page) {
+                    page->addChild(*subgroup);
+                }
             }
             {
                 OFX::DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup1");
@@ -786,9 +789,6 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     param->setParent(*subgroup);
                 }
             }
-            if (page && subgroup) {
-                page->addChild(*subgroup);
-            }
         }
         {
             OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup2AsTab");
@@ -796,6 +796,9 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 subgroup->setAsTab();
                 if (group) {
                     subgroup->setParent(*group);
+                }
+                if (page) {
+                    page->addChild(*subgroup);
                 }
             }
             {
@@ -807,9 +810,6 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     param->setParent(*subgroup);
                 }
             }
-            if (page && subgroup) {
-                page->addChild(*subgroup);
-            }
         }
         {
             OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup3AsTab");
@@ -817,6 +817,9 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 subgroup->setAsTab();
                 if (group) {
                     subgroup->setParent(*group);
+                }
+                if (page) {
+                    page->addChild(*subgroup);
                 }
             }
             {
@@ -827,9 +830,6 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 if (subgroup) {
                     param->setParent(*subgroup);
                 }
-            }
-            if (page && subgroup) {
-                page->addChild(*subgroup);
             }
         }
     }

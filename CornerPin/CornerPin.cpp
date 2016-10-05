@@ -1067,6 +1067,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
         if (group) {
             group->setLabel(kGroupTo);
             group->setAsTab();
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         defineCornerPinToDouble2DParam(desc, page, group, 0, 0, 0);
@@ -1099,10 +1102,6 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
-
-        if (page && group) {
-            page->addChild(*group);
-        }
     }
 
     // fromPoints
@@ -1111,6 +1110,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
         if (group) {
             group->setLabel(kGroupFrom);
             group->setAsTab();
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         defineCornerPinFromsDouble2DParam(desc, page, group, 0, 0, 0);
@@ -1157,10 +1159,6 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
-
-        if (page && group) {
-            page->addChild(*group);
-        }
     }
 
     // extraMatrix
@@ -1170,15 +1168,14 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
             group->setLabel(kGroupExtraMatrixLabel);
             group->setHint(kGroupExtraMatrixHint);
             group->setOpen(false);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow1, 1, 1, 0, 0);
         defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow2, 2, 0, 1, 0);
         defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow3, 3, 0, 0, 1);
-
-        if (page && group) {
-            page->addChild(*group);
-        }
     }
 
     // overlayPoints

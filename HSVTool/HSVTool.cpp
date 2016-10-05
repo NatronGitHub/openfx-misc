@@ -1856,6 +1856,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             group->setLabel(kGroupColorReplacementLabel);
             group->setHint(kGroupColorReplacementHint);
             group->setEnabled(true);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         // enableRectangle
@@ -1954,9 +1957,6 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
-        if (page && group) {
-            page->addChild(*group);
-        }
     }
 
     {
@@ -1965,6 +1965,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             group->setLabel(kGroupHueLabel);
             group->setHint(kGroupHueHint);
             group->setEnabled(true);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         {
@@ -2027,10 +2030,6 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
-
-        if (page && group) {
-            page->addChild(*group);
-        }
     }
 
     {
@@ -2039,6 +2038,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             group->setLabel(kGroupSaturationLabel);
             group->setHint(kGroupSaturationHint);
             group->setEnabled(true);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         {
@@ -2098,10 +2100,6 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
-
-        if (page && group) {
-            page->addChild(*group);
-        }
     }
 
     {
@@ -2110,6 +2108,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             group->setLabel(kGroupBrightnessLabel);
             group->setHint(kGroupBrightnessHint);
             group->setEnabled(true);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         {
@@ -2168,10 +2169,6 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             if (page) {
                 page->addChild(*param);
             }
-        }
-
-        if (page && group) {
-            page->addChild(*group);
         }
     }
 

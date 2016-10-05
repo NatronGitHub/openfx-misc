@@ -1419,6 +1419,9 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             group->setLabel(kGroupSettingsLabel);
             //group->setHint(kGroupSettingsHint);
             group->setEnabled(true);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         {
@@ -1553,6 +1556,9 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             //group->setHint(kGroupSettingsHint);
             group->setEnabled(true);
             group->setOpen(false);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         {

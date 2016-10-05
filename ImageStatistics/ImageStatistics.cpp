@@ -1979,6 +1979,9 @@ ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         if (group) {
             group->setLabel(kParamGroupRGBA);
             group->setAsTab();
+            if (page) {
+                page->addChild(*group);
+            }
         }
         // min
         {
@@ -2130,6 +2133,9 @@ ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         if (group) {
             group->setLabel(kParamGroupHSVL);
             group->setAsTab();
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         // min
@@ -2289,7 +2295,10 @@ ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         if (group) {
             group->setLabel(kParamGroupLuma);
             group->setAsTab();
-        }
+            if (page) {
+                page->addChild(*group);
+            }
+       }
 
         {
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);

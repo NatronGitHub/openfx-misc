@@ -2147,6 +2147,9 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             group->setLabel(kGroupImageShaderLabel);
             group->setOpen(false);
            //group->setAsTab();
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         {
@@ -2495,6 +2498,12 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 sgroup->setLabel(kGroupExtraParametersLabel);
                 sgroup->setHint(kGroupExtraParametersHint);
                 sgroup->setOpen(false);
+                if (page) {
+                    page->addChild(*sgroup);
+                }
+                if (group) {
+                    sgroup->setParent(*group);
+                }
             }
 
             {
@@ -2519,6 +2528,12 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 if (pgroup) {
                     pgroup->setLabel(kGroupParameterLabel + nb);
                     pgroup->setOpen(false);
+                    if (page) {
+                        page->addChild(*pgroup);
+                    }
+                    if (sgroup) {
+                        pgroup->setParent(*sgroup);
+                    }
                 }
 
                 {
@@ -2595,25 +2610,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 defineDouble2D(desc, nb, page, pgroup);
                 defineDouble3D(desc, nb, page, pgroup);
                 defineRGBA(desc, nb, page, pgroup);
-                
-                if (page && pgroup) {
-                    page->addChild(*pgroup);
-                }
-                if (sgroup) {
-                    pgroup->setParent(*sgroup);
-                }
             }
-
-            if (page && sgroup) {
-                page->addChild(*sgroup);
-            }
-            if (group) {
-                sgroup->setParent(*group);
-            }
-        }
-
-        if (page && group) {
-            page->addChild(*group);
         }
     }
 

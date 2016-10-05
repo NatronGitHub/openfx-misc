@@ -3150,6 +3150,9 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             group->setLabel(kGroupAnalysisLabel);
             //group->setHint(kGroupAnalysisHint);
             group->setEnabled(true);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
 
@@ -3263,7 +3266,10 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             //group->setHint(kGroupNoiseLevelsHint);
             group->setOpen(false);
             group->setEnabled(true);
-        }
+            if (page) {
+                page->addChild(*group);
+            }
+       }
 
         for (unsigned f = 0; f < 4; ++f) {
             for (unsigned c = 0; c < 4; ++c) {
@@ -3305,6 +3311,9 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             //group->setHint(kGroupTuningHint);
             group->setOpen(false);
             group->setEnabled(true);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         for (unsigned int f = 0; f < 4; ++f) {
@@ -3374,6 +3383,9 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             //group->setHint(kGroupChannelTuningHint);
             group->setOpen(false);
             group->setEnabled(true);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
         for (unsigned c = 0; c < 4; ++c) {
@@ -3423,6 +3435,9 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             //group->setHint(kGroupSettingsHint);
             group->setEnabled(true);
             group->setOpen(false);
+            if (page) {
+                page->addChild(*group);
+            }
         }
 
 
