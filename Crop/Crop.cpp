@@ -89,6 +89,7 @@ class CropProcessorBase
 protected:
     const OFX::Image *_srcImg;
     OfxRectD _cropRect;
+    OfxRectD _cropRectFull;
     OfxPointD _renderScale;
     double _par;
     OfxPointI _translation;
@@ -116,6 +117,7 @@ public:
     }
 
     void setValues(const OfxRectD& cropRect,
+                   const OfxRectD& cropRectFull, // without intersection
                    const OfxPointD& renderScale,
                    double par,
                    bool blackOutside,
@@ -123,14 +125,17 @@ public:
                    double softness)
     {
         _cropRect = cropRect;
+        _cropRectFull = cropRectFull;
         _renderScale = renderScale;
         _par = par;
         _blackOutside = blackOutside;
         _softness = softness;
         OFX::Coords::toPixelNearest(cropRect, renderScale, par, &_cropRectPixel);
         if (reformat) {
-            _translation.x = -_cropRectPixel.x1;
-            _translation.y = -_cropRectPixel.y1;
+            OfxRectI cropRectFullPixel;
+            OFX::Coords::toPixelNearest(cropRectFull, renderScale, par, &cropRectFullPixel);
+            _translation.x = -cropRectFullPixel.x1;
+            _translation.y = -cropRectFullPixel.y1;
         } else {
             _translation.x = 0;
             _translation.y = 0;
@@ -174,8 +179,8 @@ private:
                     p_pixel.x = x - _translation.x;
                     p_pixel.y = y - _translation.y;
                     OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
-                    double dx = std::min(p.x - _cropRect.x1, _cropRect.x2 - p.x);
-                    double dy = std::min(p.y - _cropRect.y1, _cropRect.y2 - p.y);
+                    double dx = std::min(p.x - _cropRectFull.x1, _cropRectFull.x2 - p.x);
+                    double dy = std::min(p.y - _cropRectFull.y1, _cropRectFull.y2 - p.y);
 
                     if ( (dx <= 0) || (dy <= 0) ) {
                         // outside of the rectangle
@@ -301,6 +306,7 @@ private:
 
     void getCropRectangle(OfxTime time,
                           const OfxPointD& renderScale,
+                          bool useIntersect,
                           bool forceIntersect,
                           bool useBlackOutside,
                           bool useReformat,
@@ -336,23 +342,25 @@ private:
 void
 CropPlugin::getCropRectangle(OfxTime time,
                              const OfxPointD& renderScale,
+                             bool useIntersect,
                              bool forceIntersect,
                              bool useBlackOutside,
                              bool useReformat,
                              OfxRectD* cropRect,
                              double* pixelAspectRatio) const
 {
-    bool intersect;
-
-    if (!forceIntersect) {
-        _intersect->getValueAtTime(time, intersect);
-    } else {
-        intersect = true;
+    bool intersect = false;
+    if (useIntersect) {
+        if (!forceIntersect) {
+            intersect = _intersect->getValueAtTime(time);
+        } else {
+            intersect = true;
+        }
     }
-
+    
     bool blackOutside = false;
     if (useBlackOutside) {
-        _blackOutside->getValueAtTime(time, blackOutside);
+        blackOutside = _blackOutside->getValueAtTime(time);
     }
 
     bool reformat = false;
@@ -502,12 +510,14 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor,
     bool reformat = _reformat->getValueAtTime(args.time);
     bool blackOutside = _blackOutside->getValueAtTime(args.time);
     OfxRectD cropRectCanonical;
+    OfxRectD cropRectFullCanonical;
     double par;
-    getCropRectangle(time, args.renderScale, /*forceIntersect=*/false, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRectCanonical, &par);
+    getCropRectangle(time, args.renderScale, /*useIntersect=*/true, /*forceIntersect=*/false, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRectCanonical, &par);
+    getCropRectangle(time, args.renderScale, /*useIntersect=*/false, /*forceIntersect=*/false, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRectFullCanonical, &par);
     double softness = _softness->getValueAtTime(args.time);
     softness *= args.renderScale.x;
 
-    processor.setValues(cropRectCanonical, args.renderScale, par, blackOutside, reformat, softness);
+    processor.setValues(cropRectCanonical, cropRectFullCanonical, args.renderScale, par, blackOutside, reformat, softness);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -521,7 +531,7 @@ CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
                                  OFX::RegionOfInterestSetter &rois)
 {
     OfxRectD cropRect;
-    getCropRectangle(args.time, args.renderScale, /*forceIntersect=*/true, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRect, NULL);
+    getCropRectangle(args.time, args.renderScale, /*useIntersect=*/true, /*forceIntersect=*/true, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRect, NULL);
 
     OfxRectD roi = args.regionOfInterest;
 
@@ -545,7 +555,7 @@ bool
 CropPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
                                   OfxRectD &rod)
 {
-    getCropRectangle(args.time, args.renderScale, /*forceIntersect=*/false, /*useBlackOutside=*/true, /*useReformat=*/true, &rod, NULL);
+    getCropRectangle(args.time, args.renderScale, /*useIntersect=*/true, /*forceIntersect=*/false, /*useBlackOutside=*/true, /*useReformat=*/true, &rod, NULL);
 
     return true;
 }
