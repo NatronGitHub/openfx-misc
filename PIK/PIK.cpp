@@ -20,6 +20,19 @@
  * OFX PIK plugin.
  */
 /*
+ * TODO:
+ * Alpha bias: divide C and PFg colors by alpha bias before computing alpha, and do the same on the Fg color before despill (remultiply after despill
+ * Despill Bias: use this color instead of the alpha bias for the Fg despill described above
+ * *Screen Matte
+ * Clip Black / Clip White: any alpha b elow clip black is set to 0, any alpha above clip white is set to 1 (using a linear ramp).
+ * Clip Rollback: compute a mask of the non-clipped areas, dilate this mask and the values inside, then mask the result with this mask and values.
+ * Screen Dilate: dilate (or erode) the matte
+ * Screen Softness: blur the matte
+ * Screen Despot Black: dilate followed by erode of the same amount (closing)
+ * Screen Despot White: erode followed by dilate of the same amount (opening)
+ * Screen Replace: what to do with the color of places where the alpha value was modified by the Screen Matte setting
+ */
+ /*
  IBK tutorials:
  
 
@@ -135,7 +148,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 /*"'Autolevels' will perform a color correction before the image is pulled so that hard edges from a foreground subject with saturated colors are reduced. The same can be achieved with the weights but here only those saturated colors are affected whereas the use of weights will affect the entire image. When using this feature it's best to have this as a separate node which you can then split with other PIKs as the weights will no longer work as expected. You can override some of the logic for when you actually have particular foreground colors you want to keep.\n"*/ \
 /*"For example when you have a saturated red subject against bluescreen you'll get a magenta transition area. Autolevels will eliminate this but if you have a magenta foreground object then this control will make the magenta more red unless you check the magenta box to keep it.\n"*/ \
 "\n" \
-"'Screen Subtraction' removes the background color from the output via a subtraction process. When unchecked, the output is simply the original Fg premultiplied with the generated matte.\n" \
+"'Screen Subtraction' removes the background color from the output via a subtraction process (1-alpha times the screen color is subtracted at each pixel). When unchecked, the output is simply the original Fg premultiplied with the generated matte.\n" \
 "\n" \
 "'Use Bkg Luminance' and 'Use Bkg Chroma' affect the output color by the new background. "/*These controls are best used with the 'Luminance Match' sliders above. */"This feature can also sometimes really help with screens that exhibit some form of fringing artifact - usually a darkening or lightening of an edge on one of the color channels on the screen. The effect can be offset by grading the Bg input up or down with a grade node just before input. If it is just an area which needs help then just rotoscope that area and locally grade the Bg input up or down to remove the artifact.\n" \
 "\n" \
@@ -253,6 +266,9 @@ enum ScreenTypeEnum {
 #define kParamRGBALHint "Legalize rgba relationship."
 #define kParamRGBALDefault false
 
+#define kGroupInsideMask "insideMask"
+#define kGroupInsideMaskLabel "Inside Mask"
+
 #define kParamSourceAlpha "sourceAlphaHandling"
 #define kParamSourceAlphaLabel "Source Alpha"
 #define kParamSourceAlphaHint \
@@ -269,6 +285,28 @@ enum SourceAlphaEnum
     eSourceAlphaAddToInsideMask,
     //eSourceAlphaNormal,
 };
+
+#define kParamInsideReplace "insideReplace"
+#define kParamInsideReplaceLabel "Inside Replace"
+#define kParamInsideReplaceHint "What to do with the color of the pixels for which alpha was modified by the inside mask."
+#define kParamReplaceOptionNone "None"
+#define kParamReplaceOptionNoneHint "Subtracted image is not affected by alpha modifications."
+#define kParamReplaceOptionSource "Source"
+#define kParamReplaceOptionSourceHint "When alpha is modified, a corresponding amount of the Fg color is added."
+#define kParamReplaceOptionHardColor "Hard Color"
+#define kParamReplaceOptionHardColorHint "When alpha is modified, a corresponding amount of the replace color is added."
+#define kParamReplaceOptionSoftColor "Soft Color"
+#define kParamReplaceOptionSoftColorHint "When alpha is modified, a corresponding amount of the replace color is added, but the resulting luminance is matched with Fg."
+enum ReplaceEnum
+{
+    eReplaceNone,
+    eReplaceSource,
+    eReplaceHardColor,
+    eReplaceSoftColor,
+};
+#define kParamInsideReplaceColor "insideReplaceColor"
+#define kParamInsideReplaceColorLabel "Inside Replace Color"
+#define kParamInsideReplaceColorHint "The color to use when the Inside Replace parameter is set to Soft or Hard Color."
 
 #define kParamNoKey "noKey"
 #define kParamNoKeyLabel "No Key"
@@ -332,6 +370,9 @@ protected:
     bool _clampAlpha; // Clamp: Clamp matte to 0-1.
     bool _rgbal; // Legalize rgba relationship.
     SourceAlphaEnum _sourceAlpha;
+    ReplaceEnum _insideReplace;
+    float _insideReplaceColor[3];
+    float _insideReplaceLuminance;
     bool _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     bool _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     bool _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -363,12 +404,15 @@ public:
         , _clampAlpha(kParamClampAlphaDefault)
         , _rgbal(kParamRGBALDefault)
         , _sourceAlpha(eSourceAlphaIgnore)
+        , _insideReplace(eReplaceSoftColor)
+        , _insideReplaceLuminance(0.)
         , _noKey(kParamNoKeyDefault)
         , _ubl(kParamUBLDefault)
         , _ubc(kParamUBCDefault)
         , _colorspace(eColorspaceRec709)
     {
         _color[0] = _color[1] = _color[2] = 0.;
+        _insideReplaceColor[0] = _insideReplaceColor[1] = _insideReplaceColor[2] = 0.;
     }
 
     void setSrcImgs(const OFX::Image *fgImg,
@@ -402,6 +446,8 @@ public:
                    bool clampAlpha, // Clamp: Clamp matte to 0-1.
                    bool rgbal, // Legalize rgba relationship.
                    SourceAlphaEnum sourceAlpha,
+                   ReplaceEnum insideReplace,
+                   const OfxRGBColourD& insideReplaceColor,
                    bool noKey, // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
                    bool ubl, // Use Bg Lum: Have the output rgb be biased by the bg luminance.
                    bool ubc, // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -431,6 +477,39 @@ public:
         _clampAlpha = clampAlpha;
         _rgbal = rgbal;
         _sourceAlpha = sourceAlpha;
+        _insideReplace = insideReplace;
+        if (insideReplace == eReplaceHardColor || insideReplace == eReplaceSoftColor) {
+            _insideReplaceColor[0] = insideReplaceColor.r;
+            _insideReplaceColor[1] = insideReplaceColor.g;
+            _insideReplaceColor[2] = insideReplaceColor.b;
+            if (insideReplace == eReplaceSoftColor) {
+                if (_insideReplaceColor[0] == 0 && _insideReplaceColor[1] == 0 && _insideReplaceColor[2] == 0) {
+                    _insideReplaceColor[0] = _insideReplaceColor[1] = _insideReplaceColor[2] = 1.;
+                    _insideReplaceLuminance = 1.;
+                } else {
+                    float X, Y, Z;
+                    switch (_colorspace) {
+                        case eColorspaceRec709:
+                        default:
+                            Color::rgb709_to_xyz(_insideReplaceColor[0], _insideReplaceColor[1], _insideReplaceColor[2], &X, &Y, &Z);
+                            break;
+
+                        case eColorspaceRec2020:
+                            Color::rgb2020_to_xyz(_insideReplaceColor[0], _insideReplaceColor[1], _insideReplaceColor[2], &X, &Y, &Z);
+                            break;
+
+                        case eColorspaceACESAP0:
+                            Color::rgbACESAP0_to_xyz(_insideReplaceColor[0], _insideReplaceColor[1], _insideReplaceColor[2], &X, &Y, &Z);
+                            break;
+
+                        case eColorspaceACESAP1:
+                            Color::rgbACESAP1_to_xyz(_insideReplaceColor[0], _insideReplaceColor[1], _insideReplaceColor[2], &X, &Y, &Z);
+                            break;
+                    }
+                    _insideReplaceLuminance = Y;
+                }
+            }
+        }
         _noKey = noKey;
         _ubl = ubl;
         _ubc = ubc;
@@ -661,26 +740,16 @@ private:
                         }
                     }
 
-                    // nonadditive mix between the key generator and the garbage matte (outMask)
-                    // outside mask has priority over inside mask, treat inside first
-                    if ( (inMask > 0.) && (alpha < inMask) ) {
-                        alpha = inMask;
-                    }
-                    if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
-                        alpha = 1. - outMask;
-                    }
-
-                    if (_ss) {
-                        if (alpha >= 1) {
-                            for (int i = 0; i < 3; ++i) {
-                                out[i] = fg[i];
-                            }
-                        } else {
-                            for (int i = 0; i < 3; ++i) {
-                                float v = fg[i] + c[i] * (alpha - 1.);
-                                out[i] = v < 0. ? 0 : v;
-                            }
+                    if (!_ss || alpha >= 1) {
+                        for (int i = 0; i < 3; ++i) {
+                            out[i] = fg[i];
                         }
+                    } else {
+                        for (int i = 0; i < 3; ++i) {
+                            float v = fg[i] + c[i] * (alpha - 1.);
+                            out[i] = v < 0. ? 0 : v;
+                        }
+                    }
                         /*
                     } else if (_rgbal) {
                         double alphamin = DBL_MAX;
@@ -706,13 +775,67 @@ private:
                             }
                         }
                         */
-                    } else {
-                        if (alpha <= 0.) {
-                            out[0] = out[1] = out[2] = 0;
-                        } else {
-                            for (int i = 0; i < 3; ++i) {
-                                out[i] = fg[i]*alpha;
+
+                    // nonadditive mix between the key generator and the garbage matte (outMask)
+                    // outside mask has priority over inside mask, treat inside first
+                    if ( (inMask > 0.) && (alpha < inMask) ) {
+                        switch (_insideReplace) {
+                            case eReplaceNone:
+                                // do nothing
+                                break;
+
+                            case eReplaceSource:
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + fg[i] * (inMask - alpha);
+                                }
+                                break;
+
+                            case eReplaceHardColor:
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + _insideReplaceColor[i] * (inMask - alpha);
+                                }
+                                break;
+
+                            case eReplaceSoftColor: {
+                                // compute the luminance of the luminance of fg
+                                float X, Y, Z;
+                                switch (_colorspace) {
+                                    case eColorspaceRec709:
+                                    default:
+                                        Color::rgb709_to_xyz(fg[0], fg[1], fg[2], &X, &Y, &Z);
+                                        break;
+
+                                    case eColorspaceRec2020:
+                                        Color::rgb2020_to_xyz(fg[0], fg[1], fg[2], &X, &Y, &Z);
+                                        break;
+
+                                    case eColorspaceACESAP0:
+                                        Color::rgbACESAP0_to_xyz(fg[0], fg[1], fg[2], &X, &Y, &Z);
+                                        break;
+
+                                    case eColorspaceACESAP1:
+                                        Color::rgbACESAP1_to_xyz(fg[0], fg[1], fg[2], &X, &Y, &Z);
+                                        break;
+                                }
+                                // match the luminance of fg
+                                if (_insideReplaceLuminance > 0) {
+                                    for (int i = 0; i < 3; ++i) {
+                                        out[i] = out[i] + _insideReplaceColor[i] * (inMask - alpha) * Y / _insideReplaceLuminance;
+                                    }
+                                }
+                                break;
                             }
+                        }
+                        alpha = inMask;
+                    }
+
+                    if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
+                        alpha = 1. - outMask;
+                    }
+
+                    if (!_ss) { // if no screen subtraction, just premult
+                        for (int i = 0; i < 3; ++i) {
+                            out[i] = out[i]*alpha;
                         }
                     }
                     if (_clampAlpha && alpha < 0.) {
@@ -867,6 +990,8 @@ public:
         , _clampAlpha(0)
         , _rgbal(0)
         , _sourceAlpha(0)
+        , _insideReplace(0)
+        , _insideReplaceColor(0)
         , _noKey(0)
         , _ubl(0)
         , _ubc(0)
@@ -906,6 +1031,8 @@ public:
         _clampAlpha = fetchBooleanParam(kParamClampAlpha); // Clamp: Clamp matte to 0-1.
         _rgbal = fetchBooleanParam(kParamRGBAL); // Legalize rgba relationship.
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
+        _insideReplace = fetchChoiceParam(kParamInsideReplace);
+        _insideReplaceColor = fetchRGBParam(kParamInsideReplaceColor);
         _noKey = fetchBooleanParam(kParamNoKey); // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
         _ubl = fetchBooleanParam(kParamUBL); // Use Bg Lum: Have the output rgb be biased by the bg luminance.
         _ubc = fetchBooleanParam(kParamUBC); // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -952,6 +1079,10 @@ private:
         _ss->setEnabled(!noKey);
         _clampAlpha->setEnabled(!noKey);
         _rgbal->setEnabled(!noKey);
+
+        ReplaceEnum insideReplace = (ReplaceEnum)_insideReplace->getValue();
+        bool hasInsideReplaceColor = (insideReplace == eReplaceSoftColor || insideReplace == eReplaceHardColor);
+        _insideReplaceColor->setEnabled(hasInsideReplaceColor);
     }
 
 private:
@@ -979,6 +1110,8 @@ private:
     BooleanParam* _clampAlpha; // Clamp: Clamp matte to 0-1.
     BooleanParam* _rgbal; // Legalize rgba relationship.
     ChoiceParam* _sourceAlpha;
+    ChoiceParam* _insideReplace;
+    RGBParam* _insideReplaceColor;
     BooleanParam* _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     BooleanParam* _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     BooleanParam* _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -1034,6 +1167,9 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     bool clampAlpha = _clampAlpha->getValueAtTime(time);
     bool rgbal = _rgbal->getValueAtTime(time);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
+    ReplaceEnum insideReplace = (ReplaceEnum)_insideReplace->getValueAtTime(time);
+    OfxRGBColourD insideReplaceColor = {0.5, 0.5, 0.5};
+    _insideReplaceColor->getValueAtTime(time, insideReplaceColor.r, insideReplaceColor.g, insideReplaceColor.b);
     bool noKey = _noKey->getValueAtTime(time);
     bool ubl = _ubl->getValueAtTime(time);
     bool ubc = _ubc->getValueAtTime(time);
@@ -1126,7 +1262,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         }
     }
 
-    processor.setValues(screenType, color, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, sourceAlpha, noKey, ubl, ubc, colorspace);
+    processor.setValues(screenType, color, redWeight, blueGreenWeight, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( !noKey && !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -1251,7 +1387,8 @@ PIKPlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/,
         paramName == kParamNoKey ||
         paramName == kParamLMEnable ||
         paramName == kParamLLEnable ||
-        paramName == kParamAutolevels) {
+        paramName == kParamAutolevels ||
+        paramName == kParamInsideReplace) {
         updateEnabled();
     }
 }
@@ -1356,6 +1493,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+    GroupParamDescriptor *group = NULL;
 
     // screenType
     {
@@ -1369,6 +1507,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         assert(param->getNOptions() == (int)eScreenTypePick);
         param->appendOption(kParamScreenTypeOptionPick);
         param->setDefault( (int)kParamScreenTypeDefault );
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1381,6 +1522,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(0., 0., 1.);
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintDivider);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1393,6 +1537,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamRedWeightDefault);
         param->setAnimates(true);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1406,6 +1553,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamBlueGreenWeightDefault);
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintDivider);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1420,6 +1570,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #ifdef DISABLE_LM
         param->setIsSecretAndDisabled(true);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1436,6 +1589,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #ifdef DISABLE_LM
         param->setIsSecretAndDisabled(true);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1453,6 +1609,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1469,6 +1628,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #else
         param->setLayoutHint(eLayoutHintDivider);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1484,6 +1646,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1499,6 +1664,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1514,6 +1682,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1529,6 +1700,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #else
         param->setLayoutHint(eLayoutHintDivider);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1540,6 +1714,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamSSDefault);
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1553,6 +1730,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #ifndef DISABLE_RGBAL
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1566,25 +1746,80 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #ifdef DISABLE_RGBAL
         param->setIsSecretAndDisabled(true);
 #endif
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
     }
-    // source alpha
+
     {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSourceAlpha);
-        param->setLabel(kParamSourceAlphaLabel);
-        param->setHint(kParamSourceAlphaHint);
-        assert(param->getNOptions() == (int)eSourceAlphaIgnore);
-        param->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);
-        assert(param->getNOptions() == (int)eSourceAlphaAddToInsideMask);
-        param->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
-        //assert(param->getNOptions() == (int)eSourceAlphaNormal);
-        //param->appendOption(kParamSourceAlphaOptionNormal, kParamSourceAlphaOptionNormalHint);
-        param->setDefault( (int)eSourceAlphaIgnore );
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
+        GroupParamDescriptor* group = desc.defineGroupParam(kGroupInsideMask);
+        if (group) {
+            group->setLabel(kGroupInsideMaskLabel);
+            //group->setHint(kGroupInsideMaskHint);
+            group->setOpen(false);
+            if (page) {
+                page->addChild(*group);
+            }
+        }
+
+        // source alpha
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSourceAlpha);
+            param->setLabel(kParamSourceAlphaLabel);
+            param->setHint(kParamSourceAlphaHint);
+            assert(param->getNOptions() == (int)eSourceAlphaIgnore);
+            param->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);
+            assert(param->getNOptions() == (int)eSourceAlphaAddToInsideMask);
+            param->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
+            //assert(param->getNOptions() == (int)eSourceAlphaNormal);
+            //param->appendOption(kParamSourceAlphaOptionNormal, kParamSourceAlphaOptionNormalHint);
+            param->setDefault( (int)eSourceAlphaIgnore );
+            param->setAnimates(false);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // inside replace
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamInsideReplace);
+            param->setLabel(kParamInsideReplaceLabel);
+            param->setHint(kParamInsideReplaceHint);
+            assert(param->getNOptions() == (int)eReplaceNone);
+            param->appendOption(kParamReplaceOptionNone, kParamReplaceOptionNoneHint);
+            assert(param->getNOptions() == (int)eReplaceSource);
+            param->appendOption(kParamReplaceOptionSource, kParamReplaceOptionSourceHint);
+            assert(param->getNOptions() == (int)eReplaceHardColor);
+            param->appendOption(kParamReplaceOptionHardColor, kParamReplaceOptionHardColorHint);
+            assert(param->getNOptions() == (int)eReplaceSoftColor);
+            param->appendOption(kParamReplaceOptionSoftColor, kParamReplaceOptionSoftColorHint);
+            param->setDefault( (int)eReplaceSoftColor );
+            param->setAnimates(false);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // inside replace color
+        {
+            RGBParamDescriptor* param = desc.defineRGBParam(kParamInsideReplaceColor);
+            param->setLabel(kParamInsideReplaceColorLabel);
+            param->setHint(kParamInsideReplaceColorHint);
+            param->setDefault(0.5, 0.5, 0.5);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
     {
@@ -1594,6 +1829,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamNoKeyDefault);
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1605,6 +1843,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamUBLDefault);
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1615,6 +1856,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamUBCHint);
         param->setDefault(kParamUBCDefault);
         param->setAnimates(false);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1633,6 +1877,9 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
         param->setDefault( (int)eColorspaceRec709 );
         param->setAnimates(false);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
