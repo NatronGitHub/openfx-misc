@@ -327,12 +327,12 @@ enum ReplaceEnum
 
 #define kParamUBL "ubl"
 #define kParamUBLLabel "Use Bg Luminance"
-#define kParamUBLHint "Have the output rgb be biased by the difference between the bg luminance and the c luminance). Luminance math is Rec.709." // only applied where the key is transparent
+#define kParamUBLHint "Have the output RGB be biased by the difference between the Bg luminance and the C luminance). Luminance is computed using the given Colorspace." // only applied where the key is transparent
 #define kParamUBLDefault false
 
 #define kParamUBC "ubc"
 #define kParamUBCLabel "Use Bg Chroma"
-#define kParamUBCHint "Have the output rgb be biased by the bg chroma."
+#define kParamUBCHint "Have the output RGB be biased by the Bg chroma. Chroma is computed using the given Colorspace"
 #define kParamUBCDefault false
 
 #define kParamColorspace "colorspace"
