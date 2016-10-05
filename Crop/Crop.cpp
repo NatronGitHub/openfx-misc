@@ -625,8 +625,9 @@ CropPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         bool reformat;
         _reformat->getValueAtTime(args.time, reformat);
         _rectangleInteractEnable->setValue(!reformat);
-
-    // everything below is from GeneratorPlugin::changedParam()
+        if (args.reason == OFX::eChangeUserEdit) {
+            _blackOutside->setValue(!reformat); // disable black outside when reformat is checked and vice-versa
+        }
     } else if ( (paramName == kParamGeneratorExtent) && (args.reason == OFX::eChangeUserEdit) ) {
         updateParamsVisibility();
     } else if (paramName == kParamGeneratorFormat) {
