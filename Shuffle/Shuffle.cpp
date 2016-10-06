@@ -477,8 +477,9 @@ private:
             const OFX::Image* srcImg = _inputPlanes[c].img;
             int srcComp = _inputPlanes[c].channelIndex;
             if (!srcImg) {
-                srcComp = _inputPlanes[c].fillZero ? 0. : 1.;
+                srcComp = _inputPlanes[c].fillZero ? 0 : 1;
             }
+            assert(!srcImg || (srcComp >= 0 && srcComp < srcImg->getPixelComponentCount()));
 
             for (int y = procWindow.y1; y < procWindow.y2; y++) {
                 if ( _effect.abort() ) {
@@ -490,7 +491,13 @@ private:
                 for (int x = procWindow.x1; x < procWindow.x2; x++) {
                     PIXSRC *srcPix = (PIXSRC *)  (srcImg ? srcImg->getPixelAddress(x, y) : 0);
                     // if there is a srcImg but we are outside of its RoD, it should be considered black and transparent
-                    dstPix[c] = srcImg ? convertPixelDepth<PIXSRC, PIXDST>(srcPix ? srcPix[srcComp] : 0) : convertPixelDepth<float, PIXDST>(srcComp);
+                    if (!srcImg) {
+                        // Use constant value depending on fillZero
+                        dstPix[c] = convertPixelDepth<float, PIXDST>(srcComp);
+                    } else {
+                        dstPix[c] = convertPixelDepth<PIXSRC, PIXDST>(srcPix ? srcPix[srcComp] : 0);
+                    }
+
                     dstPix += nComponentsDst;
                 }
             }
@@ -925,32 +932,34 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
 #ifdef DEBUG
     // Follow the OpenFX spec:
     // check that dstComponents is consistent with the result of getClipPreferences
-    // (@see getClipPreferences).
-    OFX::PixelComponentEnum pixelComps = mapStrToPixelComponentEnum(dstOfxComp);
-    OFX::PixelComponentEnum dstClipComps = _dstClip->getPixelComponents();
-    if (pixelComps != OFX::ePixelComponentCustom) {
-        assert(dstClipComps == pixelComps);
-    } else {
-        int nComps = std::max( (int)mapPixelComponentCustomToLayerChannels(dstOfxComp).size() - 1, 0 );
-        switch (nComps) {
-        case 1:
-            pixelComps = OFX::ePixelComponentAlpha;
-            break;
-        case 2:
-            pixelComps = OFX::ePixelComponentXY;
-            break;
-        case 3:
-            pixelComps = OFX::ePixelComponentRGB;
-            break;
-        case 4:
-            pixelComps = OFX::ePixelComponentRGBA;
-        default:
-            break;
+    // (@see getClipPreferences)
+    {
+        OFX::PixelComponentEnum pixelComps = mapStrToPixelComponentEnum(dstOfxComp);
+        OFX::PixelComponentEnum dstClipComps = _dstClip->getPixelComponents();
+        if (pixelComps != OFX::ePixelComponentCustom) {
+            assert(dstClipComps == pixelComps);
+        } else {
+            int nComps = std::max( (int)mapPixelComponentCustomToLayerChannels(dstOfxComp).size() - 1, 0 );
+            switch (nComps) {
+                case 1:
+                    pixelComps = OFX::ePixelComponentAlpha;
+                    break;
+                case 2:
+                    pixelComps = OFX::ePixelComponentXY;
+                    break;
+                case 3:
+                    pixelComps = OFX::ePixelComponentRGB;
+                    break;
+                case 4:
+                    pixelComps = OFX::ePixelComponentRGBA;
+                default:
+                    break;
+            }
+            assert(dstClipComps == pixelComps);
         }
-        assert(dstClipComps == pixelComps);
     }
 #endif
-
+    
     std::auto_ptr<OFX::Image> dst( _dstClip->fetchImagePlane( args.time, args.renderView, dstOfxPlane.c_str() ) );
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1018,6 +1027,9 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
                 if ( (srcBitDepth != eBitDepthNone) && ( srcBitDepth != p.img->getPixelDepth() ) ) {
                     OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
+            }
+            if (p.channelIndex < 0 || p.channelIndex >= (int)p.img->getPixelComponentCount()) {
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
         planes.push_back(p);
@@ -1257,25 +1269,22 @@ void
 ShufflePlugin::updateVisibility()
 {
     //Refresh output components secretness
+    PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
+    PixelComponentEnum dstPixelComps = ePixelComponentNone;
+    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
+
     if (gIsMultiPlanar) {
         bool secret = true;
-        std::string ofxPlane, ofxComponents;
-        getPlaneNeededInOutput(&ofxPlane, &ofxComponents);
-        PixelComponentEnum dstPixelComps = mapStrToPixelComponentEnum(ofxComponents);
-        // same code as in getDstPixelComps: If it is a color plane, select the value chosen by the user from the output components choice
-        if ( (dstPixelComps == OFX::ePixelComponentAlpha) ||
-            ( dstPixelComps == OFX::ePixelComponentRGB) ||
-            ( dstPixelComps == OFX::ePixelComponentRGBA) ) {
+        if ( (originalDstPixelComps == OFX::ePixelComponentAlpha) ||
+            ( originalDstPixelComps == OFX::ePixelComponentRGB) ||
+            ( originalDstPixelComps == OFX::ePixelComponentRGBA) ) {
             //If color plane, select the value chosen by the user from the output components choice
             secret = false;
         }
         _outputComponents->setIsSecretAndDisabled(secret);
-    }
 
-    // premult is only needed for RGBA
-    PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
-    PixelComponentEnum dstPixelComps = ePixelComponentNone;
-    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
+    }
+    // Premult is only needed for RGBA
     _outputPremult->setIsSecretAndDisabled( !(dstPixelComps == ePixelComponentRGBA) );
 }
 
@@ -1287,6 +1296,19 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     PixelComponentEnum dstPixelComps = OFX::ePixelComponentNone;
 
     getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
+
+    if (gIsMultiPlanar) {
+        // Same as in updateVisibility(): we do it here, because in the createInstanceAction the choice menus are not yet filled
+        bool secret = true;
+        if ( (originalDstPixelComps == OFX::ePixelComponentAlpha) ||
+            ( originalDstPixelComps == OFX::ePixelComponentRGB) ||
+            ( originalDstPixelComps == OFX::ePixelComponentRGBA) ) {
+            //If color plane, select the value chosen by the user from the output components choice
+            secret = false;
+        }
+        _outputComponents->setIsSecretAndDisabled(secret);
+
+    }
 
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
 
