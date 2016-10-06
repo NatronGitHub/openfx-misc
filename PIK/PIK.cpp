@@ -22,13 +22,11 @@
 /*
  * TODO:
  * *Screen Matte
- * Clip Black / Clip White: any alpha b elow clip black is set to 0, any alpha above clip white is set to 1 (using a linear ramp).
  * Clip Rollback: compute a mask of the non-clipped areas, dilate this mask and the values inside, then mask the result with this mask and values.
  * Screen Dilate: dilate (or erode) the matte
  * Screen Softness: blur the matte
  * Screen Despot Black: dilate followed by erode of the same amount (closing)
  * Screen Despot White: erode followed by dilate of the same amount (opening)
- * Screen Replace: what to do with the color of places where the alpha value was modified by the Screen Matte setting
  */
  /*
  IBK tutorials:
@@ -265,6 +263,25 @@ enum ScreenTypeEnum {
 #define kParamMagentaHint "Override autolevel with magenta component."
 #define kParamMagentaDefault false
 
+#define kGroupScreenMatte "screenMatte"
+#define kGroupScreenMatteLabel "Screen Matte"
+
+#define kParamScreenClipMin "screenClipMin"
+#define kParamScreenClipMinLabel "Clip Black"
+#define kParamScreenClipMinHint "Any alpha below this value is set to 0."
+
+#define kParamScreenClipMax "screenClipMax"
+#define kParamScreenClipMaxLabel "Clip White"
+#define kParamScreenClipMaxHint "Any alpha above this value is set to 1."
+
+#define kParamScreenReplace "screenReplace"
+#define kParamScreenReplaceLabel "Screen Replace"
+#define kParamScreenReplaceHint "What to do with the color of the pixels for which alpha was modified by the screen matte settings."
+
+#define kParamScreenReplaceColor "screenReplaceColor"
+#define kParamScreenReplaceColorLabel "Screen Replace Color"
+#define kParamScreenReplaceColorHint "The color to use when the Screen Replace parameter is set to Soft or Hard Color."
+
 #define kParamSS "ss"
 #define kParamSSLabel "Screen Subtraction"
 #define kParamSSHint "Have the keyer subtract the foreground or just premult."
@@ -455,6 +472,10 @@ protected:
     bool _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     bool _clampAlpha; // Clamp: Clamp matte to 0-1.
     bool _rgbal; // Legalize rgba relationship.
+    double _screenClipMin;
+    double _screenClipMax;
+    ReplaceEnum _screenReplace;
+    float _screenReplaceColor[3];
     SourceAlphaEnum _sourceAlpha;
     ReplaceEnum _insideReplace;
     float _insideReplaceColor[3];
@@ -489,6 +510,9 @@ public:
         , _ss(kParamSSDefault)
         , _clampAlpha(kParamClampAlphaDefault)
         , _rgbal(kParamRGBALDefault)
+        , _screenClipMin(0.)
+        , _screenClipMax(1.)
+        , _screenReplace(eReplaceSoftColor)
         , _sourceAlpha(eSourceAlphaIgnore)
         , _insideReplace(eReplaceSoftColor)
         , _noKey(kParamNoKeyDefault)
@@ -500,6 +524,7 @@ public:
         _color[0] = _color[1] = _color[2] = 0.;
         _alphaBias[0] = _alphaBias[1] = _alphaBias[2] = 0.;
         _despillBias[0] = _despillBias[1] = _despillBias[2] = 0.;
+        _screenReplaceColor[0] = _screenReplaceColor[1] = _screenReplaceColor[2] = 0.;
         _insideReplaceColor[0] = _insideReplaceColor[1] = _insideReplaceColor[2] = 0.;
     }
 
@@ -535,6 +560,10 @@ public:
                    bool ss, // Screen Subtraction: Have the keyer subtract the foreground or just premult.
                    bool clampAlpha, // Clamp: Clamp matte to 0-1.
                    bool rgbal, // Legalize rgba relationship.
+                   double screenClipMin,
+                   double screenClipMax,
+                   ReplaceEnum screenReplace,
+                   const OfxRGBColourD& screenReplaceColor,
                    SourceAlphaEnum sourceAlpha,
                    ReplaceEnum insideReplace,
                    const OfxRGBColourD& insideReplaceColor,
@@ -581,6 +610,25 @@ public:
         _ss = ss;
         _clampAlpha = clampAlpha;
         _rgbal = rgbal;
+        _screenClipMin = screenClipMin;
+        _screenClipMax = std::max(screenClipMin + 0.0001, screenClipMax); // avoid divisions by zero
+        _screenReplace = screenReplace;
+        if (screenReplace == eReplaceHardColor || screenReplace == eReplaceSoftColor) {
+            _screenReplaceColor[0] = screenReplaceColor.r;
+            _screenReplaceColor[1] = screenReplaceColor.g;
+            _screenReplaceColor[2] = screenReplaceColor.b;
+            // only normalize if the replace method is soft color
+            if (screenReplace == eReplaceSoftColor) {
+                if (_screenReplaceColor[0] == 0 && _screenReplaceColor[1] == 0 && _screenReplaceColor[2] == 0) {
+                    _screenReplaceColor[0] = _screenReplaceColor[1] = _screenReplaceColor[2] = 1.;
+                } else {
+                    l = luminance(_colorspace, _screenReplaceColor);
+                    _screenReplaceColor[0] /= l;
+                    _screenReplaceColor[1] /= l;
+                    _screenReplaceColor[2] /= l;
+                }
+            }
+        }
         _sourceAlpha = sourceAlpha;
         _insideReplace = insideReplace;
         if (insideReplace == eReplaceHardColor || insideReplace == eReplaceSoftColor) {
@@ -980,7 +1028,12 @@ private:
                         status[0] = status[1] = status[2] = 0.5;
                     }
                     if ( (inMask > 0.) && (alpha < inMask) ) {
+                        // method 1
                         status[2] += (inMask - alpha) / 2.;
+                        // method 2
+                        //status[0] = inMask - alpha;
+                        //status[1] = inMask - alpha;
+                        //status[2] = 1;
                         alpha = inMask;
                     }
                     if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
@@ -1134,10 +1187,92 @@ private:
                         }
                         */
 
+                    if (_clampAlpha) {
+                        if (alpha < 0.) {
+                            alpha = 0.;
+                        } else if (alpha > 1.) {
+                            alpha = 1.;
+                        }
+                    }
+                    ////////////////////////////////////////
+                    // Screen Matte options
+
+                    // the clip function is piecewise linear and continuous:
+                    // 0. from 0 to screenClipMin
+                    // 0. to 1. from screenClipMin to screenClipMax
+                    // 1. from screenClipMax to 1.
+                    float alphaClipped;
+                    if (alpha <= _screenClipMin) {
+                        alphaClipped = 0.;
+                    } else if (alpha >= _screenClipMax) {
+                        alphaClipped = 1.;
+                    } else {
+                        alphaClipped = (alpha - _screenClipMin) / (_screenClipMax - _screenClipMin);
+                    }
+
+                    if ( alphaClipped > alpha ) {
+                        float diff = alphaClipped - alpha;
+                        // method 1
+                        status[1] += diff / 2.;
+                        // method 2
+                        //status[0] = diff;
+                        //status[1] = 1;
+                        //status[2] = diff;
+
+                        switch (_screenReplace) {
+                            case eReplaceNone:
+                                // do nothing
+                                break;
+
+                            case eReplaceSource:
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + fg[i] * diff;
+                                }
+                                break;
+
+                            case eReplaceHardColor:
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + _screenReplaceColor[i] * diff;
+                                }
+                                break;
+
+                            case eReplaceSoftColor: {
+                                // match the luminance of fg
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + _screenReplaceColor[i] * diff * luminance(_colorspace, fg);
+                                }
+                                break;
+                            }
+                        }
+                        alpha = alphaClipped;
+                    } else if ( alphaClipped < alpha ) {
+                        assert(alpha > 0.);
+                        if (alphaClipped == 0.) {
+                            status[0] = 0.;
+                            status[1] = (alpha - alphaClipped) / 2.;
+                            status[2] = 0.;
+                        } else {
+                            status[0] = 0.5 - (alpha - alphaClipped) / 2.;
+                            status[1] = 0.5;
+                            status[2] = 0.5 - (alpha - alphaClipped) / 2.;
+                        }
+                        // re-premultiply output
+                        for (int i = 0; i < 3; ++i) {
+                            out[i] = out[i] * alphaClipped / alpha; // no division by zero: alpha > 0
+                        }
+                        alpha = alphaClipped;
+                    }
+
                     // nonadditive mix between the key generator and the garbage matte (outMask)
                     // outside mask has priority over inside mask, treat inside first
                     if ( (inMask > 0.) && (alpha < inMask) ) {
-                        status[2] += (inMask - alpha) / 2.;
+                        float diff = inMask - alpha;
+                        // method 1
+                        status[2] += diff / 2.;
+                        // method 2
+                        //status[0] = diff;
+                        //status[1] = diff;
+                        //status[2] = 1;
 
                         switch (_insideReplace) {
                             case eReplaceNone:
@@ -1146,20 +1281,20 @@ private:
 
                             case eReplaceSource:
                                 for (int i = 0; i < 3; ++i) {
-                                    out[i] = out[i] + fg[i] * (inMask - alpha);
+                                    out[i] = out[i] + fg[i] * diff;
                                 }
                                 break;
 
                             case eReplaceHardColor:
                                 for (int i = 0; i < 3; ++i) {
-                                    out[i] = out[i] + _insideReplaceColor[i] * (inMask - alpha);
+                                    out[i] = out[i] + _insideReplaceColor[i] * diff;
                                 }
                                 break;
 
                             case eReplaceSoftColor: {
                                 // match the luminance of fg
                                 for (int i = 0; i < 3; ++i) {
-                                    out[i] = out[i] + _insideReplaceColor[i] * (inMask - alpha) * luminance(_colorspace, fg);
+                                    out[i] = out[i] + _insideReplaceColor[i] * diff * luminance(_colorspace, fg);
                                 }
                                 break;
                             }
@@ -1168,8 +1303,13 @@ private:
                     }
 
                     if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
+                        assert(alpha > 0.);
                         status[1] -= (alpha - (1. - outMask)) / 2.;
                         status[2] -= (alpha - (1. - outMask)) / 2.;
+                        // re-premultiply output
+                        for (int i = 0; i < 3; ++i) {
+                            out[i] = out[i] * (1. - outMask) / alpha; // no division by zero: alpha > 0
+                        }
                         alpha = 1. - outMask;
                     }
 
@@ -1180,9 +1320,6 @@ private:
                         goto FINISH;
                     }
                     if (_outputMode == eOutputModeCombinedMatte) {
-                        if (_clampAlpha && alpha < 0.) {
-                            alpha = 0.;
-                        }
                         for (int i = 0; i < 3; ++i) {
                             out[i] = alpha;
                         }
@@ -1196,9 +1333,6 @@ private:
                             out[i] = fg[i];
                         }
                         if (nComponents == 4) {
-                            if (_clampAlpha && alpha < 0.) {
-                                alpha = 0.;
-                            }
                             out[3] = alpha;
                         }
                         goto FINISH;
@@ -1208,9 +1342,6 @@ private:
                         for (int i = 0; i < 3; ++i) {
                             out[i] = out[i]*alpha;
                         }
-                    }
-                    if (_clampAlpha && alpha < 0.) {
-                        alpha = 0.;
                     }
                     out[3] = alpha;
                 }
@@ -1389,6 +1520,10 @@ public:
         , _ss(0)
         , _clampAlpha(0)
         , _rgbal(0)
+        , _screenClipMin(0)
+        , _screenClipMax(0)
+        , _screenReplace(0)
+        , _screenReplaceColor(0)
         , _sourceAlpha(0)
         , _insideReplace(0)
         , _insideReplaceColor(0)
@@ -1433,6 +1568,10 @@ public:
         _ss = fetchBooleanParam(kParamSS); // Screen Subtraction: Have the keyer subtract the foreground or just premult.
         _clampAlpha = fetchBooleanParam(kParamClampAlpha); // Clamp: Clamp matte to 0-1.
         _rgbal = fetchBooleanParam(kParamRGBAL); // Legalize rgba relationship.
+        _screenClipMin = fetchDoubleParam(kParamScreenClipMin);
+        _screenClipMax = fetchDoubleParam(kParamScreenClipMax);
+        _screenReplace = fetchChoiceParam(kParamScreenReplace);
+        _screenReplaceColor = fetchRGBParam(kParamScreenReplaceColor);
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
         _insideReplace = fetchChoiceParam(kParamInsideReplace);
         _insideReplaceColor = fetchRGBParam(kParamInsideReplaceColor);
@@ -1492,6 +1631,10 @@ private:
         _clampAlpha->setEnabled(!noKey);
         _rgbal->setEnabled(!noKey);
 
+        ReplaceEnum screenReplace = (ReplaceEnum)_screenReplace->getValue();
+        bool hasScreenReplaceColor = (screenReplace == eReplaceSoftColor || screenReplace == eReplaceHardColor);
+        _screenReplaceColor->setEnabled(hasScreenReplaceColor);
+
         ReplaceEnum insideReplace = (ReplaceEnum)_insideReplace->getValue();
         bool hasInsideReplaceColor = (insideReplace == eReplaceSoftColor || insideReplace == eReplaceHardColor);
         _insideReplaceColor->setEnabled(hasInsideReplaceColor);
@@ -1524,6 +1667,10 @@ private:
     BooleanParam* _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     BooleanParam* _clampAlpha; // Clamp: Clamp matte to 0-1.
     BooleanParam* _rgbal; // Legalize rgba relationship.
+    DoubleParam* _screenClipMin;
+    DoubleParam* _screenClipMax;
+    ChoiceParam* _screenReplace;
+    RGBParam* _screenReplaceColor;
     ChoiceParam* _sourceAlpha;
     ChoiceParam* _insideReplace;
     RGBParam* _insideReplaceColor;
@@ -1590,6 +1737,11 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     bool ss = _ss->getValueAtTime(time);
     bool clampAlpha = _clampAlpha->getValueAtTime(time);
     bool rgbal = _rgbal->getValueAtTime(time);
+    double screenClipMin = _screenClipMin->getValueAtTime(time);
+    double screenClipMax = _screenClipMax->getValueAtTime(time);
+    ReplaceEnum screenReplace = (ReplaceEnum)_screenReplace->getValueAtTime(time);
+    OfxRGBColourD screenReplaceColor = {0.5, 0.5, 0.5};
+    _screenReplaceColor->getValueAtTime(time, screenReplaceColor.r, screenReplaceColor.g, screenReplaceColor.b);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
     ReplaceEnum insideReplace = (ReplaceEnum)_insideReplace->getValueAtTime(time);
     OfxRGBColourD insideReplaceColor = {0.5, 0.5, 0.5};
@@ -1760,7 +1912,9 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         }
     }
 
-    processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode);
+    processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal,
+                        screenClipMin, screenClipMax, screenReplace, screenReplaceColor,
+                        sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( !noKey && !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -1908,10 +2062,12 @@ PIKPlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/,
     //const double time = args.time;
 
     if ( paramName == kParamScreenType ||
+        paramName == kParamDespillBiasIsAlphaBias ||
         paramName == kParamNoKey ||
         paramName == kParamLMEnable ||
         paramName == kParamLLEnable ||
         paramName == kParamAutolevels ||
+        paramName == kParamScreenReplace ||
         paramName == kParamInsideReplace) {
         updateEnabled();
     }
@@ -2423,6 +2579,87 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
         if (page) {
             page->addChild(*param);
+        }
+    }
+
+    {
+        GroupParamDescriptor* group = desc.defineGroupParam(kGroupScreenMatte);
+        if (group) {
+            group->setLabel(kGroupScreenMatteLabel);
+            //group->setHint(kGroupScreenMatteHint);
+            group->setOpen(false);
+            if (page) {
+                page->addChild(*group);
+            }
+        }
+
+        // clip min
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamScreenClipMin);
+            param->setLabel(kParamScreenClipMinLabel);
+            param->setHint(kParamScreenClipMinHint);
+            param->setRange(-DBL_MAX, DBL_MAX);
+            param->setDisplayRange(0., 1.);
+            param->setDefault(0.);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // clip max
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamScreenClipMax);
+            param->setLabel(kParamScreenClipMaxLabel);
+            param->setHint(kParamScreenClipMaxHint);
+            param->setRange(-DBL_MAX, DBL_MAX);
+            param->setDisplayRange(0., 1.);
+            param->setDefault(1.);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // screen replace
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamScreenReplace);
+            param->setLabel(kParamScreenReplaceLabel);
+            param->setHint(kParamScreenReplaceHint);
+            assert(param->getNOptions() == (int)eReplaceNone);
+            param->appendOption(kParamReplaceOptionNone, kParamReplaceOptionNoneHint);
+            assert(param->getNOptions() == (int)eReplaceSource);
+            param->appendOption(kParamReplaceOptionSource, kParamReplaceOptionSourceHint);
+            assert(param->getNOptions() == (int)eReplaceHardColor);
+            param->appendOption(kParamReplaceOptionHardColor, kParamReplaceOptionHardColorHint);
+            assert(param->getNOptions() == (int)eReplaceSoftColor);
+            param->appendOption(kParamReplaceOptionSoftColor, kParamReplaceOptionSoftColorHint);
+            param->setDefault( (int)eReplaceSoftColor );
+            param->setAnimates(false);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // screen replace color
+        {
+            RGBParamDescriptor* param = desc.defineRGBParam(kParamScreenReplaceColor);
+            param->setLabel(kParamScreenReplaceColorLabel);
+            param->setHint(kParamScreenReplaceColorHint);
+            param->setDefault(0.5, 0.5, 0.5);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 
