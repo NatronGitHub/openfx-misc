@@ -21,8 +21,6 @@
  */
 /*
  * TODO:
- * Alpha bias: do the same on the Fg color before despill (remultiply after despill
- * Despill Bias: use this color instead of the alpha bias for the Fg despill described above
  * *Screen Matte
  * Clip Black / Clip White: any alpha b elow clip black is set to 0, any alpha above clip white is set to 1 (using a linear ramp).
  * Clip Rollback: compute a mask of the non-clipped areas, dilate this mask and the values inside, then mask the result with this mask and values.
@@ -160,7 +158,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "alpha = 0 if (Ag-Ar*rw-Ab*gbw) is negative, else 1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw)\n" \
 "A is input PFg and B is input C, rw is the value of \"Red Weight\" and gbw is the value of \"Green/Blue Weight\".\n" \
 "\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#IBK"
+"See also:\n" \
+"- http://opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#IBK\n" \
+"- https://compositingmentor.com/2014/07/19/advanced-keying-breakdown-alpha-1-4-ibk-stacked-technique/"
 
 #define kPluginIdentifier "net.sf.openfx.PIK"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -357,6 +357,51 @@ enum ColorspaceEnum
     eColorspaceACESAP1,
 };
 
+#define kParamOutputMode "show"
+#define kParamOutputModeLabel "Output Mode"
+#define kParamOutputModeHint \
+"What image to output."
+#define kParamOutputModeOptionSource "Source"
+#define kParamOutputModeOptionSourceHint "The PFg input (or Fg input, if PFg is not connected)."
+#define kParamOutputModeOptionSourceAlpha "Source Alpha"
+#define kParamOutputModeOptionSourceAlphaHint "The Alpha channel from the PFg input (or Fg input, if PFg is not connected), displayed as luminance."
+#define kParamOutputModeOptionCleanPlate "Clean Plate"
+#define kParamOutputModeOptionCleanPlateHint "The clean plate from the C input (or the screen color, if C is not connected)."
+#define kParamOutputModeOptionScreenMatte "Screen Matte"
+#define kParamOutputModeOptionScreenMatteHint "The screen matte after keying and screen matte processing, but before applying the inside and outside mask, displayed as luminance."
+#define kParamOutputModeOptionInsideMask "Inside Mask"
+#define kParamOutputModeOptionInsideMaskHint "The inside mask, displayed as luminance."
+#define kParamOutputModeOptionOutsideMask "Outside Mask"
+#define kParamOutputModeOptionOutsideMaskHint "The outside mask, displayed as luminance."
+#define kParamOutputModeOptionCombinedMatte "Combined Matte"
+#define kParamOutputModeOptionCombinedMatteHint "The final matte, after applying inside and outside mask, displayed as luminance."
+#define kParamOutputModeOptionStatus "Status"
+#define kParamOutputModeOptionStatusHint "An image showing which pixels are pure background (black), pure foreground (white), partially transparent (grey), affected by Screen Replace (green), affected by Inside Replace (blue), or affected by Outside Mask (red)."
+#define kParamOutputModeOptionIntermediate "Intermediate"
+#define kParamOutputModeOptionIntermediateHint "Color is the source color. Alpha is the foreground key. Use for multi-pass keying."
+#define kParamOutputModeOptionPremultiplied "Premultiplied"
+#define kParamOutputModeOptionPremultipliedHint "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key."
+#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied"
+#define kParamOutputModeOptionUnpremultipliedHint "Color is the Source color after key color suppression. Alpha is the foreground key."
+#define kParamOutputModeOptionComposite "Composite"
+#define kParamOutputModeOptionCompositeHint "Color is the composite of Source and Bg. Alpha is the foreground key."
+
+enum OutputModeEnum
+{
+    eOutputModeSource,
+    eOutputModeSourceAlpha,
+    eOutputModeCleanPlate,
+    eOutputModeScreenMatte,
+    eOutputModeInsideMask,
+    eOutputModeOutsideMask,
+    eOutputModeCombinedMatte,
+    eOutputModeStatus,
+    eOutputModeIntermediate,
+    eOutputModePremultiplied,
+    eOutputModeUnpremultiplied,
+    eOutputModeComposite,
+};
+
 static float
 luminance(ColorspaceEnum colorspace, float const rgb[3])
 {
@@ -417,6 +462,7 @@ protected:
     bool _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     bool _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
     ColorspaceEnum _colorspace;
+    OutputModeEnum _outputMode;
 
 public:
 
@@ -449,6 +495,7 @@ public:
         , _ubl(kParamUBLDefault)
         , _ubc(kParamUBCDefault)
         , _colorspace(eColorspaceRec709)
+        , _outputMode(eOutputModePremultiplied)
     {
         _color[0] = _color[1] = _color[2] = 0.;
         _alphaBias[0] = _alphaBias[1] = _alphaBias[2] = 0.;
@@ -494,7 +541,8 @@ public:
                    bool noKey, // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
                    bool ubl, // Use Bg Lum: Have the output rgb be biased by the bg luminance.
                    bool ubc, // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
-                   ColorspaceEnum colorspace)
+                   ColorspaceEnum colorspace,
+                   OutputModeEnum outputMode)
     {
         // all colors are normalized with unit luminance
         _alphaBias[0] = std::max(0.0001, alphaBias.r);
@@ -555,6 +603,7 @@ public:
         _ubl = ubl;
         _ubc = ubc;
         _colorspace = colorspace;
+        _outputMode = outputMode;
     }
 };
 
@@ -624,6 +673,242 @@ private:
 
         float c[4] = {_color[0], _color[1], _color[2], 1.};
 
+        // first, handle the simple output modes (Source, Source Alpha, Inside Mask, Outside Mask)
+        if (_outputMode == eOutputModeSource) {
+            const OFX::Image *img = _pfgImg ? _pfgImg : _fgImg;
+            const int comps = _pfgImg ? pfgComponents : fgComponents;
+
+            for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+                if ( _effect.abort() ) {
+                    break;
+                }
+
+                PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+                assert(dstPix);
+
+                for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                    const PIX *pix = (const PIX *)  (img ? img->getPixelAddress(x, y) : 0 );
+                    if (!pix) {
+                        for (int i = 0; i < nComponents; ++i) {
+                            dstPix[i] = PIX();
+                        }
+                    } else {
+                        for (int i = 0; i < 3; ++i) {
+                            dstPix[i] = pix[i];
+                        }
+                        if (nComponents == 4) {
+                            if (comps == 4) {
+                                dstPix[3] = pix[3];
+                            } else {
+                                dstPix[3] = 1.;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return;
+        } else if (_outputMode == eOutputModeSourceAlpha) {
+            const OFX::Image *img = _pfgImg ? _pfgImg : _fgImg;
+            const int comps = _pfgImg ? pfgComponents : fgComponents;
+
+            if (comps == 3) {
+                // no alpha
+                for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+                    if ( _effect.abort() ) {
+                        break;
+                    }
+
+                    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+                    assert(dstPix);
+
+                    for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                        for (int i = 0; i < nComponents; ++i) {
+                            dstPix[i] = maxValue;
+                        }
+                    }
+                }
+            } else {
+                // src has alpha
+                assert(comps == 4);
+                for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+                    if ( _effect.abort() ) {
+                        break;
+                    }
+
+                    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+                    assert(dstPix);
+
+                    for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                        const PIX *pix = (const PIX *)  (img ? img->getPixelAddress(x, y) : 0 );
+                        if (!pix) {
+                            for (int i = 0; i < nComponents; ++i) {
+                                dstPix[i] = PIX();
+                            }
+                        } else {
+                            for (int i = 0; i < 3; ++i) {
+                                dstPix[i] = pix[3];
+                            }
+                            if (nComponents == 4) {
+                                dstPix[3] = 1.;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return;
+
+        } else if (_outputMode == eOutputModeCleanPlate) {
+
+            if (!_cImg) {
+                for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+                    if ( _effect.abort() ) {
+                        break;
+                    }
+
+                    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+                    assert(dstPix);
+
+                    for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                        for (int i = 0; i < nComponents; ++i) {
+                            dstPix[i] = floatToSample<PIX, maxValue>(c[i]);
+                        }
+                    }
+                }
+            } else {
+                const OFX::Image *img = _cImg;
+                const int comps = cComponents;
+
+                for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+                    if ( _effect.abort() ) {
+                        break;
+                    }
+
+                    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+                    assert(dstPix);
+
+                    for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                        const PIX *pix = (const PIX *)  (img ? img->getPixelAddress(x, y) : 0 );
+                        if (!pix) {
+                            for (int i = 0; i < nComponents; ++i) {
+                                dstPix[i] = PIX();
+                            }
+                        } else {
+                            for (int i = 0; i < 3; ++i) {
+                                dstPix[i] = pix[i];
+                            }
+                            if (nComponents == 4) {
+                                if (comps == 4) {
+                                    dstPix[3] = pix[3];
+                                } else {
+                                    dstPix[3] = 1.;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return;
+
+        } else if (_outputMode == eOutputModeInsideMask) {
+            const OFX::Image *img = _inMaskImg;
+
+            if (!img) {
+                // no alpha
+                for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+                    if ( _effect.abort() ) {
+                        break;
+                    }
+
+                    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+                    assert(dstPix);
+
+                    for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                        for (int i = 0; i < nComponents; ++i) {
+                            dstPix[i] = PIX();
+                        }
+                    }
+                }
+            } else {
+                for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+                    if ( _effect.abort() ) {
+                        break;
+                    }
+
+                    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+                    assert(dstPix);
+
+                    for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                        const PIX *pix = (const PIX *)  (img ? img->getPixelAddress(x, y) : 0 );
+                        if (!pix) {
+                            for (int i = 0; i < nComponents; ++i) {
+                                dstPix[i] = PIX();
+                            }
+                        } else {
+                            for (int i = 0; i < 3; ++i) {
+                                dstPix[i] = pix[0];
+                            }
+                            if (nComponents == 4) {
+                                dstPix[3] = 1.;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return;
+        } else if (_outputMode == eOutputModeOutsideMask) {
+            const OFX::Image *img = _outMaskImg;
+
+            if (!img) {
+                // no alpha
+                for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+                    if ( _effect.abort() ) {
+                        break;
+                    }
+
+                    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+                    assert(dstPix);
+
+                    for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                        for (int i = 0; i < nComponents; ++i) {
+                            dstPix[i] = PIX();
+                        }
+                    }
+                }
+            } else {
+                for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+                    if ( _effect.abort() ) {
+                        break;
+                    }
+
+                    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+                    assert(dstPix);
+
+                    for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                        const PIX *pix = (const PIX *)  (img ? img->getPixelAddress(x, y) : 0 );
+                        if (!pix) {
+                            for (int i = 0; i < nComponents; ++i) {
+                                dstPix[i] = PIX();
+                            }
+                        } else {
+                            for (int i = 0; i < 3; ++i) {
+                                dstPix[i] = pix[0];
+                            }
+                            if (nComponents == 4) {
+                                dstPix[3] = 1.;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return;
+        }
+        
+
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
                 break;
@@ -636,7 +921,7 @@ private:
                 const PIX *fgPix = (const PIX *)  ((_fgImg) ? _fgImg->getPixelAddress(x, y) : 0);
                 const PIX *pfgPix = (const PIX *)  ((!_noKey && _pfgImg) ? _pfgImg->getPixelAddress(x, y) : 0);
                 const PIX *cPix = (const PIX *)  ((!_noKey && _cImg) ? _cImg->getPixelAddress(x, y) : 0);
-                const PIX *bgPix = (const PIX *)  (((_ubc || _ubl) && _bgImg) ? _bgImg->getPixelAddress(x, y) : 0);
+                const PIX *bgPix = (const PIX *)  ((( _ubc || _ubl || (_outputMode == eOutputModeComposite) ) && _bgImg) ? _bgImg->getPixelAddress(x, y) : 0);
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
                 float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
@@ -677,6 +962,8 @@ private:
                     }
                 }
 
+                float status[4] = {0., 0., 0., 1.}; // only used for status output
+
                 if (_noKey) {
                     for (int i = 0; i < 4; ++i) {
                         out[i] = fg[i];
@@ -684,10 +971,21 @@ private:
                     // nonadditive mix between the key generator and the garbage matte (outMask)
                     // outside mask has priority over inside mask, treat inside first
                     float alpha = out[3];
+
+                    if (alpha <= 0) {
+                        status[0] = status[1] = status[2] = 0.;
+                    } else if (alpha >= 1.) {
+                        status[0] = status[1] = status[2] = 1.;
+                    } else {
+                        status[0] = status[1] = status[2] = 0.5;
+                    }
                     if ( (inMask > 0.) && (alpha < inMask) ) {
+                        status[2] += (inMask - alpha) / 2.;
                         alpha = inMask;
                     }
                     if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
+                        status[1] -= (alpha - (1. - outMask)) / 2.;
+                        status[2] -= (alpha - (1. - outMask)) / 2.;
                         alpha = 1. - outMask;
                     }
                     out[3] = alpha;
@@ -781,12 +1079,30 @@ private:
                         }
                     }
 
+                    if (_outputMode == eOutputModeScreenMatte) {
+                        for (int i = 0; i < 3; ++i) {
+                            out[i] = alpha;
+                        }
+                        if (nComponents == 4) {
+                            out[3] = 1.;
+                        }
+                        goto FINISH;
+                    }
+
+                    if (alpha <= 0) {
+                        status[0] = status[1] = status[2] = 0.;
+                    } else if (alpha >= 1.) {
+                        status[0] = status[1] = status[2] = 1.;
+                    } else {
+                        status[0] = status[1] = status[2] = 0.5;
+                    }
+
                     if (!_ss || alpha >= 1) {
                         for (int i = 0; i < 3; ++i) {
                             out[i] = fg[i];
                         }
                     } else {
-                        // screen subtraction
+                        // screen subtraction / despill
                         for (int i = 0; i < 3; ++i) {
                             float v = fg[i] + c[i] * _despillBias[i] * (alpha - 1.);
                             out[i] = v < 0. ? 0 : v;
@@ -821,6 +1137,8 @@ private:
                     // nonadditive mix between the key generator and the garbage matte (outMask)
                     // outside mask has priority over inside mask, treat inside first
                     if ( (inMask > 0.) && (alpha < inMask) ) {
+                        status[2] += (inMask - alpha) / 2.;
+
                         switch (_insideReplace) {
                             case eReplaceNone:
                                 // do nothing
@@ -850,7 +1168,40 @@ private:
                     }
 
                     if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
+                        status[1] -= (alpha - (1. - outMask)) / 2.;
+                        status[2] -= (alpha - (1. - outMask)) / 2.;
                         alpha = 1. - outMask;
+                    }
+
+                    if (_outputMode == eOutputModeStatus) {
+                        for (int i = 0; i < 4; ++i) {
+                            out[i] = status[i];
+                        }
+                        goto FINISH;
+                    }
+                    if (_outputMode == eOutputModeCombinedMatte) {
+                        if (_clampAlpha && alpha < 0.) {
+                            alpha = 0.;
+                        }
+                        for (int i = 0; i < 3; ++i) {
+                            out[i] = alpha;
+                        }
+                        if (nComponents == 4) {
+                            out[3] = 1.;
+                        }
+                        goto FINISH;
+                    }
+                    if (_outputMode == eOutputModeIntermediate) {
+                        for (int i = 0; i < 3; ++i) {
+                            out[i] = fg[i];
+                        }
+                        if (nComponents == 4) {
+                            if (_clampAlpha && alpha < 0.) {
+                                alpha = 0.;
+                            }
+                            out[3] = alpha;
+                        }
+                        goto FINISH;
                     }
 
                     if (!_ss) { // if no screen subtraction, just premult
@@ -968,6 +1319,32 @@ private:
 #pragma message WARN("autolevels not yet implemented")
 #endif
 
+                if (_outputMode == eOutputModeUnpremultiplied) {
+                    if (out[3] <= 0) {
+                        for (int i = 0; i < 3; ++i) {
+                            out[i] = 0;
+                        }
+                    } else {
+                        for (int i = 0; i < 3; ++i) {
+                            out[i] = out[i] / out[3];
+                        }
+                    }
+                    goto FINISH;
+                }
+
+                if (_outputMode == eOutputModeComposite) {
+                    if (out[3] <= 0) {
+                        for (int i = 0; i < 4; ++i) {
+                            out[i] = bg[i];
+                        }
+                    } else {
+                        for (int i = 0; i < 4; ++i) {
+                            out[i] = out[i] + bg[i] * (1 - out[3]);
+                        }
+                    }
+                    goto FINISH;
+                }
+            FINISH:
                 for (int i = 0; i < nComponents; ++i) {
                     dstPix[i] = floatToSample<PIX, maxValue>(out[i]);
                 }
@@ -1063,6 +1440,7 @@ public:
         _ubl = fetchBooleanParam(kParamUBL); // Use Bg Lum: Have the output rgb be biased by the bg luminance.
         _ubc = fetchBooleanParam(kParamUBC); // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
         _colorspace = fetchChoiceParam(kParamColorspace);
+        _outputMode = fetchChoiceParam(kParamOutputMode);
 
         updateEnabled();
     }
@@ -1077,10 +1455,15 @@ private:
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
-    /* set up and run a processor */
-    void setupAndProcess(PIKProcessorBase &, const OFX::RenderArguments &args);
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    /** Override the get frames needed action */
+    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
+
+    /* set up and run a processor */
+    void setupAndProcess(PIKProcessorBase &, const OFX::RenderArguments &args);
 
     void updateEnabled()
     {
@@ -1148,6 +1531,7 @@ private:
     BooleanParam* _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     BooleanParam* _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
     ChoiceParam* _colorspace;
+    ChoiceParam* _outputMode;
 };
 
 
@@ -1214,18 +1598,92 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     bool ubl = _ubl->getValueAtTime(time);
     bool ubc = _ubc->getValueAtTime(time);
     ColorspaceEnum colorspace = (ColorspaceEnum)_colorspace->getValueAtTime(time);
+    OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
 
-    std::auto_ptr<const OFX::Image> fg( ( ( _fgClip && _fgClip->isConnected() ) ) ?
-                                       _fgClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> pfg( ( !noKey && ( _pfgClip && _pfgClip->isConnected() ) ) ?
+    bool getfg = false;
+    bool getpfg = false; // gets pfg or fg if pfg is not connected
+    bool getc = false;
+    bool getbg = false;
+    bool getinm = false;
+    bool getoutm = false;
+
+    switch (outputMode) {
+        case eOutputModeSource:
+            getpfg = true;
+            break;
+
+        case eOutputModeSourceAlpha:
+            getpfg = true;
+            break;
+
+        case eOutputModeCleanPlate:
+            getc = true;
+            break;
+
+        case eOutputModeScreenMatte:
+            getpfg = true;
+            getc = true;
+            break;
+
+        case eOutputModeInsideMask:
+            getinm = true;
+            break;
+
+        case eOutputModeOutsideMask:
+            getoutm = true;
+            break;
+
+        case eOutputModeCombinedMatte:
+            getpfg = true;
+            getc = true;
+            getinm = true;
+            getoutm = true;
+            break;
+
+        case eOutputModeStatus:
+            getpfg = true;
+            getc = true;
+            getinm = true;
+            getoutm = true;
+            break;
+
+        case eOutputModeIntermediate:
+            getfg = true;
+            getpfg = true;
+            getc = true;
+            // bg not needed
+            getinm = true;
+            getoutm = true;
+            break;
+
+        case eOutputModePremultiplied:
+        case eOutputModeUnpremultiplied:
+        case eOutputModeComposite:
+            getfg = true;
+            getpfg = true;
+            getc = true;
+            getbg = true;
+            getinm = true;
+            getoutm = true;
+            break;
+    }
+    getc = getc && (!noKey || (outputMode == eOutputModeCleanPlate) ) && screenType != eScreenTypePick;
+    getbg = getbg && ( ubl || ubc || (outputMode == eOutputModeComposite) );
+
+    std::auto_ptr<const OFX::Image> pfg( ( getpfg && !noKey && ( _pfgClip && _pfgClip->isConnected() ) ) ?
                                        _pfgClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> c( ( !noKey && screenType != eScreenTypePick && ( _cClip && _cClip->isConnected() ) ) ?
+    if ( getpfg && !pfg.get() ) {
+        getfg = true;
+    }
+    std::auto_ptr<const OFX::Image> fg( ( getfg && ( _fgClip && _fgClip->isConnected() ) ) ?
+                                       _fgClip->fetchImage(time) : 0 );
+    std::auto_ptr<const OFX::Image> c( ( getc && ( _cClip && _cClip->isConnected() ) ) ?
                                        _cClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> bg( ( (ubl || ubc) && ( _bgClip && _bgClip->isConnected() ) ) ?
+    std::auto_ptr<const OFX::Image> bg( ( getbg && ( _bgClip && _bgClip->isConnected() ) ) ?
                                         _bgClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
+    std::auto_ptr<const OFX::Image> inMask( ( getinm && ( _inMaskClip && _inMaskClip->isConnected() ) ) ?
                                            _inMaskClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
+    std::auto_ptr<const OFX::Image> outMask( ( getoutm && ( _outMaskClip && _outMaskClip->isConnected() ) ) ?
                                             _outMaskClip->fetchImage(time) : 0 );
     if ( fg.get() ) {
         if ( (fg->getRenderScale().x != args.renderScale.x) ||
@@ -1239,7 +1697,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         if (fgBitDepth != dstBitDepth /* || fgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-    } else {
+    } else if (getfg) {
         // Nuke sometimes returns NULL when render is interrupted
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -1302,7 +1760,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         }
     }
 
-    processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace);
+    processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal, sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( !noKey && !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -1409,12 +1867,38 @@ PIKPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     if (noKey) {
         clipPreferences.setOutputPremultiplication(_fgClip->getPreMultiplication());
     } else {
-        clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
+        OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
+        clipPreferences.setOutputPremultiplication(outputMode == eOutputModeUnpremultiplied ? eImageUnPreMultiplied : eImagePreMultiplied);
     }
 
     // Output is RGBA
     clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
     // note: Keyer handles correctly inputs with different components: it only uses RGB components from both clips
+}
+
+bool
+PIKPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+{
+    const double time = args.time;
+
+    OutputModeEnum outputModeEnum = (OutputModeEnum)_outputMode->getValueAtTime(time);
+
+    if (outputModeEnum == eOutputModeSource) {
+        identityClip = (_pfgClip && _pfgClip->isConnected()) ? _pfgClip : _fgClip;
+        identityTime = time;
+
+        return true;
+    }
+    if (outputModeEnum == eOutputModeCleanPlate) {
+        ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValueAtTime(time);
+        if (screenType != eScreenTypePick) {
+            identityClip = _cClip;
+            identityTime = time;
+
+            return true;
+        }
+    }
+    return false;
 }
 
 void
@@ -1461,6 +1945,113 @@ PIKPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone);
 #endif
+}
+
+void
+PIKPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames)
+{
+    const double time = args.time;
+
+    ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValueAtTime(time);
+    bool noKey = _noKey->getValueAtTime(time);
+    bool ubl = _ubl->getValueAtTime(time);
+    bool ubc = _ubc->getValueAtTime(time);
+    OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
+
+    bool getfg = false;
+    bool getpfg = false; // gets pfg or fg if pfg is not connected
+    bool getc = false;
+    bool getbg = false;
+    bool getinm = false;
+    bool getoutm = false;
+
+    switch (outputMode) {
+        case eOutputModeSource:
+            getpfg = true;
+            break;
+
+        case eOutputModeSourceAlpha:
+            getpfg = true;
+            break;
+
+        case eOutputModeCleanPlate:
+            getc = true;
+            break;
+
+        case eOutputModeScreenMatte:
+            getpfg = true;
+            getc = true;
+            break;
+
+        case eOutputModeInsideMask:
+            getinm = true;
+            break;
+
+        case eOutputModeOutsideMask:
+            getoutm = true;
+            break;
+
+        case eOutputModeCombinedMatte:
+            getpfg = true;
+            getc = true;
+            getinm = true;
+            getoutm = true;
+            break;
+
+        case eOutputModeStatus:
+            getpfg = true;
+            getc = true;
+            getinm = true;
+            getoutm = true;
+            break;
+
+        case eOutputModeIntermediate:
+            getfg = true;
+            getpfg = true;
+            getc = true;
+            // bg not needed
+            getinm = true;
+            getoutm = true;
+            break;
+
+        case eOutputModePremultiplied:
+        case eOutputModeUnpremultiplied:
+        case eOutputModeComposite:
+            getfg = true;
+            getpfg = true;
+            getc = true;
+            getbg = true;
+            getinm = true;
+            getoutm = true;
+            break;
+    }
+    getc = getc && (!noKey || (outputMode == eOutputModeCleanPlate) ) && screenType != eScreenTypePick;
+    getbg = getbg && ( ubl || ubc || (outputMode == eOutputModeComposite) );
+
+    if (getpfg && !(_pfgClip && _pfgClip->isConnected())) {
+        getpfg = false;
+        getfg = true;
+    }
+    OfxRangeD range;
+    range.min = range.max = time;
+    if (getfg) {
+        frames.setFramesNeeded(*_fgClip, range);
+    }
+    if (getpfg) {
+        frames.setFramesNeeded(*_pfgClip, range);
+    }
+    if (getc) {
+        frames.setFramesNeeded(*_cClip, range);
+    }
+    if (getbg) {
+        frames.setFramesNeeded(*_bgClip, range);
+    }
+    if (getinm) {
+        frames.setFramesNeeded(*_inMaskClip, range);
+    }
+    if (getoutm) {
+        frames.setFramesNeeded(*_outMaskClip, range);
+    }
 }
 
 void
@@ -1957,7 +2548,47 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         assert(param->getNOptions() == eColorspaceACESAP1);
         param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
         param->setDefault( (int)eColorspaceRec709 );
+        param->setLayoutHint(eLayoutHintDivider);
         param->setAnimates(false);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputMode);
+        param->setLabel(kParamOutputModeLabel);
+        param->setHint(kParamOutputModeHint);
+        assert(param->getNOptions() == eOutputModeSource);
+        param->appendOption(kParamOutputModeOptionSource, kParamOutputModeOptionSourceHint);
+        assert(param->getNOptions() == eOutputModeSourceAlpha);
+        param->appendOption(kParamOutputModeOptionSourceAlpha, kParamOutputModeOptionSourceAlphaHint);
+        assert(param->getNOptions() == eOutputModeCleanPlate);
+        param->appendOption(kParamOutputModeOptionCleanPlate, kParamOutputModeOptionCleanPlateHint);
+        assert(param->getNOptions() == eOutputModeScreenMatte);
+        param->appendOption(kParamOutputModeOptionScreenMatte, kParamOutputModeOptionScreenMatteHint);
+        assert(param->getNOptions() == eOutputModeInsideMask);
+        param->appendOption(kParamOutputModeOptionInsideMask, kParamOutputModeOptionInsideMaskHint);
+        assert(param->getNOptions() == eOutputModeOutsideMask);
+        param->appendOption(kParamOutputModeOptionOutsideMask, kParamOutputModeOptionOutsideMaskHint);
+        assert(param->getNOptions() == eOutputModeCombinedMatte);
+        param->appendOption(kParamOutputModeOptionCombinedMatte, kParamOutputModeOptionCombinedMatteHint);
+        assert(param->getNOptions() == eOutputModeStatus);
+        param->appendOption(kParamOutputModeOptionStatus, kParamOutputModeOptionStatusHint);
+        assert(param->getNOptions() == eOutputModeIntermediate);
+        param->appendOption(kParamOutputModeOptionIntermediate, kParamOutputModeOptionIntermediateHint);
+        assert(param->getNOptions() == eOutputModePremultiplied);
+        param->appendOption(kParamOutputModeOptionPremultiplied, kParamOutputModeOptionPremultipliedHint);
+        assert(param->getNOptions() == eOutputModeUnpremultiplied);
+        param->appendOption(kParamOutputModeOptionUnpremultiplied, kParamOutputModeOptionUnpremultipliedHint);
+        assert(param->getNOptions() == eOutputModeComposite);
+        param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
+        param->setDefault( (int)eOutputModePremultiplied );
+        param->setLayoutHint(eLayoutHintDivider);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (group) {
             param->setParent(*group);
         }
