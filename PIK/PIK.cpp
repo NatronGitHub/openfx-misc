@@ -143,12 +143,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "\n" \
 "The color weights deal with the hardness of the matte. When viewing the output (with screen subtraction checked), one may notice areas where edges have a slight discoloration due to the background not being fully removed from the original plate. This is not spill but a result of the matte being too strong. Lowering one of the weights will correct that particular edge. For example, if it is a red foreground image with an edge problem, lower the red weight. This may affect other edges so the use of multiple PIKs with different weights, split with KeyMixes, is recommended.\n" \
 "\n" \
+"The Alpha Bias setting may be used either if there is a strong global color cast on the scene (e.g. the green or blue screen color is not pure), or if parts of the foreground are transparent in the output. This color is considered by the algorithm as being a grey reference: all colors from the PFg input are first normalized by this color before computation.\n" \
+"If the Alpha Bias is set, but the screen subtraction has a strong color bias (e.g. the despilled areas show the screen color), uncheck 'Use Alpha for Despill' and set the Despill Bias to the color of the foreground elements that are most affected by the color bias.\n" \
 /*"The 'Luminance Match' feature adds a luminance factor to the keying algorithm which helps to capture transparent areas of the foreground which are brighter than the backing screen. It will also allow you to lessen some of the garbage area noise by bringing down the screen range - pushing this control too far will also eat into some of your foreground blacks. 'Luminance Level' allows you to make the overall effect stronger or weaker.\n"*/ \
 /*"\n"*/ \
 /*"'Autolevels' will perform a color correction before the image is pulled so that hard edges from a foreground subject with saturated colors are reduced. The same can be achieved with the weights but here only those saturated colors are affected whereas the use of weights will affect the entire image. When using this feature it's best to have this as a separate node which you can then split with other PIKs as the weights will no longer work as expected. You can override some of the logic for when you actually have particular foreground colors you want to keep.\n"*/ \
 /*"For example when you have a saturated red subject against bluescreen you'll get a magenta transition area. Autolevels will eliminate this but if you have a magenta foreground object then this control will make the magenta more red unless you check the magenta box to keep it.\n"*/ \
 "\n" \
-"'Screen Subtraction' removes the background color from the output via a subtraction process (1-alpha times the screen color is subtracted at each pixel). When unchecked, the output is simply the original Fg premultiplied with the generated matte.\n" \
+"'Screen Subtraction' (a.k.a. despill) removes the background color from the output via a subtraction process (1-alpha times the screen color is subtracted at each pixel). When unchecked, the output is simply the original Fg premultiplied with the generated matte.\n" \
 "\n" \
 "'Use Bkg Luminance' and 'Use Bkg Chroma' affect the output color by the new background. "/*These controls are best used with the 'Luminance Match' sliders above. */"This feature can also sometimes really help with screens that exhibit some form of fringing artifact - usually a darkening or lightening of an edge on one of the color channels on the screen. The effect can be offset by grading the Bg input up or down with a grade node just before input. If it is just an area which needs help then just rotoscope that area and locally grade the Bg input up or down to remove the artifact.\n" \
 "\n" \
@@ -355,6 +357,31 @@ enum ColorspaceEnum
     eColorspaceACESAP1,
 };
 
+static float
+luminance(ColorspaceEnum colorspace, float const rgb[3])
+{
+    float X, Y, Z;
+    switch (colorspace) {
+        case eColorspaceRec709:
+        default:
+            Color::rgb709_to_xyz(rgb[0], rgb[1], rgb[2], &X, &Y, &Z);
+            break;
+
+        case eColorspaceRec2020:
+            Color::rgb2020_to_xyz(rgb[0], rgb[1], rgb[2], &X, &Y, &Z);
+            break;
+
+        case eColorspaceACESAP0:
+            Color::rgbACESAP0_to_xyz(rgb[0], rgb[1], rgb[2], &X, &Y, &Z);
+            break;
+
+        case eColorspaceACESAP1:
+            Color::rgbACESAP1_to_xyz(rgb[0], rgb[1], rgb[2], &X, &Y, &Z);
+            break;
+    }
+    return Y;
+}
+
 class PIKProcessorBase
     : public OFX::ImageProcessor
 {
@@ -386,7 +413,6 @@ protected:
     SourceAlphaEnum _sourceAlpha;
     ReplaceEnum _insideReplace;
     float _insideReplaceColor[3];
-    float _insideReplaceLuminance;
     bool _noKey; // No Key: Apply background luminance and chroma to Fg rgba input - no key is pulled.
     bool _ubl; // Use Bg Lum: Have the output rgb be biased by the bg luminance.
     bool _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
@@ -419,7 +445,6 @@ public:
         , _rgbal(kParamRGBALDefault)
         , _sourceAlpha(eSourceAlphaIgnore)
         , _insideReplace(eReplaceSoftColor)
-        , _insideReplaceLuminance(0.)
         , _noKey(kParamNoKeyDefault)
         , _ubl(kParamUBLDefault)
         , _ubc(kParamUBCDefault)
@@ -471,30 +496,20 @@ public:
                    bool ubc, // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
                    ColorspaceEnum colorspace)
     {
-        _alphaBias[0] = alphaBias.r;
-        _alphaBias[1] = alphaBias.g;
-        _alphaBias[2] = alphaBias.b;
-        if (_alphaBias[0] == 0) {
-            _alphaBias[0] = 10000.;
-        }
-        if (_alphaBias[1] == 0) {
-            _alphaBias[1] = 10000.;
-        }
-        if (_alphaBias[2] == 0) {
-            _alphaBias[2] = 10000.;
-        }
-        _despillBias[0] = despillBias.r;
-        _despillBias[1] = despillBias.g;
-        _despillBias[2] = despillBias.b;
-        if (_despillBias[0] == 0) {
-            _despillBias[0] = 10000.;
-        }
-        if (_despillBias[1] == 0) {
-            _despillBias[1] = 10000.;
-        }
-        if (_despillBias[2] == 0) {
-            _despillBias[2] = 10000.;
-        }
+        // all colors are normalized with unit luminance
+        _alphaBias[0] = std::max(0.0001, alphaBias.r);
+        _alphaBias[1] = std::max(0.0001, alphaBias.g);
+        _alphaBias[2] = std::max(0.0001, alphaBias.b);
+        float l = luminance(_colorspace, _alphaBias);
+        _alphaBias[0] /= l;
+        _alphaBias[1] /= l;
+        _alphaBias[2] /= l;
+        _despillBias[0] = std::max(0.0001, despillBias.r);
+        _despillBias[1] = std::max(0.0001, despillBias.g);
+        _despillBias[2] = std::max(0.0001, despillBias.b);
+        _despillBias[0] /= l;
+        _despillBias[1] /= l;
+        _despillBias[2] /= l;
         if (screenType == eScreenTypePick) {
             _screenType = (color.g / _alphaBias[1] > color.b / _alphaBias[2]) ? eScreenTypeGreen: eScreenTypeBlue;
             _color[0] = color.r / _alphaBias[0];
@@ -524,31 +539,15 @@ public:
             _insideReplaceColor[0] = insideReplaceColor.r;
             _insideReplaceColor[1] = insideReplaceColor.g;
             _insideReplaceColor[2] = insideReplaceColor.b;
+            // only normalize if the replace method is soft color
             if (insideReplace == eReplaceSoftColor) {
                 if (_insideReplaceColor[0] == 0 && _insideReplaceColor[1] == 0 && _insideReplaceColor[2] == 0) {
                     _insideReplaceColor[0] = _insideReplaceColor[1] = _insideReplaceColor[2] = 1.;
-                    _insideReplaceLuminance = 1.;
                 } else {
-                    float X, Y, Z;
-                    switch (_colorspace) {
-                        case eColorspaceRec709:
-                        default:
-                            Color::rgb709_to_xyz(_insideReplaceColor[0], _insideReplaceColor[1], _insideReplaceColor[2], &X, &Y, &Z);
-                            break;
-
-                        case eColorspaceRec2020:
-                            Color::rgb2020_to_xyz(_insideReplaceColor[0], _insideReplaceColor[1], _insideReplaceColor[2], &X, &Y, &Z);
-                            break;
-
-                        case eColorspaceACESAP0:
-                            Color::rgbACESAP0_to_xyz(_insideReplaceColor[0], _insideReplaceColor[1], _insideReplaceColor[2], &X, &Y, &Z);
-                            break;
-
-                        case eColorspaceACESAP1:
-                            Color::rgbACESAP1_to_xyz(_insideReplaceColor[0], _insideReplaceColor[1], _insideReplaceColor[2], &X, &Y, &Z);
-                            break;
-                    }
-                    _insideReplaceLuminance = Y;
+                    l = luminance(_colorspace, _insideReplaceColor);
+                    _insideReplaceColor[0] /= l;
+                    _insideReplaceColor[1] /= l;
+                    _insideReplaceColor[2] /= l;
                 }
             }
         }
@@ -840,31 +839,9 @@ private:
                                 break;
 
                             case eReplaceSoftColor: {
-                                // compute the luminance of the luminance of fg
-                                float X, Y, Z;
-                                switch (_colorspace) {
-                                    case eColorspaceRec709:
-                                    default:
-                                        Color::rgb709_to_xyz(fg[0], fg[1], fg[2], &X, &Y, &Z);
-                                        break;
-
-                                    case eColorspaceRec2020:
-                                        Color::rgb2020_to_xyz(fg[0], fg[1], fg[2], &X, &Y, &Z);
-                                        break;
-
-                                    case eColorspaceACESAP0:
-                                        Color::rgbACESAP0_to_xyz(fg[0], fg[1], fg[2], &X, &Y, &Z);
-                                        break;
-
-                                    case eColorspaceACESAP1:
-                                        Color::rgbACESAP1_to_xyz(fg[0], fg[1], fg[2], &X, &Y, &Z);
-                                        break;
-                                }
                                 // match the luminance of fg
-                                if (_insideReplaceLuminance > 0) {
-                                    for (int i = 0; i < 3; ++i) {
-                                        out[i] = out[i] + _insideReplaceColor[i] * (inMask - alpha) * Y / _insideReplaceLuminance;
-                                    }
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + _insideReplaceColor[i] * (inMask - alpha) * luminance(_colorspace, fg);
                                 }
                                 break;
                             }
