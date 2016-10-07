@@ -70,6 +70,50 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
     "It can be used in commercial applications (see http://cimg.eu)."
 
+#define STRINGIZE_CPP_NAME_(token) # token
+
+#ifdef DEBUG
+#define kPluginDescriptionDebug " with debug"
+#else
+#define kPluginDescriptionDebug " without debug"
+#endif
+
+#ifdef NDEBUG
+#define kPluginDescriptionNDebug ", without assertions"
+#else
+#define kPluginDescriptionNDebug ", with assertions"
+#endif
+
+#if defined(__OPTIMIZE__)
+#define kPluginDescriptionOptimize ", with optimizations"
+#else
+#define kPluginDescriptionOptimize "" // don't know (maybe not gcc or clang)
+#endif
+
+#if defined(__NO_INLINE__)
+#define kPluginDescriptionInline ", without inlines"
+#else
+#define kPluginDescriptionInline "" // don't know (maybe not gcc or clang)
+#endif
+
+#ifdef cimg_use_openmp
+#define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_NAME(_OPENMP)
+#else
+#define kPluginDescriptionOpenMP ", without OpenMP"
+#endif
+
+#ifdef __clang__
+#define kPluginDescriptionCompiler ", using Clang version " __clang_version__
+#else
+#ifdef __GNUC__
+#define kPluginDescriptionCompiler ", using GNU C++ version " __VERSION__
+#else
+#define kPluginDescriptionCompiler ""
+#endif
+#endif
+
+#define kPluginDescriptionFull kPluginDescription "\n\nThis plugin was compiled " kPluginDescriptionDebug kPluginDescriptionNDebug kPluginDescriptionOptimize kPluginDescriptionInline kPluginDescriptionOpenMP kPluginDescriptionCompiler "."
+
 #define kPluginNameLaplacian          "LaplacianCImg"
 #define kPluginDescriptionLaplacian \
     "Blur input stream, and subtract the result from the input image. This is not a mathematically correct Laplacian (which would be the sum of second derivatives over X and Y).\n" \
@@ -110,6 +154,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescriptionBloom \
     "Apply a Bloom filter (Kawase 2004) that sums multiple blur filters of different radii,\n" \
     "resulting in a larger but sharper glare than a simple blur.\n" \
+    "It is similar to applying 'Count' separate Blur filters to the same input image with sizes 'Size', 'Size'*'Ratio', 'Size'*'Ratio'^2, etc., and averaging the results.\n" \
     "The blur radii follow a geometric progression (of common ratio 2 in the original implementation, " \
     "bloomRatio in this implementation), and a total of bloomCount blur kernels are summed up (bloomCount=5 " \
     "in the original implementation, and the kernels are Gaussian).\n" \
@@ -1510,7 +1555,7 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
     switch (blurPlugin) {
     case eBlurPluginBlur:
         desc.setLabel(kPluginName);
-        desc.setPluginDescription(kPluginDescription);
+        desc.setPluginDescription(kPluginDescriptionFull);
         break;
     case eBlurPluginLaplacian:
         desc.setLabel(kPluginNameLaplacian);
