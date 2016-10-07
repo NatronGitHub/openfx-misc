@@ -44,6 +44,51 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
 "Add a constant to the selected channels.\n" \
 "See also: http://opticalenquiry.com/nuke/index.php?title=Add"
+
+#define STRINGIZE_CPP_NAME_(token) # token
+
+#ifdef DEBUG
+#define kPluginDescriptionDebug " with debug"
+#else
+#define kPluginDescriptionDebug " without debug"
+#endif
+
+#ifdef NDEBUG
+#define kPluginDescriptionNDebug ", without assertions"
+#else
+#define kPluginDescriptionNDebug ", with assertions"
+#endif
+
+#if defined(__OPTIMIZE__)
+#define kPluginDescriptionOptimize ", with optimizations"
+#else
+#define kPluginDescriptionOptimize "" // don't know (maybe not gcc or clang)
+#endif
+
+#if defined(__NO_INLINE__)
+#define kPluginDescriptionInline ", without inlines"
+#else
+#define kPluginDescriptionInline "" // don't know (maybe not gcc or clang)
+#endif
+
+#ifdef cimg_use_openmp
+#define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_NAME(_OPENMP)
+#else
+#define kPluginDescriptionOpenMP ", without OpenMP"
+#endif
+
+#ifdef __clang__
+#define kPluginDescriptionCompiler ", using Clang version " __clang_version__
+#else
+#ifdef __GNUC__
+#define kPluginDescriptionCompiler ", using GNU C++ version " __VERSION__
+#else
+#define kPluginDescriptionCompiler ""
+#endif
+#endif
+
+#define kPluginDescriptionFull kPluginDescription "\n\nThis plugin was compiled " kPluginDescriptionDebug kPluginDescriptionNDebug kPluginDescriptionOptimize kPluginDescriptionInline kPluginDescriptionOpenMP kPluginDescriptionCompiler "."
+
 #define kPluginIdentifier "net.sf.openfx.AddPlugin"
 
 // History:

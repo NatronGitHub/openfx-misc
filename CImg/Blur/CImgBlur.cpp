@@ -97,7 +97,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #endif
 
 #ifdef cimg_use_openmp
-#define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_NAME(_OPENMP)
+#define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_NAME_(_OPENMP)
 #else
 #define kPluginDescriptionOpenMP ", without OpenMP"
 #endif
@@ -1141,24 +1141,29 @@ public:
             // this avoids unwanted crops (cropToFormat is checked by default)
             OfxRectI srcFormat;
             _srcClip->getFormat(srcFormat);
+            OfxRectI srcFormatEnclosing;
+            srcFormatEnclosing.x1 = std::floor(srcFormat.x1 * renderScale.x);
+            srcFormatEnclosing.x2 = std::ceil(srcFormat.x2 * renderScale.x);
+            srcFormatEnclosing.y1 = std::floor(srcFormat.y1 * renderScale.y);
+            srcFormatEnclosing.y2 = std::ceil(srcFormat.y2 * renderScale.y);
             srcFormat.x1 = std::ceil(srcFormat.x1 * renderScale.x);
             srcFormat.x2 = std::floor(srcFormat.x2 * renderScale.x);
             srcFormat.y1 = std::ceil(srcFormat.y1 * renderScale.y);
             srcFormat.y2 = std::floor(srcFormat.y2 * renderScale.y);
             if (! isEmpty(srcFormat) ) {
-                if (dstRoD->x1 < srcFormat.x1 && srcRoD.x1 >= srcFormat.x1) {
+                if (dstRoD->x1 < srcFormat.x1 && srcRoD.x1 >= srcFormatEnclosing.x1) {
                     dstRoD->x1 = srcFormat.x1;
                     retval = true;
                 }
-                if (dstRoD->x2 > srcFormat.x2 && srcRoD.x2 <= srcFormat.x2) {
+                if (dstRoD->x2 > srcFormat.x2 && srcRoD.x2 <= srcFormatEnclosing.x2) {
                     dstRoD->x2 = srcFormat.x2;
                     retval = true;
                 }
-                if (dstRoD->y1 < srcFormat.y1 && srcRoD.y1 >= srcFormat.y1) {
+                if (dstRoD->y1 < srcFormat.y1 && srcRoD.y1 >= srcFormatEnclosing.y1) {
                     dstRoD->y1 = srcFormat.y1;
                     retval = true;
                 }
-                if (dstRoD->y2 > srcFormat.y2 && srcRoD.y2 <= srcFormat.y2) {
+                if (dstRoD->y2 > srcFormat.y2 && srcRoD.y2 <= srcFormatEnclosing.y2) {
                     dstRoD->y2 = srcFormat.y2;
                     retval = true;
                 }
@@ -1220,6 +1225,7 @@ public:
                         int /*y1*/,
                         cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
+        printf("blur render %g %dx%d+%d+%d (%dx%d)\n", args.time, args.renderWindow.x2-args.renderWindow.x1, args.renderWindow.y2-args.renderWindow.y1, args.renderWindow.x1, args.renderWindow.y1, cimg.width(), cimg.height());
         // PROCESSING.
         // This is the only place where the actual processing takes place
         double sx = args.renderScale.x * params.sizex;
