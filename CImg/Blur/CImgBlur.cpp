@@ -1225,7 +1225,7 @@ public:
                         int /*y1*/,
                         cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
-        printf("blur render %g %dx%d+%d+%d (%dx%d)\n", args.time, args.renderWindow.x2-args.renderWindow.x1, args.renderWindow.y2-args.renderWindow.y1, args.renderWindow.x1, args.renderWindow.y1, cimg.width(), cimg.height());
+        //printf("blur render %g %dx%d+%d+%d (%dx%d)\n", args.time, args.renderWindow.x2-args.renderWindow.x1, args.renderWindow.y2-args.renderWindow.y1, args.renderWindow.x1, args.renderWindow.y1, cimg.width(), cimg.height());
         // PROCESSING.
         // This is the only place where the actual processing takes place
         double sx = args.renderScale.x * params.sizex;
