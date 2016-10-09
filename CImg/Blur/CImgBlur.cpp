@@ -1015,7 +1015,7 @@ premult(CImg<cimgpix_t> &cimg)
     assert(cimg.depth() == 1 &&
            cimg.spectrum() == 4);
 
-    cimg_pragma_openmp(parallel for collapse(2) if (cimgA.width()>=256 && cimgA.height()>=16))
+    cimg_pragma_openmp(parallel for collapse(2) if (cimg.width()>=256 && cimg.height()>=16))
     cimg_forXY(cimg, x, y) {
         cimgpix_t alpha = cimg(x, y, 0, 3);
         for (int c = 0; c < 3; ++c) {
@@ -1030,7 +1030,7 @@ unpremult(CImg<cimgpix_t> &cimg)
     assert(cimg.depth() == 1 &&
            cimg.spectrum() == 4);
 
-    cimg_pragma_openmp(parallel for collapse(2) if (cimgA.width()>=256 && cimgA.height()>=16))
+    cimg_pragma_openmp(parallel for collapse(2) if (cimg.width()>=256 && cimg.height()>=16))
     cimg_forXY(cimg, x, y) {
         cimgpix_t alpha = cimg(x, y, 0, 3);
         if (alpha > 0.) {
