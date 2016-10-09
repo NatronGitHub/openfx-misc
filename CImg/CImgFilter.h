@@ -679,7 +679,11 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
 #ifdef cimg_use_openmp
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
-    omp_set_num_threads( OFX::MultiThread::getNumCPUs() );
+    {
+        unsigned int ncpus = OFX::MultiThread::getNumCPUs();
+        omp_set_num_threads(ncpus);
+        //printf("ncpus=%u\n", ncpus);
+    }
 #endif
 
     // from here on, we do the following steps:
