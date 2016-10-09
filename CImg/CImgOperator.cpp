@@ -45,7 +45,7 @@ CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args,
     if ( (clipName == _srcAClipName) &&
          _srcAClip && _srcAClip->isConnected() &&
          ( args.reason == OFX::eChangeUserEdit) ) {
-        if ( _defaultUnpremult && !_premultChanged->getValue() ) {
+        if ( _defaultUnpremult && _premultChanged && !_premultChanged->getValue() ) {
             switch ( _srcAClip->getPreMultiplication() ) {
             case OFX::eImageOpaque:
                 _premult->setValue(false);
@@ -61,7 +61,7 @@ CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args,
     }
     if ( (clipName == _srcBClipName) &&
          _srcBClip && _srcBClip->isConnected() &&
-         !_premultChanged->getValue() &&
+         _premultChanged && !_premultChanged->getValue() &&
          ( args.reason == OFX::eChangeUserEdit) ) {
         if (_defaultUnpremult) {
             switch ( _srcBClip->getPreMultiplication() ) {

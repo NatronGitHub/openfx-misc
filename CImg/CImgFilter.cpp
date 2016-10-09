@@ -99,15 +99,19 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
     }
-    _premult = fetchBooleanParam(kParamPremult);
-    _premultChannel = fetchChoiceParam(kParamPremultChannel);
-    assert(_premult && _premultChannel);
+    if ( paramExists(kParamPremult) ) {
+        _premult = fetchBooleanParam(kParamPremult);
+        _premultChannel = fetchChoiceParam(kParamPremultChannel);
+        assert(_premult && _premultChannel);
+    }
     _mix = fetchDoubleParam(kParamMix);
     _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
     _maskInvert = fetchBooleanParam(kParamMaskInvert);
     assert(_mix && _maskInvert);
-    _premultChanged = fetchBooleanParam(kParamPremultChanged);
-    assert(_premultChanged);
+    if ( paramExists(kParamPremultChanged) ) {
+        _premultChanged = fetchBooleanParam(kParamPremultChanged);
+        assert(_premultChanged);
+    }
 }
 
 void
@@ -117,7 +121,7 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args,
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          ( args.reason == OFX::eChangeUserEdit) ) {
-        if ( _defaultUnpremult && !_premultChanged->getValue() ) {
+        if ( _defaultUnpremult && _premult && _premultChanged && !_premultChanged->getValue() ) {
             if (_srcClip->getPixelComponents() != OFX::ePixelComponentRGBA) {
                 _premult->setValue(false);
             } else {
@@ -141,7 +145,7 @@ void
 CImgFilterPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args,
                                          const std::string &paramName)
 {
-    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) && _premultChanged) {
         _premultChanged->setValue(true);
     }
 }
@@ -261,12 +265,15 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
 void
 CImgFilterPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &desc,
                                                  OFX::ContextEnum /*context*/,
-                                                 OFX::PageParamDescriptor* page)
+                                                 OFX::PageParamDescriptor* page,
+                                                 bool hasUnpremult)
 {
-    ofxsPremultDescribeParams(desc, page);
+    if (hasUnpremult) {
+        ofxsPremultDescribeParams(desc, page);
+    }
     ofxsMaskMixDescribeParams(desc, page);
 
-    {
+    if (hasUnpremult) {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecretAndDisabled(true);

@@ -178,7 +178,8 @@ public:
                                                             bool processIsSecret /* = false*/);
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc,
                                      OFX::ContextEnum context,
-                                     OFX::PageParamDescriptor* page);
+                                     OFX::PageParamDescriptor* page,
+                                     bool hasUnpremult = true);
 
     // utility functions
     static bool isEmpty(const OfxRectI& r)
@@ -509,14 +510,10 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     } else {
         processR = processG = processB = processA = true;
     }
-    bool premult;
-    int premultChannel;
-    _premult->getValueAtTime(time, premult);
-    _premultChannel->getValueAtTime(time, premultChannel);
-    double mix;
-    _mix->getValueAtTime(time, mix);
-    bool maskInvert;
-    _maskInvert->getValueAtTime(time, maskInvert);
+    bool premult = _premult ? _premult->getValueAtTime(time) : false;
+    int premultChannel = _premultChannel ? _premultChannel->getValueAtTime(time) : 3;
+    double mix = _mix->getValueAtTime(time);
+    bool maskInvert = _maskInvert->getValueAtTime(time);
     if (!processR && !processG && !processB) {
         // no need to (un)premult if we don't change colors
         premult = false;

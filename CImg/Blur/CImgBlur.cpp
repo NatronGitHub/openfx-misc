@@ -167,13 +167,26 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginNameErodeBlur          "ErodeBlurCImg"
 #define kPluginDescriptionErodeBlur \
-    "Performs an operation that looks like an erosion or a dilation by smoothing the image and then remapping the values of the result.\n" \
-    "The image is first smoothed by a triangle filter of width 2*abs(size).\n" \
-    "Now suppose the image is a 0-1 step edge (I=0 for x less than 0, I=1 for x greater than 0). The intensities are linearly remapped so that the value at x=size-0.5 is mapped to 0 and the value at x=size+0.5 is mapped to 1.\n" \
-    "This process usually works well for mask images (i.e. images which are either 0 or 1), but may give strange results on images with real intensities, where another Erode filter has to be used.\n" \
-    "CImg is a free, open-source library distributed under the CeCILL-C " \
-    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-    "It can be used in commercial applications (see http://cimg.eu)."
+"Performs an operation that looks like an erosion or a dilation by smoothing the image and then remapping the values of the result.\n" \
+"The image is first smoothed by a triangle filter of width 2*abs(size).\n" \
+"Now suppose the image is a 0-1 step edge (I=0 for x less than 0, I=1 for x greater than 0). The intensities are linearly remapped so that the value at x=size-0.5 is mapped to 0 and the value at x=size+0.5 is mapped to 1.\n" \
+"This process usually works well for mask images (i.e. images which are either 0 or 1), but may give strange results on images with real intensities, where another Erode filter has to be used.\n" \
+"CImg is a free, open-source library distributed under the CeCILL-C " \
+"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+"It can be used in commercial applications (see http://cimg.eu)."
+
+#define kPluginNameEdgeExtend          "EdgeExtendCImg"
+#define kPluginDescriptionEdgeExtend \
+"Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte. This effect does nothing an an opaque image.\n" \
+"The filling process works by iteratively blurring the image, and merging the non-blurred image over the image to get to the next iteration. There are exactly 'Slices' such operations. The blur size at each iteration is multiplied by the same amount, and the last blur size is 'Size'. The sizes span the range from 1 (excluded) to 'Size' (included).\n" \
+"'Size' is thus the size of the edge extension, and 'Slices' is an indicator of the precision: the more slices there are, the sharper is the final image near the original edges.\n" \
+"Optionally, the image can be multiplied by the alpha channel on input (premultiplied), and divided by the alpha channel on output (unpremultiplied), so that if RGB contain an image and Alpha contains a mask, the output is an image where the RGB is smeared from the non-zero areas of the mask to the zero areas of the same mask.\n" \
+"The 'Size' parameter gives the size of the largest blur kernel, 'Count' gives the number of blur kernels, and 'Ratio' gives the ratio between consecutive blur kernel sizes. The size of the smallest blur kernel is thus 'Size'/'Ratio'^('Count'-1)\n" \
+"To get the classical single unpremult-blur-premult, use 'Count'=1 and set the size to the size of the blur kernel. However, near the mask borders, a frontier can be seen between the non-blurred area (this inside of the mask) and the blurred area. Using more blur sizes will give a much smoother transition.\n" \
+"The idea for the builtup blurs to expand RGB comes from the EdgeExtend effect for Nuke by Frank Rueter (except the blurs were merged from the smallest to the largest, and here it is done the other way round), with suggestions by Lucas Pfaff.\n" \
+"CImg is a free, open-source library distributed under the CeCILL-C " \
+"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+"It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
 #define kPluginIdentifierLaplacian    "net.sf.cimg.CImgLaplacian"
@@ -182,6 +195,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifierChromaBlur    "net.sf.cimg.CImgChromaBlur"
 #define kPluginIdentifierBloom    "net.sf.cimg.CImgBloom"
 #define kPluginIdentifierErodeBlur    "eu.cimg.ErodeBlur"
+#define kPluginIdentifierEdgeExtend    "eu.cimg.EdgeExtend"
 
 // History:
 // version 1.0: initial version
@@ -252,6 +266,25 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBloomCountHint "Number of blur kernels of the bloom filter. The original implementation uses a value of 5. Higher values give a wider of heavier tail (the size of the largest blur kernel is 2**bloomCount * size). A count of 1 is just the original blur."
 #define kParamBloomCountDefault 5
 
+#define kParamEdgeExtendPremult "edgeExtendPremult"
+#define kParamEdgeExtendPremultLabel "Premult Source"
+#define kParamEdgeExtendPremultHint "Premultiply the source image by its alpha channel before processing. Do not check if the source matte is already premultiplied"
+
+#define kParamEdgeExtendSize "edgeExtendSize"
+#define kParamEdgeExtendSizeLabel "Size"
+#define kParamEdgeExtendSizeHint "Maximum blur kernel size applied in the ExtendSlices filter. Raise to extend the edges further."
+#define kParamEdgeExtendSizeDefault 10
+
+#define kParamEdgeExtendCount "edgeExtendSlices"
+#define kParamEdgeExtendCountLabel "Slices"
+#define kParamEdgeExtendCountHint "Number of blur kernels applied in the ExtendSlices filter. A count of 1 just merges the source image over the source image blurred by a kernel of size Size."
+#define kParamEdgeExtendCountDefault 5
+
+#define kParamEdgeExtendUnpremult "edgeExtendUnpremult"
+#define kParamEdgeExtendUnpremultLabel "Unpremult Result"
+#define kParamEdgeExtendUnpremultHint "Unpremultiply the result image by its alpha channel after processing."
+
+
 #define kParamBoundary "boundary"
 #define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
 #define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Nearest (Neumann) conditions should be used. If the image represents gradients or derivatives, Black (Dirichlet) boundary conditions should be used."
@@ -264,6 +297,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBoundaryDefault eBoundaryDirichlet
 #define kParamBoundaryDefaultLaplacian eBoundaryNeumann
 #define kParamBoundaryDefaultBloom eBoundaryNeumann
+#define kParamBoundaryDefaultEdgeExtend eBoundaryNeumann
 
 enum BoundaryEnum
 {
@@ -307,6 +341,7 @@ enum ColorspaceEnum
 #define kParamFilterOptionQuadraticHint "Quadratic filter - FIR (finite support / impulsional response)."
 #define kParamFilterDefault eFilterGaussian
 #define kParamFilterDefaultBloom eFilterQuasiGaussian
+#define kParamFilterDefaultEdgeExtend eFilterQuasiGaussian
 enum FilterEnum
 {
     eFilterQuasiGaussian = 0,
@@ -904,7 +939,10 @@ struct CImgBlurParams
     int orderX;
     int orderY;
     double bloomRatio;
-    int bloomCount;
+    int count;
+    bool edgeExtendPremult;
+    double edgeExtendSize;
+    bool edgeExtendUnpremult;
     ColorspaceEnum colorspace;
     int boundary_i;
     FilterEnum filter;
@@ -920,7 +958,8 @@ enum BlurPluginEnum
     eBlurPluginSoften,
     eBlurPluginChromaBlur,
     eBlurPluginBloom,
-    eBlurPluginErodeBlur
+    eBlurPluginErodeBlur,
+    eBlurPluginEdgeExtend,
 };
 
 /*
@@ -946,6 +985,63 @@ blurredStep(double s, double x)
     return 0.5 + x_over_s * (1. + (x < 0 ? 0.5 : -0.5) * x_over_s);
 }
 
+static void
+mergeOver(const CImg<cimgpix_t> &cimgA, const CImg<cimgpix_t> &cimgB, CImg<cimgpix_t> &cimgOut)
+{
+    assert(cimgA.width() == cimgB.width() &&
+           cimgA.height() == cimgB.height() &&
+           cimgA.depth() == cimgB.depth() &&
+           cimgA.spectrum() == cimgB.spectrum() &&
+           cimgA.width() == cimgOut.width() &&
+           cimgA.width() == cimgOut.width() &&
+           cimgA.depth() == cimgOut.depth() &&
+           cimgA.spectrum() == cimgOut.spectrum() &&
+           cimgA.depth() == 1 &&
+           cimgA.spectrum() == 4);
+
+    cimg_pragma_openmp(parallel for collapse(2) if (cimgA.width()>=256 && cimgA.height()>=16))
+    cimg_forXY(cimgOut, x, y) {
+        cimgpix_t alphaA = cimgA(x, y, 0, 3);
+        for (int c = 0; c < 4; ++c) {
+            cimgOut(x, y, 0, c) = cimgA(x, y, 0, c) + cimgB(x, y, 0, c) * (1 - alphaA);
+        }
+    }
+}
+
+
+static void
+premult(CImg<cimgpix_t> &cimg)
+{
+    assert(cimg.depth() == 1 &&
+           cimg.spectrum() == 4);
+
+    cimg_pragma_openmp(parallel for collapse(2) if (cimgA.width()>=256 && cimgA.height()>=16))
+    cimg_forXY(cimg, x, y) {
+        cimgpix_t alpha = cimg(x, y, 0, 3);
+        for (int c = 0; c < 3; ++c) {
+            cimg(x, y, 0, c) *= alpha;
+        }
+    }
+}
+
+static void
+unpremult(CImg<cimgpix_t> &cimg)
+{
+    assert(cimg.depth() == 1 &&
+           cimg.spectrum() == 4);
+
+    cimg_pragma_openmp(parallel for collapse(2) if (cimgA.width()>=256 && cimgA.height()>=16))
+    cimg_forXY(cimg, x, y) {
+        cimgpix_t alpha = cimg(x, y, 0, 3);
+        if (alpha > 0.) {
+            for (int c = 0; c < 3; ++c) {
+                cimg(x, y, 0, c) /= alpha;
+            }
+        }
+    }
+}
+
+
 class CImgBlurPlugin
     : public CImgFilterPluginHelper<CImgBlurParams, false>
 {
@@ -969,6 +1065,10 @@ public:
         , _orderY(0)
         , _bloomRatio(0)
         , _bloomCount(0)
+        , _edgeExtendPremult(0)
+        , _edgeExtendSize(0)
+        , _edgeExtendCount(0)
+        , _edgeExtendUnpremult(0)
         , _colorspace(0)
         , _boundary(0)
         , _filter(0)
@@ -981,6 +1081,12 @@ public:
         if (_blurPlugin == eBlurPluginErodeBlur) {
             _erodeSize  = fetchDoubleParam(kParamErodeSize);
             _erodeBlur  = fetchDoubleParam(kParamErodeBlur);
+        } else if (blurPlugin == eBlurPluginEdgeExtend) {
+            _edgeExtendPremult = fetchBooleanParam(kParamEdgeExtendPremult);
+            _edgeExtendSize = fetchDoubleParam(kParamEdgeExtendSize);
+            _edgeExtendCount = fetchIntParam(kParamEdgeExtendCount);
+            _edgeExtendUnpremult = fetchBooleanParam(kParamEdgeExtendUnpremult);
+            assert(_edgeExtendSize && _edgeExtendCount);
         } else {
             _size  = fetchDouble2DParam(kParamSize);
             _uniform = fetchBooleanParam(kParamUniform);
@@ -1000,13 +1106,19 @@ public:
             if (blurPlugin == eBlurPluginChromaBlur) {
                 _colorspace = fetchChoiceParam(kParamColorspace);
                 assert(_colorspace);
-            } else if (blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
+            } else if (blurPlugin != eBlurPluginLaplacian &&
+                       blurPlugin != eBlurPluginSharpen &&
+                       blurPlugin != eBlurPluginSoften &&
+                       blurPlugin != eBlurPluginEdgeExtend) {
                 _boundary  = fetchChoiceParam(kParamBoundary);
                 assert(_boundary);
             }
             _filter = fetchChoiceParam(kParamFilter);
             assert(_filter);
-            if (blurPlugin != eBlurPluginChromaBlur && blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
+            if (blurPlugin != eBlurPluginChromaBlur &&
+                blurPlugin != eBlurPluginLaplacian &&
+                blurPlugin != eBlurPluginSharpen &&
+                blurPlugin != eBlurPluginSoften) {
                 _expandRoD = fetchBooleanParam(kParamExpandRoD);
                 assert(_expandRoD);
                 if ( paramExists(kParamCropToFormat) ) {
@@ -1033,13 +1145,25 @@ public:
             params.erodeSize = _erodeSize->getValueAtTime(time);
             params.erodeBlur = _erodeBlur->getValueAtTime(time);
             params.sizey = params.sizex = 2 * std::abs(params.erodeSize);
+            params.edgeExtendPremult = false;
+            params.edgeExtendUnpremult = false;
         } else {
             params.erodeSize = 0.;
             params.erodeBlur = 0.;
-            _size->getValueAtTime(time, params.sizex, params.sizey);
-            bool uniform = _uniform->getValueAtTime(time);
-            if (uniform) {
-                params.sizey = params.sizex;
+            if (_blurPlugin == eBlurPluginEdgeExtend) {
+                params.edgeExtendPremult = _edgeExtendPremult->getValueAtTime(time);
+                params.edgeExtendSize = std::max( 0., _edgeExtendSize->getValueAtTime(time) );
+                params.edgeExtendUnpremult = _edgeExtendUnpremult->getValueAtTime(time);
+                params.sizey = params.sizex = params.edgeExtendSize; // used for RoD/RoI/identity
+            } else {
+                params.edgeExtendPremult = false;
+                params.edgeExtendSize = 0.;
+                params.edgeExtendUnpremult = false;
+                _size->getValueAtTime(time, params.sizex, params.sizey);
+                bool uniform = _uniform->getValueAtTime(time);
+                if (uniform) {
+                    params.sizey = params.sizex;
+                }
             }
         }
         params.sharpenSoftenAmount = _sharpenSoftenAmount ? _sharpenSoftenAmount->getValueAtTime(time) : 0.;
@@ -1058,22 +1182,27 @@ public:
         }
         if (_blurPlugin == eBlurPluginBloom) {
             params.bloomRatio = _bloomRatio->getValueAtTime(time);
-            params.bloomCount = std::max( 1, _bloomCount->getValueAtTime(time) );
+            params.count = std::max( 1, _bloomCount->getValueAtTime(time) );
             if (params.bloomRatio <= 1.) {
-                params.bloomCount = 1;
+                params.count = 1;
             }
-            if (params.bloomCount == 1) {
+            if (params.count == 1) {
                 params.bloomRatio = 1.;
             }
+        } else if (_blurPlugin == eBlurPluginEdgeExtend) {
+            params.bloomRatio = 1.;
+            params.count = std::max( 1, _edgeExtendCount->getValueAtTime(time) );
         } else {
             params.bloomRatio = 1.;
-            params.bloomCount = 1;
+            params.count = 1;
         }
         if (_blurPlugin == eBlurPluginChromaBlur) {
             params.colorspace = (ColorspaceEnum)_colorspace->getValueAtTime(time);
             params.boundary_i = 1; // nearest
         } else if (_blurPlugin == eBlurPluginErodeBlur) {
             params.boundary_i = 0; // black
+        } else if (_blurPlugin == eBlurPluginEdgeExtend) {
+            params.boundary_i = 1; // nearest
         } else {
             params.boundary_i = _boundary ? _boundary->getValueAtTime(time) : 1; // default is nearest for Laplacian, Sharpen, Soften
         }
@@ -1099,7 +1228,7 @@ public:
 
         if (_blurPlugin == eBlurPluginBloom) {
             // size of the largest blur kernel
-            double scale = ipow( params.bloomRatio, (params.bloomCount - 1) );
+            double scale = ipow( params.bloomRatio, (params.count - 1) );
             sx *= scale;
             sy *= scale;
         }
@@ -1186,7 +1315,8 @@ public:
 
         if (_blurPlugin == eBlurPluginBloom) {
             // size of the largest blur kernel
-            double scale = ipow( params.bloomRatio, (params.bloomCount - 1) );
+            // note: for eBlurPluginEdgeExtend, the largest kernel is the first one
+            double scale = ipow( params.bloomRatio, (params.count - 1) );
             sx *= scale;
             sy *= scale;
         }
@@ -1226,10 +1356,25 @@ public:
                         cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         //printf("blur render %g %dx%d+%d+%d (%dx%d)\n", args.time, args.renderWindow.x2-args.renderWindow.x1, args.renderWindow.y2-args.renderWindow.y1, args.renderWindow.x1, args.renderWindow.y1, cimg.width(), cimg.height());
-        // PROCESSING.
+
+        // eBlurPluginEdgeExtend only works on RGBA
+        assert( !(_blurPlugin == eBlurPluginEdgeExtend && cimg.spectrum() != 4) );
+
+       // PROCESSING.
         // This is the only place where the actual processing takes place
         double sx = args.renderScale.x * params.sizex;
         double sy = args.renderScale.y * params.sizey;
+        double edgeExtendRatio = 0.;
+        if (_blurPlugin == eBlurPluginEdgeExtend) {
+            // compute first size and the size ratio
+            edgeExtendRatio = std::exp(std::log(params.edgeExtendSize)/params.count);
+            sx = args.renderScale.x;
+            sy = args.renderScale.y;
+            double par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
+            if (par != 0.) {
+                sx /= par;
+            }
+        }
         double t0 = 0.;
         double t1 = 0.;
         if (_blurPlugin == eBlurPluginErodeBlur) {
@@ -1241,6 +1386,9 @@ public:
         //std::cout << "renderScale=" << args.renderScale.x << ',' << args.renderScale.y << std::endl;
         //std::cout << "renderWindow=" << args.renderWindow.x1 << ',' << args.renderWindow.y1 << ',' << args.renderWindow.x2 << ',' << args.renderWindow.y2 << std::endl;
         //std::cout << "cimg=" << cimg.width() << ',' << cimg.height() << std::endl;
+        if (_blurPlugin == eBlurPluginEdgeExtend && params.edgeExtendPremult) {
+            premult(cimg);
+        }
         CImg<cimgpix_t> cimg0;
         CImg<cimgpix_t> cimg1;
         if (_blurPlugin == eBlurPluginLaplacian || _blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) {
@@ -1327,23 +1475,34 @@ public:
                 }
             }
         } else if (_blurPlugin == eBlurPluginBloom) {
-            // allocate a zero-valued result image to store the sum
+            // allocate a zero-valued result image to store the sum (eBlurPluginBloom)
             cimg1.assign(cimg.width(), cimg.height(), cimg.depth(), cimg.spectrum(), 0.);
         }
 
-        // the loop is used only for BloomCImg, other filters only do one iteration
-        for (int i = 0; i < params.bloomCount; ++i) {
-            if (_blurPlugin == eBlurPluginBloom) {
-                // copy original image
+        // the loop is used only for eBlurPluginBloom and eBlurPluginEdgeExtend, other filters only do one iteration
+        for (int i = 0; i < params.count; ++i) {
+            if ( abort() ) { return; }
+            if (_blurPlugin == eBlurPluginBloom ||
+                _blurPlugin == eBlurPluginEdgeExtend) {
+                // copy original image (bloom) or previous image (edgeextend)
                 cimg0 = cimg;
             }
+            if (_blurPlugin == eBlurPluginEdgeExtend) {
+                // first blur size is edgeExtendRatio
+                sx *= edgeExtendRatio;
+                sy *= edgeExtendRatio;
+            }
             cimg_library::CImg<cimgpix_t>& cimg_blur = (_blurPlugin == eBlurPluginChromaBlur ||
-                                                        _blurPlugin == eBlurPluginBloom) ? cimg0 : cimg;
-            double scale = ipow(params.bloomRatio, i);
+                                                        _blurPlugin == eBlurPluginBloom ||
+                                                        _blurPlugin == eBlurPluginEdgeExtend) ? cimg0 : cimg;
+            double scale = 1.;
+            if (_blurPlugin == eBlurPluginBloom) {
+                scale = ipow(params.bloomRatio, i);
+            }
             if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
                 float sigmax = (float)(sx * scale / 2.4);
                 float sigmay = (float)(sy * scale / 2.4);
-                if ( (_blurPlugin != eBlurPluginBloom) && (sigmax < 0.1) && (sigmay < 0.1) && (params.orderX == 0) && (params.orderY == 0) ) {
+                if ( (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (sigmax < 0.1) && (sigmay < 0.1) && (params.orderX == 0) && (params.orderY == 0) ) {
                     return;
                 }
                 // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
@@ -1374,6 +1533,11 @@ public:
             if (_blurPlugin == eBlurPluginBloom) {
                 // accumulate result
                 cimg1 += cimg0;
+            }
+            if (_blurPlugin == eBlurPluginEdgeExtend) {
+                // merge blurred image over the result
+                // cimg (previous result) over cimg0 (blurred) -> cimg
+                mergeOver(cimg, cimg0, cimg);
             }
         }
 
@@ -1467,7 +1631,7 @@ public:
                 }
             }
         } else if (_blurPlugin == eBlurPluginBloom) {
-            cimg = cimg1 / params.bloomCount;
+            cimg = cimg1 / params.count;
         } else if (_blurPlugin == eBlurPluginErodeBlur) {
             /*
             The convolution of the step edge with the triangle filter of width s is:
@@ -1484,6 +1648,9 @@ public:
                 *ptr = (*ptr < t0) ? 0. : ((*ptr > t1) ? 1. : (*ptr - t0) / (t1 - t0) );
             }
         }
+        if (_blurPlugin == eBlurPluginEdgeExtend && params.edgeExtendUnpremult) {
+            unpremult(cimg);
+        }
     } // render
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args,
@@ -1495,12 +1662,17 @@ public:
         if ( (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) && params.sharpenSoftenAmount == 0. ) {
             return true;
         }
-        double sx = args.renderScale.x * params.sizex;
-        double sy = args.renderScale.y * params.sizey;
+        if (params.edgeExtendPremult != params.edgeExtendUnpremult) {
+            return false;
+        }
+
+        double sx, sy;
+        sx = args.renderScale.x * params.sizex;
+        sy = args.renderScale.y * params.sizey;
 
         if (_blurPlugin == eBlurPluginBloom) {
             // size of the largest blur kernel
-            double scale = ipow( params.bloomRatio, (params.bloomCount - 1) );
+            double scale = ipow( params.bloomRatio, (params.count - 1) );
             sx *= scale;
             sy *= scale;
         }
@@ -1540,6 +1712,10 @@ private:
     OFX::IntParam *_orderY;
     OFX::DoubleParam *_bloomRatio;
     OFX::IntParam *_bloomCount;
+    OFX::BooleanParam *_edgeExtendPremult;
+    OFX::DoubleParam *_edgeExtendSize;
+    OFX::IntParam *_edgeExtendCount;
+    OFX::BooleanParam *_edgeExtendUnpremult;
     OFX::ChoiceParam *_colorspace;
     OFX::ChoiceParam *_boundary;
     OFX::ChoiceParam *_filter;
@@ -1577,8 +1753,7 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
         break;
     case eBlurPluginChromaBlur:
         desc.setLabel(kPluginNameChromaBlur);
-
-            desc.setPluginDescription(kPluginDescriptionChromaBlur);
+        desc.setPluginDescription(kPluginDescriptionChromaBlur);
         break;
     case eBlurPluginBloom:
         desc.setLabel(kPluginNameBloom);
@@ -1587,6 +1762,10 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
     case eBlurPluginErodeBlur:
         desc.setLabel(kPluginNameErodeBlur);
         desc.setPluginDescription(kPluginDescriptionErodeBlur);
+        break;
+    case eBlurPluginEdgeExtend:
+        desc.setLabel(kPluginNameEdgeExtend);
+        desc.setPluginDescription(kPluginDescriptionEdgeExtend);
         break;
     }
     desc.setPluginGrouping(kPluginGrouping);
@@ -1637,13 +1816,13 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
 
     OFX::PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
                                                                             kSupportsRGBA,
-                                                                            kSupportsRGB,
-                                                                            blurPlugin == eBlurPluginChromaBlur ? false : kSupportsXY,
-                                                                            blurPlugin == eBlurPluginChromaBlur ? false : kSupportsAlpha,
+                                                                            (blurPlugin == eBlurPluginEdgeExtend) ? false : kSupportsRGB,
+                                                                            (blurPlugin == eBlurPluginEdgeExtend || blurPlugin == eBlurPluginChromaBlur) ? false : kSupportsXY,
+                                                                            (blurPlugin == eBlurPluginEdgeExtend || blurPlugin == eBlurPluginChromaBlur) ? false : kSupportsAlpha,
                                                                             kSupportsTiles,
                                                                             processRGB,
                                                                             processAlpha,
-                                                                            /*processIsSecret=*/ false);
+                                                                            /*processIsSecret=*/ (blurPlugin == eBlurPluginEdgeExtend));
     if (blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) {
         {
             OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSharpenSoftenAmount);
@@ -1680,6 +1859,47 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             param->setDefault(0);
             param->setDigits(1);
             param->setIncrement(0.1);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    } else if (blurPlugin == eBlurPluginEdgeExtend) {
+        {
+            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeExtendPremult);
+            param->setLabel(kParamEdgeExtendPremultLabel);
+            param->setHint(kParamEdgeExtendPremultHint);
+            param->setDefault(false);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeExtendSize);
+            param->setLabel(kParamEdgeExtendSizeLabel);
+            param->setHint(kParamEdgeExtendSizeHint);
+            param->setRange(0, DBL_MAX);
+            param->setDisplayRange(0, 100);
+            param->setDefault(20.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            OFX::IntParamDescriptor *param = desc.defineIntParam(kParamEdgeExtendCount);
+            param->setLabel(kParamEdgeExtendCountLabel);
+            param->setHint(kParamEdgeExtendCountHint);
+            param->setRange(1, INT_MAX);
+            param->setDisplayRange(1, 10);
+            param->setDefault(kParamEdgeExtendCountDefault);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeExtendUnpremult);
+            param->setLabel(kParamEdgeExtendUnpremultLabel);
+            param->setHint(kParamEdgeExtendUnpremultHint);
+            param->setDefault(false);
             if (page) {
                 page->addChild(*param);
             }
@@ -1785,7 +2005,10 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             if (page) {
                 page->addChild(*param);
             }
-        } else if (blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
+        } else if (blurPlugin != eBlurPluginLaplacian &&
+                   blurPlugin != eBlurPluginSharpen &&
+                   blurPlugin != eBlurPluginSoften &&
+                   blurPlugin != eBlurPluginEdgeExtend) {
             OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
             param->setLabel(kParamBoundaryLabel);
             param->setHint(kParamBoundaryHint);
@@ -1799,6 +2022,8 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
                 param->setDefault( (int)kParamBoundaryDefaultLaplacian );
             } else if (blurPlugin == eBlurPluginBloom) {
                 param->setDefault( (int)kParamBoundaryDefaultBloom );
+            } else if (blurPlugin == eBlurPluginEdgeExtend) {
+                param->setDefault( (int)kParamBoundaryDefaultEdgeExtend );
             } else {
                 param->setDefault( (int)kParamBoundaryDefault );
             }
@@ -1822,6 +2047,8 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             param->appendOption(kParamFilterOptionQuadratic, kParamFilterOptionQuadraticHint);
             if (blurPlugin == eBlurPluginBloom) {
                 param->setDefault( (int)kParamFilterDefaultBloom );
+            } else if (blurPlugin == eBlurPluginEdgeExtend) {
+                param->setDefault( (int)kParamFilterDefaultEdgeExtend );
             } else {
                 param->setDefault( (int)kParamFilterDefault );
             }
@@ -1854,7 +2081,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
     }
 #endif
 
-    CImgBlurPlugin::describeInContextEnd(desc, context, page);
+    CImgBlurPlugin::describeInContextEnd(desc, context, page, blurPlugin != eBlurPluginEdgeExtend);
 } // CImgBlurPlugin::describeInContext
 
 //
@@ -2075,6 +2302,34 @@ CImgSoftenPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handl
     return new CImgBlurPlugin(handle, eBlurPluginSoften);
 }
 
+//
+// CImgEdgeExtendPluginFactory
+//
+mDeclarePluginFactoryVersioned(CImgEdgeExtendPluginFactory, {}, {});
+
+template<unsigned int majorVersion>
+void
+CImgEdgeExtendPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+{
+    return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginEdgeExtend);
+}
+
+template<unsigned int majorVersion>
+void
+CImgEdgeExtendPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                         OFX::ContextEnum context)
+{
+    return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginEdgeExtend);
+}
+
+template<unsigned int majorVersion>
+OFX::ImageEffect*
+CImgEdgeExtendPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                      OFX::ContextEnum /*context*/)
+{
+    return new CImgBlurPlugin(handle, eBlurPluginEdgeExtend);
+}
+
 
 // Declare old versions for backward compatibility.
 // They have default for processAlpha set to false
@@ -2094,6 +2349,7 @@ static CImgBloomPluginFactory<kPluginVersionMajor> p4(kPluginIdentifierBloom, kP
 static CImgErodeBlurPluginFactory<kPluginVersionMajor> p5(kPluginIdentifierErodeBlur, kPluginVersionMinor);
 static CImgSharpenPluginFactory<kPluginVersionMajor> p6(kPluginIdentifierSharpen, kPluginVersionMinor);
 static CImgSoftenPluginFactory<kPluginVersionMajor> p7(kPluginIdentifierSoften, kPluginVersionMinor);
+static CImgEdgeExtendPluginFactory<kPluginVersionMajor> p8(kPluginIdentifierEdgeExtend, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
@@ -2101,5 +2357,6 @@ mRegisterPluginFactoryInstance(p4)
 mRegisterPluginFactoryInstance(p5)
 mRegisterPluginFactoryInstance(p6)
 mRegisterPluginFactoryInstance(p7)
+mRegisterPluginFactoryInstance(p8)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
