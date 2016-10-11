@@ -178,8 +178,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginNameEdgeExtend          "EdgeExtendCImg"
 #define kPluginDescriptionEdgeExtend \
 "Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte. This effect does nothing an an opaque image.\n" \
-"The filling process works by iteratively blurring the image, and merging the non-blurred image over the image to get to the next iteration. There are exactly 'Slices' such operations. The blur size at each iteration is multiplied by the same amount, and the last blur size is 'Size'. The sizes span the range from 1 (excluded) to 'Size' (included).\n" \
-"'Size' is thus the size of the edge extension, and 'Slices' is an indicator of the precision: the more slices there are, the sharper is the final image near the original edges.\n" \
+"The filling process works by iteratively blurring the image, and merging the non-blurred image over the image to get to the next iteration. There are exactly 'Slices' such operations. The blur size at each iteration is linearly increasing.\n" \
+"'Size' is thus the total size of the edge extension, and 'Slices' is an indicator of the precision: the more slices there are, the sharper is the final image near the original edges.\n" \
 "Optionally, the image can be multiplied by the alpha channel on input (premultiplied), and divided by the alpha channel on output (unpremultiplied), so that if RGB contain an image and Alpha contains a mask, the output is an image where the RGB is smeared from the non-zero areas of the mask to the zero areas of the same mask.\n" \
 "The 'Size' parameter gives the size of the largest blur kernel, 'Count' gives the number of blur kernels, and 'Ratio' gives the ratio between consecutive blur kernel sizes. The size of the smallest blur kernel is thus 'Size'/'Ratio'^('Count'-1)\n" \
 "To get the classical single unpremult-blur-premult, use 'Count'=1 and set the size to the size of the blur kernel. However, near the mask borders, a frontier can be seen between the non-blurred area (this inside of the mask) and the blurred area. Using more blur sizes will give a much smoother transition.\n" \
@@ -1364,16 +1364,19 @@ public:
         // This is the only place where the actual processing takes place
         double sx = args.renderScale.x * params.sizex;
         double sy = args.renderScale.y * params.sizey;
-        double edgeExtendRatio = 0.;
+        double sxBase = sx;
+        double syBase = sy;
         if (_blurPlugin == eBlurPluginEdgeExtend) {
             // compute first size and the size ratio
-            edgeExtendRatio = std::exp(std::log(params.edgeExtendSize)/params.count);
-            sx = args.renderScale.x;
-            sy = args.renderScale.y;
-            double par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
-            if (par != 0.) {
-                sx /= par;
-            }
+            // if we smooth with kernels s, 2s, 3s, 4s, 5s … ns, where n is the number of slices
+            //    the resulting variance is s^2*(1+2^2 + 3^2 + 4^2 + … + n^2) = s^2(n*(n+1)*(n+0.5)/3)
+            //    the resulting sigma is thus: s * sqrt(n*(n+1)*(n+0.5)/3) = s_total
+            //    so s = s_total/sqrt(n*(n+1)*(n+0.5)/3)
+            //    for example, for 10 slices, s = s_total/19.62141687
+            const int n = params.count;
+            double sRatio = 1. / std::sqrt(n*(n+1)*(n+0.5)/3);
+            sxBase = sx * sRatio; // sx is the total size (see getValuesAtTime())
+            syBase = sy * sRatio;
         }
         double t0 = 0.;
         double t1 = 0.;
@@ -1488,9 +1491,9 @@ public:
                 cimg0 = cimg;
             }
             if (_blurPlugin == eBlurPluginEdgeExtend) {
-                // first blur size is edgeExtendRatio
-                sx *= edgeExtendRatio;
-                sy *= edgeExtendRatio;
+                // compute blur size
+                sx = sxBase * (i+1);
+                sy = syBase * (i+1);
             }
             cimg_library::CImg<cimgpix_t>& cimg_blur = (_blurPlugin == eBlurPluginChromaBlur ||
                                                         _blurPlugin == eBlurPluginBloom ||
