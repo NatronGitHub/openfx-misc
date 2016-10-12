@@ -31,6 +31,7 @@ Gamma.o \
 GodRays.o \
 Grade.o \
 HSVTool.o \
+HueCorrect.o \
 Distortion.o \
 ImageStatistics.o \
 Invert.o \
@@ -260,6 +261,7 @@ $(TOP_SRCDIR)/Gamma \
 $(TOP_SRCDIR)/GodRays \
 $(TOP_SRCDIR)/Grade \
 $(TOP_SRCDIR)/HSVTool \
+$(TOP_SRCDIR)/HueCorrect \
 $(TOP_SRCDIR)/Distortion \
 $(TOP_SRCDIR)/ImageStatistics \
 $(TOP_SRCDIR)/Invert \
@@ -335,6 +337,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/GodRays \
 -I$(TOP_SRCDIR)/Grade \
 -I$(TOP_SRCDIR)/HSVTool \
+-I$(TOP_SRCDIR)/HueCorrect \
 -I$(TOP_SRCDIR)/Distortion \
 -I$(TOP_SRCDIR)/ImageStatistics \
 -I$(TOP_SRCDIR)/Invert \
