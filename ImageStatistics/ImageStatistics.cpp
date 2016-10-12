@@ -1030,16 +1030,16 @@ private:
                 case eLuminanceMathRec709:
                 default:
 
-                    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    return Color::rgb709_to_y(r, g, b);
                 case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
 
-                    return 0.2627 * r + 0.6780 * g + 0.0593 * b;
+                    return Color::rgb2020_to_y(r, g, b);
                 case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
 
-                    return 0.3439664498 * r + 0.7281660966 * g + -0.0721325464 * b;
+                    return Color::rgbACESAP0_to_y(r, g, b);
                 case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
 
-                    return 0.2722287168 * r +  0.6740817658 * g +  0.0536895174 * b;
+                    return Color::rgbACESAP1_to_y(r, g, b);
                 case eLuminanceMathCcir601:
 
                     return 0.2989 * r + 0.5866 * g + 0.1145 * b;

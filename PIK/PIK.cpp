@@ -422,26 +422,24 @@ enum OutputModeEnum
 static float
 luminance(ColorspaceEnum colorspace, float const rgb[3])
 {
-    float X, Y, Z;
     switch (colorspace) {
         case eColorspaceRec709:
         default:
-            Color::rgb709_to_xyz(rgb[0], rgb[1], rgb[2], &X, &Y, &Z);
+            return Color::rgb709_to_y(rgb[0], rgb[1], rgb[2]);
             break;
 
         case eColorspaceRec2020:
-            Color::rgb2020_to_xyz(rgb[0], rgb[1], rgb[2], &X, &Y, &Z);
+            return Color::rgb2020_to_y(rgb[0], rgb[1], rgb[2]);
             break;
 
         case eColorspaceACESAP0:
-            Color::rgbACESAP0_to_xyz(rgb[0], rgb[1], rgb[2], &X, &Y, &Z);
+            return Color::rgbACESAP0_to_y(rgb[0], rgb[1], rgb[2]);
             break;
 
         case eColorspaceACESAP1:
-            Color::rgbACESAP1_to_xyz(rgb[0], rgb[1], rgb[2], &X, &Y, &Z);
+            return Color::rgbACESAP1_to_y(rgb[0], rgb[1], rgb[2]);
             break;
     }
-    return Y;
 }
 
 class PIKProcessorBase
