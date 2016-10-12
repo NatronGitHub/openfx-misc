@@ -1819,7 +1819,6 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
 #endif
         } else { // adaptiveRadius > 0
             // use the local image level
-#warning TODO
             assert(fimg[3] != NULL);
             int adaptiveRadiusPixel = ( adaptiveRadius + (b3 ? 2 : 1) ) * (1 << lev);
 #ifdef kUseMultithread
