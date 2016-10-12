@@ -30,6 +30,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
+#include "ofxsLut.h"
 #include "ofxsMacros.h"
 
 using namespace OFX;
@@ -102,6 +103,35 @@ static const std::string kParamOffset = std::string("Offset");
 #define kParamColorCorrectToneRangesDim0 "Shadow"
 #define kParamColorCorrectToneRangesDim1 "Highlight"
 
+#define kParamLuminanceMath "luminanceMath"
+#define kParamLuminanceMathLabel "Luminance Math"
+#define kParamLuminanceMathHint "Formula used to compute luminance from RGB values (used for saturation adjustments)."
+#define kParamLuminanceMathOptionRec709 "Rec. 709"
+#define kParamLuminanceMathOptionRec709Hint "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b)."
+#define kParamLuminanceMathOptionRec2020 "Rec. 2020"
+#define kParamLuminanceMathOptionRec2020Hint "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b)."
+#define kParamLuminanceMathOptionACESAP0 "ACES AP0"
+#define kParamLuminanceMathOptionACESAP0Hint "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b)."
+#define kParamLuminanceMathOptionACESAP1 "ACES AP1"
+#define kParamLuminanceMathOptionACESAP1Hint "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b)."
+#define kParamLuminanceMathOptionCcir601 "CCIR 601"
+#define kParamLuminanceMathOptionCcir601Hint "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b)."
+#define kParamLuminanceMathOptionAverage "Average"
+#define kParamLuminanceMathOptionAverageHint "Use average of r, g, b."
+#define kParamLuminanceMathOptionMaximum "Max"
+#define kParamLuminanceMathOptionMaximumHint "Use max or r, g, b."
+
+enum LuminanceMathEnum
+{
+    eLuminanceMathRec709,
+    eLuminanceMathRec2020,
+    eLuminanceMathACESAP0,
+    eLuminanceMathACESAP1,
+    eLuminanceMathCcir601,
+    eLuminanceMathAverage,
+    eLuminanceMathMaximum,
+};
+
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
 #define kParamClampBlackHint "All colors below 0 on output are set to 0."
@@ -114,12 +144,6 @@ static const std::string kParamOffset = std::string("Offset");
 
 #define LUT_MAX_PRECISION 100
 
-#pragma message WARN("TODO: luminanceMath option")
-// Rec.709 luminance:
-//Y = 0.2126 R + 0.7152 G + 0.0722 B
-static const double s_rLum = 0.2126;
-static const double s_gLum = 0.7152;
-static const double s_bLum = 0.0722;
 struct ColorControlValues
 {
     double r;
@@ -161,19 +185,53 @@ struct ColorControlGroup
     ColorControlValues offset;
 };
 
+static
+double luminance(double r,
+                 double g,
+                 double b,
+                 LuminanceMathEnum luminanceMath)
+{
+    switch (luminanceMath) {
+        case eLuminanceMathRec709:
+        default:
+            return Color::rgb709_to_y(r, g, b);
+
+        case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
+
+            return Color::rgb2020_to_y(r, g, b);
+        case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+
+            return Color::rgbACESAP0_to_y(r, g, b);
+        case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+
+            return Color::rgbACESAP1_to_y(r, g, b);
+        case eLuminanceMathCcir601:
+
+            return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+        case eLuminanceMathAverage:
+
+            return (r + g + b) / 3;
+        case eLuminanceMathMaximum:
+
+            return std::max(std::max(r, g), b);
+    }
+}
+
 template<bool processR, bool processG, bool processB, bool processA>
 struct RGBAPixel
 {
-    double r, g, b, a;
+    double r, g, b, a, l;
 
     RGBAPixel(double r_,
               double g_,
               double b_,
-              double a_)
+              double a_,
+              double l_)
         : r(r_)
         , g(g_)
         , b(b_)
         , a(a_)
+        , l(l_)
     {
     }
 
@@ -211,25 +269,14 @@ struct RGBAPixel
 private:
     void applySaturation(const ColorControlValues &c)
     {
-        double tmp_r, tmp_g, tmp_b;
-
         if (processR) {
-            tmp_r = r * ( (1.f - c.r) * s_rLum + c.r ) + g * ( (1.f - c.r) * s_gLum ) + b * ( (1.f - c.r) * s_bLum );
+            r = (1.f - c.r) * l + c.r * r;
         }
         if (processG) {
-            tmp_g = g * ( (1.f - c.g) * s_gLum + c.g ) + r * ( (1.f - c.g) * s_rLum ) + b * ( (1.f - c.g) * s_bLum );
+            g = (1.f - c.g) * l + c.g * g;
         }
         if (processB) {
-            tmp_b = b * ( (1.f - c.b) * s_bLum + c.b ) + g * ( (1.f - c.b) * s_gLum ) + r * ( (1.f - c.b) * s_rLum );
-        }
-        if (processR) {
-            r = tmp_r;
-        }
-        if (processG) {
-            g = tmp_g;
-        }
-        if (processB) {
-            b = tmp_b;
+            b = (1.f - c.b) * l + c.b * b;
         }
     }
 
@@ -335,6 +382,7 @@ public:
         , _processG(false)
         , _processB(false)
         , _processA(false)
+        , _luminanceMath(eLuminanceMathRec709)
         , _clampBlack(true)
         , _clampWhite(true)
     {
@@ -351,6 +399,7 @@ public:
                                const ColorControlGroup& shadow,
                                const ColorControlGroup& midtone,
                                const ColorControlGroup& hightlights,
+                               LuminanceMathEnum luminanceMath,
                                bool clampBlack,
                                bool clampWhite,
                                bool premult,
@@ -365,6 +414,7 @@ public:
         _shadowValues = shadow;
         _midtoneValues = midtone;
         _highlightsValues = hightlights;
+        _luminanceMath = luminanceMath;
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
         _premult = premult;
@@ -382,12 +432,12 @@ public:
                         double *b,
                         double *a)
     {
-        double luminance = *r * s_rLum + *g * s_gLum + *b * s_bLum;
-        double s_scale = interpolate(0, luminance);
-        double h_scale = interpolate(1, luminance);
+        double l = luminance(*r , *g, *b, _luminanceMath);
+        double s_scale = interpolate(0, l);
+        double h_scale = interpolate(1, l);
         double m_scale = 1.f - s_scale - h_scale;
 
-        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a);
+        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, l);
         p.applySMH(_shadowValues, s_scale,
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
@@ -441,6 +491,7 @@ private:
     ColorControlGroup _shadowValues;
     ColorControlGroup _midtoneValues;
     ColorControlGroup _highlightsValues;
+    LuminanceMathEnum _luminanceMath;
     bool _clampBlack;
     bool _clampWhite;
 
@@ -677,6 +728,7 @@ public:
         , _processB(0)
         , _processA(0)
         , _rangesParam(0)
+        , _luminanceMath(0)
         , _clampBlack(0)
         , _clampWhite(0)
         , _premult(0)
@@ -703,6 +755,8 @@ public:
             _rangesParam = fetchParametricParam(kParamColorCorrectToneRanges);
             assert(_rangesParam);
         }
+        _luminanceMath = fetchChoiceParam(kParamLuminanceMath);
+        assert(_luminanceMath);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_clampBlack && _clampWhite);
@@ -774,9 +828,9 @@ private:
 private:
     bool _supportsParametricParameter;
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_maskClip;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_maskClip;
     ColorControlParamGroup _masterParamsGroup;
     ColorControlParamGroup _shadowsParamsGroup;
     ColorControlParamGroup _midtonesParamsGroup;
@@ -785,15 +839,16 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
-    OFX::ParametricParam* _rangesParam;
-    OFX::BooleanParam* _clampBlack;
-    OFX::BooleanParam* _clampWhite;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    ParametricParam* _rangesParam;
+    ChoiceParam* _luminanceMath;
+    BooleanParam* _clampBlack;
+    BooleanParam* _clampWhite;
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
+    BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -835,7 +890,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
                                     const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -854,7 +909,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+                                         _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
@@ -868,8 +923,8 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ||
@@ -879,8 +934,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
         }
     }
     if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
@@ -890,27 +944,23 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
     processor.setRenderWindow(args.renderWindow);
 
     ColorControlGroup masterValues, shadowValues, midtoneValues, highlightValues;
-    getColorCorrectGroupValues(args.time, &masterValues,    eGroupMaster);
-    getColorCorrectGroupValues(args.time, &shadowValues,    eGroupShadow);
-    getColorCorrectGroupValues(args.time, &midtoneValues,   eGroupMidtone);
-    getColorCorrectGroupValues(args.time, &highlightValues, eGroupHighlight);
-    bool clampBlack, clampWhite;
-    _clampBlack->getValueAtTime(args.time, clampBlack);
-    _clampWhite->getValueAtTime(args.time, clampWhite);
-    bool premult;
-    int premultChannel;
-    _premult->getValueAtTime(args.time, premult);
-    _premultChannel->getValueAtTime(args.time, premultChannel);
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    getColorCorrectGroupValues(time, &masterValues,    eGroupMaster);
+    getColorCorrectGroupValues(time, &shadowValues,    eGroupShadow);
+    getColorCorrectGroupValues(time, &midtoneValues,   eGroupMidtone);
+    getColorCorrectGroupValues(time, &highlightValues, eGroupHighlight);
+    LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
+    bool clampBlack = _clampBlack->getValueAtTime(time);
+    bool clampWhite = _clampWhite->getValueAtTime(time);
+    bool premult = _premult->getValueAtTime(time);
+    int premultChannel = _premultChannel->getValueAtTime(time);
+    double mix = _mix->getValueAtTime(time);
 
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
+    bool processR = _processR->getValueAtTime(time);
+    bool processG = _processG->getValueAtTime(time);
+    bool processB = _processB->getValueAtTime(time);
+    bool processA = _processA->getValueAtTime(time);
 
-    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, clampBlack, clampWhite, premult, premultChannel, mix,
+    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, luminanceMath, clampBlack, clampWhite, premult, premultChannel, mix,
                                     processR, processG, processB, processA);
     processor.process();
 } // ColorCorrectPlugin::setupAndProcess
@@ -1326,7 +1376,28 @@ ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->addControlPoint(1, 0.0, 1.0, 1.0, false);
         ranges->addChild(*param);
     }
-
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
+        param->setLabel(kParamLuminanceMathLabel);
+        param->setHint(kParamLuminanceMathHint);
+        assert(param->getNOptions() == eLuminanceMathRec709);
+        param->appendOption(kParamLuminanceMathOptionRec709, kParamLuminanceMathOptionRec709Hint);
+        assert(param->getNOptions() == eLuminanceMathRec2020);
+        param->appendOption(kParamLuminanceMathOptionRec2020, kParamLuminanceMathOptionRec2020Hint);
+        assert(param->getNOptions() == eLuminanceMathACESAP0);
+        param->appendOption(kParamLuminanceMathOptionACESAP0, kParamLuminanceMathOptionACESAP0Hint);
+        assert(param->getNOptions() == eLuminanceMathACESAP1);
+        param->appendOption(kParamLuminanceMathOptionACESAP1, kParamLuminanceMathOptionACESAP1Hint);
+        assert(param->getNOptions() == eLuminanceMathCcir601);
+        param->appendOption(kParamLuminanceMathOptionCcir601, kParamLuminanceMathOptionCcir601Hint);
+        assert(param->getNOptions() == eLuminanceMathAverage);
+        param->appendOption(kParamLuminanceMathOptionAverage, kParamLuminanceMathOptionAverageHint);
+        assert(param->getNOptions() == eLuminanceMathMaximum);
+        param->appendOption(kParamLuminanceMathOptionMaximum, kParamLuminanceMathOptionMaximumHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);

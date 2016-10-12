@@ -585,8 +585,7 @@ ColorSuppressPlugin::setupAndProcess(ColorSuppressProcessorBase &processor,
                 throwSuiteStatusException(kOfxStatFailed);
             }
         }
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
@@ -606,12 +605,9 @@ ColorSuppressPlugin::setupAndProcess(ColorSuppressProcessorBase &processor,
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     bool preserveLuma = (outputMode != eOutputModeAlpha) && _preserveLuma->getValueAtTime(time);
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
-    bool premult;
-    int premultChannel;
-    _premult->getValueAtTime(time, premult);
-    _premultChannel->getValueAtTime(time, premultChannel);
-    double mix;
-    _mix->getValueAtTime(time, mix);
+    bool premult = _premult->getValueAtTime(time);
+    int premultChannel = _premultChannel->getValueAtTime(time);
+    double mix = _mix->getValueAtTime(time);
     processor.setValues(redSuppress, blueSuppress, greenSuppress,
                         cyanSuppress, magentaSuppress, yellowSuppress,
                         outputMode,

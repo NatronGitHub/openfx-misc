@@ -39,6 +39,7 @@ using std::isnan;
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
+#include "ofxsLut.h"
 #include "ofxsMacros.h"
 
 using namespace OFX;
@@ -82,8 +83,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSetMaster "setMaster"
 #define kParamSetMasterLabel "Set Master"
-#pragma message WARN("TODO: luminanceMath option")
-#define kParamSetMasterHint "Add a new control point mapping source to target to the master curve (the relative luminance 0.2126 R + 0.7152 G + 0.0722 B is used)."
+#define kParamSetMasterHint "Add a new control point mapping source to target to the master curve (the relative luminance is computed using the 'Luminance Math' parameter)."
 
 #define kParamSetRGB "setRGB"
 #define kParamSetRGBLabel "Set RGB"
@@ -106,6 +106,35 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamResetCtrlPts "resetCtrlPts"
 #define kParamResetCtrlPtsLabel "Reset"
 #endif
+
+#define kParamLuminanceMath "luminanceMath"
+#define kParamLuminanceMathLabel "Luminance Math"
+#define kParamLuminanceMathHint "Formula used to compute luminance from RGB values (only used by 'Set Master')."
+#define kParamLuminanceMathOptionRec709 "Rec. 709"
+#define kParamLuminanceMathOptionRec709Hint "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b)."
+#define kParamLuminanceMathOptionRec2020 "Rec. 2020"
+#define kParamLuminanceMathOptionRec2020Hint "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b)."
+#define kParamLuminanceMathOptionACESAP0 "ACES AP0"
+#define kParamLuminanceMathOptionACESAP0Hint "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b)."
+#define kParamLuminanceMathOptionACESAP1 "ACES AP1"
+#define kParamLuminanceMathOptionACESAP1Hint "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b)."
+#define kParamLuminanceMathOptionCcir601 "CCIR 601"
+#define kParamLuminanceMathOptionCcir601Hint "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b)."
+#define kParamLuminanceMathOptionAverage "Average"
+#define kParamLuminanceMathOptionAverageHint "Use average of r, g, b."
+#define kParamLuminanceMathOptionMaximum "Max"
+#define kParamLuminanceMathOptionMaximumHint "Use max or r, g, b."
+
+enum LuminanceMathEnum
+{
+    eLuminanceMathRec709,
+    eLuminanceMathRec2020,
+    eLuminanceMathACESAP0,
+    eLuminanceMathACESAP1,
+    eLuminanceMathCcir601,
+    eLuminanceMathAverage,
+    eLuminanceMathMaximum,
+};
 
 #define kParamHasBackgroundInteract "hasBackgroundInteract"
 
@@ -366,6 +395,37 @@ private:
     double _rangeMax;
 };
 
+static
+double luminance(double r,
+                 double g,
+                 double b,
+                 LuminanceMathEnum luminanceMath)
+{
+    switch (luminanceMath) {
+        case eLuminanceMathRec709:
+        default:
+            return Color::rgb709_to_y(r, g, b);
+
+        case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
+
+            return Color::rgb2020_to_y(r, g, b);
+        case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+
+            return Color::rgbACESAP0_to_y(r, g, b);
+        case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+
+            return Color::rgbACESAP1_to_y(r, g, b);
+        case eLuminanceMathCcir601:
+
+            return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+        case eLuminanceMathAverage:
+
+            return (r + g + b) / 3;
+        case eLuminanceMathMaximum:
+            
+            return std::max(std::max(r, g), b);
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -378,6 +438,7 @@ public:
         , _dstClip(0)
         , _srcClip(0)
         , _maskClip(0)
+        , _luminanceMath(0)
         , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -400,6 +461,8 @@ public:
         _source = fetchRGBAParam(kParamSource);
         _target = fetchRGBAParam(kParamTarget);
         assert(_source && _target);
+        _luminanceMath = fetchChoiceParam(kParamLuminanceMath);
+        assert(_luminanceMath);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_clampBlack && _clampWhite);
@@ -442,9 +505,10 @@ private:
             double target[4];
             _source->getValueAtTime(time, source[0], source[1], source[2], source[3]);
             _target->getValueAtTime(time, target[0], target[1], target[2], target[3]);
+            LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
 
-            double s = 0.2126 * source[0] + 0.7152 * source[1] + 0.0722 * source[2];
-            double t = 0.2126 * target[0] + 0.7152 * target[1] + 0.0722 * target[2];
+            double s = luminance(source[0], source[1], source[2], luminanceMath);
+            double t = luminance(target[0], target[1], target[2], luminanceMath);
             _lookupTable->addControlPoint(kCurveMaster, // curve to set
                                           time,   // time, ignored in this case, as we are not adding a key
                                           s,   // parametric position
@@ -556,23 +620,24 @@ private:
     } // changedParam
 
 private:
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_maskClip;
-    OFX::BooleanParam* _hasBackgroundInteract;
-    OFX::ParametricParam  *_lookupTable;
-    OFX::BooleanParam* _showRamp;
-    OFX::Double2DParam* _range;
-    OFX::RGBAParam* _source;
-    OFX::RGBAParam* _target;
-    OFX::BooleanParam* _clampBlack;
-    OFX::BooleanParam* _clampWhite;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_maskClip;
+    BooleanParam* _hasBackgroundInteract;
+    ParametricParam  *_lookupTable;
+    BooleanParam* _showRamp;
+    Double2DParam* _range;
+    RGBAParam* _source;
+    RGBAParam* _target;
+    ChoiceParam* _luminanceMath;
+    BooleanParam* _clampBlack;
+    BooleanParam* _clampWhite;
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
+    BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -829,7 +894,7 @@ public:
             glLineWidth(1.5);
             glBegin(GL_LINES);
             {
-                // the following are magic colors, they all have the same luminance
+                // the following are magic colors, they all have the same Rec709 luminance
                 const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};      //set red color to red curve
                 const OfxRGBColourD green = {0., 0.546986106552894, 0.};        //set green color to green curve
                 const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};      //set blue color to blue curve
@@ -999,7 +1064,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
         // set the UI colour for each dimension
         const OfxRGBColourD master  = {0.9, 0.9, 0.9};
-        // the following are magic colors, they all have the same luminance
+        // the following are magic colors, they all have the same Rec709 luminance
         const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};      //set red color to red curve
         const OfxRGBColourD green = {0., 0.546986106552894, 0.};        //set green color to green curve
         const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};      //set blue color to blue curve
@@ -1121,6 +1186,29 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 #endif
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
+        param->setLabel(kParamLuminanceMathLabel);
+        param->setHint(kParamLuminanceMathHint);
+        param->setEvaluateOnChange(false); // WARNING: RENDER IS NOT AFFECTED BY THIS OPTION IN THIS PLUGIN
+        assert(param->getNOptions() == eLuminanceMathRec709);
+        param->appendOption(kParamLuminanceMathOptionRec709, kParamLuminanceMathOptionRec709Hint);
+        assert(param->getNOptions() == eLuminanceMathRec2020);
+        param->appendOption(kParamLuminanceMathOptionRec2020, kParamLuminanceMathOptionRec2020Hint);
+        assert(param->getNOptions() == eLuminanceMathACESAP0);
+        param->appendOption(kParamLuminanceMathOptionACESAP0, kParamLuminanceMathOptionACESAP0Hint);
+        assert(param->getNOptions() == eLuminanceMathACESAP1);
+        param->appendOption(kParamLuminanceMathOptionACESAP1, kParamLuminanceMathOptionACESAP1Hint);
+        assert(param->getNOptions() == eLuminanceMathCcir601);
+        param->appendOption(kParamLuminanceMathOptionCcir601, kParamLuminanceMathOptionCcir601Hint);
+        assert(param->getNOptions() == eLuminanceMathAverage);
+        param->appendOption(kParamLuminanceMathOptionAverage, kParamLuminanceMathOptionAverageHint);
+        assert(param->getNOptions() == eLuminanceMathMaximum);
+        param->appendOption(kParamLuminanceMathOptionMaximum, kParamLuminanceMathOptionMaximumHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);
