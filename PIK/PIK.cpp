@@ -993,12 +993,18 @@ private:
                 }
                 if (pfgPix) {
                     for (int i = 0; i < pfgComponents; ++i) {
-                        pfg[i] = sampleToFloat<PIX, maxValue>(pfgPix[i]) / _alphaBias[i];
+                        pfg[i] = sampleToFloat<PIX, maxValue>(pfgPix[i]);
+                        if (i < 3) {
+                            pfg[i] /= _alphaBias[i];
+                        }
                     }
                 }
                 if (cPix && !_useColor) {
                     for (int i = 0; i < cComponents; ++i) {
-                        c[i] = sampleToFloat<PIX, maxValue>(cPix[i]) / _alphaBias[i];
+                        c[i] = sampleToFloat<PIX, maxValue>(cPix[i]);
+                        if (i < 3) {
+                            c[i] /= _alphaBias[i];
+                        }
                     }
                 }
 
