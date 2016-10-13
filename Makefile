@@ -33,6 +33,7 @@ Gamma \
 GodRays \
 Grade \
 HSVTool \
+HueCorrect \
 Distortion \
 ImageStatistics \
 Invert \

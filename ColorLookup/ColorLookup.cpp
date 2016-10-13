@@ -171,8 +171,8 @@ protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
     bool _doMasking;
-    bool _clampBlack;
-    bool _clampWhite;
+    const bool _clampBlack;
+    const bool _clampWhite;
     bool _premult;
     int _premultChannel;
     double _mix;
@@ -230,7 +230,7 @@ protected:
 };
 
 
-// floats don't clamp
+// floats don't clamp except if _clampBlack or _clampWhite
 template<>
 float
 ColorLookupProcessorBase::clamp<float>(float value,

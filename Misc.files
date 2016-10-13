@@ -48,6 +48,7 @@ Gamma/Gamma.cpp
 GodRays/GodRays.cpp
 Grade/Grade.cpp
 HSVTool/HSVTool.cpp
+HueCorrect/HueCorrect.cpp
 ImageStatistics/ImageStatistics.cpp
 Invert/Invert.cpp
 JoinViews/JoinViews.cpp
