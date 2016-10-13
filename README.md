@@ -90,6 +90,7 @@ separately.
 black points.
 * HistEqCImg: Equalize the luminance histogram. 
 * HSVToolOFX: Adjust hue, saturation and brightnes, or perform color replacement.
+* HueCorrectOFX: Apply hue-dependent color adjustments using lookup curves.
 * InvertOFX: Inverse the selected channels.
 * Log2LinOFX: Convert from/to the logarithmic space used by Cineon files
 * Math/AddOFX: Add a constant to the selected channels.

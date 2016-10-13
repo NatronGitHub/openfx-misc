@@ -49,6 +49,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "HueCorrectOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
+"Apply hue-dependent color adjustments using lookup curves.\n" \
+"Hue and saturation are computed from the the source RGB values. Depending on the hue value, the various adjustment values are computed, and then applied:\n" \
 "sat: saturation gain. This modification is applied last.\n" \
 "lum: luminance gain\n" \
 "red: red gain\n" \
@@ -57,7 +59,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "r_sup: red suppression. If r > min(g,b),  r = min(g,b) + r_sup * (r-min(g,b))\n" \
 "g_sup: green suppression\n" \
 "b_sup: blue suppression\n" \
-"sat_thrsh: if source saturation is below this value, do not apply the lum, red, green, blue gains. Above this value, the gain is multiplied by (saturation - saturation_threshold ) / (1 - saturation_threshold) \n" \
+"sat_thrsh: if source saturation is below this value, do not apply the lum, red, green, blue gains. Above this value, apply gain progressively.\n" \
+"\n" \
+"The 'Luminance Mix' parameter may be used to restore partially or fully the original luminance (luminance is computed using the 'Luminance Math' parameter).\n" \
 "\n" \
 "See also: http://opticalenquiry.com/nuke/index.php?title=HueCorrect"
 
@@ -73,8 +77,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamHue "hue"
-#define kParamHueLabel "Lookup Table"
-#define kParamHueHint "Colour lookup table. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
+#define kParamHueLabel "Hue Curves"
+#define kParamHueHint "Hue-dependent adjustment lookup table. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
 
 
 #define kParamLuminanceMath "luminanceMath"
