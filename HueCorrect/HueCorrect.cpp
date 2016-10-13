@@ -49,7 +49,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "HueCorrectOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=HueCorrect"
+"sat: saturation gain. This modification is applied last.\n" \
+"lum: luminance gain\n" \
+"red: red gain\n" \
+"green: green gain\n" \
+"blue: blue gain\n" \
+"r_sup: red suppression. If r > min(g,b),  r = min(g,b) + r_sup * (r-min(g,b))\n" \
+"g_sup: green suppression\n" \
+"b_sup: blue suppression\n" \
+"sat_thrsh: if source saturation is below this value, do not apply the lum, red, green, blue gains. Above this value, the gain is multiplied by (saturation - saturation_threshold ) / (1 - saturation_threshold) \n" \
+"\n" \
+"See also: http://opticalenquiry.com/nuke/index.php?title=HueCorrect"
 
 #define kPluginIdentifier "net.sf.openfx.HueCorrect"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -109,7 +119,7 @@ enum LuminanceMathEnum
 #define kParamMixLuminanceEnableHint "Mix luminance"
 
 #define kParamMixLuminance "mixLuminance"
-#define kParamMixLuminanceLabel "Mix Luminance"
+#define kParamMixLuminanceLabel ""
 #define kParamMixLuminanceHint "Mix luminance"
 
 #define kParamPremultChanged "premultChanged"
@@ -125,6 +135,7 @@ enum LuminanceMathEnum
 #define kCurveSatThrsh 8
 #define kCurveNb 9
 
+
 class HueCorrectProcessorBase
     : public OFX::ImageProcessor
 {
@@ -132,8 +143,10 @@ protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
     bool _doMasking;
-    bool _clampBlack;
-    bool _clampWhite;
+    LuminanceMathEnum _luminanceMath;
+    double _luminanceMix;
+    const bool _clampBlack;
+    const bool _clampWhite;
     bool _premult;
     int _premultChannel;
     double _mix;
@@ -141,12 +154,14 @@ protected:
 
 public:
     HueCorrectProcessorBase(OFX::ImageEffect &instance,
-                             bool clampBlack,
-                             bool clampWhite)
+                            bool clampBlack,
+                            bool clampWhite)
         : OFX::ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _doMasking(false)
+        , _luminanceMath(eLuminanceMathRec709)
+        , _luminanceMix(0.)
         , _clampBlack(clampBlack)
         , _clampWhite(clampWhite)
         , _premult(false)
@@ -163,10 +178,14 @@ public:
 
     void doMasking(bool v) {_doMasking = v; }
 
-    void setValues(bool premult,
+    void setValues(LuminanceMathEnum luminanceMath,
+                   double luminanceMix,
+                   bool premult,
                    int premultChannel,
                    double mix)
     {
+        _luminanceMath = luminanceMath;
+        _luminanceMix = luminanceMix;
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
@@ -191,7 +210,7 @@ protected:
 };
 
 
-// floats don't clamp
+// floats don't clamp except if _clampBlack or _clampWhite
 template<>
 float
 HueCorrectProcessorBase::clamp<float>(float value,
@@ -217,35 +236,29 @@ class HueCorrectProcessor
 public:
     // ctor
     HueCorrectProcessor(OFX::ImageEffect &instance,
-                         const OFX::RenderArguments &args,
-                         OFX::ParametricParam  *hueParam,
-                         bool clampBlack,
-                         bool clampWhite)
+                        const OFX::RenderArguments &args,
+                        OFX::ParametricParam  *hueParam,
+                        bool clampBlack,
+                        bool clampWhite)
         : HueCorrectProcessorBase(instance, clampBlack, clampWhite)
         , _hueParam(hueParam)
-        , _rangeMin(0.)
-        , _rangeMax(6.)
     {
         // build the LUT
         assert(_hueParam);
         _time = args.time;
-        if (_rangeMin == _rangeMax) {
-            // avoid divisions by zero
-            _rangeMax = _rangeMin + 1.;
-        }
-        assert( (PIX)maxValue == maxValue );
-        // except for float, maxValue is the same as nbValues
-        assert( maxValue == 1 || (maxValue == nbValues) );
         for (int c = 0; c < kCurveNb; ++c) {
             _hue[c].resize(nbValues + 1);
             for (int position = 0; position <= nbValues; ++position) {
                 // position to evaluate the param at
-                double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
+                double parametricPos = 6 * double(position) / nbValues;
 
                 // evaluate the parametric param
                 double value = _hueParam->getValue(c, _time, parametricPos);
+
+                // all the values (in HueCorrect) must be positive. We don't care if sat_thrsh goes above 1.
+                value = std::max(0., value);
                 // set that in the lut
-                _hue[c][position] = (float)clamp<PIX>(value, maxValue);
+                _hue[c][position] = value;
             }
         }
     }
@@ -254,9 +267,9 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
+        assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float tmpPix[nComponents];
+        float tmpPix[4];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -266,69 +279,122 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if ( (nComponents == 1) || (nComponents == 3) ) {
-                    // RGB and Alpha: don't premult/unpremult, just apply curves
-                    // normalize/denormalize properly
-                    for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = (float)interpolate(c, srcPix ? (srcPix[c] / (float)maxValue) : 0.f) * maxValue;
-                        assert( ( !srcPix || ( !isnan(srcPix[c]) && !isnan(srcPix[c]) ) ) &&
-                                !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
-                    }
-                    // ofxsMaskMix expects denormalized input
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
-                } else {
-                    //assert(nComponents == 4);
-                    float unpPix[nComponents];
-                    ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                    // ofxsUnPremult outputs normalized data
-                    for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = interpolate(c, unpPix[c]);
-                        assert( !isnan(unpPix[c]) && !isnan(unpPix[c]) &&
-                                !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
-                    }
-                    // ofxsPremultMaskMixPix expects normalized input
-                    ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+                float unpPix[4];
+                ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                // ofxsUnPremult outputs normalized data
+
+                float r = unpPix[0];
+                float g = unpPix[1];
+                float b = unpPix[2];
+                float l_in = 0.;
+                if (_luminanceMix > 0.) {
+                    l_in = luminance(r, g, b, _luminanceMath);
                 }
+                float h, s, v;
+                Color::rgb_to_hsv( r, g, b, &h, &s, &v );
+                h = h * 6 + 1;
+                if (h > 6) {
+                    h -= 6;
+                }
+                double sat = interpolate(kCurveSat, h);
+                double lum = interpolate(kCurveLum, h);
+                double red = interpolate(kCurveRed, h);
+                double green = interpolate(kCurveGreen, h);
+                double blue = interpolate(kCurveBlue, h);
+                double r_sup = interpolate(kCurveRSup, h);
+                double g_sup = interpolate(kCurveGSup, h);
+                double b_sup = interpolate(kCurveBSup, h);
+                float sat_thrsh = interpolate(kCurveSatThrsh, h);
+
+                if (r_sup != 1.) {
+                    // If r > min(g,b),  r = min(g,b) + r_sup * (r-min(g,b))
+                    float m = std::min(g,b);
+                    if (r > m) {
+                        r = m + r_sup * (r - m);
+                    }
+                }
+                if (g_sup != 1.) {
+                    float m = std::min(r,b);
+                    if (g > m) {
+                        g = m + g_sup * (g - m);
+                    }
+                }
+                if (b_sup != 1.) {
+                    float m = std::min(r,g);
+                    if (b > m) {
+                        b = m + b_sup * (b - m);
+                    }
+                }
+                if (s > sat_thrsh) {
+                    // Get a smooth effect: identity at s=sat_thrsh, full if sat_thrsh = 0
+                    r *= (sat_thrsh * 1. + (s - sat_thrsh) * red * lum) / s; // red * lum
+                    g *= (sat_thrsh * 1. + (s - sat_thrsh) * green * lum) / s; // green * lum;
+                    b *= (sat_thrsh * 1. + (s - sat_thrsh) * blue * lum) / s; // blue * lum;
+                } else if (sat_thrsh == 0.) {
+                    assert(s == 0.);
+                    r *= red * lum; // red * lum
+                    g *= green * lum; // green * lum;
+                    b *= blue * lum; // blue * lum;
+                }
+                if (sat != 1.) {
+                    float l_sat = luminance(r, g, b, _luminanceMath);
+                    r = (1. - sat) * l_sat + sat * r;
+                    g = (1. - sat) * l_sat + sat * g;
+                    b = (1. - sat) * l_sat + sat * b;
+                }
+                if (_luminanceMix > 0.) {
+                    float l_out = luminance(r, g, b, _luminanceMath);
+                    if (l_out <= 0.) {
+                        r = g = b = l_in;
+                    } else {
+                        double f = 1 + _luminanceMix * (l_in / l_out - 1.);
+                        r *= f;
+                        g *= f;
+                        b *= f;
+                    }
+                }
+
+                tmpPix[0] = clamp<float>(r, 1.);
+                tmpPix[1] = clamp<float>(g, 1.);
+                tmpPix[2] = clamp<float>(b, 1.);
+                tmpPix[3] = unpPix[3]; // alpha is left unchanged
+                for (int c = 0; c < nComponents; ++c) {
+                    assert( !isnan(unpPix[c]) && !isnan(unpPix[c]) &&
+                           !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
+                }
+
+                // ofxsPremultMaskMixPix expects normalized input
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
         }
     }
 
-    // on input to interpolate, value should be normalized to the [0-1] range
-    float interpolate(int component,
-                      float value)
+    double interpolate(int c, // the curve number
+                       double value)
     {
-        return 1. - value;
-#if 0
-        if ( (value < _rangeMin) || (_rangeMax < value) ) {
+        if ( (value < 0.) || (6. < value) ) {
             // slow version
-            int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
-            double ret = _hueParam->getValue(lutIndex, _time, value);
-            if ( (nComponents != 1) && (lutIndex != kCurveAlpha) ) {
-                ret += _hueParam->getValue(kCurveMaster, _time, value) - value;
-            }
+            double ret = _hueParam->getValue(c, _time, value);
 
-            return (float)clamp<PIX>(ret, maxValue);;
+            return ret;
         } else {
-            float x = (float)(value - _rangeMin) / (float)(_rangeMax - _rangeMin);
+            double x = value / 6.;
             int i = (int)(x * nbValues);
             assert(0 <= i && i <= nbValues);
-            float alpha = std::max( 0.f, std::min(x * nbValues - i, 1.f) );
-            float a = _hue[component][i];
-            float b = (i  < nbValues) ? _hue[component][i + 1] : 0.f;
+            double alpha = std::max( 0., std::min(x * nbValues - i, 1.) );
+            double a = _hue[c][i];
+            double b = (i  < nbValues) ? _hue[c][i + 1] : 0.f;
 
             return a * (1.f - alpha) + b * alpha;
         }
-#endif
     }
 
 private:
-    std::vector<float> _hue[kCurveNb];
+    std::vector<double> _hue[kCurveNb];
     OFX::ParametricParam*  _hueParam;
     double _time;
-    double _rangeMin;
-    double _rangeMax;
 };
 
 static
@@ -391,6 +457,8 @@ public:
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _hue = fetchParametricParam(kParamHue);
         _luminanceMath = fetchChoiceParam(kParamLuminanceMath);
+        _luminanceMixEnable = fetchBooleanParam(kParamMixLuminanceEnable);
+        _luminanceMix = fetchDoubleParam(kParamMixLuminance);
         assert(_luminanceMath);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
@@ -404,6 +472,7 @@ public:
         assert(_mix && _maskInvert);
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
+        _luminanceMix->setEnabled(_luminanceMixEnable->getValue());
     }
 
 private:
@@ -422,8 +491,12 @@ private:
                               const std::string &paramName) OVERRIDE FINAL
     {
         const double time = args.time;
+
         if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
             _premultChanged->setValue(true);
+        }
+        if ( (paramName == kParamMixLuminanceEnable) && (args.reason == OFX::eChangeUserEdit) ) {
+            _luminanceMix->setEnabled(_luminanceMixEnable->getValueAtTime(time));
         }
     } // changedParam
 
@@ -433,6 +506,8 @@ private:
     Clip *_maskClip;
     ParametricParam  *_hue;
     ChoiceParam* _luminanceMath;
+    BooleanParam* _luminanceMixEnable;
+    DoubleParam* _luminanceMix;
     BooleanParam* _clampBlack;
     BooleanParam* _clampWhite;
     BooleanParam* _premult;
@@ -514,13 +589,13 @@ HueCorrectPlugin::setupAndProcess(HueCorrectProcessorBase &processor,
     processor.setDstImg( dst.get() );
     processor.setSrcImg( src.get() );
     processor.setRenderWindow(args.renderWindow);
-    bool premult;
-    int premultChannel;
-    _premult->getValueAtTime(time, premult);
-    _premultChannel->getValueAtTime(time, premultChannel);
-    double mix;
-    _mix->getValueAtTime(time, mix);
-    processor.setValues(premult, premultChannel, mix);
+    LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
+    bool luminanceMixEnable = _luminanceMixEnable->getValueAtTime(time);
+    double luminanceMix = luminanceMixEnable ? _luminanceMix->getValueAtTime(time) : 0;
+    bool premult = _premult->getValueAtTime(time);
+    int premultChannel = _premultChannel->getValueAtTime(time);
+    double mix = _mix->getValueAtTime(time);
+    processor.setValues(luminanceMath, luminanceMix, premult, premultChannel, mix);
     processor.process();
 } // HueCorrectPlugin::setupAndProcess
 
@@ -531,7 +606,6 @@ HueCorrectPlugin::renderForComponents(const OFX::RenderArguments &args,
                                        OFX::BitDepthEnum dstBitDepth)
 {
     const double time = args.time;
-
 
     bool clampBlack = _clampBlack->getValueAtTime(time);
     bool clampWhite = _clampWhite->getValueAtTime(time);
@@ -642,70 +716,63 @@ public:
         OFX::ParamInteract(handle, effect)
     {
         //_hueParam = effect->fetchParametricParam(paramName);
-        //setColourPicking(false); // no color picking
+        setColourPicking(true);
     }
 
     virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
     {
-        const double time = args.time;
+        //const double time = args.time;
 
-        return false;
-#if 0
         // let us draw one slice every 8 pixels
         const int sliceWidth = 8;
+        const double rangeMin = 0.;
+        const double rangeMax = 6.;
+        const double yMin = 0.;
+        const double yMax = 2.;
+        const float s = 1.;
+        const float v = 0.3;
         int nbValues = args.pixelScale.x > 0 ? std::ceil( (rangeMax - rangeMin) / (sliceWidth * args.pixelScale.x) ) : 1;
-        const int nComponents = 3;
-        GLfloat color[nComponents];
 
-        if ( _showRamp->getValueAtTime(time) ) {
-            glBegin (GL_TRIANGLE_STRIP);
+        glBegin (GL_TRIANGLE_STRIP);
 
-            for (int position = 0; position <= nbValues; ++position) {
-                // position to evaluate the param at
-                double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
+        for (int position = 0; position <= nbValues; ++position) {
+            // position to evaluate the param at
+            double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
 
-                for (int component = 0; component < nComponents; ++component) {
-                    int lutIndex = componentToCurve(component); // special case for components == alpha only
-                    // evaluate the parametric param
-                    double value = _hueParam->getValue(lutIndex, time, parametricPos);
-                    value += _hueParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
-                    // set that in the lut
-                    color[component] = value;
-                }
-                glColor3f(color[0], color[1], color[2]);
-                glVertex2f(parametricPos, rangeMin);
-                glVertex2f(parametricPos, rangeMax);
-            }
-            
-            glEnd();
+            // red is at parametricPos = 1
+            float h = (parametricPos - 1) / 6;
+            float r, g, b;
+            Color::hsv_to_rgb( h, s, v, &r, &g, &b );
+            glColor3f(r, g, b);
+            glVertex2f(parametricPos, yMin);
+            glVertex2f(parametricPos, yMax);
         }
+
+        glEnd();
 
         if (args.hasPickerColour) {
             glLineWidth(1.5);
             glBegin(GL_LINES);
             {
-                // the following are magic colors, they all have the same Rec709 luminance
-                const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};      //set red color to red curve
-                const OfxRGBColourD green = {0., 0.546986106552894, 0.};        //set green color to green curve
-                const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};      //set blue color to blue curve
-                const OfxRGBColourD alpha  = {0.398979, 0.398979, 0.398979};
-                glColor3f(red.r, red.g, red.b);
-                glVertex2f(args.pickerColour.r, rangeMin);
-                glVertex2f(args.pickerColour.r, rangeMax);
-                glColor3f(green.r, green.g, green.b);
-                glVertex2f(args.pickerColour.g, rangeMin);
-                glVertex2f(args.pickerColour.g, rangeMax);
-                glColor3f(blue.r, blue.g, blue.b);
-                glVertex2f(args.pickerColour.b, rangeMin);
-                glVertex2f(args.pickerColour.b, rangeMax);
-                glColor3f(alpha.r, alpha.g, alpha.b);
-                glVertex2f(args.pickerColour.a, rangeMin);
-                glVertex2f(args.pickerColour.a, rangeMax);
+                float h, s, v;
+                Color::rgb_to_hsv( args.pickerColour.r, args.pickerColour.g, args.pickerColour.b, &h, &s, &v );
+                const OfxRGBColourD yellow   = {1, 1, 0};
+                const OfxRGBColourD grey  = {2./3., 2./3., 2./3.};
+                glColor3f(yellow.r, yellow.g, yellow.b);
+                // map [0,1] to [0,6]
+                h = rangeMin + h * (rangeMax - rangeMin) + 1;
+                if (h > 6) {
+                    h -= 6;
+                }
+                glVertex2f(h, yMin);
+                glVertex2f(h, yMax);
+                glColor3f(grey.r, grey.g, grey.b);
+                glVertex2f(rangeMin, s);
+                glVertex2f(rangeMax, s);
             }
             glEnd();
         }
         return true;
-#endif
     }
 
     virtual ~HueCorrectInteract() {}
@@ -757,7 +824,7 @@ HueCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //  throwHostMissingSuiteException(kOfxParametricParameterSuite);
     //}
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(ePixelComponentRGBA);
+    desc.setChannelSelector(ePixelComponentRGB);
 #endif
 }
 
@@ -778,8 +845,8 @@ HueCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     assert(srcClip);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->addSupportedComponent(ePixelComponentXY);
-    srcClip->addSupportedComponent(ePixelComponentAlpha);
+    //srcClip->addSupportedComponent(ePixelComponentXY);
+    //srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -788,8 +855,8 @@ HueCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     assert(dstClip);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
-    dstClip->addSupportedComponent(ePixelComponentXY);
-    dstClip->addSupportedComponent(ePixelComponentAlpha);
+    //dstClip->addSupportedComponent(ePixelComponentXY);
+    //dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
@@ -835,26 +902,26 @@ HueCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};      //set red color to red curve
         const OfxRGBColourD green = {0., 0.546986106552894, 0.};        //set green color to green curve
         const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};      //set blue color to blue curve
-        //const OfxRGBColourD alpha  = {0.398979, 0.398979, 0.398979};
-        //param->setUIColour( kCurveSat, sat );
-        //param->setUIColour( kCurveLum, lum );
+        const OfxRGBColourD alpha  = {0.398979, 0.398979, 0.398979};
+        param->setUIColour( kCurveSat, alpha );
+        param->setUIColour( kCurveLum, alpha );
         param->setUIColour( kCurveRed, red );
         param->setUIColour( kCurveGreen, green );
         param->setUIColour( kCurveBlue, blue );
         param->setUIColour( kCurveRSup, red );
         param->setUIColour( kCurveGSup, green );
         param->setUIColour( kCurveBSup, blue );
-        //param->setUIColour( kCurveSatThrsh, alpha );
+        param->setUIColour( kCurveSatThrsh, alpha );
 
         // set the min/max parametric range to 0..6
         param->setRange(0.0, 6.0);
 
-        // minimum/maximum: are these supported by OpenFX?
-        //param->setRange(0., 2.);
-        //param->setDisplayRange(0., 2.);
 
         // set a default curve
         for (int c = 0; c < kCurveNb; ++c) {
+            // minimum/maximum: are these supported by OpenFX?
+            param->setDimensionRange(0., c == kCurveSatThrsh ? 1. : DBL_MAX, c);
+            param->setDimensionDisplayRange(0., 2., c);
             for (int p = 0; p <=6; ++p) {
                 // add a control point at p
                 param->addControlPoint(c, // curve to set
