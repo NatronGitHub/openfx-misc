@@ -892,6 +892,7 @@ private:
         , premult(false)
         , premultChannel(3)
         , mix(1.)
+        , outputMode(eOutputModeResult)
         , colorModel(eColorModelYCbCr)
         , b3(false)
         , startLevel(0)

@@ -2023,12 +2023,16 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
             //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
             if (blurPlugin == eBlurPluginLaplacian || blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) {
+                // coverity[dead_error_line]
                 param->setDefault( (int)kParamBoundaryDefaultLaplacian );
             } else if (blurPlugin == eBlurPluginBloom) {
+                // coverity[dead_error_line]
                 param->setDefault( (int)kParamBoundaryDefaultBloom );
             } else if (blurPlugin == eBlurPluginEdgeExtend) {
+                // coverity[dead_error_line]
                 param->setDefault( (int)kParamBoundaryDefaultEdgeExtend );
             } else {
+                // coverity[dead_error_line]
                 param->setDefault( (int)kParamBoundaryDefault );
             }
             if (page) {
