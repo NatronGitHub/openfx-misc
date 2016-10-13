@@ -673,9 +673,9 @@ bool
 ShufflePlugin::isIdentityInternal(double time,
                                   OFX::Clip*& identityClip)
 {
-    PixelComponentEnum srcAComponents = _srcClipA->getPixelComponents();
-    PixelComponentEnum srcBComponents = _srcClipB->getPixelComponents();
-    PixelComponentEnum dstComponents = _dstClip->getPixelComponents();
+    PixelComponentEnum srcAComponents = _srcClipA ? _srcClipA->getPixelComponents() : ePixelComponentNone;
+    PixelComponentEnum srcBComponents = _srcClipB ? _srcClipB->getPixelComponents() : ePixelComponentNone;
+    PixelComponentEnum dstComponents = _dstClip ? _dstClip->getPixelComponents() : ePixelComponentNone;
 
     if (!gSupportsDynamicChoices || !gIsMultiPlanar) {
         InputChannelEnum r = InputChannelEnum( _channelParam[0]->getValueAtTime(time) );

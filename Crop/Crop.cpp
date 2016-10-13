@@ -108,6 +108,7 @@ public:
     {
         _cropRect.x1 = _cropRect.y1 = _cropRect.x2 = _cropRect.y2 = 0.;
         _cropRectFull.x1 = _cropRectFull.y1 = _cropRectFull.x2 = _cropRectFull.y2 = 0.;
+        _renderScale.x = _renderScale.y = 1.;
         _cropRectPixel.x1 = _cropRectPixel.y1 = _cropRectPixel.x2 = _cropRectPixel.y2 = 0;
         _cropRectFullPixel.x1 = _cropRectFullPixel.y1 = _cropRectFullPixel.x2 = _cropRectFullPixel.y2 = 0;
         _translation.x = _translation.y = 0;

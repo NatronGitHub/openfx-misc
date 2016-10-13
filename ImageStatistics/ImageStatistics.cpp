@@ -995,8 +995,12 @@ public:
     : ImageStatisticsProcessorBase(instance)
     , _luminanceMath(eLuminanceMathRec709)
     {
-        _minLuma = +std::numeric_limits<double>::infinity();
+        _maxPos.x = _maxPos.y = 0.;
+        std::fill(_maxVal, _maxVal + nComponents, -std::numeric_limits<double>::infinity());
         _maxLuma = -std::numeric_limits<double>::infinity();
+        _minPos.x = _minPos.y = 0.;
+        std::fill(_minVal, _minVal + nComponents, +std::numeric_limits<double>::infinity());
+        _minLuma = +std::numeric_limits<double>::infinity();
     }
 
     ImageLumaProcessor()
