@@ -23,6 +23,7 @@
 /*
  TODO:
  - add "Luminance Blend [0.7]" and "Chrominance Blend [1.0]" settings to YCbCr and Lab, which is like "mix", but only on luminance or chrominance.
+ - bandlets (see fig 25 of http://www.cmap.polytechnique.fr/~mallat/papiers/07-NumerAlgo-MallatPeyre-BandletsReview.pdf )
  - edge-aware version
  - estimate a per-intensity noise gain, based on analysis of the HH1 subband, in conjunction with the first smoothed level. analyze the noise in one channel only (luminance or green).
    is this is film, analyze at 9 values from 0.1 to 1.0, with a geometric progression, thus x = 0.1*a^i for i = 0..8, whith a = (1/0.1)^(1./8) = 1.13314845307
