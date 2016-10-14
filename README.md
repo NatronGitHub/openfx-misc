@@ -143,6 +143,7 @@ matrix.
 * Despill: Remove the unwanted color contamination of the foreground (spill) caused by the reflected color of the bluescreen/greenscreen, as described in "Digital Compositing for
   Film and Video" by Steve Wright.
 * DifferenceOFX: Produce a rough matte from the difference of two images.
+* HueKeyerOFX: Compute a key depending on hue value.
 * KeyerOFX: A collection of simple keyers. 
 * MatteMonitor: A Matte Monitor, as described in "Digital Compositing for Film and Video" by Steve Wright.
 * PIK: A per-pixel color difference keyer that uses a mix operation instead of a max operation to combine the non-backing screen channels.
