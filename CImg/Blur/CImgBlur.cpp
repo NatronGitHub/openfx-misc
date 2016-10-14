@@ -1116,16 +1116,14 @@ public:
             }
             _filter = fetchChoiceParam(kParamFilter);
             assert(_filter);
-            if (blurPlugin != eBlurPluginChromaBlur &&
-                blurPlugin != eBlurPluginLaplacian &&
-                blurPlugin != eBlurPluginSharpen &&
-                blurPlugin != eBlurPluginSoften) {
-                _expandRoD = fetchBooleanParam(kParamExpandRoD);
-                assert(_expandRoD);
-                if ( paramExists(kParamCropToFormat) ) {
-                    _cropToFormat = fetchBooleanParam(kParamCropToFormat);
-                }
-            }
+        }
+        if ( paramExists(kParamExpandRoD) ) {
+            _expandRoD = fetchBooleanParam(kParamExpandRoD);
+            assert(_expandRoD);
+        }
+        if ( paramExists(kParamCropToFormat) ) {
+            _cropToFormat = fetchBooleanParam(kParamCropToFormat);
+            assert(_cropToFormat);
         }
         // On Natron, hide the uniform parameter if it is false and not animated,
         // since uniform scaling is easy through Natron's GUI.
