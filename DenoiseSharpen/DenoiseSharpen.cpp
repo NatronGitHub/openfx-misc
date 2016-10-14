@@ -81,6 +81,10 @@ typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 }
 #endif
 
+#ifndef M_LN2
+#define M_LN2       0.693147180559945309417232121458176568  /* loge(2)        */
+#endif
+
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -181,10 +185,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputModeOptionResult "Result"
 #define kParamOutputModeOptionResultHint "The result of denoising and sharpening the Source image."
 #define kParamOutputModeOptionNoise "Noise"
-#define kParamOutputModeOptionNoiseHint "Only noise should be visible in this image. If you can see a lot of picture detail in the noise output, it means the current settings are denoising too hard and remove too much of the image, which leads to a smoothed result. Try to lower the noise levels or the noise level gain."
+#define kParamOutputModeOptionNoiseHint "An image containing what would be added to the image to denoise it. If 'Denoise Amount' is zero, this image should be black. Only noise should be visible in this image. If you can see a lot of picture detail in the noise output, it means the current settings are denoising too hard and remove too much of the image, which leads to a smoothed result. Try to lower the noise levels or the noise level gain."
+#define kParamOutputModeOptionSharpen "Sharpen"
+#define kParamOutputModeOptionSharpenHint "An image containing what would be added to the image to sharpen it. If 'Sharpen Amount' is zero, this image should be black. Only image details should be visible in this image. If you can see a lot of noise in the sharpen output, it means the current settings are denoising not enough, which leads to a noisy result. Try to raise the noise levels or the noise level gain."
 enum OutputModeEnum {
     eOutputModeResult = 0,
     eOutputModeNoise,
+    eOutputModeSharpen,
 };
 
 #define kParamColorModel "colorModel"
@@ -330,10 +337,10 @@ enum ColorModelEnum {
 #define kParamSharpenAmountLabel "Sharpen Amount"
 #define kParamSharpenAmountHint "Adjusts the amount of sharpening applied. Be careful that only components that are above the noise levels are enhanced, so the noise level gain parameters are very important for proper sharpening. For example, if 'Noise Level Gain' is set to zero (0), then noise is sharpened as well as signal. If the 'Noise Level Gain' is set to one (1), only signal is sharpened. In order to sharpen without denoising, set the 'Denoise Amount' parameter to zero (0)."
 
-#pragma message WARN("TODO: radius est en unité de niveau (level) et non pixel - fixer ça en comparant avec Sharpen")
-#define kParamSharpenRadius "sharpenRadius"
-#define kParamSharpenRadiusLabel "Sharpen Radius"
-#define kParamSharpenRadiusHint "Adjusts the radius of the sharpening. For very unsharp images it is recommended to use higher values. Default is 0.5."
+// see setup() for the difference between this and the GIMP wavelet sharpen's radius
+#define kParamSharpenSize "sharpenSize"
+#define kParamSharpenSizeLabel "Sharpen Size"
+#define kParamSharpenSizeHint "Adjusts the size of the sharpening. For very unsharp images it is recommended to use higher values. Default is 10."
 
 #define kParamSharpenLuminance "sharpenLuminance"
 #define kParamSharpenLuminanceLabel "Sharpen Y Only"
@@ -782,7 +789,7 @@ public:
 
         // sharpen
         _sharpenAmount = fetchDoubleParam(kParamSharpenAmount);
-        _sharpenRadius = fetchDoubleParam(kParamSharpenRadius);
+        _sharpenSize = fetchDoubleParam(kParamSharpenSize);
         _sharpenLuminance = fetchBooleanParam(kParamSharpenLuminance);
 
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
@@ -947,7 +954,7 @@ private:
     DoubleParam* _channelGain[4];
     DoubleParam* _amount[4];
     DoubleParam* _sharpenAmount;
-    DoubleParam* _sharpenRadius;
+    DoubleParam* _sharpenSize;
     BooleanParam* _sharpenLuminance;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
@@ -1270,20 +1277,25 @@ private:
             return;
         }
         for (int i = i_begin; i < i_end; ++i) {
+            float fimg_denoised = _fimg_hpass[i];
+
             // apply smooth threshold
             if (_fimg_hpass[i] < -_thold) {
                 _fimg_hpass[i] += _thold * _denoise_amount;
+                fimg_denoised += _thold;
             } else if (_fimg_hpass[i] >  _thold) {
                 _fimg_hpass[i] -= _thold * _denoise_amount;
+                fimg_denoised -= _thold;
             } else {
                 _fimg_hpass[i] *= 1. - _denoise_amount;
+                fimg_denoised = 0.;
             }
             // add the denoised band to the final image
             if (_fimg_0) { // if (hpass != 0)
                 // note: local contrast boost could be applied here, by multiplying fimg[hpass][i] by a factor beta
-                // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5) + 1
+                // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5)
 
-                _fimg_0[i] += _beta * _fimg_hpass[i];
+                _fimg_0[i] += _fimg_hpass[i] + _beta * fimg_denoised;
             }
         }
     }
@@ -1551,22 +1563,27 @@ private:
                 int sumsqsize = row_sat_size * col_sat_size;
 
                 unsigned int i = row * _iwidth + col;
+                float fimg_denoised = _fimg_hpass[i];
+
                 // apply smooth threshold
                 float thold = _sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / sumsqsize - _sigma_n_i_sq) );
 
                 if (_fimg_hpass[i] < -thold) {
                     _fimg_hpass[i] += thold * _denoise_amount;
+                    fimg_denoised += thold;
                 } else if (_fimg_hpass[i] >  thold) {
                     _fimg_hpass[i] -= thold * _denoise_amount;
+                    fimg_denoised -= thold;
                 } else {
                     _fimg_hpass[i] *= 1. - _denoise_amount;
+                    fimg_denoised = 0.;
                 }
                 // add the denoised band to the final image
                 if (_fimg_0) { // if (hpass != 0)
                     // note: local contrast boost could be applied here, by multiplying fimg[hpass][i] by a factor beta
-                    // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5) + 1
+                    // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5)
 
-                    _fimg_0[i] += _beta * _fimg_hpass[i];
+                    _fimg_0[i] += _fimg_hpass[i] + _beta * fimg_denoised;
                 }
             }
         }
@@ -1789,9 +1806,9 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
         //printf("width=%u level=%u stdev=%g sigma_n_i=%g\n", iwidth, lev, std::sqrt(sumsq / sumsqsize), std::sqrt(sigma_n_i_sq));
 
         // sharpen
-        double beta = 1.;
+        double beta = 0.;
         if (sharpen_amount > 0.) {
-            beta += sharpen_amount * exp (-((lev + startLevel) - sharpen_radius) * ((lev + startLevel) - sharpen_radius) / 1.5);
+            beta = sharpen_amount * exp (-((lev + startLevel) - sharpen_radius) * ((lev + startLevel) - sharpen_radius) / 1.5);
         }
 
         if (adaptiveRadius <= 0) {
@@ -1810,20 +1827,25 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
 #           pragma omp parallel for
 #           endif
             for (unsigned int i = 0; i < size; ++i) {
+                float fimg_denoised = fimg[hpass][i];
+
                 // apply smooth threshold
                 if (fimg[hpass][i] < -thold) {
                     fimg[hpass][i] += thold * denoise_amount;
+                    fimg_denoised += _thold;
                 } else if (fimg[hpass][i] >  thold) {
                     fimg[hpass][i] -= thold * denoise_amount;
+                    fimg_denoised -= _thold;
                 } else {
                     fimg[hpass][i] *= 1. - denoise_amount;
+                    fimg_denoised = 0.;
                 }
                 // add the denoised band to the final image
                 if (hpass != 0) {
                     // note: local contrast boost could be applied here, by multiplying fimg[hpass][i] by a factor beta
-                    // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5) + 1
+                    // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5)
 
-                    fimg[0][i] += beta * fimg[hpass][i];
+                    fimg[0][i] += fimg[hpass][i] + beta * fimg_denoised;
                 }
             }
 #endif
@@ -1898,22 +1920,27 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
                     int sumsqsize = row_sat_size * col_sat_size;
 
                     unsigned int i = row * iwidth + col;
+                    float fimg_denoised = fimg[hpass][i];
+
                     // apply smooth threshold
                     float thold = sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / sumsqsize - sigma_n_i_sq) );
 
                     if (fimg[hpass][i] < -thold) {
                         fimg[hpass][i] += thold * denoise_amount;
+                        fimg_denoised += thold;
                     } else if (fimg[hpass][i] >  thold) {
                         fimg[hpass][i] -= thold * denoise_amount;
+                        fimg_denoised -= thold;
                     } else {
                         fimg[hpass][i] *= 1. - denoise_amount;
+                        fimg_denoised = 0.;
                     }
                     // add the denoised band to the final image
                     if (hpass != 0)
                         // note: local contrast boost could be applied here, by multiplying fimg[hpass][i] by a factor beta
-                        // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5) + 1
+                        // GIMP's wavelet sharpen uses beta = amount * exp (-(lev - radius) * (lev - radius) / 1.5)
 
-                        fimg[0][i] += beta * fimg[hpass][i];
+                        fimg[0][i] += fimg[hpass][i] + beta * fimg_denoised;
                 }
             }
 #endif
@@ -2220,10 +2247,14 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
         for (unsigned int f = 0; f < 4; ++f) {
             p.noiseLevel[c][f] = channelGain * gainFreq[f] * _noiseLevel[c][f]->getValueAtTime(time);
         }
-        p.denoise_amount[c] = denoiseAmount * _amount[c]->getValueAtTime(time);
+        p.denoise_amount[c] = (p.outputMode == eOutputModeSharpen) ? 0. : denoiseAmount * _amount[c]->getValueAtTime(time);
     }
-    p.sharpen_amount[0] = p.outputMode == eOutputModeNoise ? 0. : _sharpenAmount->getValueAtTime(time);
-    p.sharpen_radius = _sharpenRadius->getValueAtTime(time);
+    p.sharpen_amount[0] = (p.outputMode == eOutputModeNoise) ? 0. : _sharpenAmount->getValueAtTime(time);
+    double sharpenSize = _sharpenSize->getValueAtTime(time);
+    // The GIMP's wavelet sharpen uses a sharpen radius parameter which is counter-intuitive
+    // and points to a level number. We convert from the Sharpen Size (simililar to the size in the
+    // Laplacian or Sharpen plugins) to the radius using the following heuristic formula (radius=0 seems to correspond to size=8)
+    p.sharpen_radius = std::log(sharpenSize) / M_LN2 - 3.; // log(8)/log(2) = 3.
     bool sharpenLuminance = _sharpenLuminance->getValueAtTime(time);
 
     if (!sharpenLuminance) {
@@ -2427,24 +2458,28 @@ DenoiseSharpenPlugin::renderForBitDepth(const OFX::RenderArguments &args)
             }
 
             ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, p.premult, p.premultChannel, x, y, srcPix, p.doMasking, mask.get(), p.mix, p.maskInvert, dstPix);
-            if (p.outputMode == eOutputModeNoise && srcPix) {
-                for (int c = 0; c < nComponents; ++c) {
-                    dstPix[c] -= srcPix[c];
-                }
-            }
-            // copy back original values from unprocessed channels
-            if (nComponents == 1) {
-                if (!p.process[3]) {
-                    dstPix[0] = srcPix ? srcPix[0] : PIX();
-                }
-            } else if ( (nComponents == 3) || (nComponents == 4) ) {
-                for (int c = 0; c < 3; ++c) {
-                    if (!p.process[c]) {
-                        dstPix[c] = srcPix ? srcPix[c] : PIX();
+            if (p.outputMode == eOutputModeNoise || p.outputMode == eOutputModeSharpen) {
+                // if Output=Noise or Output=Sharpen, the unchecked channels should be zero on output
+                if (srcPix) {
+                    for (int c = 0; c < nComponents; ++c) {
+                        dstPix[c] = p.process[c] ? (dstPix[c] - srcPix[c]) : 0;
                     }
                 }
-                if ( !p.process[3] && (nComponents == 4) ) {
-                    dstPix[3] = srcPix ? srcPix[3] : PIX();
+            } else {
+                // copy back original values from unprocessed channels
+                if (nComponents == 1) {
+                    if (!p.process[3]) {
+                        dstPix[0] = srcPix ? srcPix[0] : PIX();
+                    }
+                } else if ( (nComponents == 3) || (nComponents == 4) ) {
+                    for (int c = 0; c < 3; ++c) {
+                        if (!p.process[c]) {
+                            dstPix[c] = srcPix ? srcPix[c] : PIX();
+                        }
+                    }
+                    if ( !p.process[3] && (nComponents == 4) ) {
+                        dstPix[3] = srcPix ? srcPix[3] : PIX();
+                    }
                 }
             }
             // increment the dst pixel
@@ -2537,7 +2572,8 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
 
     // which plugin parameter values give identity?
 
-    if ( (OutputModeEnum)_outputMode->getValueAtTime(time) == eOutputModeNoise ) {
+    if ( (OutputModeEnum)_outputMode->getValueAtTime(time) == eOutputModeNoise ||
+        (OutputModeEnum)_outputMode->getValueAtTime(time) == eOutputModeSharpen ) {
         return false;
     }
 
@@ -3121,6 +3157,8 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamOutputModeOptionResult, kParamOutputModeOptionResultHint);
         assert(param->getNOptions() == (int)eOutputModeNoise);
         param->appendOption(kParamOutputModeOptionNoise, kParamOutputModeOptionNoiseHint);
+        assert(param->getNOptions() == (int)eOutputModeSharpen);
+        param->appendOption(kParamOutputModeOptionSharpen, kParamOutputModeOptionSharpenHint);
         param->setDefault((int)eOutputModeResult);
         if (group) {
             // coverity[dead_error_line]
@@ -3485,12 +3523,12 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
 
         {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSharpenRadius);
-            param->setLabel(kParamSharpenRadiusLabel);
-            param->setHint(kParamSharpenRadiusHint);
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSharpenSize);
+            param->setLabel(kParamSharpenSizeLabel);
+            param->setHint(kParamSharpenSizeHint);
             param->setRange(0, DBL_MAX);
-            param->setDisplayRange(0, 2.);
-            param->setDefault(0.5);
+            param->setDisplayRange(8, 32.);
+            param->setDefault(10.);
             param->setAnimates(true);
             if (group) {
                 param->setParent(*group);
