@@ -1506,7 +1506,7 @@ public:
             if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
                 float sigmax = (float)(sx * scale / 2.4);
                 float sigmay = (float)(sy * scale / 2.4);
-                if ( (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (sigmax < 0.1) && (sigmay < 0.1) && (params.orderX == 0) && (params.orderY == 0) ) {
+                if ( (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) && (sigmax < 0.1) && (sigmay < 0.1) && (params.orderX == 0) && (params.orderY == 0) ) {
                     return;
                 }
                 // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
