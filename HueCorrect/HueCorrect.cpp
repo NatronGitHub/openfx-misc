@@ -239,6 +239,38 @@ HueCorrectProcessorBase::clamp<float>(float value,
     return value;
 }
 
+static
+double luminance(double r,
+                 double g,
+                 double b,
+                 LuminanceMathEnum luminanceMath)
+{
+    switch (luminanceMath) {
+    case eLuminanceMathRec709:
+    default:
+        return Color::rgb709_to_y(r, g, b);
+
+    case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
+
+        return Color::rgb2020_to_y(r, g, b);
+    case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+
+        return Color::rgbACESAP0_to_y(r, g, b);
+    case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+
+        return Color::rgbACESAP1_to_y(r, g, b);
+    case eLuminanceMathCcir601:
+
+        return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+    case eLuminanceMathAverage:
+
+        return (r + g + b) / 3;
+    case eLuminanceMathMaximum:
+            
+        return std::max(std::max(r, g), b);
+    }
+}
+
 // template to do the processing.
 // nbValues is the number of values in the LUT minus 1. For integer types, it should be the same as
 // maxValue
@@ -410,38 +442,6 @@ private:
     double _time;
 };
 
-
-static
-double luminance(double r,
-                 double g,
-                 double b,
-                 LuminanceMathEnum luminanceMath)
-{
-    switch (luminanceMath) {
-        case eLuminanceMathRec709:
-        default:
-            return Color::rgb709_to_y(r, g, b);
-
-        case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
-
-            return Color::rgb2020_to_y(r, g, b);
-        case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
-
-            return Color::rgbACESAP0_to_y(r, g, b);
-        case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
-
-            return Color::rgbACESAP1_to_y(r, g, b);
-        case eLuminanceMathCcir601:
-
-            return 0.2989 * r + 0.5866 * g + 0.1145 * b;
-        case eLuminanceMathAverage:
-
-            return (r + g + b) / 3;
-        case eLuminanceMathMaximum:
-            
-            return std::max(std::max(r, g), b);
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
