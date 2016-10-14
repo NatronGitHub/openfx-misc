@@ -253,6 +253,10 @@ enum ColorModelEnum {
 #define kParamNoiseLevelGainLabel "Noise Level Gain"
 #define kParamNoiseLevelGainHint "Global gain to apply to the noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the per-frequency gain and the channel gain."
 
+#define kParamDenoiseAmount "denoiseAmount"
+#define kParamDenoiseAmountLabel "Denoise Amount"
+#define kParamDenoiseAmountHint "The amount of denoising to apply. 0 means no denoising (which may be useful to sharpen without denoising), between 0 and 1 does a soft thresholding of below the thresholds, thus keeping some noise, and 1 applies the threshold strictly and removes everything below the thresholds. This should be used only if you want to keep some noise, for example for noise matching. This value is multiplied by the per-channel amount se in the 'Channel Tuning' group. Remember that the thresholds are multiplied by the per-frequency gain, the channel gain, and the Noise Level Gain first."
+
 #define kGroupTuning "freqTuning"
 #define kGroupTuningLabel "Frequency Tuning"
 #define kParamEnable "enableFreq"
@@ -299,7 +303,7 @@ enum ColorModelEnum {
 #define kParamAlphaGain "alphaGain"
 #define kParamAlphaGainLabel "Alpha Gain"
 
-#define kParamAmountHint "The amount of denoising to apply to the specified channel. 0 means no denoising, between 0 and 1 does a soft thresholding of below the thresholds, thus keeping some noise, and 1 applies the threshold strictly and removes everything below the thresholds. This should be used only if you want to keep some noise, for example for noise matching. Remember that the thresholds ar multiplied by the per-frequency gain, the channel gain, and the Noise Level Gain first."
+#define kParamAmountHint "The amount of denoising to apply to the specified channel. 0 means no denoising, between 0 and 1 does a soft thresholding of below the thresholds, thus keeping some noise, and 1 applies the threshold strictly and removes everything below the thresholds. This should be used only if you want to keep some noise, for example for noise matching. This value is multiplied by the global Denoise Amount. Remember that the thresholds are multiplied by the per-frequency gain, the channel gain, and the Noise Level Gain first."
 #define kParamYLRAmount "ylrAmount"
 #define kParamYLRAmountLabel "Y/L/R Amount"
 #define kParamYAmountLabel "Y Amount"
@@ -323,8 +327,9 @@ enum ColorModelEnum {
 
 #define kParamSharpenAmount "sharpenAmount"
 #define kParamSharpenAmountLabel "Sharpen Amount"
-#define kParamSharpenAmountHint "Adjusts the amount of sharpening applied."
+#define kParamSharpenAmountHint "Adjusts the amount of sharpening applied. Be careful that only components that are above the noise levels are enhanced, so the noise level gain parameters are very important for proper sharpening. For example, if 'Noise Level Gain' is set to zero (0), then noise is sharpened as well as signal. If the 'Noise Level Gain' is set to one (1), only signal is sharpened. In order to sharpen without denoising, set the 'Denoise Amount' parameter to zero (0)."
 
+#pragma message WARN("TODO: radius est en unité de niveau (level) et non pixel - fixer ça en comparant avec Sharpen")
 #define kParamSharpenRadius "sharpenRadius"
 #define kParamSharpenRadiusLabel "Sharpen Radius"
 #define kParamSharpenRadiusHint "Adjusts the radius of the sharpening. For very unsharp images it is recommended to use higher values. Default is 0.5."
@@ -754,6 +759,8 @@ public:
 
         _noiseLevelGain = fetchDoubleParam(kParamNoiseLevelGain);
 
+        _denoiseAmount = fetchDoubleParam(kParamDenoiseAmount);
+
         // frequency tuning
         for (unsigned int f = 0; f < 4; ++f) {
                 _enableFreq[f] = fetchBooleanParam(enableParam(f));
@@ -933,6 +940,7 @@ private:
     DoubleParam* _noiseLevel[4][4];
     IntParam* _adaptiveRadius;
     DoubleParam* _noiseLevelGain;
+    DoubleParam* _denoiseAmount;
     BooleanParam* _enableFreq[4];
     DoubleParam* _gainFreq[4];
     DoubleParam* _channelGain[4];
@@ -2205,12 +2213,13 @@ DenoiseSharpenPlugin::setup(const OFX::RenderArguments &args,
         }
     }
 
+    double denoiseAmount = _denoiseAmount->getValueAtTime(time);
     for (unsigned int c = 0; c < 4; ++c) {
         double channelGain = _channelGain[c]->getValueAtTime(time);
         for (unsigned int f = 0; f < 4; ++f) {
             p.noiseLevel[c][f] = channelGain * gainFreq[f] * _noiseLevel[c][f]->getValueAtTime(time);
         }
-        p.denoise_amount[c] = _amount[c]->getValueAtTime(time);
+        p.denoise_amount[c] = denoiseAmount * _amount[c]->getValueAtTime(time);
     }
     p.sharpen_amount[0] = p.outputMode == eOutputModeNoise ? 0. : _sharpenAmount->getValueAtTime(time);
     p.sharpen_radius = _sharpenRadius->getValueAtTime(time);
@@ -2548,10 +2557,11 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
             gainFreq[f] = 0;
         }
     }
+    double denoiseAmount = _denoiseAmount->getValueAtTime(time);
     bool denoise[4];
     for (unsigned int c = 0; c < 4; ++c) {
         denoise[c] = false;
-        double denoise_amount = _amount[c]->getValueAtTime(time);
+        double denoise_amount = _amount[c]->getValueAtTime(time) * denoiseAmount;
         for (unsigned int f = 0; f < 4; ++f) {
             double noiseLevel = gainFreq[f] * _noiseLevel[c][f]->getValueAtTime(time);
             denoise[c] |= (noiseLevel > 0. && denoise_amount > 0.);
@@ -3294,6 +3304,22 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamNoiseLevelGainHint);
         param->setRange(0, DBL_MAX);
         param->setDisplayRange(0, 10.);
+        param->setDefault(1.);
+        param->setAnimates(true);
+        if (group) {
+            // coverity[dead_error_line]
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamDenoiseAmount);
+        param->setLabel(kParamDenoiseAmountLabel);
+        param->setHint(kParamDenoiseAmountHint);
+        param->setRange(0, 1.);
+        param->setDisplayRange(0, 1.);
         param->setDefault(1.);
         param->setAnimates(true);
         if (group) {
