@@ -891,6 +891,7 @@ HueCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamHue);
         assert(param);
+        param->setIsPeriodic(true);
         param->setLabel(kParamHueLabel);
         param->setHint(kParamHueHint);
         {
@@ -1451,6 +1452,7 @@ HueKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamKeyerHue);
         assert(param);
+        param->setIsPeriodic(true);
         param->setLabel(kParamKeyerHueLabel);
         param->setHint(kParamKeyerHueHint);
         {
