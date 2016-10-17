@@ -891,7 +891,7 @@ HueCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamHue);
         assert(param);
-        param->setIsPeriodic(true);
+        param->setPeriodic(true);
         param->setLabel(kParamHueLabel);
         param->setHint(kParamHueHint);
         {
@@ -934,12 +934,13 @@ HueCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(0.0, 6.0);
 
 
+        int plast = param->supportsPeriodic() ? 5 : 6;
         // set a default curve
         for (int c = 0; c < kCurveNb; ++c) {
             // minimum/maximum: are these supported by OpenFX?
             param->setDimensionRange(0., c == kCurveSatThrsh ? 1. : DBL_MAX, c);
             param->setDimensionDisplayRange(0., 2., c);
-            for (int p = 0; p <=6; ++p) {
+            for (int p = 0; p <= plast; ++p) {
                 // add a control point at p
                 param->addControlPoint(c, // curve to set
                                        0.0,   // time, ignored in this case, as we are not adding a key
@@ -1452,7 +1453,7 @@ HueKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamKeyerHue);
         assert(param);
-        param->setIsPeriodic(true);
+        param->setPeriodic(true);
         param->setLabel(kParamKeyerHueLabel);
         param->setHint(kParamKeyerHueHint);
         {
@@ -1482,12 +1483,13 @@ HueKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(0.0, 6.0);
 
 
+        int plast = param->supportsPeriodic() ? 5 : 6;
         // set a default curve
         for (int c = 0; c < kCurveKeyerNb; ++c) {
             // minimum/maximum: are these supported by OpenFX?
             param->setDimensionRange(0., 1., c);
             param->setDimensionDisplayRange(0., 1., c);
-            for (int p = 0; p <=6; ++p) {
+            for (int p = 0; p <= plast; ++p) {
                 // add a control point at p
                 param->addControlPoint(c, // curve to set
                                        0.0,   // time, ignored in this case, as we are not adding a key
