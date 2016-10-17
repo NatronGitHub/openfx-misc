@@ -728,11 +728,21 @@ class HueCorrectInteract
 public:
     HueCorrectInteract(OfxInteractHandle handle,
                         OFX::ImageEffect* effect,
-                        const std::string& /*paramName*/) :
-        OFX::ParamInteract(handle, effect)
+                        const std::string& paramName)
+        : OFX::ParamInteract(handle, effect)
+        , _hueParam(0)
+        , _xMin(0)
+        , _xMax(0)
+        , _yMin(0)
+        , _yMax(0)
     {
-        //_hueParam = effect->fetchParametricParam(paramName);
+        _hueParam = effect->fetchParametricParam(paramName);
         setColourPicking(true);
+        _hueParam->getRange(_xMin, _xMax);
+        _hueParam->getDimensionDisplayRange(0, _yMin, _yMax);
+        if (_yMin == 0. && _yMax == 0.) {
+            _yMax = 2.; // default for hosts that don't support displayrange
+        }
     }
 
     virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
@@ -741,27 +751,23 @@ public:
 
         // let us draw one slice every 8 pixels
         const int sliceWidth = 8;
-        const double rangeMin = 0.;
-        const double rangeMax = 6.;
-        const double yMin = 0.;
-        const double yMax = 2.;
         const float s = 1.;
         const float v = 0.3;
-        int nbValues = args.pixelScale.x > 0 ? std::ceil( (rangeMax - rangeMin) / (sliceWidth * args.pixelScale.x) ) : 1;
+        int nbValues = args.pixelScale.x > 0 ? std::ceil( (_xMax - _xMin) / (sliceWidth * args.pixelScale.x) ) : 1;
 
         glBegin (GL_TRIANGLE_STRIP);
 
         for (int position = 0; position <= nbValues; ++position) {
             // position to evaluate the param at
-            double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
+            double parametricPos = _xMin + (_xMax - _xMin) * double(position) / nbValues;
 
             // red is at parametricPos = 1
             float h = (parametricPos - 1) / 6;
             float r, g, b;
             Color::hsv_to_rgb( h, s, v, &r, &g, &b );
             glColor3f(r, g, b);
-            glVertex2f(parametricPos, yMin);
-            glVertex2f(parametricPos, yMax);
+            glVertex2f(parametricPos, _yMin);
+            glVertex2f(parametricPos, _yMax);
         }
 
         glEnd();
@@ -776,15 +782,15 @@ public:
                 const OfxRGBColourD grey  = {2./3., 2./3., 2./3.};
                 glColor3f(yellow.r, yellow.g, yellow.b);
                 // map [0,1] to [0,6]
-                h = rangeMin + h * (rangeMax - rangeMin) + 1;
+                h = _xMin + h * (_xMax - _xMin) + 1;
                 if (h > 6) {
                     h -= 6;
                 }
-                glVertex2f(h, yMin);
-                glVertex2f(h, yMax);
+                glVertex2f(h, _yMin);
+                glVertex2f(h, _yMax);
                 glColor3f(grey.r, grey.g, grey.b);
-                glVertex2f(rangeMin, s);
-                glVertex2f(rangeMax, s);
+                glVertex2f(_xMin, s);
+                glVertex2f(_xMax, s);
             }
             glEnd();
         }
@@ -794,7 +800,9 @@ public:
     virtual ~HueCorrectInteract() {}
 
 protected:
-    //OFX::ParametricParam* _hueParam;
+    OFX::ParametricParam* _hueParam;
+    double _xMin, _xMax;
+    double _yMin, _yMax;
 };
 
 // We are lucky, there's only one hue param, so we need only one interact
