@@ -287,7 +287,7 @@ enum ColorModelEnum {
 #define kParamGainVeryLowHint "Gain to apply to the very low frequency noise level thresholds. 0 means no denoising, 1 means use the estimated thresholds multiplied by the channel Gain and the global Noise Level Gain."
 
 #define kParamAdaptiveRadius "adaptiveRadius"
-#define kParamAdaptiveRadiusLabel "Adaptive Radius (experimental)"
+#define kParamAdaptiveRadiusLabel "Adaptive Radius"
 #define kParamAdaptiveRadiusHint "Radius of the window where the signal level is analyzed at each scale. If zero, the signal level is computed from the whole image, which may excessively blur the edges if the image has many flat color areas. A reasonable value should to be in the range 2-4."
 #define kParamAdaptiveRadiusDefault 4
 
@@ -3342,7 +3342,7 @@ DenoiseSharpenPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamNoiseLevelGainLabel);
         param->setHint(kParamNoiseLevelGainHint);
         param->setRange(0, DBL_MAX);
-        param->setDisplayRange(0, 10.);
+        param->setDisplayRange(0, 2.);
         param->setDefault(1.);
         param->setAnimates(true);
         if (group) {
