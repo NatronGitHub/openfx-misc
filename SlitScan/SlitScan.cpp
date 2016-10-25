@@ -59,8 +59,6 @@
    Et il y aura aussi un paramètre pourri qui s'appellera "maximum input frame range". Ce paramètre permettra de préfetcher toutes les images nécessaires à l'effet avant son exécution. On pourra dépasser ce range sous Natron, mais pas sous Nuke (Natron est plus tolérant).
  */
 
-#ifdef DEBUG
-
 #include <cmath> // for floor
 #include <climits> // for INT_MAX
 #include <cassert>
@@ -1047,6 +1045,4 @@ static SlitScanPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVe
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
-
-#endif // ifdef DEBUG
 
