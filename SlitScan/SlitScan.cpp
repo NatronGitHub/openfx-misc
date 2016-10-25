@@ -73,6 +73,7 @@
 #include "ofxsPixelProcessor.h"
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
+#include "ofxsCopier.h"
 #include "ofxsMacros.h"
 
 using namespace OFX;
@@ -82,11 +83,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "SlitScan"
 #define kPluginGrouping "Time"
 #define kPluginDescription \
-    "Apply per-pixel retiming: the time is computed for each pixel from the retime function (by default, it is a vertical ramp).\n" \
+    "Apply per-pixel retiming: the time is computed for each pixel from the retime function, which can be either a horizontal ramp, a vertical ramp, or a retime map.\n" \
     "\n" \
-    "The default retime function corresponds to a horizontal slit: it is a vertical ramp, which is a linear function of y, which is 0 at the center of the bottom image line, and 1 at the center of the tom image line. Optionally, a vertical slit may be used (0 at the center of the leftmost image column, 1 at the center of the rightmost image column), or the optional single-channel \"Retime Map\" input may also be used.\n" \
+    "The default retime function corresponds to a horizontal slit: it is a vertical ramp, which is a linear function of y, which is 0 at the center of the bottom image line, and 1 at the center of the top image line. Optionally, a vertical slit may be used (0 at the center of the leftmost image column, 1 at the center of the rightmost image column), or the optional single-channel \"Retime Map\" input may also be used.\n" \
     "\n" \
-    "This plugin requires to render many frames on input, which may fill up the host cache, but if more than 4 frames required on input, Natron renders them on-demand, rather than pre-caching them.\n" \
+    "This plugin requires to render many frames on input, which may require a lot of memory.\n" \
     "Note that the results may be on higher quality if the video is slowed fown (e.g. using slowmoVideo)\n" \
     "\n" \
     "The parameters are:\n" \
@@ -117,7 +118,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRetimeFunctionLabel "Retime Function"
 #define kParamRetimeFunctionHint "The function that gives, for each pixel in the image, its time. The default retime function corresponds to a horizontal slit: it is a vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the top image line. Optionally, a vertical slit may be used (0 at the center of the leftmost image column, 1 at the center of the rightmost image column), or the optional single-channel \"Retime Map\" input may also be used."
 #define kParamRetimeFunctionOptionHorizontalSlit "Horizontal Slit"
-#define kParamRetimeFunctionOptionHorizontalSlitHint "A vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the tom image line."
+#define kParamRetimeFunctionOptionHorizontalSlitHint "A vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the top image line."
 #define kParamRetimeFunctionOptionVerticalSlit "Vertical Slit"
 #define kParamRetimeFunctionOptionVerticalSlitHint "A horizontal ramp (alinear function of x) which is 0 at the center of the leftmost image line, and 1 at the center of the rightmost image line."
 #define kParamRetimeFunctionOptionRetimeMap "Retime Map"
@@ -137,7 +138,7 @@ enum RetimeFunctionEnum
 #define kParamRetimeOffsetDefault 0.
 
 #define kParamRetimeGain "retimeGain"
-#define kParamRetimeGainLabel "Retime Offset"
+#define kParamRetimeGainLabel "Retime Gain"
 #define kParamRetimeGainHint "Gain applied to the retime map (after offset). With the horizontal or vertical slits, to get one line or column per frame you should use respectively (height-1) or (width-1)."
 #define kParamRetimeGainDefault -10
 
@@ -190,13 +191,27 @@ public:
         }
     }
 
-    OFX::Image* fetch(double time) const
+    const OFX::Image* fetch(double time, bool nofetch = false) const
     {
         ImagesMap::const_iterator it = _images.find(time);
         if (it != _images.end()) {
             return it->second;
         }
+        if (nofetch) {
+            assert(false);
+            return NULL;
+        }
         return _images[time] = _srcClip->fetchImage(time);
+    }
+
+    void fetchSet(const std::set<double> &times) const
+    {
+        for (std::set<double>::const_iterator it = times.begin();
+             it != times.end();
+             ++it) {
+            //printf("fetching %g\n", *it);
+            fetch(*it);
+        }
     }
 
     /** @brief return a pixel pointer, returns NULL if (x,y) is outside the image bounds
@@ -206,18 +221,9 @@ public:
      If the components are custom, then this will return NULL as the support code
      can't know the pixel size to do the work.
      */
-    void *getPixelAddress(double time, int x, int y)
-    {
-        OFX::Image* img = fetch(time);
-        if (img) {
-            return img->getPixelAddress(x, y);
-        }
-        return NULL;
-    }
-
     const void *getPixelAddress(double time, int x, int y) const
     {
-        const OFX::Image* img = fetch(time);
+        const OFX::Image* img = fetch(time, true);
         if (img) {
             return img->getPixelAddress(x, y);
         }
@@ -225,7 +231,7 @@ public:
     }
 
 private:
-    typedef std::map<double, OFX::Image*> ImagesMap;
+    typedef std::map<double, const OFX::Image*> ImagesMap;
 
     OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
 
@@ -276,6 +282,7 @@ public:
         _frameRange = fetchInt2DParam(kParamFrameRange);
         _filter = fetchChoiceParam(kParamFilter);
         assert(_retimeFunction && _retimeOffset && _retimeGain && _retimeAbsolute && _frameRange && _filter);
+        updateVisibility();
     }
 
 private:
@@ -289,11 +296,23 @@ private:
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL
+    {
+        if ( (paramName == kParamRetimeFunction) && (args.reason == OFX::eChangeUserEdit) ) {
+            updateVisibility();
+        }
+    }
 
     /* set up and run a processor */
-    void setupAndProcess(SlitScanProcessorBase &, const OFX::RenderArguments &args, double sourceTime, FilterEnum filter);
+    void setupAndProcess(SlitScanProcessorBase &, const OFX::RenderArguments &args);
     void getFramesNeededRange(const double time,
                               OfxRangeD &range);
+    void updateVisibility()
+    {
+        RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValue();
+        _frameRange->setEnabled(retimeFunction == eRetimeFunctionRetimeMap);
+    }
+
 };
 
 
@@ -302,21 +321,6 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
-
-// make sure components are sane
-static void
-checkComponents(const OFX::Image &src,
-                OFX::BitDepthEnum dstBitDepth,
-                OFX::PixelComponentEnum dstComponents)
-{
-    OFX::BitDepthEnum srcBitDepth    = src.getPixelDepth();
-    OFX::PixelComponentEnum srcComponents  = src.getPixelComponents();
-
-    // see if they have the same depths and bytes and all
-    if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-    }
-}
 
 void
 SlitScanPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
@@ -445,9 +449,9 @@ SlitScanPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
 // build the set of times needed to render renderWindow
 template<class PIX, int maxValue>
 void
-buildTimes(OFX::Image* retimeMap,
+buildTimes(const OFX::Image* retimeMap,
            double time,
-           OfxRectI& renderWindow,
+           const OfxRectI& renderWindow,
            double retimeGain,
            double retimeOffset,
            bool retimeAbsolute,
@@ -476,18 +480,56 @@ buildTimes(OFX::Image* retimeMap,
     }
 }
 
+void
+buildTimesSlit(double time,
+               double a,
+               double b,
+               double retimeGain,
+               double retimeOffset,
+               bool retimeAbsolute,
+               FilterEnum filter,
+           std::set<double> *sourceImagesTimes)
+{
+    a = a * retimeGain + retimeOffset;
+    b = b * retimeGain + retimeOffset;
+    if (!retimeAbsolute) {
+        a += time;
+        b += time;
+    }
+    if (a > b) {
+        std::swap(a, b);
+    }
+    int tmin, tmax;
+    switch (filter) {
+        case eFilterNearest: {
+            tmin = std::floor(a + 0.5);
+            tmax = std::floor(b + 0.5);
+            break;
+        }
+        case eFilterLinear: {
+            tmin = std::floor(a);
+            tmax = std::ceil(b);
+            break;
+        }
+    }
+    for (int t = tmin; t <= tmax; ++t) {
+        sourceImagesTimes->insert(t);
+    }
+}
+
 class SlitScanProcessorBase
 : public OFX::PixelProcessor
 {
 protected :
     const SourceImages *_sourceImages;
-    const OFX::Image *_retimeMap;   // be this at 1
+    const OFX::Image *_retimeMap;
     double _time;
     FilterEnum _filter;
     RetimeFunctionEnum _retimeFunction;
     double _retimeGain;
     double _retimeOffset;
     bool _retimeAbsolute;
+    OfxRectI _srcRoDPixel;
 
     public :
     /** @brief no arg ctor */
@@ -502,6 +544,7 @@ protected :
     , _retimeOffset(0.)
     , _retimeAbsolute(false)
     {
+        _srcRoDPixel.x1 = _srcRoDPixel.y1 = _srcRoDPixel.x2 = _srcRoDPixel.y2 = 0;
     }
 
     /** @brief set the src images */
@@ -513,7 +556,8 @@ protected :
                    RetimeFunctionEnum retimeFunction,
                    double retimeGain,
                    double retimeOffset,
-                   bool retimeAbsolute)
+                   bool retimeAbsolute,
+                   const OfxRectI& srcRoDPixel)
     {
         _time = time;
         _filter = filter;
@@ -521,6 +565,7 @@ protected :
         _retimeGain = retimeGain;
         _retimeOffset = retimeOffset;
         _retimeAbsolute = retimeAbsolute;
+        _srcRoDPixel = srcRoDPixel;
     }
 };
 
@@ -553,16 +598,16 @@ class SlitScanProcessor
             for(int x = procWindow.x1; x < procWindow.x2; x++) {
                 double retimeVal;
                 switch (_retimeFunction) {
-                    case eRetimeFunctionHorizontalSlit:
-                        // A vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the tom image line.
-#warning TODO
-                        retimeVal = 0;
+                    case eRetimeFunctionHorizontalSlit: {
+                        // A vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the top image line.
+                        retimeVal = (double)(y - _srcRoDPixel.y1) / (_srcRoDPixel.y2 - 1 - _srcRoDPixel.y1);
                         break;
-                    case eRetimeFunctionVerticalSlit:
+                    }
+                    case eRetimeFunctionVerticalSlit: {
                         // A horizontal ramp (alinear function of x) which is 0 at the center of the leftmost image line, and 1 at the center of the rightmost image line."
-#warning TODO
-                        retimeVal = 0;
+                        retimeVal = (double)(x - _srcRoDPixel.x1) / (_srcRoDPixel.x2 - 1 - _srcRoDPixel.x1);
                         break;
+                    }
                     case eRetimeFunctionRetimeMap: {
                         PIX *retimePix = (PIX *)_retimeMap->getPixelAddress(x, y);
                         retimeVal = retimePix ? ((double)*retimePix / maxValue) : 0.;
@@ -576,7 +621,11 @@ class SlitScanProcessor
                 if (_filter == eFilterNearest || retimeVal == (int)retimeVal) {
                     retimeVal = std::floor(retimeVal + 0.5);
                     PIX* srcPix = (PIX*)_sourceImages->getPixelAddress(retimeVal, x, y);
-                    std::copy(srcPix, srcPix + nComponents, dstPix);
+                    if (srcPix) {
+                        std::copy(srcPix, srcPix + nComponents, dstPix);
+                    } else {
+                        std::fill( dstPix, dstPix + nComponents, PIX() );
+                    }
                 } else {
                     PIX* fromPix = (PIX*)_sourceImages->getPixelAddress(std::floor(retimeVal), x, y);
                     PIX* toPix = (PIX*)_sourceImages->getPixelAddress(std::ceil(retimeVal), x, y);
@@ -597,8 +646,7 @@ class SlitScanProcessor
                             dstPix[c] = PIX(toPix[c] * blend);
                     }
                     else {
-                        for(int c = 0; c < nComponents; c++)
-                            dstPix[c] = PIX(0);
+                        std::fill( dstPix, dstPix + nComponents, PIX() );
                     }
                 }
 
@@ -612,9 +660,7 @@ class SlitScanProcessor
 /* set up and run a processor */
 void
 SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
-                                const OFX::RenderArguments &args,
-                                double sourceTime,
-                                FilterEnum filter)
+                                const OFX::RenderArguments &args)
 {
     const double time = args.time;
     // get a dst image
@@ -637,96 +683,153 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-#if 0
-    if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
-        // should have been caught by isIdentity...
-        std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                             _srcClip->fetchImage(sourceTime) : 0 );
-        if ( src.get() ) {
-            if ( (src->getRenderScale().x != args.renderScale.x) ||
-                 ( src->getRenderScale().y != args.renderScale.y) ||
-                 ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
-            }
-            OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-            OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-            if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+    double retimeGain = _retimeGain->getValueAtTime(time);
+    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
+    FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
+    double retimeOffset = _retimeOffset->getValueAtTime(time);
+    bool retimeAbsolute = _retimeAbsolute->getValueAtTime(time);
+
+    if ( (retimeFunction == eRetimeFunctionRetimeMap) && !( _retimeMapClip && _retimeMapClip->isConnected() ) ) {
+        // no retime map, equivalent to value = 0 everywhere
+        retimeGain = 0.;
+    }
+
+    if (retimeGain == 0.) {
+        double identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
+        if (identityTime != (int)identityTime) {
+            if (filter == eFilterNearest) {
+                identityTime = std::floor(identityTime + 0.5);
             }
         }
-        copyPixels( *this, args.renderWindow, src.get(), dst.get() );
-
-        return;
+        if (identityTime == (int)identityTime) {
+            // should have been caught by isIdentity...
+            std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                                _srcClip->fetchImage(identityTime) : 0 );
+            if ( src.get() ) {
+                if ( (src->getRenderScale().x != args.renderScale.x) ||
+                    ( src->getRenderScale().y != args.renderScale.y) ||
+                    ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                    OFX::throwSuiteStatusException(kOfxStatFailed);
+                }
+                OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
+                OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+                if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+                    OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+                }
+            }
+            copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+            
+            return;
+        }
     }
 
 
     // set the images
     processor.setDstImg( dst.get() );
 
-    FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
-    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
-    double retimeGain = _retimeGain->getValueAtTime(time);
-    double retimeOffset = _retimeOffset->getValueAtTime(time);
-    bool retimeAbsolute = _retimeAbsolute->getValueAtTime(time);
+    OfxRectI srcRoDPixel = {0, 0, 0, 0};
+    if (_srcClip) {
+        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+        OFX::Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
+    }
 
     SourceImages sourceImages(_srcClip);
     std::set<double> sourceImagesTimes;
 
-    std::auto_ptr<OFX::Image> retimeMap;
+    std::auto_ptr<const OFX::Image> retimeMap;
 
-    if ( retimeFunction == eRetimeFunctionRetimeMap ) {
-        if ( retimeGain != 0. && _retimeMapClip && _retimeMapClip->isConnected() ) {
-            retimeMap.reset( _retimeMapClip->fetchImage(time) );
+    switch (retimeFunction) {
+        case eRetimeFunctionHorizontalSlit: {
+            double a = (double)(args.renderWindow.y1 - srcRoDPixel.y1) / (srcRoDPixel.y2 - 1 - srcRoDPixel.y1);
+            double b = (double)(args.renderWindow.y2 - 1 - srcRoDPixel.y1) / (srcRoDPixel.y2 - 1 - srcRoDPixel.y1);
+            buildTimesSlit(time, a, b, retimeGain, retimeOffset, retimeAbsolute, filter, &sourceImagesTimes);
+            break;
         }
-        if ( !retimeMap.get() ) {
-            // empty retimeMap or no gain, we need only one or two images
-            double identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
-            if (identityTime == (int)identityTime) {
-                sourceImagesTimes.insert(identityTime);
-            } else {
-                if (filter == eFilterNearest) {
-                    sourceImagesTimes.insert( std::floor(identityTime + 0.5) );
+        case eRetimeFunctionVerticalSlit: {
+            double a = (double)(args.renderWindow.x1 - srcRoDPixel.y1) / (srcRoDPixel.x2 - 1 - srcRoDPixel.x1);
+            double b = (double)(args.renderWindow.x2 - 1 - srcRoDPixel.x1) / (srcRoDPixel.x2 - 1 - srcRoDPixel.x1);
+            buildTimesSlit(time, a, b, retimeGain, retimeOffset, retimeAbsolute, filter, &sourceImagesTimes);
+            break;
+        }
+        case eRetimeFunctionRetimeMap: {
+            if ( retimeGain != 0. && _retimeMapClip && _retimeMapClip->isConnected() ) {
+                retimeMap.reset( _retimeMapClip->fetchImage(time) );
+            }
+            if ( !retimeMap.get() ) {
+                // empty retimeMap or no gain, we need only one or two images
+                double identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
+                if (identityTime == (int)identityTime) {
+                    sourceImagesTimes.insert(identityTime);
                 } else {
-                    sourceImagesTimes.insert( std::floor(identityTime) );
-                    sourceImagesTimes.insert( std::ceil(identityTime) );
+                    if (filter == eFilterNearest) {
+                        sourceImagesTimes.insert( std::floor(identityTime + 0.5) );
+                    } else {
+                        sourceImagesTimes.insert( std::floor(identityTime) );
+                        sourceImagesTimes.insert( std::ceil(identityTime) );
+                    }
+                }
+            } else {
+                retimeMap.reset( _retimeMapClip->fetchImage(time) );
+                assert(retimeMap->getPixelComponents() == ePixelComponentAlpha);
+                processor.setRetimeMap(retimeMap.get());
+
+                // scan the renderWindow in map, and gather the necessary image ids
+                // (could be done in a processor)
+                BitDepthEnum retimeMapDepth = retimeMap->getPixelDepth();
+                switch (retimeMapDepth) {
+                    case eBitDepthUByte:
+                        buildTimes<unsigned char, 255>(retimeMap.get(),
+                                                       time,
+                                                       args.renderWindow,
+                                                       retimeGain,
+                                                       retimeOffset,
+                                                       retimeAbsolute,
+                                                       filter,
+                                                       &sourceImagesTimes);
+                        break;
+                    case eBitDepthUShort:
+                        buildTimes<unsigned short, 65535>(retimeMap.get(),
+                                                          time,
+                                                          args.renderWindow,
+                                                          retimeGain,
+                                                          retimeOffset,
+                                                          retimeAbsolute,
+                                                          filter,
+                                                          &sourceImagesTimes);
+                        break;
+                    case eBitDepthFloat:
+                        buildTimes<float, 1>(retimeMap.get(),
+                                             time,
+                                             args.renderWindow,
+                                             retimeGain,
+                                             retimeOffset,
+                                             retimeAbsolute,
+                                             filter,
+                                             &sourceImagesTimes);
+                        break;
+                    default:
+                        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+                        OFX::throwSuiteStatusException(kOfxStatFailed);
+                        break;
                 }
             }
-        } else {
-            retimeMap.reset( _retimeMapClip->fetchImage(time) );
-            assert(retimeMap->getPixelComponents() == ePixelComponentAlpha);
-            processor.setRetimeMap(retimeMap.get());
-
-            // scan the renderWindow in map, and gather the necessary image ids
-            // (could be done in a processor)
-            BitDepthEnum retimeMapDepth = retimeMap->getPixelDepth();
-            switch (retimeMapDepth) {
-                case eBitDepthUByte:
-                    buildTimes<unsigned char>(retimeMap.get(), time, args.renderWindow, retimeGain, retimeOffset, retimeAbsolute, filter);
-                    break;
-                case eBitDepthUShort:
-
-                    break;
-                case eBitDepthFloat:
-                    break;
-                default:
-                    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-                    OFX::throwSuiteStatusException(kOfxStatFailed);
-                    break;
-            }
+            break;
         }
     }
-
+    sourceImages.fetchSet(sourceImagesTimes);
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
     // set the blend between
-    processor.setBlend( (float)blend );
+    processor.setSourceImages(&sourceImages);
+
+
+    processor.setValues(time, filter, retimeFunction, retimeGain, retimeOffset, retimeAbsolute, srcRoDPixel);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-#endif // if 0
 } // SlitScanPlugin::setupAndProcessSlitScanLinear
 
 template <int nComponents>
@@ -759,39 +862,24 @@ SlitScanPlugin::renderForComponents(const OFX::RenderArguments &args)
 void
 SlitScanPlugin::render(const OFX::RenderArguments &args)
 {
-    const double time = args.time;
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
-#if 0
-
-
-        switch (filter) {
-        case eFilterNearest:
-#pragma message WARN("TODO")
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-            break;
-        case eFilterLinear:
-            // do the rendering
-            if (dstComponents == OFX::ePixelComponentRGBA) {
-                renderInternalSlitScanHorizontal<4>(args, dstBitDepth);
-            } else if (dstComponents == OFX::ePixelComponentRGB) {
-                renderInternalSlitScanLinear<3>(args, dstBitDepth);
-            } else if (dstComponents == OFX::ePixelComponentXY) {
-                renderInternalSlitScanLinear<2>(args, dstBitDepth);
-            } else {
-                assert(dstComponents == OFX::ePixelComponentAlpha);
-                renderInternalSlitScanLinear<1>(args, dstBitDepth);
-            }
-            break;
-        }
+    // do the rendering
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+        renderForComponents<4>(args);
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        renderForComponents<3>(args);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderForComponents<2>(args);
+    } else if (dstComponents == OFX::ePixelComponentAlpha) {
+        renderForComponents<1>(args);
+    } else {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-#else
-    OFX::throwSuiteStatusException(kOfxStatFailed);
-#endif
 }
 
 mDeclarePluginFactory(SlitScanPluginFactory,; , {});
