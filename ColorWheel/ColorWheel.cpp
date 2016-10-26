@@ -303,7 +303,6 @@ private:
 
     //virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
-    virtual bool paramsNotAnimated() OVERRIDE FINAL;
 
 private:
     DoubleParam* _centerSaturation;
@@ -435,17 +434,6 @@ ColorWheelPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
-}
-
-bool
-ColorWheelPlugin::paramsNotAnimated()
-{
-    return ( (!_centerSaturation || _centerSaturation->getNumKeys() == 0) &&
-             (!_edgeSaturation || _edgeSaturation->getNumKeys() == 0) &&
-             (!_centerValue || _centerValue->getNumKeys() == 0) &&
-             (!_edgeValue || _edgeValue->getNumKeys() == 0) &&
-             (!_gamma || _gamma->getNumKeys() == 0) &&
-             (!_rotate || _rotate->getNumKeys() == 0) );
 }
 
 //void

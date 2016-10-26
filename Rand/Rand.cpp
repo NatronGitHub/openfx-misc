@@ -228,7 +228,6 @@ private:
     /* set up and run a processor */
     void setupAndProcess(RandGeneratorBase &, const OFX::RenderArguments &args);
 
-    virtual bool paramsNotAnimated() OVERRIDE FINAL { return false; };
 };
 
 

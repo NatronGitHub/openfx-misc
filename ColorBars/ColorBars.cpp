@@ -268,7 +268,6 @@ private:
 
     //virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
-    virtual bool paramsNotAnimated() OVERRIDE FINAL;
 
 private:
     DoubleParam* _barIntensity;
@@ -386,18 +385,7 @@ ColorBarsPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-bool
-ColorBarsPlugin::paramsNotAnimated()
-{
-    return true; //((!_centerSaturation || _centerSaturation->getNumKeys() == 0) &&
-}
 
-//void
-//ColorBarsPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
-//{
-//    GeneratorPlugin::getClipPreferences(clipPreferences);
-//    clipPreferences.setOutputPremultiplication(OFX::eImagePreMultiplied);
-//}
 
 
 mDeclarePluginFactory(ColorBarsPluginFactory, {}, {});

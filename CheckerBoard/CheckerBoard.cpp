@@ -375,7 +375,6 @@ private:
     /* set up and run a processor */
     void setupAndProcess(CheckerBoardProcessorBase &, const OFX::RenderArguments &args);
 
-    virtual bool paramsNotAnimated() OVERRIDE FINAL;
 
 private:
     OFX::Double2DParam *_boxSize;
@@ -518,20 +517,6 @@ CheckerBoardPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
-}
-
-bool
-CheckerBoardPlugin::paramsNotAnimated()
-{
-    return ( (!_boxSize || _boxSize->getNumKeys() == 0) &&
-             (!_color0 || _color0->getNumKeys() == 0) &&
-             (!_color1 || _color1->getNumKeys() == 0) &&
-             (!_color2 || _color2->getNumKeys() == 0) &&
-             (!_color3 || _color3->getNumKeys() == 0) &&
-             (!_lineColor || _lineColor->getNumKeys() == 0) &&
-             (!_lineWidth || _lineWidth->getNumKeys() == 0) &&
-             (!_centerlineColor || _centerlineColor->getNumKeys() == 0) &&
-             (!_centerlineWidth || _centerlineWidth->getNumKeys() == 0) );
 }
 
 mDeclarePluginFactory(CheckerBoardPluginFactory, {}, {});
