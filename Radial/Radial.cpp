@@ -475,7 +475,6 @@ private:
     /* set up and run a processor */
     void setupAndProcess(RadialProcessorBase &, const OFX::RenderArguments &args);
 
-    virtual bool paramsNotAnimated() OVERRIDE FINAL;
     virtual OFX::Clip* getSrcClip() const OVERRIDE FINAL
     {
         return _srcClip;
@@ -743,21 +742,7 @@ RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     return false;
 } // RadialPlugin::isIdentity
 
-bool
-RadialPlugin::paramsNotAnimated()
-{
-    return ( (!_processR || _processR->getNumKeys() == 0) &&
-             (!_processG || _processG->getNumKeys() == 0) &&
-             (!_processB || _processB->getNumKeys() == 0) &&
-             (!_processA || _processA->getNumKeys() == 0) &&
-             (!_softness || _softness->getNumKeys() == 0) &&
-             (!_plinear || _plinear->getNumKeys() == 0) &&
-             (!_color0 || _color0->getNumKeys() == 0) &&
-             (!_color1 || _color1->getNumKeys() == 0) &&
-             (!_expandRoD || _expandRoD->getNumKeys() == 0) &&
-             (!_mix || _mix->getNumKeys() == 0) &&
-             (!_maskInvert || _maskInvert->getNumKeys() == 0) );
-}
+
 
 /* Override the clip preferences */
 void

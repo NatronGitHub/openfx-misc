@@ -208,7 +208,6 @@ private:
     void setupAndProcess(ConstantProcessorBase &, const OFX::RenderArguments &args);
 
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
-    virtual bool paramsNotAnimated() OVERRIDE FINAL;
 
 private:
     OFX::RGBAParam  *_color;
@@ -318,13 +317,6 @@ ConstantPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
-}
-
-bool
-ConstantPlugin::paramsNotAnimated()
-{
-    return ( (!_color || _color->getNumKeys() == 0) &&
-             (!_colorRGB || _colorRGB->getNumKeys() == 0) );
 }
 
 void
