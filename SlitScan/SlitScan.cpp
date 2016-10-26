@@ -175,9 +175,10 @@ enum FilterEnum
 class SourceImages
 {
 public:
-    SourceImages(OFX::Clip *srcClip)
+    SourceImages(const OFX::ImageEffect& effect, OFX::Clip *srcClip)
+        : _effect(effect)
+        , _srcClip(srcClip)
     {
-        _srcClip = srcClip;
     }
 
     ~SourceImages()
@@ -205,7 +206,7 @@ public:
     void fetchSet(const std::set<double> &times) const
     {
         for (std::set<double>::const_iterator it = times.begin();
-             it != times.end();
+             it != times.end() && !_effect.abort();
              ++it) {
             //printf("fetching %g\n", *it);
             fetch(*it);
@@ -231,6 +232,7 @@ public:
 private:
     typedef std::map<double, const OFX::Image*> ImagesMap;
 
+    const OFX::ImageEffect& _effect;
     OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
 
     mutable ImagesMap _images;
@@ -447,7 +449,8 @@ SlitScanPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
 // build the set of times needed to render renderWindow
 template<class PIX, int maxValue>
 void
-buildTimes(const OFX::Image* retimeMap,
+buildTimes(const OFX::ImageEffect& effect,
+           const OFX::Image* retimeMap,
            double time,
            const OfxRectI& renderWindow,
            double retimeGain,
@@ -457,6 +460,9 @@ buildTimes(const OFX::Image* retimeMap,
            std::set<double> *sourceImagesTimes)
 {
     for (int y = renderWindow.y1; y < renderWindow.y2; ++y) {
+        if ( effect.abort() ) {
+            return;
+        }
         for (int x = renderWindow.x1; x < renderWindow.x2; ++x) {
             PIX* mapPix = retimeGain != 0. ? (PIX*)retimeMap->getPixelAddress(x, y) : NULL;
             double mapVal = mapPix ? (double)(*mapPix) / maxValue  : 0.;
@@ -732,7 +738,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
         OFX::Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
     }
 
-    SourceImages sourceImages(_srcClip);
+    SourceImages sourceImages(*this, _srcClip);
     std::set<double> sourceImagesTimes;
 
     std::auto_ptr<const OFX::Image> retimeMap;
@@ -777,7 +783,8 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
                 BitDepthEnum retimeMapDepth = retimeMap->getPixelDepth();
                 switch (retimeMapDepth) {
                     case eBitDepthUByte:
-                        buildTimes<unsigned char, 255>(retimeMap.get(),
+                        buildTimes<unsigned char, 255>(*this,
+                                                       retimeMap.get(),
                                                        time,
                                                        args.renderWindow,
                                                        retimeGain,
@@ -787,7 +794,8 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
                                                        &sourceImagesTimes);
                         break;
                     case eBitDepthUShort:
-                        buildTimes<unsigned short, 65535>(retimeMap.get(),
+                        buildTimes<unsigned short, 65535>(*this,
+                                                          retimeMap.get(),
                                                           time,
                                                           args.renderWindow,
                                                           retimeGain,
@@ -797,7 +805,8 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
                                                           &sourceImagesTimes);
                         break;
                     case eBitDepthFloat:
-                        buildTimes<float, 1>(retimeMap.get(),
+                        buildTimes<float, 1>(*this,
+                                             retimeMap.get(),
                                              time,
                                              args.renderWindow,
                                              retimeGain,
@@ -815,8 +824,13 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
             break;
         }
     }
+    if ( abort() ) {
+        return;
+    }
     sourceImages.fetchSet(sourceImagesTimes);
-
+    if ( abort() ) {
+        return;
+    }
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
@@ -909,7 +923,7 @@ SlitScanPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     // set a few flags
     desc.setSingleInstance(false);
-    desc.setHostFrameThreading(false);
+    desc.setHostFrameThreading(true); // specific to SlitScan: host frame threading helps us: we require less input images to render a small area
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(true); // say we will be doing random time access on clips
