@@ -20,45 +20,6 @@
  * OFX SlitScan plugin.
  */
 
-/*
-   [JCL]
-   • J'aimerai bien que l'on aie dans les nodes de retiming un Slitscan (qui manque à Nuke) :
-   entrée 1 : source
-   entrée 2 : retime Map
-
-   Pour chaque pixel l'offset de timing est déterminé par la valeur de la retime Map
-   On peut avoir un mode de retime map absolu en virgule flottante et un autre mappé de 0 à 1 avec un Range à définir (pas de retime pour 0.5).
-
-   Fred tu nous fais ça ? :)
-
-   [CoyHot]
-   Une question à se posait aussi : à quoi ressemblerait la retime map :
-
-   -  Min/max entre -1 et 1 avec un facteur multiplicateur ?
-   - Greyscale visible pour que ça soit plus compréhensible avec mid-grey à 0.5 qui ne bouge pas et les valeur plus sombre en négatif et plus clair en positif ?
-
-   [JCL]
-   C'était un peu ce que je proposait :
-   On peut avoir un mode de retime map absolu en virgule flottante (la valeur vaut le décalage d'image) et un autre mappé de 0 à 1 avec un Range à définir (pas de retime pour 0.5).
-
-   [Fred]
-   pour les valeurs qui tombent entre deux images, vous espérez quoi?
-
-   - image la plus proche?
-   - blend linéaire entre les deux images les plus proches? (risque d'être moche)
-   - retiming? (ce sera pas pour tout de suite... il y a masse de boulot pour faire un bon retiming)
-
-   Il y aura un paramètre un paramètre d'offset (valeur par défaut -0.5), et un paramètre de gain, évidemment, parce que ce qui est rigolo c'est de jouer avec ce paramètre.
-
-   valeurs par défaut: offset à -0.5, multiplicateur à 10, frame range -5..5
-
-   pour passer en mode "retime map en nombre de frames", il suffirait de mettre l'offset à 0 et le multiplicateur à 1. Ou bien est-ce qu'il faut une case à cocher pour forcer ce mode (qui désactiverait les deux autres paramètres?)
-
-   il faudrait aussi une case à cocher "absolute". Dans ce cas le frame range et les valeurs données dans la retime map sont absolues.
-
-   Et il y aura aussi un paramètre pourri qui s'appellera "maximum input frame range". Ce paramètre permettra de préfetcher toutes les images nécessaires à l'effet avant son exécution. On pourra dépasser ce range sous Natron, mais pas sous Nuke (Natron est plus tolérant).
- */
-
 #include <cmath> // for floor
 #include <climits> // for INT_MAX
 #include <cassert>
@@ -93,9 +54,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "- offset for the retime function (default = 0)\n" \
     "- gain for the retime function (default = -10)\n" \
     "- absolute, a boolean indicating that the time map gives absolute frames rather than relative frames\n" \
-    "- frame range, only if RetimeMap is connected, because the frame range depends on the retime map content (default = -10..0). If \"absolute\" is checked, this frame range is absolute, else it is relative to the current frame\n" \
+    "- frame range, only used if the retime function is given by a retime map, because the actual frame range cannot be guessed without inspecting the retime map content (default = -10..0). If \"absolute\" is checked, this frame range is absolute, else it is relative to the current frame\n" \
     "- filter to handle time offsets that \"fall between\" frames. They can be mapped to the nearest frame, or interpolated between the nearest frames (corresponding to a shutter of 1 frame).\n" \
-
+    "\n" \
+    "References:\n" \
+    "- An Informal Catalogue of Slit-Scan Video Artworks and Research, Golan Levin, http://www.flong.com/texts/lists/slit_scan/"
 
 #define kPluginIdentifier "net.sf.openfx.SlitScan"
 // History:
