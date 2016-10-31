@@ -189,6 +189,23 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.eu)."
 
+#define kPluginNameEdgeDetect          "EdgeDetectCImg"
+#define kPluginDescriptionEdgeDetect \
+"Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion and thresholding.\n" \
+"\n" \
+"For color or multi-channel images, several edge detection algorithms are proposed to combine the gradients computed in each channel:\n" \
+"- Separate: the gradient magnitude is computed in each channel separately, and the output is a color edge image.\n" \
+"- RMS: the RMS of per-channel gradients magnitudes is computed.\n" \
+"- Max: the maximum per-channel gradient magnitude is computed.\n" \
+"- Tensor: the tensor gradient norm [1].\n" \
+"\n" \
+"References:\n" \
+"- [1] Silvano Di Zenzo, A note on the gradient of a multi-image, CVGIP 33, 116-125 (1986). http://people.csail.mit.edu/tieu/notebook/imageproc/dizenzo86.pdf\n" \
+"\n" \
+"CImg is a free, open-source library distributed under the CeCILL-C " \
+"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+"It can be used in commercial applications (see http://cimg.eu)."
+
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
 #define kPluginIdentifierLaplacian    "net.sf.cimg.CImgLaplacian"
 #define kPluginIdentifierSharpen    "net.sf.cimg.CImgSharpen"
@@ -197,6 +214,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifierBloom    "net.sf.cimg.CImgBloom"
 #define kPluginIdentifierErodeBlur    "eu.cimg.ErodeBlur"
 #define kPluginIdentifierEdgeExtend    "eu.cimg.EdgeExtend"
+#define kPluginIdentifierEdgeExtend    "eu.cimg.EdgeDetect"
 
 // History:
 // version 1.0: initial version
@@ -351,6 +369,86 @@ enum FilterEnum
     eFilterTriangle,
     eFilterQuadratic,
 };
+
+#define kParamEdgeDetectFilter "filter"
+#define kParamEdgeDetectFilterLabel "Filter"
+#define kParamEdgeDetectFilterHint "Edge detection filter. If the blur size is not zero, it is used as the kernel size for quasi-Gaussian, Gaussian, box, triangle and quadratic filters. For the simple, rotation-invariant and Sobel filters, the image is pre-blurred with a Gaussian filter."
+#define kParamEdgeDetectFilterOptionSimple "Simple"
+#define kParamEdgeDetectFilterOptionSimpleHint "Gradient is estimated by centered finite differences."
+#define kParamEdgeDetectFilterOptionSobel "Sobel"
+#define kParamEdgeDetectFilterOptionSobelHint "Compute gradient using the Sobel 3x3 filter."
+#define kParamEdgeDetectFilterOptionRotationInvariant "Rotation Invariant"
+#define kParamEdgeDetectFilterOptionRotationInvariantHint "Compute gradient using a 3x3 rotation-invariant filter."
+#define kParamEdgeDetectFilterOptionQuasiGaussian "Quasi-Gaussian"
+#define kParamEdgeDetectFilterOptionQuasiGaussianHint "Quasi-Gaussian filter (0-order recursive Deriche filter, faster) - IIR (infinite support / impulsional response)."
+#define kParamEdgeDetectFilterOptionGaussian "Gaussian"
+#define kParamEdgeDetectFilterOptionGaussianHint "Gaussian filter (Van Vliet recursive Gaussian filter, more isotropic, slower) - IIR (infinite support / impulsional response)."
+#define kParamEdgeDetectFilterOptionBox "Box"
+#define kParamEdgeDetectFilterOptionBoxHint "Box filter - FIR (finite support / impulsional response)."
+#define kParamEdgeDetectFilterOptionTriangle "Triangle"
+#define kParamEdgeDetectFilterOptionTriangleHint "Triangle/tent filter - FIR (finite support / impulsional response)."
+#define kParamEdgeDetectFilterOptionQuadratic "Quadratic"
+#define kParamEdgeDetectFilterOptionQuadraticHint "Quadratic filter - FIR (finite support / impulsional response)."
+#define kParamEdgeDetectFilterDefault eFilterGaussian
+enum EdgeDetectFilterEnum
+{
+    eEdgeDetectFilterSimple = 0,
+    eEdgeDetectFilterSobel,
+    eEdgeDetectFilterRotationInvariant,
+    eEdgeDetectFilterQuasiGaussian,
+    eEdgeDetectFilterGaussian,
+    eEdgeDetectFilterBox,
+    eEdgeDetectFilterTriangle,
+    eEdgeDetectFilterQuadratic,
+};
+
+#define kParamEdgeDetectMultiChannel "multiChannel"
+#define kParamEdgeDetectMultiChannelLabel "Multi-Channel"
+#define kParamEdgeDetectMultiChannelHint "Operation used to combine multi-channel (e.g. color) gradients into an edge detector."
+#define kParamEdgeDetectMultiChannelOptionSeparate "Separate"
+#define kParamEdgeDetectMultiChannelOptionSeparateHint "The gradient magnitude is computed in each channel separately, and the output is a color edge image."
+#define kParamEdgeDetectMultiChannelOptionRMS "RMS"
+#define kParamEdgeDetectMultiChannelOptionRMSHint "The RMS of per-channel gradients magnitudes is computed."
+#define kParamEdgeDetectMultiChannelOptionMax "Max"
+#define kParamEdgeDetectMultiChannelOptionMaxHint "The maximum per-channel gradient magnitude is computed."
+#define kParamEdgeDetectMultiChannelOptionTensor "Tensor"
+#define kParamEdgeDetectMultiChannelOptionTensorHint "The tensor gradient norm is computed. See Silvano Di Zenzo, A note on the gradient of a multi-image, CVGIP 33, 116-125 (1986)."
+enum EdgeDetectMultiChannelEnum
+{
+    eEdgeDetectMultiChannelSeparate = 0,
+    eEdgeDetectMultiChannelRMS,
+    eEdgeDetectMultiChannelMax,
+    eEdgeDetectMultiChannelTensor,
+};
+#define kParamEdgeDetectMultiChannelDefault eEdgeDetectMultiChannelTensor
+/*
+    Di Zenzo edge magnitude:
+ 
+    Jx = rx.^2 + gx.^2 + bx.^2;
+	Jy = ry.^2 + gy.^2 + by.^2;
+	Jxy = rx.*ry + gx.*gy + bx.*by;
+
+	%compute first (greatest) eigenvalue of 2x2 matrix J'*J.
+	%note that the abs() is only needed because some values may be slightly
+	%negative due to round-off error.
+	D = sqrt(abs(Jx.^2 - 2*Jx.*Jy + Jy.^2 + 4*Jxy.^2));
+	e1 = (Jx + Jy + D) / 2;
+	%the 2nd eigenvalue would be:  e2 = (Jx + Jy - D) / 2;
+
+	edge_magnitude = sqrt(e1);
+*/
+
+ #define kParamEdgeDetectGroupChannels "groupChannels"
+#define kParamEdgeDetectGroupChannelsLabel "Group Channels"
+#define kParamEdgeDetectGroupChannelsHint "If checked, edge detection is performed on all selected channels together, and on output each channel containes the same result. If unchecked, edge detection is performed per-channel."
+
+#define kParamEdgeDetectErode "erodeSize"
+#define kParamEdgeDetectErodeLabel "Erode Size"
+#define kParamEdgeDetectErodeHint "Size of the erosion performed after edge detection."
+
+#define kParamEdgeDetectBlur "blurSize"
+#define kParamEdgeDetectBlurLabel "Blur Size"
+#define kParamEdgeDetectBlurHint "Size of the blur kernel applied before edge detection."
 
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
