@@ -561,7 +561,10 @@ class SlitScanProcessor
             if(_effect.abort()) break;
 
             PIX *dstPix = (PIX *)getDstPixelAddress(procWindow.x1, y);
-
+            assert(dstPix);
+            if (!dstPix) {
+                return;
+            }
             for(int x = procWindow.x1; x < procWindow.x2; x++) {
                 double retimeVal;
                 switch (_retimeFunction) {
