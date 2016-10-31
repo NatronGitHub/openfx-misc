@@ -1186,10 +1186,14 @@ public:
         if (_blurPlugin == eBlurPluginSharpen ||
             _blurPlugin == eBlurPluginSoften) {
             _sharpenSoftenAmount = fetchDoubleParam(kParamSharpenSoftenAmount);
+        } else {
+            assert( !paramExists(kParamSharpenSoftenAmount) );
         }
         if (_blurPlugin == eBlurPluginErodeBlur) {
             _erodeSize  = fetchDoubleParam(kParamErodeSize);
             _erodeBlur  = fetchDoubleParam(kParamErodeBlur);
+        } else {
+            assert( !paramExists(kParamErodeSize) && !paramExists(kParamErodeBlur) );
         }
         if (blurPlugin == eBlurPluginEdgeExtend) {
             _edgeExtendPremult = fetchBooleanParam(kParamEdgeExtendPremult);
@@ -1197,6 +1201,8 @@ public:
             _edgeExtendCount = fetchIntParam(kParamEdgeExtendCount);
             _edgeExtendUnpremult = fetchBooleanParam(kParamEdgeExtendUnpremult);
             assert(_edgeExtendSize && _edgeExtendCount);
+        } else {
+            assert( !paramExists(kParamEdgeExtendPremult) && !paramExists(kParamEdgeExtendSize) && !paramExists(kParamEdgeExtendCount) && !paramExists(kParamEdgeExtendUnpremult) );
         }
         if (blurPlugin == eBlurPluginBlur ||
             blurPlugin == eBlurPluginLaplacian ||
@@ -1207,26 +1213,36 @@ public:
             _size  = fetchDouble2DParam(kParamSize);
             _uniform = fetchBooleanParam(kParamUniform);
             assert(_size && _uniform);
+        } else {
+            assert( !paramExists(kParamSize) && !paramExists(kParamUniform) );
         }
         if (blurPlugin == eBlurPluginBlur) {
             _orderX = fetchIntParam(kParamOrderX);
             _orderY = fetchIntParam(kParamOrderY);
             assert(_orderX && _orderY);
+        } else {
+            assert( !paramExists(kParamOrderX) && !paramExists(kParamOrderY) );
         }
         if (blurPlugin == eBlurPluginBloom) {
             _bloomRatio = fetchDoubleParam(kParamBloomRatio);
             _bloomCount = fetchIntParam(kParamBloomCount);
             assert(_bloomRatio && _bloomCount);
+        } else {
+            assert(!paramExists(kParamBloomRatio) && !paramExists(kParamBloomCount) );
         }
         if (blurPlugin == eBlurPluginChromaBlur) {
             _colorspace = fetchChoiceParam(kParamColorspace);
             assert(_colorspace);
+        } else {
+            assert( !paramExists(kParamColorspace) );
         }
         if (_blurPlugin == eBlurPluginBlur ||
             _blurPlugin == eBlurPluginChromaBlur ||
             _blurPlugin == eBlurPluginBloom) {
             _boundary  = fetchChoiceParam(kParamBoundary);
             assert(_boundary);
+        } else {
+            assert( !paramExists(kParamBoundary) );
         }
         if (_blurPlugin == eBlurPluginEdgeDetect) {
             _edgeDetectFilter = fetchChoiceParam(kParamEdgeDetectFilter);
@@ -1234,6 +1250,8 @@ public:
             _edgeDetectErode = fetchDoubleParam(kParamEdgeDetectErode);
             _edgeDetectBlur = fetchDoubleParam(kParamEdgeDetectBlur);
             assert(_edgeDetectFilter && _edgeDetectMultiChannel && _edgeDetectErode && _edgeDetectBlur);
+        } else {
+            assert( !paramExists(kParamEdgeDetectFilter) && !paramExists(kParamEdgeDetectMultiChannel) && !paramExists(kParamEdgeDetectErode) && !paramExists(kParamEdgeDetectBlur) );
         }
         if (_blurPlugin == eBlurPluginLaplacian ||
             _blurPlugin == eBlurPluginSharpen ||
@@ -1244,18 +1262,29 @@ public:
             _blurPlugin == eBlurPluginEdgeExtend) {
             _filter = fetchChoiceParam(kParamFilter);
             assert(_filter);
+        } else {
+            assert( !paramExists(kParamFilter) );
         }
-        if ( paramExists(kParamExpandRoD) ) {
+        if (_blurPlugin == eBlurPluginBlur ||
+            _blurPlugin == eBlurPluginBloom ||
+            _blurPlugin == eBlurPluginErodeBlur ||
+            _blurPlugin == eBlurPluginEdgeExtend) {
             _expandRoD = fetchBooleanParam(kParamExpandRoD);
             assert(_expandRoD);
+        } else {
+            assert( !paramExists(kParamExpandRoD) );
         }
         if ( paramExists(kParamCropToFormat) ) {
             _cropToFormat = fetchBooleanParam(kParamCropToFormat);
             assert(_cropToFormat);
+        } else {
+            assert( !paramExists(kParamCropToFormat) );
         }
-        if ( paramExists(kParamAlphaThreshold) ) {
+        if (blurPlugin == eBlurPluginBlur || blurPlugin == eBlurPluginBloom) {
             _alphaThreshold = fetchDoubleParam(kParamAlphaThreshold);
             assert(_alphaThreshold);
+        } else {
+            assert( !paramExists(kParamAlphaThreshold) );
         }
         // On Natron, hide the uniform parameter if it is false and not animated,
         // since uniform scaling is easy through Natron's GUI.
