@@ -142,7 +142,8 @@ public:
                         const CImgRollingGuidanceParams& params,
                         int /*x1*/,
                         int /*y1*/,
-                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+                        cimg_library::CImg<cimgpix_t>& cimg,
+                        int /*alphaChannel*/) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place

@@ -423,7 +423,7 @@ enum EdgeDetectMultiChannelEnum
 #define kParamEdgeDetectMultiChannelDefault eEdgeDetectMultiChannelTensor
 /*
     Di Zenzo edge magnitude:
- 
+
     Jx = rx.^2 + gx.^2 + bx.^2;
 	Jy = ry.^2 + gy.^2 + by.^2;
 	Jxy = rx.*ry + gx.*gy + bx.*by;
@@ -1450,7 +1450,8 @@ public:
                         const CImgBlurParams& params,
                         int /*x1*/,
                         int /*y1*/,
-                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+                        cimg_library::CImg<cimgpix_t>& cimg,
+                        int /*alphaChannel*/) OVERRIDE FINAL
     {
         //printf("blur render %g %dx%d+%d+%d (%dx%d)\n", args.time, args.renderWindow.x2-args.renderWindow.x1, args.renderWindow.y2-args.renderWindow.y1, args.renderWindow.x1, args.renderWindow.y1, cimg.width(), cimg.height());
 

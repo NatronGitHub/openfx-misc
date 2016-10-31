@@ -307,7 +307,7 @@ public:
                                        const OfxPointD& /*renderScale*/,
                                        const Params& /*params*/,
                                        OfxRectI* /*dstRoD*/) { return false; };
-    virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<cimgpix_t>& cimg) = 0;
+    virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<cimgpix_t>& cimg, int alphaChannel) = 0;
     virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
                             const Params& /*params*/) { return false; };
 
@@ -769,6 +769,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     const size_t cimgSize = cimgWidth * cimgHeight * cimgSpectrum * sizeof(cimgpix_t);
     std::vector<int> srcChannel(cimgSpectrum, -1);
 
+    int alphaChannel = -1;
     if (!_supportsComponentRemapping) {
         for (int c = 0; c < tmpPixelComponentCount; ++c) {
             srcChannel[c] = c;
@@ -779,6 +780,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             if (processA) {
                 assert(cimgSpectrum == 1);
                 srcChannel[0] = 0;
+                alphaChannel = 0;
             } else {
                 assert(cimgSpectrum == 0);
             }
@@ -798,6 +800,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             }
             if ( processA && (tmpPixelComponentCount >= 4) ) {
                 srcChannel[c] = 3;
+                alphaChannel = c;
                 ++c;
             }
             assert(c == cimgSpectrum);
@@ -829,7 +832,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
 #ifdef HAVE_THREAD_LOCAL
         tls::gImageEffect = this;
         try {
-            render(args, params, srcRoI.x1, srcRoI.y1, cimg);
+            render(args, params, srcRoI.x1, srcRoI.y1, cimg, alphaChannel);
         } catch (cimg_library::CImgAbortException) {
             tls::gImageEffect = 0;
 
@@ -838,7 +841,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
 
         tls::gImageEffect = 0;
 #else
-        render(args, params, srcRoI.x1, srcRoI.y1, cimg);
+        render(args, params, srcRoI.x1, srcRoI.y1, cimg, alphaChannel);
 #endif
         // check that the dimensions didn't change
         assert(cimg.width() == cimgWidth && cimg.height() == cimgHeight && cimg.depth() == 1 && cimg.spectrum() == cimgSpectrum);
