@@ -214,7 +214,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifierBloom    "net.sf.cimg.CImgBloom"
 #define kPluginIdentifierErodeBlur    "eu.cimg.ErodeBlur"
 #define kPluginIdentifierEdgeExtend    "eu.cimg.EdgeExtend"
-#define kPluginIdentifierEdgeExtend    "eu.cimg.EdgeDetect"
+#define kPluginIdentifierEdgeDetect    "eu.cimg.EdgeDetect"
 
 // History:
 // version 1.0: initial version
@@ -437,10 +437,6 @@ enum EdgeDetectMultiChannelEnum
 
 	edge_magnitude = sqrt(e1);
 */
-
- #define kParamEdgeDetectGroupChannels "groupChannels"
-#define kParamEdgeDetectGroupChannelsLabel "Group Channels"
-#define kParamEdgeDetectGroupChannelsHint "If checked, edge detection is performed on all selected channels together, and on output each channel containes the same result. If unchecked, edge detection is performed per-channel."
 
 #define kParamEdgeDetectErode "erodeSize"
 #define kParamEdgeDetectErodeLabel "Erode Size"
@@ -1049,6 +1045,8 @@ struct CImgBlurParams
     ColorspaceEnum colorspace;
     int boundary_i;
     FilterEnum filter;
+    EdgeDetectFilterEnum edgeDetectFilter;
+    EdgeDetectMultiChannelEnum edgeDetectMultiChannel;
     bool expandRoD;
     bool cropToFormat;
     double alphaThreshold;
@@ -1177,23 +1175,35 @@ public:
         , _colorspace(0)
         , _boundary(0)
         , _filter(0)
+        , _edgeDetectFilter(0)
+        , _edgeDetectMultiChannel(0)
+        , _edgeDetectErode(0)
+        , _edgeDetectBlur(0)
         , _expandRoD(0)
         , _cropToFormat(0)
         , _alphaThreshold(0)
     {
-        if (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) {
+        if (_blurPlugin == eBlurPluginSharpen ||
+            _blurPlugin == eBlurPluginSoften) {
             _sharpenSoftenAmount = fetchDoubleParam(kParamSharpenSoftenAmount);
         }
         if (_blurPlugin == eBlurPluginErodeBlur) {
             _erodeSize  = fetchDoubleParam(kParamErodeSize);
             _erodeBlur  = fetchDoubleParam(kParamErodeBlur);
-        } else if (blurPlugin == eBlurPluginEdgeExtend) {
+        }
+        if (blurPlugin == eBlurPluginEdgeExtend) {
             _edgeExtendPremult = fetchBooleanParam(kParamEdgeExtendPremult);
             _edgeExtendSize = fetchDoubleParam(kParamEdgeExtendSize);
             _edgeExtendCount = fetchIntParam(kParamEdgeExtendCount);
             _edgeExtendUnpremult = fetchBooleanParam(kParamEdgeExtendUnpremult);
             assert(_edgeExtendSize && _edgeExtendCount);
-        } else {
+        }
+        if (blurPlugin == eBlurPluginBlur ||
+            blurPlugin == eBlurPluginLaplacian ||
+            blurPlugin == eBlurPluginSharpen ||
+            blurPlugin == eBlurPluginSoften ||
+            blurPlugin == eBlurPluginChromaBlur ||
+            blurPlugin == eBlurPluginBloom) {
             _size  = fetchDouble2DParam(kParamSize);
             _uniform = fetchBooleanParam(kParamUniform);
             assert(_size && _uniform);
@@ -1208,17 +1218,30 @@ public:
             _bloomCount = fetchIntParam(kParamBloomCount);
             assert(_bloomRatio && _bloomCount);
         }
-        if (_blurPlugin != eBlurPluginErodeBlur) {
-            if (blurPlugin == eBlurPluginChromaBlur) {
-                _colorspace = fetchChoiceParam(kParamColorspace);
-                assert(_colorspace);
-            } else if (blurPlugin != eBlurPluginLaplacian &&
-                       blurPlugin != eBlurPluginSharpen &&
-                       blurPlugin != eBlurPluginSoften &&
-                       blurPlugin != eBlurPluginEdgeExtend) {
-                _boundary  = fetchChoiceParam(kParamBoundary);
-                assert(_boundary);
-            }
+        if (blurPlugin == eBlurPluginChromaBlur) {
+            _colorspace = fetchChoiceParam(kParamColorspace);
+            assert(_colorspace);
+        }
+        if (_blurPlugin == eBlurPluginBlur ||
+            _blurPlugin == eBlurPluginChromaBlur ||
+            _blurPlugin == eBlurPluginBloom) {
+            _boundary  = fetchChoiceParam(kParamBoundary);
+            assert(_boundary);
+        }
+        if (_blurPlugin == eBlurPluginEdgeDetect) {
+            _edgeDetectFilter = fetchChoiceParam(kParamEdgeDetectFilter);
+            _edgeDetectMultiChannel = fetchChoiceParam(kParamEdgeDetectMultiChannel);
+            _edgeDetectErode = fetchDoubleParam(kParamEdgeDetectErode);
+            _edgeDetectBlur = fetchDoubleParam(kParamEdgeDetectBlur);
+            assert(_edgeDetectFilter && _edgeDetectMultiChannel && _edgeDetectErode && _edgeDetectBlur);
+        }
+        if (_blurPlugin == eBlurPluginLaplacian ||
+            _blurPlugin == eBlurPluginSharpen ||
+            _blurPlugin == eBlurPluginSoften ||
+            _blurPlugin == eBlurPluginChromaBlur ||
+            _blurPlugin == eBlurPluginBloom ||
+            _blurPlugin == eBlurPluginErodeBlur ||
+            _blurPlugin == eBlurPluginEdgeExtend) {
             _filter = fetchChoiceParam(kParamFilter);
             assert(_filter);
         }
@@ -1249,34 +1272,92 @@ public:
     virtual void getValuesAtTime(double time,
                                  CImgBlurParams& params) OVERRIDE FINAL
     {
+        assert(_blurPlugin == eBlurPluginBlur ||
+               _blurPlugin == eBlurPluginLaplacian ||
+               _blurPlugin == eBlurPluginSharpen ||
+               _blurPlugin == eBlurPluginSoften ||
+               _blurPlugin == eBlurPluginChromaBlur ||
+               _blurPlugin == eBlurPluginBloom ||
+               _blurPlugin == eBlurPluginErodeBlur ||
+               _blurPlugin == eBlurPluginEdgeExtend ||
+               _blurPlugin == eBlurPluginEdgeDetect);
+
+        if (_blurPlugin == eBlurPluginSharpen) {
+            params.sharpenSoftenAmount = _sharpenSoftenAmount->getValueAtTime(time);
+        } else if (_blurPlugin == eBlurPluginSoften) {
+            params.sharpenSoftenAmount = -_sharpenSoftenAmount->getValueAtTime(time);
+        } else {
+            assert(_blurPlugin == eBlurPluginBlur ||
+                   _blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginBloom ||
+                   _blurPlugin == eBlurPluginErodeBlur ||
+                   _blurPlugin == eBlurPluginEdgeExtend ||
+                   _blurPlugin == eBlurPluginEdgeDetect);
+            assert(!_sharpenSoftenAmount);
+            params.sharpenSoftenAmount = 0.;
+        }
+
         if (_blurPlugin == eBlurPluginErodeBlur) {
             params.erodeSize = _erodeSize->getValueAtTime(time);
             params.erodeBlur = _erodeBlur->getValueAtTime(time);
+            assert(!_size && !_uniform);
             params.sizey = params.sizex = 2 * std::abs(params.erodeSize);
+            assert(!_edgeExtendPremult && !_edgeExtendSize);
             params.edgeExtendPremult = false;
             params.edgeExtendUnpremult = false;
+        } else if (_blurPlugin == eBlurPluginEdgeDetect) {
+            assert(!_erodeSize && !_erodeBlur);
+            params.erodeSize = _edgeDetectErode->getValueAtTime(time);
+            params.erodeBlur = 0.;
         } else {
+            assert(_blurPlugin == eBlurPluginBlur ||
+                   _blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginBloom ||
+                   _blurPlugin == eBlurPluginEdgeExtend);
+            assert(!_erodeSize && !_erodeBlur);
             params.erodeSize = 0.;
             params.erodeBlur = 0.;
-            if (_blurPlugin == eBlurPluginEdgeExtend) {
-                params.edgeExtendPremult = _edgeExtendPremult->getValueAtTime(time);
-                params.edgeExtendSize = std::max( 0., _edgeExtendSize->getValueAtTime(time) );
-                params.edgeExtendUnpremult = _edgeExtendUnpremult->getValueAtTime(time);
-                params.sizey = params.sizex = params.edgeExtendSize; // used for RoD/RoI/identity
-            } else {
-                params.edgeExtendPremult = false;
-                params.edgeExtendSize = 0.;
-                params.edgeExtendUnpremult = false;
-                _size->getValueAtTime(time, params.sizex, params.sizey);
-                bool uniform = _uniform->getValueAtTime(time);
-                if (uniform) {
-                    params.sizey = params.sizex;
-                }
-            }
         }
-        params.sharpenSoftenAmount = _sharpenSoftenAmount ? _sharpenSoftenAmount->getValueAtTime(time) : 0.;
-        if (_blurPlugin == eBlurPluginSoften) {
-            params.sharpenSoftenAmount = -params.sharpenSoftenAmount;
+        if (_blurPlugin == eBlurPluginEdgeExtend) {
+            params.edgeExtendPremult = _edgeExtendPremult->getValueAtTime(time);
+            params.edgeExtendSize = std::max( 0., _edgeExtendSize->getValueAtTime(time) );
+            params.edgeExtendUnpremult = _edgeExtendUnpremult->getValueAtTime(time);
+            params.count = std::max( 1, _edgeExtendCount->getValueAtTime(time) );
+        } else {
+            assert(_blurPlugin == eBlurPluginBlur ||
+                   _blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginBloom ||
+                   _blurPlugin == eBlurPluginEdgeDetect);
+            assert(!_edgeExtendPremult && !_edgeExtendSize);
+            params.edgeExtendPremult = false;
+            params.edgeExtendSize = 0.;
+            params.edgeExtendUnpremult = false;
+        }
+
+        if (_blurPlugin == eBlurPluginEdgeExtend) {
+            params.sizey = params.sizex = params.edgeExtendSize; // used for RoD/RoI/identity
+        } else if (_blurPlugin == eBlurPluginEdgeDetect) {
+            params.sizey = params.sizex = _edgeDetectBlur->getValueAtTime(time);
+        } else {
+            assert(_blurPlugin == eBlurPluginBlur ||
+                   _blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginBloom);
+
+            _size->getValueAtTime(time, params.sizex, params.sizey);
+            bool uniform = _uniform->getValueAtTime(time);
+            if (uniform) {
+                params.sizey = params.sizex;
+            }
         }
         double par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
         if (par != 0.) {
@@ -1286,8 +1367,18 @@ public:
             params.orderX = std::max( 0, _orderX->getValueAtTime(time) );
             params.orderY = std::max( 0, _orderY->getValueAtTime(time) );
         } else {
+            assert(_blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginBloom ||
+                   _blurPlugin == eBlurPluginErodeBlur ||
+                   _blurPlugin == eBlurPluginEdgeExtend ||
+                   _blurPlugin == eBlurPluginEdgeDetect);
+            assert(!_orderX && !_orderY);
             params.orderX = params.orderY = 0;
         }
+
         if (_blurPlugin == eBlurPluginBloom) {
             params.bloomRatio = _bloomRatio->getValueAtTime(time);
             params.count = std::max( 1, _bloomCount->getValueAtTime(time) );
@@ -1298,29 +1389,128 @@ public:
                 params.bloomRatio = 1.;
             }
         } else if (_blurPlugin == eBlurPluginEdgeExtend) {
+            assert(!_bloomRatio && !_bloomCount);
             params.bloomRatio = 1.;
-            params.count = std::max( 1, _edgeExtendCount->getValueAtTime(time) );
+            //params.count = ; // defined above
         } else {
+            assert(_blurPlugin == eBlurPluginBlur ||
+                   _blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginErodeBlur ||
+                   _blurPlugin == eBlurPluginEdgeDetect);
+            assert(!_bloomRatio && !_bloomCount);
             params.bloomRatio = 1.;
             params.count = 1;
         }
         if (_blurPlugin == eBlurPluginChromaBlur) {
             params.colorspace = (ColorspaceEnum)_colorspace->getValueAtTime(time);
-            params.boundary_i = 1; // nearest
-        } else if (_blurPlugin == eBlurPluginErodeBlur) {
-            params.boundary_i = 0; // black
-        } else if (_blurPlugin == eBlurPluginEdgeExtend) {
-            params.boundary_i = 1; // nearest
         } else {
-            params.boundary_i = _boundary ? _boundary->getValueAtTime(time) : 1; // default is nearest for Laplacian, Sharpen, Soften
+            assert(_blurPlugin == eBlurPluginBlur ||
+                   _blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginBloom ||
+                   _blurPlugin == eBlurPluginErodeBlur ||
+                   _blurPlugin == eBlurPluginEdgeExtend ||
+                   _blurPlugin == eBlurPluginEdgeDetect);
+            params.colorspace = eColorspaceRec709;
         }
-        if (_blurPlugin == eBlurPluginErodeBlur) {
+        if (_blurPlugin == eBlurPluginBlur ||
+            _blurPlugin == eBlurPluginBloom) {
+            params.boundary_i = _boundary->getValueAtTime(time);
+        } else if (_blurPlugin == eBlurPluginErodeBlur) {
+            assert(!_boundary);
+            params.boundary_i = 0; // black
+        } else {
+            assert(_blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginEdgeExtend ||
+                   _blurPlugin == eBlurPluginEdgeDetect);
+            assert(!_boundary);
+            params.boundary_i = 1; // nearest
+        }
+        if (_blurPlugin == eBlurPluginEdgeDetect) {
+            params.edgeDetectFilter = (EdgeDetectFilterEnum)_edgeDetectFilter->getValueAtTime(time);
+            // set params.orderX, orderY, filter for RoD computation
+            assert(!_orderX && !_orderY);
+            params.orderX = params.orderY = 1;
+            assert(!_filter);
+            switch (params.edgeDetectFilter) {
+                case eEdgeDetectFilterSimple:
+                case eEdgeDetectFilterSobel:
+                case eEdgeDetectFilterRotationInvariant:
+                    params.filter = eFilterBox;
+                    break;
+                case eEdgeDetectFilterQuasiGaussian:
+                    params.filter = eFilterQuasiGaussian;
+                    break;
+                case eEdgeDetectFilterGaussian:
+                    params.filter = eFilterGaussian;
+                    break;
+                case eEdgeDetectFilterBox:
+                    params.filter = eFilterBox;
+                    break;
+                case eEdgeDetectFilterTriangle:
+                    params.filter = eFilterTriangle;
+                    break;
+                case eEdgeDetectFilterQuadratic:
+                    params.filter = eFilterQuadratic;
+                    break;
+            }
+        } else if (_blurPlugin == eBlurPluginErodeBlur) {
+            assert(!_filter);
             params.filter = eFilterTriangle;
+            assert(!_edgeDetectFilter && !_edgeDetectMultiChannel);
+            params.edgeDetectFilter = eEdgeDetectFilterSimple;
+        } else {
+            assert(_blurPlugin == eBlurPluginBlur ||
+                   _blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginBloom ||
+                   _blurPlugin == eBlurPluginEdgeExtend);
+
+            params.filter = (FilterEnum)_filter->getValueAtTime(time);
+            assert(!_edgeDetectFilter && !_edgeDetectMultiChannel);
+            params.edgeDetectFilter = eEdgeDetectFilterSimple;
+            params.edgeDetectMultiChannel = eEdgeDetectMultiChannelSeparate;
+        }
+        if (_blurPlugin == eBlurPluginBlur ||
+            _blurPlugin == eBlurPluginBloom ||
+            _blurPlugin == eBlurPluginErodeBlur ||
+            _blurPlugin == eBlurPluginEdgeExtend) {
+            params.expandRoD = _expandRoD->getValueAtTime(time);
+        } else if (_blurPlugin == eBlurPluginErodeBlur) {
             params.expandRoD = true;
         } else {
-            params.filter = (FilterEnum)_filter->getValueAtTime(time);
-            params.expandRoD = _expandRoD ? _expandRoD->getValueAtTime(time) : false;
+            assert(_blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginEdgeDetect);
+            params.expandRoD = false;
         }
+        if (_blurPlugin == eBlurPluginEdgeDetect) {
+            params.edgeDetectMultiChannel = (EdgeDetectMultiChannelEnum)_edgeDetectMultiChannel->getValueAtTime(time);
+            // _edgeDetectErode already used as params.erodeSize
+            // _edgeDetectBlur already used for params.sizex/y
+        } else {
+            assert(_blurPlugin == eBlurPluginBlur ||
+                   _blurPlugin == eBlurPluginLaplacian ||
+                   _blurPlugin == eBlurPluginSharpen ||
+                   _blurPlugin == eBlurPluginSoften ||
+                   _blurPlugin == eBlurPluginChromaBlur ||
+                   _blurPlugin == eBlurPluginBloom ||
+                   _blurPlugin == eBlurPluginErodeBlur ||
+                   _blurPlugin == eBlurPluginEdgeExtend);
+            params.edgeDetectMultiChannel = eEdgeDetectMultiChannelSeparate;
+        }
+
         params.cropToFormat = _cropToFormat ? _cropToFormat->getValueAtTime(time) : false;
         params.alphaThreshold = _alphaThreshold ? _alphaThreshold->getValueAtTime(time) : 0.;
     }
@@ -1840,6 +2030,10 @@ private:
     OFX::ChoiceParam *_colorspace;
     OFX::ChoiceParam *_boundary;
     OFX::ChoiceParam *_filter;
+    OFX::ChoiceParam *_edgeDetectFilter;
+    OFX::ChoiceParam *_edgeDetectMultiChannel;
+    OFX::DoubleParam *_edgeDetectErode;
+    OFX::DoubleParam *_edgeDetectBlur;
     OFX::BooleanParam *_expandRoD;
     OFX::BooleanParam *_cropToFormat;
     OFX::DoubleParam *_alphaThreshold;
@@ -1949,7 +2143,8 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                                             processRGB,
                                                                             processAlpha,
                                                                             /*processIsSecret=*/ (blurPlugin == eBlurPluginEdgeExtend));
-    if (blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) {
+    if (blurPlugin == eBlurPluginSharpen ||
+        blurPlugin == eBlurPluginSoften) {
         {
             OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSharpenSoftenAmount);
             param->setLabel(kParamSharpenSoftenAmountLabel);
@@ -1989,7 +2184,8 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
                 page->addChild(*param);
             }
         }
-    } else if (blurPlugin == eBlurPluginEdgeExtend) {
+    }
+    if (blurPlugin == eBlurPluginEdgeExtend) {
         {
             OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeExtendPremult);
             param->setLabel(kParamEdgeExtendPremultLabel);
@@ -2030,7 +2226,13 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
                 page->addChild(*param);
             }
         }
-    } else {
+    }
+    if (blurPlugin == eBlurPluginBlur ||
+        blurPlugin == eBlurPluginLaplacian ||
+        blurPlugin == eBlurPluginSharpen ||
+        blurPlugin == eBlurPluginSoften ||
+        blurPlugin == eBlurPluginChromaBlur ||
+        blurPlugin == eBlurPluginBloom) {
         {
             OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
             param->setLabel(kParamSizeLabel);
@@ -2114,84 +2316,160 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
     }
-    if (blurPlugin != eBlurPluginErodeBlur) {
-        if (blurPlugin == eBlurPluginChromaBlur) {
-            OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColorspace);
-            param->setLabel(kParamColorspaceLabel);
-            param->setHint(kParamColorspaceHint);
-            assert(param->getNOptions() == eColorspaceRec709);
-            param->appendOption(kParamColorspaceOptionRec709, kParamColorspaceOptionRec709Hint);
-            assert(param->getNOptions() == eColorspaceRec2020);
-            param->appendOption(kParamColorspaceOptionRec2020, kParamColorspaceOptionRec2020Hint);
-            assert(param->getNOptions() == eColorspaceACESAP0);
-            param->appendOption(kParamColorspaceOptionACESAP0, kParamColorspaceOptionACESAP0Hint);
-            assert(param->getNOptions() == eColorspaceACESAP1);
-            param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
-            param->setDefault( (int)eColorspaceRec709 );
-            if (page) {
-                page->addChild(*param);
-            }
-        } else if (blurPlugin != eBlurPluginLaplacian &&
-                   blurPlugin != eBlurPluginSharpen &&
-                   blurPlugin != eBlurPluginSoften &&
-                   blurPlugin != eBlurPluginEdgeExtend) {
-            OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
-            param->setLabel(kParamBoundaryLabel);
-            param->setHint(kParamBoundaryHint);
-            assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
-            param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
-            assert(param->getNOptions() == eBoundaryNeumann && param->getNOptions() == 1);
-            param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
-            //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
-            //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
-            if (blurPlugin == eBlurPluginLaplacian || blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) {
-                // coverity[dead_error_line]
-                param->setDefault( (int)kParamBoundaryDefaultLaplacian );
-            } else if (blurPlugin == eBlurPluginBloom) {
-                // coverity[dead_error_line]
-                param->setDefault( (int)kParamBoundaryDefaultBloom );
-            } else if (blurPlugin == eBlurPluginEdgeExtend) {
-                // coverity[dead_error_line]
-                param->setDefault( (int)kParamBoundaryDefaultEdgeExtend );
-            } else {
-                // coverity[dead_error_line]
-                param->setDefault( (int)kParamBoundaryDefault );
-            }
+    if (blurPlugin == eBlurPluginChromaBlur) {
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColorspace);
+        param->setLabel(kParamColorspaceLabel);
+        param->setHint(kParamColorspaceHint);
+        assert(param->getNOptions() == eColorspaceRec709);
+        param->appendOption(kParamColorspaceOptionRec709, kParamColorspaceOptionRec709Hint);
+        assert(param->getNOptions() == eColorspaceRec2020);
+        param->appendOption(kParamColorspaceOptionRec2020, kParamColorspaceOptionRec2020Hint);
+        assert(param->getNOptions() == eColorspaceACESAP0);
+        param->appendOption(kParamColorspaceOptionACESAP0, kParamColorspaceOptionACESAP0Hint);
+        assert(param->getNOptions() == eColorspaceACESAP1);
+        param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
+        param->setDefault( (int)eColorspaceRec709 );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    if (blurPlugin == eBlurPluginBlur ||
+        blurPlugin == eBlurPluginBloom) {
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
+        param->setLabel(kParamBoundaryLabel);
+        param->setHint(kParamBoundaryHint);
+        assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
+        param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
+        assert(param->getNOptions() == eBoundaryNeumann && param->getNOptions() == 1);
+        param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
+        //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
+        //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
+        if (blurPlugin == eBlurPluginLaplacian || blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) {
+            // coverity[dead_error_line]
+            param->setDefault( (int)kParamBoundaryDefaultLaplacian );
+        } else if (blurPlugin == eBlurPluginBloom) {
+            // coverity[dead_error_line]
+            param->setDefault( (int)kParamBoundaryDefaultBloom );
+        } else if (blurPlugin == eBlurPluginEdgeExtend) {
+            // coverity[dead_error_line]
+            param->setDefault( (int)kParamBoundaryDefaultEdgeExtend );
+        } else {
+            // coverity[dead_error_line]
+            param->setDefault( (int)kParamBoundaryDefault );
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    if (blurPlugin == eBlurPluginEdgeDetect) {
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectFilter);
+        param->setLabel(kParamEdgeDetectFilterLabel);
+        param->setHint(kParamEdgeDetectFilterHint);
+        assert(param->getNOptions() == eEdgeDetectFilterSimple);
+        param->appendOption(kParamEdgeDetectFilterOptionSimple, kParamEdgeDetectFilterOptionSimpleHint);
+        assert(param->getNOptions() == eEdgeDetectFilterSobel);
+        param->appendOption(kParamEdgeDetectFilterOptionSobel, kParamEdgeDetectFilterOptionSobelHint);
+        assert(param->getNOptions() == eEdgeDetectFilterRotationInvariant);
+        param->appendOption(kParamEdgeDetectFilterOptionRotationInvariant, kParamEdgeDetectFilterOptionRotationInvariantHint);
+        assert(param->getNOptions() == eEdgeDetectFilterQuasiGaussian);
+        param->appendOption(kParamEdgeDetectFilterOptionQuasiGaussian, kParamEdgeDetectFilterOptionQuasiGaussianHint);
+        assert(param->getNOptions() == eEdgeDetectFilterGaussian);
+        param->appendOption(kParamEdgeDetectFilterOptionGaussian, kParamEdgeDetectFilterOptionGaussianHint);
+        assert(param->getNOptions() == eEdgeDetectFilterBox);
+        param->appendOption(kParamEdgeDetectFilterOptionBox, kParamEdgeDetectFilterOptionBoxHint);
+        assert(param->getNOptions() == eEdgeDetectFilterTriangle);
+        param->appendOption(kParamEdgeDetectFilterOptionTriangle, kParamEdgeDetectFilterOptionTriangleHint);
+        assert(param->getNOptions() == eEdgeDetectFilterQuadratic);
+        param->appendOption(kParamEdgeDetectFilterOptionQuadratic, kParamEdgeDetectFilterOptionQuadraticHint);
+        param->setDefault( (int)kParamEdgeDetectFilterDefault );
+        if (page) {
+            page->addChild(*param);
+        }
+    } else if (blurPlugin == eBlurPluginBlur ||
+        blurPlugin == eBlurPluginLaplacian ||
+        blurPlugin == eBlurPluginSharpen ||
+        blurPlugin == eBlurPluginSoften ||
+        blurPlugin == eBlurPluginChromaBlur ||
+        blurPlugin == eBlurPluginBloom ||
+        blurPlugin == eBlurPluginEdgeExtend) { // all except EdgeDetect and ErodeBlur
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
+        param->setLabel(kParamFilterLabel);
+        param->setHint(kParamFilterHint);
+        assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
+        param->appendOption(kParamFilterOptionQuasiGaussian, kParamFilterOptionQuasiGaussianHint);
+        assert(param->getNOptions() == eFilterGaussian && param->getNOptions() == 1);
+        param->appendOption(kParamFilterOptionGaussian, kParamFilterOptionGaussianHint);
+        assert(param->getNOptions() == eFilterBox && param->getNOptions() == 2);
+        param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
+        assert(param->getNOptions() == eFilterTriangle && param->getNOptions() == 3);
+        param->appendOption(kParamFilterOptionTriangle, kParamFilterOptionTriangleHint);
+        assert(param->getNOptions() == eFilterQuadratic && param->getNOptions() == 4);
+        param->appendOption(kParamFilterOptionQuadratic, kParamFilterOptionQuadraticHint);
+        if (blurPlugin == eBlurPluginBloom) {
+            param->setDefault( (int)kParamFilterDefaultBloom );
+        } else if (blurPlugin == eBlurPluginEdgeExtend) {
+            param->setDefault( (int)kParamFilterDefaultEdgeExtend );
+        } else {
+            param->setDefault( (int)kParamFilterDefault );
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    if (blurPlugin == eBlurPluginBlur ||
+        blurPlugin == eBlurPluginBloom ||
+        blurPlugin == eBlurPluginErodeBlur ||
+        blurPlugin == eBlurPluginEdgeExtend) {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        param->setLabel(kParamExpandRoDLabel);
+        param->setHint(kParamExpandRoDHint);
+        param->setDefault(blurPlugin != eBlurPluginBloom); // the expanded RoD of Bloom may be very large
+        param->setLayoutHint(eLayoutHintNoNewLine); // on the same line as crop to format
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    if (blurPlugin == eBlurPluginEdgeDetect) {
+        {
+            OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectMultiChannel);
+            param->setLabel(kParamEdgeDetectMultiChannelLabel);
+            param->setHint(kParamEdgeDetectMultiChannelHint);
+            assert(param->getNOptions() == eEdgeDetectMultiChannelSeparate);
+            param->appendOption(kParamEdgeDetectMultiChannelOptionSeparate, kParamEdgeDetectMultiChannelOptionSeparateHint);
+            assert(param->getNOptions() == eEdgeDetectMultiChannelRMS);
+            param->appendOption(kParamEdgeDetectMultiChannelOptionRMS, kParamEdgeDetectMultiChannelOptionRMSHint);
+            assert(param->getNOptions() == eEdgeDetectMultiChannelMax);
+            param->appendOption(kParamEdgeDetectMultiChannelOptionMax, kParamEdgeDetectMultiChannelOptionMaxHint);
+            assert(param->getNOptions() == eEdgeDetectMultiChannelTensor);
+            param->appendOption(kParamEdgeDetectMultiChannelOptionTensor, kParamEdgeDetectMultiChannelOptionTensorHint);
+            param->setDefault( (int)kParamEdgeDetectMultiChannelDefault);
             if (page) {
                 page->addChild(*param);
             }
         }
         {
-            OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
-            param->setLabel(kParamFilterLabel);
-            param->setHint(kParamFilterHint);
-            assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
-            param->appendOption(kParamFilterOptionQuasiGaussian, kParamFilterOptionQuasiGaussianHint);
-            assert(param->getNOptions() == eFilterGaussian && param->getNOptions() == 1);
-            param->appendOption(kParamFilterOptionGaussian, kParamFilterOptionGaussianHint);
-            assert(param->getNOptions() == eFilterBox && param->getNOptions() == 2);
-            param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
-            assert(param->getNOptions() == eFilterTriangle && param->getNOptions() == 3);
-            param->appendOption(kParamFilterOptionTriangle, kParamFilterOptionTriangleHint);
-            assert(param->getNOptions() == eFilterQuadratic && param->getNOptions() == 4);
-            param->appendOption(kParamFilterOptionQuadratic, kParamFilterOptionQuadraticHint);
-            if (blurPlugin == eBlurPluginBloom) {
-                param->setDefault( (int)kParamFilterDefaultBloom );
-            } else if (blurPlugin == eBlurPluginEdgeExtend) {
-                param->setDefault( (int)kParamFilterDefaultEdgeExtend );
-            } else {
-                param->setDefault( (int)kParamFilterDefault );
-            }
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectErode);
+            param->setLabel(kParamEdgeDetectErodeLabel);
+            param->setHint(kParamEdgeDetectErodeHint);
+            param->setRange(-DBL_MAX, DBL_MAX);
+            param->setDisplayRange(-10, 10);
+            param->setDefault(0);
+            param->setDigits(1);
+            param->setIncrement(0.1);
             if (page) {
                 page->addChild(*param);
             }
         }
-        if (blurPlugin != eBlurPluginChromaBlur && blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
-            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
-            param->setLabel(kParamExpandRoDLabel);
-            param->setHint(kParamExpandRoDHint);
-            param->setDefault(blurPlugin != eBlurPluginBloom); // the expanded RoD of Bloom may be very large
-            param->setLayoutHint(eLayoutHintNoNewLine); // on the same line as crop to format
+        {
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectBlur);
+            param->setLabel(kParamEdgeDetectBlurLabel);
+            param->setHint(kParamEdgeDetectBlurHint);
+            param->setRange(0., DBL_MAX);
+            param->setDisplayRange(0., 100.);
+            param->setDefault(0);
+            param->setDigits(1);
+            param->setIncrement(0.1);
             if (page) {
                 page->addChild(*param);
             }
@@ -2472,6 +2750,34 @@ CImgEdgeExtendPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle h
     return new CImgBlurPlugin(handle, eBlurPluginEdgeExtend);
 }
 
+//
+// CImgEdgeDetectPluginFactory
+//
+mDeclarePluginFactoryVersioned(CImgEdgeDetectPluginFactory, {}, {});
+
+template<unsigned int majorVersion>
+void
+CImgEdgeDetectPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+{
+    return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginEdgeDetect);
+}
+
+template<unsigned int majorVersion>
+void
+CImgEdgeDetectPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                             OFX::ContextEnum context)
+{
+    return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginEdgeDetect);
+}
+
+template<unsigned int majorVersion>
+OFX::ImageEffect*
+CImgEdgeDetectPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                          OFX::ContextEnum /*context*/)
+{
+    return new CImgBlurPlugin(handle, eBlurPluginEdgeDetect);
+}
+
 
 // Declare old versions for backward compatibility.
 // They have default for processAlpha set to false
@@ -2492,6 +2798,7 @@ static CImgErodeBlurPluginFactory<kPluginVersionMajor> p5(kPluginIdentifierErode
 static CImgSharpenPluginFactory<kPluginVersionMajor> p6(kPluginIdentifierSharpen, kPluginVersionMinor);
 static CImgSoftenPluginFactory<kPluginVersionMajor> p7(kPluginIdentifierSoften, kPluginVersionMinor);
 static CImgEdgeExtendPluginFactory<kPluginVersionMajor> p8(kPluginIdentifierEdgeExtend, kPluginVersionMinor);
+static CImgEdgeDetectPluginFactory<kPluginVersionMajor> p9(kPluginIdentifierEdgeDetect, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
@@ -2500,5 +2807,6 @@ mRegisterPluginFactoryInstance(p5)
 mRegisterPluginFactoryInstance(p6)
 mRegisterPluginFactoryInstance(p7)
 mRegisterPluginFactoryInstance(p8)
+mRegisterPluginFactoryInstance(p9)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
