@@ -1085,11 +1085,11 @@ private:
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
-        OfxPointD maxPos;
-        double maxVal[nComponents];
+        OfxPointD maxPos = {0., 0.};
+        double maxVal[nComponents] = {0.};
         double maxLuma = -std::numeric_limits<double>::infinity();
-        OfxPointD minPos;
-        double minVal[nComponents];
+        OfxPointD minPos = {0., 0.};
+        double minVal[nComponents] = {0.};
         double minLuma = +std::numeric_limits<double>::infinity();
 
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
@@ -1750,6 +1750,9 @@ ImageStatisticsPlugin::updateLuma(const OFX::Image* srcImg,
 
     if ( !abort() ) {
         updateSub<ImageLumaProcessor>(srcImg, time, analysisWindow, results, &results);
+    }
+    if ( abort() ) {
+        return;
     }
     _maxLumaPix->setValueAtTime(time, results.maxPos.x, results.maxPos.y);
     _maxLumaPixVal->setValueAtTime(time, results.maxVal.r, results.maxVal.g, results.maxVal.b, results.maxVal.a);
