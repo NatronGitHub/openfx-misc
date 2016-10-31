@@ -307,7 +307,13 @@ public:
                                        const OfxPointD& /*renderScale*/,
                                        const Params& /*params*/,
                                        OfxRectI* /*dstRoD*/) { return false; };
-    virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<cimgpix_t>& cimg, int alphaChannel) = 0;
+    virtual void render(const OFX::RenderArguments &args,
+                        const Params& params,
+                        int x1, //!< origin of the image tile
+                        int y1, //!< origin of the image tile
+                        cimg_library::CImg<cimgpix_t>& cimg, //!< in/out: image
+                        int alphaChannel //!< alpha channel in cimg, or -1 if there is no alpha channel
+                        ) = 0;
     virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
                             const Params& /*params*/) { return false; };
 

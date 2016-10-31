@@ -458,6 +458,10 @@ enum EdgeDetectMultiChannelEnum
 #define kParamCropToFormatLabel "Crop To Format"
 #define kParamCropToFormatHint "If the effect generates an image outside of the format, crop it to avoid unnecessary calculations. To avoid unwanted crops, only the borders that were inside of the format in the source clip will be cropped."
 
+#define kParamAlphaThreshold "alphaThreshold"
+#define kParamAlphaThresholdLabel "Alpha Threshold"
+#define kParamAlphaThresholdHint "If this value is non-zero, any alpha value below this is set to zero. This is only useful for IIR filters (Gaussian and Quasi-Gaussian), which may produce alpha values very close to zero due to arithmetic precision. Remind that, in theory, a black image with a single white pixel should produce non-zero values everywhere, but a few VFX tricks rely on the fact that alpha should be zero far from the alpha edges (e.g. the premult-blur-unpremult trick to fill holes)). A threshold value between 0.001 and 0.01 is usually enough to remove these artifacts."
+
 typedef cimgpix_t T;
 using namespace cimg_library;
 
@@ -1047,6 +1051,7 @@ struct CImgBlurParams
     FilterEnum filter;
     bool expandRoD;
     bool cropToFormat;
+    double alphaThreshold;
 };
 
 enum BlurPluginEnum
@@ -1059,6 +1064,7 @@ enum BlurPluginEnum
     eBlurPluginBloom,
     eBlurPluginErodeBlur,
     eBlurPluginEdgeExtend,
+    eBlurPluginEdgeDetect,
 };
 
 /*
@@ -1173,6 +1179,7 @@ public:
         , _filter(0)
         , _expandRoD(0)
         , _cropToFormat(0)
+        , _alphaThreshold(0)
     {
         if (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) {
             _sharpenSoftenAmount = fetchDoubleParam(kParamSharpenSoftenAmount);
@@ -1222,6 +1229,10 @@ public:
         if ( paramExists(kParamCropToFormat) ) {
             _cropToFormat = fetchBooleanParam(kParamCropToFormat);
             assert(_cropToFormat);
+        }
+        if ( paramExists(kParamAlphaThreshold) ) {
+            _alphaThreshold = fetchDoubleParam(kParamAlphaThreshold);
+            assert(_alphaThreshold);
         }
         // On Natron, hide the uniform parameter if it is false and not animated,
         // since uniform scaling is easy through Natron's GUI.
@@ -1311,6 +1322,7 @@ public:
             params.expandRoD = _expandRoD ? _expandRoD->getValueAtTime(time) : false;
         }
         params.cropToFormat = _cropToFormat ? _cropToFormat->getValueAtTime(time) : false;
+        params.alphaThreshold = _alphaThreshold ? _alphaThreshold->getValueAtTime(time) : 0.;
     }
 
     bool getRegionOfDefinition(const OfxRectI& srcRoD,
@@ -1451,7 +1463,7 @@ public:
                         int /*x1*/,
                         int /*y1*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
-                        int /*alphaChannel*/) OVERRIDE FINAL
+                        int alphaChannel) OVERRIDE FINAL
     {
         //printf("blur render %g %dx%d+%d+%d (%dx%d)\n", args.time, args.renderWindow.x2-args.renderWindow.x1, args.renderWindow.y2-args.renderWindow.y1, args.renderWindow.x1, args.renderWindow.y1, cimg.width(), cimg.height());
 
@@ -1749,6 +1761,14 @@ public:
                 *ptr = (*ptr < t0) ? 0. : ((*ptr > t1) ? 1. : (*ptr - t0) / (t1 - t0) );
             }
         }
+        if (params.alphaThreshold > 0. && alphaChannel != -1) {
+            cimg_forXY(cimg, x, y) {
+                float& alpha = cimg(x, y, 0, alphaChannel);
+                if (alpha < params.alphaThreshold) {
+                    alpha = 0.f;
+                }
+            }
+        }
         if (_blurPlugin == eBlurPluginEdgeExtend && params.edgeExtendUnpremult) {
             unpremult(cimg);
         }
@@ -1822,6 +1842,7 @@ private:
     OFX::ChoiceParam *_filter;
     OFX::BooleanParam *_expandRoD;
     OFX::BooleanParam *_cropToFormat;
+    OFX::DoubleParam *_alphaThreshold;
 };
 
 
@@ -1867,6 +1888,10 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
     case eBlurPluginEdgeExtend:
         desc.setLabel(kPluginNameEdgeExtend);
         desc.setPluginDescription(kPluginDescriptionEdgeExtend);
+        break;
+    case eBlurPluginEdgeDetect:
+        desc.setLabel(kPluginNameEdgeDetect);
+        desc.setPluginDescription(kPluginDescriptionEdgeDetect);
         break;
     }
     desc.setPluginGrouping(kPluginGrouping);
@@ -2185,7 +2210,19 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
 #endif
-
+    if (blurPlugin == eBlurPluginBlur || blurPlugin == eBlurPluginBloom) {
+        {
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlphaThreshold);
+            param->setLabel(kParamAlphaThresholdLabel);
+            param->setHint(kParamAlphaThresholdHint);
+            param->setRange(0., DBL_MAX);
+            param->setDisplayRange(0., 1.);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    }
     CImgBlurPlugin::describeInContextEnd(desc, context, page, blurPlugin != eBlurPluginEdgeExtend);
 } // CImgBlurPlugin::describeInContext
 
