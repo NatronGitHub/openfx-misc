@@ -611,14 +611,16 @@ _cimg_box_apply(T *data,
 
  The triangle filter of width s has the impulse response:
  x < -s or x > s: y = 0
- x >= -s and x <= 0: y = 1/s + x/(s*s)
+ x >= -s and x <= 0: y = 1/s + x/(s*s) = int(1/s^2, t = -(1/2)*s .. x+(1/2)*s)
  x > 0 and x <= s: y = 1/s - x/(s*s)
 
  The quadratic filter of width s has the impulse response:
  x < -s*3/2 or x > s*3/2: y = 0
- x >= -s*3/2 and x <= -s/2: y =
- x >= -s/2 and x <= s/2: y =
- x >= s/2 and x <= s*3/2: y =
+ x >= -s*3/2 and x <= -s/2: y = (4*x^2 + 12*x*s + 9s^2) / (8s^3) = simplify(int((1/s)*(1/s+t/(s*s)), t = -s .. x+(1/2)*s));
+
+ x >= -s/2 and x <= s/2: y = (-4x^2 + 3s^2) / (4s^3) = simplify(int((1/s)*(1/s+t/(s*s)), t = x-(1/2)*s .. 0)+int((1/s)*(1/s-t/(s*s)), t = 0 .. x+(1/2)*s));
+
+ x >= s/2 and x <= s*3/2: y = (4x^2 - 12xs + 9s^2) / (8s^3)
 
  The equation of a step edge is:
  x<=0: y=0
@@ -2118,6 +2120,61 @@ public:
         }
 
         if ( abort() ) { return; }
+
+        // if blur > 0 normalize the gradients so that the response of a vertical step-edge is exactly 1
+        // for Gaussian and quasi-gaussian:
+        // if blurred, multiply by 2 * pi * sigma^2, with sigma = (sx * scale / 2.4)
+        // > int(x*exp(-x^2/(2*sigma^2))/(2*pi*sigma^4), x = 0 .. infinity);
+        //
+        // for Box: if blurred, multiply by size
+        // > simplify((int(1/s, x = 0 .. s+1)-(int(1/s, x = 0 .. s-1)))/2);
+        //
+        // for Triangle: if blurred, multiply by (4s^2)/ (-5+6s)
+        // first part :
+        // > simplify(int(1/s+(x-1)/(s*s), x = 0 .. 1)+int(1/s-(x-1)/(s*s), x = 1 .. (1/2)*s+1));
+        // second part:
+        // > simplify(int(1/s-(x+1)/(s*s), x = 1 .. (1/2)*s-1));
+        // difference divided by two:
+        // > simplify((int(1/s+(x-1)/(s*s), x = 0 .. 1)+int(1/s-(x-1)/(s*s), x = 1 .. (1/2)*s+1)-(int(1/s-(x+1)/(s*s), x = 1 .. (1/2)*s-1)))*(1/2));
+        // -> (-5+6s)/(4s^2)
+        //
+        // for Quadratic, multiply by (12*s^3)/(9*s^2-4)
+        // > (1/2)*simplify(int((-4*(x-1)^2+3*s^2)/(4*s^3), x = 0 .. (1/2)*s+1)-(int((-4*(x+1)^2+3*s^2)/(4*s^3), x = 0 .. (1/2)*s-1)));
+        switch (params.filter) {
+            case eFilterBox:
+                if (sx > 0.) {
+                    grad[0] *= sx;
+                }
+                if (sy > 0.) {
+                    grad[1] *= sy;
+                }
+                break;
+            case eFilterTriangle:
+                if (sx > 5./6.) {
+                    grad[0] *= 1.5 /* should be 1. */  *(4*sx*sx)/ (-5+6*sx);
+                }
+                if (sy > 5./6.) {
+                    grad[1] *= 1.5 /* should be 1. */  *(4*sy*sy)/ (-5+6*sy);
+                }
+               break;
+            case eFilterQuadratic:
+                if (sx > 2./3.) {
+                    grad[0] *= (12*sx*sx*sx)/(9*sx*sx-4);
+                }
+                if (sy > 2./3.) {
+                    grad[1] *= (12*sy*sy*sy)/(9*sy*sy-4);
+                }
+                break;
+            case eFilterGaussian:
+            case eFilterQuasiGaussian:
+                if (sx / 2.4 > 0.1) {
+                    grad[0] *= 2. * M_PI * (sx/2.4) * (1. /* should be sx */ /2.4);
+                }
+                if (sy / 2.4 > 0.1) {
+                    grad[1] *= 2. * M_PI * (sy/2.4) * (1. /* should be sy */ /2.4);
+                }
+                break;
+        }
 
         if (cimg.spectrum() == 1 || params.edgeDetectMultiChannel == eEdgeDetectMultiChannelSeparate) {
             cimg_forXYC(cimg, x, y, c) {
