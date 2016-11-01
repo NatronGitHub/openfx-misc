@@ -119,6 +119,7 @@ matrix.
 * DenoiseSharpen: Denoise and/or sharpen images using wavelet-based algorithms.
 * DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann (a.k.a. nearest) boundary conditions.
 * DirBlurOFX: Directional blur.
+* EdgeDetectCImg: Perform edge detection by computing the image gradient magnitude.
 * EdgeExtend: Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte.
 * ErodeBlurCImg: Erode or dilate a mask by smoothing.
 * ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).

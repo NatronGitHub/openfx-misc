@@ -191,7 +191,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginNameEdgeDetect          "EdgeDetectCImg"
 #define kPluginDescriptionEdgeDetect \
-"Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion and thresholding.\n" \
+"Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion and thresholding. In most cases, EdgeDetect is followed a Grade node to extract the proper edges and generate a mask from these.\n" \
 "\n" \
 "For color or multi-channel images, several edge detection algorithms are proposed to combine the gradients computed in each channel:\n" \
 "- Separate: the gradient magnitude is computed in each channel separately, and the output is a color edge image.\n" \
@@ -421,22 +421,6 @@ enum EdgeDetectMultiChannelEnum
     eEdgeDetectMultiChannelTensor,
 };
 #define kParamEdgeDetectMultiChannelDefault eEdgeDetectMultiChannelTensor
-/*
-    Di Zenzo edge magnitude:
-
-    Jx = rx.^2 + gx.^2 + bx.^2;
-	Jy = ry.^2 + gy.^2 + by.^2;
-	Jxy = rx.*ry + gx.*gy + bx.*by;
-
-	%compute first (greatest) eigenvalue of 2x2 matrix J'*J.
-	%note that the abs() is only needed because some values may be slightly
-	%negative due to round-off error.
-	D = sqrt(abs(Jx.^2 - 2*Jx.*Jy + Jy.^2 + 4*Jxy.^2));
-	e1 = (Jx + Jy + D) / 2;
-	%the 2nd eigenvalue would be:  e2 = (Jx + Jy - D) / 2;
-
-	edge_magnitude = sqrt(e1);
-*/
 
 #define kParamEdgeDetectErode "erodeSize"
 #define kParamEdgeDetectErodeLabel "Erode Size"
@@ -456,7 +440,7 @@ enum EdgeDetectMultiChannelEnum
 
 #define kParamAlphaThreshold "alphaThreshold"
 #define kParamAlphaThresholdLabel "Alpha Threshold"
-#define kParamAlphaThresholdHint "If this value is non-zero, any alpha value below this is set to zero. This is only useful for IIR filters (Gaussian and Quasi-Gaussian), which may produce alpha values very close to zero due to arithmetic precision. Remind that, in theory, a black image with a single white pixel should produce non-zero values everywhere, but a few VFX tricks rely on the fact that alpha should be zero far from the alpha edges (e.g. the premult-blur-unpremult trick to fill holes)). A threshold value between 0.001 and 0.01 is usually enough to remove these artifacts."
+#define kParamAlphaThresholdHint "If this value is non-zero, any alpha value below this is set to zero. This is only useful for IIR filters (Gaussian and Quasi-Gaussian), which may produce alpha values very close to zero due to arithmetic precision. Remind that, in theory, a black image with a single white pixel should produce non-zero values everywhere, but a few VFX tricks rely on the fact that alpha should be zero far from the alpha edges (e.g. the premult-blur-unpremult trick to fill holes)). A threshold value of 0.003 is reasonable, and values between 0.001 and 0.01 are usually enough to remove these artifacts."
 
 typedef cimgpix_t T;
 using namespace cimg_library;
@@ -1193,7 +1177,8 @@ public:
             _erodeSize  = fetchDoubleParam(kParamErodeSize);
             _erodeBlur  = fetchDoubleParam(kParamErodeBlur);
         } else {
-            assert( !paramExists(kParamErodeSize) && !paramExists(kParamErodeBlur) );
+            // kParamErodeSize and kParamSize have the same value
+            assert( /*!paramExists(kParamErodeSize) &&*/ !paramExists(kParamErodeBlur) );
         }
         if (blurPlugin == eBlurPluginEdgeExtend) {
             _edgeExtendPremult = fetchBooleanParam(kParamEdgeExtendPremult);
@@ -1209,12 +1194,13 @@ public:
             blurPlugin == eBlurPluginSharpen ||
             blurPlugin == eBlurPluginSoften ||
             blurPlugin == eBlurPluginChromaBlur ||
-            blurPlugin == eBlurPluginBloom) {
+            blurPlugin == eBlurPluginBloom) { // not eBlurPluginErodeBlur, eBlurPluginEdgeExtend, eBlurPluginEdgeExtend, eBlurPluginEdgeDetect
             _size  = fetchDouble2DParam(kParamSize);
             _uniform = fetchBooleanParam(kParamUniform);
             assert(_size && _uniform);
         } else {
-            assert( !paramExists(kParamSize) && !paramExists(kParamUniform) );
+            // kParamErodeSize and kParamSize have the same value
+            assert( /*!paramExists(kParamSize) &&*/ !paramExists(kParamUniform) );
         }
         if (blurPlugin == eBlurPluginBlur) {
             _orderX = fetchIntParam(kParamOrderX);
@@ -1237,7 +1223,6 @@ public:
             assert( !paramExists(kParamColorspace) );
         }
         if (_blurPlugin == eBlurPluginBlur ||
-            _blurPlugin == eBlurPluginChromaBlur ||
             _blurPlugin == eBlurPluginBloom) {
             _boundary  = fetchChoiceParam(kParamBoundary);
             assert(_boundary);
@@ -1251,24 +1236,27 @@ public:
             _edgeDetectBlur = fetchDoubleParam(kParamEdgeDetectBlur);
             assert(_edgeDetectFilter && _edgeDetectMultiChannel && _edgeDetectErode && _edgeDetectBlur);
         } else {
-            assert( !paramExists(kParamEdgeDetectFilter) && !paramExists(kParamEdgeDetectMultiChannel) && !paramExists(kParamEdgeDetectErode) && !paramExists(kParamEdgeDetectBlur) );
+            // kParamFilter and kParamEdgeDetectFilter have the same value
+            assert( /*!paramExists(kParamEdgeDetectFilter) &&*/ !paramExists(kParamEdgeDetectMultiChannel) && !paramExists(kParamEdgeDetectErode) && !paramExists(kParamEdgeDetectBlur) );
         }
-        if (_blurPlugin == eBlurPluginLaplacian ||
+        if (_blurPlugin == eBlurPluginBlur ||
+            _blurPlugin == eBlurPluginLaplacian ||
             _blurPlugin == eBlurPluginSharpen ||
             _blurPlugin == eBlurPluginSoften ||
             _blurPlugin == eBlurPluginChromaBlur ||
             _blurPlugin == eBlurPluginBloom ||
-            _blurPlugin == eBlurPluginErodeBlur ||
             _blurPlugin == eBlurPluginEdgeExtend) {
             _filter = fetchChoiceParam(kParamFilter);
             assert(_filter);
         } else {
-            assert( !paramExists(kParamFilter) );
+            // kParamFilter and kParamEdgeDetectFilter have the same value
+            assert( (_blurPlugin == eBlurPluginEdgeDetect) || !paramExists(kParamFilter) );
         }
         if (_blurPlugin == eBlurPluginBlur ||
             _blurPlugin == eBlurPluginBloom ||
             _blurPlugin == eBlurPluginErodeBlur ||
-            _blurPlugin == eBlurPluginEdgeExtend) {
+            _blurPlugin == eBlurPluginEdgeExtend ||
+            _blurPlugin == eBlurPluginEdgeDetect) {
             _expandRoD = fetchBooleanParam(kParamExpandRoD);
             assert(_expandRoD);
         } else {
@@ -1363,6 +1351,7 @@ public:
                    _blurPlugin == eBlurPluginSoften ||
                    _blurPlugin == eBlurPluginChromaBlur ||
                    _blurPlugin == eBlurPluginBloom ||
+                   _blurPlugin == eBlurPluginErodeBlur ||
                    _blurPlugin == eBlurPluginEdgeDetect);
             assert(!_edgeExtendPremult && !_edgeExtendSize);
             params.edgeExtendPremult = false;
@@ -1374,7 +1363,7 @@ public:
             params.sizey = params.sizex = params.edgeExtendSize; // used for RoD/RoI/identity
         } else if (_blurPlugin == eBlurPluginEdgeDetect) {
             params.sizey = params.sizex = _edgeDetectBlur->getValueAtTime(time);
-        } else {
+        } else if (_blurPlugin != eBlurPluginErodeBlur) {
             assert(_blurPlugin == eBlurPluginBlur ||
                    _blurPlugin == eBlurPluginLaplacian ||
                    _blurPlugin == eBlurPluginSharpen ||
@@ -1512,7 +1501,8 @@ public:
         if (_blurPlugin == eBlurPluginBlur ||
             _blurPlugin == eBlurPluginBloom ||
             _blurPlugin == eBlurPluginErodeBlur ||
-            _blurPlugin == eBlurPluginEdgeExtend) {
+            _blurPlugin == eBlurPluginEdgeExtend ||
+            _blurPlugin == eBlurPluginEdgeDetect) {
             params.expandRoD = _expandRoD->getValueAtTime(time);
         } else if (_blurPlugin == eBlurPluginErodeBlur) {
             params.expandRoD = true;
@@ -1520,8 +1510,7 @@ public:
             assert(_blurPlugin == eBlurPluginLaplacian ||
                    _blurPlugin == eBlurPluginSharpen ||
                    _blurPlugin == eBlurPluginSoften ||
-                   _blurPlugin == eBlurPluginChromaBlur ||
-                   _blurPlugin == eBlurPluginEdgeDetect);
+                   _blurPlugin == eBlurPluginChromaBlur);
             params.expandRoD = false;
         }
         if (_blurPlugin == eBlurPluginEdgeDetect) {
@@ -1689,6 +1678,10 @@ public:
         // eBlurPluginEdgeExtend only works on RGBA
         assert( !(_blurPlugin == eBlurPluginEdgeExtend && cimg.spectrum() != 4) );
 
+        if (_blurPlugin == eBlurPluginEdgeDetect) {
+            // EdgeDetect has its own render function
+            return renderEdgeDetect(args, params, cimg);
+        }
        // PROCESSING.
         // This is the only place where the actual processing takes place
         double sx = args.renderScale.x * params.sizex;
@@ -1831,37 +1824,17 @@ public:
             if (_blurPlugin == eBlurPluginBloom) {
                 scale = ipow(params.bloomRatio, i);
             }
-            if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
-                float sigmax = (float)(sx * scale / 2.4);
-                float sigmay = (float)(sy * scale / 2.4);
-                if ( (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) && (sigmax < 0.1) && (sigmay < 0.1) && (params.orderX == 0) && (params.orderY == 0) ) {
-                    return;
-                }
-                // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
-                // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
-                if (params.filter == eFilterGaussian) {
-#ifdef cimgblur_internal_vanvliet
-                    vanvliet(cimg_blur, /*cimg_blur.vanvliet(*/ sigmax, params.orderX, 'x', (bool)params.boundary_i);
-                    vanvliet(cimg_blur, /*cimg_blur.vanvliet(*/ sigmay, params.orderY, 'y', (bool)params.boundary_i);
-#else
-                    cimg_blur.vanvliet(sigmax, params.orderX, 'x', (bool)params.boundary_i);
-                    if ( abort() ) { return; }
-                    cimg_blur.vanvliet(sigmay, params.orderY, 'y', (bool)params.boundary_i);
-#endif
-                } else {
-                    cimg_blur.deriche(sigmax, params.orderX, 'x', (bool)params.boundary_i);
-                    if ( abort() ) { return; }
-                    cimg_blur.deriche(sigmay, params.orderY, 'y', (bool)params.boundary_i);
-                }
-            } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
-                int iter = ( params.filter == eFilterBox ? 1 :
-                             (params.filter == eFilterTriangle ? 2 : 3) );
-                box(cimg_blur, sx * scale, iter, params.orderX, 'x', (bool)params.boundary_i);
-                if ( abort() ) { return; }
-                box(cimg_blur, sy * scale, iter, params.orderY, 'y', (bool)params.boundary_i);
-            } else {
-                assert(false);
+
+            bool blurred = blur(params.filter,
+                                sx, params.orderX,
+                                sy, params.orderY,
+                                scale, (bool)params.boundary_i,
+                                cimg_blur);
+
+            if ( !blurred && (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) ) {
+                return;
             }
+
             if (_blurPlugin == eBlurPluginBloom) {
                 // accumulate result
                 cimg1 += cimg0;
@@ -2039,6 +2012,198 @@ public:
     // describeInContext function for plugin factories
     static void describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context, int majorVersion, int minorVersion, BlurPluginEnum blurPlugin = eBlurPluginBlur);
 
+    // returns true if the image was actually modified
+    bool blur(FilterEnum filter,
+              double sx, int orderX,
+              double sy, int orderY,
+              double scale, bool boundary,
+              cimg_library::CImg<cimgpix_t>& cimg_blur)
+    {
+        if ( (filter == eFilterQuasiGaussian) || (filter == eFilterGaussian) ) {
+            float sigmax = (float)(sx * scale / 2.4);
+            float sigmay = (float)(sy * scale / 2.4);
+            if ( (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) && (sigmax < 0.1) && (sigmay < 0.1) && (orderX == 0) && (orderY == 0) ) {
+                return false;
+            }
+            // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
+            // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
+            if (filter == eFilterGaussian) {
+#ifdef cimgblur_internal_vanvliet
+                vanvliet(cimg_blur, /*cimg_blur.vanvliet(*/ sigmax, orderX, 'x', boundary);
+                vanvliet(cimg_blur, /*cimg_blur.vanvliet(*/ sigmay, orderY, 'y', boundary);
+#else
+                cimg_blur.vanvliet(sigmax, orderX, 'x', boundary);
+                if ( abort() ) { return false; }
+                cimg_blur.vanvliet(sigmay, orderY, 'y', boundary);
+#endif
+            } else {
+                cimg_blur.deriche(sigmax, orderX, 'x', boundary);
+                if ( abort() ) { return false; }
+                cimg_blur.deriche(sigmay, orderY, 'y', boundary);
+            }
+
+            return true;
+        } else if ( (filter == eFilterBox) || (filter == eFilterTriangle) || (filter == eFilterQuadratic) ) {
+            int iter = ( filter == eFilterBox ? 1 :
+                        (filter == eFilterTriangle ? 2 : 3) );
+            box(cimg_blur, sx * scale, iter, orderX, 'x', boundary);
+            if ( abort() ) { return false; }
+            box(cimg_blur, sy * scale, iter, orderY, 'y', boundary);
+
+            return true;
+        }
+        assert(false);
+
+        return false;
+    }
+
+    void renderEdgeDetect(const OFX::RenderArguments &args,
+                          const CImgBlurParams& params,
+                          cimg_library::CImg<cimgpix_t>& cimg)
+    {
+        // PROCESSING.
+        // This is the only place where the actual processing takes place
+        double sx = args.renderScale.x * params.sizex;
+        double sy = args.renderScale.y * params.sizey;
+        //std::cout << "renderScale=" << args.renderScale.x << ',' << args.renderScale.y << std::endl;
+        //std::cout << "renderWindow=" << args.renderWindow.x1 << ',' << args.renderWindow.y1 << ',' << args.renderWindow.x2 << ',' << args.renderWindow.y2 << std::endl;
+        //std::cout << "cimg=" << cimg.width() << ',' << cimg.height() << std::endl;
+        CImgList<float> grad;
+
+
+        if (params.edgeDetectFilter == eEdgeDetectFilterSimple ||
+            params.edgeDetectFilter == eEdgeDetectFilterSobel ||
+            params.edgeDetectFilter == eEdgeDetectFilterRotationInvariant) {
+            /*
+            - -1 = Backward finite differences
+            - 0 = Centered finite differences
+            - 1 = Forward finite differences
+            - 2 = Using Sobel kernels
+            - 3 = Using rotation invariant kernels
+            - 4 = Using Deriche recusrsive filter.
+            - 5 = Using Van Vliet recusrsive filter.
+             */
+            int scheme = 0;
+            if (params.edgeDetectFilter == eEdgeDetectFilterSobel) {
+                scheme = 2;
+            }
+            if (params.edgeDetectFilter == eEdgeDetectFilterRotationInvariant) {
+                scheme = 3;
+            }
+            // blur cimg, then compute gradients
+            blur(params.filter, // should be box
+                 sx, 0,
+                 sy, 0,
+                 1., (bool)params.boundary_i,
+                 cimg);
+            grad = cimg.get_gradient(0, scheme);
+            if (params.edgeDetectFilter == eEdgeDetectFilterSobel) {
+                grad[0] /= 8;
+                grad[1] /= 8;
+            }
+            
+        } else {
+            // compute gradients
+            grad.assign(cimg, cimg);
+            blur(params.filter,
+                 sx, 1,
+                 sy, 0,
+                 1., (bool)params.boundary_i,
+                 grad[0]);
+            blur(params.filter,
+                 sx, 0,
+                 sy, 1,
+                 1., (bool)params.boundary_i,
+                 grad[1]);
+        }
+
+        if ( abort() ) { return; }
+
+        if (cimg.spectrum() == 1 || params.edgeDetectMultiChannel == eEdgeDetectMultiChannelSeparate) {
+            cimg_forXYC(cimg, x, y, c) {
+                cimgpix_t gx = grad[0](x, y, 0, c);
+                cimgpix_t gy = grad[1](x, y, 0, c);
+                cimg(x, y, 0, c) = std::sqrt(gx * gx + gy * gy);
+            }
+        } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelRMS) {
+            cimg_forXY(cimg, x, y) {
+                double sumsq = 0;
+                cimg_forC(cimg, c) {
+                    cimgpix_t gx = grad[0](x, y, 0, c);
+                    cimgpix_t gy = grad[1](x, y, 0, c);
+                    sumsq += gx * gx + gy * gy;
+                }
+                cimgpix_t e = std::sqrt( sumsq / cimg.spectrum() );
+                cimg_forC(cimg, c) {
+                    cimg(x, y, 0, c) = e;
+                }
+            }
+        } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelMax) {
+            cimg_forXY(cimg, x, y) {
+                double maxsq = 0;
+                cimg_forC(cimg, c) {
+                    cimgpix_t gx = grad[0](x, y, 0, c);
+                    cimgpix_t gy = grad[1](x, y, 0, c);
+                    double sq = gx * gx + gy * gy;
+                    if (sq > maxsq) {
+                        maxsq = sq;
+                    }
+                }
+                cimgpix_t e = std::sqrt( maxsq );
+                cimg_forC(cimg, c) {
+                    cimg(x, y, 0, c) = e;
+                }
+            }
+        } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelTensor) {
+            /*
+             Di Zenzo edge magnitude:
+
+             Jx = rx.^2 + gx.^2 + bx.^2;
+             Jy = ry.^2 + gy.^2 + by.^2;
+             Jxy = rx.*ry + gx.*gy + bx.*by;
+
+             %compute first (greatest) eigenvalue of 2x2 matrix J'*J.
+             %note that the abs() is only needed because some values may be slightly
+             %negative due to round-off error.
+             D = sqrt(abs(Jx.^2 - 2*Jx.*Jy + Jy.^2 + 4*Jxy.^2));
+             e1 = (Jx + Jy + D) / 2;
+             %the 2nd eigenvalue would be:  e2 = (Jx + Jy - D) / 2;
+             
+             edge_magnitude = sqrt(e1);
+             */
+            cimg_forXY(cimg, x, y) {
+                double Jx = 0.;
+                double Jy = 0.;
+                double Jxy = 0.;
+                cimg_forC(cimg, c) {
+                    cimgpix_t gx = grad[0](x, y, 0, c);
+                    cimgpix_t gy = grad[1](x, y, 0, c);
+                    Jx += gx * gx;
+                    Jy += gy * gy;
+                    Jxy += gx * gy;
+                }
+                double D = std::sqrt( std::abs(Jx * Jx - 2 * Jx * Jy + Jy * Jy + 4 * Jxy * Jxy) );
+                double e1 = (Jx + Jy + D) / 2;
+                cimgpix_t e = std::sqrt(e1);
+                cimg_forC(cimg, c) {
+                    cimg(x, y, 0, c) = e;
+                }
+            }
+        }
+
+        if ( abort() ) { return; }
+
+        if ( params.erodeSize > 0 ) {
+            cimg.erode( (unsigned int)std::floor(std::max(0., params.erodeSize) * args.renderScale.x) * 2 + 1,
+                       (unsigned int)std::floor(std::max(0., params.erodeSize * params.sizey / params.sizex) * args.renderScale.y) * 2 + 1 );
+        }
+        if ( abort() ) { return; }
+        if ( params.erodeSize < 0 ) {
+            cimg.dilate( (unsigned int)std::floor(std::max(0., -params.erodeSize) * args.renderScale.x) * 2 + 1,
+                        (unsigned int)std::floor(std::max(0., -params.erodeSize * params.sizey / params.sizex) * args.renderScale.y) * 2 + 1 );
+        }
+    }
+
 private:
 
     // params
@@ -2154,6 +2319,9 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
     if (blurPlugin == eBlurPluginErodeBlur) {
         processRGB = false;
         processAlpha = true;
+    } else if (blurPlugin == eBlurPluginEdgeDetect) {
+        processRGB = true;
+        processAlpha = false;
     } else {
         processRGB = true;
         if ( majorVersion >= 4 ) {
@@ -2446,19 +2614,6 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
-    if (blurPlugin == eBlurPluginBlur ||
-        blurPlugin == eBlurPluginBloom ||
-        blurPlugin == eBlurPluginErodeBlur ||
-        blurPlugin == eBlurPluginEdgeExtend) {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
-        param->setLabel(kParamExpandRoDLabel);
-        param->setHint(kParamExpandRoDHint);
-        param->setDefault(blurPlugin != eBlurPluginBloom); // the expanded RoD of Bloom may be very large
-        param->setLayoutHint(eLayoutHintNoNewLine); // on the same line as crop to format
-        if (page) {
-            page->addChild(*param);
-        }
-    }
     if (blurPlugin == eBlurPluginEdgeDetect) {
         {
             OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectMultiChannel);
@@ -2502,6 +2657,24 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             if (page) {
                 page->addChild(*param);
             }
+        }
+    }
+    if (blurPlugin == eBlurPluginBlur ||
+        blurPlugin == eBlurPluginBloom ||
+        blurPlugin == eBlurPluginErodeBlur ||
+        blurPlugin == eBlurPluginEdgeExtend ||
+        blurPlugin == eBlurPluginEdgeDetect) {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        param->setLabel(kParamExpandRoDLabel);
+        param->setHint(kParamExpandRoDHint);
+        param->setDefault(blurPlugin != eBlurPluginBloom); // the expanded RoD of Bloom may be very large
+#ifdef OFX_EXTENSIONS_NATRON
+        if (getImageEffectHostDescription()->isNatron) {
+            param->setLayoutHint(eLayoutHintNoNewLine); // on the same line as crop to format
+        }
+#endif
+        if (page) {
+            page->addChild(*param);
         }
     }
 #ifdef OFX_EXTENSIONS_NATRON
