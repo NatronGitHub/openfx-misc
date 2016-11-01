@@ -74,20 +74,16 @@ grouping).
 
 ### Channel
 
-* ShuffleOFX: Rearrange channels from one or two inputs, and convert
-  to a different bit depth (on hosts that support it).
+* ShuffleOFX: Rearrange channels from one or two inputs, and convert to a different bit depth (on hosts that support it).
 
 ### Color
 
 * ClampOFX: Clamp values to a given interval.
-* ColorCorrectOFX: Adjusts the saturation, constrast, gamma, gain and
-offset of an image.
-* ColorLookupOFX: Apply a parametric lookup curve to each channel 
-separately. 
+* ColorCorrectOFX: Adjusts the saturation, constrast, gamma, gain and offset of an image.
+* ColorLookupOFX: Apply a parametric lookup curve to each channel separately. 
 * ColorSuppress: Remove a color/tint, or create a mask from that color.
 * EqualizeCImg: Equalize the histogram.
-* GradeOFX: Modify the tonal spread of an image from the white and
-black points.
+* GradeOFX: Modify the tonal spread of an image from the white and black points.
 * HistEqCImg: Equalize the luminance histogram. 
 * HSVToolOFX: Adjust hue, saturation and brightnes, or perform color replacement.
 * HueCorrectOFX: Apply hue-dependent color adjustments using lookup curves.
@@ -95,8 +91,7 @@ black points.
 * Log2LinOFX: Convert from/to the logarithmic space used by Cineon files
 * Math/AddOFX: Add a constant to the selected channels.
 * Math/ClipTestOFX: Draw zebra stripes on all pixels outside of the specified range.
-* Math/ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4
-matrix.
+* Math/ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4 matrix.
 * Math/GammaOFX: Apply gamma function to the selected channels.
 * Math/MultiplyOFX: Multiply the selected channels by a constant.
 * PLogLinOFX: Convert between linear and log representations using the Josh Pines log conversion.
@@ -141,8 +136,7 @@ matrix.
 ### Keyer
 
 * ChromaKeyerOFX: Apply chroma keying, as described in "Video Demystified" by Keith Jack.  
-* Despill: Remove the unwanted color contamination of the foreground (spill) caused by the reflected color of the bluescreen/greenscreen, as described in "Digital Compositing for
-  Film and Video" by Steve Wright.
+* Despill: Remove the unwanted color contamination of the foreground (spill) caused by the reflected color of the bluescreen/greenscreen, as described in "Digital Compositing for Film and Video" by Steve Wright.
 * DifferenceOFX: Produce a rough matte from the difference of two images.
 * HueKeyerOFX: Compute a key depending on hue value.
 * KeyerOFX: A collection of simple keyers. 
@@ -156,16 +150,14 @@ matrix.
 * DissolveOFX: Weighted average of two inputs.
 * KeyMixOFX: Copies A to B only where Mask is non-zero.
 * MergeOFX: Pixel-by-pixel merge operation between the two inputs.
-* PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by
-alpha (or another channel).
+* PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by alpha (or another channel).
 * SwitchOFX: Lets you switch between any number of inputs.
 * TimeDissolve: Dissolve from input A to input B over time.
 
 ### Transform
 
 * AdjustRoD: Enlarges the input image by a given amount of black and transparent pixels.
-* CornerPinOFX and CornerPinMaskedOFX: Fit an image to another in
-  translation, rotation, scale, and shear
+* CornerPinOFX and CornerPinMaskedOFX: Fit an image to another in translation, rotation, scale, and shear
 * CropOFX: Remove everything outside from the image of a rectangle.
 * IDistortOFX: Distort an image, based on a displacement map.
 * LensDistortionOFX: Apply nonlinear lens distortion.
@@ -174,8 +166,7 @@ alpha (or another channel).
 * Reformat: Convert image to a different image format and size.
 * STMapOFX: Move pixels around an image, based on a UVmap.
 * TrackerPM: Point tracker based on pattern matching using an exhaustive search within an image region.
-* TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D 
-  image. 
+* TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D image.
 
 ### Views
 
@@ -185,10 +176,8 @@ These plugins are compatible with the Sony Vegas and Nuke [multiview extensions]
 * OneViewOFX: Takes one view from the input.
 * Stereo/AnaglyphOFX: Make an anaglyph image out of the two views of the input.
 * Stereo/MixViewsOFX: Mix two views together. 
-* Stereo/ReConvergeOFX: Shift convergence so that a tracked point
-  appears at screen-depth.
-* Stereo/SideBySideOFX: Put the left and right view of the input next
-  to each other.
+* Stereo/ReConvergeOFX: Shift convergence so that a tracked point appears at screen-depth.
+* Stereo/SideBySideOFX: Put the left and right view of the input next to each other.
 
 ### Other
 
