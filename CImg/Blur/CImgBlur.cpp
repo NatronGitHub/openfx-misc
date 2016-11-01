@@ -404,7 +404,7 @@ enum EdgeDetectFilterEnum
 
 #define kParamEdgeDetectMultiChannel "multiChannel"
 #define kParamEdgeDetectMultiChannelLabel "Multi-Channel"
-#define kParamEdgeDetectMultiChannelHint "Operation used to combine multi-channel (e.g. color) gradients into an edge detector."
+#define kParamEdgeDetectMultiChannelHint "Operation used to combine multi-channel (e.g. color) gradients into an edge detector. This parameter has no effect if a single channel (e.g. alpha) is processed."
 #define kParamEdgeDetectMultiChannelOptionSeparate "Separate"
 #define kParamEdgeDetectMultiChannelOptionSeparateHint "The gradient magnitude is computed in each channel separately, and the output is a color edge image."
 #define kParamEdgeDetectMultiChannelOptionRMS "RMS"
