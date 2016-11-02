@@ -389,7 +389,7 @@ enum FilterEnum
 #define kParamEdgeDetectFilterOptionTriangleHint "Triangle/tent filter - FIR (finite support / impulsional response)."
 #define kParamEdgeDetectFilterOptionQuadratic "Quadratic"
 #define kParamEdgeDetectFilterOptionQuadraticHint "Quadratic filter - FIR (finite support / impulsional response)."
-#define kParamEdgeDetectFilterDefault eFilterGaussian
+#define kParamEdgeDetectFilterDefault eEdgeDetectFilterGaussian
 enum EdgeDetectFilterEnum
 {
     eEdgeDetectFilterSimple = 0,
@@ -421,6 +421,10 @@ enum EdgeDetectMultiChannelEnum
     eEdgeDetectMultiChannelTensor,
 };
 #define kParamEdgeDetectMultiChannelDefault eEdgeDetectMultiChannelTensor
+
+#define kParamEdgeDetectNMS "nms"
+#define kParamEdgeDetectNMSLabel "Non-Maxima Suppression"
+#define kParamEdgeDetectNMSHint "Perform non-maxima suppression (after edge detection and erosion): only values that are maximal in the direction orthogonal to the contour are kept. For multi-channel images, the contour direction estimation depends on the multi-channel operation."
 
 #define kParamEdgeDetectErode "erodeSize"
 #define kParamEdgeDetectErodeLabel "Erode Size"
@@ -1017,7 +1021,8 @@ vanvliet(CImg<T>& img,
 /// Blur plugin
 struct CImgBlurParams
 {
-    double sizex, sizey; // sizex takes PixelAspectRatio intor account
+    double sizex, sizey; // sizex takes PixelAspectRatio into account
+    double par;
     double erodeSize;
     double erodeBlur;
     double sharpenSoftenAmount;
@@ -1033,6 +1038,7 @@ struct CImgBlurParams
     FilterEnum filter;
     EdgeDetectFilterEnum edgeDetectFilter;
     EdgeDetectMultiChannelEnum edgeDetectMultiChannel;
+    bool edgeDetectNMS;
     bool expandRoD;
     bool cropToFormat;
     double alphaThreshold;
@@ -1163,8 +1169,9 @@ public:
         , _filter(0)
         , _edgeDetectFilter(0)
         , _edgeDetectMultiChannel(0)
-        , _edgeDetectErode(0)
         , _edgeDetectBlur(0)
+        , _edgeDetectErode(0)
+        , _edgeDetectNMS(0)
         , _expandRoD(0)
         , _cropToFormat(0)
         , _alphaThreshold(0)
@@ -1234,12 +1241,13 @@ public:
         if (_blurPlugin == eBlurPluginEdgeDetect) {
             _edgeDetectFilter = fetchChoiceParam(kParamEdgeDetectFilter);
             _edgeDetectMultiChannel = fetchChoiceParam(kParamEdgeDetectMultiChannel);
-            _edgeDetectErode = fetchDoubleParam(kParamEdgeDetectErode);
             _edgeDetectBlur = fetchDoubleParam(kParamEdgeDetectBlur);
-            assert(_edgeDetectFilter && _edgeDetectMultiChannel && _edgeDetectErode && _edgeDetectBlur);
+            _edgeDetectErode = fetchDoubleParam(kParamEdgeDetectErode);
+            _edgeDetectNMS = fetchBooleanParam(kParamEdgeDetectNMS);
+            assert(_edgeDetectFilter && _edgeDetectMultiChannel && _edgeDetectBlur && _edgeDetectErode && _edgeDetectNMS);
         } else {
             // kParamFilter and kParamEdgeDetectFilter have the same value
-            assert( /*!paramExists(kParamEdgeDetectFilter) &&*/ !paramExists(kParamEdgeDetectMultiChannel) && !paramExists(kParamEdgeDetectErode) && !paramExists(kParamEdgeDetectBlur) );
+            assert( /*!paramExists(kParamEdgeDetectFilter) &&*/ !paramExists(kParamEdgeDetectMultiChannel) && !paramExists(kParamEdgeDetectBlur) && !paramExists(kParamEdgeDetectErode) && !paramExists(kParamEdgeDetectNMS) );
         }
         if (_blurPlugin == eBlurPluginBlur ||
             _blurPlugin == eBlurPluginLaplacian ||
@@ -1379,9 +1387,9 @@ public:
                 params.sizey = params.sizex;
             }
         }
-        double par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
-        if (par != 0.) {
-            params.sizex /= par;
+        params.par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
+        if (params.par != 0.) {
+            params.sizex /= params.par;
         }
         if (_blurPlugin == eBlurPluginBlur) {
             params.orderX = std::max( 0, _orderX->getValueAtTime(time) );
@@ -1463,7 +1471,7 @@ public:
                 case eEdgeDetectFilterSimple:
                 case eEdgeDetectFilterSobel:
                 case eEdgeDetectFilterRotationInvariant:
-                    params.filter = eFilterBox;
+                    params.filter = eFilterGaussian;
                     break;
                 case eEdgeDetectFilterQuasiGaussian:
                     params.filter = eFilterQuasiGaussian;
@@ -1519,6 +1527,7 @@ public:
             params.edgeDetectMultiChannel = (EdgeDetectMultiChannelEnum)_edgeDetectMultiChannel->getValueAtTime(time);
             // _edgeDetectErode already used as params.erodeSize
             // _edgeDetectBlur already used for params.sizex/y
+            params.edgeDetectNMS = _edgeDetectNMS->getValueAtTime(time);
         } else {
             assert(_blurPlugin == eBlurPluginBlur ||
                    _blurPlugin == eBlurPluginLaplacian ||
@@ -1529,6 +1538,7 @@ public:
                    _blurPlugin == eBlurPluginErodeBlur ||
                    _blurPlugin == eBlurPluginEdgeExtend);
             params.edgeDetectMultiChannel = eEdgeDetectMultiChannelSeparate;
+            params.edgeDetectNMS = false;
         }
 
         params.cropToFormat = _cropToFormat ? _cropToFormat->getValueAtTime(time) : false;
@@ -2070,7 +2080,7 @@ public:
         //std::cout << "renderScale=" << args.renderScale.x << ',' << args.renderScale.y << std::endl;
         //std::cout << "renderWindow=" << args.renderWindow.x1 << ',' << args.renderWindow.y1 << ',' << args.renderWindow.x2 << ',' << args.renderWindow.y2 << std::endl;
         //std::cout << "cimg=" << cimg.width() << ',' << cimg.height() << std::endl;
-        CImgList<float> grad;
+        CImgList<cimgpix_t> grad;
 
 
         if (params.edgeDetectFilter == eEdgeDetectFilterSimple ||
@@ -2126,89 +2136,113 @@ public:
         // if blurred, multiply by 2 * pi * sigma^2, with sigma = (sx * scale / 2.4)
         // > int(x*exp(-x^2/(2*sigma^2))/(2*pi*sigma^4), x = 0 .. infinity);
         //
-        // for Box: if blurred, multiply by size
-        // > simplify((int(1/s, x = 0 .. s+1)-(int(1/s, x = 0 .. s-1)))/2);
+        // for Box, Triangle, and quadratic, derivatives are obtained using centered finite differences:
+        // (I(1) - I(-1))/2
+        // It can easily be shouwn that the derivative at 0 is the integral from 0 to 1 of the impulse response.
         //
-        // for Triangle: if blurred, multiply by (4s^2)/ (-5+6s)
-        // first part :
-        // > simplify(int(1/s+(x-1)/(s*s), x = 0 .. 1)+int(1/s-(x-1)/(s*s), x = 1 .. (1/2)*s+1));
-        // second part:
-        // > simplify(int(1/s-(x+1)/(s*s), x = 1 .. (1/2)*s-1));
-        // difference divided by two:
-        // > simplify((int(1/s+(x-1)/(s*s), x = 0 .. 1)+int(1/s-(x-1)/(s*s), x = 1 .. (1/2)*s+1)-(int(1/s-(x+1)/(s*s), x = 1 .. (1/2)*s-1)))*(1/2));
-        // -> (-5+6s)/(4s^2)
+        // for Box: if blurred, multiply by size
+        // > simplify(int(1/s, x = 0 .. 1));
+        //
+        // for Triangle: if blurred, multiply by (2*s^2)/ (2*s+1) =
+        // > simplify(int(1/s+x/(s*s), x = 0 .. 1));
         //
         // for Quadratic, multiply by (12*s^3)/(9*s^2-4)
-        // > (1/2)*simplify(int((-4*(x-1)^2+3*s^2)/(4*s^3), x = 0 .. (1/2)*s+1)-(int((-4*(x+1)^2+3*s^2)/(4*s^3), x = 0 .. (1/2)*s-1)));
+        // > simplify(int((-4*(x-1)^2+3*s^2)/(4*s^3), x = 0 .. 1));
         switch (params.filter) {
             case eFilterBox:
-                if (sx > 0.) {
+                if (sx > 1.) {
                     grad[0] *= sx;
                 }
-                if (sy > 0.) {
+                if (sy > 1.) {
                     grad[1] *= sy;
                 }
                 break;
             case eFilterTriangle:
-                if (sx > 5./6.) {
-                    grad[0] *= 1.5 /* should be 1. */  *(4*sx*sx)/ (-5+6*sx);
+                if (sx > 1.) {
+                    grad[0] *= 2*sx*sx / (2*sx+1);
                 }
-                if (sy > 5./6.) {
-                    grad[1] *= 1.5 /* should be 1. */  *(4*sy*sy)/ (-5+6*sy);
+                if (sy > 1.) {
+                    grad[1] *= 2*sy*sy / (2*sy+1);
                 }
                break;
             case eFilterQuadratic:
-                if (sx > 2./3.) {
+                if (sx > 1.) {
                     grad[0] *= (12*sx*sx*sx)/(9*sx*sx-4);
                 }
-                if (sy > 2./3.) {
+                if (sy > 1.) {
                     grad[1] *= (12*sy*sy*sy)/(9*sy*sy-4);
                 }
                 break;
             case eFilterGaussian:
             case eFilterQuasiGaussian:
-                if (sx / 2.4 > 0.1) {
+                if (sx / 2.4 >= 0.1) {
                     grad[0] *= 2. * M_PI * (sx/2.4) * (1. /* should be sx */ /2.4);
                 }
-                if (sy / 2.4 > 0.1) {
+                if (sy / 2.4 >= 0.1) {
                     grad[1] *= 2. * M_PI * (sy/2.4) * (1. /* should be sy */ /2.4);
                 }
                 break;
         }
 
-        if (cimg.spectrum() == 1 || params.edgeDetectMultiChannel == eEdgeDetectMultiChannelSeparate) {
+        bool separate = (cimg.spectrum() == 1) || (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelSeparate);
+        if (separate) {
             cimg_forXYC(cimg, x, y, c) {
                 cimgpix_t gx = grad[0](x, y, 0, c);
                 cimgpix_t gy = grad[1](x, y, 0, c);
+                // gradient direction is unchanged
                 cimg(x, y, 0, c) = std::sqrt(gx * gx + gy * gy);
             }
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelRMS) {
             cimg_forXY(cimg, x, y) {
                 double sumsq = 0;
+                // estimate gradient direction by making the largest component positive and summing
+                cimgpix_t gradx = 0.;
+                cimgpix_t grady = 0.;
                 cimg_forC(cimg, c) {
                     cimgpix_t gx = grad[0](x, y, 0, c);
                     cimgpix_t gy = grad[1](x, y, 0, c);
                     sumsq += gx * gx + gy * gy;
+                    if (std::abs(gx) > std::abs(gy)) {
+                        if (std::abs(gx) < 0) {
+                            gx = -gx;
+                            gy = -gy;
+                        }
+                    } else {
+                        if (std::abs(gy) < 0) {
+                            gx = -gx;
+                            gy = -gy;
+                        }
+                    }
+                    gradx += gx;
+                    grady += gy;
                 }
                 cimgpix_t e = std::sqrt( sumsq / cimg.spectrum() );
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
+                    grad[0](x, y, 0, c) = gradx;
+                    grad[1](x, y, 0, c) = grady;
                 }
             }
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelMax) {
             cimg_forXY(cimg, x, y) {
                 double maxsq = 0;
+                cimgpix_t gradx = 0.;
+                cimgpix_t grady = 0.;
                 cimg_forC(cimg, c) {
                     cimgpix_t gx = grad[0](x, y, 0, c);
                     cimgpix_t gy = grad[1](x, y, 0, c);
                     double sq = gx * gx + gy * gy;
                     if (sq > maxsq) {
                         maxsq = sq;
+                        gradx = gx;
+                        grady = gy;
                     }
                 }
                 cimgpix_t e = std::sqrt( maxsq );
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
+                    grad[0](x, y, 0, c) = gradx;
+                    grad[1](x, y, 0, c) = grady;
                 }
             }
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelTensor) {
@@ -2222,11 +2256,15 @@ public:
              %compute first (greatest) eigenvalue of 2x2 matrix J'*J.
              %note that the abs() is only needed because some values may be slightly
              %negative due to round-off error.
+             %See Section 1.3 of The Matrix Cookbook (available online).
              D = sqrt(abs(Jx.^2 - 2*Jx.*Jy + Jy.^2 + 4*Jxy.^2));
              e1 = (Jx + Jy + D) / 2;
              %the 2nd eigenvalue would be:  e2 = (Jx + Jy - D) / 2;
              
              edge_magnitude = sqrt(e1);
+             
+             %eigenvector corresponding to this eigenvalue: (Jxy, e1 - Jx)
+
              */
             cimg_forXY(cimg, x, y) {
                 double Jx = 0.;
@@ -2244,6 +2282,8 @@ public:
                 cimgpix_t e = std::sqrt(e1);
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
+                    grad[0](x, y, 0, c) = Jxy;
+                    grad[1](x, y, 0, c) = e1 - Jx;
                 }
             }
         }
@@ -2251,15 +2291,139 @@ public:
         if ( abort() ) { return; }
 
         if ( params.erodeSize > 0 ) {
-            cimg.erode( (unsigned int)std::floor(std::max(0., params.erodeSize) * args.renderScale.x) * 2 + 1,
-                       (unsigned int)std::floor(std::max(0., params.erodeSize * params.sizey / params.sizex) * args.renderScale.y) * 2 + 1 );
+            cimg.erode( (unsigned int)std::floor(std::max(0., params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
+                       (unsigned int)std::floor(std::max(0., params.erodeSize) * args.renderScale.y) * 2 + 1 );
         }
         if ( abort() ) { return; }
+
         if ( params.erodeSize < 0 ) {
-            cimg.dilate( (unsigned int)std::floor(std::max(0., -params.erodeSize) * args.renderScale.x) * 2 + 1,
-                        (unsigned int)std::floor(std::max(0., -params.erodeSize * params.sizey / params.sizex) * args.renderScale.y) * 2 + 1 );
+            cimg.dilate( (unsigned int)std::floor(std::max(0., -params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
+                        (unsigned int)std::floor(std::max(0., -params.erodeSize) * args.renderScale.y) * 2 + 1 );
+        }
+        if (params.edgeDetectNMS) {
+            nms(cimg, grad[0], grad[1], separate);
         }
     }
+
+    static double parabola(double Ip, double Ic, double In, double alpha)
+    {
+        /* equation of the parabola:
+         y = f(x) = ax^2 + bx + c
+         with:
+         In = f(1) = a + b + c
+         Ip = f(-1) = a - b - c
+         Ic = f(0) = c
+         
+         so that
+         */
+        double a = ((In-Ic) + (Ip -Ic) ) / 2;
+        double b = (In - Ip) / 2;
+        double c = Ic;
+        return a * alpha * alpha + b * alpha + c;
+    }
+
+    // maximul value of the parabola
+    static double parabola_maxval(double Ip, double Ic, double In)
+    {
+        /* equation of the parabola:
+         y = f(x) = ax^2 + bx + c
+         with:
+         In = f(1) = a + b + c
+         Ip = f(-1) = a - b - c
+         Ic = f(0) = c
+
+         so that
+         */
+        double a = ((In-Ic) + (Ip -Ic) ) / 2;
+        double b = (In - Ip) / 2;
+        double c = Ic;
+        /*
+         The extremum is obtained for x such that f'(x) = 2ax + b = 0 => x = -b/2a
+         The value at the extremum is
+         */
+        return c - b * b / (4*a);
+    }
+
+    void nms(cimg_library::CImg<cimgpix_t>& cimg,
+             const cimg_library::CImg<cimgpix_t>& gx,
+             const cimg_library::CImg<cimgpix_t>& gy,
+             bool separate)
+    {
+        int cmax = separate ? cimg.spectrum() : 1;
+        const cimg_library::CImg<cimgpix_t> I(cimg, /* is_shared=*/false); // copy input image
+        cimg_forXY(cimg, x, y) {
+            if ( x == 0 || x == (cimg.width() - 1) || y == 0 || y == (cimg.height() - 1) ) {
+                cimg_forC(cimg, c) {
+                    cimg(x,y,0,c) = 0.;
+                }
+                continue;
+            }
+            for (int c = 0; c < cmax; ++c) {
+                cimgpix_t gradx = gx(x,y,0,c);
+                cimgpix_t grady = gy(x,y,0,c);
+                if (gradx == 0. && grady == 0.) {
+                    // suppress the non-maximum
+                    if (separate) {
+                        cimg(x,y,0,c) = 0.;
+                    } else {
+                        cimg_forC(cimg, c1) {
+                            cimg(x,y,0,c1) = 0.;
+                        }
+                    }
+                    continue;
+                }
+                bool horiz = std::abs(gradx) >= std::abs(grady);
+                // the values that are used for gradient magnitude interp
+                cimgpix_t Ipp, Ipc, Ipn, Inp, Inc, Inn;
+                if (horiz) {
+                    Ipp = I(x-1,y-1,0,c);
+                    Ipc = I(x-1,y  ,0,c);
+                    Ipn = I(x-1,y+1,0,c);
+                    Inp = I(x+1,y-1,0,c);
+                    Inc = I(x+1,y  ,0,c);
+                    Inn = I(x+1,y+1,0,c);
+                } else {
+                    // switch to the horizontal gradient case
+                    std::swap(gradx, grady);
+                    Ipp = I(x-1,y-1,0,c);
+                    Ipc = I(x,  y-1,0,c);
+                    Ipn = I(x+1,y-1,0,c);
+                    Inp = I(x-1,y+1,0,c);
+                    Inc = I(x,  y+1,0,c);
+                    Inn = I(x+1,y+1,0,c);
+                }
+                double alpha = grady / gradx;
+                assert(-1. <= alpha && alpha <= 1);
+                // parabolic interpolation of the image values
+                double Ip = parabola(Ipp, Ipc, Ipn, -alpha);
+                double In = parabola(Inp, Inc, Inn, +alpha);
+                double Ic = I(x,y,0,c);
+                if (Ip < Ic && Ic >= In) {
+                    // local maximum. If we were doing subpixel edge detection, we would interpolate the position here
+                    // (see [Devernay1995])
+                    // compute maximum value
+                    double Imax = parabola_maxval(Ip, Ic, In);
+                    if (separate) {
+                        cimg(x,y,0,c) = Imax;
+                    } else {
+                        cimg_forC(cimg, c1) {
+                            cimg(x,y,0,c1) = Imax;
+                        }
+                    }
+                } else {
+                    // suppress the non-maximum
+                    if (separate) {
+                        cimg(x,y,0,c) = 0.;
+                    } else {
+                        cimg_forC(cimg, c1) {
+                            cimg(x,y,0,c1) = 0.;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
 private:
 
@@ -2283,8 +2447,9 @@ private:
     OFX::ChoiceParam *_filter;
     OFX::ChoiceParam *_edgeDetectFilter;
     OFX::ChoiceParam *_edgeDetectMultiChannel;
-    OFX::DoubleParam *_edgeDetectErode;
     OFX::DoubleParam *_edgeDetectBlur;
+    OFX::DoubleParam *_edgeDetectErode;
+    OFX::BooleanParam *_edgeDetectNMS;
     OFX::BooleanParam *_expandRoD;
     OFX::BooleanParam *_cropToFormat;
     OFX::DoubleParam *_alphaThreshold;
@@ -2690,6 +2855,19 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectBlur);
+            param->setLabel(kParamEdgeDetectBlurLabel);
+            param->setHint(kParamEdgeDetectBlurHint);
+            param->setRange(0., DBL_MAX);
+            param->setDisplayRange(0., 100.);
+            param->setDefault(0);
+            param->setDigits(1);
+            param->setIncrement(0.1);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
             OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectErode);
             param->setLabel(kParamEdgeDetectErodeLabel);
             param->setHint(kParamEdgeDetectErodeHint);
@@ -2703,14 +2881,9 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectBlur);
-            param->setLabel(kParamEdgeDetectBlurLabel);
-            param->setHint(kParamEdgeDetectBlurHint);
-            param->setRange(0., DBL_MAX);
-            param->setDisplayRange(0., 100.);
-            param->setDefault(0);
-            param->setDigits(1);
-            param->setIncrement(0.1);
+            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeDetectNMS);
+            param->setLabel(kParamEdgeDetectNMSLabel);
+            param->setHint(kParamEdgeDetectNMSHint);
             if (page) {
                 page->addChild(*param);
             }
