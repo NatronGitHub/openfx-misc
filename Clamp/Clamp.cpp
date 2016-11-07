@@ -48,7 +48,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "(e.g. 0 if the threshold is positive), and " \
 "check \"Enable MinClampTo\" and \"Enable MaxClampTo\" while keeping the default " \
 "values for \"MinClampTo\" (0.0) and \"MaxClampTop\" (1.0). The result is a binary "\
-"mask image.\n" \
+"mask image. To create a non-binary mask, with softer edges, either blur the output " \
+"of Clamp, or use the Grade plugin instead, setting the \"Black Point\" and \"White Point\" " \
+"to values close to the threshold, and checking the \"Clamp Black\" and \"Clamp " \
+"White\" options.\n" \
 "\n" \
 "See also: http://opticalenquiry.com/nuke/index.php?title=Clamp"
 #define kPluginIdentifier "net.sf.openfx.Clamp"

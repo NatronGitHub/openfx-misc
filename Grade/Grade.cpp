@@ -48,6 +48,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "B = offset + black - A * blackpoint\n" \
     "output = pow(A * input + B, 1 / gamma).\n" \
     "\n" \
+    "A special use for Grade is to generate a mask image with soft edges by thresholding an input image. " \
+    "Set the \"Black Point\" and \"White Point\" " \
+    "to values just below and just above the threshold, and check the \"Clamp Black\" and \"Clamp " \
+    "White\" options. If a binary mask containing only 0 and 1 is preferred, the Clamp plugin can be " \
+    "used instead.\n" \
+    "\n" \
     "See also: http://opticalenquiry.com/nuke/index.php?title=Grade and http://opticalenquiry.com/nuke/index.php?title=Integration#Matching_color"
 #define kPluginIdentifier "net.sf.openfx.GradePlugin"
 // History:
