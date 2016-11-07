@@ -39,6 +39,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ClampOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Clamp the values of the selected channels.\n" \
+"\n" \
+"A special use case for the Clamp plugin is to generate a binary mask image " \
+"(i.e. each pixel is either 0 or 1) by thresholding an image. Let us say one wants " \
+"all input pixels whose value is above or equal to some threshold value to " \
+"become 1, and all values below this threshold to become 0. Set the \"Minimum\" value " \
+"to the threshold, set the \"Maximum\" to any value strictly below the threshold " \
+"(e.g. 0 if the threshold is positive), and " \
+"check \"Enable MinClampTo\" and \"Enable MaxClampTo\" while keeping the default " \
+"values for \"MinClampTo\" (0.0) and \"MaxClampTop\" (1.0). The result is a binary "\
+"mask image.\n" \
+"\n" \
 "See also: http://opticalenquiry.com/nuke/index.php?title=Clamp"
 #define kPluginIdentifier "net.sf.openfx.Clamp"
 // History:
