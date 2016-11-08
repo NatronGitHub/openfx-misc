@@ -30,6 +30,9 @@ if (USE_OPENMP)
     endif()
 endif()
 
+# OSMesa
+add_definitions(-DHAVE_OSMESA)
+
 # CImg
 set(CIMGVERSION "02ec481605f4dd68dec9d8c5b7b4bd763ad31cac")
 if(NOT EXISTS ${PROJECT_SOURCE_DIR}/CImg/CImg.h)
@@ -39,6 +42,14 @@ include_directories("${CMAKE_SOURCE_DIR}/CImg")
 
 # Misc
 include_directories("${CMAKE_SOURCE_DIR}/Misc")
+
+# Shadertoy.ofx
+create_ofx_plugin(Shadertoy 
+    "Shadertoy" 
+    "${OSMESA_LIBRARIES}" 
+    "" 
+    "${OSMESA_INCLUDES}"
+    "")
 
 # CImg.ofx (bundle)
 create_ofx_plugin(CImg 
