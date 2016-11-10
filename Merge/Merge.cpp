@@ -920,7 +920,7 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args,
         // depending on the operation, enable/disable alpha masking
         _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
         _operationString->setValue( MergeImages2D::getOperationString(operation) );
-    } else if ( (paramName == kParamBChannelsAChanged) && (args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( (paramName == kParamBChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
         _bChannelAChanged->setValue(true);
     }
 }
