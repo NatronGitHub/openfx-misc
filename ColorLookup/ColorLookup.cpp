@@ -867,7 +867,7 @@ public:
         const int nComponents = 3;
         GLfloat color[nComponents];
 
-        if ( _showRamp->getValueAtTime(time) ) {
+        if ( _showRamp->getValueAtTime(time)  && (nbValues > 0) ) {
             glBegin (GL_TRIANGLE_STRIP);
 
             for (int position = 0; position <= nbValues; ++position) {
