@@ -31,7 +31,12 @@ if (USE_OPENMP)
 endif()
 
 # OSMesa
-add_definitions(-DHAVE_OSMESA)
+if(USE_MESA)
+    add_definitions(-DHAVE_OSMESA)
+else()
+    set(OSMESA_LIBRARIES "")
+    set(OSMESA_INCLUDES "")
+endif()
 
 # CImg
 set(CIMGVERSION "02ec481605f4dd68dec9d8c5b7b4bd763ad31cac")
