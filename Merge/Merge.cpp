@@ -46,14 +46,25 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "MergeOFX"
 #define kPluginGrouping "Merge"
-#define kPluginDescription \
+#define kPluginDescriptionStart \
     "Pixel-by-pixel merge operation between two or more inputs.\n" \
     "Input A is first merged with B (B is non-optional), then A2, if connected, is merged with the intermediary result, then A3, etc.\n\n" \
     "A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
-    "\n" \
-    "Note that if an input with only RGB components is connected to A or B, its alpha channel is considered to be transparent (zero) by default, and the \"A\" checkbox for the given input is automatically unchecked, unset it is set explicitely by the user.  In fact, most of the time, RGB images without an alpha channel are only used as background images, and in they can be considered transparent, since they should not occlude anything. That way, the alpha channel only contains the opacity of elements that are merged with this background.  In some rare cases, though, one may want the RGB image to actually be opaque, and can check the \"A\" checkbox for the given input to do so (except on Nuke, where the Read node should have the \"auto alpha\" parameter checked).\n" \
-    "\n" \
+    "\n"
+#define kPluginDescriptionMidRGB \
+    "Note that if an input with only RGB components is connected to A or B, its alpha channel " \
+    "is considered to be transparent (zero) by default, and the \"A\" checkbox for the given " \
+    "input is automatically unchecked, unless it is set explicitely by the user.  In fact, " \
+    "most of the time, RGB images without an alpha channel are only used as background images " \
+    "in the B input, and should be considered as transparent, since they should not occlude " \
+    "anything. That way, the alpha channel on output only contains the opacity of elements " \
+    "that are merged with this background.  In some rare cases, though, one may want the RGB " \
+    "image to actually be opaque, and can check the \"A\" checkbox for the given input to do " \
+    "so.\n" \
+    "\n"
+#define kPluginDescriptionEnd \
     "See also:\n" \
+    "\n" \
     "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
     "- \"SVG Compositing Specification\" https://www.w3.org/TR/SVGCompositing/\n" \
     "- \"ISO 32000-1:2008: Portable Document Format (July 2008)\", Sec. 11.3 \"Basic Compositing Operations\"  http://www.adobe.com/devnet/pdf/pdf_reference.html\n" \
@@ -460,8 +471,10 @@ public:
         _outputChannels[3] = fetchBooleanParam(kParamOutputChannelsA);
         assert(_outputChannels[0] && _outputChannels[1] && _outputChannels[2] && _outputChannels[3]);
 
-        _aChannelAChanged = fetchBooleanParam(kParamAChannelsAChanged);
-        _bChannelAChanged = fetchBooleanParam(kParamBChannelsAChanged);
+        if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
+            _aChannelAChanged = fetchBooleanParam(kParamAChannelsAChanged);
+            _bChannelAChanged = fetchBooleanParam(kParamBChannelsAChanged);
+        }
     }
 
 private:
@@ -927,9 +940,9 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args,
         // depending on the operation, enable/disable alpha masking
         _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
         _operationString->setValue( MergeImages2D::getOperationString(operation) );
-    } else if ( (paramName == kParamAChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( _aChannelAChanged && (paramName == kParamAChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
         _aChannelAChanged->setValue(true);
-    } else if ( (paramName == kParamBChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( _bChannelAChanged && (paramName == kParamBChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
         _bChannelAChanged->setValue(true);
     }
 }
@@ -937,7 +950,7 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args,
 void
 MergePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if ( (clipName == kClipB) && _srcClipB && _srcClipB->isConnected() && !_bChannelAChanged->getValue() && ( args.reason == OFX::eChangeUserEdit) ) {
+    if ( _bChannelAChanged && !_bChannelAChanged->getValue() && (clipName == kClipB) && _srcClipB && _srcClipB->isConnected() && ( args.reason == OFX::eChangeUserEdit) ) {
         PixelComponentEnum unmappedComps = _srcClipB->getUnmappedPixelComponents();
         // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
         // If before the clip preferences pass the input is RGB then don't consider the alpha channel for the clip B and use 0 instead.
@@ -947,7 +960,7 @@ MergePlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
         if (unmappedComps == ePixelComponentRGBA || unmappedComps == ePixelComponentAlpha) {
             _bChannels[3]->setValue(true);
         }
-    } else if ( (clipName == kClipA) && _srcClipA && _srcClipA->isConnected() && !_aChannelAChanged->getValue() && ( args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( _aChannelAChanged && !_aChannelAChanged->getValue() && (clipName == kClipA) && _srcClipA && _srcClipA->isConnected() && ( args.reason == OFX::eChangeUserEdit) ) {
         // Note: we do not care about clips A2, A3, ...
         PixelComponentEnum unmappedComps = _srcClipA->getUnmappedPixelComponents();
         // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
@@ -1103,66 +1116,78 @@ MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
     }
-    std::string help = kPluginDescription;
+    std::string help = kPluginDescriptionStart;
+    if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
+        // Merge has a special way of handling RGB inputs, which are transparent by default
+        help += kPluginDescriptionMidRGB;
+    }
     // only Natron benefits from the long description, because '<' characters may break the OFX
     // plugins cache in hosts using the older HostSupport library.
     if (OFX::getImageEffectHostDescription()->isNatron) {
-        help += "\n\nThe following operators are available:\n";
-        help += "\n* Porter-Duff compositing operators\n";
+        help += "### Operators\n";
+        help += "The following operators are available.\n";
+        help += "\n#### Porter-Duff compositing operators\n";
         // missing: clear
-        help += getOperationHelp(eMergeCopy) + '\n'; // src
+        help += "\n- " + getOperationHelp(eMergeCopy) + '\n'; // src
         // missing: dst
-        help += getOperationHelp(eMergeOver) + '\n'; // src-over
-        help += getOperationHelp(eMergeUnder) + '\n'; // dst-over
-        help += getOperationHelp(eMergeIn) + '\n'; // src-in
-        help += getOperationHelp(eMergeMask) + '\n'; // dst-in
-        help += getOperationHelp(eMergeOut) + '\n'; // src-out
-        help += getOperationHelp(eMergeStencil) + '\n'; // dst-out
-        help += getOperationHelp(eMergeATop) + '\n'; // src-atop
+        help += "\n- " + getOperationHelp(eMergeOver) + '\n'; // src-over
+        help += "\n- " + getOperationHelp(eMergeUnder) + '\n'; // dst-over
+        help += "\n- " + getOperationHelp(eMergeIn) + '\n'; // src-in
+        help += "\n- " + getOperationHelp(eMergeMask) + '\n'; // dst-in
+        help += "\n- " + getOperationHelp(eMergeOut) + '\n'; // src-out
+        help += "\n- " + getOperationHelp(eMergeStencil) + '\n'; // dst-out
+        help += "\n- " + getOperationHelp(eMergeATop) + '\n'; // src-atop
         // missing: dst-atop
-        help += getOperationHelp(eMergeXOR) + '\n'; // xor
+        help += "\n- " + getOperationHelp(eMergeXOR) + '\n'; // xor
 
-        help += "\n* Blend modes, see https://en.wikipedia.org/wiki/Blend_modes\n";
-        help += "\n  - Multiply and Screen\n";
-        help += getOperationHelp(eMergeMultiply) + '\n';
-        help += getOperationHelp(eMergeScreen) + '\n';
-        help += getOperationHelp(eMergeOverlay) + '\n';
-        help += getOperationHelp(eMergeHardLight) + '\n';
-        help += getOperationHelp(eMergeSoftLight) + '\n';
-        help += "\n  - Dodge and burn\n";
-        help += getOperationHelp(eMergeColorDodge) + '\n';
-        help += getOperationHelp(eMergeColorBurn) + '\n';
-        help += getOperationHelp(eMergePinLight) + '\n';
-        help += getOperationHelp(eMergeDifference) + '\n';
-        help += getOperationHelp(eMergeExclusion) + '\n';
-        help += getOperationHelp(eMergeDivide) + '\n';
-        help += "\n  - Simple arithmetic blend modes\n";
-        help += getOperationHelp(eMergeDivide) + '\n';
-        help += getOperationHelp(eMergePlus) + '\n';// add (http://keithp.com/~keithp/render/protocol.html)
-        help += getOperationHelp(eMergeFrom) + '\n';
-        help += getOperationHelp(eMergeMinus) + '\n';
-        help += getOperationHelp(eMergeDifference) + '\n';
-        help += getOperationHelp(eMergeMin) + '\n';
-        help += getOperationHelp(eMergeMax) + '\n';
-        help += "\n  - Hue, saturation and luminosity\n";
-        help += getOperationHelp(eMergeHue) + '\n';
-        help += getOperationHelp(eMergeSaturation) + '\n';
-        help += getOperationHelp(eMergeColor) + '\n';
-        help += getOperationHelp(eMergeLuminosity) + '\n';
-        help += "\n* Other\n";
-        help += getOperationHelp(eMergeAverage) + '\n';
-        help += getOperationHelp(eMergeConjointOver) + '\n';
-        help += getOperationHelp(eMergeDisjointOver) + '\n';
-        help += getOperationHelp(eMergeFreeze) + '\n';
-        help += getOperationHelp(eMergeGeometric) + '\n';
-        help += getOperationHelp(eMergeGrainExtract) + '\n';
-        help += getOperationHelp(eMergeGrainMerge) + '\n';
-        help += getOperationHelp(eMergeHypot) + '\n';
-        //help += getOperationHelp(eMergeInterpolated) + '\n';
-        help += getOperationHelp(eMergeMatte) + '\n';
-        help += getOperationHelp(eMergeReflect) + '\n';
+        help += "\n#### Blend modes, see https://en.wikipedia.org/wiki/Blend_modes\n";
+        help += "\n##### Multiply and Screen\n";
+        help += "\n- " + getOperationHelp(eMergeMultiply) + '\n';
+        help += "\n- " + getOperationHelp(eMergeScreen) + '\n';
+        help += "\n- " + getOperationHelp(eMergeOverlay) + '\n';
+        help += "\n- " + getOperationHelp(eMergeHardLight) + '\n';
+        help += "\n- " + getOperationHelp(eMergeSoftLight) + '\n';
+        help += "\n##### Dodge and burn\n";
+        help += "\n- " + getOperationHelp(eMergeColorDodge) + '\n';
+        help += "\n- " + getOperationHelp(eMergeColorBurn) + '\n';
+        help += "\n- " + getOperationHelp(eMergePinLight) + '\n';
+        help += "\n- " + getOperationHelp(eMergeDifference) + '\n';
+        help += "\n- " + getOperationHelp(eMergeExclusion) + '\n';
+        help += "\n- " + getOperationHelp(eMergeDivide) + '\n';
+        help += "\n##### Simple arithmetic blend modes\n";
+        help += "\n- " + getOperationHelp(eMergeDivide) + '\n';
+        help += "\n- " + getOperationHelp(eMergePlus) + '\n';// add (see <http://keithp.com/~keithp/render/protocol.html>)
+        help += "\n- " + getOperationHelp(eMergeFrom) + '\n';
+        help += "\n- " + getOperationHelp(eMergeMinus) + '\n';
+        help += "\n- " + getOperationHelp(eMergeDifference) + '\n';
+        help += "\n- " + getOperationHelp(eMergeMin) + '\n';
+        help += "\n- " + getOperationHelp(eMergeMax) + '\n';
+        help += "\n##### Hue, saturation and luminosity\n";
+        help += "\n- " + getOperationHelp(eMergeHue) + '\n';
+        help += "\n- " + getOperationHelp(eMergeSaturation) + '\n';
+        help += "\n- " + getOperationHelp(eMergeColor) + '\n';
+        help += "\n- " + getOperationHelp(eMergeLuminosity) + '\n';
+        help += "\n#### Other\n";
+        help += "\n- " + getOperationHelp(eMergeAverage) + '\n';
+        help += "\n- " + getOperationHelp(eMergeConjointOver) + '\n';
+        help += "\n- " + getOperationHelp(eMergeDisjointOver) + '\n';
+        help += "\n- " + getOperationHelp(eMergeFreeze) + '\n';
+        help += "\n- " + getOperationHelp(eMergeGeometric) + '\n';
+        help += "\n- " + getOperationHelp(eMergeGrainExtract) + '\n';
+        help += "\n- " + getOperationHelp(eMergeGrainMerge) + '\n';
+        help += "\n- " + getOperationHelp(eMergeHypot) + '\n';
+        //help += "\n- " + getOperationHelp(eMergeInterpolated) + '\n';
+        help += "\n- " + getOperationHelp(eMergeMatte) + '\n';
+        help += "\n- " + getOperationHelp(eMergeReflect) + '\n';
+        help += '\n';
     }
-    desc.setPluginDescription(help, /*validate=*/ false);
+    help += kPluginDescriptionEnd;
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        desc.setDescriptionIsMarkdown(true);
+        desc.setPluginDescription(help, /*validate=*/ false);
+    } else {
+        desc.setPluginDescription(help);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -1526,25 +1551,27 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    // two hidden parameters to keep track of the fact that the user explicitely checked or unchecked tha "A" checkbox
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsAChanged);
-        param->setDefault(false);
-        param->setIsSecretAndDisabled(true);
-        param->setAnimates(false);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
+    if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
+        // two hidden parameters to keep track of the fact that the user explicitely checked or unchecked tha "A" checkbox
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsAChanged);
+            param->setDefault(false);
+            param->setIsSecretAndDisabled(true);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsAChanged);
-        param->setDefault(false);
-        param->setIsSecretAndDisabled(true);
-        param->setAnimates(false);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsAChanged);
+            param->setDefault(false);
+            param->setIsSecretAndDisabled(true);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 
