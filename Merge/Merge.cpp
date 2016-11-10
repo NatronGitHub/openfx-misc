@@ -50,6 +50,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Pixel-by-pixel merge operation between two or more inputs.\n" \
     "Input A is first merged with B (B is non-optional), then A2, if connected, is merged with the intermediary result, then A3, etc.\n\n" \
     "A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
+    "\n" \
+    "Note that if an input with only RGB components is connected to A or B, its alpha channel is considered to be transparent (zero) by default, and the \"A\" checkbox for the given input is automatically unchecked, unset it is set explicitely by the user.  In fact, most of the time, RGB images without an alpha channel are only used as background images, and in they can be considered transparent, since they should not occlude anything. That way, the alpha channel only contains the opacity of elements that are merged with this background.  In some rare cases, though, one may want the RGB image to actually be opaque, and can check the \"A\" checkbox for the given input to do so (except on Nuke, where the Read node should have the \"auto alpha\" parameter checked).\n" \
+    "\n" \
     "See also:\n" \
     "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
     "- \"SVG Compositing Specification\" https://www.w3.org/TR/SVGCompositing/\n" \
@@ -165,7 +168,8 @@ enum BBoxEnum
 #define kParamOutputChannelsALabel "A"
 #define kParamOutputChannelsAHint  "Write alpha component to output."
 
-#define kParamBChannelsAChanged "bChannelsChanged"
+#define kParamAChannelsAChanged "aChannelsChanged" // did the user explicitely change the "A" checkbox for A input?
+#define kParamBChannelsAChanged "bChannelsChanged" // did the user explicitely change the "A" checkbox for B input?
 
 #define kClipA "A"
 #define kClipAHint "The image sequence to merge with input B."
@@ -407,6 +411,7 @@ public:
         , _srcClipB(0)
         , _maskClip(0)
         , _optionalASrcClips(0)
+        , _aChannelAChanged(0)
         , _bChannelAChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -455,6 +460,7 @@ public:
         _outputChannels[3] = fetchBooleanParam(kParamOutputChannelsA);
         assert(_outputChannels[0] && _outputChannels[1] && _outputChannels[2] && _outputChannels[3]);
 
+        _aChannelAChanged = fetchBooleanParam(kParamAChannelsAChanged);
         _bChannelAChanged = fetchBooleanParam(kParamBChannelsAChanged);
     }
 
@@ -497,6 +503,7 @@ private:
     OFX::BooleanParam* _aChannels[4];
     OFX::BooleanParam* _bChannels[4];
     OFX::BooleanParam* _outputChannels[4];
+    OFX::BooleanParam* _aChannelAChanged;
     OFX::BooleanParam* _bChannelAChanged;
 };
 
@@ -920,6 +927,8 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args,
         // depending on the operation, enable/disable alpha masking
         _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
         _operationString->setValue( MergeImages2D::getOperationString(operation) );
+    } else if ( (paramName == kParamAChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
+        _aChannelAChanged->setValue(true);
     } else if ( (paramName == kParamBChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
         _bChannelAChanged->setValue(true);
     }
@@ -929,11 +938,25 @@ void
 MergePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
     if ( (clipName == kClipB) && _srcClipB && _srcClipB->isConnected() && !_bChannelAChanged->getValue() && ( args.reason == OFX::eChangeUserEdit) ) {
-
+        PixelComponentEnum unmappedComps = _srcClipB->getUnmappedPixelComponents();
         // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
         // If before the clip preferences pass the input is RGB then don't consider the alpha channel for the clip B and use 0 instead.
-        if (_srcClipB->getUnmappedPixelComponents() == ePixelComponentRGB) {
+        if (unmappedComps == ePixelComponentRGB) {
             _bChannels[3]->setValue(false);
+        }
+        if (unmappedComps == ePixelComponentRGBA || unmappedComps == ePixelComponentAlpha) {
+            _bChannels[3]->setValue(true);
+        }
+    } else if ( (clipName == kClipA) && _srcClipA && _srcClipA->isConnected() && !_aChannelAChanged->getValue() && ( args.reason == OFX::eChangeUserEdit) ) {
+        // Note: we do not care about clips A2, A3, ...
+        PixelComponentEnum unmappedComps = _srcClipA->getUnmappedPixelComponents();
+        // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
+        // If before the clip preferences pass the input is RGB then don't consider the alpha channel for the clip B and use 0 instead.
+        if (unmappedComps == ePixelComponentRGB) {
+            _aChannels[3]->setValue(false);
+        }
+        if (unmappedComps == ePixelComponentRGBA || unmappedComps == ePixelComponentAlpha) {
+            _aChannels[3]->setValue(true);
         }
     }
 }
@@ -1503,6 +1526,17 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
+    // two hidden parameters to keep track of the fact that the user explicitely checked or unchecked tha "A" checkbox
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsAChanged);
+        param->setDefault(false);
+        param->setIsSecretAndDisabled(true);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsAChanged);
         param->setDefault(false);
