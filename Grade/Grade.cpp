@@ -238,8 +238,8 @@ public:
         double B = offset + black - A * bp;
         double invgamma = 1. / gamma;
         A = (A * *v) + B;
-        if ( (A < 0) && (std::floor(invgamma + 0.5) != invgamma) ) {
-            *v = 0; // pow would produce NaNs in that case
+        if (A <= 0) {
+            *v = A; // pow would produce NaNs in that case
         } else {
             *v = std::pow(A, invgamma);
         }

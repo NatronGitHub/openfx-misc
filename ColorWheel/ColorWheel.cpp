@@ -249,9 +249,15 @@ private:
                         color.g = color.g >= 1. ? 1 : 0.;
                         color.b = color.b >= 1. ? 1 : 0.;
                     } else if (_gamma != 1.) {
-                        color.r = std::pow(color.r, 1. / _gamma);
-                        color.g = std::pow(color.g, 1. / _gamma);
-                        color.b = std::pow(color.b, 1. / _gamma);
+                        if (color.r > 0.) {
+                            color.r = std::pow(color.r, 1. / _gamma);
+                        }
+                        if (color.g > 0.) {
+                            color.g = std::pow(color.g, 1. / _gamma);
+                        }
+                        if (color.b > 0.) {
+                            color.b = std::pow(color.b, 1. / _gamma);
+                        }
                     }
                     colorToPIX(color, dstPix);
                 }
