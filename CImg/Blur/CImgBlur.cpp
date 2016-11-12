@@ -2190,7 +2190,9 @@ public:
                 cimgpix_t gx = grad[0](x, y, 0, c);
                 cimgpix_t gy = grad[1](x, y, 0, c);
                 // gradient direction is unchanged
-                cimg(x, y, 0, c) = std::sqrt(gx * gx + gy * gy);
+                cimgpix_t sqe = gx * gx + gy * gy;
+                cimgpix_t e = sqe > 0. ? std::sqrt(sqe) : 0.;
+                cimg(x, y, 0, c) = e;
             }
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelRMS) {
             cimg_forXY(cimg, x, y) {
@@ -2216,7 +2218,8 @@ public:
                     gradx += gx;
                     grady += gy;
                 }
-                cimgpix_t e = std::sqrt( sumsq / cimg.spectrum() );
+                cimgpix_t sqe = sumsq / cimg.spectrum();
+                cimgpix_t e = sqe > 0. ? std::sqrt(sqe) : 0.;
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
                     grad[0](x, y, 0, c) = gradx;
@@ -2238,7 +2241,7 @@ public:
                         grady = gy;
                     }
                 }
-                cimgpix_t e = std::sqrt( maxsq );
+                cimgpix_t e = maxsq > 0. ? std::sqrt( maxsq ) : 0.;
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
                     grad[0](x, y, 0, c) = gradx;
@@ -2277,9 +2280,10 @@ public:
                     Jy += gy * gy;
                     Jxy += gx * gy;
                 }
-                double D = std::sqrt( std::abs(Jx * Jx - 2 * Jx * Jy + Jy * Jy + 4 * Jxy * Jxy) );
+                double sqD = Jx * Jx - 2 * Jx * Jy + Jy * Jy + 4 * Jxy * Jxy;
+                double D = sqD > 0. ? std::sqrt(sqD) : 0.;
                 double e1 = (Jx + Jy + D) / 2;
-                cimgpix_t e = std::sqrt(e1);
+                cimgpix_t e = e1 > 0. ? std::sqrt(e1) : 0.;
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
                     grad[0](x, y, 0, c) = Jxy;
