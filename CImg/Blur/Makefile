@@ -25,7 +25,9 @@ net.sf.cimg.CImgChromaBlur.png \
 net.sf.cimg.CImgChromaBlur.svg \
 net.sf.cimg.CImgLaplacian.png \
 net.sf.cimg.CImgLaplacian.svg \
-
+EdgeBlur.py \
+EdgeBlur.nps \
+EdgeBlur.gizmo
 
 TOP_SRCDIR = ../..
 include $(TOP_SRCDIR)/Makefile.master
