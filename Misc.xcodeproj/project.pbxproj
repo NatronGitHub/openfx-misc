@@ -3105,6 +3105,9 @@
 		1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxSonyVegas.h; path = openfx/include/ofxSonyVegas.h; sourceTree = SOURCE_ROOT; };
 		1ECA4DF51A3F3A6500C5128B /* Ramp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Ramp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECA4E0E1A3F3ACD00C5128B /* Radial.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Radial.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1ECACED81DD86E2700A33888 /* EdgeBlur.gizmo */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = EdgeBlur.gizmo; path = CImg/Blur/EdgeBlur.gizmo; sourceTree = "<group>"; };
+		1ECACED91DD86E2700A33888 /* EdgeBlur.nps */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = EdgeBlur.nps; path = CImg/Blur/EdgeBlur.nps; sourceTree = "<group>"; };
+		1ECACEDA1DD86E2700A33888 /* EdgeBlur.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = EdgeBlur.py; path = CImg/Blur/EdgeBlur.py; sourceTree = "<group>"; };
 		1ECE544C185F2374001ED442 /* ReConverge.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReConverge.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECE544F185F23E3001ED442 /* ReConverge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReConverge.cpp; sourceTree = "<group>"; };
 		1ECE5451185F23ED001ED442 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -4408,6 +4411,7 @@
 		1E551ED217994DEF00A4135C /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				1ECACEDB1DD86E3600A33888 /* PyPlugs */,
 				1E9A570F1D781CF70070646A /* Templates */,
 				1E9B5F6C198A54210095C8AA /* README.md */,
 				1E9DD3C01CEE1D9D00B674E9 /* README-hosts.txt */,
@@ -4902,6 +4906,16 @@
 				1E3284971A41C26300C9A4E4 /* net.sf.openfx.Radial.svg */,
 			);
 			path = Radial;
+			sourceTree = "<group>";
+		};
+		1ECACEDB1DD86E3600A33888 /* PyPlugs */ = {
+			isa = PBXGroup;
+			children = (
+				1ECACED81DD86E2700A33888 /* EdgeBlur.gizmo */,
+				1ECACED91DD86E2700A33888 /* EdgeBlur.nps */,
+				1ECACEDA1DD86E2700A33888 /* EdgeBlur.py */,
+			);
+			name = PyPlugs;
 			sourceTree = "<group>";
 		};
 		1ECE544E185F23BD001ED442 /* ReConverge */ = {
