@@ -325,6 +325,8 @@ KeyMixPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     if ( _srcClipB->isConnected() ) {
         rod = _srcClipB->getRegionOfDefinition(time);
+    } else {
+        rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
     }
     if ( _srcClipA->isConnected() ) {
         OFX::Coords::rectBoundingBox(rod, _srcClipA->getRegionOfDefinition(time), &rod);
@@ -491,6 +493,14 @@ KeyMixPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 
     clipPreferences.setClipComponents(*_srcClipA, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
+#ifdef OFX_EXTENSIONS_NATRON
+    // the output format is the format of the B clip if it is connected
+    if (_srcClipB && _srcClipB->isConnected()) {
+        OfxRectI format;
+        _srcClipB->getFormat(format);
+        clipPreferences.setOutputFormat(format);
+    }
+#endif
 }
 
 
@@ -608,7 +618,7 @@ KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
-    srcClipB->setOptional(false); // B clip is non-optional
+    srcClipB->setOptional(true); // B clip is optional
 
     OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->setHint(kClipAHint);
@@ -618,6 +628,7 @@ KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipA->setTemporalClipAccess(false);
     srcClipA->setSupportsTiles(kSupportsTiles);
+    srcClipA->setOptional(true);
 
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
