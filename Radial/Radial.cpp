@@ -51,7 +51,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Radial ramp.\n" \
     "The ramp is composited with the source image using the 'over' operator.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Radial"
+    "\n" \
+    "If no source is connected, this effect behaves like a generator. Its region of definition is:\n" \
+    "- The selected format if the Extent parameter is a format.\n" \
+    "- The project output format if Color0 is not black and transparent.\n" \
+    "- The selected extent plus a one-pixel border if Color0 is black and transparent.\n" \
+    "\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Radial"
 
 #define kPluginIdentifier "net.sf.openfx.Radial"
 // History:
@@ -862,7 +868,9 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     }
     RGBAValues color0;
     _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
-    if (color0.r != 0. || color0.g != 0. || color0.b != 0. || color0.a != 0.) {
+    GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+    if ( extent != eGeneratorExtentFormat &&
+         (color0.r != 0. || color0.g != 0. || color0.b != 0. || color0.a != 0.) ) {
         // something has to be drawn outside of the rectangle
 
         // return default RoD.
@@ -891,7 +899,7 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     }
 
     bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
-    if (wasCaught) {
+    if (wasCaught && extent != eGeneratorExtentFormat) {
         // add one pixel in each direction to ensure border is black and transparent
         // (non-black+transparent case was treated above)
         rod.x1 -= 1;
