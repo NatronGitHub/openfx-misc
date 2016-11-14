@@ -338,45 +338,62 @@ private:
                 double dx = std::min(x - btmLeft.x, topRight.x - x);
                 double dy = std::min(y - btmLeft.y, topRight.y - y);
 
-                if ( (dx <= 0) || (dy <= 0) ) {
+                if ( (dx <= -0.5) || (dy <= -0.5) ) {
                     // outside of the rectangle
                     tmpPix[0] = (float)_color0.r;
                     tmpPix[1] = (float)_color0.g;
                     tmpPix[2] = (float)_color0.b;
                     tmpPix[3] = (float)_color0.a;
-                } else if ( (_softness == 0) || ( (dx >= _softness) && (dy >= _softness) ) ) {
-                    // inside of the rectangle
-                    tmpPix[0] = (float)_color1.r;
-                    tmpPix[1] = (float)_color1.g;
-                    tmpPix[2] = (float)_color1.b;
-                    tmpPix[3] = (float)_color1.a;
                 } else {
-                    float tx, ty;
-                    if (dx >= _softness) {
-                        tx = 1.f;
-                    } else {
-                        tx = (float)rampSmooth(dx / _softness);
-                    }
-                    if (dy >= _softness) {
-                        ty = 1.f;
-                    } else {
-                        ty = (float)rampSmooth(dy / _softness);
-                    }
-                    float t = tx * ty;
-                    if (t >= 1) {
+                    // inside or mixed
+                    if ( (_softness == 0) || ( (dx >= _softness) && (dy >= _softness) ) ) {
+                        // inside of the rectangle
                         tmpPix[0] = (float)_color1.r;
                         tmpPix[1] = (float)_color1.g;
                         tmpPix[2] = (float)_color1.b;
                         tmpPix[3] = (float)_color1.a;
                     } else {
-                        //if (_plinear) {
-                        //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
-                        //    t = t*t*t;
-                        //}
-                        tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
-                        tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
-                        tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
-                        tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                        float tx, ty;
+                        if (dx >= _softness) {
+                            tx = 1.f;
+                        } else {
+                            tx = (float)rampSmooth(dx / _softness);
+                        }
+                        if (dy >= _softness) {
+                            ty = 1.f;
+                        } else {
+                            ty = (float)rampSmooth(dy / _softness);
+                        }
+                        float t = tx * ty;
+                        if (t >= 1) {
+                            tmpPix[0] = (float)_color1.r;
+                            tmpPix[1] = (float)_color1.g;
+                            tmpPix[2] = (float)_color1.b;
+                            tmpPix[3] = (float)_color1.a;
+                        } else {
+                            //if (_plinear) {
+                            //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                            //    t = t*t*t;
+                            //}
+                            tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                            tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                            tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                            tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                        }
+                    }
+                    if (dx < 0.5 || dy < 0.5) {
+                        // mixed pixel
+                        float a = 1.;
+                        if (dx < 0.5) {
+                            a *= dx + 0.5;
+                        }
+                        if (dy < 0.5) {
+                            a *= dy + 0.5;
+                        }
+                        tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
+                        tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
+                        tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
+                        tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
                     }
                 }
                 float a = tmpPix[3];
