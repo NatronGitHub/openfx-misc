@@ -57,8 +57,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: antialiased render
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -101,7 +102,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #endif
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
-#define kParamSoftnessHint "Softness of the radial ramp. 0 is a hard edge."
+#define kParamSoftnessHint "Softness of the radial ramp. Draws an anti-aliased disc or ellipse if zero."
 
 #define kParamPLinear "plinear"
 #define kParamPLinearLabel "Perceptually Linear"

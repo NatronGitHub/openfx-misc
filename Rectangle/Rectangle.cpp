@@ -66,7 +66,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1: remove blackOutside parameter: the outside color is always color0
+// version 2.1: antialiased render & remove blackOutside parameter (the outside color is always color0)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -112,7 +112,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
-#define kParamSoftnessHint "Softness of the rectangle edges. 0 is a hard edge."
+#define kParamSoftnessHint "Softness of the rectangle edges. Draws an anti-aliased rectangle if zero"
 
 #define kParamColor0 "color0"
 #define kParamColor0Label "Color 0"
