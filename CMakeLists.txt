@@ -16,7 +16,7 @@ target_compile_definitions(OfxSupport PUBLIC OFX_EXTENSIONS_VEGAS OFX_EXTENSIONS
 include_directories("${CMAKE_SOURCE_DIR}/SupportExt")
 if(MSVC)
     add_definitions(-DNOMINMAX)
-endif(
+endif()
 
 # OpenMP
 set(USE_OPENMP true CACHE BOOL "Use OpenMP")
