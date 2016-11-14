@@ -315,11 +315,14 @@ private:
         double par = _dstImg->getPixelAspectRatio();
 
         // center of the ellipse
-        OfxPointD c = { ( _btmLeft.x + (_btmLeft.x + _size.x) ) / 2, ( _btmLeft.y + (_btmLeft.y + _size.y) ) / 2 };
+        OfxPointD c_canonical = { ( _btmLeft.x + (_btmLeft.x + _size.x) ) / 2, ( _btmLeft.y + (_btmLeft.y + _size.y) ) / 2 };
         // radius of the ellipse
-        OfxPointD r = { _size.x / 2, _size.y / 2 };
-        OfxPointD c_pix; // center position in pixel
-        OFX::Coords::toPixelSub(c, rs, par, &c_pix);
+        OfxPointD r_canonical = { _size.x / 2, _size.y / 2 };
+        OfxPointD c; // center position in pixel
+        OFX::Coords::toPixelSub(c_canonical, rs, par, &c);
+        OfxPointD r; // radius in pixel
+        r.x = r_canonical.x * rs.x / par;
+        r.y = r_canonical.y * rs.y / par;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -330,38 +333,30 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                OfxPointI p_pixel;
-                OfxPointD p;
-                p_pixel.x = x;
-                p_pixel.y = y;
-                OFX::Coords::toCanonical(p_pixel, rs, par, &p);
-                double dx = (p.x - c.x) / r.x;
-                double dy = (p.y - c.y) / r.y;
+                double dx = (x - c.x) / r.x;
+                double dy = (y - c.y) / r.y;
 
                 // approximate subpixel rendering of the disc:
                 // - test the pixel corner closer to the center. if it is outside, the pixel is fully outside
                 // - test the pixel corner farther to the center. if it is inside, the pixel is fully outside
                 // - else the pixel is mixed, and its value is (color0*abs(sqrt(dsq_farther)-1)+color1_smoothed*abs(sqrt(dsq_closer)-1))/(sqrt(dsq_farther)+sqrt(dsq_closer))
-                OfxPointD p_closer_pixel = {(double)x, (double)y};
-                OfxPointD p_farther_pixel = {(double)x, (double)y};
+                OfxPointD p_closer = {(double)x, (double)y};
+                OfxPointD p_farther = {(double)x, (double)y};
 
-                if (x <= c_pix.x - 0.5) {
-                    p_closer_pixel.x += 0.5;
-                    p_farther_pixel.x -= 0.5;
-                } else if (x >= c_pix.x + 0.5) {
-                    p_closer_pixel.x -= 0.5;
-                    p_farther_pixel.x += 0.5;
+                if (x <= c.x - 0.5) {
+                    p_closer.x += 0.5;
+                    p_farther.x -= 0.5;
+                } else if (x >= c.x + 0.5) {
+                    p_closer.x -= 0.5;
+                    p_farther.x += 0.5;
                 }
-                if (y <= c_pix.y - 0.5) {
-                    p_closer_pixel.y += 0.5;
-                    p_farther_pixel.y -= 0.5;
-                } else if (y >= c_pix.y + 0.5) {
-                    p_closer_pixel.y -= 0.5;
-                    p_farther_pixel.y += 0.5;
+                if (y <= c.y - 0.5) {
+                    p_closer.y += 0.5;
+                    p_farther.y -= 0.5;
+                } else if (y >= c.y + 0.5) {
+                    p_closer.y -= 0.5;
+                    p_farther.y += 0.5;
                 }
-                OfxPointD p_closer, p_farther;
-                OFX::Coords::toCanonicalSub(p_closer_pixel, rs, par, &p_closer);
-                OFX::Coords::toCanonicalSub(p_farther_pixel, rs, par, &p_farther);
                 double dx_closer = (p_closer.x - c.x) / r.x;
                 double dy_closer = (p_closer.y - c.y) / r.y;
                 double dx_farther = (p_farther.x - c.x) / r.x;
