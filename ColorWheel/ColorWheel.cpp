@@ -27,6 +27,10 @@
 #include <climits>
 #include <cfloat> // DBL_MAX
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsGenerator.h"

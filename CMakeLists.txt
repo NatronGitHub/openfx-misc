@@ -14,6 +14,9 @@ target_compile_definitions(OfxSupport PUBLIC OFX_EXTENSIONS_VEGAS OFX_EXTENSIONS
 
 # SupportExt
 include_directories("${CMAKE_SOURCE_DIR}/SupportExt")
+if(MSVC)
+    add_definitions(-DNOMINMAX)
+endif(
 
 # OpenMP
 set(USE_OPENMP true CACHE BOOL "Use OpenMP")
@@ -21,6 +24,9 @@ if (APPLE)
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         set(USE_OPENMP false)
     endif()
+endif()
+if (MSVC)
+    set(USE_OPENMP false)
 endif()
 if (USE_OPENMP)
     find_package(OpenMP)
@@ -31,7 +37,7 @@ if (USE_OPENMP)
 endif()
 
 # OSMesa
-if(USE_MESA)
+if(USE_OSMESA)
     add_definitions(-DHAVE_OSMESA)
 else()
     set(OSMESA_LIBRARIES "")

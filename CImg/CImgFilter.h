@@ -44,8 +44,10 @@
 # if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
 #  define thread_local _Thread_local
 #  define HAVE_THREAD_LOCAL
+# elif defined _MSC_VER
+#  define thread_local __declspec(thread)
+#  define HAVE_THREAD_LOCAL
 # elif defined _WIN32 && ( \
-    defined _MSC_VER || \
     defined __ICL || \
     defined __DMC__ || \
     defined __BORLANDC__ )
