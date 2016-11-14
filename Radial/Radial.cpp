@@ -115,7 +115,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
-#define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0.a=0)."
+#define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0=(0,0,0,0))."
 
 
 struct RGBAValues
@@ -325,11 +325,42 @@ private:
                 OfxPointD p;
                 p_pixel.x = x;
                 p_pixel.y = y;
-                OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
-                double dx = (p.x - ( _btmLeft.x + (_btmLeft.x + _size.x) ) / 2) / (_size.x / 2);
-                double dy = (p.y - ( _btmLeft.y + (_btmLeft.y + _size.y) ) / 2) / (_size.y / 2);
+                OFX::Coords::toCanonical(p_pixel, rs, par, &p);
+                double dx = (p.x - c.x) / r.x;
+                double dy = (p.y - c.y) / r.y;
 
-                if ( (dx >= 1) || (dy >= 1) ) {
+                // approximate subpixel rendering of the disc:
+                // - test the pixel corner closer to the center. if it is outside, the pixel is fully outside
+                // - test the pixel corner farther to the center. if it is inside, the pixel is fully outside
+                // - else the pixel is mixed, and its value is (color0*abs(sqrt(dsq_farther)-1)+color1_smoothed*abs(sqrt(dsq_closer)-1))/(sqrt(dsq_farther)+sqrt(dsq_closer))
+                OfxPointD p_closer_pixel = {(double)x, (double)y};
+                OfxPointD p_farther_pixel = {(double)x, (double)y};
+
+                if (x <= c_pix.x - 0.5) {
+                    p_closer_pixel.x += 0.5;
+                    p_farther_pixel.x -= 0.5;
+                } else if (x >= c_pix.x + 0.5) {
+                    p_closer_pixel.x -= 0.5;
+                    p_farther_pixel.x += 0.5;
+                }
+                if (y <= c_pix.y - 0.5) {
+                    p_closer_pixel.y += 0.5;
+                    p_farther_pixel.y -= 0.5;
+                } else if (y >= c_pix.y + 0.5) {
+                    p_closer_pixel.y -= 0.5;
+                    p_farther_pixel.y += 0.5;
+                }
+                OfxPointD p_closer, p_farther;
+                OFX::Coords::toCanonicalSub(p_closer_pixel, rs, par, &p_closer);
+                OFX::Coords::toCanonicalSub(p_farther_pixel, rs, par, &p_farther);
+                double dx_closer = (p_closer.x - c.x) / r.x;
+                double dy_closer = (p_closer.y - c.y) / r.y;
+                double dx_farther = (p_farther.x - c.x) / r.x;
+                double dy_farther = (p_farther.y - c.y) / r.y;
+
+
+                if ( (dx_closer >= 1) || (dy_closer >= 1) ) {
+                    // outside
                     tmpPix[0] = (float)_color0.r;
                     tmpPix[1] = (float)_color0.g;
                     tmpPix[2] = (float)_color0.b;
@@ -713,7 +744,8 @@ RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     RGBAValues color0, color1;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
-    if ( (color0.a == 0.) && (color1.a == 0.) ) {
+    if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
+         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         identityClip = _srcClip;
 
         return true;
@@ -783,7 +815,7 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     }
     RGBAValues color0;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
-    if (color0.a != 0.) {
+    if (color0.r != 0. || color0.g != 0. || color0.b != 0. || color0.a != 0.) {
         // something has to be drawn outside of the rectangle
 
         // return default RoD.
@@ -795,7 +827,7 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     }
     RGBAValues color1;
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
-    if (color1.a == 0.) {
+    if (color1.r == 0. && color1.g == 0. && color1.b == 0. && color1.a == 0.) {
         if ( _srcClip->isConnected() ) {
             // nothing to draw: return default region of definition
             return false;
@@ -813,7 +845,14 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     }
 
     bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
-
+    if (wasCaught) {
+        // add one pixel in each direction to ensure border is black and transparent
+        // (non-black+transparent case was treated above)
+        rod.x1 -= 1;
+        rod.y1 -= 1;
+        rod.x2 += 1;
+        rod.y2 += 1;
+    }
     if ( _srcClip && _srcClip->isConnected() ) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
         const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
