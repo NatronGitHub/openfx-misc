@@ -325,6 +325,9 @@ private:
         OFX::Coords::toPixelSub(btmLeft_canonical, rs, par, &btmLeft);
         OfxPointD topRight; // topRight position in pixel
         OFX::Coords::toPixelSub(topRight_canonical, rs, par, &topRight);
+        OfxPointD softness; // softness value in pixel
+        softness.x = _softness * rs.x / par;
+        softness.y = _softness * rs.y / par;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -346,7 +349,17 @@ private:
                     tmpPix[3] = (float)_color0.a;
                 } else {
                     // inside or mixed
-                    if ( (_softness == 0) || ( (dx >= _softness) && (dy >= _softness) ) ) {
+                    // is it a mixed pixel?
+                    float a = 1.;
+                    if (dx < 0.5) {
+                        a *= dx + 0.5;
+                        dx = 0.5;
+                    }
+                    if (dy < 0.5) {
+                        a *= dy + 0.5;
+                        dy = 0.5;
+                    }
+                    if ( (_softness == 0) || ( (dx >= softness.x) && (dy >= softness.y) ) ) {
                         // inside of the rectangle
                         tmpPix[0] = (float)_color1.r;
                         tmpPix[1] = (float)_color1.g;
@@ -354,15 +367,15 @@ private:
                         tmpPix[3] = (float)_color1.a;
                     } else {
                         float tx, ty;
-                        if (dx >= _softness) {
+                        if (dx >= softness.x) {
                             tx = 1.f;
                         } else {
-                            tx = (float)rampSmooth(dx / _softness);
+                            tx = (float)rampSmooth(dx / softness.x);
                         }
-                        if (dy >= _softness) {
+                        if (dy >= softness.y) {
                             ty = 1.f;
                         } else {
-                            ty = (float)rampSmooth(dy / _softness);
+                            ty = (float)rampSmooth(dy / softness.y);
                         }
                         float t = tx * ty;
                         if (t >= 1) {
@@ -381,15 +394,8 @@ private:
                             tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
                         }
                     }
-                    if (dx < 0.5 || dy < 0.5) {
-                        // mixed pixel
-                        float a = 1.;
-                        if (dx < 0.5) {
-                            a *= dx + 0.5;
-                        }
-                        if (dy < 0.5) {
-                            a *= dy + 0.5;
-                        }
+                    if (a != 1.) {
+                        assert(0 <= a && a <= 1.);
                         tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
                         tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
                         tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
