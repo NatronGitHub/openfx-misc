@@ -66,8 +66,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: remove blackOutside parameter: the outside color is always color0
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -121,12 +122,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
-#define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0.a=0)."
-
-#define kParamBlackOutside "blackOutside"
-#define kParamBlackOutsideLabel "Black Outside"
-#define kParamBlackOutsideHint "Add a 1 pixel black and transparent border if the plugin is used as a generator."
-
+#define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0=(0,0,0,0))."
 
 struct RGBAValues
 {
@@ -445,7 +441,6 @@ public:
         , _color0(0)
         , _color1(0)
         , _expandRoD(0)
-        , _blackOutside(0)
     {
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
@@ -465,8 +460,7 @@ public:
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
-        _blackOutside = fetchBooleanParam(kParamBlackOutside);
-        assert(_softness && _color0 && _color1 && _expandRoD && _blackOutside);
+        assert(_softness && _color0 && _color1 && _expandRoD);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
@@ -513,7 +507,6 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _blackOutside;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -729,7 +722,8 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     RGBAValues color0, color1;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
-    if ( (color0.a == 0.) && (color1.a == 0.) ) {
+    if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
+         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         identityClip = _srcClip;
 
         return true;
@@ -799,7 +793,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     }
     RGBAValues color0;
     _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
-    if (color0.a != 0.) {
+    if ( (color0.r != 0.) || (color0.g != 0.) || (color0.b != 0.) || (color0.a != 0.) ) {
         // something has to be drawn outside of the rectangle
 
         // return default RoD.
@@ -811,7 +805,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     }
     RGBAValues color1;
     _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
-    if (color1.a == 0.) {
+    if ( (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         if ( _srcClip && _srcClip->isConnected() ) {
             // nothing to draw: return default region of definition
             return false;
@@ -829,12 +823,14 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     }
 
     bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
-    bool blackOutside;
-    _blackOutside->getValueAtTime(time, blackOutside);
-    rod.x1 -= (int)blackOutside;
-    rod.y1 -= (int)blackOutside;
-    rod.x2 += (int)blackOutside;
-    rod.y2 += (int)blackOutside;
+    if (wasCaught) {
+        // add one pixel in each direction to ensure border is black and transparent
+        // (non-black+transparent case was treated above)
+        rod.x1 -= 1;
+        rod.y1 -= 1;
+        rod.x2 += 1;
+        rod.y2 += 1;
+    }
 
     if ( _srcClip && _srcClip->isConnected() ) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
@@ -1158,18 +1154,6 @@ RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // blackOutside
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlackOutside);
-        param->setLabel(kParamBlackOutsideLabel);
-        param->setDefault(true);
-        param->setAnimates(true);
-        param->setHint(kParamBlackOutsideHint);
         if (page) {
             page->addChild(*param);
         }
