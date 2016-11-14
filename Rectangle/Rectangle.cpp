@@ -316,6 +316,15 @@ private:
         assert( !processA || (nComponents == 1 || nComponents == 4) );
 
         float tmpPix[4];
+        OfxPointD rs = _dstImg->getRenderScale();
+        double par = _dstImg->getPixelAspectRatio();
+
+        OfxPointD btmLeft_canonical = { _btmLeft.x, _btmLeft.y };
+        OfxPointD topRight_canonical = { _btmLeft.x + _size.x, _btmLeft.y + _size.y };
+        OfxPointD btmLeft; // btmLeft position in pixel
+        OFX::Coords::toPixelSub(btmLeft_canonical, rs, par, &btmLeft);
+        OfxPointD topRight; // topRight position in pixel
+        OFX::Coords::toPixelSub(topRight_canonical, rs, par, &topRight);
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -326,13 +335,8 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                OfxPointI p_pixel;
-                OfxPointD p;
-                p_pixel.x = x;
-                p_pixel.y = y;
-                OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
-                double dx = std::min(p.x - _btmLeft.x, _btmLeft.x + _size.x - p.x);
-                double dy = std::min(p.y - _btmLeft.y, _btmLeft.y + _size.y - p.y);
+                double dx = std::min(x - btmLeft.x, topRight.x - x);
+                double dy = std::min(y - btmLeft.y, topRight.y - y);
 
                 if ( (dx <= 0) || (dy <= 0) ) {
                     // outside of the rectangle
@@ -520,13 +524,14 @@ void
 RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
                                  const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    const double time = args.time;
+
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    const double time = args.time;
     OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -541,7 +546,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+                                         _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
@@ -555,8 +560,8 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
@@ -566,8 +571,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
         }
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
@@ -606,21 +610,18 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
             size.y = rod.y2 - rod.y1;
         }
     }
-    double softness;
-    _softness->getValueAtTime(args.time, softness);
+    double softness = _softness->getValueAtTime(time);
 
     RGBAValues color0, color1;
-    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
+    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
+    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
 
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
+    bool processR = _processR->getValueAtTime(time);
+    bool processG = _processG->getValueAtTime(time);
+    bool processB = _processB->getValueAtTime(time);
+    bool processA = _processA->getValueAtTime(time);
 
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    double mix = _mix->getValueAtTime(time);
 
     processor.setValues(btmLeft, size,
                         softness,
@@ -694,8 +695,9 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     if (!_srcClip) {
         return false;
     }
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    const double time = args.time;
+
+    double mix = _mix->getValueAtTime(time);
 
     if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = _srcClip;
@@ -704,14 +706,10 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     {
-        bool processR;
-        bool processG;
-        bool processB;
-        bool processA;
-        _processR->getValueAtTime(args.time, processR);
-        _processG->getValueAtTime(args.time, processG);
-        _processB->getValueAtTime(args.time, processB);
-        _processA->getValueAtTime(args.time, processA);
+        bool processR = _processR->getValueAtTime(time);
+        bool processG = _processG->getValueAtTime(time);
+        bool processB = _processB->getValueAtTime(time);
+        bool processA = _processA->getValueAtTime(time);
         if (!processR && !processG && !processB && !processA) {
             identityClip = _srcClip;
 
@@ -720,8 +718,8 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     RGBAValues color0, color1;
-    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
+    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
+    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
     if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
          (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         identityClip = _srcClip;
@@ -729,16 +727,15 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
         return true;
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
         if (!maskInvert) {
             OfxRectI maskRoD;
             if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
                 if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
