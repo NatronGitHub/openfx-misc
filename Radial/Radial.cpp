@@ -311,6 +311,15 @@ private:
         assert( !processA || (nComponents == 1 || nComponents == 4) );
 
         float tmpPix[4];
+        OfxPointD rs = _dstImg->getRenderScale();
+        double par = _dstImg->getPixelAspectRatio();
+
+        // center of the ellipse
+        OfxPointD c = { ( _btmLeft.x + (_btmLeft.x + _size.x) ) / 2, ( _btmLeft.y + (_btmLeft.y + _size.y) ) / 2 };
+        // radius of the ellipse
+        OfxPointD r = { _size.x / 2, _size.y / 2 };
+        OfxPointD c_pix; // center position in pixel
+        OFX::Coords::toPixelSub(c, rs, par, &c_pix);
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -366,37 +375,88 @@ private:
                     tmpPix[2] = (float)_color0.b;
                     tmpPix[3] = (float)_color0.a;
                 } else {
-                    double dsq = dx * dx + dy * dy;
+                    // maybe inside
 
-                    if (dsq >= 1) {
+                    double dsq = dx * dx + dy * dy;
+                    double dsq_closer = dx_closer * dx_closer + dy_closer * dy_closer;
+                    double dsq_farther = dx_farther * dx_farther + dy_farther * dy_farther;
+                    assert(dsq_closer <= dsq_farther);
+                    if (dsq_closer > dsq_farther) {
+                        // protect against bug
+                        std::swap(dsq_closer, dsq_farther);
+                    }
+                    if (dsq_closer >= 1) {
+                        // fully outside
                         tmpPix[0] = (float)_color0.r;
                         tmpPix[1] = (float)_color0.g;
                         tmpPix[2] = (float)_color0.b;
                         tmpPix[3] = (float)_color0.a;
-                    } else if ( (dsq <= 0) || (_softness == 0) ) {
-                        tmpPix[0] = (float)_color1.r;
-                        tmpPix[1] = (float)_color1.g;
-                        tmpPix[2] = (float)_color1.b;
-                        tmpPix[3] = (float)_color1.a;
-                    } else {
-                        float t = ( 1.f - (float)std::sqrt(dsq) ) / (float)_softness;
-                        if (t >= 1) {
+                    } else if (dsq_farther <= 1) {
+                        // fully inside
+                        if ( dsq <= 0 ||  _softness == 0 ) {
+                            // solid color
                             tmpPix[0] = (float)_color1.r;
                             tmpPix[1] = (float)_color1.g;
                             tmpPix[2] = (float)_color1.b;
                             tmpPix[3] = (float)_color1.a;
                         } else {
-                            t = (float)rampSmooth(t);
+                            // mixed
+                            float t = ( 1.f - (float)std::sqrt(dsq) ) / (float)_softness;
+                            if (t >= 1) {
+                                tmpPix[0] = (float)_color1.r;
+                                tmpPix[1] = (float)_color1.g;
+                                tmpPix[2] = (float)_color1.b;
+                                tmpPix[3] = (float)_color1.a;
+                            } else {
+                                t = (float)rampSmooth(t);
 
-                            if (_plinear) {
-                                // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
-                                t = t * t * t;
+                                if (_plinear) {
+                                    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                                    t = t * t * t;
+                                }
+                                tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                                tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                                tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                                tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
                             }
-                            tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
-                            tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
-                            tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
-                            tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
                         }
+                    } else {
+                        // mixed pixel, partly inside / partly outside
+                        assert(dsq_closer < 1 && dsq_farther > 1);
+                        if ( dsq_closer <= 0 ||  _softness == 0 ) {
+                            // solid color
+                            tmpPix[0] = (float)_color1.r;
+                            tmpPix[1] = (float)_color1.g;
+                            tmpPix[2] = (float)_color1.b;
+                            tmpPix[3] = (float)_color1.a;
+                        } else {
+                            // mixed
+                            float t = ( 1.f - (float)std::sqrt(dsq_closer) ) / (float)_softness;
+                            if (t >= 1) {
+                                tmpPix[0] = (float)_color1.r;
+                                tmpPix[1] = (float)_color1.g;
+                                tmpPix[2] = (float)_color1.b;
+                                tmpPix[3] = (float)_color1.a;
+                            } else {
+                                t = (float)rampSmooth(t);
+
+                                if (_plinear) {
+                                    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                                    t = t * t * t;
+                                }
+                                tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                                tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                                tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                                tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                            }
+                        }
+                        // now mix with the outside pix;
+                        float a = (1 - std::sqrt(dsq_closer)) / (std::sqrt(dsq_farther)-std::sqrt(dsq_closer));
+                        tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
+                        tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
+                        tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
+                        tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
+
                     }
                 }
                 float a = tmpPix[3];
