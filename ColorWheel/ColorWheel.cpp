@@ -42,7 +42,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ColorWheelOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a color wheel.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
+    "\n" \
+    "The color wheel occupies the full area, minus a one-pixel black and transparent border\n" \
+    "\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 #define kPluginIdentifier "net.sf.openfx.ColorWheel"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -381,9 +384,11 @@ ColorWheelPlugin::setupAndProcess(ColorWheelProcessorBase &processor,
             rod.y2 = off.y + siz.y;
         }
     }
-    center.x = (rod.x2 - rod.x1) / 2;
-    center.y = (rod.y2 - rod.y1) / 2;
-    radius = std::min( (rod.x2 - rod.x1) / 2, (rod.y2 - rod.y1) / 2 );
+    center.x = (rod.x2 + rod.x1) / 2;
+    center.y = (rod.y2 + rod.y1) / 2;
+    // radius: always leave one black pixel on each side
+    double par = _dstClip->getPixelAspectRatio();
+    radius = std::min( (rod.x2 - rod.x1) / 2 - par / args.renderScale.x, (rod.y2 - rod.y1) / 2 - 1 / args.renderScale.y);
     processor.setValues(centerSaturation, edgeSaturation, centerValue, edgeValue, gamma, rotate, center, radius);
 
     // Call the base class process member, this will call the derived templated process code
