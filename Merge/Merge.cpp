@@ -48,7 +48,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Merge"
 #define kPluginDescriptionStart \
     "Pixel-by-pixel merge operation between two or more inputs.\n" \
-    "Input A is first merged with B (B is non-optional), then A2, if connected, is merged with the intermediary result, then A3, etc.\n\n" \
+    "Input A is first merged with B (or with a black and transparent background if B is not connected), then A2, if connected, is merged with the intermediary result, then A3, etc.\n\n" \
     "A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "\n"
 #define kPluginDescriptionMidRGB \
@@ -1240,7 +1240,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
-    srcClipB->setOptional(false); // B clip is non-optional
+    srcClipB->setOptional(true); // B clip is optional
 
     OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->setHint(kClipAHint);
