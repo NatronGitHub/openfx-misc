@@ -868,26 +868,30 @@ public:
         GLfloat color[nComponents];
 
         if ( _showRamp->getValueAtTime(time)  && (nbValues > 0) ) {
-            glBegin (GL_TRIANGLE_STRIP);
+            OfxStatus stat = kOfxStatOK;
+            glBegin(GL_TRIANGLE_STRIP);
+            try { // getValue may throw
+                for (int position = 0; position <= nbValues; ++position) {
+                    // position to evaluate the param at
+                    double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
 
-            for (int position = 0; position <= nbValues; ++position) {
-                // position to evaluate the param at
-                double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
-
-                for (int component = 0; component < nComponents; ++component) {
-                    int lutIndex = componentToCurve(component); // special case for components == alpha only
-                    // evaluate the parametric param
-                    double value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
-                    value += _lookupTableParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
-                    // set that in the lut
-                    color[component] = value;
+                    for (int component = 0; component < nComponents; ++component) {
+                        int lutIndex = componentToCurve(component); // special case for components == alpha only
+                        // evaluate the parametric param
+                        double value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
+                        value += _lookupTableParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
+                        // set that in the lut
+                        color[component] = value;
+                    }
+                    glColor3f(color[0], color[1], color[2]);
+                    glVertex2f(parametricPos, rangeMin);
+                    glVertex2f(parametricPos, rangeMax);
                 }
-                glColor3f(color[0], color[1], color[2]);
-                glVertex2f(parametricPos, rangeMin);
-                glVertex2f(parametricPos, rangeMax);
+            } catch (...) {
+                stat = kOfxStatFailed;
             }
-            
             glEnd();
+            throwSuiteStatusException(stat);
         }
 
         if (args.hasPickerColour) {
