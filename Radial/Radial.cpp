@@ -329,7 +329,7 @@ private:
         OFX::Coords::toPixelSub(c_canonical, rs, par, &c);
         OfxPointD r; // radius in pixel
         r.x = r_canonical.x * rs.x / par;
-        r.y = r_canonical.y * rs.y / par;
+        r.y = r_canonical.y * rs.y;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {

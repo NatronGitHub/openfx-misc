@@ -333,7 +333,7 @@ private:
         OFX::Coords::toPixelSub(topRight_canonical, rs, par, &topRight);
         OfxPointD softness; // softness value in pixel
         softness.x = _softness * rs.x / par;
-        softness.y = _softness * rs.y / par;
+        softness.y = _softness * rs.y;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
