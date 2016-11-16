@@ -208,8 +208,14 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        OfxPointD renderScale = _dstImg->getRenderScale();
+        OfxPointD rs = _dstImg->getRenderScale();
         double par = _dstImg->getPixelAspectRatio();
+
+        OfxPointD c; // center position in pixel
+        OFX::Coords::toPixelSub(_center, rs, par, &c);
+        OfxPointD r; // radius in pixel
+        r.x = _radius * rs.x / par;
+        r.y = _radius * rs.y;
 
         // push pixels
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -220,49 +226,102 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                OfxPointI p_pixel = {x, y};
-                OfxPointD p_canonical;
-                OFX::Coords::toCanonical(p_pixel, renderScale, par, &p_canonical);
-                double r2 = ( (p_canonical.x - _center.x) * (p_canonical.x - _center.x) +
-                              (p_canonical.y - _center.y) * (p_canonical.y - _center.y) );
-                if (r2 > _radius * _radius) {
+                double dx = (x - c.x) / r.x;
+                double dy = (y - c.y) / r.y;
+
+                // approximate subpixel rendering of the disc:
+                // - test the pixel corner closer to the center. if it is outside, the pixel is fully outside
+                // - test the pixel corner farther to the center. if it is inside, the pixel is fully outside
+                // - else the pixel is mixed, and its value is (color0*abs(sqrt(dsq_farther)-1)+color1_smoothed*abs(sqrt(dsq_closer)-1))/(sqrt(dsq_farther)+sqrt(dsq_closer))
+                OfxPointD p_closer = {(double)x, (double)y};
+                OfxPointD p_farther = {(double)x, (double)y};
+
+                if (x <= c.x - 0.5) {
+                    p_closer.x += 0.5;
+                    p_farther.x -= 0.5;
+                } else if (x >= c.x + 0.5) {
+                    p_closer.x -= 0.5;
+                    p_farther.x += 0.5;
+                }
+                if (y <= c.y - 0.5) {
+                    p_closer.y += 0.5;
+                    p_farther.y -= 0.5;
+                } else if (y >= c.y + 0.5) {
+                    p_closer.y -= 0.5;
+                    p_farther.y += 0.5;
+                }
+                double dx_closer = (p_closer.x - c.x) / r.x;
+                double dy_closer = (p_closer.y - c.y) / r.y;
+                double dx_farther = (p_farther.x - c.x) / r.x;
+                double dy_farther = (p_farther.y - c.y) / r.y;
+
+                if ( (dx_closer >= 1) || (dy_closer >= 1) ) {
+                    // outside
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = 0;
                     }
                 } else {
-                    // hue in [0..1]
-                    double r1 = std::sqrt(r2);
-                    double hue = r1 > 0. ? OFXS_HUE_CIRCLE * std::acos( std::max( -1., std::min( (p_canonical.x - _center.x) / r1, 1. ) ) ) / (2 * M_PI) : 0.;
-                    assert(hue == hue);
-                    if (p_canonical.y > _center.y) {
-                        hue = OFXS_HUE_CIRCLE - hue;
+                    // maybe inside
+
+                    double dsq = dx * dx + dy * dy;
+                    double dsq_closer = dx_closer * dx_closer + dy_closer * dy_closer;
+                    double dsq_farther = dx_farther * dx_farther + dy_farther * dy_farther;
+                    assert(dsq_closer <= dsq_farther);
+                    if (dsq_closer > dsq_farther) {
+                        // protect against bug
+                        std::swap(dsq_closer, dsq_farther);
                     }
-                    hue += _rotate / 360;
-                    hue = hue - std::floor(hue / OFXS_HUE_CIRCLE) * OFXS_HUE_CIRCLE;
-                    assert(hue >= 0. && hue <= OFXS_HUE_CIRCLE);
-                    double a = r1 / _radius;
-                    double saturation = _centerSaturation + a * (_edgeSaturation - _centerSaturation);
-                    double value = _centerValue + a * (_edgeValue - _centerValue);
-                    float r, g, b;
-                    //r = hue; g = saturation; b = value;
-                    OFX::Color::hsv_to_rgb(hue, saturation, value, &r, &g, &b);
-                    OfxRGBAColourD color = {r, g, b, 1.};
-                    if (_gamma <= 0.) {
-                        color.r = color.r >= 1. ? 1 : 0.;
-                        color.g = color.g >= 1. ? 1 : 0.;
-                        color.b = color.b >= 1. ? 1 : 0.;
-                    } else if (_gamma != 1.) {
-                        if (color.r > 0.) {
-                            color.r = std::pow(color.r, 1. / _gamma);
+                    if (dsq_closer >= 1) {
+                        // fully outside
+                        for (int c = 0; c < nComponents; ++c) {
+                            dstPix[c] = 0;
                         }
-                        if (color.g > 0.) {
-                            color.g = std::pow(color.g, 1. / _gamma);
+                    } else  {
+                        // fully inside or mixed pixel (partly inside / partly outside)
+
+                        // hue in [0..1]
+                        double d = std::sqrt(dsq);
+                        double hue = d > 0. ? OFXS_HUE_CIRCLE * std::acos( std::max( -1., std::min( dx / d, 1. ) ) ) / (2 * M_PI) : 0.;
+                        assert(hue == hue);
+                        if (dy > 0) {
+                            hue = OFXS_HUE_CIRCLE - hue;
                         }
-                        if (color.b > 0.) {
-                            color.b = std::pow(color.b, 1. / _gamma);
+                        hue += _rotate / 360;
+                        hue = hue - std::floor(hue / OFXS_HUE_CIRCLE) * OFXS_HUE_CIRCLE;
+                        assert(hue >= 0. && hue <= OFXS_HUE_CIRCLE);
+                        double saturation = _centerSaturation + d * (_edgeSaturation - _centerSaturation);
+                        double value = _centerValue + d * (_edgeValue - _centerValue);
+                        float r, g, b;
+                        //r = hue; g = saturation; b = value;
+                        OFX::Color::hsv_to_rgb(hue, saturation, value, &r, &g, &b);
+                        OfxRGBAColourD color = {r, g, b, 1.};
+                        if (_gamma <= 0.) {
+                            color.r = color.r >= 1. ? 1 : 0.;
+                            color.g = color.g >= 1. ? 1 : 0.;
+                            color.b = color.b >= 1. ? 1 : 0.;
+                        } else if (_gamma != 1.) {
+                            if (color.r > 0.) {
+                                color.r = std::pow(color.r, 1. / _gamma);
+                            }
+                            if (color.g > 0.) {
+                                color.g = std::pow(color.g, 1. / _gamma);
+                            }
+                            if (color.b > 0.) {
+                                color.b = std::pow(color.b, 1. / _gamma);
+                            }
+                        }
+                        colorToPIX(color, dstPix);
+
+                        if (dsq_farther > 1) {
+                            // mixed pixel, partly inside / partly outside
+                            assert(dsq_closer < 1 && dsq_farther > 1);
+                            // now mix with the outside pix;
+                            float a = (1 - std::sqrt(dsq_closer)) / (std::sqrt(dsq_farther)-std::sqrt(dsq_closer));
+                            for (int c = 0; c < nComponents; ++c) {
+                                dstPix[c] *= a;
+                            }
                         }
                     }
-                    colorToPIX(color, dstPix);
                 }
                 dstPix += nComponents;
             }
@@ -304,13 +363,14 @@ private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
     void setupAndProcess(ColorWheelProcessorBase &, const OFX::RenderArguments &args);
 
-    //virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 
 private:
@@ -447,12 +507,12 @@ ColorWheelPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-//void
-//ColorWheelPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
-//{
-//    GeneratorPlugin::getClipPreferences(clipPreferences);
-//    clipPreferences.setOutputPremultiplication(OFX::eImagePreMultiplied);
-//}
+void
+ColorWheelPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    GeneratorPlugin::getClipPreferences(clipPreferences);
+    clipPreferences.setOutputPremultiplication(OFX::eImagePreMultiplied);
+}
 
 
 mDeclarePluginFactory(ColorWheelPluginFactory, {}, {});
