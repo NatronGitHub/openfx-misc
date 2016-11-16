@@ -404,7 +404,7 @@ private:
             }
         }
         if ( (scoreTypeE == eTrackerNCC) || (scoreTypeE == eTrackerZNCC) ) {
-            double sdev = std::sqrt(otherSsq);
+            double sdev = std::sqrt( std::max(otherSsq, 0.) );
             if (sdev != 0.) {
                 score /= sdev;
             } else {

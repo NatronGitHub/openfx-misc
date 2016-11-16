@@ -387,12 +387,12 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
                         }
                     }
                 }
-                stdev[0] = std::sqrt(stdev[0] / (samples[0] + 1));
+                stdev[0] = std::sqrt( std::max(stdev[0] / (samples[0] + 1), 0.) );
 #ifdef MULTIRANGE
-                stdev[1] = std::sqrt(stdev[1] / (samples[1] + 1));
-                stdev[2] = std::sqrt(stdev[2] / (samples[2] + 1));
-                stdev[3] = std::sqrt(stdev[3] / (samples[3] + 1));
-                stdev[4] = std::sqrt(stdev[4] / (samples[4] + 1));
+                stdev[1] = std::sqrt( std::max(stdev[1] / (samples[1] + 1), 0.) );
+                stdev[2] = std::sqrt( std::max(stdev[2] / (samples[2] + 1), 0.) );
+                stdev[3] = std::sqrt( std::max(stdev[3] / (samples[3] + 1), 0.) );
+                stdev[4] = std::sqrt( std::max(stdev[4] / (samples[4] + 1), 0.) );
 #endif
                 //printf("thold(%d) = %g\n", lev, thold);
                 //printf("stdev(%d) = %g\n", lev, stdev[0]);

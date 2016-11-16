@@ -403,7 +403,7 @@ private:
                             tmpPix[3] = (float)_color1.a;
                         } else {
                             // mixed
-                            float t = ( 1.f - (float)std::sqrt(dsq) ) / (float)_softness;
+                            float t = ( 1.f - (float)std::sqrt( std::max(dsq, 0.) ) ) / (float)_softness;
                             if (t >= 1) {
                                 tmpPix[0] = (float)_color1.r;
                                 tmpPix[1] = (float)_color1.g;
@@ -433,7 +433,7 @@ private:
                             tmpPix[3] = (float)_color1.a;
                         } else {
                             // mixed
-                            float t = ( 1.f - (float)std::sqrt(dsq_closer) ) / (float)_softness;
+                            float t = ( 1.f - (float)std::sqrt( std::max(dsq_closer, 0.) ) ) / (float)_softness;
                             if (t >= 1) {
                                 tmpPix[0] = (float)_color1.r;
                                 tmpPix[1] = (float)_color1.g;
@@ -453,7 +453,7 @@ private:
                             }
                         }
                         // now mix with the outside pix;
-                        float a = (1 - std::sqrt(dsq_closer)) / (std::sqrt(dsq_farther)-std::sqrt(dsq_closer));
+                        float a = (1 - std::sqrt(dsq_closer)) / (std::sqrt( std::max(dsq_farther, 0.) )-std::sqrt(dsq_closer));
                         tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
                         tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
                         tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;

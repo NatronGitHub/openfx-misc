@@ -2187,22 +2187,22 @@ public:
         bool separate = (cimg.spectrum() == 1) || (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelSeparate);
         if (separate) {
             cimg_forXYC(cimg, x, y, c) {
-                cimgpix_t gx = grad[0](x, y, 0, c);
-                cimgpix_t gy = grad[1](x, y, 0, c);
+                double gx = grad[0](x, y, 0, c);
+                double gy = grad[1](x, y, 0, c);
                 // gradient direction is unchanged
-                cimgpix_t sqe = gx * gx + gy * gy;
-                cimgpix_t e = sqe > 0. ? std::sqrt(sqe) : 0.;
+                double sqe = gx * gx + gy * gy;
+                double e = std::sqrt( std::max(sqe, 0.) );
                 cimg(x, y, 0, c) = e;
             }
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelRMS) {
             cimg_forXY(cimg, x, y) {
                 double sumsq = 0;
                 // estimate gradient direction by making the largest component positive and summing
-                cimgpix_t gradx = 0.;
-                cimgpix_t grady = 0.;
+                double gradx = 0.;
+                double grady = 0.;
                 cimg_forC(cimg, c) {
-                    cimgpix_t gx = grad[0](x, y, 0, c);
-                    cimgpix_t gy = grad[1](x, y, 0, c);
+                    double gx = grad[0](x, y, 0, c);
+                    double gy = grad[1](x, y, 0, c);
                     sumsq += gx * gx + gy * gy;
                     if (std::abs(gx) > std::abs(gy)) {
                         if (std::abs(gx) < 0) {
@@ -2218,8 +2218,8 @@ public:
                     gradx += gx;
                     grady += gy;
                 }
-                cimgpix_t sqe = sumsq / cimg.spectrum();
-                cimgpix_t e = sqe > 0. ? std::sqrt(sqe) : 0.;
+                double sqe = sumsq / cimg.spectrum();
+                double e = std::sqrt( std::max(sqe, 0.) );
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
                     grad[0](x, y, 0, c) = gradx;
@@ -2229,11 +2229,11 @@ public:
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelMax) {
             cimg_forXY(cimg, x, y) {
                 double maxsq = 0;
-                cimgpix_t gradx = 0.;
-                cimgpix_t grady = 0.;
+                double gradx = 0.;
+                double grady = 0.;
                 cimg_forC(cimg, c) {
-                    cimgpix_t gx = grad[0](x, y, 0, c);
-                    cimgpix_t gy = grad[1](x, y, 0, c);
+                    double gx = grad[0](x, y, 0, c);
+                    double gy = grad[1](x, y, 0, c);
                     double sq = gx * gx + gy * gy;
                     if (sq > maxsq) {
                         maxsq = sq;
@@ -2241,7 +2241,7 @@ public:
                         grady = gy;
                     }
                 }
-                cimgpix_t e = maxsq > 0. ? std::sqrt( maxsq ) : 0.;
+                double e = std::sqrt( std::max(maxsq, 0.) );
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
                     grad[0](x, y, 0, c) = gradx;
@@ -2274,16 +2274,16 @@ public:
                 double Jy = 0.;
                 double Jxy = 0.;
                 cimg_forC(cimg, c) {
-                    cimgpix_t gx = grad[0](x, y, 0, c);
-                    cimgpix_t gy = grad[1](x, y, 0, c);
+                    double gx = grad[0](x, y, 0, c);
+                    double gy = grad[1](x, y, 0, c);
                     Jx += gx * gx;
                     Jy += gy * gy;
                     Jxy += gx * gy;
                 }
                 double sqD = Jx * Jx - 2 * Jx * Jy + Jy * Jy + 4 * Jxy * Jxy;
-                double D = sqD > 0. ? std::sqrt(sqD) : 0.;
+                double D = std::sqrt( std::max(sqD, 0.) );
                 double e1 = (Jx + Jy + D) / 2;
-                cimgpix_t e = e1 > 0. ? std::sqrt(e1) : 0.;
+                double e = std::sqrt( std::max(e1, 0.) );
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
                     grad[0](x, y, 0, c) = Jxy;
