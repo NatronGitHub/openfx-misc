@@ -327,7 +327,7 @@ set N1ba5ba00 [stack 0]
   NatronOfxParamProcessG false
   NatronOfxParamProcessB false
   NatronOfxParamProcessA true
-  size {{(-Size/5)} {size.0}}
+  size {{(-Size/5)} {(-Size/5)}}
   expandRoD false
   premult false
   premultChannel A
@@ -343,12 +343,12 @@ set N1ba5ba00 [stack 0]
   NatronOfxParamProcessG false
   NatronOfxParamProcessB false
   NatronOfxParamProcessA true
-  size {{(Size/5)*2}}
+  size {{(Size/5)*2} {(Size/5)*2}}
   uniform true
   orderX 0
   orderY 0
   boundary Black
-  filter Gaussian
+  filter Box
   expandRoD false
   alphaThreshold 0
   premult false
@@ -357,6 +357,7 @@ set N1ba5ba00 [stack 0]
   mix 1
   premultChanged false
   name BlurCImg2
+  selected true
   xpos 334
   ypos 578
  }
@@ -366,7 +367,7 @@ push $N1ba5ba00
   NatronOfxParamProcessG false
   NatronOfxParamProcessB false
   NatronOfxParamProcessA true
-  size {{(-Size/5)*multi*2} {size.0}}
+  size {{(-Size/5)*multi*2} {(-Size/5)*multi*2}}
   expandRoD false
   premult false
   premultChannel A
@@ -374,7 +375,6 @@ push $N1ba5ba00
   mix 1
   premultChanged true
   name ErodeFast1
-  selected true
   xpos 217
   ypos 477
  }
@@ -383,12 +383,12 @@ push $N1ba5ba00
   NatronOfxParamProcessG false
   NatronOfxParamProcessB false
   NatronOfxParamProcessA true
-  size {{(Size/5)*multi*4}}
+  size {{(Size/5)*multi*4} {(Size/5)*multi*4}}
   uniform true
   orderX 0
   orderY 0
   boundary Black
-  filter Gaussian
+  filter Box
   expandRoD false
   alphaThreshold 0
   premult false
