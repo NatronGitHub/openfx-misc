@@ -10,16 +10,18 @@ Gizmo {
  Size 10
  addUserKnob {18 off l Darks t "adjust the color values to get the best separation between black and the screen type color.\nYou want to be left with only shades of the screen color and black. \nIf a green screen is selected start by bringing down darks->green\nIf a blue screen is selected start by bringing down darks->blue" R -1 1}
  off {0 0 0}
+ addUserKnob {6 off_panelDropped l "panel dropped state" -STARTLINE +HIDDEN}
  addUserKnob {18 mult l Lights t "adjust the color values to get the best separation between black and the screen type color.\nYou want to be left with only shades of the screen color and black. \nIf a green screen is selected start by bringing down darks->green\nIf a blue screen is selected start by bringing down darks->blue" R 0 2}
  mult {1 1 1}
+ addUserKnob {6 mult_panelDropped l "panel dropped state" -STARTLINE +HIDDEN}
  addUserKnob {26 ""}
  addUserKnob {7 erode l Erode t "increase this value if you still see traces of the foreground edge color in the output" R 0 5}
  addUserKnob {26 ""}
  addUserKnob {7 multi l "Patch Black" t "increase this to optionally remove the black from the output.\nThis should only be used once the the above darks/lights have been set" R 0 5}
- addUserKnob {6 filt l "Filter"}
+ addUserKnob {6 filt l Filter -STARTLINE}
  filt true
  addUserKnob {26 ""}
- addUserKnob {7 level l "Level" t "multiply the rgb output. Helps remove noise from main key"}
+ addUserKnob {7 level l Level t "multiply the rgb output. Helps remove noise from main key"}
  level 1
 }
  Input {
@@ -33,7 +35,7 @@ Gizmo {
   xpos 3
   ypos -21
  }
-set N2fd0b370 [stack 0]
+set N1919d910 [stack 0]
  Dot {
   name Dot1
   tile_color 0x9597bf00
@@ -87,15 +89,18 @@ set N2fd0b370 [stack 0]
   xpos -128
   ypos 92
  }
-set N2fd11e30 [stack 0]
-push $N2fd11e30
-push $N2fd11e30
+set N191a4330 [stack 0]
+push $N191a4330
+push $N191a4330
  OFXnet.sf.openfx.pik_v1 {
   inputs 3
   screenType {{screen}}
   color {0 0 1}
   redWeight 1
   blueGreenWeight 1
+  alphaBias 0.5
+  despillBias 0.5
+  despillBiasIsAlphaBias true
   lmEnable false
   level 1
   luma 0
@@ -107,9 +112,20 @@ push $N2fd11e30
   ss true
   clampAlpha true
   rgbal false
+  "Screen Matte" 0
+  screenClipMin 0
+  screenClipMax 1
+  screenReplace "Soft Color"
+  screenReplaceColor 0.5
+  "Inside Mask" 0
+  sourceAlphaHandling Ignore
+  insideReplace "Soft Color"
+  insideReplaceColor 0.5
   noKey false
   ubl false
   ubc false
+  colorspace "Rec. 709"
+  show Premultiplied
   name PIK2
   xpos -128
   ypos 190
@@ -136,6 +152,7 @@ push $N2fd11e30
   NatronOfxParamProcessA true
   size {{erode}}
   blur 0
+  expandRoD true
   premult false
   premultChannel A
   maskInvert false
@@ -146,15 +163,15 @@ push $N2fd11e30
   xpos -18
   ypos 223
  }
-set N2fd1dac0 [stack 0]
+set N191b1c00 [stack 0]
  Dot {
   name Dot3
   tile_color 0x9597bf00
   xpos 16
-  ypos 665
+  ypos 684
  }
-push $N2fd1dac0
-push $N2fd0b370
+push $N191b1c00
+push $N1919d910
  Dot {
   name Dot17
   xpos 126
@@ -181,7 +198,7 @@ push $N2fd0b370
   xpos 92
   ypos 235
  }
-set N2fd26540 [stack 0]
+set N191ba840 [stack 0]
  OFXnet.sf.cimg.cimgblur_v4 {
   NatronOfxParamProcessR true
   NatronOfxParamProcessG true
@@ -194,6 +211,7 @@ set N2fd26540 [stack 0]
   boundary Black
   filter Quadratic
   expandRoD false
+  alphaThreshold 0
   premult false
   premultChannel A
   maskInvert false
@@ -215,7 +233,7 @@ set N2fd26540 [stack 0]
   xpos 90
   ypos 300
  }
-set N2fd2d560 [stack 0]
+set N191c1b60 [stack 0]
  OFXnet.sf.openfx.clamp_v2 {
   NatronOfxParamProcessR true
   NatronOfxParamProcessG true
@@ -239,20 +257,19 @@ set N2fd2d560 [stack 0]
   xpos 212
   ypos 301
  }
-set N5331980 [stack 0]
+set N191c4ab0 [stack 0]
  Dot {
   name Dot5
   xpos 366
   ypos 304
  }
-push $N5331980
-push $N2fd2d560
+push $N191c4ab0
+push $N191c1b60
  Dot {
   name Dot4
   xpos 126
   ypos 349
  }
-set N5336c00 [stack 0]
  Copy {
   inputs 2
   from0 rgba.red
@@ -261,6 +278,7 @@ set N5336c00 [stack 0]
   xpos 212
   ypos 338
  }
+set N191caea0 [stack 0]
  Blur {
   channels rgba
   size {{Size*3*multi}}
@@ -303,41 +321,84 @@ set N5336c00 [stack 0]
   xpos 334
   ypos 477
  }
-set N2fd38790 [stack 0]
- OFXeu.cimg.erodeblur_v4 {
+set N1ba5ba00 [stack 0]
+ OFXnet.sf.cimg.cimgerode_v2 {
   NatronOfxParamProcessR false
   NatronOfxParamProcessG false
   NatronOfxParamProcessB false
   NatronOfxParamProcessA true
-  size {{(-Size/5)}}
-  blur 0
+  size {{(-Size/5)} {size.0}}
+  expandRoD false
+  premult false
+  premultChannel A
+  maskInvert false
+  mix 1
+  premultChanged true
+  name ErodeFast2
+  xpos 334
+  ypos 535
+ }
+ OFXnet.sf.cimg.cimgblur_v4 {
+  NatronOfxParamProcessR false
+  NatronOfxParamProcessG false
+  NatronOfxParamProcessB false
+  NatronOfxParamProcessA true
+  size {{(Size/5)*2}}
+  uniform true
+  orderX 0
+  orderY 0
+  boundary Black
+  filter Gaussian
+  expandRoD false
+  alphaThreshold 0
   premult false
   premultChannel A
   maskInvert false
   mix 1
   premultChanged false
-  MaskChannel -rgba.alpha
-  name ErodeBlur2
+  name BlurCImg2
   xpos 334
   ypos 578
  }
-push $N2fd38790
- OFXeu.cimg.erodeblur_v4 {
+push $N1ba5ba00
+ OFXnet.sf.cimg.cimgerode_v2 {
   NatronOfxParamProcessR false
   NatronOfxParamProcessG false
   NatronOfxParamProcessB false
   NatronOfxParamProcessA true
-  size {{(-Size/5)*multi*4}}
-  blur 1
+  size {{(-Size/5)*multi*2} {size.0}}
+  expandRoD false
+  premult false
+  premultChannel A
+  maskInvert false
+  mix 1
+  premultChanged true
+  name ErodeFast1
+  selected true
+  xpos 217
+  ypos 477
+ }
+ OFXnet.sf.cimg.cimgblur_v4 {
+  NatronOfxParamProcessR false
+  NatronOfxParamProcessG false
+  NatronOfxParamProcessB false
+  NatronOfxParamProcessA true
+  size {{(Size/5)*multi*4}}
+  uniform true
+  orderX 0
+  orderY 0
+  boundary Black
+  filter Gaussian
+  expandRoD false
+  alphaThreshold 0
   premult false
   premultChannel A
   maskInvert false
   mix 1
   premultChanged false
-  MaskChannel -rgba.alpha
-  name ErodeBlur1
+  name BlurCImg1
   xpos 217
-  ypos 477
+  ypos 513
  }
  Switch {
   inputs 2
@@ -357,7 +418,12 @@ push $N2fd38790
   xpos 217
   ypos 616
  }
-push $N5336c00
+push $N191caea0
+ Dot {
+  name Dot2
+  xpos 126
+  ypos 388
+ }
  OFXnet.sf.openfx.mergeplugin_v1 {
   inputs 2
   NatronOfxParamStringSublabelName over
@@ -376,13 +442,23 @@ push $N5336c00
   OutputChannelsG true
   OutputChannelsB true
   OutputChannelsA true
-  bChannelsChanged false
   maskInvert false
   mix 1
   MaskChannel -rgba.alpha
   name Merge1
   xpos 92
   ypos 616
+ }
+ OFXnet.sf.openfx.unpremult_v2 {
+  NatronOfxParamProcessR true
+  NatronOfxParamProcessG true
+  NatronOfxParamProcessB true
+  NatronOfxParamProcessA false
+  premultChannel A
+  premultChanged false
+  name Unpremult5
+  xpos 92
+  ypos 640
  }
  Copy {
   inputs 2
@@ -391,7 +467,7 @@ push $N5336c00
   name ChannelCopy2
   tile_color 0x9e3c6300
   xpos 92
-  ypos 654
+  ypos 673
  }
  OFXnet.sf.openfx.gradeplugin_v2 {
   NatronOfxParamProcessR true
@@ -415,14 +491,14 @@ push $N5336c00
   MaskChannel -rgba.alpha
   name Grade1
   xpos 92
-  ypos 705
+  ypos 724
  }
  Output {
   name Output1
   xpos 92
-  ypos 743
+  ypos 762
  }
-push $N2fd26540
+push $N191ba840
  Viewer {
   frame_range 1-24
   name Viewer1
