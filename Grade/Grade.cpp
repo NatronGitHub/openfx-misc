@@ -22,6 +22,7 @@
 
 #include <cmath>
 #include <cfloat> // DBL_MAX
+#include <limits>
 #include <algorithm>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
@@ -228,19 +229,25 @@ public:
                double offset,
                double gamma)
     {
-        if (gamma == 0) {
-            *v = 0;
-
-            return;
-        }
         double d = wp - bp;
         double A = d != 0 ? mutiply * (white - black) / d : 0;
         double B = offset + black - A * bp;
-        double invgamma = 1. / gamma;
         A = (A * *v) + B;
+        if (gamma <= 0) {
+            if (A < 1.) {
+                *v = 0.;
+            } else if (A == 1.) {
+                *v = 1.;
+            } else {
+                *v = std::numeric_limits<double>::infinity();
+            }
+
+            return;
+        }
         if (A <= 0) {
-            *v = A; // pow would produce NaNs in that case
+            *v = 0.; // pow would produce NaNs in that case (in Nuke, negative values produce 0 on output in Grade, and v in Gamma)
         } else {
+            double invgamma = 1. / gamma;
             *v = std::pow(A, invgamma);
         }
     }

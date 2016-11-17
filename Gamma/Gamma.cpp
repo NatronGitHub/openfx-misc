@@ -273,7 +273,7 @@ private:
                 for (int c = 0; c < 4; ++c) {
                     if (unpPix[c] <= 0.) {
                         // gamma function is not defined for negative values
-                        tmpPix[c] = unpPix[c];
+                        tmpPix[c] = unpPix[c]; // pow would produce NaNs in that case (in Nuke, negative values produce 0 on output in Grade, and v in Gamma)
                     } else if ( processR && (c == 0) ) {
                         tmpPix[0] = unpPix[0] > 0. ? std::pow(unpPix[0], (float)_value.r) : unpPix[0];
                     } else if ( processG && (c == 1) ) {
