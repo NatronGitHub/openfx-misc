@@ -511,6 +511,7 @@ public:
         _skewY = fetchDoubleParam(kParamTransformSkewYOld);
         _skewOrder = fetchChoiceParam(kParamTransformSkewOrderOld);
         _center = fetchDouble2DParam(kParamTransformCenterOld);
+        _centerChanged = fetchBooleanParam(kParamTransformCenterChanged);
         _interactive = fetchBooleanParam(kParamTransformInteractiveOld);
         assert(_rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _interactive);
 
@@ -569,6 +570,7 @@ private:
     OFX::DoubleParam* _skewY;
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
+    OFX::BooleanParam* _centerChanged;
     BooleanParam* _interactive;
     RGBAParam* _fromColor;
     RGBAParam* _toColor;
@@ -797,6 +799,7 @@ GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 {
     if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);
+        _centerChanged->setValue(false);
     } else if ( (paramName == kParamTransformTranslateOld) ||
                 ( paramName == kParamTransformRotateOld) ||
                 ( paramName == kParamTransformScaleOld) ||
@@ -805,6 +808,10 @@ GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 ( paramName == kParamTransformSkewYOld) ||
                 ( paramName == kParamTransformSkewOrderOld) ||
                 ( paramName == kParamTransformCenterOld) ) {
+        if ( (paramName == kParamTransformCenterOld) &&
+             (args.reason == OFX::eChangeUserEdit || args.reason == eChangePluginEdit) ) {
+            _centerChanged->setValue(true);
+        }
         changedTransform(args);
     } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
@@ -819,6 +826,7 @@ GodRaysPlugin::changedClip(const InstanceChangedArgs &args,
 {
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
+         !_centerChanged->getValueAtTime(args.time) &&
          ( args.reason == OFX::eChangeUserEdit) ) {
         resetCenter(args.time);
     }
