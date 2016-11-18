@@ -452,9 +452,19 @@ def createInstance(app,group):
     lastNode.setScriptName("Clamp1")
     lastNode.setLabel("Clamp1")
     lastNode.setPosition(411, 226)
-    lastNode.setSize(104, 30)
+    lastNode.setSize(104, 34)
     lastNode.setColor(0.48, 0.66, 1)
     groupClamp1 = lastNode
+
+    param = lastNode.getParam("NatronOfxParamProcessG")
+    if param is not None:
+        param.setValue(False)
+        del param
+
+    param = lastNode.getParam("NatronOfxParamProcessB")
+    if param is not None:
+        param.setValue(False)
+        del param
 
     param = lastNode.getParam("NatronOfxParamProcessA")
     if param is not None:
@@ -917,14 +927,14 @@ def createInstance(app,group):
     del lastNode
     # End of node "ErodeFast1"
 
-    # Start of node "Blur1"
+    # Start of node "BlurBox1"
     lastNode = app.createNode("net.sf.cimg.CImgBlur", 4, group)
     lastNode.setScriptName("BlurBox1")
     lastNode.setLabel("BlurBox1")
     lastNode.setPosition(414, 555)
     lastNode.setSize(104, 34)
     lastNode.setColor(0.8, 0.5, 0.3)
-    groupBlur1 = lastNode
+    groupBlurBox1 = lastNode
 
     param = lastNode.getParam("NatronOfxParamProcessR")
     if param is not None:
@@ -958,7 +968,7 @@ def createInstance(app,group):
         del param
 
     del lastNode
-    # End of node "Blur1"
+    # End of node "BlurBox1"
 
     # Start of node "ErodeFast2"
     lastNode = app.createNode("net.sf.cimg.CImgErode", 2, group)
@@ -1024,8 +1034,8 @@ def createInstance(app,group):
 
     param = lastNode.getParam("size")
     if param is not None:
-        param.setValue(-4, 0)
-        param.setValue(-4, 1)
+        param.setValue(4, 0)
+        param.setValue(4, 1)
         del param
 
     param = lastNode.getParam("filter")
@@ -1079,7 +1089,7 @@ def createInstance(app,group):
     groupDot5.connectInput(0, groupClamp1)
     groupUnpremult1.connectInput(0, groupBlur2)
     groupInvert2.connectInput(0, groupShuffleCopy2)
-    groupSwitch1.connectInput(0, groupBlur1)
+    groupSwitch1.connectInput(0, groupBlurBox1)
     groupSwitch1.connectInput(1, groupBlurBox2)
     groupPremult1.connectInput(0, groupSwitch1)
     groupMerge1.connectInput(0, groupDot7)
@@ -1097,7 +1107,7 @@ def createInstance(app,group):
     groupBlur4.connectInput(0, groupPremult3)
     groupDot7.connectInput(0, groupChannelCopy1)
     groupErodeFast1.connectInput(0, groupInvert2)
-    groupBlur1.connectInput(0, groupErodeFast1)
+    groupBlurBox1.connectInput(0, groupErodeFast1)
     groupErodeFast2.connectInput(0, groupInvert2)
     groupBlurBox2.connectInput(0, groupErodeFast2)
     groupUnpremult2.connectInput(0, groupMerge1)
@@ -1139,17 +1149,17 @@ def createInstance(app,group):
     param.setExpression("(-thisGroup.size.get()/5)*thisGroup.multi.get()*2", False, 0)
     param.setExpression("(-thisGroup.size.get()/5)*thisGroup.multi.get()*2", False, 1)
     del param
-    param = groupBlur1.getParam("size")
-    param.setExpression("(-thisGroup.size.get()/5)*thisGroup.multi.get()*4", False, 0)
-    param.setExpression("(-thisGroup.size.get()/5)*thisGroup.multi.get()*4", False, 1)
+    param = groupBlurBox1.getParam("size")
+    param.setExpression("(thisGroup.size.get()/5)*thisGroup.multi.get()*4", False, 0)
+    param.setExpression("(thisGroup.size.get()/5)*thisGroup.multi.get()*4", False, 1)
     del param
     param = groupErodeFast2.getParam("size")
     param.setExpression("(-thisGroup.size.get()/5)", False, 0)
     param.setExpression("(-thisGroup.size.get()/5)", False, 1)
     del param
     param = groupBlurBox2.getParam("size")
-    param.setExpression("(-thisGroup.size.get()/5)*2", False, 0)
-    param.setExpression("(-thisGroup.size.get()/5)*2", False, 1)
+    param.setExpression("(thisGroup.size.get()/5)*2", False, 0)
+    param.setExpression("(thisGroup.size.get()/5)*2", False, 1)
     del param
 
     try:
