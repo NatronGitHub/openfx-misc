@@ -116,6 +116,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamProcessAHint  "Process alpha component."
 #endif
 
+#define kParamCornerRadius "cornerRadius"
+#define kParamCornerRadiusLabel "Corner Radius"
+#define kParamCornerRadiusHint "If non-zero, this is the radius of the round corners."
+
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
 #define kParamSoftnessHint "Softness of the rectangle edges. Draws an anti-aliased rectangle if zero"
@@ -166,6 +170,7 @@ protected:
     bool _processB;
     bool _processA;
     OfxPointD _btmLeft, _size;
+    OfxPointD _cornerRadius;
     double _softness;
     RGBAValues _color0, _color1;
 
@@ -184,6 +189,7 @@ public:
         , _softness(0.)
     {
         _btmLeft.x = _btmLeft.y = _size.x = _size.y = 0.;
+        _cornerRadius.x = _cornerRadius.y = 0.;
         _color0.r = _color0.g = _color0.b = _color0.a = 0.;
         _color1.r = _color1.g = _color1.b = _color1.a = 0.;
     }
@@ -208,6 +214,7 @@ public:
 
     void setValues(const OfxPointD& btmLeft,
                    const OfxPointD& size,
+                   const OfxPointD& cornerRadius,
                    double softness,
                    const RGBAValues& color0,
                    const RGBAValues& color1,
@@ -219,6 +226,7 @@ public:
     {
         _btmLeft = btmLeft;
         _size = size;
+        _cornerRadius = cornerRadius;
         _softness = std::max(0., softness);
         _color0 = color0;
         _color1 = color1;
@@ -334,6 +342,9 @@ private:
         OfxPointD softness; // softness value in pixel
         softness.x = _softness * rs.x / par;
         softness.y = _softness * rs.y;
+        OfxPointD r; // cornerRadius value in pixel
+        r.x = _cornerRadius.x * rs.x / par;
+        r.y = _cornerRadius.y * rs.y;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -354,53 +365,198 @@ private:
                     tmpPix[2] = (float)_color0.b;
                     tmpPix[3] = (float)_color0.a;
                 } else {
-                    // inside or mixed
-                    // is it a mixed pixel?
-                    float a = 1.;
-                    if (dx < 0.5) {
-                        a *= dx + 0.5;
-                        dx = 0.5;
-                    }
-                    if (dy < 0.5) {
-                        a *= dy + 0.5;
-                        dy = 0.5;
-                    }
-                    if ( (_softness == 0) || ( (dx >= softness.x) && (dy >= softness.y) ) ) {
-                        // inside of the rectangle
-                        tmpPix[0] = (float)_color1.r;
-                        tmpPix[1] = (float)_color1.g;
-                        tmpPix[2] = (float)_color1.b;
-                        tmpPix[3] = (float)_color1.a;
+                    float a = 1.; // mix factor with the outside
+                    // test if the center of the pixel is within one of the rounded corners
+                    if (r.x > 0 && r.y > 0 &&
+                        ( ( x < (btmLeft.x + r.x) ) || ( x > (topRight.x - r.x) ) ) &&
+                        ( ( y < (btmLeft.y + r.y) ) || ( y > (topRight.y - r.y) ) ) ) {
+                        // CORNERS
+
+                        // compute the corresponding ellipse center (in pixel coordinates
+                        OfxPointD c; // center position in pixel
+                        c.x = x < (btmLeft.x + r.x) ? (btmLeft.x + r.x) : (topRight.x - r.x);
+                        c.y = y < (btmLeft.y + r.y) ? (btmLeft.y + r.y) : (topRight.y - r.y);
+
+                        // The following is the ellipse drawing code from the Radial plugin
+                        double dxe = (x - c.x) / r.x;
+                        double dye = (y - c.y) / r.y;
+
+                        // approximate subpixel rendering of the disc:
+                        // - test the pixel corner closer to the center. if it is outside, the pixel is fully outside
+                        // - test the pixel corner farther to the center. if it is inside, the pixel is fully outside
+                        // - else the pixel is mixed, and its value is (color0*abs(sqrt(dsq_farther)-1)+color1_smoothed*abs(sqrt(dsq_closer)-1))/(sqrt(dsq_farther)+sqrt(dsq_closer))
+                        OfxPointD p_closer = {(double)x, (double)y};
+                        OfxPointD p_farther = {(double)x, (double)y};
+
+                        if (x <= c.x - 0.5) {
+                            p_closer.x += 0.5;
+                            p_farther.x -= 0.5;
+                        } else if (x >= c.x + 0.5) {
+                            p_closer.x -= 0.5;
+                            p_farther.x += 0.5;
+                        }
+                        if (y <= c.y - 0.5) {
+                            p_closer.y += 0.5;
+                            p_farther.y -= 0.5;
+                        } else if (y >= c.y + 0.5) {
+                            p_closer.y -= 0.5;
+                            p_farther.y += 0.5;
+                        }
+                        double dx_closer = (p_closer.x - c.x) / r.x;
+                        double dy_closer = (p_closer.y - c.y) / r.y;
+                        double dx_farther = (p_farther.x - c.x) / r.x;
+                        double dy_farther = (p_farther.y - c.y) / r.y;
+
+
+                        if ( (dx_closer >= 1) || (dy_closer >= 1) ) {
+                            // outside
+                            tmpPix[0] = (float)_color0.r;
+                            tmpPix[1] = (float)_color0.g;
+                            tmpPix[2] = (float)_color0.b;
+                            tmpPix[3] = (float)_color0.a;
+                        } else {
+                            // maybe inside
+
+                            //double dsq = dxe * dxe + dye * dye;
+                            double dsq_closer = dx_closer * dx_closer + dy_closer * dy_closer;
+                            double dsq_farther = dx_farther * dx_farther + dy_farther * dy_farther;
+                            assert(dsq_closer <= dsq_farther);
+                            if (dsq_closer > dsq_farther) {
+                                // protect against bug
+                                std::swap(dsq_closer, dsq_farther);
+                            }
+                            if (dsq_closer >= 1) {
+                                // fully outside
+                                tmpPix[0] = (float)_color0.r;
+                                tmpPix[1] = (float)_color0.g;
+                                tmpPix[2] = (float)_color0.b;
+                                tmpPix[3] = (float)_color0.a;
+                            } else {
+                                // always consider the value closest top the center to avoid discontinuities/artifacts
+                                if ( dsq_closer <= 0 ||  _softness == 0 ) {
+                                    // solid color
+                                    tmpPix[0] = (float)_color1.r;
+                                    tmpPix[1] = (float)_color1.g;
+                                    tmpPix[2] = (float)_color1.b;
+                                    tmpPix[3] = (float)_color1.a;
+                                } else {
+                                    // compute the non-round rect coeff (tx*ty) first.
+                                    float tx, ty;
+                                    if (dx >= softness.x) {
+                                        tx = 1.f;
+                                    } else {
+                                        tx = (float)rampSmooth(dx / softness.x);
+                                    }
+                                    if (dy >= softness.y) {
+                                        ty = 1.f;
+                                    } else {
+                                        ty = (float)rampSmooth(dy / softness.y);
+                                    }
+
+                                    // then the corner coeff.
+                                    double dellipse; // distance to the ellipse along the radius
+                                    // compute the point on the ellipse that goes through the ellipse center and the considered point.
+                                    if (dsq_closer <= 0) {
+                                        dellipse = std::min(r.x, r.y);
+                                    } else {
+                                        double radius = std::sqrt(dsq_closer);
+                                        // distance must be measured at full scale in canonical coords
+                                        double vx = (p_closer.x - c.x) * (1 / radius - 1) * par / rs.x;
+                                        double vy = (p_closer.y - c.y) * (1 / radius - 1) / rs.y;
+                                        dellipse = std::sqrt(vx * vx + vy * vy);
+                                    }
+                                    assert(dellipse >= 0.);
+                                    float t = dellipse / _softness;
+                                    if (t < 1) {
+                                        t = (float)rampSmooth(t);
+                                    }
+
+                                    // take the min of the rectangle softness and the corner softness
+                                    t = std::min(t, tx * ty);
+
+                                    if (t >= 1) {
+                                        tmpPix[0] = (float)_color1.r;
+                                        tmpPix[1] = (float)_color1.g;
+                                        tmpPix[2] = (float)_color1.b;
+                                        tmpPix[3] = (float)_color1.a;
+                                    } else {
+                                        //if (_plinear) {
+                                        //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                                        //    t = t * t * t;
+                                        //}
+                                        tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                                        tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                                        tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                                        tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                    }
+                                }
+
+                                if (dsq_farther <= 1) {
+                                    // fully inside
+                                    a = 1.;
+                                } else {
+                                    // mixed pixel, partly inside / partly outside, center of pixel is outside
+                                    assert(dsq_closer < 1 && dsq_farther > 1);
+                                    // now mix with the outside pix;
+                                    a = ( 1 - std::sqrt( std::max(dsq_closer, 0.) ) ) / (std::sqrt( std::max(dsq_farther, 0.) )-std::sqrt( std::max(dsq_closer, 0.) ) );
+                                }
+                            } // if (!fully_outside
+                        } // if (outside vs. maybe inside)
+
                     } else {
-                        float tx, ty;
-                        if (dx >= softness.x) {
-                            tx = 1.f;
-                        } else {
-                            tx = (float)rampSmooth(dx / softness.x);
+                        // RECTANGLE
+
+                        // within the rectangle area minus the corners
+
+                        // inside or mixed
+                        // is it a mixed pixel?
+                        if (dx < 0.5) {
+                            a *= dx + 0.5;
+                            dx = 0.5;
                         }
-                        if (dy >= softness.y) {
-                            ty = 1.f;
-                        } else {
-                            ty = (float)rampSmooth(dy / softness.y);
+                        if (dy < 0.5) {
+                            a *= dy + 0.5;
+                            dy = 0.5;
                         }
-                        float t = tx * ty;
-                        if (t >= 1) {
+                        if ( (_softness == 0) || ( (dx >= softness.x) && (dy >= softness.y) ) ) {
+                            // inside of the rectangle
                             tmpPix[0] = (float)_color1.r;
                             tmpPix[1] = (float)_color1.g;
                             tmpPix[2] = (float)_color1.b;
                             tmpPix[3] = (float)_color1.a;
                         } else {
-                            //if (_plinear) {
-                            //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
-                            //    t = t*t*t;
-                            //}
-                            tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
-                            tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
-                            tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
-                            tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                            float tx, ty;
+                            if (dx >= softness.x) {
+                                tx = 1.f;
+                            } else {
+                                tx = (float)rampSmooth(dx / softness.x);
+                            }
+                            if (dy >= softness.y) {
+                                ty = 1.f;
+                            } else {
+                                ty = (float)rampSmooth(dy / softness.y);
+                            }
+                            float t = tx * ty;
+                            if (t >= 1) {
+                                tmpPix[0] = (float)_color1.r;
+                                tmpPix[1] = (float)_color1.g;
+                                tmpPix[2] = (float)_color1.b;
+                                tmpPix[3] = (float)_color1.a;
+                            } else {
+                                //if (_plinear) {
+                                //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                                //    t = t*t*t;
+                                //}
+                                tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                                tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                                tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                                tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                            }
                         }
                     }
+                    assert(a >= 0. && a <= 1.);
                     if (a != 1.) {
+                        // mixed pixel (inside/outside)
                         assert(0 <= a && a <= 1.);
                         tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
                         tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
@@ -489,6 +645,7 @@ public:
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
+        _cornerRadius = fetchDouble2DParam(kParamCornerRadius);
         _softness = fetchDoubleParam(kParamSoftness);
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
@@ -533,6 +690,7 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
+    Double2DParam* _cornerRadius;
     DoubleParam* _softness;
     RGBAParam* _color0;
     RGBAParam* _color1;
@@ -639,6 +797,14 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
             size.y = rod.y2 - rod.y1;
         }
     }
+    OfxPointD cornerRadius;
+    _cornerRadius->getValueAtTime(time, cornerRadius.x, cornerRadius.y);
+    if (cornerRadius.x > size.x / 2) {
+        cornerRadius.x = size.x / 2;
+    }
+    if (cornerRadius.y > size.y / 2) {
+        cornerRadius.y = size.y / 2;
+    }
     double softness = _softness->getValueAtTime(time);
 
     RGBAValues color0, color1;
@@ -653,6 +819,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
     double mix = _mix->getValueAtTime(time);
 
     processor.setValues(btmLeft, size,
+                        cornerRadius,
                         softness,
                         color0, color1,
                         mix,
@@ -1140,6 +1307,20 @@ RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentSize, ePixelComponentRGBA, false,  context);
 
+    // corner radius
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamCornerRadius);
+        param->setLabel(kParamCornerRadiusLabel);
+        param->setHint(kParamCornerRadiusHint);
+        param->setDoubleType(eDoubleTypeXY);
+        param->setDefault(0., 0.);
+        param->setRange(0., 0., DBL_MAX, DBL_MAX);
+        param->setDisplayRange(0., 0., 100., 100.);
+        param->setDigits(1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     // softness
     {
