@@ -393,38 +393,8 @@ private:
                         tmpPix[1] = (float)_color0.g;
                         tmpPix[2] = (float)_color0.b;
                         tmpPix[3] = (float)_color0.a;
-                    } else if (dsq_farther <= 1) {
-                        // fully inside
-                        if ( dsq <= 0 ||  _softness == 0 ) {
-                            // solid color
-                            tmpPix[0] = (float)_color1.r;
-                            tmpPix[1] = (float)_color1.g;
-                            tmpPix[2] = (float)_color1.b;
-                            tmpPix[3] = (float)_color1.a;
-                        } else {
-                            // mixed
-                            float t = ( 1.f - (float)std::sqrt( std::max(dsq, 0.) ) ) / (float)_softness;
-                            if (t >= 1) {
-                                tmpPix[0] = (float)_color1.r;
-                                tmpPix[1] = (float)_color1.g;
-                                tmpPix[2] = (float)_color1.b;
-                                tmpPix[3] = (float)_color1.a;
-                            } else {
-                                t = (float)rampSmooth(t);
-
-                                if (_plinear) {
-                                    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
-                                    t = t * t * t;
-                                }
-                                tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
-                                tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
-                                tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
-                                tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
-                            }
-                        }
                     } else {
-                        // mixed pixel, partly inside / partly outside
-                        assert(dsq_closer < 1 && dsq_farther > 1);
+                        // always consider the value closest top the center to avoid discontinuities/artifacts
                         if ( dsq_closer <= 0 ||  _softness == 0 ) {
                             // solid color
                             tmpPix[0] = (float)_color1.r;
@@ -452,13 +422,23 @@ private:
                                 tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
                             }
                         }
-                        // now mix with the outside pix;
-                        float a = (1 - std::sqrt(dsq_closer)) / (std::sqrt( std::max(dsq_farther, 0.) )-std::sqrt(dsq_closer));
-                        tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
-                        tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
-                        tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
-                        tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
-
+                        float a;
+                        if (dsq_farther <= 1) {
+                            // fully inside
+                            a = 1.;
+                        } else {
+                            // mixed pixel, partly inside / partly outside, center of pixel is outside
+                            assert(dsq_closer < 1 && dsq_farther > 1);
+                            // now mix with the outside pix;
+                            a = ( 1 - std::sqrt( std::max(dsq_closer, 0.) ) ) / (std::sqrt( std::max(dsq_farther, 0.) )-std::sqrt( std::max(dsq_closer, 0.) ) );
+                        }
+                        assert(a >= 0. && a <= 1.);
+                        if (a != 1.) {
+                            tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
+                            tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
+                            tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
+                            tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
+                        }
                     }
                 }
                 float a = tmpPix[3];
