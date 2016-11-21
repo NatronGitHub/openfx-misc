@@ -433,7 +433,7 @@ private:
                                 tmpPix[3] = (float)_color0.a;
                             } else {
                                 // always consider the value closest top the center to avoid discontinuities/artifacts
-                                if ( dsq_closer <= 0 ||  _softness == 0 ) {
+                                if ( _softness == 0 ) {
                                     // solid color
                                     tmpPix[0] = (float)_color1.r;
                                     tmpPix[1] = (float)_color1.g;
