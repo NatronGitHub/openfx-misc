@@ -379,7 +379,7 @@ private:
                 } else {
                     // maybe inside
 
-                    double dsq = dx * dx + dy * dy;
+                    //double dsq = dx * dx + dy * dy;
                     double dsq_closer = dx_closer * dx_closer + dy_closer * dy_closer;
                     double dsq_farther = dx_farther * dx_farther + dy_farther * dy_farther;
                     assert(dsq_closer <= dsq_farther);
