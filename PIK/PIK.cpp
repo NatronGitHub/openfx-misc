@@ -2299,6 +2299,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamScreenTypeOptionPick);
         param->setDefault( (int)kParamScreenTypeDefault );
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2314,6 +2315,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintDivider);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2329,6 +2331,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamRedWeightDefault);
         param->setAnimates(true);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2344,6 +2347,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamBlueGreenWeightDefault);
         param->setAnimates(true);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2358,6 +2362,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(0.5, 0.5, 0.5);
         param->setAnimates(true);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2372,6 +2377,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(0.5, 0.5, 0.5);
         param->setAnimates(true);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2386,6 +2392,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintDivider);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2403,6 +2410,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setIsSecretAndDisabled(true);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2422,6 +2430,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setIsSecretAndDisabled(true);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2442,6 +2451,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2461,6 +2471,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLayoutHint(eLayoutHintDivider);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2479,6 +2490,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2497,6 +2509,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2515,6 +2528,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2533,6 +2547,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLayoutHint(eLayoutHintDivider);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2547,6 +2562,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2563,6 +2579,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2579,6 +2596,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setIsSecretAndDisabled(true);
 #endif
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2743,6 +2761,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2757,6 +2776,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2770,6 +2790,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(kParamUBCDefault);
         param->setAnimates(false);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2792,6 +2813,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLayoutHint(eLayoutHintDivider);
         param->setAnimates(false);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {
@@ -2831,6 +2853,7 @@ PIKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (group) {
+            // coverity[dead_error_line]
             param->setParent(*group);
         }
         if (page) {

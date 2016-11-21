@@ -155,6 +155,9 @@ public:
 
     const OFX::Image* fetch(double time, bool nofetch = false) const
     {
+        if (!_srcClip) {
+            return NULL;
+        }
         ImagesMap::const_iterator it = _images.find(time);
         if (it != _images.end()) {
             return it->second;
