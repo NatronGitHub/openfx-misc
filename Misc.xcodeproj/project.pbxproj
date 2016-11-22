@@ -403,6 +403,8 @@
 		1E593379194A0C6300804448 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E593381194A0CF400804448 /* Constant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E59337F194A0CF400804448 /* Constant.cpp */; };
 		1E593382194A0CF400804448 /* Constant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E59337F194A0CF400804448 /* Constant.cpp */; };
+		1E5CD4CB1DE4874000CEC3BA /* ShuffleClassic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E5CD4CA1DE4871400CEC3BA /* ShuffleClassic.cpp */; };
+		1E5CD4CC1DE4874400CEC3BA /* ShuffleClassic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E5CD4CA1DE4871400CEC3BA /* ShuffleClassic.cpp */; };
 		1E5D546E1AB58CFA00B7B1BE /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E5D546F1AB58CFA00B7B1BE /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E5D54701AB58CFA00B7B1BE /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -2897,6 +2899,7 @@
 		1E59337F194A0CF400804448 /* Constant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Constant.cpp; sourceTree = "<group>"; };
 		1E593383194A0D0500804448 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E593384194A0D0500804448 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E5CD4CA1DE4871400CEC3BA /* ShuffleClassic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ShuffleClassic.cpp; sourceTree = "<group>"; };
 		1E5D54671AB58BC700B7B1BE /* FrameHold.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FrameHold.cpp; sourceTree = "<group>"; };
 		1E5D54691AB58BC700B7B1BE /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E5D546A1AB58BC700B7B1BE /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -5149,6 +5152,7 @@
 		1EF46F44194A399D00825BDF /* Shuffle */ = {
 			isa = PBXGroup;
 			children = (
+				1E5CD4CA1DE4871400CEC3BA /* ShuffleClassic.cpp */,
 				1EF46F45194A39C800825BDF /* Shuffle.cpp */,
 				1EF46F4C194A39E800825BDF /* Makefile */,
 				1EF46F49194A39DB00825BDF /* Info.plist */,
@@ -7248,6 +7252,7 @@
 				D730310419518B560024BCA4 /* CopyRectangle.cpp in Sources */,
 				D7257D5F192E91510040CD9C /* CornerPin.cpp in Sources */,
 				1ED12E521A4B318400ABA348 /* ClipTest.cpp in Sources */,
+				1E53BF8C1C75D19400623EE0 /* ColorBars.cpp in Sources */,
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* ColorLookup.cpp in Sources */,
 				1EAFE3E71C5D092900F9E4E4 /* ColorSuppress.cpp in Sources */,
@@ -7273,12 +7278,12 @@
 				1E181B0219518E0000FAB9A9 /* Invert.cpp in Sources */,
 				1E8B5D7F18B7828400C31FDC /* JoinViews.cpp in Sources */,
 				1ECF2FA519F51DA600E91A38 /* Keyer.cpp in Sources */,
+				1EBEC6071D928F5800127BC7 /* KeyMix.cpp in Sources */,
 				1E89B5761D81A7AC00F61E6B /* Log2Lin.cpp in Sources */,
 				1E2D33F11C3FBA05004E2F03 /* MatteMonitor.cpp in Sources */,
 				D74121D118F9C99300A81F8B /* Merge.cpp in Sources */,
 				1EB0A49B1AA21B4200F9C93E /* Mirror.cpp in Sources */,
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
-				1E53BF8C1C75D19400623EE0 /* ColorBars.cpp in Sources */,
 				1ED12E5A1A4B319800ABA348 /* Multiply.cpp in Sources */,
 				1EB9C085196DD697003C1849 /* NoOp.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
@@ -7296,6 +7301,7 @@
 				1E0072EE1A4041DF00E77042 /* Radial.cpp in Sources */,
 				1E69CA061A2B2F350099D609 /* Saturation.cpp in Sources */,
 				1EF46F48194A39C800825BDF /* Shuffle.cpp in Sources */,
+				1E5CD4CC1DE4874400CEC3BA /* ShuffleClassic.cpp in Sources */,
 				1E8B5D6D18B77F1600C31FDC /* SideBySide.cpp in Sources */,
 				1EBB4BBA1B2D66880042DBE0 /* SlitScan.cpp in Sources */,
 				1E8B5D4E18B76A7500C31FDC /* Switch.cpp in Sources */,
@@ -7319,7 +7325,6 @@
 				1E9B5F61198A52060095C8AA /* ofxsTransform3x3.cpp in Sources */,
 				1E9B5F63198A52210095C8AA /* ofxsOGLFontData.cpp in Sources */,
 				1E8B5D4C18B76A7500C31FDC /* ofxsCore.cpp in Sources */,
-				1EBEC6071D928F5800127BC7 /* KeyMix.cpp in Sources */,
 				AC3525D81C2171380063F0C0 /* ofxsMultiPlane.cpp in Sources */,
 				1E8B5D4D18B76A7500C31FDC /* ofxsImageEffect.cpp in Sources */,
 				1E8B5D4F18B76A7500C31FDC /* ofxsInteract.cpp in Sources */,
@@ -7923,6 +7928,7 @@
 				1EF46F34194A394E00825BDF /* ofxsCore.cpp in Sources */,
 				1EF46F35194A394E00825BDF /* ofxsImageEffect.cpp in Sources */,
 				1EF46F36194A394E00825BDF /* ofxsInteract.cpp in Sources */,
+				1E5CD4CB1DE4874000CEC3BA /* ShuffleClassic.cpp in Sources */,
 				1EF46F37194A394E00825BDF /* ofxsLog.cpp in Sources */,
 				1EF46F38194A394E00825BDF /* ofxsMultiThread.cpp in Sources */,
 				1EF46F3B194A394E00825BDF /* ofxsParams.cpp in Sources */,
