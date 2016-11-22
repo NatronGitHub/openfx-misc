@@ -4,6 +4,7 @@ PLUGINOBJECTS = \
 PLUGINNAME = Shadertoy
 
 OSMESA_PATH ?= /opt/osmesa
+LLVM_PATH ?= /opt/llvm
 
 ## Enable these if you installed a mangled OSMesa (preferably with 32 bits FP support)
 #CXXFLAGS_MESA += -DHAVE_OSMESA
