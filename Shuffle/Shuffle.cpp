@@ -542,6 +542,14 @@ public:
         _channelParam[1] = fetchChoiceParam(kParamOutputG);
         _channelParam[2] = fetchChoiceParam(kParamOutputB);
         _channelParam[3] = fetchChoiceParam(kParamOutputA);
+        try {
+            _channelStringParam[0] = fetchStringParam(kParamOutputRChoice);
+            _channelStringParam[1] = fetchStringParam(kParamOutputGChoice);
+            _channelStringParam[2] = fetchStringParam(kParamOutputBChoice);
+            _channelStringParam[3] = fetchStringParam(kParamOutputAChoice);
+        } catch (...) {
+            _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
+        }
 
         _outputComponents = fetchChoiceParam(kParamOutputComponents);
 
@@ -555,7 +563,7 @@ public:
             fetchDynamicMultiplaneChoiceParameter(kParamOutputA, abClips);
             fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, _dstClip);
         }
-
+        
         _outputPremult = fetchChoiceParam(kParamOutputPremultiplication);
 
         updateVisibility();
@@ -613,6 +621,7 @@ private:
     OFX::ChoiceParam *_outputLayer;
     OFX::ChoiceParam *_outputBitDepth;
     OFX::ChoiceParam* _channelParam[4];
+    OFX::StringParam* _channelStringParam[4];
     OFX::ChoiceParam *_outputComponents;
     OFX::ChoiceParam *_outputPremult;
 };
@@ -1443,12 +1452,21 @@ ShufflePlugin::setChannelsFromRed(double time)
                 std::string chan = opt.substr( base.size() );
                 if ( (chan == ".G") || (chan == ".g") ) {
                     _channelParam[1]->setValue(i);
+                    if (_channelStringParam[1]) {
+                        _channelStringParam[1]->setValue(chan);
+                    }
                     gSet = true;
                 } else if ( (chan == ".B") || (chan == ".b") ) {
                     _channelParam[2]->setValue(i);
+                    if (_channelStringParam[2]) {
+                        _channelStringParam[2]->setValue(chan);
+                    }
                     bSet = true;
                 } else if ( (chan == ".A") || (chan == ".a") ) {
                     _channelParam[3]->setValue(i);
+                    if (_channelStringParam[3]) {
+                        _channelStringParam[3]->setValue(chan);
+                    }
                     aSet = true;
                 }
             }
