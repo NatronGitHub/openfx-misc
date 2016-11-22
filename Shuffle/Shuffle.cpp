@@ -532,7 +532,7 @@ public:
             _srcClipB = fetchClip(kClipB);
             assert( _srcClipB && (1 <= _srcClipB->getPixelComponentCount() && _srcClipB->getPixelComponentCount() <= 4) );
         }
-        if (gIsMultiPlanar) {
+        if (gIsMultiPlanar && gSupportsDynamicChoices) {
             _outputLayer = fetchChoiceParam(kParamOutputChannels);
         }
         if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
@@ -1542,10 +1542,9 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args,
         msg += "\n";
         sendMessage(OFX::Message::eMessageMessage, "", msg);
     } else if (paramName == kParamOutputChannelsChoice) {
-        int layer_i;
-        _outputLayer->getValue(layer_i);
+        assert(_outputLayer);
         std::string layerName;
-        _outputLayer->getOption(layer_i, layerName);
+        _outputLayer->getOption(_outputLayer->getValue(), layerName);
 
         std::string ofxComponents;
         if ( layerName.empty() ||
@@ -1584,7 +1583,7 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 return;
             }
         }
-
+        assert(_outputLayer);
         if ( checkIfChangedParamCalledOnDynamicChoice(paramName, _outputLayer->getName(), args.reason) ) {
             return;
         }
@@ -1923,6 +1922,7 @@ ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // outputComponents
     if (gIsMultiPlanar && gSupportsDynamicChoices) {
+        // defines kParamOutputChannels
         OFX::MultiPlane::Factory::describeInContextAddOutputLayerChoice(false, desc, page);
     }
     {
