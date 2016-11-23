@@ -521,6 +521,10 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
         if ( !dst.get() ) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
+        if (!src.get()) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Could not fetch source image");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
 
         copyPixelsOpaque( *this, args.renderWindow, src.get(), dst.get() );
     } else {
