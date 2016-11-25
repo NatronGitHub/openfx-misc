@@ -47,12 +47,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
     "KeyMix takes two images and layers them together according to a third input. It can be used to lay a foreground over a background using the output of a keyer. The only disadvantage to this method is that it outputs an image with no alpha.\n" \
-"\n" \
-"It copies the pixel from A to B only where the Mask is non-zero. It is the same as the Matte operation, but alpha for input A is taken from an external mask, and the output alpha is mixed between A and B. The output bounding box is the union of A and B.\n" \
-"\n" \
-"As well as functioning as a layering node, it can also be used to integrate two color operations with one mask. This guards against 'recycled masks', where two consecutive color filters are masked using the same mask, which may generate strange artifacts.\n" \
-"\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=KeyMix"
+    "\n" \
+    "It copies the pixel from A to B only where the Mask is non-zero. It is the same as the Matte operation, but alpha for input A is taken from an external mask, and the output alpha is mixed between A and B. The output bounding box is the union of A and B.\n" \
+    "\n" \
+    "As well as functioning as a layering node, it can also be used to integrate two color operations with one mask. This guards against 'recycled masks', where two consecutive color filters are masked using the same mask, which may generate strange artifacts.\n" \
+    "\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=KeyMix"
 
 #define kPluginIdentifier "net.sf.openfx.KeyMix"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -114,20 +114,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
  */
 
 class KeyMixProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImgA;
-    const OFX::Image *_srcImgB;
-    const OFX::Image *_maskImg;
+    const Image *_srcImgA;
+    const Image *_srcImgB;
+    const Image *_maskImg;
     double _mix;
     bool _maskInvert;
     std::bitset<4> _aChannels;
 
 public:
 
-    KeyMixProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    KeyMixProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImgA(0)
         , _srcImgB(0)
         , _maskImg(0)
@@ -137,14 +137,14 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *A,
-                   const OFX::Image *B)
+    void setSrcImg(const Image *A,
+                   const Image *B)
     {
         _srcImgA = A;
         _srcImgB = B;
     }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
     void setValues(double mix,
@@ -162,7 +162,7 @@ class KeyMixProcessor
     : public KeyMixProcessorBase
 {
 public:
-    KeyMixProcessor(OFX::ImageEffect &instance)
+    KeyMixProcessor(ImageEffect &instance)
         : KeyMixProcessorBase(instance)
     {
     }
@@ -238,7 +238,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class KeyMixPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -257,7 +257,7 @@ public:
 
         _srcClipB = fetchClip(kClipB);
         assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
@@ -276,43 +276,43 @@ private:
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(KeyMixProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(KeyMixProcessorBase &, const RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
     template<int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args);
+    void renderForComponents(const RenderArguments &args);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const OFX::RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args);
 
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClipA;
-    OFX::Clip *_srcClipB;
-    OFX::Clip *_maskClip;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _aChannels[4];
+    Clip *_dstClip;
+    Clip *_srcClipA;
+    Clip *_srcClipB;
+    Clip *_maskClip;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
+    BooleanParam* _aChannels[4];
 };
 
 
 // override the rod call
 bool
 KeyMixPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
-                                   OfxRectD &rod)
+                                    OfxRectD &rod)
 {
     const double time = args.time;
     double mix = _mix->getValueAtTime(time);
 
     //Do the same as isIdentity otherwise the result of getRegionOfDefinition() might not be coherent with the RoD of the identity clip.
-    if (mix == 0. || !(_maskClip && _maskClip->isConnected())) {
+    if ( (mix == 0.) || !( _maskClip && _maskClip->isConnected() ) ) {
         if ( _srcClipB->isConnected() ) {
             OfxRectD rodB = _srcClipB->getRegionOfDefinition(time);
             rod = rodB;
@@ -329,7 +329,7 @@ KeyMixPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
     }
     if ( _srcClipA->isConnected() ) {
-        OFX::Coords::rectBoundingBox(rod, _srcClipA->getRegionOfDefinition(time), &rod);
+        Coords::rectBoundingBox(rod, _srcClipA->getRegionOfDefinition(time), &rod);
     }
 
     return true;
@@ -344,63 +344,64 @@ KeyMixPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 /* set up and run a processor */
 void
 KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
-                             const OFX::RenderArguments &args)
+                              const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
-                                          _srcClipA->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
-                                          _srcClipB->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
+                                     _srcClipA->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
+                                     _srcClipB->fetchImage(time) : 0 );
 
     if ( srcA.get() ) {
         if ( (srcA->getRenderScale().x != args.renderScale.x) ||
              ( srcA->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcA->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
+        BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
+        PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
     if ( srcB.get() ) {
         if ( (srcB->getRenderScale().x != args.renderScale.x) ||
              ( srcB->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcB->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcB->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( srcB->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcB->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
+        BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
+        PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
 
     // do we do masking
     if (doMasking) {
@@ -418,7 +419,7 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
     }
     processor.setValues(mix, aChannels);
     processor.setDstImg( dst.get() );
-    processor.setSrcImg(srcA.get(), srcB.get());
+    processor.setSrcImg( srcA.get(), srcB.get() );
     processor.setRenderWindow(args.renderWindow);
 
     processor.process();
@@ -426,31 +427,31 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
 
 template<int nComponents>
 void
-KeyMixPlugin::renderForComponents(const OFX::RenderArguments &args)
+KeyMixPlugin::renderForComponents(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         renderForBitDepth<unsigned char, nComponents, 255>(args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         renderForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 template <class PIX, int nComponents, int maxValue>
 void
-KeyMixPlugin::renderForBitDepth(const OFX::RenderArguments &args)
+KeyMixPlugin::renderForBitDepth(const RenderArguments &args)
 {
     //const double time = args.time;
     std::auto_ptr<KeyMixProcessorBase> fred;
@@ -465,23 +466,23 @@ KeyMixPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 
 // the overridden render function
 void
-KeyMixPlugin::render(const OFX::RenderArguments &args)
+KeyMixPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderForComponents<4>(args);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderForComponents<1>(args);
     }
 }
@@ -489,13 +490,13 @@ KeyMixPlugin::render(const OFX::RenderArguments &args)
 void
 KeyMixPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    PixelComponentEnum outputComps = _dstClip->getPixelComponents();
 
     clipPreferences.setClipComponents(*_srcClipA, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
 #ifdef OFX_EXTENSIONS_NATRON
     // the output format is the format of the B clip if it is connected
-    if (_srcClipB && _srcClipB->isConnected()) {
+    if ( _srcClipB && _srcClipB->isConnected() ) {
         OfxRectI format;
         _srcClipB->getFormat(format);
         clipPreferences.setOutputFormat(format);
@@ -503,11 +504,10 @@ KeyMixPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 #endif
 }
 
-
 bool
 KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
-                        Clip * &identityClip,
-                        double & /*identityTime*/)
+                         Clip * &identityClip,
+                         double & /*identityTime*/)
 {
     const double time = args.time;
     double mix;
@@ -538,9 +538,9 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             maskRoDValid = true;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClipB;
 
                 return true;
@@ -552,17 +552,16 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
     // If at least one of these regions intersects the renderwindow, the effect is not identity.
 
     if ( _srcClipA->isConnected() ) {
-
         OfxRectD srcARoD = _srcClipA->getRegionOfDefinition(time);
-        if ( ! OFX::Coords::rectIsEmpty(srcARoD) ) {
+        if ( !Coords::rectIsEmpty(srcARoD) ) {
             OfxRectI srcARoDPixel;
-            OFX::Coords::toPixelEnclosing(srcARoD, args.renderScale, _srcClipA->getPixelAspectRatio(), &srcARoDPixel);
+            Coords::toPixelEnclosing(srcARoD, args.renderScale, _srcClipA->getPixelAspectRatio(), &srcARoDPixel);
             bool srcARoDValid = true;
             if (maskRoDValid) {
                 // mask the srcARoD with the mask RoD. The result may be empty
-                srcARoDValid = OFX::Coords::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
+                srcARoDValid = Coords::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
             }
-            if ( srcARoDValid && OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0) ) {
+            if ( srcARoDValid && Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0) ) {
                 // renderWindow intersects one of the effect areas
                 return false;
             }
@@ -576,9 +575,8 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
 } // KeyMixPlugin::isIdentity
 
 mDeclarePluginFactory(KeyMixPluginFactory, {}, {});
-
 void
-KeyMixPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+KeyMixPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -604,15 +602,16 @@ KeyMixPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 } // >::describe
 
 void
-KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                              OFX::ContextEnum context)
+KeyMixPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                       ContextEnum context)
 {
-    OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
+    ClipDescriptor* srcClipB = desc.defineClip(kClipB);
+
     srcClipB->setHint(kClipBHint);
-    srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
-    srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
-    srcClipB->addSupportedComponent( OFX::ePixelComponentXY );
-    srcClipB->addSupportedComponent( OFX::ePixelComponentAlpha );
+    srcClipB->addSupportedComponent( ePixelComponentRGBA );
+    srcClipB->addSupportedComponent( ePixelComponentRGB );
+    srcClipB->addSupportedComponent( ePixelComponentXY );
+    srcClipB->addSupportedComponent( ePixelComponentAlpha );
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(kSupportsTiles);
 
@@ -620,12 +619,12 @@ KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //they need to be optional.
     srcClipB->setOptional(true); // B clip is optional
 
-    OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
+    ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->setHint(kClipAHint);
-    srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
-    srcClipA->addSupportedComponent( OFX::ePixelComponentRGB );
-    srcClipA->addSupportedComponent( OFX::ePixelComponentXY );
-    srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
+    srcClipA->addSupportedComponent( ePixelComponentRGBA );
+    srcClipA->addSupportedComponent( ePixelComponentRGB );
+    srcClipA->addSupportedComponent( ePixelComponentXY );
+    srcClipA->addSupportedComponent( ePixelComponentAlpha );
     srcClipA->setTemporalClipAccess(false);
     srcClipA->setSupportsTiles(kSupportsTiles);
     srcClipA->setOptional(true);
@@ -656,10 +655,10 @@ KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -669,7 +668,7 @@ KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -679,7 +678,7 @@ KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -689,7 +688,7 @@ KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
@@ -701,9 +700,9 @@ KeyMixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 } // >::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 KeyMixPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                    OFX::ContextEnum /*context*/)
+                                    ContextEnum /*context*/)
 {
     return new KeyMixPlugin(handle);
 }

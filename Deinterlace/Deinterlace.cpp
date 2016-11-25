@@ -131,13 +131,13 @@ enum YadifModeEnum
 };
 
 class DeinterlacePlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     DeinterlacePlugin(OfxImageEffectHandle handle) : ImageEffect(handle), _dstClip(0), _srcClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
 
         mode = fetchChoiceParam("mode");
         fieldOrder = fetchChoiceParam("fieldOrder");
@@ -145,25 +145,25 @@ public:
     }
 
 private:
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /** Override the get frames needed action */
-    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
+    virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::ChoiceParam *fieldOrder, *mode, *parity;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    ChoiceParam *fieldOrder, *mode, *parity;
 };
 
 
@@ -370,6 +370,7 @@ interpolate(float *dst,
         dst[x] = (cur0[x] + cur2[x] ) * 0.5f; // simple average
     }
 }
+
 #endif
 
 template<int ch, typename Comp, typename Diff>
@@ -416,10 +417,10 @@ filter_plane(int mode,
 template<int ch, typename Comp, typename Diff>
 static void
 filter_plane_ofx(int mode,
-                 OFX::Image *dst_,
-                 const OFX::Image *srcp,
-                 const OFX::Image *src,
-                 const OFX::Image *srcn,
+                 Image *dst_,
+                 const Image *srcp,
+                 const Image *src,
+                 const Image *srcn,
                  int parity,
                  int tff)
 {
@@ -441,60 +442,60 @@ filter_plane_ofx(int mode,
 // =========== GNU Lesser General Public License code end =================
 
 void
-DeinterlacePlugin::render(const OFX::RenderArguments &args)
+DeinterlacePlugin::render(const RenderArguments &args)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
-    std::auto_ptr<const OFX::Image> srcp( ( _srcClip && _srcClip->isConnected() ) ?
-                                          _srcClip->fetchImage(args.time - 1) : 0 );
-    std::auto_ptr<const OFX::Image> srcn( ( _srcClip && _srcClip->isConnected() ) ?
-                                          _srcClip->fetchImage(args.time + 1) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> srcp( ( _srcClip && _srcClip->isConnected() ) ?
+                                     _srcClip->fetchImage(args.time - 1) : 0 );
+    std::auto_ptr<const Image> srcn( ( _srcClip && _srcClip->isConnected() ) ?
+                                     _srcClip->fetchImage(args.time + 1) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     } else {
         //All the code below expects src to be valid
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch input image");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "Failed to fetch input image");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( srcp.get() ) {
         if ( (srcp->getRenderScale().x != args.renderScale.x) ||
              ( srcp->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcp->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcp->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( srcp->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcp->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
     if ( srcn.get() ) {
         if ( (srcn->getRenderScale().x != args.renderScale.x) ||
              ( srcn->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcn->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcn->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( srcn->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcn->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
@@ -533,23 +534,23 @@ DeinterlacePlugin::render(const OFX::RenderArguments &args)
             }
         }
     } else {
-        if (dstComponents == OFX::ePixelComponentRGBA) {
+        if (dstComponents == ePixelComponentRGBA) {
             switch (dstBitDepth) {
-            case OFX::eBitDepthUByte:
+            case eBitDepthUByte:
                 filter_plane_ofx<4, unsigned char, int>(imode, // mode
                                                         dst.get(),
                                                         srcp.get(), src.get(), srcn.get(),
                                                         iparity, ifieldOrder); // parity, tff
                 break;
 
-            case OFX::eBitDepthUShort:
+            case eBitDepthUShort:
                 filter_plane_ofx<4, unsigned short, int>(imode, // mode
                                                          dst.get(),
                                                          srcp.get(), src.get(), srcn.get(),
                                                          iparity, ifieldOrder); // parity, tff
                 break;
 
-            case OFX::eBitDepthFloat:
+            case eBitDepthFloat:
                 filter_plane_ofx<4, float, float>(imode,   // mode
                                                   dst.get(),
                                                   srcp.get(), src.get(), srcn.get(),
@@ -559,23 +560,23 @@ DeinterlacePlugin::render(const OFX::RenderArguments &args)
             default:
                 break;
             }
-        } else if (dstComponents == OFX::ePixelComponentRGB) {
+        } else if (dstComponents == ePixelComponentRGB) {
             switch (dstBitDepth) {
-            case OFX::eBitDepthUByte:
+            case eBitDepthUByte:
                 filter_plane_ofx<3, unsigned char, int>(imode,   // mode
                                                         dst.get(),
                                                         srcp.get(), src.get(), srcn.get(),
                                                         iparity, ifieldOrder);  // parity, tff
                 break;
 
-            case OFX::eBitDepthUShort:
+            case eBitDepthUShort:
                 filter_plane_ofx<3, unsigned short, int>(imode,   // mode
                                                          dst.get(),
                                                          srcp.get(), src.get(), srcn.get(),
                                                          iparity, ifieldOrder);  // parity, tff
                 break;
 
-            case OFX::eBitDepthFloat:
+            case eBitDepthFloat:
                 filter_plane_ofx<3, float, float>(imode,   // mode
                                                   dst.get(),
                                                   srcp.get(), src.get(), srcn.get(),
@@ -585,23 +586,23 @@ DeinterlacePlugin::render(const OFX::RenderArguments &args)
             default:
                 break;
             }
-        } else if (dstComponents == OFX::ePixelComponentXY) {
+        } else if (dstComponents == ePixelComponentXY) {
             switch (dstBitDepth) {
-            case OFX::eBitDepthUByte:
+            case eBitDepthUByte:
                 filter_plane_ofx<2, unsigned char, int>(imode,   // mode
                                                         dst.get(),
                                                         srcp.get(), src.get(), srcn.get(),
                                                         iparity, ifieldOrder);  // parity, tff
                 break;
 
-            case OFX::eBitDepthUShort:
+            case eBitDepthUShort:
                 filter_plane_ofx<2, unsigned short, int>(imode,   // mode
                                                          dst.get(),
                                                          srcp.get(), src.get(), srcn.get(),
                                                          iparity, ifieldOrder);  // parity, tff
                 break;
 
-            case OFX::eBitDepthFloat:
+            case eBitDepthFloat:
                 filter_plane_ofx<2, float, float>(imode,   // mode
                                                   dst.get(),
                                                   srcp.get(), src.get(), srcn.get(),
@@ -611,23 +612,23 @@ DeinterlacePlugin::render(const OFX::RenderArguments &args)
             default:
                 break;
             }
-        } else if (dstComponents == OFX::ePixelComponentAlpha) {
+        } else if (dstComponents == ePixelComponentAlpha) {
             switch (dstBitDepth) {
-            case OFX::eBitDepthUByte:
+            case eBitDepthUByte:
                 filter_plane_ofx<1, unsigned char, int>(imode,   // mode
                                                         dst.get(),
                                                         srcp.get(), src.get(), srcn.get(),
                                                         iparity, ifieldOrder);  // parity, tff
                 break;
 
-            case OFX::eBitDepthUShort:
+            case eBitDepthUShort:
                 filter_plane_ofx<1, unsigned short, int>(imode,   // mode
                                                          dst.get(),
                                                          srcp.get(), src.get(), srcn.get(),
                                                          iparity, ifieldOrder);  // parity, tff
                 break;
 
-            case OFX::eBitDepthFloat:
+            case eBitDepthFloat:
                 filter_plane_ofx<1, float, float>(imode,   // mode
                                                   dst.get(),
                                                   srcp.get(), src.get(), srcn.get(),
@@ -643,38 +644,38 @@ DeinterlacePlugin::render(const OFX::RenderArguments &args)
 
 /* Override the clip preferences */
 void
-DeinterlacePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+DeinterlacePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     // set the fielding of _dstClip
-    clipPreferences.setOutputFielding(OFX::eFieldNone);
+    clipPreferences.setOutputFielding(eFieldNone);
 }
 
 bool
-DeinterlacePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+DeinterlacePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                          OfxRectD & /*rod*/)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     return false;
 }
 
 bool
-DeinterlacePlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                              OFX::Clip * & /*identityClip*/,
+DeinterlacePlugin::isIdentity(const IsIdentityArguments &args,
+                              Clip * & /*identityClip*/,
                               double & /*identityTime*/)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     return false;
 }
 
 void
-DeinterlacePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
-                                   OFX::FramesNeededSetter &frames)
+DeinterlacePlugin::getFramesNeeded(const FramesNeededArguments &args,
+                                   FramesNeededSetter &frames)
 {
     OfxRangeD range;
 
@@ -685,7 +686,7 @@ DeinterlacePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 
 mDeclarePluginFactory(DeinterlacePluginFactory, {}, {});
 void
-DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+DeinterlacePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -717,8 +718,8 @@ DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                            OFX::ContextEnum /*context*/)
+DeinterlacePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                            ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -731,7 +732,7 @@ DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClip->setTemporalClipAccess(true);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    srcClip->setFieldExtraction(OFX::eFieldExtractBoth);
+    srcClip->setFieldExtraction(eFieldExtractBoth);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -740,7 +741,7 @@ DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
-    dstClip->setFieldExtraction(OFX::eFieldExtractBoth);
+    dstClip->setFieldExtraction(eFieldExtractBoth);
 
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
@@ -830,7 +831,7 @@ DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 ImageEffect*
 DeinterlacePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                         OFX::ContextEnum /*context*/)
+                                         ContextEnum /*context*/)
 {
     return new DeinterlacePlugin(handle);
 }

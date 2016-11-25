@@ -475,7 +475,7 @@ public:
         }
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgErodeSmoothParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -559,12 +559,12 @@ public:
         cimg_rof(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - ERODESMOOTH_OFFSET) * (rmax - rmin) + rmin );
     } // render
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgErodeSmoothParams& params) OVERRIDE FINAL
     {
         return ( (params.sizex == 0. && params.sizey == 0) || params.exponent <= 0 );
     };
-    virtual void changedParam(const OFX::InstanceChangedArgs &args,
+    virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) OVERRIDE FINAL
     {
         if ( (paramName == kParamRange) && (args.reason == eChangeUserEdit) ) {
@@ -584,20 +584,20 @@ public:
 private:
 
     // params
-    OFX::Double2DParam *_range;
-    OFX::Double2DParam *_size;
-    OFX::BooleanParam *_uniform;
-    OFX::IntParam *_exponent;
-    OFX::ChoiceParam *_boundary;
-    OFX::ChoiceParam *_filter;
-    OFX::BooleanParam *_expandRoD;
+    Double2DParam *_range;
+    Double2DParam *_size;
+    BooleanParam *_uniform;
+    IntParam *_exponent;
+    ChoiceParam *_boundary;
+    ChoiceParam *_filter;
+    BooleanParam *_expandRoD;
 };
 
 
 mDeclarePluginFactory(CImgErodeSmoothPluginFactory, {}, {});
 
 void
-CImgErodeSmoothPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgErodeSmoothPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -626,11 +626,11 @@ CImgErodeSmoothPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                OFX::ContextEnum context)
+CImgErodeSmoothPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                                ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgErodeSmoothPlugin::describeInContextBegin(desc, context,
+    PageParamDescriptor *page = CImgErodeSmoothPlugin::describeInContextBegin(desc, context,
                                                                                    kSupportsRGBA,
                                                                                    kSupportsRGB,
                                                                                    kSupportsXY,
@@ -654,7 +654,7 @@ CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         }
     }
     {
-        OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
+        Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(-1000, -1000, 1000, 1000);
@@ -670,18 +670,18 @@ CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         }
     }
     {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamUniform);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamUniform);
         param->setLabel(kParamUniformLabel);
         param->setHint(kParamUniformHint);
         // uniform parameter is false by default on Natron
         // https://github.com/MrKepzie/Natron/issues/1204
-        param->setDefault(!OFX::getImageEffectHostDescription()->isNatron);
+        param->setDefault(!getImageEffectHostDescription()->isNatron);
         if (page) {
             page->addChild(*param);
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamExponent);
+        IntParamDescriptor *param = desc.defineIntParam(kParamExponent);
         param->setLabel(kParamExponentLabel);
         param->setHint(kParamExponentHint);
         param->setRange(1, 100);
@@ -692,7 +692,7 @@ CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         }
     }
     {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
         param->setLabel(kParamBoundaryLabel);
         param->setHint(kParamBoundaryHint);
         assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
@@ -707,7 +707,7 @@ CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         }
     }
     {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
         param->setLabel(kParamFilterLabel);
         param->setHint(kParamFilterHint);
         assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
@@ -726,7 +726,7 @@ CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         }
     }
     {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
@@ -737,9 +737,9 @@ CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     CImgErodeSmoothPlugin::describeInContextEnd(desc, context, page);
 } // CImgErodeSmoothPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 CImgErodeSmoothPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                             OFX::ContextEnum /*context*/)
+                                             ContextEnum /*context*/)
 {
     return new CImgErodeSmoothPlugin(handle);
 }

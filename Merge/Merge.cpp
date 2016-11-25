@@ -221,13 +221,13 @@ using namespace MergeImages2D;
  */
 
 class MergeProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImgA;
-    const OFX::Image *_srcImgB;
-    const OFX::Image *_maskImg;
-    std::vector<const OFX::Image*> _optionalAImages;
+    const Image *_srcImgA;
+    const Image *_srcImgB;
+    const Image *_maskImg;
+    std::vector<const Image*> _optionalAImages;
     bool _doMasking;
     bool _alphaMasking;
     double _mix;
@@ -238,8 +238,8 @@ protected:
 
 public:
 
-    MergeProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    MergeProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImgA(0)
         , _srcImgB(0)
         , _maskImg(0)
@@ -253,16 +253,16 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *A,
-                   const OFX::Image *B,
-                   const std::vector<const OFX::Image*>& optionalAImages)
+    void setSrcImg(const Image *A,
+                   const Image *B,
+                   const std::vector<const Image*>& optionalAImages)
     {
         _srcImgA = A;
         _srcImgB = B;
         _optionalAImages = optionalAImages;
     }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v; }
@@ -288,7 +288,7 @@ class MergeProcessor
     : public MergeProcessorBase
 {
 public:
-    MergeProcessor(OFX::ImageEffect &instance)
+    MergeProcessor(ImageEffect &instance)
         : MergeProcessorBase(instance)
     {
     }
@@ -410,7 +410,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class MergePlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -433,7 +433,7 @@ public:
         if (numerousInputs) {
             _optionalASrcClips.resize(kMaximumAInputs - 1);
             for (int i = 2; i <= kMaximumAInputs; ++i) {
-                OFX::Clip* clip = fetchClip( std::string(kClipA) + unsignedToString(i) );
+                Clip* clip = fetchClip( std::string(kClipA) + unsignedToString(i) );
                 assert( clip && (!clip->isConnected() || clip->getPixelComponents() == ePixelComponentRGB || clip->getPixelComponents() == ePixelComponentRGBA || clip->getPixelComponents() == ePixelComponentAlpha) );
                 _optionalASrcClips[i - 2] = clip;
             }
@@ -441,7 +441,7 @@ public:
 
         _srcClipB = fetchClip(kClipB);
         assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _operation = fetchChoiceParam(kParamOperation);
         _operationString = fetchStringParam(kNatronOfxParamStringSublabelName);
@@ -482,42 +482,41 @@ private:
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(MergeProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(MergeProcessorBase &, const RenderArguments &args);
 
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
     template<int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args);
+    void renderForComponents(const RenderArguments &args);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const OFX::RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args);
 
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClipA;
-    OFX::Clip *_srcClipB;
-    OFX::Clip *_maskClip;
-    std::vector<OFX::Clip *> _optionalASrcClips;
-    OFX::ChoiceParam *_operation;
-    OFX::StringParam *_operationString;
-    OFX::ChoiceParam *_bbox;
-    OFX::BooleanParam *_alphaMasking;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _aChannels[4];
-    OFX::BooleanParam* _bChannels[4];
-    OFX::BooleanParam* _outputChannels[4];
-    OFX::BooleanParam* _aChannelAChanged;
-    OFX::BooleanParam* _bChannelAChanged;
+    Clip *_dstClip;
+    Clip *_srcClipA;
+    Clip *_srcClipB;
+    Clip *_maskClip;
+    std::vector<Clip *> _optionalASrcClips;
+    ChoiceParam *_operation;
+    StringParam *_operationString;
+    ChoiceParam *_bbox;
+    BooleanParam *_alphaMasking;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
+    BooleanParam* _aChannels[4];
+    BooleanParam* _bChannels[4];
+    BooleanParam* _outputChannels[4];
+    BooleanParam* _aChannelAChanged;
+    BooleanParam* _bChannelAChanged;
 };
 
 
@@ -563,14 +562,14 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     switch (bboxChoice) {
     case eBBoxUnion: {     //union
         for (unsigned i = 1; i < rods.size(); ++i) {
-            OFX::Coords::rectBoundingBox(rod, rods[i], &rod);
+            Coords::rectBoundingBox(rod, rods[i], &rod);
         }
 
         return true;
     }
     case eBBoxIntersection: {     //intersection
         for (unsigned i = 1; i < rods.size(); ++i) {
-            OFX::Coords::rectIntersection(rod, rods[i], &rod);
+            Coords::rectIntersection(rod, rods[i], &rod);
         }
 
         // may return an empty RoD if intersection is empty
@@ -603,7 +602,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
 {
-    std::vector<const OFX::Image*> images;
+    std::vector<const Image*> images;
 
     OptionalImagesHolder_RAII()
         : images()
@@ -627,35 +626,36 @@ struct OptionalImagesHolder_RAII
 /* set up and run a processor */
 void
 MergePlugin::setupAndProcess(MergeProcessorBase &processor,
-                             const OFX::RenderArguments &args)
+                             const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
-                                          _srcClipA->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
-                                          _srcClipB->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
+                                     _srcClipA->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
+                                     _srcClipB->fetchImage(time) : 0 );
     OptionalImagesHolder_RAII optionalImages;
     for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
-        const OFX::Image* optImg = ( _optionalASrcClips[i] && _optionalASrcClips[i]->isConnected() ) ?
-                                   _optionalASrcClips[i]->fetchImage(time) : 0;
+        const Image* optImg = ( _optionalASrcClips[i] && _optionalASrcClips[i]->isConnected() ) ?
+                              _optionalASrcClips[i]->fetchImage(time) : 0;
         if (optImg) {
             optionalImages.images.push_back(optImg);
         }
@@ -663,14 +663,14 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         if (optImg) {
             if ( (optImg->getRenderScale().x != args.renderScale.x) ||
                  ( optImg->getRenderScale().y != args.renderScale.y) ||
-                 ( ( optImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( optImg->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                 ( ( optImg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( optImg->getField() != args.fieldToRender) ) ) {
+                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                throwSuiteStatusException(kOfxStatFailed);
             }
-            OFX::BitDepthEnum srcBitDepth      = optImg->getPixelDepth();
-            OFX::PixelComponentEnum srcComponents = optImg->getPixelComponents();
+            BitDepthEnum srcBitDepth      = optImg->getPixelDepth();
+            PixelComponentEnum srcComponents = optImg->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+                throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
     }
@@ -678,34 +678,34 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     if ( srcA.get() ) {
         if ( (srcA->getRenderScale().x != args.renderScale.x) ||
              ( srcA->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcA->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
+        BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
+        PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
     if ( srcB.get() ) {
         if ( (srcB->getRenderScale().x != args.renderScale.x) ||
              ( srcB->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcB->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcB->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( srcB->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcB->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
+        BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
+        PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
 
     // do we do masking
     if (doMasking) {
@@ -738,34 +738,35 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
 
 template<int nComponents>
 void
-MergePlugin::renderForComponents(const OFX::RenderArguments &args)
+MergePlugin::renderForComponents(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         renderForBitDepth<unsigned char, nComponents, 255>(args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         renderForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 template <class PIX, int nComponents, int maxValue>
 void
-MergePlugin::renderForBitDepth(const OFX::RenderArguments &args)
+MergePlugin::renderForBitDepth(const RenderArguments &args)
 {
     const double time = args.time;
     MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValueAtTime(time);
+
     std::auto_ptr<MergeProcessorBase> fred;
 
     switch (operation) {
@@ -898,23 +899,23 @@ MergePlugin::renderForBitDepth(const OFX::RenderArguments &args)
 
 // the overridden render function
 void
-MergePlugin::render(const OFX::RenderArguments &args)
+MergePlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderForComponents<4>(args);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderForComponents<1>(args);
     }
 }
@@ -922,7 +923,7 @@ MergePlugin::render(const OFX::RenderArguments &args)
 void
 MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    PixelComponentEnum outputComps = _dstClip->getPixelComponents();
 
     clipPreferences.setClipComponents(*_srcClipA, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
@@ -932,7 +933,7 @@ MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 }
 
 void
-MergePlugin::changedParam(const OFX::InstanceChangedArgs &args,
+MergePlugin::changedParam(const InstanceChangedArgs &args,
                           const std::string &paramName)
 {
     if (paramName == kParamOperation) {
@@ -940,27 +941,28 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args,
         // depending on the operation, enable/disable alpha masking
         _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
         _operationString->setValue( MergeImages2D::getOperationString(operation) );
-    } else if ( _aChannelAChanged && (paramName == kParamAChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( _aChannelAChanged && (paramName == kParamAChannelsA) && (args.reason == eChangeUserEdit) ) {
         _aChannelAChanged->setValue(true);
-    } else if ( _bChannelAChanged && (paramName == kParamBChannelsA) && (args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( _bChannelAChanged && (paramName == kParamBChannelsA) && (args.reason == eChangeUserEdit) ) {
         _bChannelAChanged->setValue(true);
     }
 }
 
 void
-MergePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+MergePlugin::changedClip(const InstanceChangedArgs &args,
+                         const std::string &clipName)
 {
-    if ( _bChannelAChanged && !_bChannelAChanged->getValue() && (clipName == kClipB) && _srcClipB && _srcClipB->isConnected() && ( args.reason == OFX::eChangeUserEdit) ) {
+    if ( _bChannelAChanged && !_bChannelAChanged->getValue() && (clipName == kClipB) && _srcClipB && _srcClipB->isConnected() && ( args.reason == eChangeUserEdit) ) {
         PixelComponentEnum unmappedComps = _srcClipB->getUnmappedPixelComponents();
         // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
         // If before the clip preferences pass the input is RGB then don't consider the alpha channel for the clip B and use 0 instead.
         if (unmappedComps == ePixelComponentRGB) {
             _bChannels[3]->setValue(false);
         }
-        if (unmappedComps == ePixelComponentRGBA || unmappedComps == ePixelComponentAlpha) {
+        if ( (unmappedComps == ePixelComponentRGBA) || (unmappedComps == ePixelComponentAlpha) ) {
             _bChannels[3]->setValue(true);
         }
-    } else if ( _aChannelAChanged && !_aChannelAChanged->getValue() && (clipName == kClipA) && _srcClipA && _srcClipA->isConnected() && ( args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( _aChannelAChanged && !_aChannelAChanged->getValue() && (clipName == kClipA) && _srcClipA && _srcClipA->isConnected() && ( args.reason == eChangeUserEdit) ) {
         // Note: we do not care about clips A2, A3, ...
         PixelComponentEnum unmappedComps = _srcClipA->getUnmappedPixelComponents();
         // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
@@ -968,7 +970,7 @@ MergePlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
         if (unmappedComps == ePixelComponentRGB) {
             _aChannels[3]->setValue(false);
         }
-        if (unmappedComps == ePixelComponentRGBA || unmappedComps == ePixelComponentAlpha) {
+        if ( (unmappedComps == ePixelComponentRGBA) || (unmappedComps == ePixelComponentAlpha) ) {
             _aChannels[3]->setValue(true);
         }
     }
@@ -1008,9 +1010,9 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             maskRoDValid = true;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClipB;
 
                 return true;
@@ -1021,26 +1023,26 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     // The region of effect is only the set of the intersections between the A inputs and the mask.
     // If at least one of these regions intersects the renderwindow, the effect is not identity.
 
-    std::vector<OFX::Clip *> aClips = _optionalASrcClips;
+    std::vector<Clip *> aClips = _optionalASrcClips;
     aClips.push_back(_srcClipA);
     for (std::size_t i = 0; i < aClips.size(); ++i) {
         if ( !aClips[i]->isConnected() ) {
             continue;
         }
         OfxRectD srcARoD = aClips[i]->getRegionOfDefinition(time);
-        if ( OFX::Coords::rectIsEmpty(srcARoD) ) {
+        if ( Coords::rectIsEmpty(srcARoD) ) {
             // RoD is empty
             continue;
         }
 
         OfxRectI srcARoDPixel;
-        OFX::Coords::toPixelEnclosing(srcARoD, args.renderScale, aClips[i]->getPixelAspectRatio(), &srcARoDPixel);
+        Coords::toPixelEnclosing(srcARoD, args.renderScale, aClips[i]->getPixelAspectRatio(), &srcARoDPixel);
         bool srcARoDValid = true;
         if (maskRoDValid) {
             // mask the srcARoD with the mask RoD. The result may be empty
-            srcARoDValid = OFX::Coords::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
+            srcARoDValid = Coords::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
         }
-        if ( srcARoDValid && OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0) ) {
+        if ( srcARoDValid && Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0) ) {
             // renderWindow intersects one of the effect areas
             return false;
         }
@@ -1055,22 +1057,22 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
 //mDeclarePluginFactory(MergePluginFactory, {}, {});
 template<MergingFunctionEnum plugin>
 class MergePluginFactory
-    : public OFX::PluginFactoryHelper<MergePluginFactory<plugin> >
+    : public PluginFactoryHelper<MergePluginFactory<plugin> >
 {
 public:
     MergePluginFactory<plugin>(const std::string & id, unsigned int verMaj, unsigned int verMin)
-    : OFX::PluginFactoryHelper<MergePluginFactory>(id, verMaj, verMin)
+    : PluginFactoryHelper<MergePluginFactory>(id, verMaj, verMin)
     {
     }
 
-    virtual void describe(OFX::ImageEffectDescriptor &desc);
-    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
-    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
+    virtual void describe(ImageEffectDescriptor &desc);
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
 };
 
 template<MergingFunctionEnum plugin>
 void
-MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
+MergePluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
 
@@ -1123,7 +1125,7 @@ MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
     }
     // only Natron benefits from the long description, because '<' characters may break the OFX
     // plugins cache in hosts using the older HostSupport library.
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (getImageEffectHostDescription()->isNatron) {
         help += "### Operators\n";
         help += "The following operators are available.\n";
         help += "\n#### Porter-Duff compositing operators\n";
@@ -1182,7 +1184,7 @@ MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
         help += '\n';
     }
     help += kPluginDescriptionEnd;
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (getImageEffectHostDescription()->isNatron) {
         desc.setDescriptionIsMarkdown(true);
         desc.setPluginDescription(help, /*validate=*/ false);
     } else {
@@ -1222,19 +1224,20 @@ addMergeOption(ChoiceParamDescriptor* param,
 
 template<MergingFunctionEnum plugin>
 void
-MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                              OFX::ContextEnum context)
+MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
+                                              ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
-                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
-    OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
+    bool numerousInputs =  (getImageEffectHostDescription()->isNatron &&
+                            getImageEffectHostDescription()->versionMajor >= 2);
+    ClipDescriptor* srcClipB = desc.defineClip(kClipB);
+
     srcClipB->setHint(kClipBHint);
-    srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
-    srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
-    srcClipB->addSupportedComponent( OFX::ePixelComponentXY );
-    srcClipB->addSupportedComponent( OFX::ePixelComponentAlpha );
+    srcClipB->addSupportedComponent( ePixelComponentRGBA );
+    srcClipB->addSupportedComponent( ePixelComponentRGB );
+    srcClipB->addSupportedComponent( ePixelComponentXY );
+    srcClipB->addSupportedComponent( ePixelComponentAlpha );
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(kSupportsTiles);
 
@@ -1242,12 +1245,12 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
     //they need to be optional.
     srcClipB->setOptional(true); // B clip is optional
 
-    OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
+    ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->setHint(kClipAHint);
-    srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
-    srcClipA->addSupportedComponent( OFX::ePixelComponentRGB );
-    srcClipA->addSupportedComponent( OFX::ePixelComponentXY );
-    srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
+    srcClipA->addSupportedComponent( ePixelComponentRGBA );
+    srcClipA->addSupportedComponent( ePixelComponentRGB );
+    srcClipA->addSupportedComponent( ePixelComponentXY );
+    srcClipA->addSupportedComponent( ePixelComponentAlpha );
     srcClipA->setTemporalClipAccess(false);
     srcClipA->setSupportsTiles(kSupportsTiles);
 
@@ -1266,11 +1269,11 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     if (numerousInputs) {
         for (int i = 2; i <= kMaximumAInputs; ++i) {
-            OFX::ClipDescriptor* optionalSrcClip = desc.defineClip( std::string(kClipA) + unsignedToString(i) );
-            optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
-            optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGB );
-            optionalSrcClip->addSupportedComponent( OFX::ePixelComponentXY );
-            optionalSrcClip->addSupportedComponent( OFX::ePixelComponentAlpha );
+            ClipDescriptor* optionalSrcClip = desc.defineClip( std::string(kClipA) + unsignedToString(i) );
+            optionalSrcClip->addSupportedComponent( ePixelComponentRGBA );
+            optionalSrcClip->addSupportedComponent( ePixelComponentRGB );
+            optionalSrcClip->addSupportedComponent( ePixelComponentXY );
+            optionalSrcClip->addSupportedComponent( ePixelComponentAlpha );
             optionalSrcClip->setTemporalClipAccess(false);
             optionalSrcClip->setSupportsTiles(kSupportsTiles);
 
@@ -1310,7 +1313,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOperation);
         param->setLabel(kParamOperationLabel);
         param->setHint(kParamOperationHint);
-        bool cascading = false;// OFX::getImageEffectHostDescription()->supportsCascadingChoices;
+        bool cascading = false;// getImageEffectHostDescription()->supportsCascadingChoices;
         param->setCascading(cascading);
         addMergeOption(param, eMergeATop, cascading);
         addMergeOption(param, eMergeAverage, cascading);
@@ -1354,7 +1357,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         addMergeOption(param, eMergeXOR, cascading);
         param->setDefault(plugin);
         param->setAnimates(true);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1395,7 +1398,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamAChannels);
@@ -1409,7 +1412,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsR);
         param->setLabel(kParamAChannelsRLabel);
         param->setHint(kParamAChannelsRHint);
         param->setDefault(true);
@@ -1419,7 +1422,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsG);
         param->setLabel(kParamAChannelsGLabel);
         param->setHint(kParamAChannelsGHint);
         param->setDefault(true);
@@ -1429,7 +1432,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsB);
         param->setLabel(kParamAChannelsBLabel);
         param->setHint(kParamAChannelsBHint);
         param->setDefault(true);
@@ -1439,7 +1442,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsA);
         param->setLabel(kParamAChannelsALabel);
         param->setHint(kParamAChannelsAHint);
         param->setDefault(true);
@@ -1460,7 +1463,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsR);
         param->setLabel(kParamBChannelsRLabel);
         param->setHint(kParamBChannelsRHint);
         param->setDefault(true);
@@ -1470,7 +1473,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsG);
         param->setLabel(kParamBChannelsGLabel);
         param->setHint(kParamBChannelsGHint);
         param->setDefault(true);
@@ -1480,7 +1483,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsB);
         param->setLabel(kParamBChannelsBLabel);
         param->setHint(kParamBChannelsBHint);
         param->setDefault(true);
@@ -1490,7 +1493,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsA);
         param->setLabel(kParamBChannelsALabel);
         param->setHint(kParamBChannelsAHint);
         param->setDefault(true);
@@ -1511,7 +1514,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsR);
         param->setLabel(kParamOutputChannelsRLabel);
         param->setHint(kParamOutputChannelsRHint);
         param->setDefault(true);
@@ -1521,7 +1524,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsG);
         param->setLabel(kParamOutputChannelsGLabel);
         param->setHint(kParamOutputChannelsGHint);
         param->setDefault(true);
@@ -1531,7 +1534,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsB);
         param->setLabel(kParamOutputChannelsBLabel);
         param->setHint(kParamOutputChannelsBHint);
         param->setDefault(true);
@@ -1541,7 +1544,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsA);
         param->setLabel(kParamOutputChannelsALabel);
         param->setHint(kParamOutputChannelsAHint);
         param->setDefault(true);
@@ -1554,7 +1557,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
     if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
         // two hidden parameters to keep track of the fact that the user explicitely checked or unchecked tha "A" checkbox
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsAChanged);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsAChanged);
             param->setDefault(false);
             param->setIsSecretAndDisabled(true);
             param->setAnimates(false);
@@ -1564,7 +1567,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsAChanged);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsAChanged);
             param->setDefault(false);
             param->setIsSecretAndDisabled(true);
             param->setAnimates(false);
@@ -1579,15 +1582,15 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
 } // >::describeInContext
 
 template<MergingFunctionEnum plugin>
-OFX::ImageEffect*
+ImageEffect*
 MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
-                                           OFX::ContextEnum /*context*/)
+                                           ContextEnum /*context*/)
 {
     assert(unsignedToString(12345) == "12345");
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
-                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
+    bool numerousInputs =  (getImageEffectHostDescription()->isNatron &&
+                            getImageEffectHostDescription()->versionMajor >= 2);
 
     return new MergePlugin(handle, numerousInputs);
 }

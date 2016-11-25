@@ -97,7 +97,7 @@ protected:
 
 public:
 
-    GodRaysProcessorBase(OFX::ImageEffect &instance)
+    GodRaysProcessorBase(ImageEffect &instance)
         : Transform3x3ProcessorBase(instance)
 #ifdef USE_STEPS
         , _steps(5)
@@ -109,7 +109,7 @@ public:
         }
     }
 
-    virtual void setValues(const OFX::Matrix3x3* invtransform, //!< non-generic - must be in PIXEL coords
+    virtual void setValues(const Matrix3x3* invtransform, //!< non-generic - must be in PIXEL coords
                            size_t invtransformsize,
                            // all generic parameters below
                            bool blackOutside, //!< generic
@@ -144,7 +144,7 @@ class GodRaysProcessor
     : public GodRaysProcessorBase
 {
 public:
-    GodRaysProcessor(OFX::ImageEffect &instance)
+    GodRaysProcessor(ImageEffect &instance)
         : GodRaysProcessorBase(instance)
     {
     }
@@ -160,7 +160,7 @@ private:
         return clamp;
     }
 
-    virtual void setValues(const OFX::Matrix3x3* invtransform, //!< non-generic - must be in PIXEL coords
+    virtual void setValues(const Matrix3x3* invtransform, //!< non-generic - must be in PIXEL coords
                            size_t invtransformsize,
                            // all generic parameters below
                            bool blackOutside, //!< generic
@@ -231,7 +231,7 @@ private:
     void multiThreadProcessImagesNoBlur(const OfxRectI &procWindow)
     {
         float tmpPix[nComponents];
-        const OFX::Matrix3x3 & H = _invtransform[0];
+        const Matrix3x3 & H = _invtransform[0];
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -242,7 +242,7 @@ private:
 
             // the coordinates of the center of the pixel in canonical coordinates
             // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
-            OFX::Point3D canonicalCoords;
+            Point3D canonicalCoords;
             canonicalCoords.z = 1;
             canonicalCoords.y = (double)y + 0.5;
 
@@ -252,7 +252,7 @@ private:
                 // the coordinates of the center of the pixel in canonical coordinates
                 // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
                 canonicalCoords.x = (double)x + 0.5;
-                OFX::Point3D transformed = H * canonicalCoords;
+                Point3D transformed = H * canonicalCoords;
                 if ( !_srcImg || (transformed.z == 0.) ) {
                     // the back-transformed point is at infinity
                     for (int c = 0; c < nComponents; ++c) {
@@ -296,7 +296,7 @@ private:
 
             // the coordinates of the center of the pixel in canonical coordinates
             // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
-            OFX::Point3D canonicalCoords;
+            Point3D canonicalCoords;
             canonicalCoords.z = 1;
             canonicalCoords.y = (double)y + 0.5;
 
@@ -345,8 +345,8 @@ private:
                         // the coordinates of the center of the pixel in canonical coordinates
                         // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
                         canonicalCoords.x = (double)x + 0.5;
-                        const OFX::Matrix3x3& H = _invtransform[t];
-                        OFX::Point3D transformed = H * canonicalCoords;
+                        const Matrix3x3& H = _invtransform[t];
+                        Point3D transformed = H * canonicalCoords;
                         if ( !_srcImg || (transformed.z == 0.) ) {
                             // the back-transformed point is at infinity
                             for (int c = 0; c < nComponents; ++c) {
@@ -540,44 +540,44 @@ public:
 
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
-    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, Matrix3x3* invtransform) const OVERRIDE FINAL;
 
     void resetCenter(double time);
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
 private:
     /* internal render function */
     template <class PIX, int nComponents, int maxValue>
-    void renderInternalForBitDepth(const OFX::RenderArguments &args);
+    void renderInternalForBitDepth(const RenderArguments &args);
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(GodRaysProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(GodRaysProcessorBase &, const RenderArguments &args);
 
     // NON-GENERIC
-    OFX::Double2DParam* _translate;
-    OFX::DoubleParam* _rotate;
-    OFX::Double2DParam* _scale;
-    OFX::BooleanParam* _scaleUniform;
-    OFX::DoubleParam* _skewX;
-    OFX::DoubleParam* _skewY;
-    OFX::ChoiceParam* _skewOrder;
-    OFX::Double2DParam* _center;
-    OFX::BooleanParam* _centerChanged;
+    Double2DParam* _translate;
+    DoubleParam* _rotate;
+    Double2DParam* _scale;
+    BooleanParam* _scaleUniform;
+    DoubleParam* _skewX;
+    DoubleParam* _skewY;
+    ChoiceParam* _skewOrder;
+    Double2DParam* _center;
+    BooleanParam* _centerChanged;
     BooleanParam* _interactive;
     RGBAParam* _fromColor;
     RGBAParam* _toColor;
     RGBAParam* _gamma;
     IntParam* _steps;
     BooleanParam* _max;
-    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 // overridden is identity
@@ -631,7 +631,7 @@ GodRaysPlugin::getInverseTransformCanonical(double time,
                                             int /*view*/,
                                             double amount,
                                             bool invert,
-                                            OFX::Matrix3x3* invtransform) const
+                                            Matrix3x3* invtransform) const
 {
     // NON-GENERIC
     OfxPointD center = { 0., 0. };
@@ -692,12 +692,12 @@ GodRaysPlugin::getInverseTransformCanonical(double time,
         skewY *= amount;
     }
 
-    double rot = OFX::ofxsToRadians(rotate);
+    double rot = ofxsToRadians(rotate);
 
     if (!invert) {
-        *invtransform = OFX::ofxsMatInverseTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
+        *invtransform = ofxsMatInverseTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
     } else {
-        *invtransform = OFX::ofxsMatTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
+        *invtransform = ofxsMatTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
     }
 
     return true;
@@ -714,7 +714,7 @@ GodRaysPlugin::resetCenter(double time)
          ( rod.y1 <= kOfxFlagInfiniteMin) || ( kOfxFlagInfiniteMax <= rod.y2) ) {
         return;
     }
-    if ( OFX::Coords::rectIsEmpty(rod) ) {
+    if ( Coords::rectIsEmpty(rod) ) {
         // default to project window
         OfxPointD offset = getProjectOffset();
         OfxPointD size = getProjectSize();
@@ -727,7 +727,7 @@ GodRaysPlugin::resetCenter(double time)
     if (_rotate) {
         _rotate->getValueAtTime(time, currentRotation);
     }
-    double rot = OFX::ofxsToRadians(currentRotation);
+    double rot = ofxsToRadians(currentRotation);
     double skewX = 0.;
     if (_skewX) {
         _skewX->getValueAtTime(time, skewX);
@@ -761,9 +761,9 @@ GodRaysPlugin::resetCenter(double time)
         _center->getValueAtTime(time, center.x, center.y);
     }
 
-    OFX::Matrix3x3 Rinv = ( ofxsMatRotation(-rot) *
-                            ofxsMatSkewXY(skewX, skewY, skewOrder) *
-                            ofxsMatScale(scale.x, scale.y) );
+    Matrix3x3 Rinv = ( ofxsMatRotation(-rot) *
+                       ofxsMatSkewXY(skewX, skewY, skewOrder) *
+                       ofxsMatScale(scale.x, scale.y) );
     OfxPointD newCenter;
     newCenter.x = (rod.x1 + rod.x2) / 2;
     newCenter.y = (rod.y1 + rod.y2) / 2;
@@ -774,7 +774,7 @@ GodRaysPlugin::resetCenter(double time)
     if (_translate) {
         double dxrot = newCenter.x - center.x;
         double dyrot = newCenter.y - center.y;
-        OFX::Point3D dRot;
+        Point3D dRot;
         dRot.x = dxrot;
         dRot.y = dyrot;
         dRot.z = 1;
@@ -794,7 +794,7 @@ GodRaysPlugin::resetCenter(double time)
 } // GodRaysPlugin::resetCenter
 
 void
-GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+GodRaysPlugin::changedParam(const InstanceChangedArgs &args,
                             const std::string &paramName)
 {
     if (paramName == kParamTransformResetCenterOld) {
@@ -809,11 +809,11 @@ GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 ( paramName == kParamTransformSkewOrderOld) ||
                 ( paramName == kParamTransformCenterOld) ) {
         if ( (paramName == kParamTransformCenterOld) &&
-             (args.reason == OFX::eChangeUserEdit || args.reason == eChangePluginEdit) ) {
+             ( (args.reason == eChangeUserEdit) || (args.reason == eChangePluginEdit) ) ) {
             _centerChanged->setValue(true);
         }
         changedTransform(args);
-    } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
@@ -827,7 +827,7 @@ GodRaysPlugin::changedClip(const InstanceChangedArgs &args,
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_centerChanged->getValueAtTime(args.time) &&
-         ( args.reason == OFX::eChangeUserEdit) ) {
+         ( args.reason == eChangeUserEdit) ) {
         resetCenter(args.time);
     }
 }
@@ -835,32 +835,33 @@ GodRaysPlugin::changedClip(const InstanceChangedArgs &args,
 /* set up and run a processor */
 void
 GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
-                               const OFX::RenderArguments &args)
+                               const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     size_t invtransformsizealloc = 0;
     size_t invtransformsize = 0;
-    std::vector<OFX::Matrix3x3> invtransform;
+    std::vector<Matrix3x3> invtransform;
     bool blackOutside = true;
     double motionblur = 1.;
     double mix = 1.;
@@ -883,12 +884,12 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         invtransform[0].h = 0.;
         invtransform[0].i = 1.;
     } else {
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            throwSuiteStatusException(kOfxStatFailed);
         }
 
         bool invert = false;
@@ -906,7 +907,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
             _motionblur->getValueAtTime(time, motionblur);
         }
 #endif
-        const bool fielded = args.fieldToRender == OFX::eFieldLower || args.fieldToRender == OFX::eFieldUpper;
+        const bool fielded = args.fieldToRender == eFieldLower || args.fieldToRender == eFieldUpper;
         const double srcpixelAspectRatio = src->getPixelAspectRatio();
         const double dstpixelAspectRatio = dst->getPixelAspectRatio();
 
@@ -927,7 +928,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         if ( !src->getTransformIsIdentity() ) {
             double srcTransform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
             src->getTransform(srcTransform);
-            OFX::Matrix3x3 srcTransformMat;
+            Matrix3x3 srcTransformMat;
             srcTransformMat.a = srcTransform[0];
             srcTransformMat.b = srcTransform[1];
             srcTransformMat.c = srcTransform[2];
@@ -940,7 +941,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
             // invert it
             double det = srcTransformMat.determinant();
             if (det != 0.) {
-                OFX::Matrix3x3 srcTransformInverse = srcTransformMat.inverse(det);
+                Matrix3x3 srcTransformInverse = srcTransformMat.inverse(det);
 
                 for (size_t i = 0; i < invtransformsize; ++i) {
                     invtransform[i] = srcTransformInverse * invtransform[i];
@@ -951,7 +952,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if (doMasking) {
         bool maskInvert = false;
         if (_maskInvert) {
@@ -1014,7 +1015,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
 
 template <class PIX, int nComponents, int maxValue>
 void
-GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
+GodRaysPlugin::renderInternalForBitDepth(const RenderArguments &args)
 {
     const double time = args.time;
     FilterEnum filter = args.renderQualityDraft ? eFilterImpulse : eFilterCubic;
@@ -1097,50 +1098,50 @@ GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 // the internal render function
 template <int nComponents>
 void
-GodRaysPlugin::renderInternal(const OFX::RenderArguments &args,
-                              OFX::BitDepthEnum dstBitDepth)
+GodRaysPlugin::renderInternal(const RenderArguments &args,
+                              BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
         renderInternalForBitDepth<unsigned char, nComponents, 255>(args);
         break;
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
         renderInternalForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
         renderInternalForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-GodRaysPlugin::render(const OFX::RenderArguments &args)
+GodRaysPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    assert(dstComponents == ePixelComponentAlpha || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentRGBA);
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
 
 mDeclarePluginFactory(GodRaysPluginFactory, {}, {});
 void
-GodRaysPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+GodRaysPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -1153,8 +1154,8 @@ GodRaysPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                        OFX::ContextEnum context)
+GodRaysPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                        ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
@@ -1257,7 +1258,7 @@ GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
@@ -1268,9 +1269,9 @@ GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // GodRaysPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 GodRaysPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                     OFX::ContextEnum /*context*/)
+                                     ContextEnum /*context*/)
 {
     return new GodRaysPlugin(handle);
 }

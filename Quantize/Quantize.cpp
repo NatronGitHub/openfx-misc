@@ -51,7 +51,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "Quantize"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Reduce the number of color levels per channel.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Color_Operation"
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Color_Operation"
 
 #define kPluginIdentifier "net.sf.openfx.Quantize"
 // History:
@@ -119,7 +119,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamDitherOptionOrderedVoidAndCluster25Hint "Ordered dithering using a void-and-cluster 25x25 matrix."
 #define kParamDitherOptionRandom "Random"
 #define kParamDitherOptionRandomHint "Random dithering."
-enum DitherEnum {
+enum DitherEnum
+{
     eDitherNone = 0,
     eDitherOrderedBayer2,
     eDitherOrderedBayer4,
@@ -153,8 +154,8 @@ static const unsigned short vac14[14][14] = {
     {152, 87, 182, 118, 91, 42, 67, 25, 84, 147, 43, 85, 125, 68},
     {16, 136, 71, 10, 193, 112, 160, 138, 51, 111, 162, 26, 194, 46},
     {174, 107, 41, 143, 33, 74, 1, 101, 195, 15, 75, 140, 109, 90},
-    {32, 62, 157, 98, 167, 119, 179, 59, 36, 130, 175, 55, 0, 150} };
-
+    {32, 62, 157, 98, 167, 119, 179, 59, 36, 130, 175, 55, 0, 150}
+};
 static const unsigned short vac25[25][25] = {
     {165, 530, 106, 302, 540, 219, 477, 100, 231, 417, 314, 223, 424, 37, 207, 434, 326, 22, 448, 338, 111, 454, 523, 278, 579},
     {334, 19, 410, 495, 57, 352, 158, 318, 598, 109, 509, 157, 524, 282, 606, 83, 225, 539, 163, 234, 607, 313, 206, 71, 470},
@@ -180,8 +181,8 @@ static const unsigned short vac25[25][25] = {
     {283, 541, 18, 194, 401, 516, 262, 148, 41, 250, 621, 24, 329, 92, 446, 27, 291, 485, 35, 622, 180, 535, 379, 30, 341},
     {443, 145, 363, 494, 246, 101, 445, 550, 390, 499, 115, 432, 521, 211, 623, 253, 528, 189, 430, 307, 53, 323, 130, 624, 172},
     {46, 589, 292, 63, 599, 328, 203, 74, 290, 181, 376, 274, 140, 393, 59, 367, 88, 380, 137, 506, 252, 571, 431, 240, 497},
-    {382, 228, 464, 167, 398, 2, 573, 366, 518, 1, 583, 73, 563, 303, 510, 154, 564, 257, 587, 65, 406, 173, 0, 360, 110} };
-
+    {382, 228, 464, 167, 398, 2, 573, 366, 518, 1, 583, 73, 563, 303, 510, 154, 564, 257, 587, 65, 406, 173, 0, 360, 110}
+};
 static const unsigned char bayer8[8][8] = {
     { 0, 32, 8, 40, 2, 34, 10, 42},
     {48, 16, 56, 24, 50, 18, 58, 26},
@@ -190,18 +191,18 @@ static const unsigned char bayer8[8][8] = {
     { 3, 35, 11, 43, 1, 33, 9, 41},
     {51, 19, 59, 27, 49, 17, 57, 25},
     {15, 47, 7, 39, 13, 45, 5, 37},
-    {63, 31, 55, 23, 61, 29, 53, 21} };
-
+    {63, 31, 55, 23, 61, 29, 53, 21}
+};
 static const unsigned char bayer4[4][4] = {
     {5,   9,   6,   10},
     {13,   1,   14,   2},
     {7,   11,   4,   8},
-    {15,   3,   12,   0} };
-
+    {15,   3,   12,   0}
+};
 static const unsigned char bayer2[2][2] = {
     {1, 2},
-    {3, 0} };
-
+    {3, 0}
+};
 static unsigned int
 hash(unsigned int a)
 {
@@ -217,11 +218,11 @@ hash(unsigned int a)
 using namespace OFX;
 
 class QuantizeProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_maskImg;
+    const Image *_srcImg;
+    const Image *_maskImg;
     bool _premult;
     int _premultChannel;
     bool _doMasking;
@@ -233,9 +234,9 @@ protected:
     uint32_t _seed;       // base seed
 
 public:
-    QuantizeProcessorBase(OFX::ImageEffect &instance,
-                                const OFX::RenderArguments & /*args*/)
-        : OFX::ImageProcessor(instance)
+    QuantizeProcessorBase(ImageEffect &instance,
+                          const RenderArguments & /*args*/)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _premult(false)
@@ -253,9 +254,9 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert) {_maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v; }
@@ -290,8 +291,8 @@ class QuantizeProcessor
     : public QuantizeProcessorBase
 {
 public:
-    QuantizeProcessor(OFX::ImageEffect &instance,
-                            const OFX::RenderArguments &args)
+    QuantizeProcessor(ImageEffect &instance,
+                      const RenderArguments &args)
         : QuantizeProcessorBase(instance, args)
     {
         //const double time = args.time;
@@ -408,158 +409,157 @@ private:
 
                 // process the pixel (the actual computation goes here)
                 switch (_dither) {
-                    case eDitherNone: {
-                        // no dithering (identical tu Nuke's Posterize)
-                        for (int c = 0; c < 4; ++c) {
-
-                            float rounded = (unpPix[c] <= 0) ? std::floor(unpPix[c] * _colors) : std::ceil(unpPix[c] * _colors - 1.);
-                            //tmpPix[c] = std::floor(unpPix[c] * _colors) / (_colors - 1.); // ok except when unpPix[c] * _colors is a positive integer
-                            tmpPix[c] = rounded / (_colors - 1.);
-                        }
-                        break;
+                case eDitherNone: {
+                    // no dithering (identical tu Nuke's Posterize)
+                    for (int c = 0; c < 4; ++c) {
+                        float rounded = (unpPix[c] <= 0) ? std::floor(unpPix[c] * _colors) : std::ceil(unpPix[c] * _colors - 1.);
+                        //tmpPix[c] = std::floor(unpPix[c] * _colors) / (_colors - 1.); // ok except when unpPix[c] * _colors is a positive integer
+                        tmpPix[c] = rounded / (_colors - 1.);
                     }
-                    case eDitherOrderedBayer2: {
-                        // 2x2 Bayer
+                    break;
+                }
+                case eDitherOrderedBayer2: {
+                    // 2x2 Bayer
 #undef MSIZE
 #define MSIZE 2
-                        int subx = x % MSIZE;
-                        if (subx < 0) {
-                            subx += MSIZE;
-                        }
-                        int suby = y % MSIZE;
-                        if (suby < 0) {
-                            suby += MSIZE;
-                        }
-                        int dith = bayer2[subx][suby];
-                        for (int c = 0; c < 4; ++c) {
-                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
-                            float fv = std::floor(v);
-                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
-                                tmpPix[c] = fv / (_colors - 1.);
-                            } else {
-                                tmpPix[c] = (fv + 1) / (_colors - 1.);
-                            }
-                        }
-                        break;
+                    int subx = x % MSIZE;
+                    if (subx < 0) {
+                        subx += MSIZE;
                     }
-                    case eDitherOrderedBayer4: {
-                        // 4x4 Bayer
+                    int suby = y % MSIZE;
+                    if (suby < 0) {
+                        suby += MSIZE;
+                    }
+                    int dith = bayer2[subx][suby];
+                    for (int c = 0; c < 4; ++c) {
+                        float v = unpPix[c] * (_colors - 1.) + 1. / (2 * MSIZE * MSIZE); // ok for integer _colors
+                        float fv = std::floor(v);
+                        if ( (v - fv) * (MSIZE * MSIZE) <= (dith + 1) ) {
+                            tmpPix[c] = fv / (_colors - 1.);
+                        } else {
+                            tmpPix[c] = (fv + 1) / (_colors - 1.);
+                        }
+                    }
+                    break;
+                }
+                case eDitherOrderedBayer4: {
+                    // 4x4 Bayer
 #undef MSIZE
 #define MSIZE 4
-                        int subx = x % MSIZE;
-                        if (subx < 0) {
-                            subx += MSIZE;
-                        }
-                        int suby = y % MSIZE;
-                        if (suby < 0) {
-                            suby += MSIZE;
-                        }
-                        int dith = bayer4[subx][suby];
-                        for (int c = 0; c < 4; ++c) {
-                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
-                            float fv = std::floor(v);
-                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
-                                tmpPix[c] = fv / (_colors - 1.);
-                            } else {
-                                tmpPix[c] = (fv + 1) / (_colors - 1.);
-                            }
-                        }
-                        break;
+                    int subx = x % MSIZE;
+                    if (subx < 0) {
+                        subx += MSIZE;
                     }
-                    case eDitherOrderedBayer8: {
-                        // 8x8 Bayer
+                    int suby = y % MSIZE;
+                    if (suby < 0) {
+                        suby += MSIZE;
+                    }
+                    int dith = bayer4[subx][suby];
+                    for (int c = 0; c < 4; ++c) {
+                        float v = unpPix[c] * (_colors - 1.) + 1. / (2 * MSIZE * MSIZE); // ok for integer _colors
+                        float fv = std::floor(v);
+                        if ( (v - fv) * (MSIZE * MSIZE) <= (dith + 1) ) {
+                            tmpPix[c] = fv / (_colors - 1.);
+                        } else {
+                            tmpPix[c] = (fv + 1) / (_colors - 1.);
+                        }
+                    }
+                    break;
+                }
+                case eDitherOrderedBayer8: {
+                    // 8x8 Bayer
 #undef MSIZE
 #define MSIZE 8
-                        int subx = x % MSIZE;
-                        if (subx < 0) {
-                            subx += MSIZE;
-                        }
-                        int suby = y % MSIZE;
-                        if (suby < 0) {
-                            suby += MSIZE;
-                        }
-                        int dith = bayer8[subx][suby];
-                        for (int c = 0; c < 4; ++c) {
-                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
-                            float fv = std::floor(v);
-                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
-                                tmpPix[c] = fv / (_colors - 1.);
-                            } else {
-                                tmpPix[c] = (fv + 1) / (_colors - 1.);
-                            }
-                        }
-                        break;
+                    int subx = x % MSIZE;
+                    if (subx < 0) {
+                        subx += MSIZE;
                     }
-                    case eDitherOrderedVAC14: {
-                        // 14x14 void-and-cluster
+                    int suby = y % MSIZE;
+                    if (suby < 0) {
+                        suby += MSIZE;
+                    }
+                    int dith = bayer8[subx][suby];
+                    for (int c = 0; c < 4; ++c) {
+                        float v = unpPix[c] * (_colors - 1.) + 1. / (2 * MSIZE * MSIZE); // ok for integer _colors
+                        float fv = std::floor(v);
+                        if ( (v - fv) * (MSIZE * MSIZE) <= (dith + 1) ) {
+                            tmpPix[c] = fv / (_colors - 1.);
+                        } else {
+                            tmpPix[c] = (fv + 1) / (_colors - 1.);
+                        }
+                    }
+                    break;
+                }
+                case eDitherOrderedVAC14: {
+                    // 14x14 void-and-cluster
 #undef MSIZE
 #define MSIZE 14
-                        int subx = x % MSIZE;
-                        if (subx < 0) {
-                            subx += MSIZE;
-                        }
-                        int suby = y % MSIZE;
-                        if (suby < 0) {
-                            suby += MSIZE;
-                        }
-                        int dith = vac14[subx][suby];
-                        for (int c = 0; c < 4; ++c) {
-                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
-                            float fv = std::floor(v);
-                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
-                                tmpPix[c] = fv / (_colors - 1.);
-                            } else {
-                                tmpPix[c] = (fv + 1) / (_colors - 1.);
-                            }
-                        }
-                        break;
+                    int subx = x % MSIZE;
+                    if (subx < 0) {
+                        subx += MSIZE;
                     }
-                    case eDitherOrderedVAC25: {
-                        // 25x25 void-and-cluster
+                    int suby = y % MSIZE;
+                    if (suby < 0) {
+                        suby += MSIZE;
+                    }
+                    int dith = vac14[subx][suby];
+                    for (int c = 0; c < 4; ++c) {
+                        float v = unpPix[c] * (_colors - 1.) + 1. / (2 * MSIZE * MSIZE); // ok for integer _colors
+                        float fv = std::floor(v);
+                        if ( (v - fv) * (MSIZE * MSIZE) <= (dith + 1) ) {
+                            tmpPix[c] = fv / (_colors - 1.);
+                        } else {
+                            tmpPix[c] = (fv + 1) / (_colors - 1.);
+                        }
+                    }
+                    break;
+                }
+                case eDitherOrderedVAC25: {
+                    // 25x25 void-and-cluster
 #undef MSIZE
 #define MSIZE 25
-                        int subx = x % MSIZE;
-                        if (subx < 0) {
-                            subx += MSIZE;
-                        }
-                        int suby = y % MSIZE;
-                        if (suby < 0) {
-                            suby += MSIZE;
-                        }
-                        int dith = vac25[subx][suby];
-                        for (int c = 0; c < 4; ++c) {
-                            float v = unpPix[c] * (_colors - 1.) + 1./(2*MSIZE*MSIZE); // ok for integer _colors
-                            float fv = std::floor(v);
-                            if ( (v - fv) * (MSIZE*MSIZE) <= (dith + 1) ) {
-                                tmpPix[c] = fv / (_colors - 1.);
-                            } else {
-                                tmpPix[c] = (fv + 1) / (_colors - 1.);
-                            }
-                        }
-                        break;
+                    int subx = x % MSIZE;
+                    if (subx < 0) {
+                        subx += MSIZE;
                     }
-                    case eDitherRandom: {
-                        for (int c = 0; c < 4; ++c) {
+                    int suby = y % MSIZE;
+                    if (suby < 0) {
+                        suby += MSIZE;
+                    }
+                    int dith = vac25[subx][suby];
+                    for (int c = 0; c < 4; ++c) {
+                        float v = unpPix[c] * (_colors - 1.) + 1. / (2 * MSIZE * MSIZE); // ok for integer _colors
+                        float fv = std::floor(v);
+                        if ( (v - fv) * (MSIZE * MSIZE) <= (dith + 1) ) {
+                            tmpPix[c] = fv / (_colors - 1.);
+                        } else {
+                            tmpPix[c] = (fv + 1) / (_colors - 1.);
+                        }
+                    }
+                    break;
+                }
+                case eDitherRandom: {
+                    for (int c = 0; c < 4; ++c) {
 #                         ifdef USE_RANDOMGENERATOR
-                            randValue = randy.random();
+                        randValue = randy.random();
 #                         else
-                            randValue = hash(hash(hash(_seed ^ x) ^ y) ^ c) / ( (double)0x100000000ULL );
+                        randValue = hash(hash(hash(_seed ^ x) ^ y) ^ c) / ( (double)0x100000000ULL );
 #                         endif
 
-                            float rounded = (unpPix[c] <= 0) ? std::floor(unpPix[c] * _colors) : std::ceil(unpPix[c] * _colors - 1.);
-                            float v = unpPix[c] * (_colors - 1.); // ok for integer _colors
-                            float fv = (rounded <= v) ? rounded : (rounded - 1.);
-                            assert( (v - fv) >= 0 );
-                            assert( (v - fv) < 1 );
-                            if ( (v - fv) <= randValue ) {
-                                tmpPix[c] = fv / (_colors - 1.);
-                            } else {
-                                tmpPix[c] = (fv + 1) / (_colors - 1.);
-                            }
+                        float rounded = (unpPix[c] <= 0) ? std::floor(unpPix[c] * _colors) : std::ceil(unpPix[c] * _colors - 1.);
+                        float v = unpPix[c] * (_colors - 1.);     // ok for integer _colors
+                        float fv = (rounded <= v) ? rounded : (rounded - 1.);
+                        assert( (v - fv) >= 0 );
+                        assert( (v - fv) < 1 );
+                        if ( (v - fv) <= randValue ) {
+                            tmpPix[c] = fv / (_colors - 1.);
+                        } else {
+                            tmpPix[c] = (fv + 1) / (_colors - 1.);
                         }
-                        break;
                     }
+                    break;
                 }
+                } // switch
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
@@ -584,13 +584,13 @@ private:
                 dstPix += nComponents;
             }
         }
-    }
+    } // process
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class QuantizePlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
 
@@ -615,12 +615,12 @@ public:
         assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         // TODO: fetch noise parameters
@@ -648,16 +648,16 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template<int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args);
+    void renderForComponents(const RenderArguments &args);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const OFX::RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args);
 
     /* set up and run a processor */
-    void setupAndProcess(QuantizeProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(QuantizeProcessorBase &, const RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
@@ -665,13 +665,13 @@ private:
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_maskClip;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_maskClip;
     BooleanParam* _processR;
     BooleanParam* _processG;
     BooleanParam* _processB;
@@ -680,11 +680,11 @@ private:
     ChoiceParam* _dither;
     IntParam* _seed;
     BooleanParam* _staticSeed;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
 };
 
 
@@ -697,50 +697,51 @@ private:
 /* set up and run a processor */
 void
 QuantizePlugin::setupAndProcess(QuantizeProcessorBase &processor,
-                                      const OFX::RenderArguments &args)
+                                const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ||
-             ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
     if (doMasking) {
@@ -769,7 +770,6 @@ QuantizePlugin::setupAndProcess(QuantizeProcessorBase &processor,
 
     double colors = _colors->getValueAtTime(time);
     DitherEnum dither = (DitherEnum)_dither->getValueAtTime(time);
-
     bool staticSeed = _staticSeed->getValueAtTime(time);
     uint32_t seed = hash( (unsigned int)_seed->getValueAtTime(time) );
     if (!staticSeed) {
@@ -784,35 +784,34 @@ QuantizePlugin::setupAndProcess(QuantizeProcessorBase &processor,
     processor.process();
 } // QuantizePlugin::setupAndProcess
 
-
 // the overridden render function
 void
-QuantizePlugin::render(const OFX::RenderArguments &args)
+QuantizePlugin::render(const RenderArguments &args)
 {
     //std::cout << "render!\n";
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
     // do the rendering
     switch (dstComponents) {
-    case OFX::ePixelComponentRGBA:
+    case ePixelComponentRGBA:
         renderForComponents<4>(args);
         break;
-    case OFX::ePixelComponentRGB:
+    case ePixelComponentRGB:
         renderForComponents<3>(args);
         break;
-    case OFX::ePixelComponentXY:
+    case ePixelComponentXY:
         renderForComponents<2>(args);
         break;
-    case OFX::ePixelComponentAlpha:
+    case ePixelComponentAlpha:
         renderForComponents<1>(args);
         break;
     default:
         //std::cout << "components usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
       //std::cout << "render! OK\n";
@@ -820,31 +819,31 @@ QuantizePlugin::render(const OFX::RenderArguments &args)
 
 template<int nComponents>
 void
-QuantizePlugin::renderForComponents(const OFX::RenderArguments &args)
+QuantizePlugin::renderForComponents(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
         renderForBitDepth<unsigned char, nComponents, 255>(args);
         break;
 
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
         renderForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
 
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
         //std::cout << "depth usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 template <class PIX, int nComponents, int maxValue>
 void
-QuantizePlugin::renderForBitDepth(const OFX::RenderArguments &args)
+QuantizePlugin::renderForBitDepth(const RenderArguments &args)
 {
     QuantizeProcessor<PIX, nComponents, maxValue> fred(*this, args);
     setupAndProcess(fred, args);
@@ -852,8 +851,8 @@ QuantizePlugin::renderForBitDepth(const OFX::RenderArguments &args)
 
 bool
 QuantizePlugin::isIdentity(const IsIdentityArguments &args,
-                                 Clip * &identityClip,
-                                 double & /*identityTime*/)
+                           Clip * &identityClip,
+                           double & /*identityTime*/)
 {
     //std::cout << "isIdentity!\n";
     const double time = args.time;
@@ -896,9 +895,9 @@ QuantizePlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
 
                 return true;
@@ -912,10 +911,10 @@ QuantizePlugin::isIdentity(const IsIdentityArguments &args,
 
 void
 QuantizePlugin::changedClip(const InstanceChangedArgs &args,
-                                  const std::string &clipName)
+                            const std::string &clipName)
 {
     //std::cout << "changedClip!\n";
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && _srcClip && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && _srcClip && (args.reason == eChangeUserEdit) ) {
         switch ( _srcClip->getPreMultiplication() ) {
         case eImageOpaque:
             _premult->setValue(false);
@@ -933,9 +932,10 @@ QuantizePlugin::changedClip(const InstanceChangedArgs &args,
 
 /* Override the clip preferences, we need to say we are setting the frame varying flag */
 void
-QuantizePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+QuantizePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     DitherEnum dither = (DitherEnum)_dither->getValue();
+
     if (dither == eDitherRandom) {
         bool staticSeed = _staticSeed->getValue();
         if (!staticSeed) {
@@ -945,10 +945,9 @@ QuantizePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     }
 }
 
-
 mDeclarePluginFactory(QuantizePluginFactory, {}, {});
 void
-QuantizePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+QuantizePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
     // basic labels
@@ -975,14 +974,14 @@ QuantizePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
     //std::cout << "describe! OK\n";
 }
 
 void
-QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                               OFX::ContextEnum context)
+QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                         ContextEnum context)
 {
     //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
@@ -1018,7 +1017,7 @@ QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -1028,7 +1027,7 @@ QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -1038,7 +1037,7 @@ QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -1048,7 +1047,7 @@ QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
@@ -1060,7 +1059,7 @@ QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // describe plugin params
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamColors);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamColors);
         param->setLabel(kParamColorsLabel);
         param->setHint(kParamColorsHint);
         param->setRange(0, DBL_MAX);
@@ -1071,7 +1070,7 @@ QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamDither);
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamDither);
         param->setLabel(kParamDitherLabel);
         param->setHint(kParamDitherHint);
         param->setAnimates(false);
@@ -1123,9 +1122,9 @@ QuantizePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //std::cout << "describeInContext! OK\n";
 } // QuantizePluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 QuantizePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                            OFX::ContextEnum /*context*/)
+                                      ContextEnum /*context*/)
 {
     return new QuantizePlugin(handle);
 }

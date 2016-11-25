@@ -89,7 +89,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 /** @brief  Base class used to blend two images together */
 class RandGeneratorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
     float _noiseLevel;         // noise amplitude
@@ -99,8 +99,8 @@ protected:
 
 public:
     /** @brief no arg ctor */
-    RandGeneratorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    RandGeneratorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _noiseLevel(0.5f)
         , _density(1.)
         , _mean(0.5f)
@@ -140,7 +140,7 @@ class RandGenerator
 {
 public:
     // ctor
-    RandGenerator(OFX::ImageEffect &instance)
+    RandGenerator(ImageEffect &instance)
         : RandGeneratorBase(instance)
     {}
 
@@ -220,14 +220,13 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(RandGeneratorBase &, const OFX::RenderArguments &args);
-
+    void setupAndProcess(RandGeneratorBase &, const RenderArguments &args);
 };
 
 
@@ -241,27 +240,28 @@ private:
 /* set up and run a processor */
 void
 RandPlugin::setupAndProcess(RandGeneratorBase &processor,
-                            const OFX::RenderArguments &args)
+                            const RenderArguments &args)
 {
     const double time = args.time;
+
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // set the images
@@ -298,7 +298,7 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor,
 
 /* Override the clip preferences, we need to say we are setting the frame varying flag */
 void
-RandPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+RandPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     GeneratorPlugin::getClipPreferences(clipPreferences);
     bool staticSeed = _staticSeed->getValue();
@@ -311,85 +311,85 @@ RandPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 
 // the overridden render function
 void
-RandPlugin::render(const OFX::RenderArguments &args)
+RandPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
+        case eBitDepthUByte: {
             RandGenerator<unsigned char, 4, 255> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
 
-        case OFX::eBitDepthUShort: {
+        case eBitDepthUShort: {
             RandGenerator<unsigned short, 4, 65535> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
 
-        case OFX::eBitDepthFloat: {
+        case eBitDepthFloat: {
             RandGenerator<float, 4, 1> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+            throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                RandGenerator<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
+        case eBitDepthUByte: {
+            RandGenerator<unsigned char, 3, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
 
-            case OFX::eBitDepthUShort: {
-                RandGenerator<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
+        case eBitDepthUShort: {
+            RandGenerator<unsigned short, 3, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
 
-            case OFX::eBitDepthFloat: {
-                RandGenerator<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case eBitDepthFloat: {
+            RandGenerator<float, 3, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
         switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
+        case eBitDepthUByte: {
             RandGenerator<unsigned char, 1, 255> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
 
-        case OFX::eBitDepthUShort: {
+        case eBitDepthUShort: {
             RandGenerator<unsigned short, 1, 65535> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
 
-        case OFX::eBitDepthFloat: {
+        case eBitDepthFloat: {
             RandGenerator<float, 1, 1> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+            throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
 } // RandPlugin::render
 
 mDeclarePluginFactory(RandPluginFactory, {}, {});
 void
-RandPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+RandPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -425,7 +425,7 @@ RandPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-RandPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+RandPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                      ContextEnum context)
 {
     // there has to be an input clip, even for generators
@@ -504,7 +504,6 @@ RandPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-
 } // RandPluginFactory::describeInContext
 
 ImageEffect*

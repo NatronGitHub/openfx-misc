@@ -81,19 +81,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 
 class RotoProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_roto;
+    const Image *_srcImg;
+    const Image *_roto;
     bool _processR;
     bool _processG;
     bool _processB;
     bool _processA;
 
 public:
-    RotoProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    RotoProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _roto(0)
         , _processR(false)
@@ -104,13 +104,13 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v)
+    void setSrcImg(const Image *v)
     {
         _srcImg = v;
     }
 
     /** @brief set the optional mask image */
-    void setRotoImg(const OFX::Image *v) {_roto = v; }
+    void setRotoImg(const Image *v) {_roto = v; }
 
     void setValues(bool processR,
                    bool processG,
@@ -132,7 +132,7 @@ class RotoProcessor
     : public RotoProcessorBase
 {
 public:
-    RotoProcessor(OFX::ImageEffect &instance)
+    RotoProcessor(ImageEffect &instance)
         : RotoProcessorBase(instance)
     {
     }
@@ -263,7 +263,7 @@ private:
 
                 // merge/over
                 for (int c = 0; c < nComponents; ++c) {
-                    dstPix[c] = OFX::MergeImages2D::overFunctor<PIX, maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha);
+                    dstPix[c] = MergeImages2D::overFunctor<PIX, maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha);
 #                 ifdef DEBUG
                     assert(srcVal[c] == srcVal[c]); // check for NaN
                     assert(dstPix[c] == dstPix[c]); // check for NaN
@@ -278,7 +278,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class RotoPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -293,13 +293,13 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         // name of mask clip depends on the context
-        _rotoClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Roto");
+        _rotoClip = getContext() == eContextFilter ? NULL : fetchClip(getContext() == eContextPaint ? "Brush" : "Roto");
         assert( _rotoClip && (_rotoClip->getPixelComponents() == ePixelComponentAlpha || _rotoClip->getPixelComponents() == ePixelComponentRGBA) );
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
@@ -309,30 +309,30 @@ public:
     }
 
 private:
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(RotoProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(RotoProcessorBase &, const RenderArguments &args);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_rotoClip;
-    OFX::BooleanParam* _processR;
-    OFX::BooleanParam* _processG;
-    OFX::BooleanParam* _processB;
-    OFX::BooleanParam* _processA;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_rotoClip;
+    BooleanParam* _processR;
+    BooleanParam* _processG;
+    BooleanParam* _processB;
+    BooleanParam* _processA;
 };
 
 
@@ -345,65 +345,65 @@ private:
 /* set up and run a processor */
 void
 RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
-                            const OFX::RenderArguments &args)
+                            const RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Could not fetch output image");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "Could not fetch output image");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatErrFormat);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatErrFormat);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() && dst.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatErrFormat);
         }
-        OFX::BitDepthEnum srcBitDepth = src->getPixelDepth();
+        BitDepthEnum srcBitDepth = src->getPixelDepth();
         if (srcBitDepth != dstBitDepth) {
-            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            throwSuiteStatusException(kOfxStatErrFormat);
         }
     }
 
     // auto ptr for the mask.
-    std::auto_ptr<const OFX::Image> mask( ( _rotoClip && _rotoClip->isConnected() ) ?
-                                          _rotoClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> mask( ( _rotoClip && _rotoClip->isConnected() ) ?
+                                     _rotoClip->fetchImage(args.time) : 0 );
 
     // do we do masking
     if ( _rotoClip && _rotoClip->isConnected() ) {
         if ( !mask.get() ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "Error while rendering the roto mask");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            setPersistentMessage(Message::eMessageError, "", "Error while rendering the roto mask");
+            throwSuiteStatusException(kOfxStatFailed);
         }
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
                  ( mask->getRenderScale().y != args.renderScale.y) ||
-                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                throwSuiteStatusException(kOfxStatFailed);
             }
         }
-        assert(mask->getPixelComponents() == OFX::ePixelComponentRGBA || mask->getPixelComponents() == OFX::ePixelComponentAlpha
-               || mask->getPixelComponents() == OFX::ePixelComponentRGB || mask->getPixelComponents() == OFX::ePixelComponentXY);
+        assert(mask->getPixelComponents() == ePixelComponentRGBA || mask->getPixelComponents() == ePixelComponentAlpha
+               || mask->getPixelComponents() == ePixelComponentRGB || mask->getPixelComponents() == ePixelComponentXY);
         if ( mask->getPixelComponents() != dst->getPixelComponents() ) {
-            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+            throwSuiteStatusException(kOfxStatErrFormat);
         }
         // Set it in the processor
         processor.setRotoImg( mask.get() );
@@ -429,7 +429,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
 
 // (see comments in Natron code about this feature being buggy)
 bool
-RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+RotoPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                   OfxRectD &rod)
 {
 #ifdef NATRON_ROTO_INVERTIBLE
@@ -458,7 +458,7 @@ RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
             return true;
         }
 
-        OFX::Coords::rectBoundingBox(rod, rotoRod, &rod);
+        Coords::rectBoundingBox(rod, rotoRod, &rod);
 
         return true;
     }
@@ -468,53 +468,53 @@ RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
 // the internal render function
 template <int nComponents>
 void
-RotoPlugin::renderInternal(const OFX::RenderArguments &args,
-                           OFX::BitDepthEnum dstBitDepth)
+RotoPlugin::renderInternal(const RenderArguments &args,
+                           BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         RotoProcessor<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         RotoProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         RotoProcessor<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-RotoPlugin::render(const OFX::RenderArguments &args)
+RotoPlugin::render(const RenderArguments &args)
 {
     assert(_srcClip && _dstClip);
     if (!_srcClip || !_dstClip) {
         throwSuiteStatusException(kOfxStatErrBadHandle);
     }
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentAlpha || dstComponents == ePixelComponentXY);
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
@@ -528,8 +528,8 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
         return false;
     }
     const double time = args.time;
-    OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     if (srcComponents != dstComponents) {
         return false;
     }
@@ -554,9 +554,9 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
 
     if ( _rotoClip && _rotoClip->isConnected() ) {
         OfxRectI rotoRoD;
-        OFX::Coords::toPixelEnclosing(_rotoClip->getRegionOfDefinition(args.time), args.renderScale, _rotoClip->getPixelAspectRatio(), &rotoRoD);
+        Coords::toPixelEnclosing(_rotoClip->getRegionOfDefinition(args.time), args.renderScale, _rotoClip->getPixelAspectRatio(), &rotoRoD);
         // effect is identity if the renderWindow doesn't intersect the roto RoD
-        if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, rotoRoD, 0) ) {
+        if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, rotoRoD, 0) ) {
             identityClip = _srcClip;
 
             return true;
@@ -583,7 +583,7 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 
 mDeclarePluginFactory(RotoPluginFactory, {}, {});
 void
-RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+RotoPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -613,22 +613,22 @@ RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (getImageEffectHostDescription()->isNatron) {
         desc.setIsDeprecated(true); // prefer Natron's internal Roto
     }
 #endif
 }
 
-OFX::ImageEffect*
+ImageEffect*
 RotoPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                  OFX::ContextEnum /*context*/)
+                                  ContextEnum /*context*/)
 {
     return new RotoPlugin(handle, false);
 }
 
 void
-RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                     OFX::ContextEnum context)
+RotoPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                     ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -673,7 +673,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(false);
@@ -683,7 +683,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(false);
@@ -693,7 +693,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(false);
@@ -703,7 +703,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setAnimates(false);

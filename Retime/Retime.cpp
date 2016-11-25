@@ -49,7 +49,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Retime"
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Retime"
 
 #define kPluginIdentifier "net.sf.openfx.Retime"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -109,18 +109,18 @@ enum FilterEnum
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class RetimePlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 protected:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;            /**< @brief Mandated output clips */
-    OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
-    OFX::BooleanParam  *_reverse_input;
-    OFX::DoubleParam  *_sourceTime; /**< @brief mandated parameter, only used in the retimer context. */
-    OFX::DoubleParam  *_speed;      /**< @brief only used in the filter or general context. */
-    OFX::ParametricParam  *_warp;      /**< @brief only used in the filter or general context. */
-    OFX::DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only. */
-    OFX::ChoiceParam  *_filter;   /**< @brief how images are interpolated (or not). */
+    Clip *_dstClip;            /**< @brief Mandated output clips */
+    Clip *_srcClip;            /**< @brief Mandated input clips */
+    BooleanParam  *_reverse_input;
+    DoubleParam  *_sourceTime; /**< @brief mandated parameter, only used in the retimer context. */
+    DoubleParam  *_speed;      /**< @brief only used in the filter or general context. */
+    ParametricParam  *_warp;      /**< @brief only used in the filter or general context. */
+    DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only. */
+    ChoiceParam  *_filter;   /**< @brief how images are interpolated (or not). */
 
 public:
     /** @brief ctor */
@@ -137,14 +137,14 @@ public:
         , _filter(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
 
         // What parameters we instantiate depend on the context
-        if (getContext() == OFX::eContextRetimer) {
+        if (getContext() == eContextRetimer) {
             // fetch the mandated parameter which the host uses to pass us the frame to retime to
             _sourceTime = fetchDoubleParam(kOfxImageEffectRetimerParamName);
             assert(_sourceTime);
-        } else { // context == OFX::eContextFilter || context == OFX::eContextGeneral
+        } else { // context == eContextFilter || context == eContextGeneral
             // filter context means we are in charge of how to retime, and our example is using a speed curve to do that
             _reverse_input = fetchBooleanParam(kParamReverseInput);
             _speed = fetchDoubleParam(kParamSpeed);
@@ -152,7 +152,7 @@ public:
             if (supportsParametricParameter) {
                 _warp = fetchParametricParam(kParamWarp);
                 assert(_warp);
-            } else if (getContext() == OFX::eContextGeneral) {
+            } else if (getContext() == eContextGeneral) {
                 // fetch duration param for general context
                 _duration = fetchDoubleParam(kParamDuration);
                 assert(_duration);
@@ -163,26 +163,26 @@ public:
     }
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, double sourceTime, FilterEnum filter, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, double sourceTime, FilterEnum filter, BitDepthEnum dstBitDepth);
 
     /** Override the get frames needed action */
-    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args, double sourceTime, FilterEnum filter);
+    void setupAndProcess(ImageBlenderBase &, const RenderArguments &args, double sourceTime, FilterEnum filter);
 
 private:
 
 
-    bool isIdentityInternal(OfxTime time, OFX::Clip* &identityClip, OfxTime &identityTime);
+    bool isIdentityInternal(OfxTime time, Clip* &identityClip, OfxTime &identityTime);
 };
 
 
@@ -194,22 +194,22 @@ private:
 
 // make sure components are sane
 static void
-checkComponents(const OFX::Image &src,
-                OFX::BitDepthEnum dstBitDepth,
-                OFX::PixelComponentEnum dstComponents)
+checkComponents(const Image &src,
+                BitDepthEnum dstBitDepth,
+                PixelComponentEnum dstComponents)
 {
-    OFX::BitDepthEnum srcBitDepth    = src.getPixelDepth();
-    OFX::PixelComponentEnum srcComponents  = src.getPixelComponents();
+    BitDepthEnum srcBitDepth    = src.getPixelDepth();
+    PixelComponentEnum srcComponents  = src.getPixelComponents();
 
     // see if they have the same depths and bytes and all
     if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 }
 
 static void
 framesNeeded(double sourceTime,
-             OFX::FieldEnum fieldToRender,
+             FieldEnum fieldToRender,
              double *fromTimep,
              double *toTimep,
              double *blendp)
@@ -218,7 +218,7 @@ framesNeeded(double sourceTime,
     double fromTime, toTime;
     double blend;
 
-    if (fieldToRender == OFX::eFieldNone) {
+    if (fieldToRender == eFieldNone) {
         // unfielded, easy peasy
         fromTime = std::floor(sourceTime);
         toTime = fromTime + 1;
@@ -245,47 +245,48 @@ framesNeeded(double sourceTime,
 
 /* set up and run a processor */
 void
-RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
-                              const OFX::RenderArguments &args,
+RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
+                              const RenderArguments &args,
                               double sourceTime,
                               FilterEnum filter)
 {
     const double time = args.time;
+
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(time) );
+    std::auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
         // should have been caught by isIdentity...
-        std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                             _srcClip->fetchImage(sourceTime) : 0 );
+        std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                        _srcClip->fetchImage(sourceTime) : 0 );
         if ( src.get() ) {
             if ( (src->getRenderScale().x != args.renderScale.x) ||
                  ( src->getRenderScale().y != args.renderScale.y) ||
-                 ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                 ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                throwSuiteStatusException(kOfxStatFailed);
             }
-            OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-            OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+            BitDepthEnum srcBitDepth      = src->getPixelDepth();
+            PixelComponentEnum srcComponents = src->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+                throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
         copyPixels( *this, args.renderWindow, src.get(), dst.get() );
@@ -299,27 +300,27 @@ RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
     framesNeeded(sourceTime, args.fieldToRender, &fromTime, &toTime, &blend);
 
     // fetch the two source images
-    std::auto_ptr<OFX::Image> fromImg( ( _srcClip && _srcClip->isConnected() ) ?
-                                       _srcClip->fetchImage(fromTime) : 0 );
-    std::auto_ptr<OFX::Image> toImg( ( _srcClip && _srcClip->isConnected() ) ?
-                                     _srcClip->fetchImage(toTime) : 0 );
+    std::auto_ptr<Image> fromImg( ( _srcClip && _srcClip->isConnected() ) ?
+                                  _srcClip->fetchImage(fromTime) : 0 );
+    std::auto_ptr<Image> toImg( ( _srcClip && _srcClip->isConnected() ) ?
+                                _srcClip->fetchImage(toTime) : 0 );
 
     // make sure bit depths are sane
     if ( fromImg.get() ) {
         if ( (fromImg->getRenderScale().x != args.renderScale.x) ||
              ( fromImg->getRenderScale().y != args.renderScale.y) ||
-             ( ( fromImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( fromImg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( fromImg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( fromImg->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if ( toImg.get() ) {
         if ( (toImg->getRenderScale().x != args.renderScale.x) ||
              ( toImg->getRenderScale().y != args.renderScale.y) ||
-             ( ( toImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( toImg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( toImg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( toImg->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
@@ -340,15 +341,15 @@ RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
 } // RetimePlugin::setupAndProcess
 
 void
-RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
-                              OFX::FramesNeededSetter &frames)
+RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
+                              FramesNeededSetter &frames)
 {
     if (!_srcClip) {
         return;
     }
     const double time = args.time;
     double sourceTime;
-    if (getContext() == OFX::eContextRetimer) {
+    if (getContext() == eContextRetimer) {
         // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
         sourceTime = _sourceTime->getValueAtTime(time);
     } else {
@@ -381,7 +382,7 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
         double fromTime, toTime;
         double blend;
         // whatever the rendered field is, the frames are the same
-        framesNeeded(sourceTime, OFX::eFieldNone, &fromTime, &toTime, &blend);
+        framesNeeded(sourceTime, eFieldNone, &fromTime, &toTime, &blend);
         range.min = fromTime;
         range.max = toTime;
     } else {
@@ -391,10 +392,10 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 }
 
 bool
-RetimePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+RetimePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                     OfxRectD &rod)
 {
-    OFX::Clip* identityClip;
+    Clip* identityClip;
     OfxTime identityTime;
     bool identity = isIdentityInternal(args.time, identityClip, identityTime);
 
@@ -408,14 +409,14 @@ RetimePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
 
 bool
 RetimePlugin::isIdentityInternal(OfxTime time,
-                                 OFX::Clip* &identityClip,
+                                 Clip* &identityClip,
                                  OfxTime &identityTime)
 {
     if (!_srcClip) {
         return false;
     }
     double sourceTime;
-    if (getContext() == OFX::eContextRetimer) {
+    if (getContext() == eContextRetimer) {
         // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
         sourceTime = _sourceTime->getValueAtTime(time);
     } else {
@@ -454,8 +455,8 @@ RetimePlugin::isIdentityInternal(OfxTime time,
 }
 
 bool
-RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                         OFX::Clip * &identityClip,
+RetimePlugin::isIdentity(const IsIdentityArguments &args,
+                         Clip * &identityClip,
                          double &identityTime)
 {
     return isIdentityInternal(args.time, identityClip, identityTime);
@@ -466,7 +467,7 @@ bool
 RetimePlugin::getTimeDomain(OfxRangeD &range)
 {
     // this should only be called in the general context, ever!
-    if ( (getContext() == OFX::eContextGeneral) && _srcClip && _duration ) {
+    if ( (getContext() == eContextGeneral) && _srcClip && _duration ) {
         assert(!_warp);
         // If we are a general context, we can changed the duration of the effect, so have a param to do that
         // We need a separate param as it is impossible to derive this from a speed param and the input clip
@@ -492,40 +493,40 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
 // the internal render function
 template <int nComponents>
 void
-RetimePlugin::renderInternal(const OFX::RenderArguments &args,
+RetimePlugin::renderInternal(const RenderArguments &args,
                              double sourceTime,
                              FilterEnum filter,
-                             OFX::BitDepthEnum dstBitDepth)
+                             BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
-        OFX::ImageBlender<unsigned char, nComponents> fred(*this);
+    case eBitDepthUByte: {
+        ImageBlender<unsigned char, nComponents> fred(*this);
         setupAndProcess(fred, args, sourceTime, filter);
         break;
     }
-    case OFX::eBitDepthUShort: {
-        OFX::ImageBlender<unsigned short, nComponents> fred(*this);
+    case eBitDepthUShort: {
+        ImageBlender<unsigned short, nComponents> fred(*this);
         setupAndProcess(fred, args, sourceTime, filter);
         break;
     }
-    case OFX::eBitDepthFloat: {
-        OFX::ImageBlender<float, nComponents> fred(*this);
+    case eBitDepthFloat: {
+        ImageBlender<float, nComponents> fred(*this);
         setupAndProcess(fred, args, sourceTime, filter);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-RetimePlugin::render(const OFX::RenderArguments &args)
+RetimePlugin::render(const RenderArguments &args)
 {
     const double time = args.time;
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
@@ -533,7 +534,7 @@ RetimePlugin::render(const OFX::RenderArguments &args)
     // figure the frame we should be retiming from
     double sourceTime = time;
 
-    if (getContext() == OFX::eContextRetimer) {
+    if (getContext() == eContextRetimer) {
         // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
         sourceTime = _sourceTime->getValueAtTime(time);
     } else if (_srcClip) {
@@ -559,20 +560,20 @@ RetimePlugin::render(const OFX::RenderArguments &args)
 #ifdef DEBUG
     if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
         // should be caught by isIdentity!
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host should not render");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 #endif
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, sourceTime, filter, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, sourceTime, filter, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, sourceTime, filter, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, sourceTime, filter, dstBitDepth);
     }
 } // RetimePlugin::render
@@ -583,13 +584,13 @@ RetimePluginFactory::load()
 {
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
-        throw OFX::Exception::HostInadequate("Need random temporal image access to work");
+        throw Exception::HostInadequate("Need random temporal image access to work");
     }
 }
 
 /** @brief The basic describe function, passed a plugin descriptor */
 void
-RetimePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+RetimePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -597,9 +598,9 @@ RetimePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     // Say we are a transition context
-    desc.addSupportedContext(OFX::eContextRetimer);
-    desc.addSupportedContext(OFX::eContextFilter);
-    desc.addSupportedContext(OFX::eContextGeneral);
+    desc.addSupportedContext(eContextRetimer);
+    desc.addSupportedContext(eContextFilter);
+    desc.addSupportedContext(eContextGeneral);
 
     // Add supported pixel depths
     desc.addSupportedBitDepth(eBitDepthUByte);
@@ -619,7 +620,7 @@ RetimePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
-        throw OFX::Exception::HostInadequate("Need random temporal image access to work");
+        throw Exception::HostInadequate("Need random temporal image access to work");
     }
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
@@ -628,7 +629,7 @@ RetimePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void
-RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                        ContextEnum context)
 {
     // we are a transition, so define the sourceTo input clip
@@ -655,7 +656,7 @@ RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // what param we have is dependant on the host
-    if (context == OFX::eContextRetimer) {
+    if (context == eContextRetimer) {
         // Define the mandated kOfxImageEffectRetimerParamName param, note that we don't do anything with this other than.
         // describe it. It is not a true param but how the host indicates to the plug-in which frame
         // it wants you to retime to. It appears on no plug-in side UI, it is purely the host's to manage.
@@ -691,17 +692,17 @@ RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
 
-        const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
         const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
                                                    !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
                                                      8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) ); // Nuke 8-10 are known to *not* support Parametric
         if (supportsParametricParameter) {
-            OFX::PageParamDescriptor* page = desc.definePageParam(kPageTimeWarp);
+            PageParamDescriptor* page = desc.definePageParam(kPageTimeWarp);
             if (page) {
                 page->setLabel(kPageTimeWarpLabel);
             }
             {
-                OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamWarp);
+                ParametricParamDescriptor* param = desc.defineParametricParam(kParamWarp);
                 assert(param);
                 param->setLabel(kParamWarpLabel);
                 param->setHint(kParamWarpHint);
@@ -723,7 +724,7 @@ RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                     page->addChild(*param);
                 }
             }
-        } else if (context == OFX::eContextGeneral) {
+        } else if (context == eContextGeneral) {
             // If we are a general context, we can change the duration of the effect, so have a param to do that
             // We need a separate param as it is impossible to derive this from a speed param and the input clip
             // duration (the speed may be animating or wired to an expression).
@@ -767,12 +768,12 @@ RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // RetimePluginFactory::describeInContext
 
-/** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
+/** @brief The create instance function, the plugin must return an object derived from the \ref ImageEffect class */
 ImageEffect*
 RetimePluginFactory::createInstance(OfxImageEffectHandle handle,
                                     ContextEnum /*context*/)
 {
-    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
                                                !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
                                                  8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric

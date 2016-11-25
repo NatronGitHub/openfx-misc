@@ -173,52 +173,52 @@ struct ShadertoyShader
 #endif
 
 #ifndef GL_VERSION_2_0
-typedef GLuint (APIENTRYP PFNGLCREATEPROGRAMPROC) (void);
-typedef void (APIENTRYP PFNGLDELETEPROGRAMPROC) (GLuint program);
-typedef void (APIENTRYP PFNGLUSEPROGRAMPROC) (GLuint program);
-typedef void (APIENTRYP PFNGLATTACHSHADERPROC) (GLuint program, GLuint shader);
-typedef void (APIENTRYP PFNGLDETACHSHADERPROC) (GLuint program, GLuint shader);
-typedef void (APIENTRYP PFNGLLINKPROGRAMPROC) (GLuint program);
-typedef void (APIENTRYP PFNGLGETPROGRAMIVPROC) (GLuint program, GLenum pname, GLint *params);
-typedef void (APIENTRYP PFNGLGETPROGRAMINFOLOGPROC) (GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
-typedef void (APIENTRYP PFNGLGETSHADERINFOLOGPROC) (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
-typedef GLint (APIENTRYP PFNGLGETUNIFORMLOCATIONPROC) (GLuint program, const GLchar *name);
-typedef void (APIENTRYP PFNGLGETUNIFORMFVPROC) (GLuint program, GLint location, GLfloat *params);
-typedef void (APIENTRYP PFNGLGETUNIFORMIVPROC) (GLuint program, GLint location, GLint *params);
-typedef void (APIENTRYP PFNGLGETVERTEXATTRIBDVPROC) (GLuint index, GLenum pname, GLdouble *params);
-typedef void (APIENTRYP PFNGLGETVERTEXATTRIBFVPROC) (GLuint index, GLenum pname, GLfloat *params);
-typedef void (APIENTRYP PFNGLGETVERTEXATTRIBIVPROC) (GLuint index, GLenum pname, GLint *params);
-typedef void (APIENTRYP PFNGLGETVERTEXATTRIBPOINTERVPROC) (GLuint index, GLenum pname, void **pointer);
-typedef GLboolean (APIENTRYP PFNGLISPROGRAMPROC) (GLuint program);
-typedef void (APIENTRYP PFNGLUNIFORM1IPROC) (GLint location, GLint v0);
-typedef void (APIENTRYP PFNGLUNIFORM2IPROC) (GLint location, GLint v0, GLint v1);
-typedef void (APIENTRYP PFNGLUNIFORM3IPROC) (GLint location, GLint v0, GLint v1, GLint v2);
-typedef void (APIENTRYP PFNGLUNIFORM4IPROC) (GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
-typedef void (APIENTRYP PFNGLUNIFORM1IVPROC) (GLint location, GLsizei count, const GLint *value);
-typedef void (APIENTRYP PFNGLUNIFORM2IVPROC) (GLint location, GLsizei count, const GLint *value);
-typedef void (APIENTRYP PFNGLUNIFORM3IVPROC) (GLint location, GLsizei count, const GLint *value);
-typedef void (APIENTRYP PFNGLUNIFORM4IVPROC) (GLint location, GLsizei count, const GLint *value);
-typedef void (APIENTRYP PFNGLUNIFORM1FPROC) (GLint location, GLfloat v0);
-typedef void (APIENTRYP PFNGLUNIFORM2FPROC) (GLint location, GLfloat v0, GLfloat v1);
-typedef void (APIENTRYP PFNGLUNIFORM3FPROC) (GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
-typedef void (APIENTRYP PFNGLUNIFORM4FPROC) (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
-typedef void (APIENTRYP PFNGLUNIFORM1FVPROC) (GLint location, GLsizei count, const GLfloat *value);
-typedef void (APIENTRYP PFNGLUNIFORM2FVPROC) (GLint location, GLsizei count, const GLfloat *value);
-typedef void (APIENTRYP PFNGLUNIFORM3FVPROC) (GLint location, GLsizei count, const GLfloat *value);
-typedef void (APIENTRYP PFNGLUNIFORM4FVPROC) (GLint location, GLsizei count, const GLfloat *value);
-typedef void (APIENTRYP PFNGLUNIFORMMATRIX4FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
-typedef GLint (APIENTRYP PFNGLGETATTRIBLOCATIONPROC) (GLuint program, const GLchar *name);
-typedef void (APIENTRYP PFNGLVERTEXATTRIB1FPROC) (GLuint index, GLfloat x);
-typedef void (APIENTRYP PFNGLVERTEXATTRIB1FVPROC) (GLuint index, const GLfloat *v);
-typedef void (APIENTRYP PFNGLVERTEXATTRIB2FVPROC) (GLuint index, const GLfloat *v);
-typedef void (APIENTRYP PFNGLVERTEXATTRIB3FVPROC) (GLuint index, const GLfloat *v);
-typedef void (APIENTRYP PFNGLVERTEXATTRIB4FVPROC) (GLuint index, const GLfloat *v);
-typedef void (APIENTRYP PFNGLVERTEXATTRIBPOINTERPROC) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
-typedef void (APIENTRYP PFNGLENABLEVERTEXATTRIBARRAYPROC) (GLuint index);
-typedef void (APIENTRYP PFNGLDISABLEVERTEXATTRIBARRAYPROC) (GLuint index);
-typedef void (APIENTRYP PFNGLGETACTIVEATTRIBPROC) (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
-typedef void (APIENTRYP PFNGLBINDATTRIBLOCATIONPROC) (GLuint program, GLuint index, const GLchar *name);
-typedef void (APIENTRYP PFNGLGETACTIVEUNIFORMPROC) (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
+typedef GLuint (APIENTRYP PFNGLCREATEPROGRAMPROC)(void);
+typedef void (APIENTRYP PFNGLDELETEPROGRAMPROC)(GLuint program);
+typedef void (APIENTRYP PFNGLUSEPROGRAMPROC)(GLuint program);
+typedef void (APIENTRYP PFNGLATTACHSHADERPROC)(GLuint program, GLuint shader);
+typedef void (APIENTRYP PFNGLDETACHSHADERPROC)(GLuint program, GLuint shader);
+typedef void (APIENTRYP PFNGLLINKPROGRAMPROC)(GLuint program);
+typedef void (APIENTRYP PFNGLGETPROGRAMIVPROC)(GLuint program, GLenum pname, GLint *params);
+typedef void (APIENTRYP PFNGLGETPROGRAMINFOLOGPROC)(GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+typedef void (APIENTRYP PFNGLGETSHADERINFOLOGPROC)(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+typedef GLint (APIENTRYP PFNGLGETUNIFORMLOCATIONPROC)(GLuint program, const GLchar *name);
+typedef void (APIENTRYP PFNGLGETUNIFORMFVPROC)(GLuint program, GLint location, GLfloat *params);
+typedef void (APIENTRYP PFNGLGETUNIFORMIVPROC)(GLuint program, GLint location, GLint *params);
+typedef void (APIENTRYP PFNGLGETVERTEXATTRIBDVPROC)(GLuint index, GLenum pname, GLdouble *params);
+typedef void (APIENTRYP PFNGLGETVERTEXATTRIBFVPROC)(GLuint index, GLenum pname, GLfloat *params);
+typedef void (APIENTRYP PFNGLGETVERTEXATTRIBIVPROC)(GLuint index, GLenum pname, GLint *params);
+typedef void (APIENTRYP PFNGLGETVERTEXATTRIBPOINTERVPROC)(GLuint index, GLenum pname, void **pointer);
+typedef GLboolean (APIENTRYP PFNGLISPROGRAMPROC)(GLuint program);
+typedef void (APIENTRYP PFNGLUNIFORM1IPROC)(GLint location, GLint v0);
+typedef void (APIENTRYP PFNGLUNIFORM2IPROC)(GLint location, GLint v0, GLint v1);
+typedef void (APIENTRYP PFNGLUNIFORM3IPROC)(GLint location, GLint v0, GLint v1, GLint v2);
+typedef void (APIENTRYP PFNGLUNIFORM4IPROC)(GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
+typedef void (APIENTRYP PFNGLUNIFORM1IVPROC)(GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRYP PFNGLUNIFORM2IVPROC)(GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRYP PFNGLUNIFORM3IVPROC)(GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRYP PFNGLUNIFORM4IVPROC)(GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRYP PFNGLUNIFORM1FPROC)(GLint location, GLfloat v0);
+typedef void (APIENTRYP PFNGLUNIFORM2FPROC)(GLint location, GLfloat v0, GLfloat v1);
+typedef void (APIENTRYP PFNGLUNIFORM3FPROC)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+typedef void (APIENTRYP PFNGLUNIFORM4FPROC)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+typedef void (APIENTRYP PFNGLUNIFORM1FVPROC)(GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRYP PFNGLUNIFORM2FVPROC)(GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRYP PFNGLUNIFORM3FVPROC)(GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRYP PFNGLUNIFORM4FVPROC)(GLint location, GLsizei count, const GLfloat *value);
+typedef void (APIENTRYP PFNGLUNIFORMMATRIX4FVPROC)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+typedef GLint (APIENTRYP PFNGLGETATTRIBLOCATIONPROC)(GLuint program, const GLchar *name);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB1FPROC)(GLuint index, GLfloat x);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB1FVPROC)(GLuint index, const GLfloat *v);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB2FVPROC)(GLuint index, const GLfloat *v);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB3FVPROC)(GLuint index, const GLfloat *v);
+typedef void (APIENTRYP PFNGLVERTEXATTRIB4FVPROC)(GLuint index, const GLfloat *v);
+typedef void (APIENTRYP PFNGLVERTEXATTRIBPOINTERPROC)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
+typedef void (APIENTRYP PFNGLENABLEVERTEXATTRIBARRAYPROC)(GLuint index);
+typedef void (APIENTRYP PFNGLDISABLEVERTEXATTRIBARRAYPROC)(GLuint index);
+typedef void (APIENTRYP PFNGLGETACTIVEATTRIBPROC)(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
+typedef void (APIENTRYP PFNGLBINDATTRIBLOCATIONPROC)(GLuint program, GLuint index, const GLchar *name);
+typedef void (APIENTRYP PFNGLGETACTIVEUNIFORMPROC)(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
 #endif
 static PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
 static PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
@@ -269,12 +269,12 @@ static PFNGLGETACTIVEUNIFORMPROC glGetActiveUniform = NULL;
 
 // Shader
 #ifndef GL_VERSION_2_0
-typedef GLuint (APIENTRYP PFNGLCREATESHADERPROC) (GLenum type);
-typedef void (APIENTRYP PFNGLDELETESHADERPROC) (GLuint shader);
-typedef void (APIENTRYP PFNGLSHADERSOURCEPROC) (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
-typedef void (APIENTRYP PFNGLCOMPILESHADERPROC) (GLuint shader);
-typedef void (APIENTRYP PFNGLGETSHADERIVPROC) (GLuint shader, GLenum pname, GLint *params);
-typedef GLboolean (APIENTRYP PFNGLISSHADERPROC) (GLuint shader);
+typedef GLuint (APIENTRYP PFNGLCREATESHADERPROC)(GLenum type);
+typedef void (APIENTRYP PFNGLDELETESHADERPROC)(GLuint shader);
+typedef void (APIENTRYP PFNGLSHADERSOURCEPROC)(GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
+typedef void (APIENTRYP PFNGLCOMPILESHADERPROC)(GLuint shader);
+typedef void (APIENTRYP PFNGLGETSHADERIVPROC)(GLuint shader, GLenum pname, GLint *params);
+typedef GLboolean (APIENTRYP PFNGLISSHADERPROC)(GLuint shader);
 #endif
 static PFNGLCREATESHADERPROC glCreateShader = NULL;
 static PFNGLDELETESHADERPROC glDeleteShader = NULL;
@@ -285,9 +285,9 @@ static PFNGLGETSHADERIVPROC glGetShaderiv = NULL;
 
 // VBO
 #ifndef GL_VERSION_1_5
-typedef void (APIENTRYP PFNGLGENBUFFERSPROC) (GLsizei n, GLuint *buffers);
-typedef void (APIENTRYP PFNGLBINDBUFFERPROC) (GLenum target, GLuint buffer);
-typedef void (APIENTRYP PFNGLBUFFERDATAPROC) (GLenum target, GLsizeiptr size, const void *data, GLenum usage);
+typedef void (APIENTRYP PFNGLGENBUFFERSPROC)(GLsizei n, GLuint *buffers);
+typedef void (APIENTRYP PFNGLBINDBUFFERPROC)(GLenum target, GLuint buffer);
+typedef void (APIENTRYP PFNGLBUFFERDATAPROC)(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
 #endif
 static PFNGLGENBUFFERSPROC glGenBuffers = NULL;
 static PFNGLBINDBUFFERPROC glBindBuffer = NULL;
@@ -295,11 +295,11 @@ static PFNGLBUFFERDATAPROC glBufferData = NULL;
 
 //Multitexture
 #ifndef GL_VERSION_1_3
-typedef void (APIENTRYP PFNGLACTIVETEXTUREARBPROC) (GLenum texture);
+typedef void (APIENTRYP PFNGLACTIVETEXTUREARBPROC)(GLenum texture);
 #endif
 #ifndef GL_VERSION_1_3_DEPRECATED
-typedef void (APIENTRYP PFNGLCLIENTACTIVETEXTUREPROC) (GLenum texture);
-typedef void (APIENTRYP PFNGLMULTITEXCOORD2FROC) (GLenum target, GLfloat s, GLfloat t);
+typedef void (APIENTRYP PFNGLCLIENTACTIVETEXTUREPROC)(GLenum texture);
+typedef void (APIENTRYP PFNGLMULTITEXCOORD2FROC)(GLenum target, GLfloat s, GLfloat t);
 #endif
 static PFNGLACTIVETEXTUREARBPROC glActiveTexture = NULL;
 //static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = NULL;
@@ -307,17 +307,17 @@ static PFNGLACTIVETEXTUREARBPROC glActiveTexture = NULL;
 
 // Framebuffers
 #ifndef GL_ARB_framebuffer_object
-typedef GLboolean (APIENTRYP PFNGLISFRAMEBUFFERPROC) (GLuint framebuffer);
-typedef void (APIENTRYP PFNGLBINDFRAMEBUFFERPROC) (GLenum target, GLuint framebuffer);
-typedef void (APIENTRYP PFNGLDELETEFRAMEBUFFERSPROC) (GLsizei n, const GLuint *framebuffers);
-typedef void (APIENTRYP PFNGLGENFRAMEBUFFERSPROC) (GLsizei n, GLuint *framebuffers);
-typedef GLenum (APIENTRYP PFNGLCHECKFRAMEBUFFERSTATUSPROC) (GLenum target);
-typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE1DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE2DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE3DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
-typedef void (APIENTRYP PFNGLFRAMEBUFFERRENDERBUFFERPROC) (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
-typedef void (APIENTRYP PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC) (GLenum target, GLenum attachment, GLenum pname, GLint *params);
-typedef void (APIENTRYP PFNGLGENERATEMIPMAPPROC) (GLenum target);
+typedef GLboolean (APIENTRYP PFNGLISFRAMEBUFFERPROC)(GLuint framebuffer);
+typedef void (APIENTRYP PFNGLBINDFRAMEBUFFERPROC)(GLenum target, GLuint framebuffer);
+typedef void (APIENTRYP PFNGLDELETEFRAMEBUFFERSPROC)(GLsizei n, const GLuint *framebuffers);
+typedef void (APIENTRYP PFNGLGENFRAMEBUFFERSPROC)(GLsizei n, GLuint *framebuffers);
+typedef GLenum (APIENTRYP PFNGLCHECKFRAMEBUFFERSTATUSPROC)(GLenum target);
+typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE1DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE2DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE3DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
+typedef void (APIENTRYP PFNGLFRAMEBUFFERRENDERBUFFERPROC)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+typedef void (APIENTRYP PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)(GLenum target, GLenum attachment, GLenum pname, GLint *params);
+typedef void (APIENTRYP PFNGLGENERATEMIPMAPPROC)(GLenum target);
 #endif
 //static PFNGLISFRAMEBUFFERPROC glIsFramebuffer = NULL;
 static PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
@@ -333,11 +333,11 @@ static PFNGLGENERATEMIPMAPPROC glGenerateMipmap = NULL;
 
 // Sync Objects https://www.opengl.org/wiki/Sync_Object
 #ifndef GL_ARB_sync
-typedef GLsync (APIENTRYP PFNGLFENCESYNCPROC) (GLenum condition, GLbitfield flags);
-typedef GLboolean (APIENTRYP PFNGLISSYNCPROC) (GLsync sync);
-typedef void (APIENTRYP PFNGLDELETESYNCPROC) (GLsync sync);
-typedef GLenum (APIENTRYP PFNGLCLIENTWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
-typedef void (APIENTRYP PFNGLWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
+typedef GLsync (APIENTRYP PFNGLFENCESYNCPROC)(GLenum condition, GLbitfield flags);
+typedef GLboolean (APIENTRYP PFNGLISSYNCPROC)(GLsync sync);
+typedef void (APIENTRYP PFNGLDELETESYNCPROC)(GLsync sync);
+typedef GLenum (APIENTRYP PFNGLCLIENTWAITSYNCPROC)(GLsync sync, GLbitfield flags, GLuint64 timeout);
+typedef void (APIENTRYP PFNGLWAITSYNCPROC)(GLsync sync, GLbitfield flags, GLuint64 timeout);
 #endif
 static PFNGLFENCESYNCPROC glFenceSync = NULL;
 static PFNGLISSYNCPROC glIsSync = NULL;
@@ -346,7 +346,6 @@ static PFNGLCLIENTWAITSYNCPROC glClientWaitSync = NULL;
 static PFNGLWAITSYNCPROC glWaitSync = NULL;
 
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
-
 
 
 static
@@ -731,11 +730,9 @@ compileAndLinkProgram(const char *vertexShader,
     {
         GLint i;
         GLint count;
-
         GLint size; // size of the variable
         GLenum type; // type of the variable (float, vec3 or mat4, etc)
         // GL_FLOAT, GL_FLOAT_VEC3, GL_FLOAT_MAT4
-
         GLint bufSize; // maximum name length
 
         std::vector<GLchar> name; // variable name in GLSL
@@ -768,86 +765,86 @@ compileAndLinkProgram(const char *vertexShader,
             glCheckError();
             DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), &name[0]) );
             GLint loc = glGetUniformLocation(program, &name[0]);
-            if(loc >= 0) {
+            if (loc >= 0) {
                 switch (type) {
-                    case GL_FLOAT: {
-                        GLfloat v;
-                        glGetUniformfv(program, loc, &v);
-                        DPRINT( ("Value: %g\n", v) );
-                        break;
-                    }
-                    case GL_FLOAT_VEC2: {
-                        GLfloat v[2];
-                        glGetUniformfv(program, loc, v);
-                        DPRINT( ("Value: (%g, %g)\n", v[0], v[1]) );
-                        break;
-                    }
-                    case GL_FLOAT_VEC3: {
-                        GLfloat v[3];
-                        glGetUniformfv(program, loc, v);
-                        DPRINT( ("Value: (%g, %g, %g)\n", v[0], v[1], v[2]) );
-                        break;
-                    }
-                    case GL_FLOAT_VEC4: {
-                        GLfloat v[4];
-                        glGetUniformfv(program, loc, v);
-                        DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
-                        break;
-                    }
-                    case GL_INT:
-                    case GL_BOOL: {
-                        GLint v;
-                        glGetUniformiv(program, loc, &v);
-                        DPRINT( ("Value: %d\n", v) );
-                        break;
-                    }
-                    case GL_INT_VEC2:
-                    case GL_BOOL_VEC2: {
-                        GLint v[2];
-                        glGetUniformiv(program, loc, v);
-                        DPRINT( ("Value: (%d, %d)\n", v[0], v[1]) );
-                        break;
-                    }
-                    case GL_INT_VEC3:
-                    case GL_BOOL_VEC3: {
-                        GLint v[3];
-                        glGetUniformiv(program, loc, v);
-                        DPRINT( ("Value: (%d, %d, %d)\n", v[0], v[1], v[2]) );
-                        break;
-                    }
-                    case GL_BOOL_VEC4:
-                    case GL_INT_VEC4: {
-                        GLint v[4];
-                        glGetUniformiv(program, loc, v);
-                        DPRINT( ("Value: (%d, %d, %d, %d)\n", v[0], v[1], v[2], v[3]) );
-                        break;
-                    }
-                    case GL_FLOAT_MAT2: {
-                        GLfloat v[4];
-                        glGetUniformfv(program, loc, v);
-                        DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
-                        break;
-                    }
-                    case GL_FLOAT_MAT3: {
-                        GLfloat v[9];
-                        glGetUniformfv(program, loc, v);
-                        DPRINT( ("Value: (%g, %g, %g, %g, %g, %g, %g, %g, %g)\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6] , v[7], v[8]) );
-                        break;
-                    }
-                    case GL_FLOAT_MAT4: {
-                        GLfloat v[16];
-                        glGetUniformfv(program, loc, v);
-                        DPRINT( ("Value: (%g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g)\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6] , v[7], v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15]) );
-                        break;
-                    }
-                    default:
-                        break;
+                case GL_FLOAT: {
+                    GLfloat v;
+                    glGetUniformfv(program, loc, &v);
+                    DPRINT( ("Value: %g\n", v) );
+                    break;
                 }
+                case GL_FLOAT_VEC2: {
+                    GLfloat v[2];
+                    glGetUniformfv(program, loc, v);
+                    DPRINT( ("Value: (%g, %g)\n", v[0], v[1]) );
+                    break;
+                }
+                case GL_FLOAT_VEC3: {
+                    GLfloat v[3];
+                    glGetUniformfv(program, loc, v);
+                    DPRINT( ("Value: (%g, %g, %g)\n", v[0], v[1], v[2]) );
+                    break;
+                }
+                case GL_FLOAT_VEC4: {
+                    GLfloat v[4];
+                    glGetUniformfv(program, loc, v);
+                    DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
+                    break;
+                }
+                case GL_INT:
+                case GL_BOOL: {
+                    GLint v;
+                    glGetUniformiv(program, loc, &v);
+                    DPRINT( ("Value: %d\n", v) );
+                    break;
+                }
+                case GL_INT_VEC2:
+                case GL_BOOL_VEC2: {
+                    GLint v[2];
+                    glGetUniformiv(program, loc, v);
+                    DPRINT( ("Value: (%d, %d)\n", v[0], v[1]) );
+                    break;
+                }
+                case GL_INT_VEC3:
+                case GL_BOOL_VEC3: {
+                    GLint v[3];
+                    glGetUniformiv(program, loc, v);
+                    DPRINT( ("Value: (%d, %d, %d)\n", v[0], v[1], v[2]) );
+                    break;
+                }
+                case GL_BOOL_VEC4:
+                case GL_INT_VEC4: {
+                    GLint v[4];
+                    glGetUniformiv(program, loc, v);
+                    DPRINT( ("Value: (%d, %d, %d, %d)\n", v[0], v[1], v[2], v[3]) );
+                    break;
+                }
+                case GL_FLOAT_MAT2: {
+                    GLfloat v[4];
+                    glGetUniformfv(program, loc, v);
+                    DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
+                    break;
+                }
+                case GL_FLOAT_MAT3: {
+                    GLfloat v[9];
+                    glGetUniformfv(program, loc, v);
+                    DPRINT( ("Value: (%g, %g, %g, %g, %g, %g, %g, %g, %g)\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8]) );
+                    break;
+                }
+                case GL_FLOAT_MAT4: {
+                    GLfloat v[16];
+                    glGetUniformfv(program, loc, v);
+                    DPRINT( ("Value: (%g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g)\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15]) );
+                    break;
+                }
+                default:
+                    break;
+                } // switch
             }
         }
         glCheckError();
     }
-#endif
+#endif // ifdef DEBUG
 
     return program;
 } // compileAndLinkProgram
@@ -869,8 +866,8 @@ static std::string vsSource = "void main() { gl_Position = ftransform(); }";
 
 // https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/fragment_base_uniforms.glsl
 /*
-   #extension GL_EXT_shader_texture_lod : enable
-   #extension GL_OES_standard_derivatives : enable
+ #extension GL_EXT_shader_texture_lod : enable
+ #extension GL_OES_standard_derivatives : enable
 
    precision highp float;
    precision highp int;
@@ -936,6 +933,7 @@ void
 ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
     const double time = args.time;
+
 #if GL_ARB_framebuffer_object && !defined(GL_GLEXT_FUNCTION_POINTERS)
     const bool supportsMipmap = true;
 #else
@@ -1245,14 +1243,14 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             {
                 // for compatibility with ShaderToy, remove the first line that starts with "const vec2 iRenderScale"
                 std::size_t found = str.find("const vec2 iRenderScale");
-                if ( found != std::string::npos && (found == 0 || (str[found-1] == '\n' || str[found-1] == '\r') ) ) {
+                if ( (found != std::string::npos) && ( (found == 0) || ( (str[found - 1] == '\n') || (str[found - 1] == '\r') ) ) ) {
                     std::size_t eol = str.find('\n', found);
                     if (eol == std::string::npos) {
                         // last line
                         eol = str.size();
                     }
                     // replace by an empty line
-                    str.replace(found, eol - found, std::string());
+                    str.replace( found, eol - found, std::string() );
                 }
             }
             std::string fsSource = fsHeader;
@@ -1300,10 +1298,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
                     GLint i;
                     GLint count;
-
                     GLint size; // size of the variable
                     GLenum type; // type of the variable (float, vec3 or mat4, etc)
-
                     GLint bufSize; // maximum name length
 
                     std::string name; // variable name in GLSL
@@ -1325,10 +1321,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                         //DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), &name[0]) );
                         GLint loc = glGetUniformLocation(program, &name[0]);
 
-                        if(loc >= 0) {
-                            if (starts_with(name, "iChannel")) {
+                        if (loc >= 0) {
+                            if ( starts_with(name, "iChannel") ) {
                                 for (unsigned j = 0; j < NBINPUTS; ++j) {
-                                    if ( name == (std::string("iChannel") + (char)('0' + j)) ) {
+                                    if ( name == ( std::string("iChannel") + (char)('0' + j) ) ) {
                                         _imageShaderInputEnabled[j] = true;
                                         getChannelInfo(fragmentShader, j, _imageShaderInputLabel[j], _imageShaderInputHint[j], _imageShaderInputFilter[j], _imageShaderInputWrap[j]);
                                         loc = -1; // go to next uniform
@@ -1343,50 +1339,50 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                                 continue;
                             }
 
-                            if ( name == "iResolution" ||
-                                name == "iGlobalTime" ||
-                                name == "iTimeDelta" ||
-                                name == "iFrame" ||
-                                name == "iChannelTime" ||
-                                //name == "iMouse" ||
-                                name == "iDate" ||
-                                name == "iSampleRate" ||
-                                name == "iChannelResolution" ||
-                                name == "ifFragCoordOffsetUniform" ||
-                                name == "iRenderScale" ||
-                                starts_with(name, "gl_") ) {
+                            if ( (name == "iResolution") ||
+                                 ( name == "iGlobalTime") ||
+                                 ( name == "iTimeDelta") ||
+                                 ( name == "iFrame") ||
+                                 ( name == "iChannelTime") ||
+                                 //name == "iMouse" ||
+                                 ( name == "iDate") ||
+                                 ( name == "iSampleRate") ||
+                                 ( name == "iChannelResolution") ||
+                                 ( name == "ifFragCoordOffsetUniform") ||
+                                 ( name == "iRenderScale") ||
+                                 starts_with(name, "gl_") ) {
                                 // builtin uniform
                                 continue;
                             }
                             UniformTypeEnum t = eUniformTypeNone;
                             switch (type) {
-                                case GL_BOOL:
-                                    t = eUniformTypeBool;
-                                    break;
+                            case GL_BOOL:
+                                t = eUniformTypeBool;
+                                break;
 
-                                case GL_INT:
-                                    t = eUniformTypeInt;
-                                    break;
+                            case GL_INT:
+                                t = eUniformTypeInt;
+                                break;
 
-                                case GL_FLOAT:
-                                    t = eUniformTypeFloat;
-                                    break;
+                            case GL_FLOAT:
+                                t = eUniformTypeFloat;
+                                break;
 
-                                case GL_FLOAT_VEC2:
-                                    t = eUniformTypeVec2;
-                                    break;
+                            case GL_FLOAT_VEC2:
+                                t = eUniformTypeVec2;
+                                break;
 
-                                case GL_FLOAT_VEC3:
-                                    t = eUniformTypeVec3;
-                                    break;
+                            case GL_FLOAT_VEC3:
+                                t = eUniformTypeVec3;
+                                break;
 
-                                case GL_FLOAT_VEC4:
-                                    t = eUniformTypeVec4;
-                                    break;
+                            case GL_FLOAT_VEC4:
+                                t = eUniformTypeVec4;
+                                break;
 
-                                default:
-                                    // ignore uniform
-                                    break;
+                            default:
+                                // ignore uniform
+                                break;
                             }
                             if (t == eUniformTypeNone) {
                                 DPRINT( ("Uniform #%d Type: %s Name: %s NOT SUPPORTED\n", i, glGetEnumString(type), &name[0]) );
@@ -1397,53 +1393,53 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                             p.init(t, name);
 
                             switch (t) {
-                                case eUniformTypeBool: {
-                                    GLint v;
-                                    glGetUniformiv(program, loc, &v);
-                                    //DPRINT( ("Value: %d\n", v) );
-                                    p.set(p.getDefault(), (bool)v);
-                                    break;
-                                }
-                                case eUniformTypeInt: {
-                                    GLint v;
-                                    glGetUniformiv(program, loc, &v);
-                                    //DPRINT( ("Value: %d\n", v) );
-                                    p.set(p.getDefault(), (int)v);
-                                    break;
-                                }
-                                case eUniformTypeFloat: {
-                                    GLfloat v;
-                                    glGetUniformfv(program, loc, &v);
-                                    //DPRINT( ("Value: %g\n", v) );
-                                    p.set(p.getDefault(), (float)v);
-                                    break;
-                                }
-                                case eUniformTypeVec2: {
-                                    GLfloat v[2];
-                                    glGetUniformfv(program, loc, v);
-                                    //DPRINT( ("Value: (%g, %g)\n", v[0], v[1]) );
-                                    p.set(p.getDefault(), (float)v[0], (float)v[1]);
-                                    break;
-                                }
-                                case eUniformTypeVec3: {
-                                    GLfloat v[3];
-                                    glGetUniformfv(program, loc, v);
-                                    //DPRINT( ("Value: (%g, %g, %g)\n", v[0], v[1], v[2]) );
-                                    p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2]);
-                                    break;
-                                }
-                                case eUniformTypeVec4: {
-                                    GLfloat v[4];
-                                    glGetUniformfv(program, loc, v);
-                                    //DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
-                                    p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2], (float)v[3]);
-                                    break;
-                                }
-                                default:
-                                    assert(false);
-                                    break;
+                            case eUniformTypeBool: {
+                                GLint v;
+                                glGetUniformiv(program, loc, &v);
+                                //DPRINT( ("Value: %d\n", v) );
+                                p.set(p.getDefault(), (bool)v);
+                                break;
                             }
-                            
+                            case eUniformTypeInt: {
+                                GLint v;
+                                glGetUniformiv(program, loc, &v);
+                                //DPRINT( ("Value: %d\n", v) );
+                                p.set(p.getDefault(), (int)v);
+                                break;
+                            }
+                            case eUniformTypeFloat: {
+                                GLfloat v;
+                                glGetUniformfv(program, loc, &v);
+                                //DPRINT( ("Value: %g\n", v) );
+                                p.set(p.getDefault(), (float)v);
+                                break;
+                            }
+                            case eUniformTypeVec2: {
+                                GLfloat v[2];
+                                glGetUniformfv(program, loc, v);
+                                //DPRINT( ("Value: (%g, %g)\n", v[0], v[1]) );
+                                p.set(p.getDefault(), (float)v[0], (float)v[1]);
+                                break;
+                            }
+                            case eUniformTypeVec3: {
+                                GLfloat v[3];
+                                glGetUniformfv(program, loc, v);
+                                //DPRINT( ("Value: (%g, %g, %g)\n", v[0], v[1], v[2]) );
+                                p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2]);
+                                break;
+                            }
+                            case eUniformTypeVec4: {
+                                GLfloat v[4];
+                                glGetUniformfv(program, loc, v);
+                                //DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
+                                p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2], (float)v[3]);
+                                break;
+                            }
+                            default:
+                                assert(false);
+                                break;
+                            }
+
                             // parse hint/min/max from comment
                             getExtraParameterInfo(fragmentShader, p);
 
@@ -1488,7 +1484,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             OfxRectI srcBounds = src[i]->getBounds();
             glBindTexture(srcTarget[i], srcIndex[i]);
             // legacy mipmap generation was replaced by glGenerateMipmap from GL_ARB_framebuffer_object (see below)
-            if ((filter[i] == eFilterMipmap || filter[i] == eFilterAnisotropic) && !supportsMipmap) {
+            if ( ( (filter[i] == eFilterMipmap) || (filter[i] == eFilterAnisotropic) ) && !supportsMipmap ) {
                 DPRINT( ("Shadertoy: legacy mipmap generation!\n") );
                 // this must be done before glTexImage2D
                 glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
@@ -1630,7 +1626,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
             // GL_ARB_framebuffer_object
             // https://www.opengl.org/wiki/Common_Mistakes#Automatic_mipmap_generation
-            if ((filter[i] == eFilterMipmap || filter[i] == eFilterAnisotropic) && supportsMipmap) {
+            if ( ( (filter[i] == eFilterMipmap) || (filter[i] == eFilterAnisotropic) ) && supportsMipmap ) {
                 glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
                 glGenerateMipmap(GL_TEXTURE_2D);  //Generate mipmaps now!!!
                 glCheckError();
@@ -1638,35 +1634,34 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             GLenum min_filter = GL_NEAREST;
             GLenum mag_filter = GL_NEAREST;
             switch (filter[i]) {
-                case eFilterNearest:
-                    min_filter = GL_NEAREST;
-                    mag_filter = GL_NEAREST;
-                    break;
-                case eFilterLinear:
-                    min_filter = GL_LINEAR;
-                    mag_filter = GL_LINEAR;
-                    break;
-                case eFilterMipmap:
-                    min_filter = GL_LINEAR_MIPMAP_LINEAR;
-                    mag_filter = GL_LINEAR;
-                    break;
-                case eFilterAnisotropic:
-                    min_filter = GL_LINEAR_MIPMAP_LINEAR;
-                    mag_filter = GL_LINEAR;
-                    if (haveAniso) {
-                        glTexParameterf(srcTarget[i], GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisoMax);
-                    }
-                    break;
+            case eFilterNearest:
+                min_filter = GL_NEAREST;
+                mag_filter = GL_NEAREST;
+                break;
+            case eFilterLinear:
+                min_filter = GL_LINEAR;
+                mag_filter = GL_LINEAR;
+                break;
+            case eFilterMipmap:
+                min_filter = GL_LINEAR_MIPMAP_LINEAR;
+                mag_filter = GL_LINEAR;
+                break;
+            case eFilterAnisotropic:
+                min_filter = GL_LINEAR_MIPMAP_LINEAR;
+                mag_filter = GL_LINEAR;
+                if (haveAniso) {
+                    glTexParameterf(srcTarget[i], GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisoMax);
+                }
+                break;
             }
             glTexParameteri(srcTarget[i], GL_TEXTURE_MIN_FILTER, min_filter);
             glTexParameteri(srcTarget[i], GL_TEXTURE_MAG_FILTER, mag_filter);
 
-            GLenum wrapst = (wrap[i] == eWrapClamp) ? GL_CLAMP_TO_EDGE : ((wrap[i] == eWrapMirror) ? GL_MIRRORED_REPEAT : GL_REPEAT);
+            GLenum wrapst = (wrap[i] == eWrapClamp) ? GL_CLAMP_TO_EDGE : ( (wrap[i] == eWrapMirror) ? GL_MIRRORED_REPEAT : GL_REPEAT );
             glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_S, wrapst);
             glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_T, wrapst);
 
             // The texture parameters vflip and srgb [default = false] should be handled by the reader
-
         } else {
             glBindTexture(srcTarget[i], 0);
         }
@@ -2102,10 +2097,13 @@ bool
 ShadertoyPlugin::OSMesaDriverSelectable()
 {
 #ifdef OSMESA_GALLIUM_DRIVER
+
     return true;
 #else
+
     return false;
 #endif
 }
+
 #endif
 

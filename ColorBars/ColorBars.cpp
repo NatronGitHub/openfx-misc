@@ -43,8 +43,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Image"
 #define kPluginDescription \
     "Generate an image with SMPTE RP 219:2002 color bars.\n" \
-"The output of this plugin is broadcast-safe of \"Output IRE\" is unchecked. Be careful that colorbars are defined in a nonlinear colorspace. In order to get linear RGB, this plug-in should be combined with a transformation from the video space to linear.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
+    "The output of this plugin is broadcast-safe of \"Output IRE\" is unchecked. Be careful that colorbars are defined in a nonlinear colorspace. In order to get linear RGB, this plug-in should be combined with a transformation from the video space to linear.\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 
 #define kPluginIdentifier "net.sf.openfx.ColorBars"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -73,7 +73,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 
 class ColorBarsProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
     double _barIntensity;
@@ -82,8 +82,8 @@ protected:
 
 public:
     /** @brief no arg ctor */
-    ColorBarsProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    ColorBarsProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _barIntensity(kParamBarIntensityDefault)
         , _outputIRE(false)
         , _rod()
@@ -107,7 +107,7 @@ class ColorBarsProcessor
 {
 public:
     // ctor
-    ColorBarsProcessor(OFX::ImageEffect &instance)
+    ColorBarsProcessor(ImageEffect &instance)
         : ColorBarsProcessorBase(instance)
     {
         assert(nComponents >= 3);
@@ -204,7 +204,7 @@ private:
                 if (_outputIRE) {
                     if (max > 1) {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = OFX::Color::floatToInt<max + 1>(ire[c] / 100.);
+                            dstPix[c] = Color::floatToInt<max + 1>(ire[c] / 100.);
                         }
                     } else {
                         for (int c = 0; c < 3; ++c) {
@@ -214,11 +214,11 @@ private:
                 } else {
                     if (max == 65535) {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = 4096 + OFX::Color::floatToInt<60160 - 4096>(ire[c] / 100.);
+                            dstPix[c] = 4096 + Color::floatToInt<60160 - 4096>(ire[c] / 100.);
                         }
                     } else if (max == 255) {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = 16 + OFX::Color::floatToInt<235 - 16>(ire[c] / 100.);
+                            dstPix[c] = 16 + Color::floatToInt<235 - 16>(ire[c] / 100.);
                         }
                     } else {
                         for (int c = 0; c < 3; ++c) {
@@ -247,10 +247,10 @@ public:
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
     {
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentXY ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
+        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentXY ||
+                             _srcClip->getPixelComponents() == ePixelComponentAlpha) );
         _barIntensity = fetchDoubleParam(kParamBarIntensity);
         _outputIRE = fetchBooleanParam(kParamOutputIRE);
         assert(_barIntensity && _outputIRE);
@@ -258,16 +258,15 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(ColorBarsProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ColorBarsProcessorBase &, const RenderArguments &args);
 
-    //virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
-
+    //virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
     DoubleParam* _barIntensity;
@@ -286,27 +285,28 @@ private:
 /* set up and run a processor */
 void
 ColorBarsPlugin::setupAndProcess(ColorBarsProcessorBase &processor,
-                                 const OFX::RenderArguments &args)
+                                 const RenderArguments &args)
 {
     const double time = args.time;
+
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(time) );
+    std::auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // set the images
@@ -329,7 +329,7 @@ ColorBarsPlugin::setupAndProcess(ColorBarsProcessorBase &processor,
         }
     }
     OfxRectI rod_pixel;
-    OFX::Coords::toPixelEnclosing(rod, args.renderScale, dst->getPixelAspectRatio(), &rod_pixel);
+    Coords::toPixelEnclosing(rod, args.renderScale, dst->getPixelAspectRatio(), &rod_pixel);
     double barIntensity = _barIntensity->getValueAtTime(time);
     bool outputIRE = _outputIRE->getValueAtTime(time);
     processor.setValues(barIntensity, outputIRE, rod_pixel);
@@ -341,56 +341,53 @@ ColorBarsPlugin::setupAndProcess(ColorBarsProcessorBase &processor,
 // the internal render function
 template <int nComponents>
 void
-ColorBarsPlugin::renderInternal(const OFX::RenderArguments &args,
-                                OFX::BitDepthEnum dstBitDepth)
+ColorBarsPlugin::renderInternal(const RenderArguments &args,
+                                BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         ColorBarsProcessor<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         ColorBarsProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         ColorBarsProcessor<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-ColorBarsPlugin::render(const OFX::RenderArguments &args)
+ColorBarsPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
 
     checkComponents(dstBitDepth, dstComponents);
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
     }
 }
 
-
-
-
 mDeclarePluginFactory(ColorBarsPluginFactory, {}, {});
 void
-ColorBarsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+ColorBarsPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginDescription(kPluginDescription);
@@ -426,7 +423,7 @@ ColorBarsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-ColorBarsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+ColorBarsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum context)
 {
     // there has to be an input clip, even for generators

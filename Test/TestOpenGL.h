@@ -44,10 +44,12 @@ class TestOpenGLPlugin
 
 public:
 #if defined(HAVE_OSMESA)
-    enum CPUDriverEnum {
+    enum CPUDriverEnum
+    {
         eCPUDriverSoftPipe = 0,
         eCPUDriverLLVMPipe
     };
+
 #endif
 
 #ifdef OFX_USE_MULTITHREAD_MUTEX

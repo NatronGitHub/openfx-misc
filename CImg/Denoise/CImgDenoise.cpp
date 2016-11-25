@@ -163,7 +163,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgDenoiseParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -328,7 +328,7 @@ public:
 #endif // ifdef CIMG_ABORTABLE
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgDenoiseParams& params) OVERRIDE FINAL
     {
         return (params.sigma_s == 0. && params.sigma_r == 0.);
@@ -337,19 +337,19 @@ public:
 private:
 
     // params
-    OFX::DoubleParam *_sigma_s;
-    OFX::DoubleParam *_sigma_r;
-    OFX::IntParam *_psize;
-    OFX::IntParam *_lsize;
-    OFX::DoubleParam *_smoothness;
-    OFX::BooleanParam *_fast_approx;
+    DoubleParam *_sigma_s;
+    DoubleParam *_sigma_r;
+    IntParam *_psize;
+    IntParam *_lsize;
+    DoubleParam *_smoothness;
+    BooleanParam *_fast_approx;
 };
 
 
 mDeclarePluginFactory(CImgDenoisePluginFactory, {}, {});
 
 void
-CImgDenoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgDenoisePluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -378,11 +378,11 @@ CImgDenoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                            OFX::ContextEnum context)
+CImgDenoisePluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                            ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgDenoisePlugin::describeInContextBegin(desc, context,
+    PageParamDescriptor *page = CImgDenoisePlugin::describeInContextBegin(desc, context,
                                                                                kSupportsRGBA,
                                                                                kSupportsRGB,
                                                                                kSupportsXY,
@@ -393,7 +393,7 @@ CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                                                /*processIsSecret=*/ false);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
         param->setLabel(kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 1000);
@@ -405,7 +405,7 @@ CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
         param->setLabel(kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 10.0);
@@ -417,7 +417,7 @@ CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamPatchSize);
+        IntParamDescriptor *param = desc.defineIntParam(kParamPatchSize);
         param->setLabel(kParamPatchSizeLabel);
         param->setHint(kParamPatchSizeHint);
         param->setRange(0, 1000);
@@ -428,7 +428,7 @@ CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamLookupSize);
+        IntParamDescriptor *param = desc.defineIntParam(kParamLookupSize);
         param->setLabel(kParamLookupSizeLabel);
         param->setHint(kParamLookupSizeHint);
         param->setRange(0, 1000);
@@ -439,7 +439,7 @@ CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSmoothness);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSmoothness);
         param->setLabel(kParamSmoothnessLabel);
         param->setHint(kParamSmoothnessHint);
         param->setRange(0, 1000);
@@ -450,7 +450,7 @@ CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFastApprox);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFastApprox);
         param->setLabel(kParamFastApproxLabel);
         param->setHint(kParamFastApproxHint);
         param->setDefault(kParamFastApproxDefault);
@@ -461,9 +461,9 @@ CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
     CImgDenoisePlugin::describeInContextEnd(desc, context, page);
 } // CImgDenoisePluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 CImgDenoisePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                         OFX::ContextEnum /*context*/)
+                                         ContextEnum /*context*/)
 {
     return new CImgDenoisePlugin(handle);
 }

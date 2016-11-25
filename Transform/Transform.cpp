@@ -39,7 +39,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Translate / Rotate / Scale a 2D image.\n" \
     "This plugin concatenates transforms.\n" \
-"See also http://opticalenquiry.com/nuke/index.php?title=Transform"
+    "See also http://opticalenquiry.com/nuke/index.php?title=Transform"
 
 #define kPluginMaskedDescription "Translate / Rotate / Scale a 2D image, with optional masking.\n" \
     "This plugin concatenates transforms upstream."
@@ -111,27 +111,27 @@ public:
 
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
-    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, Matrix3x3* invtransform) const OVERRIDE FINAL;
 
     void resetCenter(double time);
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
     // NON-GENERIC
-    OFX::Double2DParam* _translate;
-    OFX::DoubleParam* _rotate;
-    OFX::Double2DParam* _scale;
-    OFX::BooleanParam* _scaleUniform;
-    OFX::DoubleParam* _skewX;
-    OFX::DoubleParam* _skewY;
-    OFX::ChoiceParam* _skewOrder;
-    OFX::Double2DParam* _center;
-    OFX::BooleanParam* _centerChanged;
-    OFX::BooleanParam* _interactive;
-    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    Double2DParam* _translate;
+    DoubleParam* _rotate;
+    Double2DParam* _scale;
+    BooleanParam* _scaleUniform;
+    DoubleParam* _skewX;
+    DoubleParam* _skewY;
+    ChoiceParam* _skewOrder;
+    Double2DParam* _center;
+    BooleanParam* _centerChanged;
+    BooleanParam* _interactive;
+    BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 // overridden is identity
@@ -179,7 +179,7 @@ TransformPlugin::getInverseTransformCanonical(double time,
                                               int /*view*/,
                                               double amount,
                                               bool invert,
-                                              OFX::Matrix3x3* invtransform) const
+                                              Matrix3x3* invtransform) const
 {
     // NON-GENERIC
     OfxPointD center = { 0., 0. };
@@ -241,11 +241,11 @@ TransformPlugin::getInverseTransformCanonical(double time,
         skewY *= amount;
     }
 
-    double rot = OFX::ofxsToRadians(rotate);
+    double rot = ofxsToRadians(rotate);
     if (!invert) {
-        *invtransform = OFX::ofxsMatInverseTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
+        *invtransform = ofxsMatInverseTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
     } else {
-        *invtransform = OFX::ofxsMatTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
+        *invtransform = ofxsMatTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
     }
 
     return true;
@@ -262,7 +262,7 @@ TransformPlugin::resetCenter(double time)
          ( rod.y1 <= kOfxFlagInfiniteMin) || ( kOfxFlagInfiniteMax <= rod.y2) ) {
         return;
     }
-    if ( OFX::Coords::rectIsEmpty(rod) ) {
+    if ( Coords::rectIsEmpty(rod) ) {
         // default to project window
         OfxPointD offset = getProjectOffset();
         OfxPointD size = getProjectSize();
@@ -275,7 +275,7 @@ TransformPlugin::resetCenter(double time)
     if (_rotate) {
         _rotate->getValueAtTime(time, currentRotation);
     }
-    double rot = OFX::ofxsToRadians(currentRotation);
+    double rot = ofxsToRadians(currentRotation);
     double skewX = 0.;
     double skewY = 0.;
     int skewOrder = 0;
@@ -310,9 +310,9 @@ TransformPlugin::resetCenter(double time)
         _center->getValueAtTime(time, center.x, center.y);
     }
 
-    OFX::Matrix3x3 Rinv = ( ofxsMatRotation(-rot) *
-                            ofxsMatSkewXY(skewX, skewY, skewOrder) *
-                            ofxsMatScale(scale.x, scale.y) );
+    Matrix3x3 Rinv = ( ofxsMatRotation(-rot) *
+                       ofxsMatSkewXY(skewX, skewY, skewOrder) *
+                       ofxsMatScale(scale.x, scale.y) );
     OfxPointD newCenter;
     newCenter.x = (rod.x1 + rod.x2) / 2;
     newCenter.y = (rod.y1 + rod.y2) / 2;
@@ -323,7 +323,7 @@ TransformPlugin::resetCenter(double time)
     if (_translate) {
         double dxrot = newCenter.x - center.x;
         double dyrot = newCenter.y - center.y;
-        OFX::Point3D dRot;
+        Point3D dRot;
         dRot.x = dxrot;
         dRot.y = dyrot;
         dRot.z = 1;
@@ -343,7 +343,7 @@ TransformPlugin::resetCenter(double time)
 } // TransformPlugin::resetCenter
 
 void
-TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+TransformPlugin::changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName)
 {
     if (paramName == kParamTransformResetCenterOld) {
@@ -358,11 +358,11 @@ TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 ( paramName == kParamTransformSkewOrderOld) ||
                 ( paramName == kParamTransformCenterOld) ) {
         if ( (paramName == kParamTransformCenterOld) &&
-             (args.reason == OFX::eChangeUserEdit || args.reason == eChangePluginEdit) ) {
+             ( (args.reason == eChangeUserEdit) || (args.reason == eChangePluginEdit) ) ) {
             _centerChanged->setValue(true);
         }
         changedTransform(args);
-    } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _srcClipChanged->setValue(true);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
@@ -376,7 +376,7 @@ TransformPlugin::changedClip(const InstanceChangedArgs &args,
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_centerChanged->getValueAtTime(args.time) &&
-         ( args.reason == OFX::eChangeUserEdit) ) {
+         ( args.reason == eChangeUserEdit) ) {
         resetCenter(args.time);
     }
 }
@@ -384,8 +384,8 @@ TransformPlugin::changedClip(const InstanceChangedArgs &args,
 mDeclarePluginFactory(TransformPluginFactory, {}, {});
 static
 void
-TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
-                                 OFX::ContextEnum /*context*/,
+TransformPluginDescribeInContext(ImageEffectDescriptor &desc,
+                                 ContextEnum /*context*/,
                                  PageParamDescriptor *page)
 {
     // NON-GENERIC PARAMETERS
@@ -394,7 +394,7 @@ TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
 }
 
 void
-TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TransformPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -407,18 +407,18 @@ TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                          OFX::ContextEnum context)
+TransformPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                          ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
 
     TransformPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, false, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
+    Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
@@ -429,16 +429,16 @@ TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 }
 
-OFX::ImageEffect*
+ImageEffect*
 TransformPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       OFX::ContextEnum /*context*/)
+                                       ContextEnum /*context*/)
 {
     return new TransformPlugin(handle, false, false);
 }
 
 mDeclarePluginFactory(TransformMaskedPluginFactory, {}, {});
 void
-TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TransformMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginMaskedName);
@@ -451,18 +451,18 @@ TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                                OFX::ContextEnum context)
+TransformMaskedPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                                ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
 
     TransformPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
+    Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
@@ -473,16 +473,16 @@ TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     }
 }
 
-OFX::ImageEffect*
+ImageEffect*
 TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                             OFX::ContextEnum /*context*/)
+                                             ContextEnum /*context*/)
 {
     return new TransformPlugin(handle, true, false);
 }
 
 mDeclarePluginFactory(DirBlurPluginFactory, {}, {});
 void
-DirBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+DirBlurPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginDirBlurName);
@@ -495,18 +495,18 @@ DirBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-DirBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                        OFX::ContextEnum context)
+DirBlurPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                        ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
 
     TransformPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeDirBlur);
+    Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeDirBlur);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
@@ -517,9 +517,9 @@ DirBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 }
 
-OFX::ImageEffect*
+ImageEffect*
 DirBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                     OFX::ContextEnum /*context*/)
+                                     ContextEnum /*context*/)
 {
     return new TransformPlugin(handle, true, true);
 }

@@ -62,8 +62,8 @@ public:
 
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
-    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 
     // NON-GENERIC
@@ -90,7 +90,7 @@ TestPositionPlugin::getInverseTransformCanonical(double time,
                                                  int /*view*/,
                                                  double /*amount*/,
                                                  bool invert,
-                                                 OFX::Matrix3x3* invtransform) const
+                                                 Matrix3x3* invtransform) const
 {
     double x, y;
 
@@ -110,7 +110,7 @@ TestPositionPlugin::getInverseTransformCanonical(double time,
 }
 
 void
-TestPositionPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+TestPositionPlugin::changedParam(const InstanceChangedArgs &args,
                                  const std::string &paramName)
 {
     if (paramName == kParamPositionTranslate) {
@@ -122,7 +122,7 @@ TestPositionPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 
 mDeclarePluginFactory(TestPositionPluginFactory, {}, {});
 void
-TestPositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TestPositionPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginPositionName);
@@ -133,8 +133,8 @@ TestPositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                             OFX::ContextEnum context)
+TestPositionPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                             ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, /*masked=*/ true);
@@ -162,9 +162,9 @@ TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 TestPositionPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                          OFX::ContextEnum /*context*/)
+                                          ContextEnum /*context*/)
 {
     return new TestPositionPlugin(handle);
 }

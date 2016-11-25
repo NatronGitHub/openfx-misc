@@ -151,17 +151,17 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
 #endif
     } catch (const std::exception& e) {
 #      ifdef DEBUG
-        std::cout << "ERROR in createInstance(): OFX::Multithread::Mutex creation returned " << e.what() << std::endl;
+        std::cout << "ERROR in createInstance(): Multithread::Mutex creation returned " << e.what() << std::endl;
 #      endif
     }
 
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-    assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
-                         _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
-    _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-            ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  OFX::ePixelComponentRGBA ||
-                           _srcClip->getPixelComponents() == OFX::ePixelComponentAlpha) ) );
+    assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA ||
+                         _dstClip->getPixelComponents() == ePixelComponentAlpha) );
+    _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert( (!_srcClip && getContext() == eContextGenerator) ||
+            ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGBA ||
+                           _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
 
     _scale = fetchDouble2DParam(kParamScale);
     _sourceScale = fetchDouble2DParam(kParamSourceScale);
@@ -179,7 +179,7 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
     assert(_enableGPU);
-    const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     if (!gHostDescription.supportsOpenGLRender) {
         _enableGPU->setEnabled(false);
     }
@@ -208,10 +208,10 @@ TestOpenGLPlugin::~TestOpenGLPlugin()
 
 // the overridden render function
 void
-TestOpenGLPlugin::render(const OFX::RenderArguments &args)
+TestOpenGLPlugin::render(const RenderArguments &args)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
@@ -231,15 +231,15 @@ TestOpenGLPlugin::render(const OFX::RenderArguments &args)
         return renderMesa(args);
     }
 #endif // HAVE_OSMESA
-    OFX::throwSuiteStatusException(kOfxStatFailed);
+    throwSuiteStatusException(kOfxStatFailed);
 }
 
 // override the roi call
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-TestOpenGLPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                       OFX::RegionOfInterestSetter &rois)
+TestOpenGLPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                       RegionOfInterestSetter &rois)
 {
     const double time = args.time;
 
@@ -253,11 +253,11 @@ TestOpenGLPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
 
 // overriding getRegionOfDefinition is necessary to tell the host that we do not support render scale
 bool
-TestOpenGLPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+TestOpenGLPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD & rod)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // use the default RoD
@@ -276,7 +276,7 @@ TestOpenGLPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
 }
 
 void
-TestOpenGLPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+TestOpenGLPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     // We have to do this because the processing code does not support varying components for srcClip and dstClip
     // (The OFX spec doesn't state a default value for this)
@@ -286,7 +286,7 @@ TestOpenGLPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
 }
 
 void
-TestOpenGLPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+TestOpenGLPlugin::changedParam(const InstanceChangedArgs &args,
                                const std::string &paramName)
 {
     if (paramName == kParamRendererInfo) {
@@ -296,10 +296,10 @@ TestOpenGLPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             message = _rendererInfo;
         }
         if ( message.empty() ) {
-            sendMessage(OFX::Message::eMessageMessage, "", "OpenGL renderer info not yet available.\n"
+            sendMessage(Message::eMessageMessage, "", "OpenGL renderer info not yet available.\n"
                         "Please execute at least one image render and try again.");
         } else {
-            sendMessage(OFX::Message::eMessageMessage, "", message);
+            sendMessage(Message::eMessageMessage, "", message);
         }
 #if defined(HAVE_OSMESA)
     } else if (paramName == kParamEnableGPU) {
@@ -324,7 +324,7 @@ TestOpenGLPluginFactory::load()
     // we can't be used on hosts that don't support the stereoscopic suite
     // returning an error here causes a blank menu entry in Nuke
     //#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    //const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    //const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     //if (!gHostDescription.supportsOpenGLRender) {
     //    throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     //}
@@ -332,11 +332,11 @@ TestOpenGLPluginFactory::load()
 }
 
 void
-TestOpenGLPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TestOpenGLPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // returning an error here crashes Nuke
     //#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    //const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    //const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     //if (!gHostDescription.supportsOpenGLRender) {
     //    throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     //}
@@ -383,7 +383,7 @@ TestOpenGLPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
      * ::kOfxActionDescribe action and return a ::kOfxStatErrMissingHostFeature
      * status flag if it is not set to "true".
      */
-    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     if (!gHostDescription.supportsOpenGLRender) {
         throwSuiteStatusException(kOfxStatErrMissingHostFeature);
     }
@@ -394,11 +394,11 @@ TestOpenGLPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 } // TestOpenGLPluginFactory::describe
 
 void
-TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                           OFX::ContextEnum /*context*/)
+TestOpenGLPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                           ContextEnum /*context*/)
 {
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     if (!gHostDescription.supportsOpenGLRender) {
         throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     }
@@ -423,7 +423,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamScale);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamScale);
         param->setLabel(kParamScaleLabel);
         param->setHint(kParamScaleHint);
         // say we are a scaling parameter
@@ -439,7 +439,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamSourceScale);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamSourceScale);
         param->setLabel(kParamSourceScaleLabel);
         param->setHint(kParamSourceScaleHint);
         // say we are a scaling parameter
@@ -455,7 +455,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSourceStretch);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSourceStretch);
         param->setLabel(kParamSourceStretchLabel);
         param->setHint(kParamSourceStretchHint);
         param->setDefault(0.);
@@ -468,7 +468,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTeapotScale);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTeapotScale);
         param->setLabel(kParamTeapotScaleLabel);
         param->setHint(kParamTeapotScaleHint);
         // say we are a scaling parameter
@@ -483,7 +483,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngleX);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngleX);
         param->setLabel(kParamAngleXLabel);
         param->setHint(kParamAngleXHint);
         // say we are a angle parameter
@@ -497,7 +497,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngleY);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngleY);
         param->setLabel(kParamAngleYLabel);
         param->setHint(kParamAngleYHint);
         // say we are a angle parameter
@@ -511,7 +511,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngleZ);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngleZ);
         param->setLabel(kParamAngleZLabel);
         param->setHint(kParamAngleZHint);
         // say we are a angle parameter
@@ -525,7 +525,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProjective);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProjective);
         param->setLabel(kParamProjectiveLabel);
         param->setHint(kParamProjectiveHint);
         param->setDefault(true);
@@ -534,7 +534,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMipmap);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMipmap);
         param->setLabel(kParamMipmapLabel);
         param->setHint(kParamMipmapHint);
         param->setDefault(true);
@@ -543,7 +543,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAnisotropic);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAnisotropic);
         param->setLabel(kParamAnisotropicLabel);
         param->setHint(kParamAnisotropicHint);
         param->setDefault(true);
@@ -554,10 +554,10 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnableGPU);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnableGPU);
         param->setLabel(kParamEnableGPULabel);
         param->setHint(kParamEnableGPUHint);
-        const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
         // Resolve advertises OpenGL support in its host description, but never calls render with OpenGL enabled
         if ( gHostDescription.supportsOpenGLRender && (gHostDescription.hostName != "DaVinciResolveLite") ) {
             param->setDefault(true);
@@ -577,7 +577,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #endif
 #if defined(HAVE_OSMESA)
     if ( TestOpenGLPlugin::OSMesaDriverSelectable() ) {
-        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCPUDriver);
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCPUDriver);
         param->setLabel(kParamCPUDriverLabel);
         param->setHint(kParamCPUDriverHint);
         assert(param->getNOptions() == TestOpenGLPlugin::eCPUDriverSoftPipe);
@@ -594,7 +594,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #endif
 
     {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamRendererInfo);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamRendererInfo);
         param->setLabel(kParamRendererInfoLabel);
         param->setHint(kParamRendererInfoHint);
         if (page) {
@@ -603,9 +603,9 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // TestOpenGLPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 TestOpenGLPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new TestOpenGLPlugin(handle);
 }

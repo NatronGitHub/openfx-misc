@@ -41,7 +41,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ConstantOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a constant color.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 #define kPluginIdentifier "net.sf.openfx.ConstantPlugin"
 #define kPluginSolidName "SolidOFX"
 #define kPluginSolidDescription "Generate an image with a constant opaque color."
@@ -67,15 +67,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 /** @brief  Base class used to blend two images together */
 class ConstantProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
     OfxRGBAColourD _color;
 
 public:
     /** @brief no arg ctor */
-    ConstantProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    ConstantProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
     {
         _color.r = _color.g = _color.b = _color.a = 0.;
     }
@@ -94,7 +94,7 @@ class ConstantProcessor
 {
 public:
     // ctor
-    ConstantProcessor(OFX::ImageEffect &instance)
+    ConstantProcessor(ImageEffect &instance)
         : ConstantProcessorBase(instance)
     {
     }
@@ -137,16 +137,16 @@ private:
                 // don't delinearize alpha: it is always linear
                 for (int c = 0; c < 3; ++c) {
                     if (max == 255) {
-                        colorf[c] = OFX::Color::to_func_srgb(colorf[c]);
+                        colorf[c] = Color::to_func_srgb(colorf[c]);
                     } else {
                         assert(max == 65535);
-                        colorf[c] = OFX::Color::to_func_Rec709(colorf[c]);
+                        colorf[c] = Color::to_func_Rec709(colorf[c]);
                     }
                 }
             }
             // clamp and convert to the destination type
             for (int c = 0; c < nComponents; ++c) {
-                colorPix[c] = OFX::Color::floatToInt<max + 1>(colorf[c]);
+                colorPix[c] = Color::floatToInt<max + 1>(colorf[c]);
             }
         }
     }
@@ -199,19 +199,19 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(ConstantProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ConstantProcessorBase &, const RenderArguments &args);
 
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
-    OFX::RGBAParam  *_color;
-    OFX::RGBParam *_colorRGB;
+    RGBAParam  *_color;
+    RGBParam *_colorRGB;
 };
 
 
@@ -225,26 +225,26 @@ private:
 /* set up and run a processor */
 void
 ConstantPlugin::setupAndProcess(ConstantProcessorBase &processor,
-                                const OFX::RenderArguments &args)
+                                const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // set the images
@@ -270,80 +270,80 @@ ConstantPlugin::setupAndProcess(ConstantProcessorBase &processor,
 // the internal render function
 template <int nComponents>
 void
-ConstantPlugin::renderInternal(const OFX::RenderArguments &args,
-                               OFX::BitDepthEnum dstBitDepth)
+ConstantPlugin::renderInternal(const RenderArguments &args,
+                               BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         ConstantProcessor<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         ConstantProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         ConstantProcessor<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-ConstantPlugin::render(const OFX::RenderArguments &args)
+ConstantPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
 
     checkComponents(dstBitDepth, dstComponents);
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
 
 void
-ConstantPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+ConstantPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     GeneratorPlugin::getClipPreferences(clipPreferences);
 
-    clipPreferences.setOutputPremultiplication(_colorRGB ? OFX::eImageOpaque : OFX::eImagePreMultiplied);
+    clipPreferences.setOutputPremultiplication(_colorRGB ? eImageOpaque : eImagePreMultiplied);
 }
 
 template<bool solid>
 class ConstantPluginFactory
-    : public OFX::PluginFactoryHelper<ConstantPluginFactory<solid> >
+    : public PluginFactoryHelper<ConstantPluginFactory<solid> >
 {
 public:
     ConstantPluginFactory(const std::string& id,
                           unsigned int verMaj,
-                          unsigned int verMin) : OFX::PluginFactoryHelper<ConstantPluginFactory>(id, verMaj, verMin) {}
+                          unsigned int verMin) : PluginFactoryHelper<ConstantPluginFactory>(id, verMaj, verMin) {}
 
-    virtual void describe(OFX::ImageEffectDescriptor &desc);
-    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
-    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
+    virtual void describe(ImageEffectDescriptor &desc);
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
 };
 
 template<bool solid>
 void
-ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
+ConstantPluginFactory<solid>::describe(ImageEffectDescriptor &desc)
 {
     if (solid) {
         desc.setLabel(kPluginSolidName);
@@ -385,7 +385,7 @@ ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
 
 template<bool solid>
 void
-ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor &desc,
+ConstantPluginFactory<solid>::describeInContext(ImageEffectDescriptor &desc,
                                                 ContextEnum context)
 {
     // there has to be an input clip, even for generators

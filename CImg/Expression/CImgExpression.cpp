@@ -489,7 +489,7 @@ public:
         roi->y2 = rect.y2;
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgExpressionParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -512,12 +512,12 @@ public:
         try {
             cimg.fill(expr.c_str(), true);
         } catch (const cimg_library::CImgArgumentException& e) {
-            setPersistentMessage( OFX::Message::eMessageError, "", e.what() );
+            setPersistentMessage( Message::eMessageError, "", e.what() );
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgExpressionParams& /*params*/) OVERRIDE FINAL
     {
         // must clear persistent message in isIdentity, or render() is not called by Nuke
@@ -527,17 +527,17 @@ public:
     };
 
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
     {
         clipPreferences.setOutputFrameVarying(true);
         clipPreferences.setOutputHasContinousSamples(true);
     }
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &args,
+    virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) OVERRIDE FINAL
     {
         if (paramName == kParamHelp) {
-            sendMessage(OFX::Message::eMessageMessage, "", kPluginDescriptionUnsafe);
+            sendMessage(Message::eMessageMessage, "", kPluginDescriptionUnsafe);
         } else {
             CImgFilterPluginHelper<CImgExpressionParams, true>::changedParam(args, paramName);
         }
@@ -546,23 +546,23 @@ public:
 private:
 
     // params
-    OFX::StringParam *_expr;
+    StringParam *_expr;
 };
 
 
 mDeclarePluginFactory(CImgExpressionPluginFactory, {}, {});
 
 void
-CImgExpressionPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgExpressionPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    if (desc.getPropertySet().propGetDimension(kNatronOfxPropDescriptionIsMarkdown, false)) {
+    if ( desc.getPropertySet().propGetDimension(kNatronOfxPropDescriptionIsMarkdown, false) ) {
         desc.setPluginDescription(kPluginDescriptionMarkdown, false);
         desc.setDescriptionIsMarkdown(true);
-    } else if ( OFX::getImageEffectHostDescription()->isNatron &&
-         ( OFX::getImageEffectHostDescription()->versionMajor >= 2) ) {
+    } else if ( getImageEffectHostDescription()->isNatron &&
+                ( getImageEffectHostDescription()->versionMajor >= 2) ) {
         desc.setPluginDescription(kPluginDescriptionUnsafe);
     } else {
         desc.setPluginDescription(kPluginDescription);
@@ -590,21 +590,21 @@ CImgExpressionPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgExpressionPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                               OFX::ContextEnum context)
+CImgExpressionPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                               ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgExpressionPlugin::describeInContextBegin(desc, context,
-                                                                                  kSupportsRGBA,
-                                                                                  kSupportsRGB,
-                                                                                  kSupportsXY,
-                                                                                  kSupportsAlpha,
-                                                                                  kSupportsTiles,
-                                                                                  /*processRGB=*/ true,
-                                                                                  /*processAlpha*/ false,
-                                                                                  /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgExpressionPlugin::describeInContextBegin(desc, context,
+                                                                             kSupportsRGBA,
+                                                                             kSupportsRGB,
+                                                                             kSupportsXY,
+                                                                             kSupportsAlpha,
+                                                                             kSupportsTiles,
+                                                                             /*processRGB=*/ true,
+                                                                             /*processAlpha*/ false,
+                                                                             /*processIsSecret=*/ false);
     {
-        OFX::StringParamDescriptor *param = desc.defineStringParam(kParamExpression);
+        StringParamDescriptor *param = desc.defineStringParam(kParamExpression);
         param->setLabel(kParamExpressionLabel);
         param->setHint(kParamExpressionHint);
         param->setDefault(kParamExpressionDefault);
@@ -614,19 +614,20 @@ CImgExpressionPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
     }
 
     {
-        OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamHelp);
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamHelp);
         param->setLabel(kParamHelpLabel);
         param->setHint(kParamHelpHint);
         if (page) {
             page->addChild(*param);
         }
     }
+
     CImgExpressionPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CImgExpressionPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                            OFX::ContextEnum /*context*/)
+                                            ContextEnum /*context*/)
 {
     return new CImgExpressionPlugin(handle);
 }

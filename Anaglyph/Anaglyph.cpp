@@ -64,19 +64,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // Base class for the RGBA and the Alpha processor
 class AnaglyphBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcLeftImg;
-    const OFX::Image *_srcRightImg;
+    const Image *_srcLeftImg;
+    const Image *_srcRightImg;
     double _amtcolour;
     bool _swap;
     int _offset;
 
 public:
     /** @brief no arg ctor */
-    AnaglyphBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    AnaglyphBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcLeftImg(0)
         , _srcRightImg(0)
         , _amtcolour(0.)
@@ -86,10 +86,10 @@ public:
     }
 
     /** @brief set the left src image */
-    void setSrcLeftImg(const OFX::Image *v) {_srcLeftImg = v; }
+    void setSrcLeftImg(const Image *v) {_srcLeftImg = v; }
 
     /** @brief set the right src image */
-    void setSrcRightImg(const OFX::Image *v) {_srcRightImg = v; }
+    void setSrcRightImg(const Image *v) {_srcRightImg = v; }
 
     /** @brief set the amount of colour */
     void setAmtColour(double v) {_amtcolour = v; }
@@ -108,7 +108,7 @@ class ImageAnaglypher
 {
 public:
     // ctor
-    ImageAnaglypher(OFX::ImageEffect &instance)
+    ImageAnaglypher(ImageEffect &instance)
         : AnaglyphBase(instance)
     {}
 
@@ -116,8 +116,8 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        const OFX::Image *srcRedImg = _srcLeftImg;
-        const OFX::Image *srcCyanImg = _srcRightImg;
+        const Image *srcRedImg = _srcLeftImg;
+        const Image *srcCyanImg = _srcRightImg;
 
         if (_swap) {
             std::swap(srcRedImg, srcCyanImg);
@@ -181,7 +181,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class AnaglyphPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -195,8 +195,8 @@ public:
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _amtcolour  = fetchDoubleParam(kParamAmtColour);
         _swap = fetchBooleanParam(kParamSwap);
@@ -206,20 +206,20 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(AnaglyphBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(AnaglyphBase &, const RenderArguments &args);
 
     virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::DoubleParam  *_amtcolour;
-    OFX::BooleanParam *_swap;
-    OFX::IntParam     *_offset;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    DoubleParam  *_amtcolour;
+    BooleanParam *_swap;
+    IntParam     *_offset;
 };
 
 
@@ -233,67 +233,67 @@ private:
 /* set up and run a processor */
 void
 AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
-                                const OFX::RenderArguments &args)
+                                const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-         ( dstComponents != _dstClip->getPixelComponents() || dstComponents != ePixelComponentRGBA ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dstComponents != _dstClip->getPixelComponents() ) || (dstComponents != ePixelComponentRGBA) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
-                                             _srcClip->fetchImagePlane(args.time, 0, kFnOfxImagePlaneColour) : 0 );
+    std::auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
+                                        _srcClip->fetchImagePlane(args.time, 0, kFnOfxImagePlaneColour) : 0 );
     if ( srcLeft.get() ) {
         if ( (srcLeft->getRenderScale().x != args.renderScale.x) ||
              ( srcLeft->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcLeft->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcLeft->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( srcLeft->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcLeft->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const OFX::Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
-                                              _srcClip->fetchImagePlane(args.time, 1, kFnOfxImagePlaneColour) : 0 );
+    std::auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImagePlane(args.time, 1, kFnOfxImagePlaneColour) : 0 );
     if ( srcRight.get() ) {
         if ( (srcRight->getRenderScale().x != args.renderScale.x) ||
              ( srcRight->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcRight->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcRight->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( srcRight->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcRight->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
     // make sure bit depths are sane
     if ( srcLeft.get() ) {
-        OFX::BitDepthEnum srcBitDepth      = srcLeft->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcLeft->getPixelComponents();
+        BitDepthEnum srcBitDepth      = srcLeft->getPixelDepth();
+        PixelComponentEnum srcComponents = srcLeft->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     if ( srcRight.get() ) {
-        OFX::BitDepthEnum srcBitDepth      = srcRight->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcRight->getPixelComponents();
+        BitDepthEnum srcBitDepth      = srcRight->getPixelDepth();
+        PixelComponentEnum srcComponents = srcRight->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -332,37 +332,37 @@ AnaglyphPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args,
 
 // the overridden render function
 void
-AnaglyphPlugin::render(const OFX::RenderArguments &args)
+AnaglyphPlugin::render(const RenderArguments &args)
 {
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
-    assert(dstComponents == OFX::ePixelComponentRGBA);
+    assert(dstComponents == ePixelComponentRGBA);
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         ImageAnaglypher<unsigned char, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
 
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         ImageAnaglypher<unsigned short, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
 
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         ImageAnaglypher<float, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -372,13 +372,13 @@ AnaglyphPluginFactory::load()
 {
     // we can't be used on hosts that don't support the stereoscopic suite
     // returning an error here causes a blank menu entry in Nuke
-    //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    //if (!fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 }
 
 void
-AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+AnaglyphPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -404,7 +404,7 @@ AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     // returning an error here crashes Nuke
-    //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    //if (!fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //  throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 
@@ -412,7 +412,7 @@ AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setIsViewAware(true);
 
     //We render the same thing on all views
-    desc.setIsViewInvariant(OFX::eViewInvarianceAllViewsInvariant);
+    desc.setIsViewInvariant(eViewInvarianceAllViewsInvariant);
 
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
@@ -420,10 +420,10 @@ AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                         OFX::ContextEnum /*context*/)
+AnaglyphPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                         ContextEnum /*context*/)
 {
-    if ( !OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
+    if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 
@@ -481,9 +481,9 @@ AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // AnaglyphPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 AnaglyphPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                      OFX::ContextEnum /*context*/)
+                                      ContextEnum /*context*/)
 {
     return new AnaglyphPlugin(handle);
 }

@@ -43,9 +43,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "CheckerBoardOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription \
-"Generate an image with a checkerboard.\n" \
-"A frame range may be specified for operators that need it.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
+    "Generate an image with a checkerboard.\n" \
+    "A frame range may be specified for operators that need it.\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 
 #define kPluginIdentifier "net.sf.openfx.CheckerBoardPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -101,7 +101,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 /** @brief  Base class used to blend two images together */
 class CheckerBoardProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
     OfxPointD _boxSize;
@@ -119,8 +119,8 @@ protected:
 
 public:
     /** @brief no arg ctor */
-    CheckerBoardProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    CheckerBoardProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _lineInfX(0.)
         , _lineSupX(0.)
         , _lineInfY(0.)
@@ -188,7 +188,7 @@ class CheckerBoardProcessor
 {
 public:
     // ctor
-    CheckerBoardProcessor(OFX::ImageEffect &instance)
+    CheckerBoardProcessor(ImageEffect &instance)
         : CheckerBoardProcessorBase(instance)
     {
     }
@@ -231,16 +231,16 @@ private:
                 // don't delinearize alpha: it is always linear
                 for (int c = 0; c < 3; ++c) {
                     if (max == 255) {
-                        colorf[c] = OFX::Color::to_func_srgb(colorf[c]);
+                        colorf[c] = Color::to_func_srgb(colorf[c]);
                     } else {
                         assert(max == 65535);
-                        colorf[c] = OFX::Color::to_func_Rec709(colorf[c]);
+                        colorf[c] = Color::to_func_Rec709(colorf[c]);
                     }
                 }
             }
             // clamp and convert to the destination type
             for (int c = 0; c < nComponents; ++c) {
-                colorPix[c] = OFX::Color::floatToInt<max + 1>(colorf[c]);
+                colorPix[c] = Color::floatToInt<max + 1>(colorf[c]);
             }
         }
     }
@@ -367,25 +367,24 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(CheckerBoardProcessorBase &, const OFX::RenderArguments &args);
-
+    void setupAndProcess(CheckerBoardProcessorBase &, const RenderArguments &args);
 
 private:
-    OFX::Double2DParam *_boxSize;
-    OFX::RGBAParam  *_color0;
-    OFX::RGBAParam  *_color1;
-    OFX::RGBAParam  *_color2;
-    OFX::RGBAParam  *_color3;
-    OFX::RGBAParam  *_lineColor;
-    OFX::DoubleParam *_lineWidth;
-    OFX::RGBAParam  *_centerlineColor;
-    OFX::DoubleParam *_centerlineWidth;
+    Double2DParam *_boxSize;
+    RGBAParam  *_color0;
+    RGBAParam  *_color1;
+    RGBAParam  *_color2;
+    RGBAParam  *_color3;
+    RGBAParam  *_lineColor;
+    DoubleParam *_lineWidth;
+    RGBAParam  *_centerlineColor;
+    DoubleParam *_centerlineWidth;
 };
 
 
@@ -399,27 +398,28 @@ private:
 /* set up and run a processor */
 void
 CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor,
-                                    const OFX::RenderArguments &args)
+                                    const RenderArguments &args)
 {
     const double time = args.time;
+
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(time) );
+    std::auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // set the images
@@ -464,64 +464,64 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor,
 // the internal render function
 template <int nComponents>
 void
-CheckerBoardPlugin::renderInternal(const OFX::RenderArguments &args,
-                                   OFX::BitDepthEnum dstBitDepth)
+CheckerBoardPlugin::renderInternal(const RenderArguments &args,
+                                   BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         CheckerBoardProcessor<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         CheckerBoardProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         CheckerBoardProcessor<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-CheckerBoardPlugin::render(const OFX::RenderArguments &args)
+CheckerBoardPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
 #ifdef OFX_EXTENSIONS_NATRON
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
 #else
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentAlpha);
 #endif
 
     checkComponents(dstBitDepth, dstComponents);
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
 #ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
 #endif
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
 
 mDeclarePluginFactory(CheckerBoardPluginFactory, {}, {});
 void
-CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+CheckerBoardPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -558,7 +558,7 @@ CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+CheckerBoardPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                              ContextEnum context)
 {
     // there has to be an input clip, even for generators

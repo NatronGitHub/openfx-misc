@@ -84,10 +84,10 @@ rampSmooth(double t)
 }
 
 class CropProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
+    const Image *_srcImg;
     OfxRectD _cropRect;
     OfxRectD _cropRectFull;
     OfxPointD _renderScale;
@@ -99,8 +99,8 @@ protected:
     OfxRectI _cropRectFullPixel;
 
 public:
-    CropProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    CropProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _par(1.)
         , _blackOutside(false)
@@ -115,7 +115,7 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v)
+    void setSrcImg(const Image *v)
     {
         _srcImg = v;
     }
@@ -134,8 +134,8 @@ public:
         _par = par;
         _blackOutside = blackOutside;
         _softness = softness;
-        OFX::Coords::toPixelNearest(cropRect, renderScale, par, &_cropRectPixel);
-        OFX::Coords::toPixelNearest(cropRectFull, renderScale, par, &_cropRectFullPixel);
+        Coords::toPixelNearest(cropRect, renderScale, par, &_cropRectPixel);
+        Coords::toPixelNearest(cropRectFull, renderScale, par, &_cropRectFullPixel);
         if (reformat) {
             _translation.x = -_cropRectFullPixel.x1;
             _translation.y = -_cropRectFullPixel.y1;
@@ -152,7 +152,7 @@ class CropProcessor
     : public CropProcessorBase
 {
 public:
-    CropProcessor(OFX::ImageEffect &instance)
+    CropProcessor(ImageEffect &instance)
         : CropProcessorBase(instance)
     {
     }
@@ -181,7 +181,7 @@ private:
                     OfxPointD p;
                     p_pixel.x = x - _translation.x;
                     p_pixel.y = y - _translation.y;
-                    OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
+                    Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
                     double dx = std::min(p.x - _cropRectFull.x1, _cropRectFull.x2 - p.x);
                     double dy = std::min(p.y - _cropRectFull.y1, _cropRectFull.y2 - p.y);
 
@@ -240,7 +240,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class CropPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -265,8 +265,8 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
@@ -292,21 +292,20 @@ public:
 
 private:
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(CropProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(CropProcessorBase &, const RenderArguments &args);
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
-
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     void getCropRectangle(OfxTime time,
                           const OfxPointD& renderScale,
@@ -319,28 +318,28 @@ private:
 
     void updateParamsVisibility();
 
-    OFX::Clip* getSrcClip() const
+    Clip* getSrcClip() const
     {
         return _srcClip;
     }
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::BooleanParam* _rectangleInteractEnable;
-    OFX::ChoiceParam* _extent;
-    OFX::ChoiceParam* _format;
-    OFX::Int2DParam* _formatSize;
-    OFX::DoubleParam* _formatPar;
-    OFX::Double2DParam* _btmLeft;
-    OFX::Double2DParam* _size;
-    OFX::BooleanParam* _interactive;
-    OFX::PushButtonParam *_recenter;
-    OFX::DoubleParam* _softness;
-    OFX::BooleanParam* _reformat;
-    OFX::BooleanParam* _intersect;
-    OFX::BooleanParam* _blackOutside;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    BooleanParam* _rectangleInteractEnable;
+    ChoiceParam* _extent;
+    ChoiceParam* _format;
+    Int2DParam* _formatSize;
+    DoubleParam* _formatPar;
+    Double2DParam* _btmLeft;
+    Double2DParam* _size;
+    BooleanParam* _interactive;
+    PushButtonParam *_recenter;
+    DoubleParam* _softness;
+    BooleanParam* _reformat;
+    BooleanParam* _intersect;
+    BooleanParam* _blackOutside;
 };
 
 void
@@ -354,6 +353,7 @@ CropPlugin::getCropRectangle(OfxTime time,
                              double* pixelAspectRatio) const
 {
     bool intersect = false;
+
     if (useIntersect) {
         if (!forceIntersect) {
             intersect = _intersect->getValueAtTime(time);
@@ -361,7 +361,7 @@ CropPlugin::getCropRectangle(OfxTime time,
             intersect = true;
         }
     }
-    
+
     bool blackOutside = false;
     if (useBlackOutside) {
         blackOutside = _blackOutside->getValueAtTime(time);
@@ -376,31 +376,44 @@ CropPlugin::getCropRectangle(OfxTime time,
     double par;
 
     // below: see GeneratorPlugin::getRegionOfDefinition
-
     GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
 
     switch (extent) {
-        case eGeneratorExtentFormat: {
-            OfxRectI pixelFormat;
-            int w, h;
-            _formatSize->getValue(w, h);
-            _formatPar->getValue(par);
-            pixelFormat.x1 = pixelFormat.y1 = 0;
-            pixelFormat.x2 = w;
-            pixelFormat.y2 = h;
-            const OfxPointD rsOne = {1., 1.};
-            OFX::Coords::toCanonical(pixelFormat, rsOne, par, &rod);
-            break;
-        }
-        case eGeneratorExtentSize: {
+    case eGeneratorExtentFormat: {
+        OfxRectI pixelFormat;
+        int w, h;
+        _formatSize->getValue(w, h);
+        _formatPar->getValue(par);
+        pixelFormat.x1 = pixelFormat.y1 = 0;
+        pixelFormat.x2 = w;
+        pixelFormat.y2 = h;
+        const OfxPointD rsOne = {1., 1.};
+        Coords::toCanonical(pixelFormat, rsOne, par, &rod);
+        break;
+    }
+    case eGeneratorExtentSize: {
+        par = _srcClip->getPixelAspectRatio();
+        _size->getValueAtTime(time, rod.x2, rod.y2);
+        _btmLeft->getValue(rod.x1, rod.y1);
+        rod.x2 += rod.x1;
+        rod.y2 += rod.y1;
+        break;
+    }
+    case eGeneratorExtentProject: {
+        OfxPointD siz = getProjectSize();
+        OfxPointD off = getProjectOffset();
+        rod.x1 = off.x;
+        rod.x2 = off.x + siz.x;
+        rod.y1 = off.y;
+        rod.y2 = off.y + siz.y;
+        par = getProjectPixelAspectRatio();
+        break;
+    }
+    case eGeneratorExtentDefault: {
+        if ( _srcClip->isConnected() ) {
+            rod = _srcClip->getRegionOfDefinition(time);
             par = _srcClip->getPixelAspectRatio();
-            _size->getValueAtTime(time, rod.x2, rod.y2);
-            _btmLeft->getValue(rod.x1, rod.y1);
-            rod.x2 += rod.x1;
-            rod.y2 += rod.y1;
-            break;
-        }
-        case eGeneratorExtentProject: {
+        } else {
             OfxPointD siz = getProjectSize();
             OfxPointD off = getProjectOffset();
             rod.x1 = off.x;
@@ -408,23 +421,9 @@ CropPlugin::getCropRectangle(OfxTime time,
             rod.y1 = off.y;
             rod.y2 = off.y + siz.y;
             par = getProjectPixelAspectRatio();
-            break;
-       }
-        case eGeneratorExtentDefault: {
-            if (_srcClip->isConnected()) {
-                rod = _srcClip->getRegionOfDefinition(time);
-                par = _srcClip->getPixelAspectRatio();
-           } else {
-                OfxPointD siz = getProjectSize();
-                OfxPointD off = getProjectOffset();
-                rod.x1 = off.x;
-                rod.x2 = off.x + siz.x;
-                rod.y1 = off.y;
-                rod.y2 = off.y + siz.y;
-                par = getProjectPixelAspectRatio();
-            }
-            break;
         }
+        break;
+    }
     }
 
     if (reformat) {
@@ -435,17 +434,17 @@ CropPlugin::getCropRectangle(OfxTime time,
     }
     if (intersect && _srcClip) {
         const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(time);
-        OFX::Coords::rectIntersection(rod, srcRoD, &rod);
+        Coords::rectIntersection(rod, srcRoD, &rod);
     }
 
     if (blackOutside) {
         OfxRectI rodPixel;
-        OFX::Coords::toPixelEnclosing(rod, renderScale, par, &rodPixel);
+        Coords::toPixelEnclosing(rod, renderScale, par, &rodPixel);
         rodPixel.x1 -= 1;
         rodPixel.y1 -= 1;
         rodPixel.x2 += 1;
         rodPixel.y2 += 1;
-        OFX::Coords::toCanonical(rodPixel, renderScale, par, &rod);
+        Coords::toCanonical(rodPixel, renderScale, par, &rod);
     }
 
     if (cropRect) {
@@ -454,7 +453,7 @@ CropPlugin::getCropRectangle(OfxTime time,
     if (pixelAspectRatio) {
         *pixelAspectRatio = par;
     }
-}
+} // CropPlugin::getCropRectangle
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -465,42 +464,43 @@ CropPlugin::getCropRectangle(OfxTime time,
 /* set up and run a processor */
 void
 CropPlugin::setupAndProcess(CropProcessorBase &processor,
-                            const OFX::RenderArguments &args)
+                            const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
@@ -516,8 +516,8 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor,
     OfxRectD cropRectCanonical;
     OfxRectD cropRectFullCanonical;
     double par;
-    getCropRectangle(time, args.renderScale, /*useIntersect=*/true, /*forceIntersect=*/false, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRectCanonical, &par);
-    getCropRectangle(time, args.renderScale, /*useIntersect=*/false, /*forceIntersect=*/false, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRectFullCanonical, &par);
+    getCropRectangle(time, args.renderScale, /*useIntersect=*/ true, /*forceIntersect=*/ false, /*useBlackOutside=*/ false, /*useReformat=*/ false, &cropRectCanonical, &par);
+    getCropRectangle(time, args.renderScale, /*useIntersect=*/ false, /*forceIntersect=*/ false, /*useBlackOutside=*/ false, /*useReformat=*/ false, &cropRectFullCanonical, &par);
     double softness = _softness->getValueAtTime(args.time);
     // no need to softness *= args.renderScale.x; since softness is computed on canonical coords
 
@@ -531,14 +531,14 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor,
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                 OFX::RegionOfInterestSetter &rois)
+CropPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                 RegionOfInterestSetter &rois)
 {
     OfxRectD cropRect;
-    getCropRectangle(args.time, args.renderScale, /*useIntersect=*/true, /*forceIntersect=*/true, /*useBlackOutside=*/false, /*useReformat=*/false, &cropRect, NULL);
+
+    getCropRectangle(args.time, args.renderScale, /*useIntersect=*/ true, /*forceIntersect=*/ true, /*useBlackOutside=*/ false, /*useReformat=*/ false, &cropRect, NULL);
 
     OfxRectD roi = args.regionOfInterest;
-
     bool reformat = _reformat->getValueAtTime(args.time);
     if (reformat) {
         // translate, because cropRect will be rendered at (0,0) in this case
@@ -551,15 +551,15 @@ CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
     }
 
     // intersect the crop rectangle with args.regionOfInterest
-    OFX::Coords::rectIntersection(cropRect, roi, &cropRect);
+    Coords::rectIntersection(cropRect, roi, &cropRect);
     rois.setRegionOfInterest(*_srcClip, cropRect);
 }
 
 bool
-CropPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+CropPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                   OfxRectD &rod)
 {
-    getCropRectangle(args.time, args.renderScale, /*useIntersect=*/true, /*forceIntersect=*/false, /*useBlackOutside=*/true, /*useReformat=*/true, &rod, NULL);
+    getCropRectangle(args.time, args.renderScale, /*useIntersect=*/ true, /*forceIntersect=*/ false, /*useBlackOutside=*/ true, /*useReformat=*/ true, &rod, NULL);
 
     return true;
 }
@@ -567,49 +567,49 @@ CropPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
 // the internal render function
 template <int nComponents>
 void
-CropPlugin::renderInternal(const OFX::RenderArguments &args,
-                           OFX::BitDepthEnum dstBitDepth)
+CropPlugin::renderInternal(const RenderArguments &args,
+                           BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         CropProcessor<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         CropProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         CropProcessor<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-CropPlugin::render(const OFX::RenderArguments &args)
+CropPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
@@ -628,9 +628,8 @@ CropPlugin::updateParamsVisibility()
     _interactive->setIsSecretAndDisabled(!hasSize);
 }
 
-
 void
-CropPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+CropPlugin::changedParam(const InstanceChangedArgs &args,
                          const std::string &paramName)
 {
     const double time = args.time;
@@ -639,14 +638,14 @@ CropPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         bool reformat;
         _reformat->getValueAtTime(args.time, reformat);
         _rectangleInteractEnable->setValue(!reformat);
-        if (args.reason == OFX::eChangeUserEdit) {
+        if (args.reason == eChangeUserEdit) {
             _blackOutside->setValue(!reformat); // disable black outside when reformat is checked and vice-versa
         }
-    } else if ( (paramName == kParamGeneratorExtent) && (args.reason == OFX::eChangeUserEdit) ) {
+    } else if ( (paramName == kParamGeneratorExtent) && (args.reason == eChangeUserEdit) ) {
         updateParamsVisibility();
     } else if (paramName == kParamGeneratorFormat) {
         //the host does not handle the format itself, do it ourselves
-        OFX::EParamFormat format = (OFX::EParamFormat)_format->getValue();
+        EParamFormat format = (EParamFormat)_format->getValue();
         int w = 0, h = 0;
         double par = -1;
         getFormatResolution(format, &w, &h, &par);
@@ -654,7 +653,7 @@ CropPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _formatPar->setValue(par);
         _formatSize->setValue(w, h);
     } else if (paramName == kParamGeneratorCenter) {
-        OFX::Clip* srcClip = getSrcClip();
+        Clip* srcClip = getSrcClip();
         OfxRectD srcRoD;
         if ( srcClip && srcClip->isConnected() ) {
             srcRoD = srcClip->getRegionOfDefinition(args.time);
@@ -685,11 +684,10 @@ CropPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _size->setValue(newRectangle.x2 - newRectangle.x1, newRectangle.y2 - newRectangle.y1);
         _btmLeft->setValue(newRectangle.x1, newRectangle.y1);
     }
-
-}
+} // CropPlugin::changedParam
 
 void
-CropPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+CropPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     if ( _reformat->getValue() ) {
         GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
@@ -707,15 +705,13 @@ CropPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
             pixelFormat.x1 = pixelFormat.y1 = 0;
             pixelFormat.x2 = w;
             pixelFormat.y2 = h;
-            if (!OFX::Coords::rectIsEmpty(pixelFormat)) {
+            if ( !Coords::rectIsEmpty(pixelFormat) ) {
                 clipPreferences.setOutputFormat(pixelFormat);
             }
 #endif
         }
-        
     }
 }
-
 
 class CropInteract
     : public RectangleInteract
@@ -723,7 +719,7 @@ class CropInteract
 public:
 
     CropInteract(OfxInteractHandle handle,
-                 OFX::ImageEffect* effect)
+                 ImageEffect* effect)
         : RectangleInteract(handle, effect)
         , _reformat(0)
         , _isReformated(false)
@@ -773,7 +769,7 @@ private:
     }
 
 private:
-    OFX::BooleanParam* _reformat;
+    BooleanParam* _reformat;
     bool _isReformated; //< @see aboutToCheckInteractivity
 };
 
@@ -786,7 +782,7 @@ class CropOverlayDescriptor
 mDeclarePluginFactory(CropPluginFactory, {}, {});
 
 void
-CropPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+CropPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -825,16 +821,16 @@ CropPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CropPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                  OFX::ContextEnum /*context*/)
+                                  ContextEnum /*context*/)
 {
     return new CropPlugin(handle);
 }
 
 void
-CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                     OFX::ContextEnum context)
+CropPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                     ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -893,7 +889,7 @@ CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint( std::string(kParamReformatHint) + (getImageEffectHostDescription()->isNatron ? "" : kParamReformatHintExtraNatron) );
         param->setDefault(kParamReformatDefault);
         param->setAnimates(false);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -905,7 +901,7 @@ CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamIntersect);
         param->setLabel(kParamIntersectLabel);
         param->setHint(kParamIntersectHint);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setDefault(false);
         param->setAnimates(true);
         if (page) {

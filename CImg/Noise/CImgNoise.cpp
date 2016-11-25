@@ -143,7 +143,7 @@ public:
         roi->y2 = rect.y2;
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgNoiseParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -162,14 +162,14 @@ public:
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgNoiseParams& params) OVERRIDE FINAL
     {
         return (params.sigma == 0.);
     };
 
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
     {
         clipPreferences.setOutputFrameVarying(true);
         clipPreferences.setOutputHasContinousSamples(true);
@@ -178,15 +178,15 @@ public:
 private:
 
     // params
-    OFX::DoubleParam *_sigma;
-    OFX::ChoiceParam *_type;
+    DoubleParam *_sigma;
+    ChoiceParam *_type;
 };
 
 
 mDeclarePluginFactory(CImgNoisePluginFactory, {}, {});
 
 void
-CImgNoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgNoisePluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -215,22 +215,22 @@ CImgNoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                          OFX::ContextEnum context)
+CImgNoisePluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                          ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgNoisePlugin::describeInContextBegin(desc, context,
-                                                                             kSupportsRGBA,
-                                                                             kSupportsRGB,
-                                                                             kSupportsXY,
-                                                                             kSupportsAlpha,
-                                                                             kSupportsTiles,
-                                                                             /*processRGB=*/ true,
-                                                                             /*processAlpha*/ false,
-                                                                             /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgNoisePlugin::describeInContextBegin(desc, context,
+                                                                        kSupportsRGBA,
+                                                                        kSupportsRGB,
+                                                                        kSupportsXY,
+                                                                        kSupportsAlpha,
+                                                                        kSupportsTiles,
+                                                                        /*processRGB=*/ true,
+                                                                        /*processAlpha*/ false,
+                                                                        /*processIsSecret=*/ false);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
         param->setLabel(kParamSigmaLabel);
         param->setHint(kParamSigmaHint);
         param->setRange(0., 10.);
@@ -243,7 +243,7 @@ CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
     }
 
     {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamType);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamType);
         param->setLabel(kParamTypeLabel);
         param->setHint(kParamTypeHint);
         assert(param->getNOptions() == eTypeGaussian && param->getNOptions() == 0);
@@ -261,12 +261,13 @@ CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
+
     CImgNoisePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CImgNoisePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       OFX::ContextEnum /*context*/)
+                                       ContextEnum /*context*/)
 {
     return new CImgNoisePlugin(handle);
 }

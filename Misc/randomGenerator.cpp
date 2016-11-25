@@ -102,4 +102,3 @@ RandomGenerator::random(void)
 
     return ( (double)y / (uint32_t)0xffffffff );
 }
-

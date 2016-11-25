@@ -39,9 +39,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "PLogLinOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Convert between logarithmic and linear encoding.\n" \
-"This method uses the so-called \"Josh Pines log conversion\" or \"printing density transform\" (as described in http://lists.gnu.org/archive/html/openexr-devel/2005-03/msg00006.html), which is based on a single gray point, rather than the white and black points in the Cineon formula (as implemented in the Log2Lin plugin).\n" \
-"Log to Lin conversion: xLin = linRef * pow( 10.0, (xLog * 1023. - logRef)*density/nGamma )\n" \
-"Lin to Log conversion: xLog = (logRef + log10(max( xLin, 1e-10 ) / linRef)*nGamma/density) / 1023."
+    "This method uses the so-called \"Josh Pines log conversion\" or \"printing density transform\" (as described in http://lists.gnu.org/archive/html/openexr-devel/2005-03/msg00006.html), which is based on a single gray point, rather than the white and black points in the Cineon formula (as implemented in the Log2Lin plugin).\n" \
+    "Log to Lin conversion: xLin = linRef * pow( 10.0, (xLog * 1023. - logRef)*density/nGamma )\n" \
+    "Lin to Log conversion: xLog = (logRef + log10(max( xLin, 1e-10 ) / linRef)*nGamma/density) / 1023."
 
 #define kPluginIdentifier "net.sf.openfx.PLogLin"
 // History:
@@ -85,54 +85,54 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #endif
 
 /*
- http://lists.gnu.org/archive/html/openexr-devel/2005-03/msg00006.html
- From: 	Ken McGaugh
- Subject: 	Re: [Openexr-devel] Cineon -> half conversion?
- Date: 	Wed, 02 Mar 2005 10:24:21 +0000
+   http://lists.gnu.org/archive/html/openexr-devel/2005-03/msg00006.html
+   From:        Ken McGaugh
+   Subject:     Re: [Openexr-devel] Cineon -> half conversion?
+   Date:        Wed, 02 Mar 2005 10:24:21 +0000
 
- Paul Miller wrote:
+   Paul Miller wrote:
 
- Does anyone have a good reference for Cineon log -> linear half conversion?
+   Does anyone have a good reference for Cineon log -> linear half conversion?
 
 
- The method I recommend comes from Josh Pines (who monitors this list).  I'll
- summarize it by showing how we do it here, including the header attributes we
- use to store the parameters controlling the conversion.
+   The method I recommend comes from Josh Pines (who monitors this list).  I'll
+   summarize it by showing how we do it here, including the header attributes we
+   use to store the parameters controlling the conversion.
 
- The attributes are prefixed with "pdx" which stands for Printing Density Xform.
- They look like
+   The attributes are prefixed with "pdx" which stands for Printing Density Xform.
+   They look like
 
- pdxLinReference (type v3f): (0.18 0.18 0.18)
- pdxLogReference (type v3f): (445 445 445)
- pdxNegativeGamma (type v3f): (0.6 0.6 0.6)
- pdxDensityPerCodeValue (type v3f): (0.002 0.002 0.002)
+   pdxLinReference (type v3f): (0.18 0.18 0.18)
+   pdxLogReference (type v3f): (445 445 445)
+   pdxNegativeGamma (type v3f): (0.6 0.6 0.6)
+   pdxDensityPerCodeValue (type v3f): (0.002 0.002 0.002)
 
- Note that we typically leave out the pdxDensityPerCodeValue and just assume
- a value of 0.002.
+   Note that we typically leave out the pdxDensityPerCodeValue and just assume
+   a value of 0.002.
 
- Say you have a cineon code value named xLog in the range 0-1023.  To convert
- it into a linear value xLin you would do
+   Say you have a cineon code value named xLog in the range 0-1023.  To convert
+   it into a linear value xLin you would do
 
- xLin = pow( 10.0, (xLog - pdxLogReference)*pdxDensityPerCodeValue/pdxnegativeGamma );
- xLin *= pdxLinReference;
+   xLin = pow( 10.0, (xLog - pdxLogReference)*pdxDensityPerCodeValue/pdxnegativeGamma );
+   xLin *= pdxLinReference;
 
- Similarly, to convert back
+   Similarly, to convert back
 
- xLog = max( xLin, 1e-10 ) / pdxLinReference;
- xLog = pdxLogReference + log10(xLog)*pdxNegativeGamma/pdxDensityPerCodeValue;
+   xLog = max( xLin, 1e-10 ) / pdxLinReference;
+   xLog = pdxLogReference + log10(xLog)*pdxNegativeGamma/pdxDensityPerCodeValue;
 
- Note that nowhere is there any reference to "black" or "white".  They are video
- concepts and should only be used when preparing pixel values for display.
+   Note that nowhere is there any reference to "black" or "white".  They are video
+   concepts and should only be used when preparing pixel values for display.
 
- --Ken
-*/
+   --Ken
+ */
 /*
 
- Default:
- linref=0.18
- logref=445
- ngamma=0.6
- density=0.002
+   Default:
+   linref=0.18
+   logref=445
+   ngamma=0.6
+   density=0.002
  */
 
 #define kParamOperation "operation"
@@ -143,7 +143,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOperationOptionLin2Log "Lin to Log"
 #define kParamOperationOptionLin2LogHint "Convert the input from linear to logarithmic colorspace (usually before a Write node)."
 
-enum OperationEnum {
+enum OperationEnum
+{
     eOperationLog2Lin = 0,
     eOperationLin2Log,
 };
@@ -171,11 +172,11 @@ enum OperationEnum {
 using namespace OFX;
 
 class PLogLinProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_maskImg;
+    const Image *_srcImg;
+    const Image *_maskImg;
     bool _premult;
     int _premultChannel;
     bool _doMasking;
@@ -187,21 +188,22 @@ protected:
     double _nGamma[3];
     double _density[3];
 
-    double log2lin(double xLog, int c)
+    double log2lin(double xLog,
+                   int c)
     {
-        return _linRef[c] * std::pow( 10.0, (xLog * 1023. - _logRef[c])*_density[c]/_nGamma[c] );
+        return _linRef[c] * std::pow( 10.0, (xLog * 1023. - _logRef[c]) * _density[c] / _nGamma[c] );
     }
 
-    double lin2log(double xLin, int c)
+    double lin2log(double xLin,
+                   int c)
     {
-        return (_logRef[c] + std::log10(std::max(xLin, 1e-10) / _linRef[c])*_nGamma[c]/_density[c]) / 1023.;
+        return (_logRef[c] + std::log10(std::max(xLin, 1e-10) / _linRef[c]) * _nGamma[c] / _density[c]) / 1023.;
     }
-
 
 public:
-    PLogLinProcessorBase(OFX::ImageEffect &instance,
-                                const OFX::RenderArguments & /*args*/)
-        : OFX::ImageProcessor(instance)
+    PLogLinProcessorBase(ImageEffect &instance,
+                         const RenderArguments & /*args*/)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _premult(false)
@@ -216,9 +218,9 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert) {_maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v; }
@@ -255,8 +257,8 @@ class PLog2LinProcessor
     : public PLogLinProcessorBase
 {
 public:
-    PLog2LinProcessor(OFX::ImageEffect &instance,
-                            const OFX::RenderArguments &args)
+    PLog2LinProcessor(ImageEffect &instance,
+                      const RenderArguments &args)
         : PLogLinProcessorBase(instance, args)
     {
         //const double time = args.time;
@@ -273,29 +275,29 @@ public:
         if (r) {
             if (g) {
                 if (b) {
-                        return process<true, true, true>(procWindow); // RGBa
+                    return process<true, true, true>(procWindow);     // RGBa
                 } else {
-                        return process<true, true, false>(procWindow); // RGba
+                    return process<true, true, false>(procWindow);     // RGba
                 }
             } else {
                 if (b) {
-                        return process<true, false, true>(procWindow); // RgBa
+                    return process<true, false, true>(procWindow);     // RgBa
                 } else {
-                        return process<true, false, false>(procWindow); // Rgba
+                    return process<true, false, false>(procWindow);     // Rgba
                 }
             }
         } else {
             if (g) {
                 if (b) {
-                        return process<false, true, true>(procWindow); // rGBa
+                    return process<false, true, true>(procWindow);     // rGBa
                 } else {
-                        return process<false, true, false>(procWindow); // rGba
+                    return process<false, true, false>(procWindow);     // rGba
                 }
             } else {
                 if (b) {
-                        return process<false, false, true>(procWindow); // rgBa
+                    return process<false, false, true>(procWindow);     // rgBa
                 } else {
-                        return process<false, false, false>(procWindow); // rgba
+                    return process<false, false, false>(procWindow);     // rgba
                 }
             }
         }
@@ -352,8 +354,8 @@ class PLin2LogProcessor
     : public PLogLinProcessorBase
 {
 public:
-    PLin2LogProcessor(OFX::ImageEffect &instance,
-                            const OFX::RenderArguments &args)
+    PLin2LogProcessor(ImageEffect &instance,
+                      const RenderArguments &args)
         : PLogLinProcessorBase(instance, args)
     {
         //const double time = args.time;
@@ -370,29 +372,29 @@ public:
         if (r) {
             if (g) {
                 if (b) {
-                        return process<true, true, true>(procWindow); // RGBa
+                    return process<true, true, true>(procWindow);     // RGBa
                 } else {
-                        return process<true, true, false>(procWindow); // RGba
+                    return process<true, true, false>(procWindow);     // RGba
                 }
             } else {
                 if (b) {
-                        return process<true, false, true>(procWindow); // RgBa
+                    return process<true, false, true>(procWindow);     // RgBa
                 } else {
-                        return process<true, false, false>(procWindow); // Rgba
+                    return process<true, false, false>(procWindow);     // Rgba
                 }
             }
         } else {
             if (g) {
                 if (b) {
-                        return process<false, true, true>(procWindow); // rGBa
+                    return process<false, true, true>(procWindow);     // rGBa
                 } else {
-                        return process<false, true, false>(procWindow); // rGba
+                    return process<false, true, false>(procWindow);     // rGba
                 }
             } else {
                 if (b) {
-                        return process<false, false, true>(procWindow); // rgBa
+                    return process<false, false, true>(procWindow);     // rgBa
                 } else {
-                        return process<false, false, false>(procWindow); // rgba
+                    return process<false, false, false>(procWindow);     // rgba
                 }
             }
         }
@@ -447,7 +449,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class PLogLinPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
 
@@ -474,11 +476,11 @@ public:
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         // TODO: fetch noise parameters
@@ -506,16 +508,16 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template<int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args);
+    void renderForComponents(const RenderArguments &args);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const OFX::RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args);
 
     /* set up and run a processor */
-    void setupAndProcess(PLogLinProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(PLogLinProcessorBase &, const RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
@@ -524,9 +526,9 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_maskClip;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_maskClip;
     BooleanParam* _processR;
     BooleanParam* _processG;
     BooleanParam* _processB;
@@ -535,11 +537,11 @@ private:
     RGBParam* _logRef;
     RGBParam* _nGamma;
     RGBParam* _density;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
 };
 
 
@@ -552,50 +554,51 @@ private:
 /* set up and run a processor */
 void
 PLogLinPlugin::setupAndProcess(PLogLinProcessorBase &processor,
-                                      const OFX::RenderArguments &args)
+                               const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ||
-             ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
     if (doMasking) {
@@ -639,32 +642,32 @@ PLogLinPlugin::setupAndProcess(PLogLinProcessorBase &processor,
 
 // the overridden render function
 void
-PLogLinPlugin::render(const OFX::RenderArguments &args)
+PLogLinPlugin::render(const RenderArguments &args)
 {
     //std::cout << "render!\n";
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB);
     // do the rendering
     switch (dstComponents) {
-    case OFX::ePixelComponentRGBA:
+    case ePixelComponentRGBA:
         renderForComponents<4>(args);
         break;
-    case OFX::ePixelComponentRGB:
+    case ePixelComponentRGB:
         renderForComponents<3>(args);
         break;
-    //case OFX::ePixelComponentXY:
+    //case ePixelComponentXY:
     //    renderForComponents<2>(args);
     //    break;
-    //case OFX::ePixelComponentAlpha:
+    //case ePixelComponentAlpha:
     //    renderForComponents<1>(args);
     //    break;
     default:
         //std::cout << "components usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
       //std::cout << "render! OK\n";
@@ -672,51 +675,52 @@ PLogLinPlugin::render(const OFX::RenderArguments &args)
 
 template<int nComponents>
 void
-PLogLinPlugin::renderForComponents(const OFX::RenderArguments &args)
+PLogLinPlugin::renderForComponents(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
         renderForBitDepth<unsigned char, nComponents, 255>(args);
         break;
 
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
         renderForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
 
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
         //std::cout << "depth usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 template <class PIX, int nComponents, int maxValue>
 void
-PLogLinPlugin::renderForBitDepth(const OFX::RenderArguments &args)
+PLogLinPlugin::renderForBitDepth(const RenderArguments &args)
 {
     OperationEnum operation = (OperationEnum)_operation->getValueAtTime(args.time);
+
     switch (operation) {
-        case eOperationLog2Lin: {
-            PLog2LinProcessor<PIX, nComponents, maxValue> fred(*this, args);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eOperationLin2Log: {
-            PLin2LogProcessor<PIX, nComponents, maxValue> fred(*this, args);
-            setupAndProcess(fred, args);
-            break;
-        }
+    case eOperationLog2Lin: {
+        PLog2LinProcessor<PIX, nComponents, maxValue> fred(*this, args);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eOperationLin2Log: {
+        PLin2LogProcessor<PIX, nComponents, maxValue> fred(*this, args);
+        setupAndProcess(fred, args);
+        break;
+    }
     }
 }
 
 bool
 PLogLinPlugin::isIdentity(const IsIdentityArguments &args,
-                                 Clip * &identityClip,
-                                 double & /*identityTime*/)
+                          Clip * &identityClip,
+                          double & /*identityTime*/)
 {
     //std::cout << "isIdentity!\n";
     const double time = args.time;
@@ -757,9 +761,9 @@ PLogLinPlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
 
                 return true;
@@ -773,10 +777,10 @@ PLogLinPlugin::isIdentity(const IsIdentityArguments &args,
 
 void
 PLogLinPlugin::changedClip(const InstanceChangedArgs &args,
-                                  const std::string &clipName)
+                           const std::string &clipName)
 {
     //std::cout << "changedClip!\n";
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && _srcClip && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && _srcClip && (args.reason == eChangeUserEdit) ) {
         switch ( _srcClip->getPreMultiplication() ) {
         case eImageOpaque:
             _premult->setValue(false);
@@ -794,7 +798,7 @@ PLogLinPlugin::changedClip(const InstanceChangedArgs &args,
 
 mDeclarePluginFactory(PLogLinPluginFactory, {}, {});
 void
-PLogLinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+PLogLinPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
     // basic labels
@@ -821,14 +825,14 @@ PLogLinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
     //std::cout << "describe! OK\n";
 }
 
 void
-PLogLinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                               OFX::ContextEnum context)
+PLogLinPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                        ContextEnum context)
 {
     //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
@@ -864,7 +868,7 @@ PLogLinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -874,7 +878,7 @@ PLogLinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -884,7 +888,7 @@ PLogLinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -895,21 +899,21 @@ PLogLinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // describe plugin params
     {
-        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOperation);
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOperation);
         param->setLabel(kParamOperationLabel);
         param->setHint(kParamOperationHint);
         assert(param->getNOptions() == eOperationLog2Lin);
         param->appendOption(kParamOperationOptionLog2Lin, kParamOperationOptionLog2LinHint);
         assert(param->getNOptions() == eOperationLin2Log);
         param->appendOption(kParamOperationOptionLin2Log, kParamOperationOptionLin2LogHint);
-        param->setDefault((int)eOperationLog2Lin);
+        param->setDefault( (int)eOperationLog2Lin );
         if (page) {
             page->addChild(*param);
         }
     }
 
     {
-        OFX::RGBParamDescriptor* param = desc.defineRGBParam(kParamLinRef);
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamLinRef);
         param->setLabel(kParamLinRefLabel);
         param->setHint(kParamLinRefHint);
         param->setRange(0, 0, 0, 1, 1, 1);
@@ -921,7 +925,7 @@ PLogLinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::RGBParamDescriptor* param = desc.defineRGBParam(kParamLogRef);
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamLogRef);
         param->setLabel(kParamLogRefLabel);
         param->setHint(kParamLogRefHint);
         param->setRange(0, 0, 0, 1023, 1023, 1023);
@@ -933,7 +937,7 @@ PLogLinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::RGBParamDescriptor* param = desc.defineRGBParam(kParamNGamma);
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamNGamma);
         param->setLabel(kParamNGammaLabel);
         param->setHint(kParamNGammaHint);
         param->setRange(0, 0, 0, 1, 1, 1);
@@ -945,7 +949,7 @@ PLogLinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::RGBParamDescriptor* param = desc.defineRGBParam(kParamDensity);
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamDensity);
         param->setLabel(kParamDensityLabel);
         param->setHint(kParamDensityHint);
         param->setRange(0, 0, 0, 0.01, 0.01, 0.01);
@@ -961,9 +965,9 @@ PLogLinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //std::cout << "describeInContext! OK\n";
 } // PLogLinPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 PLogLinPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                            OFX::ContextEnum /*context*/)
+                                     ContextEnum /*context*/)
 {
     return new PLogLinPlugin(handle);
 }

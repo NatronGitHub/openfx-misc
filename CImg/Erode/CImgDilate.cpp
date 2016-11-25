@@ -142,14 +142,14 @@ public:
             dstRoD->x2 = dstRoD->x2 + delta_pix_x;
             dstRoD->y1 = dstRoD->y1 - delta_pix_y;
             dstRoD->y2 = dstRoD->y2 + delta_pix_y;
+
             return true;
         } else {
             return false;
         }
-
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgDilateParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -168,7 +168,7 @@ public:
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args,
+    virtual bool isIdentity(const IsIdentityArguments &args,
                             const CImgDilateParams& params) OVERRIDE FINAL
     {
         return (std::floor(params.sx * args.renderScale.x) == 0 && std::floor(params.sy * args.renderScale.y) == 0);
@@ -177,15 +177,15 @@ public:
 private:
 
     // params
-    OFX::Int2DParam *_size;
-    OFX::BooleanParam* _expandRod;
+    Int2DParam *_size;
+    BooleanParam* _expandRod;
 };
 
 
 mDeclarePluginFactory(CImgDilatePluginFactory, {}, {});
 
 void
-CImgDilatePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgDilatePluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -214,22 +214,22 @@ CImgDilatePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                           OFX::ContextEnum context)
+CImgDilatePluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                           ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgDilatePlugin::describeInContextBegin(desc, context,
-                                                                              kSupportsRGBA,
-                                                                              kSupportsRGB,
-                                                                              kSupportsXY,
-                                                                              kSupportsAlpha,
-                                                                              kSupportsTiles,
-                                                                              /*processRGB=*/ true,
-                                                                              /*processAlpha*/ true, // Enable alpha by default, so it works OK on masks
-                                                                              /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgDilatePlugin::describeInContextBegin(desc, context,
+                                                                         kSupportsRGBA,
+                                                                         kSupportsRGB,
+                                                                         kSupportsXY,
+                                                                         kSupportsAlpha,
+                                                                         kSupportsTiles,
+                                                                         /*processRGB=*/ true,
+                                                                         /*processAlpha*/ true,      // Enable alpha by default, so it works OK on masks
+                                                                         /*processIsSecret=*/ false);
 
     {
-        OFX::Int2DParamDescriptor *param = desc.defineInt2DParam(kParamSize);
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamSize);
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(-1000, -1000, 1000, 1000);
@@ -240,7 +240,7 @@ CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
@@ -248,12 +248,13 @@ CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
+
     CImgDilatePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CImgDilatePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new CImgDilatePlugin(handle);
 }

@@ -33,7 +33,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 #define kPluginDescription "Move the input clip forward or backward in time. " \
     "This can also reverse the order of the input frames so that last one is first.\n" \
-"See also http://opticalenquiry.com/nuke/index.php?title=TimeOffset"
+    "See also http://opticalenquiry.com/nuke/index.php?title=TimeOffset"
 
 #define kPluginIdentifier "net.sf.openfx.timeOffset"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -61,7 +61,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TimeOffsetPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -69,27 +69,27 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /** Override the get frames needed action */
-    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
+    virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
 
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     double getSourceTime(double time) const;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    //OFX::Clip *_dstClip;            /**< @brief Mandated output clips */
-    OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
-    OFX::IntParam  *_time_offset;      /**< @brief only used in the filter context. */
-    OFX::BooleanParam  *_reverse_input;
-    OFX::BooleanParam  *_clip;
+    //Clip *_dstClip;            /**< @brief Mandated output clips */
+    Clip *_srcClip;            /**< @brief Mandated input clips */
+    IntParam  *_time_offset;      /**< @brief only used in the filter context. */
+    BooleanParam  *_reverse_input;
+    BooleanParam  *_clip;
 };
 
 TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
@@ -98,11 +98,11 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
     , _time_offset(0)
     , _reverse_input(0)
 {
-    _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-            ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  OFX::ePixelComponentAlpha ||
-                           _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
-                           _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA) ) );
+    _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert( (!_srcClip && getContext() == eContextGenerator) ||
+            ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
+                           _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                           _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
     _time_offset   = fetchIntParam(kParamTimeOffset);
     _reverse_input = fetchBooleanParam(kParamReverseInput);
@@ -147,7 +147,7 @@ bool
 TimeOffsetPlugin::getTimeDomain(OfxRangeD &range)
 {
     // this should only be called in the general context, ever!
-    if (getContext() == OFX::eContextGeneral) {
+    if (getContext() == eContextGeneral) {
         // how many frames on the input clip
         OfxRangeD srcRange = _srcClip->getFrameRange();
 
@@ -161,8 +161,8 @@ TimeOffsetPlugin::getTimeDomain(OfxRangeD &range)
 }
 
 void
-TimeOffsetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
-                                  OFX::FramesNeededSetter &frames)
+TimeOffsetPlugin::getFramesNeeded(const FramesNeededArguments &args,
+                                  FramesNeededSetter &frames)
 {
     double sourceTime = getSourceTime(args.time);
     OfxRangeD range;
@@ -174,15 +174,15 @@ TimeOffsetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 
 // the overridden render function
 void
-TimeOffsetPlugin::render(const OFX::RenderArguments & /*args*/)
+TimeOffsetPlugin::render(const RenderArguments & /*args*/)
 {
     // do nothing as this should never be called as isIdentity should always be trapped
 }
 
 // overridden is identity
 bool
-TimeOffsetPlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                             OFX::Clip * &identityClip,
+TimeOffsetPlugin::isIdentity(const IsIdentityArguments &args,
+                             Clip * &identityClip,
                              double &identityTime)
 {
     identityClip = _srcClip;
@@ -192,7 +192,7 @@ TimeOffsetPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 }
 
 bool
-TimeOffsetPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+TimeOffsetPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
     const double identityTime = getSourceTime(args.time);
@@ -208,13 +208,13 @@ TimeOffsetPluginFactory::load()
 {
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
-        throw OFX::Exception::HostInadequate("Need random temporal image access to work");
+        throw Exception::HostInadequate("Need random temporal image access to work");
     }
 }
 
 /** @brief The basic describe function, passed a plugin descriptor */
 void
-TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TimeOffsetPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -222,8 +222,8 @@ TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     // Say we are a filer context
-    desc.addSupportedContext(OFX::eContextFilter);
-    desc.addSupportedContext(OFX::eContextGeneral);
+    desc.addSupportedContext(eContextFilter);
+    desc.addSupportedContext(eContextGeneral);
 
     // Add supported pixel depths
     desc.addSupportedBitDepth(eBitDepthUByte);
@@ -242,7 +242,7 @@ TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
-        throw OFX::Exception::HostInadequate("Need random temporal image access to work");
+        throw Exception::HostInadequate("Need random temporal image access to work");
     }
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
@@ -251,7 +251,7 @@ TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void
-TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+TimeOffsetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                            ContextEnum /*context*/)
 {
     // we are a transition, so define the sourceTo input clip
@@ -314,7 +314,7 @@ TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // TimeOffsetPluginFactory::describeInContext
 
-/** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
+/** @brief The create instance function, the plugin must return an object derived from the \ref ImageEffect class */
 ImageEffect*
 TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle,
                                         ContextEnum /*context*/)

@@ -108,7 +108,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class NoOpPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -137,13 +137,13 @@ public:
         , _frameRate(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _forceCopy = fetchBooleanParam(kParamForceCopy);
         _setPremult = fetchBooleanParam(kParamSetPremult);
         _premult = fetchChoiceParam(kParamOutputPremult);
         assert(_forceCopy && _setPremult && _premult);
 
-        const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
         if (gHostDescription.supportsSetableFielding) {
             _setFieldOrder = fetchBooleanParam(kParamSetFieldOrder);
             _fieldOrder = fetchChoiceParam(kParamOutputFieldOrder);
@@ -177,11 +177,11 @@ public:
 
 private:
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
@@ -189,14 +189,15 @@ private:
 
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
-    virtual bool getTransform(const OFX::TransformArguments & args, OFX::Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
+    virtual bool getTransform(const TransformArguments & args, Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
 #endif
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     void updateVisibility()
     {
-        const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+
         _premult->setEnabled( _setPremult->getValue() );
         if (gHostDescription.supportsSetableFielding) {
             _fieldOrder->setEnabled( _setFieldOrder->getValue() );
@@ -226,31 +227,31 @@ private:
         if (gHostDescription.supportsSetableFrameRate) {
             _frameRate->setEnabled( _setFrameRate->getValue() );
         }
-
     }
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::BooleanParam *_forceCopy;
-    OFX::BooleanParam *_setPremult;
-    OFX::ChoiceParam *_premult;
-    OFX::BooleanParam *_setFieldOrder;
-    OFX::ChoiceParam *_fieldOrder;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    BooleanParam *_forceCopy;
+    BooleanParam *_setPremult;
+    ChoiceParam *_premult;
+    BooleanParam *_setFieldOrder;
+    ChoiceParam *_fieldOrder;
 #ifdef OFX_EXTENSIONS_NATRON
-    OFX::BooleanParam *_setFormat;
-    OFX::ChoiceParam* _extent;
-    OFX::ChoiceParam* _format;
-    OFX::Int2DParam* _formatSize;
-    OFX::DoubleParam* _formatPar;
-    OFX::Double2DParam* _btmLeft;
-    OFX::Double2DParam* _size;
-    OFX::PushButtonParam *_recenter;
+    BooleanParam *_setFormat;
+    ChoiceParam* _extent;
+    ChoiceParam* _format;
+    Int2DParam* _formatSize;
+    DoubleParam* _formatPar;
+    Double2DParam* _btmLeft;
+    Double2DParam* _size;
+    PushButtonParam *_recenter;
 #endif
-    OFX::BooleanParam *_setPixelAspectRatio;
-    OFX::DoubleParam *_pixelAspectRatio;
-    OFX::BooleanParam *_setFrameRate;
-    OFX::DoubleParam *_frameRate;
+    BooleanParam *_setPixelAspectRatio;
+    DoubleParam *_pixelAspectRatio;
+    BooleanParam *_setFrameRate;
+    DoubleParam *_frameRate;
 };
 
 
@@ -264,8 +265,8 @@ private:
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-NoOpPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                 OFX::RegionOfInterestSetter &rois)
+NoOpPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                 RegionOfInterestSetter &rois)
 {
     if (!_srcClip) {
         return;
@@ -293,7 +294,7 @@ NoOpPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
 }
 
 bool
-NoOpPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+NoOpPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                   OfxRectD &rod)
 {
     if (!_srcClip) {
@@ -322,7 +323,7 @@ NoOpPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
     }
 
     const OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
-    if ( OFX::Coords::rectIsEmpty(srcRoD) ) {
+    if ( Coords::rectIsEmpty(srcRoD) ) {
         return false;
     }
     rod = srcRoD;
@@ -334,7 +335,7 @@ NoOpPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
 
 // the overridden render function
 void
-NoOpPlugin::render(const OFX::RenderArguments &args)
+NoOpPlugin::render(const RenderArguments &args)
 {
     const double time = args.time;
     bool forceCopy;
@@ -343,7 +344,7 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
 
 #ifdef DEBUG
     if (!forceCopy) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
+        setPersistentMessage(Message::eMessageError, "", "OFX Host should not render");
         throwSuiteStatusException(kOfxStatFailed);
     }
 #endif
@@ -351,31 +352,31 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     copyPixels( *this, args.renderWindow, src.get(), dst.get() );
@@ -403,8 +404,8 @@ NoOpPlugin::isIdentity(const IsIdentityArguments &args,
 #ifdef OFX_EXTENSIONS_NUKE
 // overridden getTransform
 bool
-NoOpPlugin::getTransform(const OFX::TransformArguments &args,
-                         OFX::Clip * &transformClip,
+NoOpPlugin::getTransform(const TransformArguments &args,
+                         Clip * &transformClip,
                          double transformMatrix[9])
 {
     const double time = args.time;
@@ -435,22 +436,22 @@ static const char*
 bitDepthString(BitDepthEnum bitDepth)
 {
     switch (bitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
 
         return "8u";
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
 
         return "16u";
-    case OFX::eBitDepthHalf:
+    case eBitDepthHalf:
 
         return "16f";
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
 
         return "32f";
-    case OFX::eBitDepthCustom:
+    case eBitDepthCustom:
 
         return "x";
-    case OFX::eBitDepthNone:
+    case eBitDepthNone:
 
         return "0";
 #ifdef OFX_EXTENSIONS_VEGAS
@@ -474,6 +475,7 @@ static std::string
 pixelComponentString(const std::string& p)
 {
     const std::string prefix = "OfxImageComponent";
+
     std::string s = p;
 
     return s.replace(s.find(prefix), prefix.length(), "");
@@ -546,7 +548,7 @@ fieldOrderString(FieldEnum e)
 }
 
 void
-NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+NoOpPlugin::changedParam(const InstanceChangedArgs &args,
                          const std::string &paramName)
 {
     if (paramName == kParamSetPremult) {
@@ -562,7 +564,7 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         updateVisibility();
     } else if (paramName == kParamGeneratorFormat) {
         //the host does not handle the format itself, do it ourselves
-        OFX::EParamFormat format = (OFX::EParamFormat)_format->getValue();
+        EParamFormat format = (EParamFormat)_format->getValue();
         int w = 0, h = 0;
         double par = -1;
         getFormatResolution(format, &w, &h, &par);
@@ -570,7 +572,7 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _formatPar->setValue(par);
         _formatSize->setValue(w, h);
     } else if (paramName == kParamGeneratorCenter) {
-        OFX::Clip* srcClip = _srcClip;
+        Clip* srcClip = _srcClip;
         OfxRectD srcRoD;
         if ( srcClip && srcClip->isConnected() ) {
             srcRoD = srcClip->getRegionOfDefinition(args.time);
@@ -612,7 +614,7 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         if (!_srcClip) {
             oss << "N/A";
         } else {
-            OFX::Clip &c = *_srcClip;
+            Clip &c = *_srcClip;
             oss << pixelComponentString( c.getPixelComponentsProperty() );
             oss << bitDepthString( c.getPixelDepth() );
             oss << " (unmapped: ";
@@ -635,7 +637,7 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             OfxRectI format;
             c.getFormat(format);
             oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
-            if (format.x1 != 0 && format.y1 != 0) {
+            if ( (format.x1 != 0) && (format.y1 != 0) ) {
                 if (format.x1 < 0) {
                     oss << format.x1;
                 } else {
@@ -671,7 +673,7 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         if (!_dstClip) {
             oss << "N/A";
         } else {
-            OFX::Clip &c = *_dstClip;
+            Clip &c = *_dstClip;
             oss << pixelComponentString( c.getPixelComponentsProperty() );
             oss << bitDepthString( c.getPixelDepth() );
             oss << " (unmapped: ";
@@ -694,7 +696,7 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             OfxRectI format;
             c.getFormat(format);
             oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
-            if (format.x1 != 0 && format.y1 != 0) {
+            if ( (format.x1 != 0) && (format.y1 != 0) ) {
                 if (format.x1 < 0) {
                     oss << format.x1;
                 } else {
@@ -728,13 +730,13 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         oss << "\n\n";
         oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
 
-        sendMessage( OFX::Message::eMessageMessage, "", oss.str() );
+        sendMessage( Message::eMessageMessage, "", oss.str() );
     }
 } // NoOpPlugin::changedParam
 
 /* Override the clip preferences */
 void
-NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+NoOpPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip
     bool setPremult = _setPremult->getValue();
@@ -760,54 +762,54 @@ NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
             GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
 
             switch (extent) {
-                case eGeneratorExtentFormat: {
-                    int w, h;
-                    _formatSize->getValue(w, h);
-                    double par = _formatPar->getValue();
-                    OfxRectI pixelFormat;
-                    pixelFormat.x1 = pixelFormat.y1 = 0;
-                    pixelFormat.x2 = w;
-                    pixelFormat.y2 = h;
-                    clipPreferences.setOutputFormat(pixelFormat);
-                    clipPreferences.setPixelAspectRatio(*_dstClip, par);
-                    break;
-                }
-                case eGeneratorExtentSize: {
-                    OfxRectD rod;
-                    _size->getValue(rod.x2, rod.y2);
-                    _btmLeft->getValue(rod.x1, rod.y1);
-                    rod.x2 += rod.x1;
-                    rod.y2 += rod.y1;
-                    double par = _srcClip->getPixelAspectRatio();
-                    OfxPointD renderScale = {1., 1.};
-                    OfxRectI pixelFormat;
-                    OFX::Coords::toPixelNearest(rod, renderScale, par, &pixelFormat);
-                    clipPreferences.setOutputFormat(pixelFormat);
-                    //clipPreferences.setPixelAspectRatio(*_dstClip, par); // should be the default
-                    break;
-                }
-                case eGeneratorExtentProject: {
-                    OfxRectD rod;
-                    OfxPointD siz = getProjectSize();
-                    OfxPointD off = getProjectOffset();
-                    rod.x1 = off.x;
-                    rod.x2 = off.x + siz.x;
-                    rod.y1 = off.y;
-                    rod.y2 = off.y + siz.y;
-                    double par = getProjectPixelAspectRatio();
-                    OfxPointD renderScale = {1., 1.};
-                    OfxRectI pixelFormat;
-                    OFX::Coords::toPixelNearest(rod, renderScale, par, &pixelFormat);
-                    clipPreferences.setOutputFormat(pixelFormat);
-                    clipPreferences.setPixelAspectRatio(*_dstClip, par);
-                    break;
-                }
-                case eGeneratorExtentDefault:
-                    break;
+            case eGeneratorExtentFormat: {
+                int w, h;
+                _formatSize->getValue(w, h);
+                double par = _formatPar->getValue();
+                OfxRectI pixelFormat;
+                pixelFormat.x1 = pixelFormat.y1 = 0;
+                pixelFormat.x2 = w;
+                pixelFormat.y2 = h;
+                clipPreferences.setOutputFormat(pixelFormat);
+                clipPreferences.setPixelAspectRatio(*_dstClip, par);
+                break;
+            }
+            case eGeneratorExtentSize: {
+                OfxRectD rod;
+                _size->getValue(rod.x2, rod.y2);
+                _btmLeft->getValue(rod.x1, rod.y1);
+                rod.x2 += rod.x1;
+                rod.y2 += rod.y1;
+                double par = _srcClip->getPixelAspectRatio();
+                OfxPointD renderScale = {1., 1.};
+                OfxRectI pixelFormat;
+                Coords::toPixelNearest(rod, renderScale, par, &pixelFormat);
+                clipPreferences.setOutputFormat(pixelFormat);
+                //clipPreferences.setPixelAspectRatio(*_dstClip, par); // should be the default
+                break;
+            }
+            case eGeneratorExtentProject: {
+                OfxRectD rod;
+                OfxPointD siz = getProjectSize();
+                OfxPointD off = getProjectOffset();
+                rod.x1 = off.x;
+                rod.x2 = off.x + siz.x;
+                rod.y1 = off.y;
+                rod.y2 = off.y + siz.y;
+                double par = getProjectPixelAspectRatio();
+                OfxPointD renderScale = {1., 1.};
+                OfxRectI pixelFormat;
+                Coords::toPixelNearest(rod, renderScale, par, &pixelFormat);
+                clipPreferences.setOutputFormat(pixelFormat);
+                clipPreferences.setPixelAspectRatio(*_dstClip, par);
+                break;
+            }
+            case eGeneratorExtentDefault:
+                break;
             }
         }
     }
-#endif
+#endif // ifdef OFX_EXTENSIONS_NATRON
     if (_setPixelAspectRatio) {
         bool setPixelAspectRatio = _setPixelAspectRatio->getValue();
         if (setPixelAspectRatio) {
@@ -822,11 +824,11 @@ NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
             clipPreferences.setOutputFrameRate(frameRate);
         }
     }
-}
+} // NoOpPlugin::getClipPreferences
 
 mDeclarePluginFactory(NoOpPluginFactory, {}, {});
 void
-NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+NoOpPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -873,8 +875,8 @@ NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                     OFX::ContextEnum /*context*/)
+NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                     ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -922,7 +924,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     //// setPremult
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetPremult);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetPremult);
         param->setLabel(kParamSetPremultLabel);
         param->setHint(kParamSetPremultHint);
         param->setDefault(false);
@@ -935,7 +937,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     //// premult
     {
-        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputPremult);
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputPremult);
         param->setLabel(kParamOutputPremultLabel);
         param->setHint(kParamOutputPremultHint);
         assert(param->getNOptions() == eImageOpaque);
@@ -951,12 +953,12 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
 
     if (gHostDescription.supportsSetableFielding) {
         //// setFieldOrder
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFieldOrder);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFieldOrder);
             param->setLabel(kParamSetFieldOrderLabel);
             param->setHint(kParamSetFieldOrderHint);
             param->setDefault(false);
@@ -969,7 +971,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
         //// fieldOrder
         {
-            OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputFieldOrder);
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputFieldOrder);
             param->setLabel(kParamOutputFieldOrderLabel);
             param->setHint(kParamOutputFieldOrderHint);
             assert(param->getNOptions() == eFieldNone);
@@ -997,7 +999,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     if (gHostDescription.isNatron) {
         //// setFormat
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFormat);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFormat);
             param->setLabel(kParamSetFormatLabel);
             param->setHint(kParamSetFormatHint);
             param->setDefault(false);
@@ -1021,7 +1023,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             //assert(param->getNOptions() == eGeneratorExtentDefault);
             //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
             param->setDefault(eGeneratorExtentFormat);
-            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine);
             param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
@@ -1034,7 +1036,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamGeneratorCenter);
             param->setLabel(kParamGeneratorCenterLabel);
             param->setHint(kParamGeneratorCenterHint);
-            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine);
             if (page) {
                 page->addChild(*param);
             }
@@ -1125,7 +1127,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
-            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine);
             param->setHint("Coordinates of the bottom left corner of the size rectangle.");
             param->setDigits(0);
             if (page) {
@@ -1157,7 +1159,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     if (gHostDescription.supportsMultipleClipPARs) {
         //// setPixelAspectRatio
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetPixelAspectRatio);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetPixelAspectRatio);
             param->setLabel(kParamSetPixelAspectRatioLabel);
             param->setHint(kParamSetPixelAspectRatioHint);
             param->setDefault(false);
@@ -1169,7 +1171,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
         //// pixelAspectRatio
         {
-            OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamOutputPixelAspectRatio);
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamOutputPixelAspectRatio);
             param->setLabel(kParamOutputPixelAspectRatioLabel);
             param->setHint(kParamOutputPixelAspectRatioHint);
             param->setDefault(1.);
@@ -1184,7 +1186,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     if (gHostDescription.supportsSetableFrameRate) {
         //// setFrameRate
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFrameRate);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFrameRate);
             param->setLabel(kParamSetFrameRateLabel);
             param->setHint(kParamSetFrameRateHint);
             param->setDefault(false);
@@ -1197,7 +1199,7 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
         //// frameRate
         {
-            OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamOutputFrameRate);
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamOutputFrameRate);
             param->setLabel(kParamOutputFrameRateLabel);
             param->setHint(kParamOutputFrameRateHint);
             param->setDefault(24.);
@@ -1220,9 +1222,9 @@ NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // NoOpPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 NoOpPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                  OFX::ContextEnum /*context*/)
+                                  ContextEnum /*context*/)
 {
     return new NoOpPlugin(handle);
 }

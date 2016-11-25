@@ -84,7 +84,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TestGroupsPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -102,13 +102,13 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
         _optionalClip = fetchClip(kClipOptional);
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _color = fetchRGBAParam(kParamColor0);
@@ -135,44 +135,43 @@ public:
         _doubleTestDisplayMax = fetchDoubleParam(kParamDoubleTestDisplayMax);
         _optionalClipLabel = fetchStringParam(kParamOptionalClipLabel);
         _optionalClipHint = fetchStringParam(kParamOptionalClipHint);
-
     }
 
 private:
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_optionalClip;
-    OFX::Clip *_maskClip;
-    OFX::RGBAParam* _color;
-    OFX::BooleanParam *_forceCopy;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
-    OFX::PushButtonParam* _testButton;
-    OFX::StringParam* _labelString;
-    OFX::DoubleParam* _double2;
-    OFX::DoubleParam* _doubleTest;
-    OFX::StringParam* _doubleTestLabel;
-    OFX::StringParam* _doubleTestHint;
-    OFX::DoubleParam* _doubleTestDefault;
-    OFX::DoubleParam* _doubleTestMin;
-    OFX::DoubleParam* _doubleTestMax;
-    OFX::DoubleParam* _doubleTestDisplayMin;
-    OFX::DoubleParam* _doubleTestDisplayMax;
-    OFX::StringParam* _optionalClipLabel;
-    OFX::StringParam* _optionalClipHint;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_optionalClip;
+    Clip *_maskClip;
+    RGBAParam* _color;
+    BooleanParam *_forceCopy;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
+    PushButtonParam* _testButton;
+    StringParam* _labelString;
+    DoubleParam* _double2;
+    DoubleParam* _doubleTest;
+    StringParam* _doubleTestLabel;
+    StringParam* _doubleTestHint;
+    DoubleParam* _doubleTestDefault;
+    DoubleParam* _doubleTestMin;
+    DoubleParam* _doubleTestMax;
+    DoubleParam* _doubleTestDisplayMin;
+    DoubleParam* _doubleTestDisplayMax;
+    StringParam* _optionalClipLabel;
+    StringParam* _optionalClipHint;
 };
 
 
 // the overridden render function
 void
-TestGroupsPlugin::render(const OFX::RenderArguments &args)
+TestGroupsPlugin::render(const RenderArguments &args)
 {
     const double time = args.time;
     bool forceCopy;
@@ -181,7 +180,7 @@ TestGroupsPlugin::render(const OFX::RenderArguments &args)
 
 #ifdef DEBUG
     if (!forceCopy) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
+        setPersistentMessage(Message::eMessageError, "", "OFX Host should not render");
         throwSuiteStatusException(kOfxStatFailed);
     }
 #endif
@@ -189,31 +188,31 @@ TestGroupsPlugin::render(const OFX::RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     copyPixels( *this, args.renderWindow, src.get(), dst.get() );
@@ -252,12 +251,12 @@ TestGroupsPlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
+            if (getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
 
                     return true;
@@ -273,22 +272,22 @@ static const char*
 bitDepthString(BitDepthEnum bitDepth)
 {
     switch (bitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
 
         return "8u";
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
 
         return "16u";
-    case OFX::eBitDepthHalf:
+    case eBitDepthHalf:
 
         return "16f";
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
 
         return "32f";
-    case OFX::eBitDepthCustom:
+    case eBitDepthCustom:
 
         return "x";
-    case OFX::eBitDepthNone:
+    case eBitDepthNone:
 
         return "0";
 #ifdef OFX_EXTENSIONS_VEGAS
@@ -312,6 +311,7 @@ static std::string
 pixelComponentString(const std::string& p)
 {
     const std::string prefix = "OfxImageComponent";
+
     std::string s = p;
 
     return s.replace(s.find(prefix), prefix.length(), "");
@@ -384,10 +384,11 @@ fieldOrderString(FieldEnum e)
 }
 
 void
-TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+TestGroupsPlugin::changedParam(const InstanceChangedArgs &args,
                                const std::string &paramName)
 {
     const double time = args.time;
+
     if (paramName == kParamTestButton) {
         _testButton->setLabel("Clicked!");
         _testButton->setHint("You clicked me!");
@@ -401,7 +402,7 @@ TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         if (!_srcClip) {
             oss << "N/A";
         } else {
-            OFX::Clip &c = *_srcClip;
+            Clip &c = *_srcClip;
             oss << pixelComponentString( c.getPixelComponentsProperty() );
             oss << bitDepthString( c.getPixelDepth() );
             oss << " (unmapped: ";
@@ -424,7 +425,7 @@ TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             OfxRectI format;
             c.getFormat(format);
             oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
-            if (format.x1 != 0 && format.y1 != 0) {
+            if ( (format.x1 != 0) && (format.y1 != 0) ) {
                 if (format.x1 < 0) {
                     oss << format.x1;
                 } else {
@@ -460,7 +461,7 @@ TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         if (!_dstClip) {
             oss << "N/A";
         } else {
-            OFX::Clip &c = *_dstClip;
+            Clip &c = *_dstClip;
             oss << pixelComponentString( c.getPixelComponentsProperty() );
             oss << bitDepthString( c.getPixelDepth() );
             oss << " (unmapped: ";
@@ -483,7 +484,7 @@ TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             OfxRectI format;
             c.getFormat(format);
             oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
-            if (format.x1 != 0 && format.y1 != 0) {
+            if ( (format.x1 != 0) && (format.y1 != 0) ) {
                 if (format.x1 < 0) {
                     oss << format.x1;
                 } else {
@@ -517,7 +518,7 @@ TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         oss << "\n\n";
         oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
 
-        sendMessage( OFX::Message::eMessageMessage, "", oss.str() );
+        sendMessage( Message::eMessageMessage, "", oss.str() );
     } else if (paramName == kParamDoubleTestLabel) {
         std::string s;
         _doubleTestLabel->getValueAtTime(time, s);
@@ -527,11 +528,11 @@ TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _doubleTestHint->getValueAtTime(time, s);
         _doubleTest->setHint(s);
     } else if (paramName == kParamDoubleTestDefault) {
-        _doubleTest->setDefault(_doubleTestDefault->getValueAtTime(time));
-    } else if (paramName == kParamDoubleTestMin || paramName == kParamDoubleTestMax) {
-        _doubleTest->setRange(_doubleTestMin->getValueAtTime(time), _doubleTestMax->getValueAtTime(time));
-    } else if (paramName == kParamDoubleTestDisplayMin || paramName == kParamDoubleTestMax) {
-        _doubleTest->setDisplayRange(_doubleTestDisplayMin->getValueAtTime(time), _doubleTestDisplayMax->getValueAtTime(time));
+        _doubleTest->setDefault( _doubleTestDefault->getValueAtTime(time) );
+    } else if ( (paramName == kParamDoubleTestMin) || (paramName == kParamDoubleTestMax) ) {
+        _doubleTest->setRange( _doubleTestMin->getValueAtTime(time), _doubleTestMax->getValueAtTime(time) );
+    } else if ( (paramName == kParamDoubleTestDisplayMin) || (paramName == kParamDoubleTestMax) ) {
+        _doubleTest->setDisplayRange( _doubleTestDisplayMin->getValueAtTime(time), _doubleTestDisplayMax->getValueAtTime(time) );
     } else if (paramName == kParamOptionalClipLabel) {
         std::string s;
         _optionalClipLabel->getValueAtTime(time, s);
@@ -541,12 +542,11 @@ TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _optionalClipHint->getValueAtTime(time, s);
         _optionalClip->setHint(s);
     }
-
 } // TestGroupsPlugin::changedParam
 
 mDeclarePluginFactory(TestGroupsPluginFactory, {}, {});
 void
-TestGroupsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TestGroupsPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -572,8 +572,8 @@ TestGroupsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                           OFX::ContextEnum context)
+TestGroupsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                           ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -768,10 +768,10 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // Groups
     {
-        OFX::GroupParamDescriptor* group = desc.defineGroupParam("group");
+        GroupParamDescriptor* group = desc.defineGroupParam("group");
         //group->setAsTab();
         {
-            OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup1");
+            GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup1");
             if (subgroup) {
                 if (group) {
                     subgroup->setParent(*group);
@@ -781,7 +781,7 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 }
             }
             {
-                OFX::DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup1");
+                DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup1");
                 if (page) {
                     page->addChild(*param);
                 }
@@ -791,7 +791,7 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
         {
-            OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup2AsTab");
+            GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup2AsTab");
             if (subgroup) {
                 subgroup->setAsTab();
                 if (group) {
@@ -802,7 +802,7 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 }
             }
             {
-                OFX::DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup2AsTab");
+                DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup2AsTab");
                 if (page) {
                     page->addChild(*param);
                 }
@@ -812,7 +812,7 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
         {
-            OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup3AsTab");
+            GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup3AsTab");
             if (subgroup) {
                 subgroup->setAsTab();
                 if (group) {
@@ -823,7 +823,7 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                 }
             }
             {
-                OFX::DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup3AsTab");
+                DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup3AsTab");
                 if (page) {
                     page->addChild(*param);
                 }
@@ -833,8 +833,8 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             }
         }
     }
-    OFX::GroupParamDescriptor* formatGroup = desc.defineGroupParam( "kParamFormatGroup" );
-    OFX::GroupParamDescriptor* videoGroup  = desc.defineGroupParam( "kParamVideoGroup" );
+    GroupParamDescriptor* formatGroup = desc.defineGroupParam( "kParamFormatGroup" );
+    GroupParamDescriptor* videoGroup  = desc.defineGroupParam( "kParamVideoGroup" );
     formatGroup->setLabel( "Format" );
     videoGroup->setLabel( "Video" );
 
@@ -846,8 +846,8 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //avtranscoder::OptionArray formatOptions = formatContext.getOptions();
     //common::addOptionsToGroup( desc, formatGroup, formatOptions, common::kPrefixFormat );
     {
-        OFX::ParamDescriptor* param = NULL;
-        OFX::BooleanParamDescriptor* boolParam = desc.defineBooleanParam( "opt1" );
+        ParamDescriptor* param = NULL;
+        BooleanParamDescriptor* boolParam = desc.defineBooleanParam( "opt1" );
         boolParam->setDefault( true );
         param = boolParam;
         param->setLabel( "Opt1" );
@@ -856,15 +856,15 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::ParamDescriptor* param = NULL;
-        OFX::IntParamDescriptor* intParam = desc.defineIntParam( "int" );
+        ParamDescriptor* param = NULL;
+        IntParamDescriptor* intParam = desc.defineIntParam( "int" );
         param = intParam;
         param->setLabel( "Int1" );
         param->setHint( "Int1 help" );
         param->setParent( *formatGroup );
     }
 
-    OFX::GroupParamDescriptor* formatDetailledGroup = desc.defineGroupParam( "kParamFormatDetailledGroup" );
+    GroupParamDescriptor* formatDetailledGroup = desc.defineGroupParam( "kParamFormatDetailledGroup" );
     formatDetailledGroup->setLabel( "Detailled" );
     formatDetailledGroup->setAsTab( );
     formatDetailledGroup->setParent( *formatGroup );
@@ -872,8 +872,8 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //avtranscoder::OptionArrayMap formatDetailledGroupOptions = avtranscoder::getOutputFormatOptions();
     //common::addOptionsToGroup( desc, formatDetailledGroup, formatDetailledGroupOptions, common::kPrefixFormat );
     {
-        OFX::ParamDescriptor* param = NULL;
-        OFX::BooleanParamDescriptor* boolParam = desc.defineBooleanParam( "opt2" );
+        ParamDescriptor* param = NULL;
+        BooleanParamDescriptor* boolParam = desc.defineBooleanParam( "opt2" );
         boolParam->setDefault( true );
         param = boolParam;
         param->setLabel( "Opt2" );
@@ -882,13 +882,13 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     /// VIDEO PARAMETERS
-    OFX::BooleanParamDescriptor* useCustomSAR = desc.defineBooleanParam( "kParamUseCustomSAR" );
+    BooleanParamDescriptor* useCustomSAR = desc.defineBooleanParam( "kParamUseCustomSAR" );
     useCustomSAR->setLabel( "Override SAR" );
     useCustomSAR->setDefault( false );
     useCustomSAR->setHint( "Override the file SAR (Storage Aspect Ratio) with a custom SAR value." );
     useCustomSAR->setParent( *videoGroup );
 
-    OFX::DoubleParamDescriptor* customSAR = desc.defineDoubleParam( "kParamCustomSAR" );
+    DoubleParamDescriptor* customSAR = desc.defineDoubleParam( "kParamCustomSAR" );
     customSAR->setLabel( "Custom SAR" );
     customSAR->setDefault( 1.0 );
     customSAR->setRange( 0., 10. );
@@ -896,7 +896,7 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     customSAR->setHint( "Choose a custom value to override the file SAR (Storage Aspect Ratio). Maximum value: 10." );
     customSAR->setParent( *videoGroup );
 
-    OFX::IntParamDescriptor* streamIndex = desc.defineIntParam( "kParamVideoStreamIndex" );
+    IntParamDescriptor* streamIndex = desc.defineIntParam( "kParamVideoStreamIndex" );
     streamIndex->setLabel( "kParamVideoStreamIndexLabel" );
     streamIndex->setDefault( 0 );
     streamIndex->setRange( 0., 100. );
@@ -904,7 +904,7 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     streamIndex->setHint( "Choose a custom value to decode the video stream you want. Maximum value: 100." );
     streamIndex->setParent( *videoGroup );
 
-    OFX::GroupParamDescriptor* videoDetailledGroup  = desc.defineGroupParam( "kParamVideoDetailledGroup" );
+    GroupParamDescriptor* videoDetailledGroup  = desc.defineGroupParam( "kParamVideoDetailledGroup" );
     videoDetailledGroup->setLabel( "Detailled" );
     videoDetailledGroup->setAsTab( );
     videoDetailledGroup->setParent( *videoGroup );
@@ -912,8 +912,8 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //avtranscoder::OptionArrayMap videoDetailledGroupOptions =  avtranscoder::getVideoCodecOptions();
     //common::addOptionsToGroup( desc, videoDetailledGroup, videoDetailledGroupOptions, common::kPrefixVideo );
     {
-        OFX::ParamDescriptor* param = NULL;
-        OFX::BooleanParamDescriptor* boolParam = desc.defineBooleanParam( "opt3" );
+        ParamDescriptor* param = NULL;
+        BooleanParamDescriptor* boolParam = desc.defineBooleanParam( "opt3" );
         boolParam->setDefault( true );
         param = boolParam;
         param->setLabel( "Op3" );
@@ -922,7 +922,7 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     /// VERBOSE
-    OFX::BooleanParamDescriptor* useVerbose = desc.defineBooleanParam( "kParamVerbose" );
+    BooleanParamDescriptor* useVerbose = desc.defineBooleanParam( "kParamVerbose" );
     useVerbose->setLabel( "Set to verbose" );
     useVerbose->setDefault( false );
     useVerbose->setHint( "Set plugin to verbose to get debug informations." );
@@ -930,9 +930,9 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 } // TestGroupsPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 TestGroupsPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new TestGroupsPlugin(handle);
 }

@@ -32,8 +32,8 @@
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
+typedef MultiThread::Mutex Mutex;
+typedef MultiThread::AutoMutex AutoMutex;
 }
 #else
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
@@ -111,7 +111,7 @@ public:
         , _outerBtmLeft(0)
         , _outerTopRight(0)
     {
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kParamScore);
         assert(_score);
@@ -135,21 +135,21 @@ private:
      * from last to first.
      * @param currentTime The current time at which the track has been requested.
      **/
-    virtual void trackRange(const OFX::TrackArguments& args);
+    virtual void trackRange(const TrackArguments& args);
 
     template <int nComponents>
-    void trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::TrackArguments& args);
+    void trackInternal(OfxTime refTime, OfxTime otherTime, const TrackArguments& args);
 
     template <class PIX, int nComponents, int maxValue>
     void trackInternalForDepth(OfxTime refTime,
                                const OfxRectD& refBounds,
                                const OfxPointD& refCenter,
                                const OfxPointD& refCenterWithOffset,
-                               const OFX::Image* refImg,
-                               const OFX::Image* maskImg,
+                               const Image* refImg,
+                               const Image* maskImg,
                                OfxTime otherTime,
                                const OfxRectD& trackSearchBounds,
-                               const OFX::Image* otherImg);
+                               const Image* otherImg);
 
     /* set up and run a processor */
     void setupAndProcess(TrackerPMProcessorBase &processor,
@@ -157,39 +157,39 @@ private:
                          const OfxRectD& refBounds,
                          const OfxPointD& refCenter,
                          const OfxPointD& refCenterWithOffset,
-                         const OFX::Image* refImg,
-                         const OFX::Image* maskImg,
+                         const Image* refImg,
+                         const Image* maskImg,
                          OfxTime otherTime,
                          const OfxRectD& trackSearchBounds,
-                         const OFX::Image* otherImg);
+                         const Image* otherImg);
 
-    OFX::Clip *_maskClip;
+    Clip *_maskClip;
     ChoiceParam* _score;
-    OFX::Double2DParam* _center;
-    OFX::Double2DParam* _offset;
-    OFX::IntParam* _referenceFrame;
-    OFX::BooleanParam* _enableReferenceFrame;
-    OFX::DoubleParam* _correlationScore;
-    OFX::Double2DParam* _innerBtmLeft;
-    OFX::Double2DParam* _innerTopRight;
-    OFX::Double2DParam* _outerBtmLeft;
-    OFX::Double2DParam* _outerTopRight;
+    Double2DParam* _center;
+    Double2DParam* _offset;
+    IntParam* _referenceFrame;
+    BooleanParam* _enableReferenceFrame;
+    DoubleParam* _correlationScore;
+    Double2DParam* _innerBtmLeft;
+    Double2DParam* _innerTopRight;
+    Double2DParam* _outerBtmLeft;
+    Double2DParam* _outerTopRight;
 };
 
 
 class TrackerPMProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_otherImg;
+    const Image *_otherImg;
     OfxRectI _refRectPixel;
     OfxPointI _refCenterI;
     std::pair<OfxPointD, double> _bestMatch; //< the results for the current processor
     Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
 
 public:
-    TrackerPMProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    TrackerPMProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _otherImg(0)
         , _refRectPixel()
         , _refCenterI()
@@ -202,7 +202,7 @@ public:
     }
 
     /** @brief set the processing parameters. return false if processing cannot be done. */
-    virtual bool setValues(const OFX::Image *ref, const OFX::Image *other, const OFX::Image *mask,
+    virtual bool setValues(const Image *ref, const Image *other, const Image *mask,
                            const OfxRectI& pattern, const OfxPointI& centeri) = 0;
 
     /**
@@ -221,14 +221,14 @@ class TrackerPMProcessor
     : public TrackerPMProcessorBase
 {
 protected:
-    std::auto_ptr<OFX::ImageMemory> _patternImg;
+    std::auto_ptr<ImageMemory> _patternImg;
     PIX *_patternData;
-    std::auto_ptr<OFX::ImageMemory> _weightImg;
+    std::auto_ptr<ImageMemory> _weightImg;
     float *_weightData;
     double _weightTotal;
 
 public:
-    TrackerPMProcessor(OFX::ImageEffect &instance)
+    TrackerPMProcessor(ImageEffect &instance)
         : TrackerPMProcessorBase(instance)
         , _patternImg(0)
         , _patternData(0)
@@ -244,9 +244,9 @@ public:
 
 private:
     /** @brief set the processing parameters. return false if processing cannot be done. */
-    virtual bool setValues(const OFX::Image *ref,
-                           const OFX::Image *other,
-                           const OFX::Image *mask,
+    virtual bool setValues(const Image *ref,
+                           const Image *other,
+                           const Image *mask,
                            const OfxRectI& pattern,
                            const OfxPointI& centeri)
     {
@@ -548,7 +548,7 @@ private:
 
 
 void
-TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
+TrackerPMPlugin::trackRange(const TrackArguments& args)
 {
     if (!_srcClip) {
         return;
@@ -583,16 +583,16 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
         }
 
 
-        OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
-        assert(srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA ||
-               srcComponents == OFX::ePixelComponentAlpha);
+        PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
+        assert(srcComponents == ePixelComponentRGB || srcComponents == ePixelComponentRGBA ||
+               srcComponents == ePixelComponentAlpha);
 
-        if (srcComponents == OFX::ePixelComponentRGBA) {
+        if (srcComponents == ePixelComponentRGBA) {
             trackInternal<4>(refFrame, t, args);
-        } else if (srcComponents == OFX::ePixelComponentRGB) {
+        } else if (srcComponents == ePixelComponentRGB) {
             trackInternal<3>(refFrame, t, args);
         } else {
-            assert(srcComponents == OFX::ePixelComponentAlpha);
+            assert(srcComponents == ePixelComponentAlpha);
             trackInternal<1>(refFrame, t, args);
         }
         if (args.forward) {
@@ -699,11 +699,11 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
                                  const OfxRectD& refBounds,
                                  const OfxPointD& refCenter,
                                  const OfxPointD& refCenterWithOffset,
-                                 const OFX::Image* refImg,
-                                 const OFX::Image* maskImg,
+                                 const Image* refImg,
+                                 const Image* maskImg,
                                  OfxTime otherTime,
                                  const OfxRectD& trackSearchBounds,
-                                 const OFX::Image* otherImg)
+                                 const Image* otherImg)
 {
     if (!_srcClip) {
         return;
@@ -711,20 +711,20 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
     const double par = _srcClip->getPixelAspectRatio();
     const OfxPointD rsOne = {1., 1.};
     OfxRectI trackSearchBoundsPixel;
-    OFX::Coords::toPixelEnclosing(trackSearchBounds, rsOne, par, &trackSearchBoundsPixel);
+    Coords::toPixelEnclosing(trackSearchBounds, rsOne, par, &trackSearchBoundsPixel);
 
     // compute the pattern window in pixel coords
     OfxRectI refRectPixel;
-    OFX::Coords::toPixelEnclosing(refBounds, rsOne, par, &refRectPixel);
+    Coords::toPixelEnclosing(refBounds, rsOne, par, &refRectPixel);
 
     // round center to nearest pixel center
     OfxPointI refCenterI;
     OfxPointD refCenterPixelSub;
-    OFX::Coords::toPixel(refCenterWithOffset, rsOne, par, &refCenterI);
-    OFX::Coords::toPixelSub(refCenterWithOffset, rsOne, par, &refCenterPixelSub);
+    Coords::toPixel(refCenterWithOffset, rsOne, par, &refCenterI);
+    Coords::toPixelSub(refCenterWithOffset, rsOne, par, &refCenterPixelSub);
 
     //Clip the refRectPixel to the bounds of the ref image
-    bool intersect = OFX::Coords::rectIntersection(refRectPixel, refImg->getBounds(), &refRectPixel);
+    bool intersect = Coords::rectIntersection(refRectPixel, refImg->getBounds(), &refRectPixel);
 
     if (!intersect) {
         // can't track: erase any existing track
@@ -767,7 +767,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
 
             newCenterPixelSub.x = refCenterPixelSub.x + bestMatch.x - refCenterI.x;
             newCenterPixelSub.y = refCenterPixelSub.y + bestMatch.y - refCenterI.y;
-            OFX::Coords::toCanonicalSub(newCenterPixelSub, rsOne, par, &newCenter);
+            Coords::toCanonicalSub(newCenterPixelSub, rsOne, par, &newCenter);
 
             //Commented-out for Natron compat: Natron does beginEditBlock in the main-thread, hence
             //since the instanceChanged action is executed in multiple separated thread by Natron when tracking, there's no
@@ -789,11 +789,11 @@ TrackerPMPlugin::trackInternalForDepth(OfxTime refTime,
                                        const OfxRectD& refBounds,
                                        const OfxPointD& refCenter,
                                        const OfxPointD& refCenterWithOffset,
-                                       const OFX::Image* refImg,
-                                       const OFX::Image* maskImg,
+                                       const Image* refImg,
+                                       const Image* maskImg,
                                        OfxTime otherTime,
                                        const OfxRectD& trackSearchBounds,
-                                       const OFX::Image* otherImg)
+                                       const Image* otherImg)
 {
     TrackerScoreEnum typeE = (TrackerScoreEnum)_score->getValueAtTime(refTime);
 
@@ -826,7 +826,7 @@ template <int nComponents>
 void
 TrackerPMPlugin::trackInternal(OfxTime refTime,
                                OfxTime otherTime,
-                               const OFX::TrackArguments& args)
+                               const TrackArguments& args)
 {
     OfxRectD refRect;
 
@@ -862,25 +862,25 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
     OfxRectD otherBounds;
     getOtherBounds(prevTimeCenterWithOffset, searchRect, &otherBounds);
 
-    std::auto_ptr<const OFX::Image> srcRef( ( _srcClip && _srcClip->isConnected() ) ?
-                                            _srcClip->fetchImage(refTime, refBounds) : 0 );
-    std::auto_ptr<const OFX::Image> srcOther( ( _srcClip && _srcClip->isConnected() ) ?
-                                              _srcClip->fetchImage(otherTime, otherBounds) : 0 );
+    std::auto_ptr<const Image> srcRef( ( _srcClip && _srcClip->isConnected() ) ?
+                                       _srcClip->fetchImage(refTime, refBounds) : 0 );
+    std::auto_ptr<const Image> srcOther( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(otherTime, otherBounds) : 0 );
     if ( !srcRef.get() || !srcOther.get() ) {
         return;
     }
     if ( srcRef.get() ) {
         if ( (srcRef->getRenderScale().x != args.renderScale.x) ||
              ( srcRef->getRenderScale().y != args.renderScale.y) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
     if ( srcOther.get() ) {
         if ( (srcOther->getRenderScale().x != args.renderScale.x) ||
              ( srcOther->getRenderScale().y != args.renderScale.y) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
     // renderScale should never be something else than 1 when called from ActionInstanceChanged
@@ -888,20 +888,20 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
          ( srcRef->getPixelComponents() != srcOther->getPixelComponents() ) ||
          ( srcRef->getRenderScale().x != 1.) || ( srcRef->getRenderScale().y != 1) ||
          ( srcOther->getRenderScale().x != 1.) || ( srcOther->getRenderScale().y != 1) ) {
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 
-    OFX::BitDepthEnum srcBitDepth = srcRef->getPixelDepth();
+    BitDepthEnum srcBitDepth = srcRef->getPixelDepth();
 
     //  mask cannot be black and transparent, so an empty mask means mask is disabled.
     // auto ptr for the mask.
-    std::auto_ptr<const OFX::Image> mask( ( _maskClip && _maskClip->isConnected() ) ?
-                                          _maskClip->fetchImage(refTime) : 0 );
+    std::auto_ptr<const Image> mask( ( _maskClip && _maskClip->isConnected() ) ?
+                                     _maskClip->fetchImage(refTime) : 0 );
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
@@ -909,26 +909,26 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
     getTrackSearchBounds(refRect, prevTimeCenterWithOffset, searchRect, &trackSearchBounds);
 
     switch (srcBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         trackInternalForDepth<unsigned char, nComponents, 255>( refTime, refBounds, refCenter, refCenterWithOffset, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get() );
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         trackInternalForDepth<unsigned short, nComponents, 65535>( refTime, refBounds, refCenter, refCenterWithOffset, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get() );
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         trackInternalForDepth<float, nComponents, 1>( refTime, refBounds, refCenter, refCenterWithOffset, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get() );
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 } // TrackerPMPlugin::trackInternal
 
 mDeclarePluginFactory(TrackerPMPluginFactory, {}, {});
 void
-TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TrackerPMPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -956,17 +956,17 @@ TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 #ifdef OFX_EXTENSIONS_NATRON
     // This plug-in is deprecated since Natron has its new tracker implementation
-    if ( OFX::getImageEffectHostDescription()->isNatron &&
-         ( OFX::getImageEffectHostDescription()->versionMajor >= 2) &&
-         ( OFX::getImageEffectHostDescription()->versionMinor >= 1) ) {
+    if ( getImageEffectHostDescription()->isNatron &&
+         ( getImageEffectHostDescription()->versionMajor >= 2) &&
+         ( getImageEffectHostDescription()->versionMinor >= 1) ) {
         desc.setIsDeprecated(true);
     }
 #endif
 }
 
 void
-TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                          OFX::ContextEnum context)
+TrackerPMPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                          ContextEnum context)
 {
     PageParamDescriptor* page = genericTrackerDescribeInContextBegin(desc, context);
 
@@ -975,7 +975,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     genericTrackerDescribePointParameters(desc, page);
     // center
     {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingCenterPoint);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingCenterPoint);
         param->setLabel(kParamTrackingCenterPointLabel);
         param->setHint(kParamTrackingCenterPointHint);
         param->setInstanceSpecific(true);
@@ -996,7 +996,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // offset
     {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingOffset);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingOffset);
         param->setLabel(kParamTrackingOffsetLabel);
         param->setHint(kParamTrackingOffsetHint);
         param->setInstanceSpecific(true);
@@ -1014,11 +1014,11 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // ref
     {
-        OFX::IntParamDescriptor* param = desc.defineIntParam(kParamTrackingReferenceFrame);
+        IntParamDescriptor* param = desc.defineIntParam(kParamTrackingReferenceFrame);
         param->setLabel(kParamTrackingReferenceFrameLabel);
         param->setHint(kParamTrackingReferenceFrameHint);
         param->setEvaluateOnChange(false); // The tracker is identity always
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine);
         if (page) {
             page->addChild(*param);
         }
@@ -1026,7 +1026,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // enable ref
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTrackingEnableReferenceFrame);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTrackingEnableReferenceFrame);
         param->setLabel(kParamTrackingEnableReferenceFrameLabel);
         param->setHint(kParamTrackingEnableReferenceFrameHint);
         param->setEvaluateOnChange(false); // The tracker is identity always
@@ -1038,7 +1038,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // correlation score
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTrackingCorrelationScore);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTrackingCorrelationScore);
         param->setLabel(kParamTrackingCorrelationScoreLabel);
         param->setHint(kParamTrackingCorrelationScoreHint);
         param->setInstanceSpecific(true);
@@ -1051,7 +1051,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // innerBtmLeft
     {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingPatternBoxBtmLeft);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingPatternBoxBtmLeft);
         param->setLabel(kParamTrackingPatternBoxBtmLeftLabel);
         param->setHint(kParamTrackingPatternBoxBtmLeftHint);
         param->setDoubleType(eDoubleTypeXY);
@@ -1071,7 +1071,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // innerTopRight
     {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingPatternBoxTopRight);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingPatternBoxTopRight);
         param->setLabel(kParamTrackingPatternBoxTopRightLabel);
         param->setHint(kParamTrackingPatternBoxTopRightHint);
         param->setDoubleType(eDoubleTypeXY);
@@ -1091,7 +1091,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // outerBtmLeft
     {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingSearchBoxBtmLeft);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingSearchBoxBtmLeft);
         param->setLabel(kParamTrackingSearchBoxBtmLeftLabel);
         param->setHint(kParamTrackingSearchBoxBtmLeftHint);
         param->setDoubleType(eDoubleTypeXY);
@@ -1111,7 +1111,7 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // outerTopRight
     {
-        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingSearchBoxTopRight);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingSearchBoxTopRight);
         param->setLabel(kParamTrackingSearchBoxTopRightLabel);
         param->setHint(kParamTrackingSearchBoxBtmLeftHint);
         param->setDoubleType(eDoubleTypeXY);
@@ -1162,9 +1162,9 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // TrackerPMPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 TrackerPMPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       OFX::ContextEnum /*context*/)
+                                       ContextEnum /*context*/)
 {
     return new TrackerPMPlugin(handle);
 }

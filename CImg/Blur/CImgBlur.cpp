@@ -1678,7 +1678,7 @@ public:
         }
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgBlurParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -1745,7 +1745,7 @@ public:
                 case eColorspaceRec709: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float X, Y, Z;
-                        OFX::Color::rgb709_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
+                        Color::rgb709_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
                         float XYZ = X + Y + Z;
                         float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
                         *px = X * invXYZ;
@@ -1762,7 +1762,7 @@ public:
                 case eColorspaceRec2020: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float X, Y, Z;
-                        OFX::Color::rgb2020_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
+                        Color::rgb2020_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
                         float XYZ = X + Y + Z;
                         float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
                         *px = X * invXYZ;
@@ -1779,7 +1779,7 @@ public:
                 case eColorspaceACESAP0: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float X, Y, Z;
-                        OFX::Color::rgbACESAP0_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
+                        Color::rgbACESAP0_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
                         float XYZ = X + Y + Z;
                         float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
                         *px = X * invXYZ;
@@ -1796,7 +1796,7 @@ public:
                 case eColorspaceACESAP1: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float X, Y, Z;
-                        OFX::Color::rgbACESAP1_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
+                        Color::rgbACESAP1_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
                         float XYZ = X + Y + Z;
                         float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
                         *px = X * invXYZ;
@@ -1880,7 +1880,7 @@ public:
                         float X = *px * Y / *py;
                         float Z = (1. - *px - *py) * Y / *py;
                         float r, g, b;
-                        OFX::Color::xyz_to_rgb709(X, Y, Z, &r, &g, &b);
+                        Color::xyz_to_rgb709(X, Y, Z, &r, &g, &b);
                         *pr = r;
                         *pg = g;
                         *pb = b;
@@ -1898,7 +1898,7 @@ public:
                         float X = *px * Y / *py;
                         float Z = (1. - *px - *py) * Y / *py;
                         float r, g, b;
-                        OFX::Color::xyz_to_rgb2020(X, Y, Z, &r, &g, &b);
+                        Color::xyz_to_rgb2020(X, Y, Z, &r, &g, &b);
                         *pr = r;
                         *pg = g;
                         *pb = b;
@@ -1916,7 +1916,7 @@ public:
                         float X = *px * Y / *py;
                         float Z = (1. - *px - *py) * Y / *py;
                         float r, g, b;
-                        OFX::Color::xyz_to_rgbACESAP0(X, Y, Z, &r, &g, &b);
+                        Color::xyz_to_rgbACESAP0(X, Y, Z, &r, &g, &b);
                         *pr = r;
                         *pg = g;
                         *pb = b;
@@ -1934,7 +1934,7 @@ public:
                         float X = *px * Y / *py;
                         float Z = (1. - *px - *py) * Y / *py;
                         float r, g, b;
-                        OFX::Color::xyz_to_rgbACESAP1(X, Y, Z, &r, &g, &b);
+                        Color::xyz_to_rgbACESAP1(X, Y, Z, &r, &g, &b);
                         *pr = r;
                         *pg = g;
                         *pb = b;
@@ -1978,7 +1978,7 @@ public:
         }
     } // render
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args,
+    virtual bool isIdentity(const IsIdentityArguments &args,
                             const CImgBlurParams& params) OVERRIDE FINAL
     {
         if (_blurPlugin == eBlurPluginLaplacian) {
@@ -2019,10 +2019,10 @@ public:
     virtual int getBoundary(const CImgBlurParams& params)  OVERRIDE FINAL { return params.boundary_i; }
 
     // describe function for plugin factories
-    static void describe(OFX::ImageEffectDescriptor& desc, int majorVersion, int minorVersion, BlurPluginEnum blurPlugin = eBlurPluginBlur);
+    static void describe(ImageEffectDescriptor& desc, int majorVersion, int minorVersion, BlurPluginEnum blurPlugin = eBlurPluginBlur);
 
     // describeInContext function for plugin factories
-    static void describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context, int majorVersion, int minorVersion, BlurPluginEnum blurPlugin = eBlurPluginBlur);
+    static void describeInContext(ImageEffectDescriptor& desc, ContextEnum context, int majorVersion, int minorVersion, BlurPluginEnum blurPlugin = eBlurPluginBlur);
 
     // returns true if the image was actually modified
     bool blur(FilterEnum filter,
@@ -2069,7 +2069,7 @@ public:
         return false;
     }
 
-    void renderEdgeDetect(const OFX::RenderArguments &args,
+    void renderEdgeDetect(const RenderArguments &args,
                           const CImgBlurParams& params,
                           cimg_library::CImg<cimgpix_t>& cimg)
     {
@@ -2433,35 +2433,35 @@ private:
 
     // params
     const BlurPluginEnum _blurPlugin;
-    OFX::DoubleParam *_sharpenSoftenAmount;
-    OFX::Double2DParam *_size;
-    OFX::DoubleParam *_erodeSize;
-    OFX::DoubleParam *_erodeBlur;
-    OFX::BooleanParam *_uniform;
-    OFX::IntParam *_orderX;
-    OFX::IntParam *_orderY;
-    OFX::DoubleParam *_bloomRatio;
-    OFX::IntParam *_bloomCount;
-    OFX::BooleanParam *_edgeExtendPremult;
-    OFX::DoubleParam *_edgeExtendSize;
-    OFX::IntParam *_edgeExtendCount;
-    OFX::BooleanParam *_edgeExtendUnpremult;
-    OFX::ChoiceParam *_colorspace;
-    OFX::ChoiceParam *_boundary;
-    OFX::ChoiceParam *_filter;
-    OFX::ChoiceParam *_edgeDetectFilter;
-    OFX::ChoiceParam *_edgeDetectMultiChannel;
-    OFX::DoubleParam *_edgeDetectBlur;
-    OFX::DoubleParam *_edgeDetectErode;
-    OFX::BooleanParam *_edgeDetectNMS;
-    OFX::BooleanParam *_expandRoD;
-    OFX::BooleanParam *_cropToFormat;
-    OFX::DoubleParam *_alphaThreshold;
+    DoubleParam *_sharpenSoftenAmount;
+    Double2DParam *_size;
+    DoubleParam *_erodeSize;
+    DoubleParam *_erodeBlur;
+    BooleanParam *_uniform;
+    IntParam *_orderX;
+    IntParam *_orderY;
+    DoubleParam *_bloomRatio;
+    IntParam *_bloomCount;
+    BooleanParam *_edgeExtendPremult;
+    DoubleParam *_edgeExtendSize;
+    IntParam *_edgeExtendCount;
+    BooleanParam *_edgeExtendUnpremult;
+    ChoiceParam *_colorspace;
+    ChoiceParam *_boundary;
+    ChoiceParam *_filter;
+    ChoiceParam *_edgeDetectFilter;
+    ChoiceParam *_edgeDetectMultiChannel;
+    DoubleParam *_edgeDetectBlur;
+    DoubleParam *_edgeDetectErode;
+    BooleanParam *_edgeDetectNMS;
+    BooleanParam *_expandRoD;
+    BooleanParam *_cropToFormat;
+    DoubleParam *_alphaThreshold;
 };
 
 
 void
-CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
+CImgBlurPlugin::describe(ImageEffectDescriptor& desc,
                          int majorVersion,
                          int /*minorVersion*/,
                          BlurPluginEnum blurPlugin)
@@ -2532,8 +2532,8 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc,
 }
 
 void
-CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                  OFX::ContextEnum context,
+CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
+                                  ContextEnum context,
                                   int majorVersion,
                                   int /*minorVersion*/,
                                   BlurPluginEnum blurPlugin)
@@ -2557,7 +2557,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
 
-    OFX::PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
+    PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
                                                                             kSupportsRGBA,
                                                                             (blurPlugin == eBlurPluginEdgeExtend) ? false : kSupportsRGB,
                                                                             (blurPlugin == eBlurPluginEdgeExtend || blurPlugin == eBlurPluginChromaBlur) ? false : kSupportsXY,
@@ -2569,7 +2569,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
     if (blurPlugin == eBlurPluginSharpen ||
         blurPlugin == eBlurPluginSoften) {
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSharpenSoftenAmount);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSharpenSoftenAmount);
             param->setLabel(kParamSharpenSoftenAmountLabel);
             param->setHint(blurPlugin == eBlurPluginSharpen ? kParamSharpenAmountHint : kParamSoftenAmountHint);
             param->setRange(-DBL_MAX, DBL_MAX);
@@ -2582,7 +2582,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
     }
     if (blurPlugin == eBlurPluginErodeBlur) {
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamErodeSize);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamErodeSize);
             param->setLabel(kParamErodeSizeLabel);
             param->setHint(kParamErodeSizeHint);
             param->setRange(-DBL_MAX, DBL_MAX);
@@ -2595,7 +2595,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamErodeBlur);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamErodeBlur);
             param->setLabel(kParamErodeBlurLabel);
             param->setHint(kParamErodeBlurHint);
             param->setRange(-0.5, DBL_MAX);
@@ -2610,7 +2610,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
     }
     if (blurPlugin == eBlurPluginEdgeExtend) {
         {
-            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeExtendPremult);
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeExtendPremult);
             param->setLabel(kParamEdgeExtendPremultLabel);
             param->setHint(kParamEdgeExtendPremultHint);
             param->setDefault(false);
@@ -2619,7 +2619,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeExtendSize);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeExtendSize);
             param->setLabel(kParamEdgeExtendSizeLabel);
             param->setHint(kParamEdgeExtendSizeHint);
             param->setRange(0, DBL_MAX);
@@ -2630,7 +2630,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::IntParamDescriptor *param = desc.defineIntParam(kParamEdgeExtendCount);
+            IntParamDescriptor *param = desc.defineIntParam(kParamEdgeExtendCount);
             param->setLabel(kParamEdgeExtendCountLabel);
             param->setHint(kParamEdgeExtendCountHint);
             param->setRange(1, INT_MAX);
@@ -2641,7 +2641,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeExtendUnpremult);
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeExtendUnpremult);
             param->setLabel(kParamEdgeExtendUnpremultLabel);
             param->setHint(kParamEdgeExtendUnpremultHint);
             param->setDefault(false);
@@ -2657,7 +2657,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
         blurPlugin == eBlurPluginChromaBlur ||
         blurPlugin == eBlurPluginBloom) {
         {
-            OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
+            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
             param->setLabel(kParamSizeLabel);
             param->setHint(kParamSizeHint);
             param->setRange(0, 0, 1000, 1000);
@@ -2681,12 +2681,12 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamUniform);
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamUniform);
             param->setLabel(kParamUniformLabel);
             param->setHint(kParamUniformHint);
             // uniform parameter is false by default on Natron
             // https://github.com/MrKepzie/Natron/issues/1204
-            param->setDefault(!OFX::getImageEffectHostDescription()->isNatron);
+            param->setDefault(!getImageEffectHostDescription()->isNatron);
             if (page) {
                 page->addChild(*param);
             }
@@ -2695,7 +2695,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
 
     if (blurPlugin == eBlurPluginBlur) {
         {
-            OFX::IntParamDescriptor *param = desc.defineIntParam(kParamOrderX);
+            IntParamDescriptor *param = desc.defineIntParam(kParamOrderX);
             param->setLabel(kParamOrderXLabel);
             param->setHint(kParamOrderXHint);
             param->setRange(0, 2);
@@ -2705,7 +2705,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::IntParamDescriptor *param = desc.defineIntParam(kParamOrderY);
+            IntParamDescriptor *param = desc.defineIntParam(kParamOrderY);
             param->setLabel(kParamOrderYLabel);
             param->setHint(kParamOrderYHint);
             param->setRange(0, 2);
@@ -2717,7 +2717,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
     }
     if (blurPlugin == eBlurPluginBloom) {
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBloomRatio);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBloomRatio);
             param->setLabel(kParamBloomRatioLabel);
             param->setHint(kParamBloomRatioHint);
             param->setRange(1., DBL_MAX);
@@ -2728,7 +2728,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::IntParamDescriptor *param = desc.defineIntParam(kParamBloomCount);
+            IntParamDescriptor *param = desc.defineIntParam(kParamBloomCount);
             param->setLabel(kParamBloomCountLabel);
             param->setHint(kParamBloomCountHint);
             param->setRange(1, INT_MAX);
@@ -2740,7 +2740,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     if (blurPlugin == eBlurPluginChromaBlur) {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColorspace);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColorspace);
         param->setLabel(kParamColorspaceLabel);
         param->setHint(kParamColorspaceHint);
         assert(param->getNOptions() == eColorspaceRec709);
@@ -2759,7 +2759,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
 
     if (blurPlugin == eBlurPluginBlur ||
         blurPlugin == eBlurPluginBloom) {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
         param->setLabel(kParamBoundaryLabel);
         param->setHint(kParamBoundaryHint);
         assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
@@ -2786,7 +2786,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     if (blurPlugin == eBlurPluginEdgeDetect) {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectFilter);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectFilter);
         param->setLabel(kParamEdgeDetectFilterLabel);
         param->setHint(kParamEdgeDetectFilterHint);
         assert(param->getNOptions() == eEdgeDetectFilterSimple);
@@ -2816,7 +2816,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
         blurPlugin == eBlurPluginChromaBlur ||
         blurPlugin == eBlurPluginBloom ||
         blurPlugin == eBlurPluginEdgeExtend) { // all except EdgeDetect and ErodeBlur
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
         param->setLabel(kParamFilterLabel);
         param->setHint(kParamFilterHint);
         assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
@@ -2842,7 +2842,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
     }
     if (blurPlugin == eBlurPluginEdgeDetect) {
         {
-            OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectMultiChannel);
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectMultiChannel);
             param->setLabel(kParamEdgeDetectMultiChannelLabel);
             param->setHint(kParamEdgeDetectMultiChannelHint);
             assert(param->getNOptions() == eEdgeDetectMultiChannelSeparate);
@@ -2859,7 +2859,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectBlur);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectBlur);
             param->setLabel(kParamEdgeDetectBlurLabel);
             param->setHint(kParamEdgeDetectBlurHint);
             param->setRange(0., DBL_MAX);
@@ -2872,7 +2872,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectErode);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectErode);
             param->setLabel(kParamEdgeDetectErodeLabel);
             param->setHint(kParamEdgeDetectErodeHint);
             param->setRange(-DBL_MAX, DBL_MAX);
@@ -2885,7 +2885,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
             }
         }
         {
-            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeDetectNMS);
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeDetectNMS);
             param->setLabel(kParamEdgeDetectNMSLabel);
             param->setHint(kParamEdgeDetectNMSHint);
             if (page) {
@@ -2898,7 +2898,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
         blurPlugin == eBlurPluginErodeBlur ||
         blurPlugin == eBlurPluginEdgeExtend ||
         blurPlugin == eBlurPluginEdgeDetect) {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(blurPlugin != eBlurPluginBloom); // the expanded RoD of Bloom may be very large
@@ -2914,7 +2914,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
 #ifdef OFX_EXTENSIONS_NATRON
     if (getImageEffectHostDescription()->isNatron) {
         if (blurPlugin != eBlurPluginChromaBlur && blurPlugin != eBlurPluginLaplacian && blurPlugin != eBlurPluginSharpen && blurPlugin != eBlurPluginSoften) {
-            OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCropToFormat);
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCropToFormat);
             param->setLabel(kParamCropToFormatLabel);
             param->setHint(kParamCropToFormatHint);
             param->setDefault(true);
@@ -2926,7 +2926,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
 #endif
     if (blurPlugin == eBlurPluginBlur || blurPlugin == eBlurPluginBloom) {
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlphaThreshold);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlphaThreshold);
             param->setLabel(kParamAlphaThresholdLabel);
             param->setHint(kParamAlphaThresholdHint);
             param->setRange(0., DBL_MAX);
@@ -2946,21 +2946,21 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc,
 mDeclarePluginFactory(CImgBlurPluginFactory0, {}, {});
 
 void
-CImgBlurPluginFactory0::describe(OFX::ImageEffectDescriptor& desc)
+CImgBlurPluginFactory0::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe( desc, getMajorVersion(), getMinorVersion() );
 }
 
 void
-CImgBlurPluginFactory0::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                       OFX::ContextEnum context)
+CImgBlurPluginFactory0::describeInContext(ImageEffectDescriptor& desc,
+                                                       ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext( desc, context, getMajorVersion(), getMinorVersion() );
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CImgBlurPluginFactory0::createInstance(OfxImageEffectHandle handle,
-                                                    OFX::ContextEnum /*context*/)
+                                                    ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle);
 }
@@ -2969,23 +2969,23 @@ mDeclarePluginFactoryVersioned(CImgBlurPluginFactory, {}, {});
 
 template<unsigned int majorVersion>
 void
-CImgBlurPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+CImgBlurPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe( desc, this->getMajorVersion(), this->getMinorVersion() );
 }
 
 template<unsigned int majorVersion>
 void
-CImgBlurPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                       OFX::ContextEnum context)
+CImgBlurPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
+                                                       ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext( desc, context, this->getMajorVersion(), this->getMinorVersion() );
 }
 
 template<unsigned int majorVersion>
-OFX::ImageEffect*
+ImageEffect*
 CImgBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                    OFX::ContextEnum /*context*/)
+                                                    ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle);
 }
@@ -2997,23 +2997,23 @@ mDeclarePluginFactoryVersioned(CImgLaplacianPluginFactory, {}, {});
 
 template<unsigned int majorVersion>
 void
-CImgLaplacianPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+CImgLaplacianPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginLaplacian);
 }
 
 template<unsigned int majorVersion>
 void
-CImgLaplacianPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                            OFX::ContextEnum context)
+CImgLaplacianPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
+                                                            ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginLaplacian);
 }
 
 template<unsigned int majorVersion>
-OFX::ImageEffect*
+ImageEffect*
 CImgLaplacianPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                         OFX::ContextEnum /*context*/)
+                                                         ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginLaplacian);
 }
@@ -3025,23 +3025,23 @@ mDeclarePluginFactoryVersioned(CImgChromaBlurPluginFactory, {}, {});
 
 template<unsigned int majorVersion>
 void
-CImgChromaBlurPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+CImgChromaBlurPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginChromaBlur);
 }
 
 template<unsigned int majorVersion>
 void
-CImgChromaBlurPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                             OFX::ContextEnum context)
+CImgChromaBlurPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
+                                                             ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginChromaBlur);
 }
 
 template<unsigned int majorVersion>
-OFX::ImageEffect*
+ImageEffect*
 CImgChromaBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                          OFX::ContextEnum /*context*/)
+                                                          ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginChromaBlur);
 }
@@ -3053,23 +3053,23 @@ mDeclarePluginFactoryVersioned(CImgBloomPluginFactory, {}, {});
 
 template<unsigned int majorVersion>
 void
-CImgBloomPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+CImgBloomPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginBloom);
 }
 
 template<unsigned int majorVersion>
 void
-CImgBloomPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                        OFX::ContextEnum context)
+CImgBloomPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
+                                                        ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginBloom);
 }
 
 template<unsigned int majorVersion>
-OFX::ImageEffect*
+ImageEffect*
 CImgBloomPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                     OFX::ContextEnum /*context*/)
+                                                     ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginBloom);
 }
@@ -3081,23 +3081,23 @@ mDeclarePluginFactoryVersioned(CImgErodeBlurPluginFactory, {}, {});
 
 template<unsigned int majorVersion>
 void
-CImgErodeBlurPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+CImgErodeBlurPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginErodeBlur);
 }
 
 template<unsigned int majorVersion>
 void
-CImgErodeBlurPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                            OFX::ContextEnum context)
+CImgErodeBlurPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
+                                                            ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginErodeBlur);
 }
 
 template<unsigned int majorVersion>
-OFX::ImageEffect*
+ImageEffect*
 CImgErodeBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                         OFX::ContextEnum /*context*/)
+                                                         ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginErodeBlur);
 }
@@ -3109,23 +3109,23 @@ mDeclarePluginFactoryVersioned(CImgSharpenPluginFactory, {}, {});
 
 template<unsigned int majorVersion>
 void
-CImgSharpenPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+CImgSharpenPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginSharpen);
 }
 
 template<unsigned int majorVersion>
 void
-CImgSharpenPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                          OFX::ContextEnum context)
+CImgSharpenPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
+                                                          ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginSharpen);
 }
 
 template<unsigned int majorVersion>
-OFX::ImageEffect*
+ImageEffect*
 CImgSharpenPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                       OFX::ContextEnum /*context*/)
+                                                       ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginSharpen);
 }
@@ -3137,23 +3137,23 @@ mDeclarePluginFactoryVersioned(CImgSoftenPluginFactory, {}, {});
 
 template<unsigned int majorVersion>
 void
-CImgSoftenPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+CImgSoftenPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginSoften);
 }
 
 template<unsigned int majorVersion>
 void
-CImgSoftenPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                         OFX::ContextEnum context)
+CImgSoftenPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
+                                                         ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginSoften);
 }
 
 template<unsigned int majorVersion>
-OFX::ImageEffect*
+ImageEffect*
 CImgSoftenPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                      OFX::ContextEnum /*context*/)
+                                                      ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginSoften);
 }
@@ -3165,23 +3165,23 @@ mDeclarePluginFactoryVersioned(CImgEdgeExtendPluginFactory, {}, {});
 
 template<unsigned int majorVersion>
 void
-CImgEdgeExtendPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+CImgEdgeExtendPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginEdgeExtend);
 }
 
 template<unsigned int majorVersion>
 void
-CImgEdgeExtendPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                         OFX::ContextEnum context)
+CImgEdgeExtendPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
+                                                         ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginEdgeExtend);
 }
 
 template<unsigned int majorVersion>
-OFX::ImageEffect*
+ImageEffect*
 CImgEdgeExtendPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                      OFX::ContextEnum /*context*/)
+                                                      ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginEdgeExtend);
 }
@@ -3193,23 +3193,23 @@ mDeclarePluginFactoryVersioned(CImgEdgeDetectPluginFactory, {}, {});
 
 template<unsigned int majorVersion>
 void
-CImgEdgeDetectPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
+CImgEdgeDetectPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     return CImgBlurPlugin::describe(desc, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginEdgeDetect);
 }
 
 template<unsigned int majorVersion>
 void
-CImgEdgeDetectPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                             OFX::ContextEnum context)
+CImgEdgeDetectPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
+                                                             ContextEnum context)
 {
     return CImgBlurPlugin::describeInContext(desc, context, this->getMajorVersion(), this->getMinorVersion(), eBlurPluginEdgeDetect);
 }
 
 template<unsigned int majorVersion>
-OFX::ImageEffect*
+ImageEffect*
 CImgEdgeDetectPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
-                                                          OFX::ContextEnum /*context*/)
+                                                          ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle, eBlurPluginEdgeDetect);
 }

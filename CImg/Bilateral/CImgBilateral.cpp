@@ -49,8 +49,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Blur input stream by bilateral filtering.\n" \
     "Uses the 'blur_bilateral' function from the CImg library.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Bilateral\n" \
-"\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Bilateral\n" \
+    "\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
     "It can be used in commercial applications (see http://cimg.eu)."
@@ -153,7 +153,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgBilateralParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -173,7 +173,7 @@ public:
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgBilateralParams& params) OVERRIDE FINAL
     {
         return (params.sigma_s == 0.);
@@ -182,9 +182,9 @@ public:
 private:
 
     // params
-    OFX::DoubleParam *_sigma_s;
-    OFX::DoubleParam *_sigma_r;
-    OFX::IntParam *_iterations;
+    DoubleParam *_sigma_s;
+    DoubleParam *_sigma_r;
+    IntParam *_iterations;
 };
 
 class CImgBilateralGuidedPlugin
@@ -224,7 +224,7 @@ public:
 
     virtual void render(const cimg_library::CImg<cimgpix_t>& srcA,
                         const cimg_library::CImg<cimgpix_t>& srcB,
-                        const OFX::RenderArguments &args,
+                        const RenderArguments &args,
                         const CImgBilateralParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -249,7 +249,7 @@ public:
         }
     }
 
-    virtual int isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual int isIdentity(const IsIdentityArguments & /*args*/,
                            const CImgBilateralParams& params) OVERRIDE FINAL
     {
         return (params.sigma_s == 0.);
@@ -258,14 +258,14 @@ public:
 private:
 
     // params
-    OFX::DoubleParam *_sigma_s;
-    OFX::DoubleParam *_sigma_r;
+    DoubleParam *_sigma_s;
+    DoubleParam *_sigma_r;
 };
 
 mDeclarePluginFactory(CImgBilateralPluginFactory, {}, {});
 
 void
-CImgBilateralPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgBilateralPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -294,22 +294,22 @@ CImgBilateralPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                              OFX::ContextEnum context)
+CImgBilateralPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                              ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgBilateralPlugin::describeInContextBegin(desc, context,
-                                                                                 kSupportsRGBA,
-                                                                                 kSupportsRGB,
-                                                                                 kSupportsXY,
-                                                                                 kSupportsAlpha,
-                                                                                 kSupportsTiles,
-                                                                                 /*processRGB=*/ true,
-                                                                                 /*processAlpha*/ false,
-                                                                                 /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgBilateralPlugin::describeInContextBegin(desc, context,
+                                                                            kSupportsRGBA,
+                                                                            kSupportsRGB,
+                                                                            kSupportsXY,
+                                                                            kSupportsAlpha,
+                                                                            kSupportsTiles,
+                                                                            /*processRGB=*/ true,
+                                                                            /*processAlpha*/ false,
+                                                                            /*processIsSecret=*/ false);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
         param->setLabel(kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 1000.);
@@ -321,7 +321,7 @@ CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
         param->setLabel(kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 100000.);
@@ -333,7 +333,7 @@ CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
         param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, 10);
@@ -343,19 +343,20 @@ CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
-    CImgBilateralPlugin::describeInContextEnd(desc, context, page);
-}
 
-OFX::ImageEffect*
+    CImgBilateralPlugin::describeInContextEnd(desc, context, page);
+} // CImgBilateralPluginFactory::describeInContext
+
+ImageEffect*
 CImgBilateralPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                           OFX::ContextEnum /*context*/)
+                                           ContextEnum /*context*/)
 {
     return new CImgBilateralPlugin(handle);
 }
 
 mDeclarePluginFactory(CImgBilateralGuidedPluginFactory, {}, {});
 void
-CImgBilateralGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgBilateralGuidedPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginGuidedName);
@@ -384,26 +385,26 @@ CImgBilateralGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                    OFX::ContextEnum context)
+CImgBilateralGuidedPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                                    ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgBilateralGuidedPlugin::describeInContextBegin(desc, context,
-                                                                                       kClipImage,
-                                                                                       NULL/*kClipImageHint*/,
-                                                                                       kClipGuide,
-                                                                                       kClipGuideHint,
-                                                                                       kSupportsRGBA,
-                                                                                       kSupportsRGB,
-                                                                                       kSupportsXY,
-                                                                                       kSupportsAlpha,
-                                                                                       kSupportsTiles,
-                                                                                       /*processRGB =*/ true,
-                                                                                       /*processAlpha =*/ false,
-                                                                                       /*processIsSecret =*/ false);
+    PageParamDescriptor *page = CImgBilateralGuidedPlugin::describeInContextBegin(desc, context,
+                                                                                  kClipImage,
+                                                                                  NULL /*kClipImageHint*/,
+                                                                                  kClipGuide,
+                                                                                  kClipGuideHint,
+                                                                                  kSupportsRGBA,
+                                                                                  kSupportsRGB,
+                                                                                  kSupportsXY,
+                                                                                  kSupportsAlpha,
+                                                                                  kSupportsTiles,
+                                                                                  /*processRGB =*/ true,
+                                                                                  /*processAlpha =*/ false,
+                                                                                  /*processIsSecret =*/ false);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
         param->setLabel(kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 1000.);
@@ -415,7 +416,7 @@ CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
         param->setLabel(kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 100000.);
@@ -427,7 +428,7 @@ CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
         param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, 10);
@@ -437,12 +438,13 @@ CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
             page->addChild(*param);
         }
     }
-    CImgBilateralGuidedPlugin::describeInContextEnd(desc, context, page);
-}
 
-OFX::ImageEffect*
+    CImgBilateralGuidedPlugin::describeInContextEnd(desc, context, page);
+} // CImgBilateralGuidedPluginFactory::describeInContext
+
+ImageEffect*
 CImgBilateralGuidedPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                                 OFX::ContextEnum /*context*/)
+                                                 ContextEnum /*context*/)
 {
     return new CImgBilateralGuidedPlugin(handle);
 }

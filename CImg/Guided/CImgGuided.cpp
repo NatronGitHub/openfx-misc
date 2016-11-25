@@ -140,7 +140,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgGuidedParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -162,7 +162,7 @@ public:
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgGuidedParams& params) OVERRIDE FINAL
     {
         return (params.radius == 0);
@@ -171,16 +171,16 @@ public:
 private:
 
     // params
-    OFX::IntParam *_radius;
-    OFX::DoubleParam *_epsilon;
-    OFX::IntParam *_iterations;
+    IntParam *_radius;
+    DoubleParam *_epsilon;
+    IntParam *_iterations;
 };
 
 
 mDeclarePluginFactory(CImgGuidedPluginFactory, {}, {});
 
 void
-CImgGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgGuidedPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -209,22 +209,22 @@ CImgGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                           OFX::ContextEnum context)
+CImgGuidedPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                           ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgGuidedPlugin::describeInContextBegin(desc, context,
-                                                                              kSupportsRGBA,
-                                                                              kSupportsRGB,
-                                                                              kSupportsXY,
-                                                                              kSupportsAlpha,
-                                                                              kSupportsTiles,
-                                                                              /*processRGB=*/ true,
-                                                                              /*processAlpha*/ false,
-                                                                              /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgGuidedPlugin::describeInContextBegin(desc, context,
+                                                                         kSupportsRGBA,
+                                                                         kSupportsRGB,
+                                                                         kSupportsXY,
+                                                                         kSupportsAlpha,
+                                                                         kSupportsTiles,
+                                                                         /*processRGB=*/ true,
+                                                                         /*processAlpha*/ false,
+                                                                         /*processIsSecret=*/ false);
 
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamRadius);
+        IntParamDescriptor *param = desc.defineIntParam(kParamRadius);
         param->setLabel(kParamRadiusLabel);
         param->setHint(kParamRadiusHint);
         param->setRange(0, 100);
@@ -235,7 +235,7 @@ CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEpsilon);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEpsilon);
         param->setLabel(kParamEpsilonLabel);
         param->setHint(kParamEpsilonHint);
         param->setRange(0, 1.);
@@ -247,7 +247,7 @@ CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
         param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, 10);
@@ -257,12 +257,13 @@ CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
-    CImgGuidedPlugin::describeInContextEnd(desc, context, page);
-}
 
-OFX::ImageEffect*
+    CImgGuidedPlugin::describeInContextEnd(desc, context, page);
+} // CImgGuidedPluginFactory::describeInContext
+
+ImageEffect*
 CImgGuidedPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new CImgGuidedPlugin(handle);
 }

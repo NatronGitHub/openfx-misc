@@ -92,7 +92,7 @@ enum BeforeAfterEnum
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class FrameRangePlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -106,7 +106,7 @@ public:
         , _sublabel(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _frameRange = fetchInt2DParam(kParamFrameRange);
         _before = fetchChoiceParam(kParamBefore);
         _after = fetchChoiceParam(kParamAfter);
@@ -117,39 +117,40 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
-    virtual bool getTransform(const OFX::TransformArguments & args, OFX::Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
+    virtual bool getTransform(const TransformArguments & args, Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
 #endif
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Int2DParam *_frameRange;
-    OFX::ChoiceParam *_before;
-    OFX::ChoiceParam *_after;
-    OFX::StringParam *_sublabel;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Int2DParam *_frameRange;
+    ChoiceParam *_before;
+    ChoiceParam *_after;
+    StringParam *_sublabel;
 };
 
 
 void
-FrameRangePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+FrameRangePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     // setting an image to black outside of the frame range means that the effect is frame varying
     BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
+
     if (before == eBeforeAfterBlack) {
         clipPreferences.setOutputFrameVarying(true);
     } else {
@@ -160,7 +161,6 @@ FrameRangePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
     }
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
 
@@ -170,7 +170,7 @@ FrameRangePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
 
 // the overridden render function
 void
-FrameRangePlugin::render(const OFX::RenderArguments &args)
+FrameRangePlugin::render(const RenderArguments &args)
 {
     const double time = args.time;
     OfxPointI range = _frameRange->getValue();
@@ -196,31 +196,31 @@ FrameRangePlugin::render(const OFX::RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src( (_srcClip && _srcClip->isConnected() && !black) ?
-                                         _srcClip->fetchImage(srcTime) : 0 );
+    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    std::auto_ptr<const Image> src( (_srcClip && _srcClip->isConnected() && !black) ?
+                                    _srcClip->fetchImage(srcTime) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     if (black) {
@@ -297,8 +297,8 @@ FrameRangePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 #ifdef OFX_EXTENSIONS_NUKE
 // overridden getTransform
 bool
-FrameRangePlugin::getTransform(const OFX::TransformArguments &args,
-                               OFX::Clip * &transformClip,
+FrameRangePlugin::getTransform(const TransformArguments &args,
+                               Clip * &transformClip,
                                double transformMatrix[9])
 {
     const double time = args.time;
@@ -334,11 +334,11 @@ FrameRangePlugin::getTransform(const OFX::TransformArguments &args,
 
 /** @brief called when a clip has just been changed in some way (a rewire maybe) */
 void
-FrameRangePlugin::changedClip(const OFX::InstanceChangedArgs &args,
+FrameRangePlugin::changedClip(const InstanceChangedArgs &args,
                               const std::string &clipName)
 {
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
-         ( args.reason == OFX::eChangeUserEdit) &&
+         ( args.reason == eChangeUserEdit) &&
          _srcClip &&
          _srcClip->isConnected() ) {
         // if range is (1,1), i.e. the default value, set it to the input range
@@ -352,7 +352,7 @@ FrameRangePlugin::changedClip(const OFX::InstanceChangedArgs &args,
 }
 
 void
-FrameRangePlugin::changedParam(const OFX::InstanceChangedArgs &args,
+FrameRangePlugin::changedParam(const InstanceChangedArgs &args,
                                const std::string &paramName)
 {
     if ( (paramName == kParamReset) && _srcClip && _srcClip->isConnected() && (args.reason == eChangeUserEdit) ) {
@@ -375,7 +375,7 @@ bool
 FrameRangePlugin::getTimeDomain(OfxRangeD &range)
 {
     // this should only be called in the general context, ever!
-    assert (getContext() == OFX::eContextGeneral);
+    assert (getContext() == eContextGeneral);
     int min, max;
     _frameRange->getValue(min, max);
     range.min = min;
@@ -386,7 +386,7 @@ FrameRangePlugin::getTimeDomain(OfxRangeD &range)
 
 mDeclarePluginFactory(FrameRangePluginFactory, {}, {});
 void
-FrameRangePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+FrameRangePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -432,8 +432,8 @@ FrameRangePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                           OFX::ContextEnum /*context*/)
+FrameRangePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                           ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -533,9 +533,9 @@ FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // FrameRangePluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 FrameRangePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new FrameRangePlugin(handle);
 }

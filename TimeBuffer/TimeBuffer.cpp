@@ -41,8 +41,8 @@
 
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
+typedef MultiThread::Mutex Mutex;
+typedef MultiThread::AutoMutex AutoMutex;
 }
 #else
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
@@ -197,16 +197,16 @@ sleep(const unsigned int milliseconds)
 
 struct TimeBuffer
 {
-    OFX::ImageEffect *readInstance; // written only once, not protected by mutex
-    OFX::ImageEffect *writeInstance; // written only once, not protected by mutex
+    ImageEffect *readInstance; // written only once, not protected by mutex
+    ImageEffect *writeInstance; // written only once, not protected by mutex
     mutable Mutex mutex;
     double time; // can store any integer from 0 to 2^53
     bool dirty; // TimeBufferRead sets this to true and sets date to t+1, TimeBufferWrite sets this to false
     std::vector<unsigned char> pixelData;
     OfxRectI bounds;
-    OFX::PixelComponentEnum pixelComponents;
+    PixelComponentEnum pixelComponents;
     int pixelComponentCount;
-    OFX::BitDepthEnum bitDepth;
+    BitDepthEnum bitDepth;
     int rowBytes;
     OfxPointD renderScale;
     double par;
@@ -240,7 +240,7 @@ static std::auto_ptr<Mutex> gTimeBufferMapMutex;
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TimeBufferReadPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
 
@@ -270,8 +270,8 @@ public:
         }
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGBA) ) );
 
         _bufferName = fetchStringParam(kParamBufferName);
@@ -296,12 +296,12 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     void setName(const std::string &name)
     {
@@ -336,7 +336,7 @@ private:
             }
             if ( timeBuffer && timeBuffer->readInstance && (timeBuffer->readInstance != this) ) {
                 // a buffer already exists with that name
-                setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"") + name + "\".");
+                setPersistentMessage(Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"") + name + "\".");
                 throwSuiteStatusException(kOfxStatFailed);
 
                 return;
@@ -354,7 +354,7 @@ private:
                 if ( it != gTimeBufferMap->end() ) {
                     assert(it->second == timeBuffer);
                     if (it->second != timeBuffer) {
-                        setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"") + name + "\".");
+                        setPersistentMessage(Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"") + name + "\".");
                         delete _buffer;
                         _buffer = 0;
                         _name.clear();
@@ -422,26 +422,26 @@ private:
         }
 
         if (!timeBuffer) {
-            setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBuffer exists with name \"") + _name + "\". Try using another name.");
+            setPersistentMessage(Message::eMessageError, "", std::string("No TimeBuffer exists with name \"") + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
         }
         if (timeBuffer && !timeBuffer->readInstance) {
-            setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"") + _name + "\". Try using another name.");
+            setPersistentMessage(Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"") + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
         }
         if ( timeBuffer && timeBuffer->readInstance && (timeBuffer->readInstance != this) ) {
             // a buffer already exists with that name
-            setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"") + _name + "\". Try using another name.");
+            setPersistentMessage(Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"") + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
         }
         if (timeBuffer && !timeBuffer->writeInstance) {
-            setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBufferWrite exists with name \"") + _name + "\". Create one and connect it to this TimeBufferRead via the Sync input.");
+            setPersistentMessage(Message::eMessageError, "", std::string("No TimeBufferWrite exists with name \"") + _name + "\". Create one and connect it to this TimeBufferRead via the Sync input.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
@@ -452,14 +452,14 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::StringParam *_bufferName;
-    OFX::IntParam *_startFrame;
-    OFX::ChoiceParam *_unorderedRender;
-    OFX::DoubleParam *_timeOut;
-    OFX::BooleanParam *_resetTrigger;
-    OFX::StringParam *_sublabel;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    StringParam *_bufferName;
+    IntParam *_startFrame;
+    ChoiceParam *_unorderedRender;
+    DoubleParam *_timeOut;
+    BooleanParam *_resetTrigger;
+    StringParam *_sublabel;
     TimeBuffer *_buffer; // associated TimeBuffer
     std::string _name; // name of the TimeBuffer
     std::string _projectId; // identifier for the project the instance lives in
@@ -472,7 +472,7 @@ private:
 
 // the overridden render function
 void
-TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
+TimeBufferReadPlugin::render(const RenderArguments &args)
 {
     //std::cout << "render!\n";
     const double time = args.time;
@@ -480,23 +480,23 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
 
         return;
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
-    assert(dstBitDepth == OFX::eBitDepthFloat);
-    assert(dstComponents == OFX::ePixelComponentRGBA);
+    assert(dstBitDepth == eBitDepthFloat);
+    assert(dstComponents == ePixelComponentRGBA);
 
     // do the rendering
     TimeBuffer* timeBuffer = 0;
@@ -530,8 +530,8 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
         UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
         switch (e) {
         case eUnorderedRenderError:
-            setPersistentMessage(OFX::Message::eMessageError, "", "Frames must be rendered in sequential order");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            setPersistentMessage(Message::eMessageError, "", "Frames must be rendered in sequential order");
+            throwSuiteStatusException(kOfxStatFailed);
 
             return;
         case eUnorderedRenderBlack:
@@ -560,8 +560,8 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
             switch (e) {
             case eUnorderedRenderError:
             case eUnorderedRenderLast:
-                setPersistentMessage(OFX::Message::eMessageError, "", "Timed out");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                setPersistentMessage(Message::eMessageError, "", "Timed out");
+                throwSuiteStatusException(kOfxStatFailed);
 
                 return;
             case eUnorderedRenderBlack:
@@ -579,8 +579,8 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
         switch (e) {
         case eUnorderedRenderError:
         case eUnorderedRenderLast:
-            setPersistentMessage(OFX::Message::eMessageError, "", "Frames must be rendered in sequential order with the same renderScale");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            setPersistentMessage(Message::eMessageError, "", "Frames must be rendered in sequential order with the same renderScale");
+            throwSuiteStatusException(kOfxStatFailed);
 
             return;
         case eUnorderedRenderBlack:
@@ -609,7 +609,7 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
 
 /* Override the clip preferences, we need to say we are setting the frame varying flag */
 void
-TimeBufferReadPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+TimeBufferReadPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     TimeBuffer* timeBuffer = getBuffer();
 
@@ -623,7 +623,7 @@ TimeBufferReadPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPrefere
 }
 
 bool
-TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+TimeBufferReadPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                             OfxRectD &rod)
 {
     const double time = args.time;
@@ -651,8 +651,8 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
         UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
         switch (e) {
         case eUnorderedRenderError:
-            setPersistentMessage(OFX::Message::eMessageError, "", "Frames must be rendered in sequential order");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            setPersistentMessage(Message::eMessageError, "", "Frames must be rendered in sequential order");
+            throwSuiteStatusException(kOfxStatFailed);
 
             return false;
         case eUnorderedRenderBlack:
@@ -678,8 +678,8 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
             switch (e) {
             case eUnorderedRenderError:
             case eUnorderedRenderLast:
-                setPersistentMessage(OFX::Message::eMessageError, "", "Timed out");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                setPersistentMessage(Message::eMessageError, "", "Timed out");
+                throwSuiteStatusException(kOfxStatFailed);
 
                 return false;
             case eUnorderedRenderBlack:
@@ -694,8 +694,8 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
         switch (e) {
         case eUnorderedRenderError:
         case eUnorderedRenderLast:
-            setPersistentMessage(OFX::Message::eMessageError, "", "Frames must be rendered in sequential order with the same renderScale");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            setPersistentMessage(Message::eMessageError, "", "Frames must be rendered in sequential order with the same renderScale");
+            throwSuiteStatusException(kOfxStatFailed);
 
             return false;
         case eUnorderedRenderBlack:
@@ -705,17 +705,17 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
         }
     }
     // - when the buffer is locked and clean, the buffer's RoD is returned and it is unlocked
-    OFX::Coords::toCanonical(timeBuffer->bounds,
-                             timeBuffer->renderScale,
-                             timeBuffer->par,
-                             &rod);
+    Coords::toCanonical(timeBuffer->bounds,
+                        timeBuffer->renderScale,
+                        timeBuffer->par,
+                        &rod);
     clearPersistentMessage();
 
     return true;
 } // TimeBufferReadPlugin::getRegionOfDefinition
 
 void
-TimeBufferReadPlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
+TimeBufferReadPlugin::changedParam(const InstanceChangedArgs & /*args*/,
                                    const std::string &paramName)
 {
     if (paramName == kParamBufferName) {
@@ -753,7 +753,7 @@ TimeBufferReadPlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
 
 mDeclarePluginFactory(TimeBufferReadPluginFactory, {}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
 void
-TimeBufferReadPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TimeBufferReadPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
     // basic labels
@@ -786,8 +786,8 @@ TimeBufferReadPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                               OFX::ContextEnum /*context*/)
+TimeBufferReadPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                               ContextEnum /*context*/)
 {
     //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
@@ -811,7 +811,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // describe plugin params
     {
-        OFX::StringParamDescriptor* param = desc.defineStringParam(kParamBufferName);
+        StringParamDescriptor* param = desc.defineStringParam(kParamBufferName);
         param->setLabel(kParamBufferNameLabel);
         if (getImageEffectHostDescription()->isNatron) {
             param->setHint(kParamBufferNameHint kParamBufferNameHintNatron);
@@ -825,7 +825,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::IntParamDescriptor* param = desc.defineIntParam(kParamStartFrame);
+        IntParamDescriptor* param = desc.defineIntParam(kParamStartFrame);
         param->setLabel(kParamStartFrameLabel);
         param->setHint(kParamStartFrameHint);
         param->setRange(INT_MIN, INT_MAX);
@@ -837,7 +837,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamUnorderedRender);
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamUnorderedRender);
         param->setLabel(kParamUnorderedRenderLabel);
         param->setHint(kParamUnorderedRenderHint);
         assert(param->getNOptions() == eUnorderedRenderError);
@@ -853,7 +853,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTimeOut);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTimeOut);
         param->setLabel(kParamTimeOutLabel);
         param->setHint(kParamTimeOutHint);
 #ifdef DEBUG
@@ -869,7 +869,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamReset);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamReset);
         param->setLabel(kParamResetLabel);
         param->setHint(kParamResetHint);
         if (page) {
@@ -877,7 +877,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamResetTrigger);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamResetTrigger);
         param->setIsSecretAndDisabled(true);
         param->setIsPersistent(false);
         param->setEvaluateOnChange(true);
@@ -887,7 +887,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
     /*
        {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamInfo);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamInfo);
         param->setLabel(kParamInfoLabel);
         param->setHint(kParamInfoHint);
         if (page) {
@@ -909,9 +909,9 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 //std::cout << "describeInContext! OK\n";
 } // TimeBufferReadPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 TimeBufferReadPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                            OFX::ContextEnum /*context*/)
+                                            ContextEnum /*context*/)
 {
     return new TimeBufferReadPlugin(handle);
 }
@@ -919,7 +919,7 @@ TimeBufferReadPluginFactory::createInstance(OfxImageEffectHandle handle,
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TimeBufferWritePlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
 
@@ -970,8 +970,8 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     void setName(const std::string &name)
     {
@@ -1007,7 +1007,7 @@ private:
             }
             if ( timeBuffer && timeBuffer->writeInstance && (timeBuffer->writeInstance != this) ) {
                 // a buffer already exists with that name
-                setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferWrite already exists with name \"") + name + "\".");
+                setPersistentMessage(Message::eMessageError, "", std::string("A TimeBufferWrite already exists with name \"") + name + "\".");
                 throwSuiteStatusException(kOfxStatFailed);
 
                 return;
@@ -1025,7 +1025,7 @@ private:
                 if ( it != gTimeBufferMap->end() ) {
                     assert(it->second == timeBuffer);
                     if (it->second != timeBuffer) {
-                        setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferWrite already exists with name \"") + name + "\".");
+                        setPersistentMessage(Message::eMessageError, "", std::string("A TimeBufferWrite already exists with name \"") + name + "\".");
                         delete _buffer;
                         _buffer = 0;
                         _name.clear();
@@ -1093,26 +1093,26 @@ private:
         }
 
         if (!timeBuffer) {
-            setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBuffer exists with name \"") + _name + "\". Try using another name.");
+            setPersistentMessage(Message::eMessageError, "", std::string("No TimeBuffer exists with name \"") + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
         }
         if (!timeBuffer->writeInstance) {
-            setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"") + _name + "\". Try using another name.");
+            setPersistentMessage(Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"") + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
         }
         if ( timeBuffer->writeInstance && (timeBuffer->writeInstance != this) ) {
             // a buffer already exists with that name
-            setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"") + _name + "\". Try using another name.");
+            setPersistentMessage(Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"") + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
         }
         if (!timeBuffer->readInstance) {
-            setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBufferRead exists with name \"") + _name + "\". Create one and connect it to this TimeBufferWrite via the Sync input.");
+            setPersistentMessage(Message::eMessageError, "", std::string("No TimeBufferRead exists with name \"") + _name + "\". Create one and connect it to this TimeBufferWrite via the Sync input.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
@@ -1123,12 +1123,12 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_syncClip;
-    OFX::StringParam *_bufferName;
-    OFX::BooleanParam *_resetTrigger;
-    OFX::StringParam *_sublabel;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_syncClip;
+    StringParam *_bufferName;
+    BooleanParam *_resetTrigger;
+    StringParam *_sublabel;
     TimeBuffer *_buffer; // associated TimeBuffer
     std::string _name; // name of the TimeBuffer
     std::string _projectId; // identifier for the project the instance lives in
@@ -1141,12 +1141,12 @@ private:
 
 // the overridden render function
 void
-TimeBufferWritePlugin::render(const OFX::RenderArguments &args)
+TimeBufferWritePlugin::render(const RenderArguments &args)
 {
     //std::cout << "render!\n";
     if ( !_syncClip->isConnected() ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "The Sync clip must be connected to the output of the corresponding TimeBufferRead effect.");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "The Sync clip must be connected to the output of the corresponding TimeBufferRead effect.");
+        throwSuiteStatusException(kOfxStatFailed);
 
         return;
     }
@@ -1155,39 +1155,39 @@ TimeBufferWritePlugin::render(const OFX::RenderArguments &args)
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    assert(dstComponents == OFX::ePixelComponentRGBA);
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    assert(dstComponents == ePixelComponentRGBA);
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     const double time = args.time;
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -1204,8 +1204,8 @@ TimeBufferWritePlugin::render(const OFX::RenderArguments &args)
     {
         AutoMutex guard(timeBuffer->mutex);
         if ( (timeBuffer->time != time + 1) || !timeBuffer->dirty ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "The TimeBuffer has wrong properties. Check that the corresponding TimeBufferRead effect is connected to the Sync input.");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            setPersistentMessage(Message::eMessageError, "", "The TimeBuffer has wrong properties. Check that the corresponding TimeBufferRead effect is connected to the Sync input.");
+            throwSuiteStatusException(kOfxStatFailed);
         }
         // - src is copied to the buffer, and it is marked as not dirty, then unlocked
         std::vector<unsigned char> pixelData;
@@ -1228,7 +1228,7 @@ TimeBufferWritePlugin::render(const OFX::RenderArguments &args)
 } // TimeBufferWritePlugin::render
 
 void
-TimeBufferWritePlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
+TimeBufferWritePlugin::changedParam(const InstanceChangedArgs & /*args*/,
                                     const std::string &paramName)
 {
     if (paramName == kParamBufferName) {
@@ -1250,7 +1250,7 @@ TimeBufferWritePlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
         // reset the buffer to a clean state
         AutoMutex guard(timeBuffer->mutex);
         if (timeBuffer->readInstance) {
-            sendMessage(OFX::Message::eMessageError, "", "A TimeBufferRead instance is connected to this buffer, please reset it instead.");
+            sendMessage(Message::eMessageError, "", "A TimeBufferRead instance is connected to this buffer, please reset it instead.");
 
             return;
         }
@@ -1272,7 +1272,7 @@ TimeBufferWritePlugin::changedParam(const OFX::InstanceChangedArgs & /*args*/,
 
 mDeclarePluginFactory(TimeBufferWritePluginFactory, {}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
 void
-TimeBufferWritePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TimeBufferWritePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
     // basic labels
@@ -1305,8 +1305,8 @@ TimeBufferWritePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                                OFX::ContextEnum /*context*/)
+TimeBufferWritePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                                ContextEnum /*context*/)
 {
     //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
@@ -1335,7 +1335,7 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     // describe plugin params
     {
-        OFX::StringParamDescriptor* param = desc.defineStringParam(kParamBufferName);
+        StringParamDescriptor* param = desc.defineStringParam(kParamBufferName);
         param->setLabel(kParamBufferNameLabel);
         if (getImageEffectHostDescription()->isNatron) {
             param->setHint(kParamBufferNameHint kParamBufferNameHintNatron);
@@ -1349,7 +1349,7 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         }
     }
     {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamReset);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamReset);
         param->setLabel(kParamResetLabel);
         param->setHint(kParamResetHint);
         if (page) {
@@ -1357,7 +1357,7 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamResetTrigger);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamResetTrigger);
         param->setIsSecretAndDisabled(true);
         param->setIsPersistent(false);
         param->setEvaluateOnChange(true);
@@ -1368,7 +1368,7 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     }
     /*
        {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamInfo);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamInfo);
         param->setLabel(kParamInfoLabel);
         param->setHint(kParamInfoHint);
         if (page) {
@@ -1391,9 +1391,9 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 //std::cout << "describeInContext! OK\n";
 } // TimeBufferWritePluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 TimeBufferWritePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                             OFX::ContextEnum /*context*/)
+                                             ContextEnum /*context*/)
 {
     return new TimeBufferWritePlugin(handle);
 }

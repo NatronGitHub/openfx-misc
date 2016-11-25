@@ -228,6 +228,7 @@ protected:
         switch (_luminanceMath) {
         case eLuminanceMathRec709:
         default:
+
             return Color::rgb709_to_y(r, g, b);
 
         case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
@@ -540,6 +541,7 @@ ColorSuppressPlugin::setupAndProcess(ColorSuppressProcessorBase &processor,
                                      const RenderArguments &args)
 {
     const double time = args.time;
+
     std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {

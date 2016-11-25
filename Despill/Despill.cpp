@@ -112,11 +112,11 @@ enum ScreenTypeEnum
 
 
 class DespillProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_maskImg;
+    const Image *_srcImg;
+    const Image *_maskImg;
     bool _maskInvert;
     bool _outputToAlpha;
     double _spillMix;
@@ -127,8 +127,8 @@ protected:
 
 public:
 
-    DespillProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    DespillProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _maskInvert(false)
@@ -143,14 +143,14 @@ public:
     {
     }
 
-    void setMaskImg(const OFX::Image* m,
+    void setMaskImg(const Image* m,
                     bool maskInvert)
     {
         _maskImg = m;
         _maskInvert = maskInvert;
     }
 
-    void setSrcImg(const OFX::Image *v)
+    void setSrcImg(const Image *v)
     {
         _srcImg = v;
     }
@@ -183,7 +183,7 @@ class DespillProcessor
     : public DespillProcessorBase
 {
 public:
-    DespillProcessor(OFX::ImageEffect &instance)
+    DespillProcessor(ImageEffect &instance)
         : DespillProcessorBase(instance)
     {
     }
@@ -241,13 +241,13 @@ private:
                 srcPix += nComponents;
             }
         }
-    }
+    } // multiThreadProcessImages
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class DespillPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -268,11 +268,11 @@ public:
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _screenType = fetchChoiceParam(kParamScreenType);
@@ -291,22 +291,22 @@ public:
     }
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(DespillProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(DespillProcessorBase &, const RenderArguments &args);
 
 private:
 
 
     template<int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args);
+    void renderForComponents(const RenderArguments &args);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const OFX::RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args);
 
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -335,57 +335,57 @@ private:
 /* set up and run a processor */
 void
 DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
-                               const OFX::RenderArguments &args)
+                               const RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch output image");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "Failed to fetch output image");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
 
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents  = src->getPixelComponents();
-        //OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth  || srcComponents != dstComponents) { // Keyer outputs RGBA but may have RGB input
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents  = src->getPixelComponents();
+        //PixelComponentEnum srcComponents = src->getPixelComponents();
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) { // Keyer outputs RGBA but may have RGB input
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     } else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch source image");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "Failed to fetch source image");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
 
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ||
-             ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
@@ -417,8 +417,8 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
 
 
     if ( outputAlpha && (dst->getPixelComponentCount() != 4) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
 
@@ -433,50 +433,50 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
 
 // the overridden render function
 void
-DespillPlugin::render(const OFX::RenderArguments &args)
+DespillPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderForComponents<4>(args);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args);
     }  else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderForComponents<1>(args);
     } // switch
 } // render
 
 template<int nComponents>
 void
-DespillPlugin::renderForComponents(const OFX::RenderArguments &args)
+DespillPlugin::renderForComponents(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
         renderForBitDepth<unsigned char, nComponents, 255>(args);
         break;
 
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
         renderForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
 
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 template <class PIX, int nComponents, int maxValue>
 void
-DespillPlugin::renderForBitDepth(const OFX::RenderArguments &args)
+DespillPlugin::renderForBitDepth(const RenderArguments &args)
 {
     ScreenTypeEnum s = (ScreenTypeEnum)_screenType->getValue();
 
@@ -497,23 +497,24 @@ DespillPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 
 /* Override the clip preferences */
 void
-DespillPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+DespillPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     bool createAlpha;
+
     _outputToAlpha->getValue(createAlpha);
     // Set input and output to the same components
     if (createAlpha) {
-        clipPreferences.setClipComponents(*_dstClip, OFX::ePixelComponentRGBA);
-        clipPreferences.setClipComponents(*_srcClip, OFX::ePixelComponentRGBA);
+        clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+        clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
     } else {
-        OFX::PixelComponentEnum srcComps = _srcClip->getPixelComponents();
+        PixelComponentEnum srcComps = _srcClip->getPixelComponents();
         clipPreferences.setClipComponents(*_dstClip, srcComps);
     }
 }
 
 mDeclarePluginFactory(DespillPluginFactory, {}, {} );
 void
-DespillPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+DespillPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -545,7 +546,7 @@ DespillPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+DespillPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                         ContextEnum context)
 {
     // Source clip only in the filter context

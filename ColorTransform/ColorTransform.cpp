@@ -213,21 +213,21 @@ enum ColorTransformEnum
                      (e) == eColorTransformXYZToRGB709 || \
                      (e) == eColorTransformLabToRGB709 )
 
-#define fromRGB(e) ( !toRGB(e) && ((e) != eColorTransformXYZToLab) && ((e) != eColorTransformLabToXYZ) && ((e) != eColorTransformXYZToxyY) && ((e) != eColorTransformxyYToXYZ) )
+#define fromRGB(e) ( !toRGB(e) && ( (e) != eColorTransformXYZToLab ) && ( (e) != eColorTransformLabToXYZ ) && ( (e) != eColorTransformXYZToxyY ) && ( (e) != eColorTransformxyYToXYZ ) )
 
 class ColorTransformProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
+    const Image *_srcImg;
     bool _premult;
     int _premultChannel;
     double _mix;
 
 public:
 
-    ColorTransformProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    ColorTransformProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _premult(false)
         , _premultChannel(3)
@@ -235,7 +235,7 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
     void setValues(bool premult,
                    int premultChannel)
@@ -253,7 +253,7 @@ class ColorTransformProcessor
     : public ColorTransformProcessorBase
 {
 public:
-    ColorTransformProcessor(OFX::ImageEffect &instance)
+    ColorTransformProcessor(ImageEffect &instance)
         : ColorTransformProcessorBase(instance)
     {
     }
@@ -279,142 +279,142 @@ public:
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, dounpremult, _premultChannel);
                 switch (transform) {
                 case eColorTransformRGBToHSV:
-                    unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
-                    unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
-                    unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
-                    OFX::Color::rgb_to_hsv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    Color::rgb_to_hsv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSVToRGB:
-                    OFX::Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
-                    tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
-                    tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
+                    Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToHSL:
-                    unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
-                    unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
-                    unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
-                    OFX::Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSLToRGB:
-                    OFX::Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
-                    tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
-                    tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
+                    Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToHSI:
-                    unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
-                    unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
-                    unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
-                    OFX::Color::rgb_to_hsi(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    Color::rgb_to_hsi(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSIToRGB:
-                    OFX::Color::hsi_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
-                    tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
-                    tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
+                    Color::hsi_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
 
                 case eColorTransformRGBToYCbCr601:
-                    unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
-                    unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
-                    unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
-                    OFX::Color::rgb_to_ycbcr601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    Color::rgb_to_ycbcr601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformYCbCrToRGB601:
-                    OFX::Color::ycbcr_to_rgb601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
-                    tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
-                    tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
+                    Color::ycbcr_to_rgb601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToYCbCr709:
-                    unpPix[0] = OFX::Color::to_func_Rec709(unpPix[0]);
-                    unpPix[1] = OFX::Color::to_func_Rec709(unpPix[1]);
-                    unpPix[2] = OFX::Color::to_func_Rec709(unpPix[2]);
-                    OFX::Color::rgb_to_ycbcr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    unpPix[0] = Color::to_func_Rec709(unpPix[0]);
+                    unpPix[1] = Color::to_func_Rec709(unpPix[1]);
+                    unpPix[2] = Color::to_func_Rec709(unpPix[2]);
+                    Color::rgb_to_ycbcr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformYCbCrToRGB709:
-                    OFX::Color::ycbcr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = OFX::Color::from_func_Rec709(tmpPix[0]);
-                    tmpPix[1] = OFX::Color::from_func_Rec709(tmpPix[1]);
-                    tmpPix[2] = OFX::Color::from_func_Rec709(tmpPix[2]);
+                    Color::ycbcr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_Rec709(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToYPbPr601:
-                    unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
-                    unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
-                    unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
-                    OFX::Color::rgb_to_ypbpr601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    Color::rgb_to_ypbpr601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformYPbPrToRGB601:
-                    OFX::Color::ypbpr_to_rgb601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
-                    tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
-                    tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
+                    Color::ypbpr_to_rgb601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToYPbPr709:
-                    unpPix[0] = OFX::Color::to_func_Rec709(unpPix[0]);
-                    unpPix[1] = OFX::Color::to_func_Rec709(unpPix[1]);
-                    unpPix[2] = OFX::Color::to_func_Rec709(unpPix[2]);
-                    OFX::Color::rgb_to_ypbpr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    unpPix[0] = Color::to_func_Rec709(unpPix[0]);
+                    unpPix[1] = Color::to_func_Rec709(unpPix[1]);
+                    unpPix[2] = Color::to_func_Rec709(unpPix[2]);
+                    Color::rgb_to_ypbpr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformYPbPrToRGB709:
-                    OFX::Color::ypbpr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = OFX::Color::from_func_Rec709(tmpPix[0]);
-                    tmpPix[1] = OFX::Color::from_func_Rec709(tmpPix[1]);
-                    tmpPix[2] = OFX::Color::from_func_Rec709(tmpPix[2]);
+                    Color::ypbpr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_Rec709(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToYUV601:
-                    unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
-                    unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
-                    unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
-                    OFX::Color::rgb_to_yuv601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    Color::rgb_to_yuv601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformYUVToRGB601:
-                    OFX::Color::yuv_to_rgb601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
-                    tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
-                    tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
+                    Color::yuv_to_rgb601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToYUV709:
-                    unpPix[0] = OFX::Color::to_func_Rec709(unpPix[0]);
-                    unpPix[1] = OFX::Color::to_func_Rec709(unpPix[1]);
-                    unpPix[2] = OFX::Color::to_func_Rec709(unpPix[2]);
-                    OFX::Color::rgb_to_yuv709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    unpPix[0] = Color::to_func_Rec709(unpPix[0]);
+                    unpPix[1] = Color::to_func_Rec709(unpPix[1]);
+                    unpPix[2] = Color::to_func_Rec709(unpPix[2]);
+                    Color::rgb_to_yuv709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformYUVToRGB709:
-                    OFX::Color::yuv_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = OFX::Color::from_func_Rec709(tmpPix[0]);
-                    tmpPix[1] = OFX::Color::from_func_Rec709(tmpPix[1]);
-                    tmpPix[2] = OFX::Color::from_func_Rec709(tmpPix[2]);
+                    Color::yuv_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_Rec709(tmpPix[2]);
                     break;
 
                 case eColorTransformRGB709ToXYZ:
-                    OFX::Color::rgb709_to_xyz(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::rgb709_to_xyz(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformXYZToRGB709:
-                    OFX::Color::xyz_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::xyz_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformRGB709ToLab:
-                    OFX::Color::rgb709_to_lab(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::rgb709_to_lab(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] /= 100;
                     tmpPix[1] /= 100;
                     tmpPix[2] /= 100;
@@ -424,11 +424,11 @@ public:
                     unpPix[0] *= 100;
                     unpPix[1] *= 100;
                     unpPix[2] *= 100;
-                    OFX::Color::lab_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::lab_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformXYZToLab:
-                    OFX::Color::xyz_to_lab(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::xyz_to_lab(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] /= 100;
                     tmpPix[1] /= 100;
                     tmpPix[2] /= 100;
@@ -438,7 +438,7 @@ public:
                     unpPix[0] *= 100;
                     unpPix[1] *= 100;
                     unpPix[2] *= 100;
-                    OFX::Color::lab_to_xyz(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::lab_to_xyz(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformXYZToxyY: {
@@ -477,7 +477,7 @@ public:
 /** @brief The plugin that does our work */
 template <ColorTransformEnum transform>
 class ColorTransformPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -492,11 +492,11 @@ public:
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
-        if (fromRGB(transform) || toRGB(transform)) {
+        if ( fromRGB(transform) || toRGB(transform) ) {
             _premult = fetchBooleanParam(kParamPremult);
             _premultChannel = fetchChoiceParam(kParamPremultChannel);
             assert(_premult && _premultChannel);
@@ -507,25 +507,25 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(ColorTransformProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ColorTransformProcessorBase &, const RenderArguments &args);
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    Clip *_dstClip;
+    Clip *_srcClip;
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -539,39 +539,39 @@ private:
 template <ColorTransformEnum transform>
 void
 ColorTransformPlugin<transform>::setupAndProcess(ColorTransformProcessorBase &processor,
-                                                 const OFX::RenderArguments &args)
+                                                 const RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -590,60 +590,60 @@ ColorTransformPlugin<transform>::setupAndProcess(ColorTransformProcessorBase &pr
 
     processor.setValues(premult, premultChannel);
     processor.process();
-}
+} // >::setupAndProcess
 
 // the overridden render function
 template <ColorTransformEnum transform>
 void
-ColorTransformPlugin<transform>::render(const OFX::RenderArguments &args)
+ColorTransformPlugin<transform>::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    assert(dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentRGBA);
+    if (dstComponents == ePixelComponentRGBA) {
         switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
+        case eBitDepthUByte: {
             ColorTransformProcessor<unsigned char, 4, 255, transform> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
-        case OFX::eBitDepthUShort: {
+        case eBitDepthUShort: {
             ColorTransformProcessor<unsigned short, 4, 65535, transform> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
-        case OFX::eBitDepthFloat: {
+        case eBitDepthFloat: {
             ColorTransformProcessor<float, 4, 1, transform> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+            throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
-        assert(dstComponents == OFX::ePixelComponentRGB);
+        assert(dstComponents == ePixelComponentRGB);
         switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
+        case eBitDepthUByte: {
             ColorTransformProcessor<unsigned char, 3, 255, transform> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
-        case OFX::eBitDepthUShort: {
+        case eBitDepthUShort: {
             ColorTransformProcessor<unsigned short, 3, 65535, transform> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
-        case OFX::eBitDepthFloat: {
+        case eBitDepthFloat: {
             ColorTransformProcessor<float, 3, 1, transform> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+            throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
 } // >::render
@@ -651,11 +651,11 @@ ColorTransformPlugin<transform>::render(const OFX::RenderArguments &args)
 /* Override the clip preferences */
 template <ColorTransformEnum transform>
 void
-ColorTransformPlugin<transform>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+ColorTransformPlugin<transform>::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     if ( ( fromRGB(transform) || toRGB(transform) ) &&
-          _srcClip &&
-          ( !_srcClip->isConnected() || (_srcClip->getPixelComponents() ==  ePixelComponentRGBA) ) ) {
+         _srcClip &&
+         ( !_srcClip->isConnected() || (_srcClip->getPixelComponents() ==  ePixelComponentRGBA) ) ) {
         bool premult;
         _premult->getValue(premult);
         // set the premultiplication of _dstClip
@@ -678,7 +678,7 @@ ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args,
          (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
-         ( args.reason == OFX::eChangeUserEdit) ) {
+         ( args.reason == eChangeUserEdit) ) {
         if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
             _premult->setValue(false);
         } else {
@@ -699,33 +699,33 @@ ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args,
 
 template <ColorTransformEnum transform>
 void
-ColorTransformPlugin<transform>::changedParam(const OFX::InstanceChangedArgs &args,
+ColorTransformPlugin<transform>::changedParam(const InstanceChangedArgs &args,
                                               const std::string &paramName)
 {
-    if ( ( fromRGB(transform) || toRGB(transform) ) && (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( ( fromRGB(transform) || toRGB(transform) ) && (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
 }
 
 template <ColorTransformEnum transform>
 class ColorTransformPluginFactory
-    : public OFX::PluginFactoryHelper<ColorTransformPluginFactory<transform> >
+    : public PluginFactoryHelper<ColorTransformPluginFactory<transform> >
 {
 public:
     ColorTransformPluginFactory(const std::string& id,
                                 unsigned int verMaj,
-                                unsigned int verMin) : OFX::PluginFactoryHelper<ColorTransformPluginFactory<transform> >(id, verMaj, verMin) {}
+                                unsigned int verMin) : PluginFactoryHelper<ColorTransformPluginFactory<transform> >(id, verMaj, verMin) {}
 
     //virtual void load() OVERRIDE FINAL {};
     //virtual void unload() OVERRIDE FINAL {};
-    virtual void describe(OFX::ImageEffectDescriptor &desc);
-    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
-    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
+    virtual void describe(ImageEffectDescriptor &desc);
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
 };
 
 template <ColorTransformEnum transform>
 void
-ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &desc)
+ColorTransformPluginFactory<transform>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     switch (transform) {
@@ -885,8 +885,8 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
 
 template <ColorTransformEnum transform>
 void
-ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                                          OFX::ContextEnum /*context*/)
+ColorTransformPluginFactory<transform>::describeInContext(ImageEffectDescriptor &desc,
+                                                          ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -905,10 +905,10 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in
-    if (fromRGB(transform) || toRGB(transform)) {
+    if ( fromRGB(transform) || toRGB(transform) ) {
         PageParamDescriptor *page = desc.definePageParam("Controls");
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremult);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremult);
             if ( fromRGB(transform) ) {
                 param->setLabel(kParamPremultRGBToXXXLabel);
                 param->setHint(kParamPremultRGBToXXXHint);
@@ -925,7 +925,7 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
         }
         {
             // not yet implemented, for future use (whenever deep compositing is supported)
-            OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamPremultChannel);
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamPremultChannel);
             param->setLabel(kParamPremultChannelLabel);
             param->setHint(kParamPremultChannelHint);
             param->appendOption(kParamPremultChannelR, kParamPremultChannelRHint);
@@ -940,7 +940,7 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
         }
 
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
             param->setDefault(false);
             param->setIsSecretAndDisabled(true);
             param->setAnimates(false);
@@ -953,9 +953,9 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
 } // >::describeInContext
 
 template <ColorTransformEnum transform>
-OFX::ImageEffect*
+ImageEffect*
 ColorTransformPluginFactory<transform>::createInstance(OfxImageEffectHandle handle,
-                                                       OFX::ContextEnum /*context*/)
+                                                       ContextEnum /*context*/)
 {
     return new ColorTransformPlugin<transform>(handle);
 }

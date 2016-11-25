@@ -126,7 +126,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments & /*args*/,
+    virtual void render(const RenderArguments & /*args*/,
                         const CImgSharpenInvDiffParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -202,7 +202,7 @@ public:
         }
     } // render
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgSharpenInvDiffParams& params) OVERRIDE FINAL
     {
         return (params.iterations <= 0 || params.amplitude == 0.);
@@ -211,15 +211,15 @@ public:
 private:
 
     // params
-    OFX::DoubleParam *_amplitude;
-    OFX::IntParam *_iterations;
+    DoubleParam *_amplitude;
+    IntParam *_iterations;
 };
 
 
 mDeclarePluginFactory(CImgSharpenInvDiffPluginFactory, {}, {});
 
 void
-CImgSharpenInvDiffPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgSharpenInvDiffPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -248,22 +248,22 @@ CImgSharpenInvDiffPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                   OFX::ContextEnum context)
+CImgSharpenInvDiffPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                                   ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgSharpenInvDiffPlugin::describeInContextBegin(desc, context,
-                                                                                      kSupportsRGBA,
-                                                                                      kSupportsRGB,
-                                                                                      kSupportsXY,
-                                                                                      kSupportsAlpha,
-                                                                                      kSupportsTiles,
-                                                                                      /*processRGB=*/ true,
-                                                                                      /*processAlpha*/ false,
-                                                                                      /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgSharpenInvDiffPlugin::describeInContextBegin(desc, context,
+                                                                                 kSupportsRGBA,
+                                                                                 kSupportsRGB,
+                                                                                 kSupportsXY,
+                                                                                 kSupportsAlpha,
+                                                                                 kSupportsTiles,
+                                                                                 /*processRGB=*/ true,
+                                                                                 /*processAlpha*/ false,
+                                                                                 /*processIsSecret=*/ false);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
         param->setLabel(kParamAmplitudeLabel);
         param->setHint(kParamAmplitudeHint);
         param->setRange(0, 4. /*1000/256*/);
@@ -275,7 +275,7 @@ CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
         param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, 10);
@@ -285,12 +285,13 @@ CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
             page->addChild(*param);
         }
     }
+
     CImgSharpenInvDiffPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CImgSharpenInvDiffPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                                OFX::ContextEnum /*context*/)
+                                                ContextEnum /*context*/)
 {
     return new CImgSharpenInvDiffPlugin(handle);
 }

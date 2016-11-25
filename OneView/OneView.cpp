@@ -59,7 +59,7 @@ static bool gHostSupportsDynamicChoices = false;
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class OneViewPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -73,8 +73,8 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
@@ -84,34 +84,35 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /** @brief get the frame/views needed for input clips*/
     virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(PixelProcessorFilterBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(PixelProcessorFilterBase &, const RenderArguments &args);
 
     //Cannot be implemented because the OpenFX API does not allow to return an identity view different from the calling view
     //virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::ChoiceParam     *_view;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    ChoiceParam     *_view;
     std::vector<std::string> _knownViews;
 };
 
 void
-OneViewPlugin::getClipPreferences(OFX::ClipPreferencesSetter & /*clipPreferences*/)
+OneViewPlugin::getClipPreferences(ClipPreferencesSetter & /*clipPreferences*/)
 {
     //Rebuild view choice
     int nViews = getViewCount();
+
     std::vector<std::string> views;
 
     for (int i = 0; i < nViews; ++i) {
@@ -163,52 +164,52 @@ OneViewPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args,
 /* set up and run a processor */
 void
 OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
-                               const OFX::RenderArguments &args)
+                               const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( ( dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     int view;
     _view->getValueAtTime(args.time, view);
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImagePlane(args.time, view, kFnOfxImagePlaneColour) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImagePlane(args.time, view, kFnOfxImagePlaneColour) : 0 );
 
     // make sure bit depths are sane
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     } else {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch source image");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "Failed to fetch source image");
+        throwSuiteStatusException(kOfxStatFailed);
 
         return;
     }
@@ -227,53 +228,53 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
 // the internal render function
 template <int nComponents>
 void
-OneViewPlugin::renderInternal(const OFX::RenderArguments &args,
-                              OFX::BitDepthEnum dstBitDepth)
+OneViewPlugin::renderInternal(const RenderArguments &args,
+                              BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         PixelCopier<unsigned char, nComponents> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         PixelCopier<unsigned short, nComponents> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         PixelCopier<float, nComponents> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-OneViewPlugin::render(const OFX::RenderArguments &args)
+OneViewPlugin::render(const RenderArguments &args)
 {
-    if ( !OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
-        OFX::throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+    if ( !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
+        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     }
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
@@ -284,13 +285,13 @@ OneViewPluginFactory::load()
 {
     // we can't be used on hosts that don't support the stereoscopic suite
     // returning an error here causes a blank menu entry in Nuke
-    //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    //if (!fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 }
 
 void
-OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+OneViewPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -324,30 +325,30 @@ OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setIsViewAware(true);
 
     // We render the same thing on all views
-    desc.setIsViewInvariant(OFX::eViewInvarianceAllViewsInvariant);
+    desc.setIsViewInvariant(eViewInvarianceAllViewsInvariant);
 
     // returning an error here crashes Nuke
-    //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    //if (!fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //  throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (getImageEffectHostDescription()->isNatron) {
         desc.setIsDeprecated(true); // prefer Natron's internal OneView
     }
 #endif
 }
 
 void
-OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                        OFX::ContextEnum /*context*/)
+OneViewPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                        ContextEnum /*context*/)
 {
-    if ( !OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) &&
-         !OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
+    if ( !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) &&
+         !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 #ifdef OFX_EXTENSIONS_NATRON
-    gHostSupportsDynamicChoices = OFX::getImageEffectHostDescription()->supportsDynamicChoices;
+    gHostSupportsDynamicChoices = getImageEffectHostDescription()->supportsDynamicChoices;
 #endif
 
     // Source clip only in the filter context
@@ -387,9 +388,9 @@ OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 }
 
-OFX::ImageEffect*
+ImageEffect*
 OneViewPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                     OFX::ContextEnum /*context*/)
+                                     ContextEnum /*context*/)
 {
     return new OneViewPlugin(handle);
 }

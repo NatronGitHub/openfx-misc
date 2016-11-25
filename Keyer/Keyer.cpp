@@ -59,11 +59,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "center = (B+C)/2\n" \
     "toleranceUpper = (C-B)/2\n" \
     "softnessUpper = (D-C)\n" \
-"\n" \
-"See also:\n" \
-"- http://opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#Keyer\n" \
-"- http://opticalenquiry.com/nuke/index.php?title=Green_Screen\n" \
-"- http://opticalenquiry.com/nuke/index.php?title=Keying_Tips"
+    "\n" \
+    "See also:\n" \
+    "- http://opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#Keyer\n" \
+    "- http://opticalenquiry.com/nuke/index.php?title=Green_Screen\n" \
+    "- http://opticalenquiry.com/nuke/index.php?title=Keying_Tips"
 
 #define kPluginIdentifier "net.sf.openfx.KeyerPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -213,45 +213,46 @@ enum SourceAlphaEnum
 };
 
 static
-double luminance (LuminanceMathEnum luminanceMath,
-                  double r,
-                  double g,
-                  double b)
+double
+luminance (LuminanceMathEnum luminanceMath,
+           double r,
+           double g,
+           double b)
 {
     switch (luminanceMath) {
-        case eLuminanceMathRec709:
-        default:
+    case eLuminanceMathRec709:
+    default:
 
-            return Color::rgb709_to_y(r, g, b);
-        case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
+        return Color::rgb709_to_y(r, g, b);
+    case eLuminanceMathRec2020:     // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
 
-            return Color::rgb2020_to_y(r, g, b);
-        case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+        return Color::rgb2020_to_y(r, g, b);
+    case eLuminanceMathACESAP0:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
 
-            return Color::rgbACESAP0_to_y(r, g, b);
-        case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+        return Color::rgbACESAP0_to_y(r, g, b);
+    case eLuminanceMathACESAP1:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
 
-            return Color::rgbACESAP1_to_y(r, g, b);
-        case eLuminanceMathCcir601:
+        return Color::rgbACESAP1_to_y(r, g, b);
+    case eLuminanceMathCcir601:
 
-            return 0.2989 * r + 0.5866 * g + 0.1145 * b;
-        case eLuminanceMathAverage:
+        return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+    case eLuminanceMathAverage:
 
-            return (r + g + b) / 3;
-        case eLuminanceMathMaximum:
+        return (r + g + b) / 3;
+    case eLuminanceMathMaximum:
 
-            return std::max(std::max(r, g), b);
+        return std::max(std::max(r, g), b);
     }
 }
 
 class KeyerProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_bgImg;
-    const OFX::Image *_inMaskImg;
-    const OFX::Image *_outMaskImg;
+    const Image *_srcImg;
+    const Image *_bgImg;
+    const Image *_inMaskImg;
+    const Image *_outMaskImg;
     OfxRGBColourD _keyColor;
     KeyerModeEnum _keyerMode;
     LuminanceMathEnum _luminanceMath;
@@ -267,8 +268,8 @@ protected:
 
 public:
 
-    KeyerProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    KeyerProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _bgImg(0)
         , _inMaskImg(0)
@@ -288,10 +289,10 @@ public:
         _keyColor.r = _keyColor.g = _keyColor.b = 0.;
     }
 
-    void setSrcImgs(const OFX::Image *srcImg,
-                    const OFX::Image *bgImg,
-                    const OFX::Image *inMaskImg,
-                    const OFX::Image *outMaskImg)
+    void setSrcImgs(const Image *srcImg,
+                    const Image *bgImg,
+                    const Image *inMaskImg,
+                    const Image *outMaskImg)
     {
         _srcImg = srcImg;
         _bgImg = bgImg;
@@ -343,7 +344,7 @@ public:
             return ( Kfg - (_center + _toleranceLower + _softnessLower) ) / -_softnessLower;
         } else if (Kfg <= _center + _toleranceUpper) {
             return 1.;
-        }  else if ( ( 1. <= (_center + _toleranceUpper) ) && (1. <= Kfg) ) {              // special case: everything above 1 is 1. if center+toleranceUpper>=1
+        }  else if ( ( 1. <= (_center + _toleranceUpper) ) && (1. <= Kfg) ) {               // special case: everything above 1 is 1. if center+toleranceUpper>=1
             return 1.;
         } else if ( ( Kfg < (_center + _toleranceUpper + _softnessUpper) ) && (_softnessUpper > 0.) ) {
             return ( (_center + _toleranceUpper + _softnessUpper) - Kfg ) / _softnessUpper;
@@ -351,11 +352,11 @@ public:
             return 0.;
         }
     }
+
 protected:
-    double
-    rgb2luminance(double r,
-                  double g,
-                  double b)
+    double rgb2luminance(double r,
+                         double g,
+                         double b)
     {
         return luminance(_luminanceMath, r, g, b);
     }
@@ -406,7 +407,7 @@ class KeyerProcessor
     : public KeyerProcessorBase
 {
 public:
-    KeyerProcessor(OFX::ImageEffect &instance)
+    KeyerProcessor(ImageEffect &instance)
         : KeyerProcessorBase(instance)
     {
     }
@@ -597,7 +598,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class KeyerPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -624,8 +625,8 @@ public:
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _bgClip = fetchClip(kClipBg);
@@ -655,21 +656,22 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(KeyerProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(KeyerProcessorBase &, const RenderArguments &args);
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     void setThresholdsFromKeyColor(double r, double g, double b, KeyerModeEnum keyerMode, LuminanceMathEnum luminanceMath);
 
     void updateVisibility()
     {
         KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValue();
+
         _luminanceMath->setIsSecretAndDisabled(keyerMode != eKeyerModeLuminance);
         _softnessLower->setIsSecretAndDisabled(keyerMode == eKeyerModeNone);
         _toleranceLower->setIsSecretAndDisabled(keyerMode == eKeyerModeNone);
@@ -682,24 +684,24 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_bgClip;
-    OFX::Clip *_inMaskClip;
-    OFX::Clip *_outMaskClip;
-    OFX::StringParam *_sublabel;
-    OFX::RGBParam* _keyColor;
-    OFX::ChoiceParam* _keyerMode;
-    OFX::ChoiceParam* _luminanceMath;
-    OFX::DoubleParam* _softnessLower;
-    OFX::DoubleParam* _toleranceLower;
-    OFX::DoubleParam* _center;
-    OFX::DoubleParam* _toleranceUpper;
-    OFX::DoubleParam* _softnessUpper;
-    OFX::DoubleParam* _despill;
-    OFX::DoubleParam* _despillAngle;
-    OFX::ChoiceParam* _outputMode;
-    OFX::ChoiceParam* _sourceAlpha;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_bgClip;
+    Clip *_inMaskClip;
+    Clip *_outMaskClip;
+    StringParam *_sublabel;
+    RGBParam* _keyColor;
+    ChoiceParam* _keyerMode;
+    ChoiceParam* _luminanceMath;
+    DoubleParam* _softnessLower;
+    DoubleParam* _toleranceLower;
+    DoubleParam* _center;
+    DoubleParam* _toleranceUpper;
+    DoubleParam* _softnessUpper;
+    DoubleParam* _despill;
+    DoubleParam* _despillAngle;
+    ChoiceParam* _outputMode;
+    ChoiceParam* _sourceAlpha;
 };
 
 
@@ -712,78 +714,79 @@ private:
 /* set up and run a processor */
 void
 KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
-                             const OFX::RenderArguments &args)
+                             const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
-                                        _bgClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
+                                   _bgClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        //OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        //PixelComponentEnum srcComponents = src->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
     if ( bg.get() ) {
         if ( (bg->getRenderScale().x != args.renderScale.x) ||
              ( bg->getRenderScale().y != args.renderScale.y) ||
-             ( ( bg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( bg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( bg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( bg->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = bg->getPixelDepth();
-        //OFX::PixelComponentEnum srcComponents = bg->getPixelComponents();
+        BitDepthEnum srcBitDepth      = bg->getPixelDepth();
+        //PixelComponentEnum srcComponents = bg->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) {  // Keyer outputs RGBA but may have RGB input
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
     // auto ptr for the masks.
-    std::auto_ptr<const OFX::Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
-                                            _inMaskClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
+                                       _inMaskClip->fetchImage(time) : 0 );
     if ( inMask.get() ) {
         if ( (inMask->getRenderScale().x != args.renderScale.x) ||
              ( inMask->getRenderScale().y != args.renderScale.y) ||
-             ( ( inMask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( inMask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( inMask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( inMask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const OFX::Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
-                                             _outMaskClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
+                                        _outMaskClip->fetchImage(time) : 0 );
     if ( outMask.get() ) {
         if ( (outMask->getRenderScale().x != args.renderScale.x) ||
              ( outMask->getRenderScale().y != args.renderScale.y) ||
-             ( ( outMask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( outMask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( outMask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( outMask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
@@ -810,45 +813,45 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
 
 // the overridden render function
 void
-KeyerPlugin::render(const OFX::RenderArguments &args)
+KeyerPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    if (dstComponents != OFX::ePixelComponentRGBA) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+    if (dstComponents != ePixelComponentRGBA) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host dit not take into account output components");
+        throwSuiteStatusException(kOfxStatErrImageFormat);
 
         return;
     }
 
     switch (dstBitDepth) {
-    //case OFX::eBitDepthUByte: {
+    //case eBitDepthUByte: {
     //    KeyerProcessor<unsigned char, 4, 255> fred(*this);
     //    setupAndProcess(fred, args);
     //    break;
     //}
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         KeyerProcessor<unsigned short, 4, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         KeyerProcessor<float, 4, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 /* Override the clip preferences */
 void
-KeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+KeyerPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
@@ -908,7 +911,7 @@ KeyerPlugin::setThresholdsFromKeyColor(double r,
 }
 
 void
-KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+KeyerPlugin::changedParam(const InstanceChangedArgs &args,
                           const std::string &paramName)
 {
     const double time = args.time;
@@ -936,7 +939,7 @@ KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 
 mDeclarePluginFactory(KeyerPluginFactory, {}, {});
 void
-KeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+KeyerPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -962,13 +965,14 @@ KeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                      OFX::ContextEnum /*context*/)
+KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                      ContextEnum /*context*/)
 {
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->setHint(kClipSourceHint);
-    srcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
-    srcClip->addSupportedComponent( OFX::ePixelComponentRGB );
+    srcClip->addSupportedComponent( ePixelComponentRGBA );
+    srcClip->addSupportedComponent( ePixelComponentRGB );
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(false);
@@ -993,8 +997,8 @@ KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     ClipDescriptor* bgClip = desc.defineClip(kClipBg);
     bgClip->setHint(kClipBgHint);
-    bgClip->addSupportedComponent( OFX::ePixelComponentRGBA );
-    bgClip->addSupportedComponent( OFX::ePixelComponentRGB );
+    bgClip->addSupportedComponent( ePixelComponentRGBA );
+    bgClip->addSupportedComponent( ePixelComponentRGB );
     bgClip->setTemporalClipAccess(false);
     bgClip->setSupportsTiles(kSupportsTiles);
     bgClip->setOptional(true);
@@ -1222,9 +1226,9 @@ KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // KeyerPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 KeyerPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                   OFX::ContextEnum /*context*/)
+                                   ContextEnum /*context*/)
 {
     return new KeyerPlugin(handle);
 }

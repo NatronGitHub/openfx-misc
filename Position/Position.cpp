@@ -64,7 +64,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class PositionPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -75,72 +75,72 @@ public:
         , _translate(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _translate = fetchDouble2DParam(kParamTranslate);
         assert(_translate);
     }
 
 private:
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
+    Clip *_dstClip;
+    Clip *_srcClip;
     Double2DParam* _translate;
 };
 
 // the overridden render function
 void
-PositionPlugin::render(const OFX::RenderArguments &args)
+PositionPlugin::render(const RenderArguments &args)
 {
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     // do the rendering
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     void* dstPixelData;
     OfxRectI dstBounds;
-    OFX::PixelComponentEnum dstComponents;
-    OFX::BitDepthEnum dstBitDepth;
+    PixelComponentEnum dstComponents;
+    BitDepthEnum dstBitDepth;
     int dstRowBytes;
     getImageData(dst.get(), &dstPixelData, &dstBounds, &dstComponents, &dstBitDepth, &dstRowBytes);
     int dstPixelComponentCount = dst->getPixelComponentCount();
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     const void* srcPixelData;
     OfxRectI srcBounds;
-    OFX::PixelComponentEnum srcPixelComponents;
-    OFX::BitDepthEnum srcBitDepth;
+    PixelComponentEnum srcPixelComponents;
+    BitDepthEnum srcBitDepth;
     int srcRowBytes;
     getImageData(src.get(), &srcPixelData, &srcBounds, &srcPixelComponents, &srcBitDepth, &srcRowBytes);
     int srcPixelComponentCount = src.get() ? src->getPixelComponentCount() : 0;
@@ -171,7 +171,7 @@ PositionPlugin::render(const OFX::RenderArguments &args)
 
 // override the rod call
 bool
-PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+PositionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                       OfxRectD &rod)
 {
     if (!_srcClip) {
@@ -179,7 +179,7 @@ PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     }
     const double time = args.time;
     OfxRectD srcrod = _srcClip->getRegionOfDefinition(time);
-    if ( OFX::Coords::rectIsEmpty(srcrod) ) {
+    if ( Coords::rectIsEmpty(srcrod) ) {
         return false;
     }
     double par = _dstClip->getPixelAspectRatio();
@@ -209,15 +209,15 @@ PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
 
 // override the roi call
 void
-PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                     OFX::RegionOfInterestSetter &rois)
+PositionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                     RegionOfInterestSetter &rois)
 {
     if (!_srcClip) {
         return;
     }
     const double time = args.time;
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
-    if ( OFX::Coords::rectIsEmpty(srcRod) ) {
+    if ( Coords::rectIsEmpty(srcRod) ) {
         return;
     }
     double par = _dstClip->getPixelAspectRatio();
@@ -244,7 +244,7 @@ PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args
     srcRoi.y1 -= t_canonical.y;
     srcRoi.y2 -= t_canonical.y;
     // intersect srcRoi with srcRoD
-    OFX::Coords::rectIntersection(srcRoi, srcRod, &srcRoi);
+    Coords::rectIntersection(srcRoi, srcRod, &srcRoi);
     rois.setRegionOfInterest(*_srcClip, srcRoi);
 }
 
@@ -286,7 +286,7 @@ struct PositionInteractParam
 };
 
 void
-PositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+PositionPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -331,8 +331,8 @@ PositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                         OFX::ContextEnum /*context*/)
+PositionPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                         ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -397,9 +397,9 @@ PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // PositionPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 PositionPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                      OFX::ContextEnum /*context*/)
+                                      ContextEnum /*context*/)
 {
     return new PositionPlugin(handle);
 }

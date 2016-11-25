@@ -188,3 +188,5 @@ Shadertoy/ShadertoyParse
 Shadertoy/ShadertoyParse.dSYM/Contents/Info.plist
 
 Shadertoy/ShadertoyParse.dSYM/Contents/Resources/DWARF/ShadertoyParse
+
+*.bak

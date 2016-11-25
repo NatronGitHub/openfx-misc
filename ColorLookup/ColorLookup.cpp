@@ -55,8 +55,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "Note that you can easily do color remapping by setting Source and Target colors and clicking \"Set RGB\" or \"Set RGBA\" below.\n" \
     "This will add control points on the curve to match the target from the source. You can add as many point as you like.\n" \
-"This is very useful for matching color of one shot to another, or adding custom colors to a black and white ramp.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=ColorLookup"
+    "This is very useful for matching color of one shot to another, or adding custom colors to a black and white ramp.\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=ColorLookup"
 
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -165,11 +165,11 @@ enum LuminanceMathEnum
 
 
 class ColorLookupProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_maskImg;
+    const Image *_srcImg;
+    const Image *_maskImg;
     bool _doMasking;
     const bool _clampBlack;
     const bool _clampWhite;
@@ -179,10 +179,10 @@ protected:
     bool _maskInvert;
 
 public:
-    ColorLookupProcessorBase(OFX::ImageEffect &instance,
+    ColorLookupProcessorBase(ImageEffect &instance,
                              bool clampBlack,
                              bool clampWhite)
-        : OFX::ImageProcessor(instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _doMasking(false)
@@ -195,9 +195,9 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v; }
@@ -277,9 +277,9 @@ class ColorLookupProcessor
 {
 public:
     // ctor
-    ColorLookupProcessor(OFX::ImageEffect &instance,
-                         const OFX::RenderArguments &args,
-                         OFX::ParametricParam  *lookupTableParam,
+    ColorLookupProcessor(ImageEffect &instance,
+                         const RenderArguments &args,
+                         ParametricParam  *lookupTableParam,
                          double rangeMin,
                          double rangeMax,
                          bool clampBlack,
@@ -389,48 +389,50 @@ private:
 
 private:
     std::vector<float> _lookupTable[nComponents];
-    OFX::ParametricParam*  _lookupTableParam;
+    ParametricParam*  _lookupTableParam;
     double _time;
     double _rangeMin;
     double _rangeMax;
 };
 
 static
-double luminance(double r,
-                 double g,
-                 double b,
-                 LuminanceMathEnum luminanceMath)
+double
+luminance(double r,
+          double g,
+          double b,
+          LuminanceMathEnum luminanceMath)
 {
     switch (luminanceMath) {
-        case eLuminanceMathRec709:
-        default:
-            return Color::rgb709_to_y(r, g, b);
+    case eLuminanceMathRec709:
+    default:
 
-        case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
+        return Color::rgb709_to_y(r, g, b);
 
-            return Color::rgb2020_to_y(r, g, b);
-        case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+    case eLuminanceMathRec2020:     // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
 
-            return Color::rgbACESAP0_to_y(r, g, b);
-        case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+        return Color::rgb2020_to_y(r, g, b);
+    case eLuminanceMathACESAP0:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
 
-            return Color::rgbACESAP1_to_y(r, g, b);
-        case eLuminanceMathCcir601:
+        return Color::rgbACESAP0_to_y(r, g, b);
+    case eLuminanceMathACESAP1:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
 
-            return 0.2989 * r + 0.5866 * g + 0.1145 * b;
-        case eLuminanceMathAverage:
+        return Color::rgbACESAP1_to_y(r, g, b);
+    case eLuminanceMathCcir601:
 
-            return (r + g + b) / 3;
-        case eLuminanceMathMaximum:
-            
-            return std::max(std::max(r, g), b);
+        return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+    case eLuminanceMathAverage:
+
+        return (r + g + b) / 3;
+    case eLuminanceMathMaximum:
+
+        return std::max(std::max(r, g), b);
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class ColorLookupPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     ColorLookupPlugin(OfxImageEffectHandle handle)
@@ -445,13 +447,13 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _hasBackgroundInteract = fetchBooleanParam(kParamHasBackgroundInteract);
         _lookupTable = fetchParametricParam(kParamLookupTable);
@@ -481,21 +483,22 @@ public:
     }
 
 private:
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderForComponents(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
-    void setupAndProcess(ColorLookupProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ColorLookupProcessorBase &, const RenderArguments &args);
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &args,
+    virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) OVERRIDE FINAL
     {
         const double time = args.time;
+
         if ( (paramName == kParamHasBackgroundInteract) ) {
             bool hasBackgroundInteract = _hasBackgroundInteract->getValueAtTime(time);
             _showRamp->setIsSecretAndDisabled(!hasBackgroundInteract);
@@ -506,7 +509,6 @@ private:
             _source->getValueAtTime(time, source[0], source[1], source[2], source[3]);
             _target->getValueAtTime(time, target[0], target[1], target[2], target[3]);
             LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
-
             double s = luminance(source[0], source[1], source[2], luminanceMath);
             double t = luminance(target[0], target[1], target[2], luminanceMath);
             _lookupTable->addControlPoint(kCurveMaster, // curve to set
@@ -577,23 +579,23 @@ private:
 #endif
 #ifdef COLORLOOKUP_RESET
         if ( (paramName == kParamResetCtrlPts) && (args.reason == eChangeUserEdit) ) {
-            OFX::Message::MessageReplyEnum reply = sendMessage(OFX::Message::eMessageQuestion, "", "Delete all control points for all components?");
+            Message::MessageReplyEnum reply = sendMessage(Message::eMessageQuestion, "", "Delete all control points for all components?");
             // Nuke seems to always reply eMessageReplyOK, whatever the real answer was
             switch (reply) {
-            case OFX::Message::eMessageReplyOK:
-                sendMessage(OFX::Message::eMessageMessage, "", "OK");
+            case Message::eMessageReplyOK:
+                sendMessage(Message::eMessageMessage, "", "OK");
                 break;
-            case OFX::Message::eMessageReplyYes:
-                sendMessage(OFX::Message::eMessageMessage, "", "Yes");
+            case Message::eMessageReplyYes:
+                sendMessage(Message::eMessageMessage, "", "Yes");
                 break;
-            case OFX::Message::eMessageReplyNo:
-                sendMessage(OFX::Message::eMessageMessage, "", "No");
+            case Message::eMessageReplyNo:
+                sendMessage(Message::eMessageMessage, "", "No");
                 break;
-            case OFX::Message::eMessageReplyFailed:
-                sendMessage(OFX::Message::eMessageMessage, "", "Failed");
+            case Message::eMessageReplyFailed:
+                sendMessage(Message::eMessageMessage, "", "Failed");
                 break;
             }
-            if (reply == OFX::Message::eMessageReplyYes) {
+            if (reply == Message::eMessageReplyYes) {
                 for (int component = 0; component < kCurveNb; ++component) {
                     _lookupTable->deleteControlPoint(component);
                     // add a control point at 0, value is 0
@@ -614,7 +616,7 @@ private:
             if (rmax < rmin) {
                 _range->setValue(rmax, rmin);
             }
-        } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+        } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
             _premultChanged->setValue(true);
         }
     } // changedParam
@@ -640,54 +642,54 @@ private:
     BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
-
 void
 ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
-                                   const OFX::RenderArguments &args)
+                                   const RenderArguments &args)
 {
     const double time = args.time;
+
     assert(_dstClip);
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
                  ( mask->getRenderScale().y != args.renderScale.y) ||
-                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                throwSuiteStatusException(kOfxStatFailed);
             }
         }
         bool maskInvert;
@@ -697,14 +699,14 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
     }
 
     if ( src.get() && dst.get() ) {
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -724,8 +726,8 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
 // the internal render function
 template <int nComponents>
 void
-ColorLookupPlugin::renderForComponents(const OFX::RenderArguments &args,
-                                       OFX::BitDepthEnum dstBitDepth)
+ColorLookupPlugin::renderForComponents(const RenderArguments &args,
+                                       BitDepthEnum dstBitDepth)
 {
     double rangeMin, rangeMax;
     bool clampBlack, clampWhite;
@@ -735,42 +737,42 @@ ColorLookupPlugin::renderForComponents(const OFX::RenderArguments &args,
     _clampBlack->getValueAtTime(time, clampBlack);
     _clampWhite->getValueAtTime(time, clampWhite);
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         ColorLookupProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         ColorLookupProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         ColorLookupProcessor<float, nComponents, 1, 1023> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 void
-ColorLookupPlugin::render(const OFX::RenderArguments &args)
+ColorLookupPlugin::render(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderForComponents<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderForComponents<1>(args, dstBitDepth);
     }
 }
@@ -788,12 +790,12 @@ ColorLookupPlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
+            if (getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
 
                     return true;
@@ -812,7 +814,7 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args,
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
-         ( args.reason == OFX::eChangeUserEdit) ) {
+         ( args.reason == eChangeUserEdit) ) {
         if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
             _premult->setValue(false);
         } else {
@@ -832,13 +834,13 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args,
 }
 
 class ColorLookupInteract
-    : public OFX::ParamInteract
+    : public ParamInteract
 {
 public:
     ColorLookupInteract(OfxInteractHandle handle,
-                        OFX::ImageEffect* effect,
+                        ImageEffect* effect,
                         const std::string& paramName) :
-        OFX::ParamInteract(handle, effect)
+        ParamInteract(handle, effect)
     {
         _hasBackgroundInteract = effect->fetchBooleanParam(kParamHasBackgroundInteract);
         _showRamp = effect->fetchBooleanParam(kParamShowRamp);
@@ -848,11 +850,11 @@ public:
         addParamToSlaveTo(_showRamp);
     }
 
-    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
+    virtual bool draw(const DrawArgs &args) OVERRIDE FINAL
     {
         const double time = args.time;
-
         bool hasBackgroundInteract = _hasBackgroundInteract->getValueAtTime(time);
+
         if (!hasBackgroundInteract) {
             _hasBackgroundInteract->setValue(true);
         }
@@ -918,23 +920,24 @@ public:
             }
             glEnd();
         }
+
         return true;
-    }
+    } // draw
 
     virtual ~ColorLookupInteract() {}
 
 protected:
-    OFX::BooleanParam* _hasBackgroundInteract;
-    OFX::BooleanParam* _showRamp;
-    OFX::ParametricParam* _lookupTableParam;
-    OFX::Double2DParam* _range;
+    BooleanParam* _hasBackgroundInteract;
+    BooleanParam* _showRamp;
+    ParametricParam* _lookupTableParam;
+    Double2DParam* _range;
 };
 
 // We are lucky, there's only one lookupTable param, so we need only one interact
 // descriptor. If there were several, be would have to use a template parameter,
 // as in propTester.cpp
 class ColorLookupInteractDescriptor
-    : public OFX::DefaultParamInteractDescriptor<ColorLookupInteractDescriptor, ColorLookupInteract>
+    : public DefaultParamInteractDescriptor<ColorLookupInteractDescriptor, ColorLookupInteract>
 {
 public:
     virtual void describe() OVERRIDE FINAL
@@ -946,7 +949,7 @@ public:
 mDeclarePluginFactory(ColorLookupPluginFactory, {}, {});
 
 void
-ColorLookupPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+ColorLookupPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -969,7 +972,7 @@ ColorLookupPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     // returning an error here crashes Nuke
-    //if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+    //if (!getImageEffectHostDescription()->supportsParametricParameter) {
     //  throwHostMissingSuiteException(kOfxParametricParameterSuite);
     //}
 #ifdef OFX_EXTENSIONS_NATRON
@@ -978,10 +981,10 @@ ColorLookupPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                            OFX::ContextEnum context)
+ColorLookupPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                            ContextEnum context)
 {
-    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
                                                !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
                                                  8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric
@@ -1047,7 +1050,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamLookupTable);
+        ParametricParamDescriptor* param = desc.defineParametricParam(kParamLookupTable);
         assert(param);
         param->setLabel(kParamLookupTableLabel);
         param->setHint(kParamLookupTableHint);
@@ -1056,7 +1059,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             param->setInteractDescriptor(interact);
         }
 
-       // define it as three dimensional
+        // define it as three dimensional
         param->setDimension(kCurveNb);
 
         // label our dimensions are r/g/b
@@ -1114,7 +1117,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamSource);
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamSource);
         param->setLabel(kParamSourceLabel);
         param->setHint(kParamSourceHint);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
@@ -1126,7 +1129,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTarget);
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTarget);
         param->setLabel(kParamTargetLabel);
         param->setHint(kParamTargetHint);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
@@ -1138,7 +1141,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetMaster);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetMaster);
         param->setLabel(kParamSetMasterLabel);
         param->setHint(kParamSetMasterHint);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -1147,7 +1150,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGB);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGB);
         param->setLabel(kParamSetRGBLabel);
         param->setHint(kParamSetRGBHint);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -1156,7 +1159,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGBA);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGBA);
         param->setLabel(kParamSetRGBALabel);
         param->setHint(kParamSetRGBAHint);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -1165,7 +1168,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetA);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetA);
         param->setLabel(kParamSetALabel);
         param->setHint(kParamSetAHint);
         if (page) {
@@ -1174,7 +1177,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 #ifdef COLORLOOKUP_ADD
     {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAddCtrlPts);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAddCtrlPts);
         param->setLabel(kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel);
         if (page) {
             page->addChild(*param);
@@ -1183,7 +1186,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #endif
 #ifdef COLORLOOKUP_RESET
     {
-        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetCtrlPts);
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetCtrlPts);
         param->setLabel(kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel);
         if (page) {
             page->addChild(*param);
@@ -1238,7 +1241,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
@@ -1249,9 +1252,9 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // ColorLookupPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 ColorLookupPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                         OFX::ContextEnum /*context*/)
+                                         ContextEnum /*context*/)
 {
     return new ColorLookupPlugin(handle);
 }
