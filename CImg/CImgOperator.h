@@ -377,7 +377,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const OFX::BitDepthEnum tmpBitDepth = OFX::eBitDepthFloat;
     const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
-    const int tmpRowBytes = tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
+    const size_t tmpRowBytes = tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
     size_t tmpSize = tmpRowBytes * tmpHeight;
 
     assert(tmpSize > 0);
