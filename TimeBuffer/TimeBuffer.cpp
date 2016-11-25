@@ -1216,7 +1216,7 @@ TimeBufferWritePlugin::render(const RenderArguments &args)
         timeBuffer->rowBytes = (args.renderWindow.x2 - args.renderWindow.x1) * timeBuffer->pixelComponentCount * sizeof(float);
         timeBuffer->renderScale = args.renderScale;
         timeBuffer->par = src->getPixelAspectRatio();
-        timeBuffer->pixelData.resize( timeBuffer->rowBytes * (args.renderWindow.y2 - args.renderWindow.y1) );
+        timeBuffer->pixelData.resize( (size_t)timeBuffer->rowBytes * (args.renderWindow.y2 - args.renderWindow.y1) );
         copyPixels(*this, args.renderWindow, src.get(), &timeBuffer->pixelData.front(), timeBuffer->bounds, timeBuffer->pixelComponents, timeBuffer->pixelComponentCount, timeBuffer->bitDepth, timeBuffer->rowBytes);
         timeBuffer->dirty = false;
     }
