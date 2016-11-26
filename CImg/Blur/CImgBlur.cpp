@@ -24,7 +24,7 @@
 #include <cmath>
 #include <cstring>
 #include <climits>
-#include <cfloat> // DBL_MAX
+#include <cfloat> // DBL_MAX, FLT_EPSILON
 #include <algorithm>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
@@ -1128,7 +1128,7 @@ unpremult(CImg<cimgpix_t> &cimg)
     cimg_pragma_openmp(parallel for collapse(2) if (cimg.width()>=256 && cimg.height()>=16))
     cimg_forXY(cimg, x, y) {
         cimgpix_t alpha = cimg(x, y, 0, 3);
-        if (alpha > 0.) {
+        if (alpha > FLT_EPSILON) {
             for (int c = 0; c < 3; ++c) {
                 cimg(x, y, 0, c) /= alpha;
             }

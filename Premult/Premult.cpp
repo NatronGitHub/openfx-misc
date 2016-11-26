@@ -20,7 +20,7 @@
  * OFX Premult plugin.
  */
 
-#include <limits>
+#include <cfloat> // FLT_EPSILON
 #include <algorithm>
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
@@ -302,7 +302,6 @@ private:
         doc[1] = processG;
         doc[2] = processB;
         doc[3] = processA;
-        const float fltmin = std::numeric_limits<float>::min();
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -322,7 +321,7 @@ private:
                                 dstPix[c] = doc[c] ? ( ( (float)srcPix[c] * alpha ) / maxValue ) : srcPix[c];
                             } else {
                                 PIX val;
-                                if ( !doc[c] || ( alpha <= (PIX)(fltmin * maxValue) ) ) {
+                                if ( !doc[c] || ( alpha <= (PIX)(FLT_EPSILON * maxValue) ) ) {
                                     val = srcPix[c];
                                 } else {
                                     val = ClampNonFloat<PIX, maxValue>( ( (float)srcPix[c] * maxValue ) / alpha );
