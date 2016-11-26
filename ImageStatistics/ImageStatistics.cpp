@@ -24,6 +24,7 @@
 #include <cfloat> // DBL_MAX
 #include <climits>
 #include <algorithm>
+#include <limits>
 
 #include "ofxsProcessing.H"
 #include "ofxsRectangleInteract.h"

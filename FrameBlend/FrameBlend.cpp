@@ -28,6 +28,7 @@
 #include <cfloat>
 #include <cassert>
 #include <algorithm>
+#include <limits>
 
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
