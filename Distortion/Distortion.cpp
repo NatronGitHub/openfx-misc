@@ -41,6 +41,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
+#include <limits>
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
