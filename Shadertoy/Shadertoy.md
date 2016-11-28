@@ -17,9 +17,9 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * __Input:__ vec2 fragCoord
 
 
-### Built-in Functions
+### Built-in Functions [(details)](http://www.shaderific.com/glsl-functions/)
 
-#### Trigonometric
+#### Angle and Trigonometry Functions
 
 * *type* radians (*type* degrees)
 * *type* degrees (*type* radians)
@@ -31,7 +31,7 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * *type* atan (*type* y, *type* x)
 * *type* atan (*type* yoverx)
 
-### Exponential and Logarithm
+### Exponential Functions
 
 * *type* pow (*type* x, *type* y)
 * *type* exp (*type* x)
@@ -41,7 +41,7 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * *type* sqrt (*type* x)
 * *type* inversesqrt (*type* x)
 
-#### Arithmetic
+#### Common Functions
 
 * *type* abs (*type* x)
 * *type* sign (*type* x)
@@ -63,9 +63,8 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * *type* smoothstep (*type* a, *type* b, *type* x)
 * *type* smoothstep (float a, float b, *type* x)
 
-#### Vectors and Matrices
+#### Geometric Functions
 
-* mat matrixCompMult (mat x, mat y)
 * float length (*type* x)
 * float distance (*type* p0, *type* p1)
 * float dot (*type* x, *type* y)
@@ -75,7 +74,11 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * *type* reflect (*type* I, *type* N)
 * *type* refract (*type* I, *type* N,float eta)
 
-#### Comparisons
+#### Matrix Functions
+
+* mat matrixCompMult (mat x, mat y)
+
+#### Vector Relational Functions
 
 * bvec lessThan(vec x, vec y)
 * bvec lessThan(ivec x, ivec y)
@@ -95,7 +98,7 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * bool all(bvec x)
 * bvec not(bvec x)
 
-#### Textures
+#### Texture Lookup Functions
 
 * vec4 texture2D(sampler2D sampler, vec2 coord )
 * vec4 texture2D(sampler2D sampler, vec2 coord, float bias)
@@ -112,6 +115,8 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * vec4 texture2DProjGradEXT(sampler2D sampler, vec3 P, vec2 dPdx, vec2 dPdy)
 * vec4 texture2DProjGradEXT(sampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy)
 * vec4 textureCubeGradEXT(samplerCube sampler, vec3 P, vec3 dPdx, vec3 dPdy)
+
+#### Function Derivatives
 
 * *type* dFdx( *type* x ), dFdy( *type* x )
 * *type* fwidth( *type* p )

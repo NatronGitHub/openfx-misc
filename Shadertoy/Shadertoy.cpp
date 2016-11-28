@@ -86,9 +86,9 @@ using namespace OFX;
     "    Input: vec2 fragCoord\n" \
     "\n" \
     "\n" \
-    "Built-in Functions:\n" \
+    "Built-in Functions (see http://www.shaderific.com/glsl-functions/ for details):\n" \
     "\n" \
-    "Trigonometric\n" \
+    "Angle and Trigonometry Functions\n" \
     "    type radians (type degrees)\n" \
     "    type degrees (type radians)\n" \
     "    type sin (type angle)\n" \
@@ -99,7 +99,7 @@ using namespace OFX;
     "    type atan (type y, type x)\n" \
     "    type atan (type y_over_x)\n" \
     "\n" \
-    "Exponential and Logarithm\n" \
+    "Exponential Functions\n" \
     "    type pow (type x, type y)\n" \
     "    type exp (type x)\n" \
     "    type log (type x)\n" \
@@ -108,7 +108,7 @@ using namespace OFX;
     "    type sqrt (type x)\n" \
     "    type inversesqrt (type x)\n" \
     "\n" \
-    "Arithmetic\n" \
+    "Common Functions\n" \
     "    type abs (type x)\n" \
     "    type sign (type x)\n" \
     "    type floor (type x)\n" \
@@ -129,8 +129,7 @@ using namespace OFX;
     "    type smoothstep (type a, type b, type x)\n" \
     "    type smoothstep (float a, float b, type x)\n" \
     "\n" \
-    "Vectors and Matrices\n" \
-    "    mat matrixCompMult (mat x, mat y)\n" \
+    "Geometric Functions\n" \
     "    float length (type x)\n" \
     "    float distance (type p0, type p1)\n" \
     "    float dot (type x, type y)\n" \
@@ -140,7 +139,10 @@ using namespace OFX;
     "    type reflect (type I, type N)\n" \
     "    type refract (type I, type N,float eta)\n" \
     "\n" \
-    "Comparisons\n" \
+    "Matrix Functions\n" \
+    "    mat matrixCompMult (mat x, mat y)\n" \
+    "\n" \
+    "Vector Relational Functions\n" \
     "    bvec lessThan(vec x, vec y)\n" \
     "    bvec lessThan(ivec x, ivec y)\n" \
     "    bvec lessThanEqual(vec x, vec y)\n" \
@@ -159,7 +161,7 @@ using namespace OFX;
     "    bool all(bvec x)\n" \
     "    bvec not(bvec x)\n" \
     "\n" \
-    "Textures\n" \
+    "Texture Lookup Functions\n" \
     "    vec4 texture2D(sampler2D sampler, vec2 coord )\n" \
     "    vec4 texture2D(sampler2D sampler, vec2 coord, float bias)\n" \
     "    vec4 textureCube(samplerCube sampler, vec3 coord)\n" \
@@ -176,7 +178,7 @@ using namespace OFX;
     "    vec4 texture2DProjGradEXT(sampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy)\n" \
     "    vec4 textureCubeGradEXT(samplerCube sampler, vec3 P, vec3 dPdx, vec3 dPdy)\n" \
     "\n" \
-    "Derivatives\n" \
+    "Function Derivatives\n" \
     "    type dFdx( type x ), dFdy( type x )\n" \
     "    type fwidth( type p )\n" \
     "\n" \
@@ -258,9 +260,9 @@ using namespace OFX;
     "* __Input:__ vec2 fragCoord\n" \
     "\n" \
     "\n" \
-    "### Built-in Functions\n" \
+    "### Built-in Functions [(details)](http://www.shaderific.com/glsl-functions/)\n" \
     "\n" \
-    "#### Trigonometric\n" \
+    "#### Angle and Trigonometry Functions\n" \
     "\n" \
     "* *type* radians (*type* degrees)\n" \
     "* *type* degrees (*type* radians)\n" \
@@ -272,7 +274,7 @@ using namespace OFX;
     "* *type* atan (*type* y, *type* x)\n" \
     "* *type* atan (*type* y_over_x)\n" \
     "\n" \
-    "#### Exponential and Logarithm\n" \
+    "#### Exponential Functions\n" \
     "\n" \
     "* *type* pow (*type* x, *type* y)\n" \
     "* *type* exp (*type* x)\n" \
@@ -282,7 +284,7 @@ using namespace OFX;
     "* *type* sqrt (*type* x)\n" \
     "* *type* inversesqrt (*type* x)\n" \
     "\n" \
-    "#### Arithmetic\n" \
+    "#### Common Functions\n" \
     "\n" \
     "* *type* abs (*type* x)\n" \
     "* *type* sign (*type* x)\n" \
@@ -304,9 +306,8 @@ using namespace OFX;
     "* *type* smoothstep (*type* a, *type* b, *type* x)\n" \
     "* *type* smoothstep (float a, float b, *type* x)\n" \
     "\n" \
-    "#### Vectors and Matrices\n" \
+    "#### Geometric Functions\n" \
     "\n" \
-    "* mat matrixCompMult (mat x, mat y)\n" \
     "* float length (*type* x)\n" \
     "* float distance (*type* p0, *type* p1)\n" \
     "* float dot (*type* x, *type* y)\n" \
@@ -316,7 +317,11 @@ using namespace OFX;
     "* *type* reflect (*type* I, *type* N)\n" \
     "* *type* refract (*type* I, *type* N,float eta)\n" \
     "\n" \
-    "#### Comparisons\n" \
+    "#### Matrix Functions\n" \
+    "\n" \
+    "* mat matrixCompMult (mat x, mat y)\n" \
+    "\n" \
+    "#### Vector Relational Functions\n" \
     "\n" \
     "* bvec lessThan(vec x, vec y)\n" \
     "* bvec lessThan(ivec x, ivec y)\n" \
@@ -336,7 +341,7 @@ using namespace OFX;
     "* bool all(bvec x)\n" \
     "* bvec not(bvec x)\n" \
     "\n" \
-    "#### Textures\n" \
+    "#### Texture Lookup Functions\n" \
     "\n" \
     "* vec4 texture2D(sampler2D sampler, vec2 coord )\n" \
     "* vec4 texture2D(sampler2D sampler, vec2 coord, float bias)\n" \
@@ -354,7 +359,7 @@ using namespace OFX;
     "* vec4 texture2DProjGradEXT(sampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy)\n" \
     "* vec4 textureCubeGradEXT(samplerCube sampler, vec3 P, vec3 dPdx, vec3 dPdy)\n" \
     "\n" \
-    "#### Derivatives\n" \
+    "#### Function Derivatives\n" \
     "\n" \
     "* *type* dFdx( *type* x ), dFdy( *type* x )\n" \
     "* *type* fwidth( *type* p )\n" \
