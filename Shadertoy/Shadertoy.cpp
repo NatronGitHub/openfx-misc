@@ -505,13 +505,16 @@ using namespace OFX;
 #define kParamImageShaderDefault                            \
     "// iChannel0: Source (Source image.), filter=linear, wrap=clamp\n" \
     "// BBox: iChannel0\n" \
+    "\n" \
+    "const vec2 iRenderScale = vec2(1.,1.); // Render Scale (The size of a full-resolution pixel).\n" \
     "uniform float amplitude = 0.5; // Amplitude (The amplitude of the xy sine wave), min=0., max=1.\n" \
-    "uniform float frequency = 50.; // Frequency (The frequency of the xy sine wave), min = 0., max = 100.\n" \
+    "uniform float size = 50.; // Size (The period of the xy sine wave), min = 0., max = 200.\n" \
+    "\n" \
     "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n" \
     "{\n"                                                       \
     "    vec2 uv = fragCoord.xy / iResolution.xy;\n"            \
-    "    vec3 sinetex = vec3(0.5+0.5*amplitude*sin(frequency*uv.x),\n" \
-    "                        0.5+0.5*amplitude*sin(frequency*uv.y),\n" \
+    "    vec3 sinetex = vec3(0.5+0.5*amplitude*sin(fragCoord.x/(size*iRenderScale.x)),\n" \
+    "                        0.5+0.5*amplitude*sin(fragCoord.y/(size*iRenderScale.y)),\n" \
     "                        0.5+0.5*sin(iGlobalTime));\n" \
     "    fragColor = vec4(amplitude*sinetex + (1 - amplitude)*texture2D( iChannel0, uv ).xyz,1.0);\n"  \
     "}"
