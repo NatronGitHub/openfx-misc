@@ -1001,16 +1001,20 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
               dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth) ) );
 # endif
 
+    bool inputEnable[NBINPUTS];
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        inputEnable[i] = _inputEnable[i]->getValue();
+    }
 # ifdef USE_OPENGL
     std::auto_ptr<const OFX::Texture> src[NBINPUTS];
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        src[i].reset( ( _srcClips[i] && _srcClips[i]->isConnected() ) ?
+        src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
                       _srcClips[i]->loadTexture(time) : 0 );
     }
 # else
     std::auto_ptr<const OFX::Image> src[NBINPUTS];
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        src[i].reset( ( _srcClips[i] && _srcClips[i]->isConnected() ) ?
+        src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
                       _srcClips[i]->fetchImage(time) : 0 );
     }
 # endif
@@ -1553,6 +1557,16 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     if (shadertoy->iChannelResolutionLoc >= 0) {
         GLfloat rv[3 * NBINPUTS];
         for (unsigned i = 0; i < NBINPUTS; ++i) {
+            if ( src[i].get() ) {
+                OfxRectI srcBounds = src[i]->getBounds();
+                rv[i * 3] = srcBounds.x2 - srcBounds.x1;
+                rv[i * 3 + 1] = srcBounds.y2 - srcBounds.y1;
+            } else {
+                rv[i * 3] = rv[i * 3 + 1] = 0;
+            }
+            // last coord is 1.
+            // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderPassRenderer.m#L329
+            rv[i * 3 + 2] = 1;
         }
         glUniform3fv(shadertoy->iChannelResolutionLoc, NBINPUTS, rv);
     }

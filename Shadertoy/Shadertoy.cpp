@@ -229,7 +229,7 @@ using namespace OFX;
     "  `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`\n" \
     "* This one also sets the filter and wrap parameters:\n" \
     "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`\n" \
-    "* And this one sets the output bouding box (possible values are Default, Union, Interection, and iChannel0 to iChannel3):\n" \
+    "* And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):\n" \
     "  `// BBox: iChannel0`"
 
 
@@ -929,9 +929,14 @@ ShadertoyPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         return true;
        }*/
 
+    bool inputEnable[NBINPUTS];
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        inputEnable[i] = _inputEnable[i]->getValue();
+    }
+
     if (bboxChoice >= eBBoxIChannel) {
         unsigned i = bboxChoice - eBBoxIChannel;
-        if ( _srcClips[i]->isConnected() ) {
+        if ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) {
             rod = _srcClips[i]->getRegionOfDefinition(time);
 
             return true;
@@ -943,7 +948,7 @@ ShadertoyPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     std::vector<OfxRectD> rods;
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if ( _srcClips[i]->isConnected() ) {
+        if ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) {
             rods.push_back( _srcClips[i]->getRegionOfDefinition(time) );
         }
     }
@@ -975,11 +980,16 @@ ShadertoyPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         return;
     }
 
+    bool inputEnable[NBINPUTS];
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        inputEnable[i] = _inputEnable[i]->getValue();
+    }
+
     // The effect requires full images to render any region
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         OfxRectD srcRoI;
 
-        if ( _srcClips[i] && _srcClips[i]->isConnected() ) {
+        if ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) {
             srcRoI = _srcClips[i]->getRegionOfDefinition(args.time);
             rois.setRegionOfInterest(*_srcClips[i], srcRoI);
         }
