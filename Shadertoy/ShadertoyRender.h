@@ -1348,10 +1348,12 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                                  ( name == "iTimeDelta") ||
                                  ( name == "iFrame") ||
                                  ( name == "iChannelTime") ||
+                                 ( name == "iChannelTime[0]") ||
                                  //name == "iMouse" ||
                                  ( name == "iDate") ||
                                  ( name == "iSampleRate") ||
                                  ( name == "iChannelResolution") ||
+                                 ( name == "iChannelResolution[0]") ||
                                  ( name == "ifFragCoordOffsetUniform") ||
                                  ( name == "iRenderScale") ||
                                  starts_with(name, "gl_") ) {
