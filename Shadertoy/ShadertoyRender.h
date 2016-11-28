@@ -1574,13 +1574,17 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     if (shadertoy->iMouseLoc >= 0) {
         double x, y, xc, yc;
-        _mousePosition->getValueAtTime(time, x, y);
-        _mouseClick->getValueAtTime(time, xc, yc);
-        if ( !_mousePressed->getValueAtTime(time) ) {
-            // negative is mouse released
-            // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderCanvasViewController.m#L315
-            xc = -xc;
-            yc = -yc;
+        if ( !_mouseParams->getValueAtTime(time) ) {
+            x = y = xc = yc = 0.;
+        } else {
+            _mousePosition->getValueAtTime(time, x, y);
+            _mouseClick->getValueAtTime(time, xc, yc);
+            if ( !_mousePressed->getValueAtTime(time) ) {
+                // negative is mouse released
+                // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderCanvasViewController.m#L315
+                xc = -xc;
+                yc = -yc;
+            }
         }
         glUniform4f (shadertoy->iMouseLoc, x * rs.x, y * rs.y, xc * rs.x, yc * rs.y);
     }
