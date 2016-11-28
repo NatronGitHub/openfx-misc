@@ -17,57 +17,65 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * __Input:__ vec2 fragCoord
 
 
-### Built-in Functions:
+### Built-in Functions
 
-* type radians (type degrees)
-* type degrees (type radians)
-* type sin (type angle)
-* type cos (type angle)
-* type tan (type angle)
-* type asin (type x)
-* type acos (type x)
-* type atan (type y, type x)
-* type atan (type yoverx)
+#### Trigonometric
 
-	
+* *type* radians (*type* degrees)
+* *type* degrees (*type* radians)
+* *type* sin (*type* angle)
+* *type* cos (*type* angle)
+* *type* tan (*type* angle)
+* *type* asin (*type* x)
+* *type* acos (*type* x)
+* *type* atan (*type* y, *type* x)
+* *type* atan (*type* yoverx)
 
-* type pow (type x, type y)
-* type exp (type x)
-* type log (type x)
-* type exp2 (type x)
-* type log2 (type x)
-* type sqrt (type x)
-* type inversesqrt (type x)
+### Exponential and Logarithm
 
-* type abs (type x)
-* type sign (type x)
-* type floor (type x)
-* type ceil (type x)
-* type fract (type x)
-* type mod (type x, float y)
-* type mod (type x, type y)
-* type min (type x, type y)
-* type min (type x, float y)
-* type max (type x, type y)
-* type max (type x, float y)
-* type clamp (type x, type minV, type maxV)
-* type clamp (type x, float minV, float maxV)
-* type mix (type x, type y, type a)
-* type mix (type x, type y, float a)
-* type step (type edge, type x)
-* type step (float edge, type x)
-* type smoothstep (type a, type b, type x)
-* type smoothstep (float a, float b, type x)
+* *type* pow (*type* x, *type* y)
+* *type* exp (*type* x)
+* *type* log (*type* x)
+* *type* exp2 (*type* x)
+* *type* log2 (*type* x)
+* *type* sqrt (*type* x)
+* *type* inversesqrt (*type* x)
+
+#### Arithmetic
+
+* *type* abs (*type* x)
+* *type* sign (*type* x)
+* *type* floor (*type* x)
+* *type* ceil (*type* x)
+* *type* fract (*type* x)
+* *type* mod (*type* x, float y)
+* *type* mod (*type* x, *type* y)
+* *type* min (*type* x, *type* y)
+* *type* min (*type* x, float y)
+* *type* max (*type* x, *type* y)
+* *type* max (*type* x, float y)
+* *type* clamp (*type* x, *type* minV, *type* maxV)
+* *type* clamp (*type* x, float minV, float maxV)
+* *type* mix (*type* x, *type* y, *type* a)
+* *type* mix (*type* x, *type* y, float a)
+* *type* step (*type* edge, *type* x)
+* *type* step (float edge, *type* x)
+* *type* smoothstep (*type* a, *type* b, *type* x)
+* *type* smoothstep (float a, float b, *type* x)
+
+#### Vectors and Matrices
+
 * mat matrixCompMult (mat x, mat y)
-
-* float length (type x)
-* float distance (type p0, type p1)
-* float dot (type x, type y)
+* float length (*type* x)
+* float distance (*type* p0, *type* p1)
+* float dot (*type* x, *type* y)
 * vec3 cross (vec3 x, vec3 y)
-* type normalize (type x)
-* type faceforward (type N, type I, type Nref)
-* type reflect (type I, type N)
-* type refract (type I, type N,float eta)
+* *type* normalize (*type* x)
+* *type* faceforward (*type* N, *type* I, *type* Nref)
+* *type* reflect (*type* I, *type* N)
+* *type* refract (*type* I, *type* N,float eta)
+
+#### Comparisons
 
 * bvec lessThan(vec x, vec y)
 * bvec lessThan(ivec x, ivec y)
@@ -87,6 +95,8 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * bool all(bvec x)
 * bvec not(bvec x)
 
+#### Textures
+
 * vec4 texture2D(sampler2D sampler, vec2 coord )
 * vec4 texture2D(sampler2D sampler, vec2 coord, float bias)
 * vec4 textureCube(samplerCube sampler, vec3 coord)
@@ -103,8 +113,8 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 * vec4 texture2DProjGradEXT(sampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy)
 * vec4 textureCubeGradEXT(samplerCube sampler, vec3 P, vec3 dPdx, vec3 dPdy)
 
-* type dFdx( type x ), dFdy( type x )
-* type fwidth( type p )
+* *type* dFdx( *type* x ), dFdy( *type* x )
+* *type* fwidth( *type* p )
 
 
 ### How-to
@@ -163,6 +173,6 @@ For sound shaders, the mainSound() function returns a vec2 containing the left a
   `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`
 * This one also sets the filter and wrap parameters:
   `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`
-* And this one sets the output bouding box (possible values are Default, Union, Interection, and iChannel0 to iChannel3):
+* And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):
   `// BBox: iChannel0`
 
