@@ -186,6 +186,12 @@ $(TOP_SRCDIR)/Rand/net.sf.openfx.Noise.png \
 $(TOP_SRCDIR)/Rand/net.sf.openfx.Noise.svg \
 $(TOP_SRCDIR)/OneView/net.sf.openfx.oneViewPlugin.png \
 $(TOP_SRCDIR)/OneView/net.sf.openfx.oneViewPlugin.svg \
+$(TOP_SRCDIR)/PIK/net.sf.openfx.PIK.png \
+$(TOP_SRCDIR)/PIK/net.sf.openfx.PIK.svg \
+$(TOP_SRCDIR)/PIK/fr.inria.PIKColor.png \
+$(TOP_SRCDIR)/PIK/fr.inria.PIKColor.svg \
+$(TOP_SRCDIR)/PIK/PIKColor.gizmo \
+$(TOP_SRCDIR)/PIK/PIKColor.py \
 $(TOP_SRCDIR)/Position/net.sf.openfx.Position.png \
 $(TOP_SRCDIR)/Position/net.sf.openfx.Position.svg \
 $(TOP_SRCDIR)/Premult/net.sf.openfx.Premult.png \

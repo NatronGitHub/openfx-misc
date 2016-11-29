@@ -335,6 +335,18 @@
 		1E3E3CC517995D5C005F2132 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E3E3CC617995D8C005F2132 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E40E4DF1D114A33008DAE8C /* ShadertoyParse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E40E4DE1D114A33008DAE8C /* ShadertoyParse.cpp */; };
+		1E44B0351DEDD033006602AD /* net.sf.openfx.PIK.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E44B0331DEDD019006602AD /* net.sf.openfx.PIK.png */; };
+		1E44B0361DEDD036006602AD /* net.sf.openfx.PIK.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E44B0341DEDD019006602AD /* net.sf.openfx.PIK.svg */; };
+		1E44B0371DEDD038006602AD /* fr.inria.PIKColor.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E44B0311DEDD019006602AD /* fr.inria.PIKColor.png */; };
+		1E44B0391DEDD04B006602AD /* fr.inria.PIKColor.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E44B0321DEDD019006602AD /* fr.inria.PIKColor.svg */; };
+		1E44B03A1DEDD04F006602AD /* PIKColor.gizmo in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E2E986D1D9674CE000D1E98 /* PIKColor.gizmo */; };
+		1E44B03B1DEDD051006602AD /* PIKColor.py in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E2E986E1D9674CE000D1E98 /* PIKColor.py */; };
+		1E44B03C1DEDD09A006602AD /* fr.inria.PIKColor.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E44B0311DEDD019006602AD /* fr.inria.PIKColor.png */; };
+		1E44B03D1DEDD09A006602AD /* fr.inria.PIKColor.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E44B0321DEDD019006602AD /* fr.inria.PIKColor.svg */; };
+		1E44B03E1DEDD09A006602AD /* net.sf.openfx.PIK.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E44B0331DEDD019006602AD /* net.sf.openfx.PIK.png */; };
+		1E44B03F1DEDD09A006602AD /* net.sf.openfx.PIK.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E44B0341DEDD019006602AD /* net.sf.openfx.PIK.svg */; };
+		1E44B0401DEDD0A1006602AD /* PIKColor.gizmo in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E2E986D1D9674CE000D1E98 /* PIKColor.gizmo */; };
+		1E44B0411DEDD0A1006602AD /* PIKColor.py in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E2E986E1D9674CE000D1E98 /* PIKColor.py */; };
 		1E4551C81A797F060044F01B /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
 		1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3451F3190695850080D699 /* ChromaKeyer.cpp */; };
 		1E511D4B1D8AC9A50037C61F /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -346,8 +358,6 @@
 		1E511D511D8AC9A50037C61F /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E511D521D8AC9A50037C61F /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E511D541D8AC9A50037C61F /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1E511D561D8AC9A50037C61F /* net.sf.openfx.KeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */; };
-		1E511D571D8AC9A50037C61F /* net.sf.openfx.KeyerPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284831A41C1E400C9A4E4 /* net.sf.openfx.KeyerPlugin.svg */; };
 		1E511D5D1D8AC9CB0037C61F /* Log2Lin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E89B5741D81A79C00F61E6B /* Log2Lin.cpp */; };
 		1E511D5E1D8AC9E90037C61F /* PIK.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E511D471D8AC9890037C61F /* PIK.cpp */; };
 		1E52FFBE1955CE120000FB79 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -1967,8 +1977,12 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1E511D561D8AC9A50037C61F /* net.sf.openfx.KeyerPlugin.png in CopyFiles */,
-				1E511D571D8AC9A50037C61F /* net.sf.openfx.KeyerPlugin.svg in CopyFiles */,
+				1E44B0351DEDD033006602AD /* net.sf.openfx.PIK.png in CopyFiles */,
+				1E44B0361DEDD036006602AD /* net.sf.openfx.PIK.svg in CopyFiles */,
+				1E44B0371DEDD038006602AD /* fr.inria.PIKColor.png in CopyFiles */,
+				1E44B0391DEDD04B006602AD /* fr.inria.PIKColor.svg in CopyFiles */,
+				1E44B03A1DEDD04F006602AD /* PIKColor.gizmo in CopyFiles */,
+				1E44B03B1DEDD051006602AD /* PIKColor.py in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2580,6 +2594,12 @@
 				1ED3A26F1BBC3516008128B1 /* net.sf.openfx.NoTimeBlur.svg in CopyFiles */,
 				AC6486E21A41A5C90088844F /* net.sf.openfx.oneViewPlugin.png in CopyFiles */,
 				1E3284AD1A41C4D200C9A4E4 /* net.sf.openfx.oneViewPlugin.svg in CopyFiles */,
+				1E44B03C1DEDD09A006602AD /* fr.inria.PIKColor.png in CopyFiles */,
+				1E44B03D1DEDD09A006602AD /* fr.inria.PIKColor.svg in CopyFiles */,
+				1E44B03E1DEDD09A006602AD /* net.sf.openfx.PIK.png in CopyFiles */,
+				1E44B03F1DEDD09A006602AD /* net.sf.openfx.PIK.svg in CopyFiles */,
+				1E44B0401DEDD0A1006602AD /* PIKColor.gizmo in CopyFiles */,
+				1E44B0411DEDD0A1006602AD /* PIKColor.py in CopyFiles */,
 				AC0626741ABDC56100B3D105 /* net.sf.openfx.Position.png in CopyFiles */,
 				AC0626751ABDC56500B3D105 /* net.sf.openfx.Position.svg in CopyFiles */,
 				1EE4A8BC19C6EF6900E6E3AE /* net.sf.openfx.Premult.png in CopyFiles */,
@@ -2877,6 +2897,10 @@
 		1E3E3D3717996112005F2132 /* ofxsMultiThread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMultiThread.h; sourceTree = "<group>"; };
 		1E3E3D3817996112005F2132 /* ofxsParam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsParam.h; sourceTree = "<group>"; };
 		1E40E4DE1D114A33008DAE8C /* ShadertoyParse.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ShadertoyParse.cpp; sourceTree = "<group>"; };
+		1E44B0311DEDD019006602AD /* fr.inria.PIKColor.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = fr.inria.PIKColor.png; sourceTree = "<group>"; };
+		1E44B0321DEDD019006602AD /* fr.inria.PIKColor.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = fr.inria.PIKColor.svg; sourceTree = "<group>"; };
+		1E44B0331DEDD019006602AD /* net.sf.openfx.PIK.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.PIK.png; sourceTree = "<group>"; };
+		1E44B0341DEDD019006602AD /* net.sf.openfx.PIK.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.PIK.svg; sourceTree = "<group>"; };
 		1E511D451D8AC9890037C61F /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E511D461D8AC9890037C61F /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E511D471D8AC9890037C61F /* PIK.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PIK.cpp; sourceTree = "<group>"; };
@@ -4282,6 +4306,10 @@
 		1E511D441D8AC9700037C61F /* PIK */ = {
 			isa = PBXGroup;
 			children = (
+				1E44B0311DEDD019006602AD /* fr.inria.PIKColor.png */,
+				1E44B0321DEDD019006602AD /* fr.inria.PIKColor.svg */,
+				1E44B0331DEDD019006602AD /* net.sf.openfx.PIK.png */,
+				1E44B0341DEDD019006602AD /* net.sf.openfx.PIK.svg */,
 				1E511D471D8AC9890037C61F /* PIK.cpp */,
 				1E2E986D1D9674CE000D1E98 /* PIKColor.gizmo */,
 				1E2E986E1D9674CE000D1E98 /* PIKColor.py */,
