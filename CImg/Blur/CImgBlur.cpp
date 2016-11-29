@@ -71,6 +71,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "It can be used in commercial applications (see http://cimg.eu)."
 
 #define STRINGIZE_CPP_NAME_(token) # token
+#define STRINGIZE_CPP_(token) STRINGIZE_CPP_NAME_(token)
 
 #ifdef DEBUG
 #define kPluginDescriptionDebug " with debug"
@@ -97,7 +98,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #endif
 
 #ifdef cimg_use_openmp
-#define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_NAME_(_OPENMP)
+#define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_(_OPENMP)
 #else
 #define kPluginDescriptionOpenMP ", without OpenMP"
 #endif
