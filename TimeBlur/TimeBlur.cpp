@@ -432,7 +432,7 @@ TimeBlurPlugin::isIdentity(const IsIdentityArguments &args,
     shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
 
     identityClip = _srcClip;
-    identityTime = args.time;
+    identityTime = range.min;
 
     return true;
 }
