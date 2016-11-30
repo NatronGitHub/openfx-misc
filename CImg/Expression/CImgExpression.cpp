@@ -530,7 +530,7 @@ public:
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
     {
         clipPreferences.setOutputFrameVarying(true);
-        clipPreferences.setOutputHasContinousSamples(true);
+        clipPreferences.setOutputHasContinuousSamples(true);
     }
 
     virtual void changedParam(const InstanceChangedArgs &args,

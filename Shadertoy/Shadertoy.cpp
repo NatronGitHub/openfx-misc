@@ -1026,7 +1026,7 @@ ShadertoyPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         clipPreferences.setClipComponents( *_dstClip, _srcClips[0]->getPixelComponents() );
     }
     clipPreferences.setOutputFrameVarying(true);
-    clipPreferences.setOutputHasContinousSamples(true);
+    clipPreferences.setOutputHasContinuousSamples(true);
 }
 
 static inline

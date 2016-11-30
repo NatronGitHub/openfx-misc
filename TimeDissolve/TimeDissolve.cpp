@@ -433,7 +433,7 @@ void
 TimeDissolvePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     clipPreferences.setOutputFrameVarying(true);
-    clipPreferences.setOutputHasContinousSamples(true);
+    clipPreferences.setOutputHasContinuousSamples(true);
 }
 
 mDeclarePluginFactory(TimeDissolvePluginFactory, {}, {}
