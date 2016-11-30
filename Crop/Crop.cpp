@@ -692,24 +692,37 @@ CropPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     if ( _reformat->getValue() ) {
         GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
 
+        OfxRectI pixelFormat = {0, 0, 0, 0};
+        double par = 0.;
         if (extent == eGeneratorExtentFormat) {
             //specific output format
-            double par = _formatPar->getValue();
-            if (par != 0.) {
-                clipPreferences.setPixelAspectRatio(*_dstClip, par);
-            }
-#ifdef OFX_EXTENSIONS_NATRON
-            OfxRectI pixelFormat;
+            par = _formatPar->getValue();
             int w, h;
             _formatSize->getValue(w, h);
             pixelFormat.x1 = pixelFormat.y1 = 0;
             pixelFormat.x2 = w;
             pixelFormat.y2 = h;
-            if ( !Coords::rectIsEmpty(pixelFormat) ) {
-                clipPreferences.setOutputFormat(pixelFormat);
-            }
-#endif
         }
+        if (extent == eGeneratorExtentProject) {
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            par = getProjectPixelAspectRatio();
+            OfxRectD rod;
+            rod.x1 = off.x;
+            rod.x2 = off.x + siz.x;
+            rod.y1 = off.y;
+            rod.y2 = off.y + siz.y;
+            const OfxPointD rsOne = {1., 1.};
+            Coords::toPixelNearest(rod, rsOne, par, &pixelFormat);
+        }
+        if (par != 0.) {
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
+#ifdef OFX_EXTENSIONS_NATRON
+        if ( !Coords::rectIsEmpty(pixelFormat) ) {
+            clipPreferences.setOutputFormat(pixelFormat);
+        }
+#endif
     }
 }
 
