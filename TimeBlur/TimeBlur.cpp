@@ -457,7 +457,8 @@ TimeBlurPlugin::getFramesNeeded(const FramesNeededArguments &args,
 
         return;
     }
-#define OFX_HOST_ACCEPTS_FRACTIONAL_FRAME_RANGES // works with Natron, but this is perhaps borderline with respect to OFX spec
+//#define OFX_HOST_ACCEPTS_FRACTIONAL_FRAME_RANGES // works with Natron, but this is perhaps borderline with respect to OFX spec
+// Edit: Natron works better if you input the same range that what is going to be done in render.
 #ifdef OFX_HOST_ACCEPTS_FRACTIONAL_FRAME_RANGES
     //std::printf("TimeBlur: range(%g,%g)\n", range.min, range.max);
     frames.setFramesNeeded(*_srcClip, range);
