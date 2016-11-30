@@ -152,7 +152,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "'Use Bkg Luminance' and 'Use Bkg Chroma' affect the output color by the new background. " /*These controls are best used with the 'Luminance Match' sliders above. */ "This feature can also sometimes really help with screens that exhibit some form of fringing artifact - usually a darkening or lightening of an edge on one of the color channels on the screen. The effect can be offset by grading the Bg input up or down with a grade node just before input. If it is just an area which needs help then just rotoscope that area and locally grade the Bg input up or down to remove the artifact.\n" \
     "\n" \
-    "The output of PIK is the foreground matte (unless \"No Key\" is checked), and should be composited with the background using a Merge-over operation.\n" \
+    "The output of PIK is controlled by the \"Output Mode\" option. For example, if the output is \"Premultiplied\", it should be composited with the background using a Merge-over operation.\n" \
     "\n" \
     "The basic equation used to extract the key in PIK is (in the case of \"green\" keying):\n" \
     "alpha = 0 if (Ag-Ar*rw-Ab*gbw) is negative, else 1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw)\n" \
@@ -346,7 +346,7 @@ enum ReplaceEnum
 
 #define kParamNoKey "noKey"
 #define kParamNoKeyLabel "No Key"
-#define kParamNoKeyHint "Apply background luminance and chroma to Fg rgba input - no key is pulled, but Inside Mask and Outside Mask are applied if connected."
+#define kParamNoKeyHint "Apply despill, background luminance and chroma to Fg rgba input using the Fg alpha channel as the key - no key is pulled, but Inside Mask and Outside Mask are applied if connected."
 #define kParamNoKeyDefault false
 
 #define kParamUBL "ubl"
@@ -972,7 +972,7 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 const PIX *fgPix = (const PIX *)  ( (_fgImg) ? _fgImg->getPixelAddress(x, y) : 0 );
                 const PIX *pfgPix = (const PIX *)  ( (!_noKey && _pfgImg) ? _pfgImg->getPixelAddress(x, y) : 0 );
-                const PIX *cPix = (const PIX *)  ( (!_noKey && _cImg) ? _cImg->getPixelAddress(x, y) : 0 );
+                const PIX *cPix = (const PIX *)  ( (/*!_noKey &&*/ _cImg) ? _cImg->getPixelAddress(x, y) : 0 );
                 const PIX *bgPix = (const PIX *)  ( ( ( _ubc || _ubl || (_outputMode == eOutputModeComposite) ) && _bgImg ) ? _bgImg->getPixelAddress(x, y) : 0 );
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
@@ -1022,38 +1022,10 @@ private:
 
                 float status[4] = {0., 0., 0., 1.}; // only used for status output
 
+                float alpha = 0.;
                 if (_noKey) {
-                    for (int i = 0; i < 4; ++i) {
-                        out[i] = fg[i];
-                    }
-                    // nonadditive mix between the key generator and the garbage matte (outMask)
-                    // outside mask has priority over inside mask, treat inside first
-                    float alpha = out[3];
-
-                    if (alpha <= 0) {
-                        status[0] = status[1] = status[2] = 0.;
-                    } else if (alpha >= 1.) {
-                        status[0] = status[1] = status[2] = 1.;
-                    } else {
-                        status[0] = status[1] = status[2] = 0.5;
-                    }
-                    if ( (inMask > 0.) && (alpha < inMask) ) {
-                        // method 1
-                        status[2] += (inMask - alpha) / 2.;
-                        // method 2
-                        //status[0] = inMask - alpha;
-                        //status[1] = inMask - alpha;
-                        //status[2] = 1;
-                        alpha = inMask;
-                    }
-                    if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
-                        status[1] -= ( alpha - (1. - outMask) ) / 2.;
-                        status[2] -= ( alpha - (1. - outMask) ) / 2.;
-                        alpha = 1. - outMask;
-                    }
-                    out[3] = alpha;
+                    alpha = fg[3];
                 } else {
-                    float alpha = 0.;
                     if (_screenType == eScreenTypeGreen) {
                         if (c[1] <= 0.) {
                             alpha = 1.;
@@ -1141,36 +1113,36 @@ private:
                             }
                         }
                     }
-
-                    if (_outputMode == eOutputModeScreenMatte) {
-                        for (int i = 0; i < 3; ++i) {
-                            out[i] = alpha;
-                        }
-                        if (nComponents == 4) {
-                            out[3] = 1.;
-                        }
-                        goto FINISH;
+                } // if (!_noKey)
+                if (_outputMode == eOutputModeScreenMatte) {
+                    for (int i = 0; i < 3; ++i) {
+                        out[i] = alpha;
                     }
-
-                    if (alpha <= 0) {
-                        status[0] = status[1] = status[2] = 0.;
-                    } else if (alpha >= 1.) {
-                        status[0] = status[1] = status[2] = 1.;
-                    } else {
-                        status[0] = status[1] = status[2] = 0.5;
+                    if (nComponents == 4) {
+                        out[3] = 1.;
                     }
+                    goto FINISH;
+                }
 
-                    if ( !_ss || (alpha >= 1) ) {
-                        for (int i = 0; i < 3; ++i) {
-                            out[i] = fg[i];
-                        }
-                    } else {
-                        // screen subtraction / despill
-                        for (int i = 0; i < 3; ++i) {
-                            float v = fg[i] + c[i] * _despillBias[i] * (alpha - 1.);
-                            out[i] = v < 0. ? 0 : v;
-                        }
+                if (alpha <= 0) {
+                    status[0] = status[1] = status[2] = 0.;
+                } else if (alpha >= 1.) {
+                    status[0] = status[1] = status[2] = 1.;
+                } else {
+                    status[0] = status[1] = status[2] = 0.5;
+                }
+
+                if ( !_ss || (alpha >= 1) ) {
+                    for (int i = 0; i < 3; ++i) {
+                        out[i] = fg[i];
                     }
+                } else {
+                    // screen subtraction / despill
+                    for (int i = 0; i < 3; ++i) {
+                        float v = fg[i] + c[i] * _despillBias[i] * (alpha - 1.);
+                        out[i] = v < 0. ? 0 : v;
+                    }
+                }
                     /*
                        } else if (_rgbal) {
                        double alphamin = DBL_MAX;
@@ -1197,164 +1169,175 @@ private:
                        }
                      */
 
-                    if (_clampAlpha) {
-                        if (alpha < 0.) {
-                            alpha = 0.;
-                        } else if (alpha > 1.) {
-                            alpha = 1.;
-                        }
+                if (_clampAlpha) {
+                    if (alpha < 0.) {
+                        alpha = 0.;
+                    } else if (alpha > 1.) {
+                        alpha = 1.;
                     }
-                    ////////////////////////////////////////
-                    // Screen Matte options
+                }
+                ////////////////////////////////////////
+                // Screen Matte options
 
-                    // the clip function is piecewise linear and continuous:
-                    // 0. from 0 to screenClipMin
-                    // 0. to 1. from screenClipMin to screenClipMax
-                    // 1. from screenClipMax to 1.
-                    float alphaClipped;
-                    if (alpha <= _screenClipMin) {
-                        alphaClipped = 0.;
-                    } else if (alpha >= _screenClipMax) {
-                        alphaClipped = 1.;
-                    } else {
-                        alphaClipped = (alpha - _screenClipMin) / (_screenClipMax - _screenClipMin);
-                    }
+                // the clip function is piecewise linear and continuous:
+                // 0. from 0 to screenClipMin
+                // 0. to 1. from screenClipMin to screenClipMax
+                // 1. from screenClipMax to 1.
+                float alphaClipped;
+                if (alpha <= _screenClipMin) {
+                    alphaClipped = 0.;
+                } else if (alpha >= _screenClipMax) {
+                    alphaClipped = 1.;
+                } else {
+                    alphaClipped = (alpha - _screenClipMin) / (_screenClipMax - _screenClipMin);
+                }
 
-                    if (alphaClipped > alpha) {
-                        float diff = alphaClipped - alpha;
-                        // method 1
-                        status[1] += diff / 2.;
-                        // method 2
-                        //status[0] = diff;
-                        //status[1] = 1;
-                        //status[2] = diff;
+                if (alphaClipped > alpha) {
+                    float diff = alphaClipped - alpha;
+                    // method 1
+                    status[1] += diff / 2.;
+                    // method 2
+                    //status[0] = diff;
+                    //status[1] = 1;
+                    //status[2] = diff;
 
+                    if (_outputMode == eOutputModePremultiplied ||
+                        _outputMode == eOutputModeUnpremultiplied ||
+                        _outputMode == eOutputModeComposite) {
                         switch (_screenReplace) {
-                        case eReplaceNone:
-                            // do nothing
-                            break;
+                            case eReplaceNone:
+                                // do nothing
+                                break;
 
-                        case eReplaceSource:
-                            for (int i = 0; i < 3; ++i) {
-                                out[i] = out[i] + fg[i] * diff;
-                            }
-                            break;
+                            case eReplaceSource:
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + fg[i] * diff;
+                                }
+                                break;
 
-                        case eReplaceHardColor:
-                            for (int i = 0; i < 3; ++i) {
-                                out[i] = out[i] + _screenReplaceColor[i] * diff;
-                            }
-                            break;
+                            case eReplaceHardColor:
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + _screenReplaceColor[i] * diff;
+                                }
+                                break;
 
-                        case eReplaceSoftColor: {
-                            // match the luminance of fg
-                            for (int i = 0; i < 3; ++i) {
-                                out[i] = out[i] + _screenReplaceColor[i] * diff * luminance(_colorspace, fg);
+                            case eReplaceSoftColor: {
+                                // match the luminance of fg
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + _screenReplaceColor[i] * diff * luminance(_colorspace, fg);
+                                }
+                                break;
                             }
-                            break;
                         }
-                        }
-                        alpha = alphaClipped;
-                    } else if (alphaClipped < alpha) {
-                        assert(alpha > 0.);
-                        if (alphaClipped == 0.) {
-                            status[0] = 0.;
-                            status[1] = (alpha - alphaClipped) / 2.;
-                            status[2] = 0.;
-                        } else {
-                            status[0] = 0.5 - (alpha - alphaClipped) / 2.;
-                            status[1] = 0.5;
-                            status[2] = 0.5 - (alpha - alphaClipped) / 2.;
-                        }
-                        // re-premultiply output
-                        for (int i = 0; i < 3; ++i) {
-                            out[i] = out[i] * alphaClipped / alpha; // no division by zero: alpha > 0
-                        }
-                        alpha = alphaClipped;
                     }
+                    alpha = alphaClipped;
+                } else if (alphaClipped < alpha) {
+                    assert(alpha > 0.);
+                    if (alphaClipped == 0.) {
+                        status[0] = 0.;
+                        status[1] = (alpha - alphaClipped) / 2.;
+                        status[2] = 0.;
+                    } else {
+                        status[0] = 0.5 - (alpha - alphaClipped) / 2.;
+                        status[1] = 0.5;
+                        status[2] = 0.5 - (alpha - alphaClipped) / 2.;
+                    }
+                    // re-premultiply output
+                    for (int i = 0; i < 3; ++i) {
+                        out[i] = out[i] * alphaClipped / alpha; // no division by zero: alpha > 0
+                    }
+                    alpha = alphaClipped;
+                }
 
-                    // nonadditive mix between the key generator and the garbage matte (outMask)
-                    // outside mask has priority over inside mask, treat inside first
-                    if ( (inMask > 0.) && (alpha < inMask) ) {
-                        float diff = inMask - alpha;
-                        // method 1
-                        status[2] += diff / 2.;
-                        // method 2
-                        //status[0] = diff;
-                        //status[1] = diff;
-                        //status[2] = 1;
+                // nonadditive mix between the key generator and the garbage matte (outMask)
+                // outside mask has priority over inside mask, treat inside first
+                if ( (inMask > 0.) && (alpha < inMask) ) {
+                    float diff = inMask - alpha;
+                    // method 1
+                    status[2] += diff / 2.;
+                    // method 2
+                    //status[0] = diff;
+                    //status[1] = diff;
+                    //status[2] = 1;
 
+                    if (_outputMode == eOutputModePremultiplied ||
+                        _outputMode == eOutputModeUnpremultiplied ||
+                        _outputMode == eOutputModeComposite) {
                         switch (_insideReplace) {
-                        case eReplaceNone:
-                            // do nothing
-                            break;
+                            case eReplaceNone:
+                                // do nothing
+                                break;
 
-                        case eReplaceSource:
-                            for (int i = 0; i < 3; ++i) {
-                                out[i] = out[i] + fg[i] * diff;
-                            }
-                            break;
+                            case eReplaceSource:
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + fg[i] * diff;
+                                }
+                                break;
 
-                        case eReplaceHardColor:
-                            for (int i = 0; i < 3; ++i) {
-                                out[i] = out[i] + _insideReplaceColor[i] * diff;
-                            }
-                            break;
+                            case eReplaceHardColor:
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + _insideReplaceColor[i] * diff;
+                                }
+                                break;
 
-                        case eReplaceSoftColor: {
-                            // match the luminance of fg
-                            for (int i = 0; i < 3; ++i) {
-                                out[i] = out[i] + _insideReplaceColor[i] * diff * luminance(_colorspace, fg);
+                            case eReplaceSoftColor: {
+                                // match the luminance of fg
+                                for (int i = 0; i < 3; ++i) {
+                                    out[i] = out[i] + _insideReplaceColor[i] * diff * luminance(_colorspace, fg);
+                                }
+                                break;
                             }
-                            break;
                         }
-                        }
-                        alpha = inMask;
                     }
+                    alpha = inMask;
+                }
 
-                    if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
-                        assert(alpha > 0.);
-                        status[1] -= ( alpha - (1. - outMask) ) / 2.;
-                        status[2] -= ( alpha - (1. - outMask) ) / 2.;
+                if ( (outMask > 0.) && (alpha > 1. - outMask) ) {
+                    assert(alpha > 0.);
+                    status[1] -= ( alpha - (1. - outMask) ) / 2.;
+                    status[2] -= ( alpha - (1. - outMask) ) / 2.;
+                    if (_outputMode == eOutputModePremultiplied ||
+                        _outputMode == eOutputModeUnpremultiplied ||
+                        _outputMode == eOutputModeComposite) {
                         // re-premultiply output
                         for (int i = 0; i < 3; ++i) {
                             out[i] = out[i] * (1. - outMask) / alpha; // no division by zero: alpha > 0
                         }
-                        alpha = 1. - outMask;
                     }
-
-                    if (_outputMode == eOutputModeStatus) {
-                        for (int i = 0; i < 4; ++i) {
-                            out[i] = status[i];
-                        }
-                        goto FINISH;
-                    }
-                    if (_outputMode == eOutputModeCombinedMatte) {
-                        for (int i = 0; i < 3; ++i) {
-                            out[i] = alpha;
-                        }
-                        if (nComponents == 4) {
-                            out[3] = 1.;
-                        }
-                        goto FINISH;
-                    }
-                    if (_outputMode == eOutputModeIntermediate) {
-                        for (int i = 0; i < 3; ++i) {
-                            out[i] = fg[i];
-                        }
-                        if (nComponents == 4) {
-                            out[3] = alpha;
-                        }
-                        goto FINISH;
-                    }
-
-                    if (!_ss) { // if no screen subtraction, just premult
-                        for (int i = 0; i < 3; ++i) {
-                            out[i] = out[i] * alpha;
-                        }
-                    }
-                    out[3] = alpha;
+                    alpha = 1. - outMask;
                 }
+
+                if (_outputMode == eOutputModeStatus) {
+                    for (int i = 0; i < 4; ++i) {
+                        out[i] = status[i];
+                    }
+                    goto FINISH;
+                }
+                if (_outputMode == eOutputModeCombinedMatte) {
+                    for (int i = 0; i < 3; ++i) {
+                        out[i] = alpha;
+                    }
+                    if (nComponents == 4) {
+                        out[3] = 1.;
+                    }
+                    goto FINISH;
+                }
+                if (_outputMode == eOutputModeIntermediate) {
+                    for (int i = 0; i < 3; ++i) {
+                        out[i] = fg[i];
+                    }
+                    if (nComponents == 4) {
+                        out[3] = alpha;
+                    }
+                    goto FINISH;
+                }
+
+                if (!_ss) { // if no screen subtraction, just premult
+                    for (int i = 0; i < 3; ++i) {
+                        out[i] = out[i] * alpha;
+                    }
+                }
+                out[3] = alpha;
 
                 // ubl, ubc
                 if (_ubl || _ubc) {
@@ -1617,33 +1600,54 @@ private:
         bool lmEnable = _lmEnable->getValue();
         bool llEnable = _llEnable->getValue();
         bool autolevels = _autolevels->getValue();
+        OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
+        bool doSomething = !(outputMode == eOutputModeSource ||
+                             outputMode == eOutputModeSourceAlpha ||
+                             outputMode == eOutputModeInsideMask ||
+                             outputMode == eOutputModeOutsideMask);
 
-        _screenType->setEnabled(!noKey);
-        _color->setEnabled(!noKey && screenType == eScreenTypePick);
-        _redWeight->setEnabled(!noKey);
-        _blueGreenWeight->setEnabled(!noKey);
-        _alphaBias->setEnabled(!noKey);
-        _despillBias->setEnabled( !noKey && !_despillBiasIsAlphaBias->getValue() );
-        _despillBiasIsAlphaBias->setEnabled(!noKey);
-        _lmEnable->setEnabled(!noKey);
-        _level->setEnabled(!noKey && lmEnable);
-        _llEnable->setEnabled(!noKey && lmEnable);
-        _luma->setEnabled(!noKey && lmEnable && llEnable);
-        _autolevels->setEnabled(!noKey);
-        _yellow->setEnabled(!noKey && autolevels);
-        _cyan->setEnabled(!noKey && autolevels);
-        _magenta->setEnabled(!noKey && autolevels);
-        _ss->setEnabled(!noKey);
-        _clampAlpha->setEnabled(!noKey);
-        _rgbal->setEnabled(!noKey);
+        bool doScreenSubtraction =  (outputMode == eOutputModePremultiplied ||
+                                     outputMode == eOutputModeUnpremultiplied ||
+                                     outputMode == eOutputModeComposite);
 
+        bool doScreenMatte = (outputMode == eOutputModeScreenMatte ||
+                              outputMode == eOutputModeCombinedMatte ||
+                              outputMode == eOutputModeStatus ||
+                              outputMode == eOutputModeIntermediate ||
+                              doScreenSubtraction);
+
+        _screenType->setEnabled(doSomething);
+        _color->setEnabled(doSomething && screenType == eScreenTypePick);
+        _redWeight->setEnabled(doSomething && doScreenMatte && !noKey);
+        _blueGreenWeight->setEnabled(doSomething && doScreenMatte && !noKey);
+        _alphaBias->setEnabled( doSomething && (doScreenMatte || doScreenSubtraction) );
+        _despillBias->setEnabled( doSomething && doScreenSubtraction && !_despillBiasIsAlphaBias->getValue() );
+        _despillBiasIsAlphaBias->setEnabled(doSomething && doScreenSubtraction);
+        _lmEnable->setEnabled(doSomething && doScreenSubtraction);
+        _level->setEnabled(doSomething && lmEnable && doScreenSubtraction);
+        _llEnable->setEnabled(doSomething && lmEnable && doScreenSubtraction);
+        _luma->setEnabled(doSomething && llEnable && doScreenSubtraction);
+        _autolevels->setEnabled(doSomething && doScreenSubtraction);
+        _yellow->setEnabled(doSomething && autolevels && doScreenSubtraction);
+        _cyan->setEnabled(doSomething && autolevels && doScreenSubtraction);
+        _magenta->setEnabled(doSomething && autolevels && doScreenSubtraction);
+        _ss->setEnabled(doSomething && doScreenSubtraction);
+        _clampAlpha->setEnabled(doSomething);
+        _rgbal->setEnabled(doSomething);
+
+        _screenReplace->setEnabled(doSomething && doScreenSubtraction);
         ReplaceEnum screenReplace = (ReplaceEnum)_screenReplace->getValue();
         bool hasScreenReplaceColor = (screenReplace == eReplaceSoftColor || screenReplace == eReplaceHardColor);
-        _screenReplaceColor->setEnabled(hasScreenReplaceColor);
+        _screenReplaceColor->setEnabled(doSomething && doScreenSubtraction && hasScreenReplaceColor);
 
+        _insideReplace->setEnabled(doSomething && doScreenSubtraction);
         ReplaceEnum insideReplace = (ReplaceEnum)_insideReplace->getValue();
         bool hasInsideReplaceColor = (insideReplace == eReplaceSoftColor || insideReplace == eReplaceHardColor);
-        _insideReplaceColor->setEnabled(hasInsideReplaceColor);
+        _insideReplaceColor->setEnabled(doSomething && doScreenSubtraction && hasInsideReplaceColor);
+
+        _ubl->setEnabled(doSomething && doScreenSubtraction);
+        _ubc->setEnabled(doSomething && doScreenSubtraction);
+        _colorspace->setEnabled(doSomething && doScreenSubtraction);
     }
 
 private:
@@ -1825,7 +1829,13 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         getoutm = true;
         break;
     } // switch
-    getc = getc && ( !noKey || (outputMode == eOutputModeCleanPlate) ) && screenType != eScreenTypePick;
+
+    bool doSomething = !(outputMode == eOutputModeSource ||
+                         outputMode == eOutputModeSourceAlpha ||
+                         outputMode == eOutputModeInsideMask ||
+                         outputMode == eOutputModeOutsideMask);
+
+    getc = getc && doSomething && (screenType != eScreenTypePick);
     getbg = getbg && ( ubl || ubc || (outputMode == eOutputModeComposite) );
 
     std::auto_ptr<const Image> pfg( ( getpfg && !noKey && ( _pfgClip && _pfgClip->isConnected() ) ) ?
@@ -1886,6 +1896,9 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         if (cBitDepth != dstBitDepth /* || cComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+    } else if (getc) {
+        setPersistentMessage(Message::eMessageError, "", "Clean plate (C input) is required but not available or not connected");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     if ( bg.get() ) {
@@ -1900,7 +1913,11 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) {  // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+    } else if (getbg) {
+        setPersistentMessage(Message::eMessageError, "", "Backgroung (Bg input) is required but not available or not connected");
+        throwSuiteStatusException(kOfxStatFailed);
     }
+
     if ( inMask.get() ) {
         if ( (inMask->getRenderScale().x != args.renderScale.x) ||
              ( inMask->getRenderScale().y != args.renderScale.y) ||
@@ -1922,7 +1939,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
                         screenClipMin, screenClipMax, screenReplace, screenReplaceColor,
                         sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode);
     processor.setDstImg( dst.get() );
-    processor.setSrcImgs( fg.get(), ( !noKey && !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
+    processor.setSrcImgs( fg.get(), ( /*!noKey &&*/ !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow);
 
     processor.process();
@@ -1951,6 +1968,8 @@ PIKPlugin::render(const RenderArguments &args)
         return;
     }
 
+    clearPersistentMessage();
+    
     switch (dstBitDepth) {
     //case eBitDepthUByte: {
     //    PIKProcessor<unsigned char, 4, 255> fred(*this);
@@ -1992,11 +2011,10 @@ PIKPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     bool noKey = _noKey->getValueAtTime(time);
     if (noKey) {
         rois.setRegionOfInterest(*_pfgClip, emptyRoD);
-        rois.setRegionOfInterest(*_cClip, emptyRoD);
     } else {
         inputClips.push_back(_pfgClip);
-        inputClips.push_back(_cClip);
     }
+    inputClips.push_back(_cClip);
     bool ubl = _ubl->getValueAtTime(time);
     bool ubc = _ubc->getValueAtTime(time);
     if (!ubl && !ubc) {
@@ -2023,14 +2041,8 @@ void
 PIKPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip
-    bool noKey = _noKey->getValue();
-
-    if (noKey) {
-        clipPreferences.setOutputPremultiplication( _fgClip->getPreMultiplication() );
-    } else {
-        OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
-        clipPreferences.setOutputPremultiplication(outputMode == eOutputModeUnpremultiplied ? eImageUnPreMultiplied : eImagePreMultiplied);
-    }
+    OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
+    clipPreferences.setOutputPremultiplication(outputMode == eOutputModeUnpremultiplied ? eImageUnPreMultiplied : eImagePreMultiplied);
 
     // Output is RGBA
     clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
@@ -2077,7 +2089,8 @@ PIKPlugin::changedParam(const InstanceChangedArgs & /*args*/,
          ( paramName == kParamLLEnable) ||
          ( paramName == kParamAutolevels) ||
          ( paramName == kParamScreenReplace) ||
-         ( paramName == kParamInsideReplace) ) {
+         ( paramName == kParamInsideReplace) ||
+         ( paramName == kParamOutputMode) ) {
         updateEnabled();
     }
 }
@@ -2189,7 +2202,7 @@ PIKPlugin::getFramesNeeded(const FramesNeededArguments &args,
         getoutm = true;
         break;
     } // switch
-    getc = getc && ( !noKey || (outputMode == eOutputModeCleanPlate) ) && screenType != eScreenTypePick;
+    getc = getc && ( /*!noKey*/true || (outputMode == eOutputModeCleanPlate) ) && screenType != eScreenTypePick;
     getbg = getbg && ( ubl || ubc || (outputMode == eOutputModeComposite) );
 
     if ( getpfg && !( _pfgClip && _pfgClip->isConnected() ) ) {
@@ -2319,6 +2332,21 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDefault(0., 0., 1.);
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintDivider);
+        if (group) {
+            // coverity[dead_error_line]
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamNoKey);
+        param->setLabel(kParamNoKeyLabel);
+        param->setHint(kParamNoKeyHint);
+        param->setDefault(kParamNoKeyDefault);
+        param->setAnimates(false);
+        //param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
@@ -2756,21 +2784,6 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             if (page) {
                 page->addChild(*param);
             }
-        }
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamNoKey);
-        param->setLabel(kParamNoKeyLabel);
-        param->setHint(kParamNoKeyHint);
-        param->setDefault(kParamNoKeyDefault);
-        param->setAnimates(false);
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        if (group) {
-            // coverity[dead_error_line]
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
         }
     }
     {
