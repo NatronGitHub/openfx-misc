@@ -441,7 +441,7 @@ enum EdgeDetectMultiChannelEnum
 
 #define kParamCropToFormat "cropToFormat"
 #define kParamCropToFormatLabel "Crop To Format"
-#define kParamCropToFormatHint "If the effect generates an image outside of the format, crop it to avoid unnecessary calculations. To avoid unwanted crops, only the borders that were inside of the format in the source clip will be cropped."
+#define kParamCropToFormatHint "If the source is inside the format and the effect extends it outside of the format, crop it to avoid unnecessary calculations. To avoid unwanted crops, only the borders that were inside of the format in the source clip will be cropped."
 
 #define kParamAlphaThreshold "alphaThreshold"
 #define kParamAlphaThresholdLabel "Alpha Threshold"
