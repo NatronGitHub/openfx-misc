@@ -65,7 +65,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamDivisions     "division"
 #define kParamDivisionsLabel "Divisions"
-#define kParamDivisionsHint  "Number of time samples along the shutter time. The first frame is always at the tart of the shutter range, and the shutter range is divided by divisions. The frame corresponding to the end of the shutter range is not included. If divisions=4, Shutter=1, Shutter Offset=Centered, this leads to blending the frames at t-0.5, t-0.25, t, t+0.25."
+#define kParamDivisionsHint  "Number of time samples along the shutter time. The first frame is always at the start of the shutter range, and the shutter range is divided by divisions. The frame corresponding to the end of the shutter range is not included. If divisions=4, Shutter=1, Shutter Offset=Centered, this leads to blending the frames at t-0.5, t-0.25, t, t+0.25."
 
 #define kFrameChunk 4 // how many frames to process simultaneously
 
