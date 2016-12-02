@@ -46,6 +46,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Blend frames of the input clip over the shutter range."
 
+#define kPluginDescriptionNuke \
+" Note that this effect does not work correctly in Nuke, because frames cannot be fetched at fractional times."
+
 #define kPluginIdentifier "net.sf.openfx.TimeBlur"
 // History:
 // version 1.0: initial version
@@ -62,7 +65,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamDivisions     "division"
 #define kParamDivisionsLabel "Divisions"
-#define kParamDivisionsHint  "Number of time samples along the shutter time."
+#define kParamDivisionsHint  "Number of time samples along the shutter time. The first frame is always at the tart of the shutter range, and the shutter range is divided by divisions. The frame corresponding to the end of the shutter range is not included. If divisions=4, Shutter=1, Shutter Offset=Centered, this leads to blending the frames at t-0.5, t-0.25, t, t+0.25."
 
 #define kFrameChunk 4 // how many frames to process simultaneously
 
@@ -298,6 +301,13 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
 
     // Main processing loop.
     // We process the frame range by chunks, to avoid using too much memory.
+    //
+    // Note that Nuke has a bug in TimeBlur when divisions=1:
+    // -the RoD is the expected RoD from the beginning of the shutter time
+    // - the image is always identity
+    // We chose not to reproduce this bug: when divisions = 1 both the RoD
+    // and the image correspond to the start of shutter time.
+
     int imin;
     int imax = 0;
     const int n = divisions;
@@ -431,6 +441,12 @@ TimeBlurPlugin::isIdentity(const IsIdentityArguments &args,
     OfxRangeD range;
     shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
 
+    // Note that Nuke has a bug in TimeBlur when divisions=1:
+    // -the RoD is the expected RoD from the beginning of the shutter time
+    // - the image is always identity
+    // We chose not to reproduce this bug: when divisions = 1 both the RoD
+    // and the image correspond to the start of shutter time.
+    //
     identityClip = _srcClip;
     identityTime = range.min;
 
@@ -448,6 +464,12 @@ TimeBlurPlugin::getFramesNeeded(const FramesNeededArguments &args,
     double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
     OfxRangeD range;
 
+    // Note that Nuke has a bug in TimeBlur when divisions=1:
+    // -the RoD is the expected RoD from the beginning of the shutter time
+    // - the image is always identity
+    // We chose not to reproduce this bug: when divisions = 1 both the RoD
+    // and the image correspond to the start of shutter time.
+
     shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
     int divisions = _divisions->getValueAtTime(time);
 
@@ -457,12 +479,14 @@ TimeBlurPlugin::getFramesNeeded(const FramesNeededArguments &args,
 
         return;
     }
-//#define OFX_HOST_ACCEPTS_FRACTIONAL_FRAME_RANGES // works with Natron, but this is perhaps borderline with respect to OFX spec
-// Edit: Natron works better if you input the same range that what is going to be done in render.
+
+    //#define OFX_HOST_ACCEPTS_FRACTIONAL_FRAME_RANGES // works with Natron, but this is perhaps borderline with respect to OFX spec
+    // Edit: Natron works better if you input the same range that what is going to be done in render.
 #ifdef OFX_HOST_ACCEPTS_FRACTIONAL_FRAME_RANGES
     //std::printf("TimeBlur: range(%g,%g)\n", range.min, range.max);
     frames.setFramesNeeded(*_srcClip, range);
 #else
+    // return the exact list of frames rather than a frame range , so that they can be pre-rendered by the host.
     double interval = divisions > 1 ? (range.max - range.min) / divisions : 1.;
     for (int i = 1; i < divisions; ++i) {
         double t = range.min + i * interval;
@@ -483,6 +507,14 @@ TimeBlurPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     ShutterOffsetEnum shutteroffset = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
     double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
     OfxRangeD range;
+
+    // Compute the RoD as the union of all fetched input's RoDs
+    //
+    // Note that Nuke has a bug in TimeBlur when divisions=1:
+    // -the RoD is the expected RoD from the beginning of the shutter time
+    // - the image is always identity
+    // We chose not to reproduce this bug: when divisions = 1 both the RoD
+    // and the image correspond to the start of shutter time.
 
     shutterRange(time, shutter, shutteroffset, shuttercustomoffset, &range);
     int divisions = _divisions->getValueAtTime(time);
@@ -505,7 +537,11 @@ TimeBlurPluginFactory::describe(ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    std::string description = kPluginDescription;
+    if (getImageEffectHostDescription()->hostName == "uk.co.thefoundry.nuke") {
+        description += kPluginDescriptionNuke;
+    }
+    desc.setPluginDescription(description);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
