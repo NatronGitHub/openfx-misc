@@ -4,7 +4,7 @@ PLUGINOBJECTS = \
 PLUGINNAME = Shadertoy
 
 RESOURCES = \
-resources/README.txt \
+resources/Shadertoy.txt \
 resources/ball.frag.glsl \
 resources/basicfractal.frag.glsl \
 resources/bleepyblocks.frag.glsl \
@@ -27,7 +27,6 @@ resources/noiseanimlava.frag.glsl \
 resources/noiseanimwatery.frag.glsl \
 resources/plasma2.frag.glsl \
 resources/plasmatriangle.frag.glsl \
-resources/settings.xml \
 resources/silexarst.frag.glsl \
 resources/simplefire.frag.glsl \
 resources/sinebands.frag.glsl \
