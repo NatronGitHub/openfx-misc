@@ -2,7 +2,12 @@
 # and were adapted (parameters, renderscale, inputs) for the OpenFX Shadertoy.
 # Following is the list of plugins used to build the presets menu, taken from
 # https://github.com/popcornmix/screensaver.shadertoy/blob/master/src/main.cpp
-# The four last colum specify the inputs:
+# The format is actually simpler that it seems: there should be two strings between
+# quotes per line:
+# - the shader description
+# - the shader file name, relative to the presets directory
+# Everything else is ignored.
+# The four last colums, which are ignored, specify the inputs:
 # -1: no input
 # 0-15: one of the default textures, indices 0 to 12 are tex00-tex12, 13 is tex15,
 #       14 is tex16, 15 is tex14
