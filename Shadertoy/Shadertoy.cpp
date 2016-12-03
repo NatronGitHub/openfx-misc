@@ -36,6 +36,7 @@
 #include <climits>
 #include <cstring>
 #include <cstdio>
+#include <cmath>
 #include <string>
 #include <fstream>
 #include <streambuf>
@@ -228,12 +229,12 @@ using std::string;
     "OpenFX extensions to Shadertoy\n" \
     "\n" \
     "* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect. For compatibility with Shadertoy, the first line that starts with `const vec2 iRenderScale` is ignored (the full line should be `const vec2 iRenderScale = vec2(1.,1.);`).\n" \
-    "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = (5., 5.);`.\n" \
+    "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = vec2(5., 5.);`.\n" \
     "  These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).\n" \
     "  A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.\n" \
-    "  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.)`\n" \
+    "  `uniform vec2 blurSize = vec2(5., 5.); // Blur Size (The blur size in pixels.)`\n" \
     "  min/max values can also be given after a comma. The strings must be exactly `min=` and `max=`, without additional spaces, separated by a comma, and the values must have the same dimension as the uniform:\n" \
-    "  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.), min=(0.,0.), max=(1000.,1000.)`\n" \
+    "  `uniform vec2 blurSize = vec2(5., 5.); // Blur Size (The blur size in pixels.), min=(0.,0.), max=(1000.,1000.)`\n" \
     "* The following comment line placed in the shader gives a label and help string to input 1 (the comment must be the only thing on the line):\n" \
     "  `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`\n" \
     "* This one also sets the filter and wrap parameters:\n" \
@@ -412,12 +413,12 @@ using std::string;
     "### OpenFX extensions to Shadertoy\n" \
     "\n" \
     "* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect. For compatibility with Shadertoy, the first line that starts with `const vec2 iRenderScale` is ignored (the full line should be `const vec2 iRenderScale = vec2(1.,1.);`).\n" \
-    "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = (5., 5.);`.\n" \
+    "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = vec2(5., 5.);`.\n" \
     "  These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).\n" \
     "  A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.\n" \
-    "  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.)`\n" \
+    "  `uniform vec2 blurSize = vec2(5., 5.); // Blur Size (The blur size in pixels.)`\n" \
     "  min/max values can also be given after a comma. The strings must be exactly `min=` and `max=`, without additional spaces, separated by a comma, and the values must have the same dimension as the uniform:\n" \
-    "  `uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.), min=(0.,0.), max=(1000.,1000.)`\n" \
+    "  `uniform vec2 blurSize = vec2(5., 5.); // Blur Size (The blur size in pixels.), min=(0.,0.), max=(1000.,1000.)`\n" \
     "* The following comment line placed in the shader gives a label and help string to input 1 (the comment must be the only thing on the line):\n" \
     "  `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`\n" \
     "* This one also sets the filter and wrap parameters:\n" \
@@ -508,11 +509,11 @@ using std::string;
 
 #define kParamAuto "autoParams"
 #define kParamAutoLabel "Auto. Params"
-#define kParamAutoHint "Automatically set the parameters from the shader source next time image is rendered. May require clicking twice, depending on the OpenFX host."
+#define kParamAutoHint "Automatically set the parameters from the shader source next time image is rendered. May require clicking twice, depending on the OpenFX host. Also reset these parameters to their default value."
 
 #define kParamResetParams "resetParams"
 #define kParamResetParamsLabel "Reset Params Values"
-#define kParamResetParamsHint "Set the extra parameters to their default values, as set automatically by the \"Auto. Params\", or in the \"Extra Parameters\" group."
+#define kParamResetParamsHint "Set all the extra parameters to their default values, as set automatically by the \"Auto. Params\", or in the \"Extra Parameters\" group."
 
 
 #define kParamImageShaderDefault                            \
@@ -717,6 +718,43 @@ unsignedToString(unsigned i)
     return nb;
 }
 
+double
+ShadertoyPlugin::ftod(float f)
+{
+    double      d, exponent, mantissa, power10;
+    bool        bNegative;
+
+#ifdef FTOD_10_TO_6TH
+#undef FTOD_10_TO_6TH
+#endif
+#ifdef FTOD_10_TO_7TH
+#undef FTOD_10_TO_7TH
+#endif
+#define FTOD_10_TO_6TH  ((double) 1000000.0)
+#define FTOD_10_TO_7TH  ((double)10000000.0)
+
+    d = (double)f;
+    if (d == (double)0.0) {
+        return d;
+    }
+    if (d < (double)0.0) {
+        d = -d;
+        bNegative = true;
+    } else {
+        bNegative = false;
+    }
+
+    exponent = std::floor(std::log10(d) + (double)0.00005);
+    power10 = std::pow( (double)10.0, exponent );
+    mantissa = d / power10;
+    if (mantissa < (double)1.0) {
+        d = (floor((mantissa*FTOD_10_TO_7TH)+0.5)/FTOD_10_TO_7TH) * power10;
+    } else {
+        d = (floor((mantissa*FTOD_10_TO_6TH)+ 0.5)/FTOD_10_TO_6TH) * power10;
+    }
+    return (bNegative ? -d : d);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 
@@ -754,13 +792,13 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _paramValueInt  (NBUNIFORMS, (IntParam*)     NULL)
     , _paramValueFloat(NBUNIFORMS, (DoubleParam*)  NULL)
     , _paramValueVec2 (NBUNIFORMS, (Double2DParam*)     NULL)
-    , _paramValueVec3 (NBUNIFORMS, (Double3DParam*)NULL)
+    , _paramValueVec3 (NBUNIFORMS, (RGBParam*)NULL)
     , _paramValueVec4 (NBUNIFORMS, (RGBAParam*)    NULL)
     , _paramDefaultBool (NBUNIFORMS, (BooleanParam*) NULL)
     , _paramDefaultInt  (NBUNIFORMS, (IntParam*)     NULL)
     , _paramDefaultFloat(NBUNIFORMS, (DoubleParam*)  NULL)
     , _paramDefaultVec2 (NBUNIFORMS, (Double2DParam*)     NULL)
-    , _paramDefaultVec3 (NBUNIFORMS, (Double3DParam*)NULL)
+    , _paramDefaultVec3 (NBUNIFORMS, (RGBParam*)NULL)
     , _paramDefaultVec4 (NBUNIFORMS, (RGBAParam*)    NULL)
     , _paramMinInt  (NBUNIFORMS, (IntParam*)     NULL)
     , _paramMinFloat(NBUNIFORMS, (DoubleParam*)  NULL)
@@ -863,13 +901,13 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         _paramValueInt[i]   = fetchIntParam     (kParamValueInt   + nb);
         _paramValueFloat[i] = fetchDoubleParam  (kParamValueFloat + nb);
         _paramValueVec2[i]  = fetchDouble2DParam(kParamValueVec2  + nb);
-        _paramValueVec3[i]  = fetchDouble3DParam(kParamValueVec3  + nb);
+        _paramValueVec3[i]  = fetchRGBParam     (kParamValueVec3  + nb);
         _paramValueVec4[i]  = fetchRGBAParam    (kParamValueVec4  + nb);
         _paramDefaultBool[i]  = fetchBooleanParam (kParamDefaultBool  + nb);
         _paramDefaultInt[i]   = fetchIntParam     (kParamDefaultInt   + nb);
         _paramDefaultFloat[i] = fetchDoubleParam  (kParamDefaultFloat + nb);
         _paramDefaultVec2[i]  = fetchDouble2DParam(kParamDefaultVec2  + nb);
-        _paramDefaultVec3[i]  = fetchDouble3DParam(kParamDefaultVec3  + nb);
+        _paramDefaultVec3[i]  = fetchRGBParam(kParamDefaultVec3  + nb);
         _paramDefaultVec4[i]  = fetchRGBAParam    (kParamDefaultVec4  + nb);
         _paramMinInt[i]   = fetchIntParam     (kParamMinInt   + nb);
         _paramMinFloat[i] = fetchDoubleParam  (kParamMinFloat + nb);
@@ -1064,6 +1102,18 @@ ShadertoyPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
     clipPreferences.setOutputFrameVarying(true);
     clipPreferences.setOutputHasContinuousSamples(true);
+    BBoxEnum bbox = (BBoxEnum)_bbox->getValue();
+    if (bbox == eBBoxFormat) {
+        int w, h;
+        _formatSize->getValue(w, h);
+        double par = _formatPar->getValue();
+        OfxRectI pixelFormat;
+        pixelFormat.x1 = pixelFormat.y1 = 0;
+        pixelFormat.x2 = w;
+        pixelFormat.y2 = h;
+        clipPreferences.setOutputFormat(pixelFormat);
+        clipPreferences.setPixelAspectRatio(*_dstClip, par);
+    }
 }
 
 static inline
@@ -1294,6 +1344,7 @@ ShadertoyPlugin::updateExtra()
                 }
                 case eUniformTypeBool: {
                     if (tChanged) {
+                        //_paramDefaultBool[i]->resetToDefault();
                         _paramDefaultInt[i]->resetToDefault();
                         _paramMinInt[i]->resetToDefault();
                         _paramMaxInt[i]->resetToDefault();
@@ -1316,6 +1367,9 @@ ShadertoyPlugin::updateExtra()
                 case eUniformTypeInt: {
                     if (tChanged) {
                         _paramDefaultBool[i]->resetToDefault();
+                        //_paramDefaultInt[i]->resetToDefault();
+                        //_paramMinInt[i]->resetToDefault();
+                        //_paramMaxInt[i]->resetToDefault();
                         _paramDefaultFloat[i]->resetToDefault();
                         _paramMinFloat[i]->resetToDefault();
                         _paramMaxFloat[i]->resetToDefault();
@@ -1340,6 +1394,9 @@ ShadertoyPlugin::updateExtra()
                         _paramDefaultInt[i]->resetToDefault();
                         _paramMinInt[i]->resetToDefault();
                         _paramMaxInt[i]->resetToDefault();
+                        //_paramDefaultFloat[i]->resetToDefault();
+                        //_paramMinFloat[i]->resetToDefault();
+                        //_paramMaxFloat[i]->resetToDefault();
                         _paramDefaultVec2[i]->resetToDefault();
                         _paramMinVec2[i]->resetToDefault();
                         _paramMaxVec2[i]->resetToDefault();
@@ -1364,6 +1421,9 @@ ShadertoyPlugin::updateExtra()
                         _paramDefaultFloat[i]->resetToDefault();
                         _paramMinFloat[i]->resetToDefault();
                         _paramMaxFloat[i]->resetToDefault();
+                        //_paramDefaultVec2[i]->resetToDefault();
+                        //_paramMinVec2[i]->resetToDefault();
+                        //_paramMaxVec2[i]->resetToDefault();
                         _paramDefaultVec3[i]->resetToDefault();
                         //_paramMinVec3[i]->resetToDefault();
                         //_paramMaxVec3[i]->resetToDefault();
@@ -1388,6 +1448,9 @@ ShadertoyPlugin::updateExtra()
                         _paramDefaultVec2[i]->resetToDefault();
                         _paramMinVec2[i]->resetToDefault();
                         _paramMaxVec2[i]->resetToDefault();
+                        //_paramDefaultVec3[i]->resetToDefault();
+                        ////_paramMinVec3[i]->resetToDefault();
+                        ////_paramMaxVec3[i]->resetToDefault();
                         _paramDefaultVec4[i]->resetToDefault();
                         //_paramMinVec4[i]->resetToDefault();
                         //_paramMaxVec4[i]->resetToDefault();
@@ -1412,8 +1475,11 @@ ShadertoyPlugin::updateExtra()
                         _paramDefaultVec3[i]->resetToDefault();
                         //_paramMinVec3[i]->resetToDefault();
                         //_paramMaxVec3[i]->resetToDefault();
+                        //_paramDefaultVec4[i]->resetToDefault();
+                        ////_paramMinVec4[i]->resetToDefault();
+                        ////_paramMaxVec4[i]->resetToDefault();
                     }
-                    _paramDefaultVec4[i]->setDefault(p.getDefault().f[0], p.getDefault().f[1], p.getDefault().f[2], p.getDefault().f[3]);
+                    _paramDefaultVec4[i]->setValue(p.getDefault().f[0], p.getDefault().f[1], p.getDefault().f[2], p.getDefault().f[3]);
                     //_paramMinVec4[i]->setValue(p.getMin().f[0], p.getMin().f[1], p.getMin().f[2], p.getMin().f[3]);
                     //_paramMaxVec4[i]->setValue(p.getMax().f[0], p.getMax().f[1], p.getMax().f[2], p.getMax().f[3]);
                     break;
@@ -1463,6 +1529,7 @@ ShadertoyPlugin::updateExtra()
                 }
             }
             _bbox->setValue( (int)_imageShaderBBox );
+            resetParamsValues();
             endEditBlock();
             if (uniformsChanged) {
                 // mark that image shader must be recompiled on next render
@@ -1612,7 +1679,7 @@ ShadertoyPlugin::updateExtra()
 void
 ShadertoyPlugin::resetParamsValues()
 {
-    beginEditBlock(kParamResetParams);
+    //beginEditBlock(kParamResetParams);
     unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
     for (unsigned i = 0; i < paramCount; ++i) {
         UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
@@ -1661,7 +1728,7 @@ ShadertoyPlugin::resetParamsValues()
             break;
         }
     }
-    endEditBlock();
+    //endEditBlock();
 } // ShadertoyPlugin::resetParamsValues
 
 void
@@ -1772,7 +1839,9 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
             updateClips();
         }
     } else if (paramName == kParamResetParams) {
+        beginEditBlock(kParamResetParams);
         resetParamsValues();
+        endEditBlock();
     } else if (paramName == kParamImageShaderSource) {
         _imageShaderCompile->setEnabled(true);
         if (args.reason == eChangeUserEdit) {
@@ -2095,7 +2164,7 @@ defineDouble3DSub(ImageEffectDescriptor &desc,
                   PageParamDescriptor *page,
                   GroupParamDescriptor *group)
 {
-    Double3DParamDescriptor* param = desc.defineDouble3DParam(name + nb);
+    RGBParamDescriptor* param = desc.defineRGBParam(name + nb);
 
     param->setLabel(label + nb);
     param->setHint(hint);

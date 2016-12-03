@@ -251,7 +251,7 @@ public:
                  float f)
         {
             assert(_type == eUniformTypeFloat);
-            val.f[0] = f;
+            val.f[0] = ftod(f);
         }
 
         void set(ExtraParameterValue& val,
@@ -259,8 +259,8 @@ public:
                  float y)
         {
             assert(_type == eUniformTypeVec2);
-            val.f[0] = x;
-            val.f[1] = y;
+            val.f[0] = ftod(x);
+            val.f[1] = ftod(y);
         }
 
         void set(ExtraParameterValue& val,
@@ -269,9 +269,9 @@ public:
                  float b)
         {
             assert(_type == eUniformTypeVec3);
-            val.f[0] = r;
-            val.f[1] = g;
-            val.f[2] = b;
+            val.f[0] = ftod(r);
+            val.f[1] = ftod(g);
+            val.f[2] = ftod(b);
         }
 
         void set(ExtraParameterValue& val,
@@ -281,10 +281,10 @@ public:
                  float a)
         {
             assert(_type == eUniformTypeVec4);
-            val.f[0] = r;
-            val.f[1] = g;
-            val.f[2] = b;
-            val.f[3] = a;
+            val.f[0] = ftod(r);
+            val.f[1] = ftod(g);
+            val.f[2] = ftod(b);
+            val.f[3] = ftod(a);
         }
     };
 
@@ -376,6 +376,7 @@ private:
     void updateExtra();
     void updateClips();
     void resetParamsValues();
+    static double ftod(float f);
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -410,13 +411,13 @@ private:
     std::vector<OFX::IntParam *> _paramValueInt;
     std::vector<OFX::DoubleParam *> _paramValueFloat;
     std::vector<OFX::Double2DParam *> _paramValueVec2;
-    std::vector<OFX::Double3DParam *> _paramValueVec3;
+    std::vector<OFX::RGBParam *> _paramValueVec3;
     std::vector<OFX::RGBAParam *> _paramValueVec4;
     std::vector<OFX::BooleanParam *> _paramDefaultBool;
     std::vector<OFX::IntParam *> _paramDefaultInt;
     std::vector<OFX::DoubleParam *> _paramDefaultFloat;
     std::vector<OFX::Double2DParam *> _paramDefaultVec2;
-    std::vector<OFX::Double3DParam *> _paramDefaultVec3;
+    std::vector<OFX::RGBParam *> _paramDefaultVec3;
     std::vector<OFX::RGBAParam *> _paramDefaultVec4;
     std::vector<OFX::IntParam *> _paramMinInt;
     std::vector<OFX::DoubleParam *> _paramMinFloat;
@@ -430,6 +431,7 @@ private:
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
     bool _imageShaderUpdateParams; // ask to extract parameters from the shader on next compilation
+    bool _imageShaderUpdateParamsReset; // shouldwe also reset params to default values when updating?
     std::vector<ExtraParameter> _imageShaderExtraParameters; // parameters extracted from the shader
     bool _imageShaderHasMouse; // parameters extracted from the shader
     std::vector<bool> _imageShaderInputEnabled;

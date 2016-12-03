@@ -449,7 +449,7 @@ const char* s1 =
     "// iChannel0: ChannelLabel (Channel hint.)\n"
     "// iChannel1: Source (the source.); wrap=mirror, filter=linear\n"
     "// BBox: iChannel3\n"
-    "uniform vec2 blurSize = (5., 5.); // Blur Size (The blur size in pixels.), min=(0.1,1.2), max=(1000.,1000.)\n"
+    "uniform vec2 blurSize = vec2(5., 5.); // Blur Size (The blur size in pixels.), min=(0.1,1.2), max=(1000.,1000.)\n"
     "uniform float value = 2.; // ValueLabel (Value hint.) max=10, min=-10\n";
 
 
@@ -462,6 +462,7 @@ main(int argc,
     ShadertoyPlugin::WrapEnum wrap = ShadertoyPlugin::eWrapRepeat;
     ShadertoyPlugin::FilterEnum filter = ShadertoyPlugin::eFilterNearest;
 
+    std::cout << "Shader:\n" << s1;
     for (int i = 0; i < SHADERTOY_NBINPUTS; ++i) {
         getChannelInfo(s1, i, label, hint, filter, wrap);
         std::cout << "channel " << i << ":\n";
