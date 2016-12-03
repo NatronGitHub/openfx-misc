@@ -7,6 +7,7 @@
 # - the shader description
 # - the shader file name, relative to the presets directory
 # Everything else is ignored.
+# Lines starting with '#' are ignored too.
 # The four last colums, which are ignored, specify the inputs:
 # -1: no input
 # 0-15: one of the default textures, indices 0 to 12 are tex00-tex12, 13 is tex15,
