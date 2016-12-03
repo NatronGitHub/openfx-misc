@@ -489,6 +489,10 @@ using std::string;
 #define kParamImageShaderReloadLabel "Reload"
 #define kParamImageShaderReloadHint "Reload the source from the given file."
 
+#define kParamImageShaderPresetDir "imageShaderPresetDir"
+#define kParamImageShaderPresetDirLabel "Presets Directory"
+#define kParamImageShaderPresetDirHint "The directory where presets (and predefined textures) are located. There must be a \"Shadertoy.txt\" file in this directory to give the list of presets (see the default presets directory for an example)."
+
 #define kParamImageShaderPreset "imageShaderPreset"
 #define kParamImageShaderPresetLabel "Load from Preset"
 #define kParamImageShaderPresetHint "Load the source from the preset. The presets and the default textures are located in \"%1\", and more presets can be added by editing \"%2\"."
@@ -678,19 +682,8 @@ using std::string;
 
 #define kClipChannel "iChannel"
 
-struct Preset
-{
-    Preset(const std::string& d, const std::string& f)
-    : description(d)
-    , filename(f)
-    {
-    }
 
-    string description;
-    string filename;
-};
-
-static std::vector<Preset> gPresets;
+static std::vector<ShadertoyPlugin::Preset> gPresetsDefault;
 
 static
 bool
@@ -716,6 +709,61 @@ unsignedToString(unsigned i)
     }
 
     return nb;
+}
+
+static
+void
+presetsFromDir(const string &dir, std::vector<ShadertoyPlugin::Preset>& presets)
+{
+    //std::printf( kOfxPluginPropFilePath"= %s", filePath.c_str() );
+    char line[1024];
+    presets.clear();
+    FILE* fp = std::fopen( (dir + "/Shadertoy.txt").c_str(), "r" );
+    if (fp != NULL) {
+        //int i = 0;
+        while (1) {
+            if (std::fgets(line, sizeof(line), fp) == NULL) {
+                break;
+            }
+            //++i;
+            //printf("%3d: %s", i, line);
+            if (line[0] == '#') { // skip comments
+                continue;
+            }
+            // a line looks like
+            //    {"Ball",                            "ball.frag.glsl",                 99,-1,-1,-1},
+            const char* desc = std::strchr(line, '"');
+            if (desc == NULL) {
+                continue;
+            }
+            ++desc;
+            const char* desc_end = std::strchr(desc, '"');
+            if (desc_end == NULL) {
+                continue;
+            }
+            string description(desc, desc_end);
+            ++desc_end;
+            const char* file = std::strchr(desc_end, '"');
+            if (file == NULL) {
+                continue;
+            }
+            ++file;
+            const char* file_end = std::strchr(file, '"');
+            if (file_end == NULL) {
+                continue;
+            }
+            string filename = dir + '/' + string(file, file_end);
+            //printf("%s,%s\n", description.c_str(), filename.c_str());
+            // check if file is readable
+            FILE* fps = std::fopen( filename.c_str(), "r" );
+            if (fps == NULL) {
+                //printf("%s cannot open\n", filename.c_str());
+                continue;
+            }
+            presets.push_back( ShadertoyPlugin::Preset(description, filename) );
+        }
+        std::fclose(fp);
+    }
 }
 
 double
@@ -772,6 +820,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _formatSize(0)
     , _formatPar(0)
     , _imageShaderFileName(0)
+    , _imageShaderPresetDir(0)
     , _imageShaderPreset(0)
     , _imageShaderSource(0)
     , _imageShaderCompile(0)
@@ -822,6 +871,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderCompiled(false)
     , _openGLContextData()
     , _openGLContextAttached(false)
+    , _presets(gPresetsDefault)
 {
     try {
         _imageShaderMutex.reset(new Mutex);
@@ -872,7 +922,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _formatPar = fetchDoubleParam(kParamFormatPAR);
     assert(_bbox && _format && _formatSize && _formatPar);
     _imageShaderFileName = fetchStringParam(kParamImageShaderFileName);
-    if ( paramExists(kParamImageShaderPreset) ) {
+    if ( paramExists(kParamImageShaderPresetDir) ) {
+        _imageShaderPresetDir = fetchStringParam(kParamImageShaderPresetDir);
         _imageShaderPreset = fetchChoiceParam(kParamImageShaderPreset);
     }
     _imageShaderSource = fetchStringParam(kParamImageShaderSource);
@@ -1767,11 +1818,20 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
                 _imageShaderSource->setValue(str);
             }
         }
+    } else if (paramName == kParamImageShaderPresetDir) {
+        string dir;
+        _imageShaderPresetDir->getValue(dir);
+        presetsFromDir(dir, _presets);
+        _imageShaderPreset->resetOptions();
+        _imageShaderPreset->appendOption("No preset");
+        for (std::vector<ShadertoyPlugin::Preset>::iterator it = _presets.begin(); it != _presets.end(); ++it) {
+            _imageShaderPreset->appendOption(it->description);
+        }
     } else if (paramName == kParamImageShaderPreset) {
         int preset = _imageShaderPreset->getValue() - 1;
-        if ( preset >= 0 && preset < (int)gPresets.size() ) {
+        if ( preset >= 0 && preset < (int)_presets.size() ) {
             // load image shader from file
-            string imageShaderFileName = gPresets[preset].filename;
+            string imageShaderFileName = _presets[preset].filename;
             if ( !imageShaderFileName.empty() ) {
                 std::ifstream t( imageShaderFileName.c_str() );
                 if ( t.bad() ) {
@@ -2244,56 +2304,8 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     // parse the Shadertoy.txt file from the resources to fetch the presets
     string resourcesPath = desc.getPropertySet().propGetString(kOfxPluginPropFilePath, /*throwOnFailure=*/false) + "/Contents/Resources";
-    {
-        //std::printf( kOfxPluginPropFilePath"= %s", filePath.c_str() );
-        char line[1024];
-        FILE* fp = std::fopen( (resourcesPath + "/Shadertoy.txt").c_str(), "r" );
-        if (fp != NULL) {
-            //int i = 0;
-            while (1) {
-                if (std::fgets(line, sizeof(line), fp) == NULL) {
-                    break;
-                }
-                //++i;
-                //printf("%3d: %s", i, line);
-                if (line[0] == '#') { // skip comments
-                    continue;
-                }
-                // a line looks like
-                //    {"Ball",                            "ball.frag.glsl",                 99,-1,-1,-1},
-                const char* desc = std::strchr(line, '"');
-                if (desc == NULL) {
-                    continue;
-                }
-                ++desc;
-                const char* desc_end = std::strchr(desc, '"');
-                if (desc_end == NULL) {
-                    continue;
-                }
-                string description(desc, desc_end);
-                ++desc_end;
-                const char* file = std::strchr(desc_end, '"');
-                if (file == NULL) {
-                    continue;
-                }
-                ++file;
-                const char* file_end = std::strchr(file, '"');
-                if (file_end == NULL) {
-                    continue;
-                }
-                string filename = resourcesPath + '/' + string(file, file_end);
-                //printf("%s,%s\n", description.c_str(), filename.c_str());
-                // check if file is readable
-                FILE* fps = std::fopen( filename.c_str(), "r" );
-                if (fps == NULL) {
-                    //printf("%s cannot open\n", filename.c_str());
-                    continue;
-                }
-                gPresets.push_back( Preset(description, filename) );
-            }
-            std::fclose(fp);
-        }
-    }
+    presetsFromDir(resourcesPath, gPresetsDefault);
+
 
     // Source clip only in the filter context
     // create the mandated source clip
@@ -2413,7 +2425,24 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             }
         }
 
-        if ( !gPresets.empty() ) {
+        if ( !gPresetsDefault.empty() ) {
+            StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderPresetDir);
+            param->setLabel(kParamImageShaderPresetDirLabel);
+            param->setHint(kParamImageShaderPresetDirHint);
+            param->setStringType(eStringTypeDirectoryPath);
+            param->setDefault(resourcesPath);
+            param->setEnabled(getImageEffectHostDescription()->isNatron);
+            param->setFilePathExists(true);
+            param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
+            param->setAnimates(false);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+        if ( !gPresetsDefault.empty() ) {
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageShaderPreset);
             param->setLabel(kParamImageShaderPresetLabel);
             string hint = kParamImageShaderPresetHint;
@@ -2421,7 +2450,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             replace(hint, "%2", resourcesPath + "/Shadertoy.txt");
             param->setHint(hint);
             param->appendOption("No preset");
-            for (std::vector<Preset>::iterator it = gPresets.begin(); it != gPresets.end(); ++it) {
+            for (std::vector<ShadertoyPlugin::Preset>::iterator it = gPresetsDefault.begin(); it != gPresetsDefault.end(); ++it) {
                 param->appendOption(it->description);
             }
             param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender

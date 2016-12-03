@@ -288,6 +288,18 @@ public:
         }
     };
 
+    struct Preset
+    {
+        Preset(const std::string& d, const std::string& f)
+        : description(d)
+        , filename(f)
+        {
+        }
+
+        std::string description;
+        std::string filename;
+    };
+
 #ifdef OFX_USE_MULTITHREAD_MUTEX
     typedef OFX::MultiThread::Mutex Mutex;
     typedef OFX::MultiThread::AutoMutex AutoMutex;
@@ -391,6 +403,7 @@ private:
     OFX::Int2DParam *_formatSize;
     OFX::DoubleParam *_formatPar;
     OFX::StringParam *_imageShaderFileName;
+    OFX::StringParam *_imageShaderPresetDir;
     OFX::ChoiceParam *_imageShaderPreset;
     OFX::StringParam *_imageShaderSource;
     OFX::PushButtonParam *_imageShaderCompile;
@@ -464,6 +477,8 @@ private:
     std::auto_ptr<Mutex> _rendererInfoMutex;
     std::string _rendererInfo;
 
+    std::vector<Preset> _presets;
+    
 #if defined(HAVE_OSMESA)
     // A list of Mesa contexts available for rendering.
     // renderMesa() pops the last element, uses it, then pushes it back.
