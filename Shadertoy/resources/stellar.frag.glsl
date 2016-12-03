@@ -1,4 +1,5 @@
 // from https://www.shadertoy.com/view/Xdl3D2
+// iChannel0: Rand (The output of a Rand plugin with Static Seed checked, or tex16.png), filter=mipmap, wrap=repeat
 
 #ifdef GL_ES
 precision lowp float;

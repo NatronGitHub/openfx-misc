@@ -4,10 +4,16 @@
 # https://github.com/popcornmix/screensaver.shadertoy/blob/master/src/main.cpp
 # The four last colum specify the inputs:
 # -1: no input
-# 0-14: one of the default textures
-# 98: a fixed random pattern (use the Rand plugin with "Static Seed" checked)
+# 0-15: one of the default textures, indices 0 to 12 are tex00-tex12, 13 is tex15,
+#       14 is tex16, 15 is tex14
+# 98: a fixed random pattern (use the Rand plugin with "Static Seed" checked) or tex12.png
 # 99: a source image
-
+#
+# Note that the textures in the shadertoy webinterface have the following arrrangement:
+# tex00.jpg tex01.jpg tex02.jpg tex03.jpg tex04.jpg tex05.jpg tex06.jpg tex07.jpg
+# tex17.jpg tex18.jpg tex19.jpg tex20.jpg tex08.jpg tex09.jpg tex10.png tex11.png
+# tex12.png tex15.png tex16.png tex14.png
+    
    {"Ball",                            "ball.frag.glsl",                 99,-1,-1,-1},
    {"Basic Fractal",                   "basicfractal.frag.glsl",         -1,-1,-1,-1},
    {"Bleepy Blocks",                   "bleepyblocks.frag.glsl",         99,-1,-1,-1},

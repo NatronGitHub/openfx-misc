@@ -1,4 +1,5 @@
 // Taken from https://www.shadertoy.com/view/lslXRS
+// iChannel0: Rand (The output of a Rand plugin with Static Seed checked or tex12.png), filter=mipmap, wrap=repeat
 
 //Noise animation - Lava
 //by nimitz (stormoid.com) (twitter: @stormoid)

@@ -1,4 +1,5 @@
 // Based on https://www.shadertoy.com/view/ldlXRS
+// iChannel0: Rand (The output of a Rand plugin with Static Seed checked or tex12.png), filter=mipmap, wrap=repeat
 
 //Noise animation - Electric
 //by nimitz (stormoid.com) (twitter: @stormoid)
@@ -41,7 +42,7 @@ float dualfbm(in vec2 p)
 float circ(vec2 p) 
 {
 	float r = length(p);
-	r = log(sqrt(r));
+    r = 0.5 * log(r); // log(sqrt(r)); in the original version
 	return abs(mod(r*4.,tau)-3.14)*3.+.2;
 
 }

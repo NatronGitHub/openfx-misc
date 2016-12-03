@@ -1,4 +1,5 @@
 // Taken from https://www.shadertoy.com/view/XdX3WN
+// iChannel0: Rand (The output of a Rand plugin with Static Seed checked or tex11.png), filter=mipmap, wrap=repeat
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {

@@ -1,12 +1,14 @@
 // See: https://www.shadertoy.com/view/XsjSRt
+// iChannel0: Rand (The output of a Rand plugin with Static Seed checked, or tex12.png), filter=mipmap, wrap=repeat
 
 //SETTINGS//
-const float timeScale = 10.0;
-const float cloudScale = 0.5;
-const float softness = 0.2;
-const float brightness = 1.0;
-const int noiseOctaves = 8;
-const float curlStrain = 3.0;
+uniform float timeScale = 10.0;
+uniform float cloudScale = 0.5;
+uniform float cover = 0.5; // Sky Cover, min=0, max=1.1
+uniform float softness = 0.2;
+uniform float brightness = 1.0;
+uniform int noiseOctaves = 8;
+uniform float curlStrain = 3.0;
 //SETTINGS//
 
 float saturate(float num)
@@ -54,8 +56,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	vec2 screenUv = fragCoord.xy/iResolution.xy;
     vec2 uv = fragCoord.xy/(40000.0*cloudScale);
-    
-    float cover = 0.5;
     
     float bright = brightness*(1.8-cover);
     

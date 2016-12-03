@@ -1,4 +1,7 @@
 // see: https://www.shadertoy.com/view/MdlXWr
+// mousePosition gives the focus of expansion
+// mouseClick must be non-zero
+// mousePressed must be true
 
 // Star Tunnel - @P_Malin
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
@@ -138,6 +141,51 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vRayDir = RotateY(vRayDir, vEuler.y);
 	vRayDir = RotateZ(vRayDir, vEuler.z);
 	
+	float fShade = 0.0;
+		
+	float a = 0.2;
+	float b = 10.0;
+	float c = 1.0;
+	float fZPos = 5.0 + iGlobalTime * c + sin(iGlobalTime * a) * b;
+	float fSpeed = c + a * b * cos(a * iGlobalTime);
+	
+	fParticleLength = 0.25 * fSpeed / 60.0;
+	
+	float fSeed = 0.0;
+	
+	vec3 vResult = mix(vec3(0.005, 0.0, 0.01), vec3(0.01, 0.005, 0.0), vRayDir.y * 0.5 + 0.5);
+	
+	for(int i=0; i<PASS_COUNT; i++)
+	{
+		vResult += Starfield(vRayDir, fZPos, fSeed);
+		fSeed += 1.234;
+	}
+	
+	fragColor = vec4(sqrt(vResult),1.0);
+}
+
+void mainVR( out vec4 fragColor, in vec2 fragCoord, vec3 vRayOrigin, vec3 vRayDir )
+{
+/*	vec2 vScreenUV = fragCoord.xy / iResolution.xy;
+	
+	vec2 vScreenPos = vScreenUV * 2.0 - 1.0;
+	vScreenPos.x *= iResolution.x / iResolution.y;
+
+	vec3 vRayDir = normalize(vec3(vScreenPos, 1.0));
+
+	vec3 vEuler = vec3(0.5 + sin(iGlobalTime * 0.2) * 0.125, 0.5 + sin(iGlobalTime * 0.1) * 0.125, iGlobalTime * 0.1 + sin(iGlobalTime * 0.3) * 0.5);
+			
+	if(iMouse.z > 0.0)
+	{
+		vEuler.x = -((iMouse.y / iResolution.y) * 2.0 - 1.0);
+		vEuler.y = -((iMouse.x / iResolution.x) * 2.0 - 1.0);
+		vEuler.z = 0.0;
+	}
+		
+	vRayDir = RotateX(vRayDir, vEuler.x);
+	vRayDir = RotateY(vRayDir, vEuler.y);
+	vRayDir = RotateZ(vRayDir, vEuler.z);
+*/	
 	float fShade = 0.0;
 		
 	float a = 0.2;

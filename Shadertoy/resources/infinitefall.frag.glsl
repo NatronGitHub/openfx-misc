@@ -1,4 +1,5 @@
 // See: https://www.shadertoy.com/view/ltjXDW
+// iChannel0: Rand (The output of a Rand plugin with Static Seed checked or tex12.png), filter=mipmap, wrap=repeat
 
 /*
 	

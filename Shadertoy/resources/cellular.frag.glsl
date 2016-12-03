@@ -2,9 +2,9 @@
 
 #define PI 3.14159265359
 
-vec3 col1 = vec3(0.216, 0.471, 0.698); // blue
-vec3 col2 = vec3(1.00, 0.329, 0.298); // yellow
-vec3 col3 = vec3(0.867, 0.910, 0.247); // red
+uniform vec3 col1 = vec3(0.216, 0.471, 0.698); // blue
+uniform vec3 col2 = vec3(1.00, 0.329, 0.298); // red
+uniform vec3 col3 = vec3(0.867, 0.910, 0.247); // yellow
 
 float disk(vec2 r, vec2 center, float radius) {
 	return 1.0 - smoothstep( radius-0.008, radius+0.008, length(r-center));

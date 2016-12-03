@@ -1,4 +1,5 @@
 // See: https://www.shadertoy.com/view/MsXSzM
+// iChannel0: Source (tex15.png or any other image), filter=nearest, wrap=repeat
 
 #define TIMESCALE 0.25 
 #define TILES 8

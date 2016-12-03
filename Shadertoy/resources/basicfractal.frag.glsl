@@ -1,7 +1,7 @@
 // https://www.shadertoy.com/view/Mss3Wf
 //Basic fractal by @paulofalcao
 
-const int maxIterations=6;//a nice value for fullscreen is 8
+uniform int maxIterations=6; // Max. Iterations (maximum number of iterations. A nice value for fullscreen is 8), min=1,max=10
 
 float circleSize=1.0/(3.0*pow(2.0,float(maxIterations)));
 
