@@ -34,6 +34,8 @@
 #include <cfloat> // DBL_MAX
 #include <cstddef>
 #include <climits>
+#include <cstring>
+#include <cstdio>
 #include <string>
 #include <fstream>
 #include <streambuf>
