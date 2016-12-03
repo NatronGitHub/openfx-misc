@@ -53,6 +53,8 @@
 
 using namespace OFX;
 
+using std::string;
+
 //OFXS_NAMESPACE_ANONYMOUS_ENTER // defines external classes
 #define NBINPUTS SHADERTOY_NBINPUTS
 #define NBUNIFORMS SHADERTOY_NBUNIFORMS
@@ -484,6 +486,10 @@ using namespace OFX;
 #define kParamImageShaderReloadLabel "Reload"
 #define kParamImageShaderReloadHint "Reload the source from the given file."
 
+#define kParamImageShaderPreset "imageShaderPreset"
+#define kParamImageShaderPresetLabel "Load from Preset"
+#define kParamImageShaderPresetHint "Load the source from the preset. The presets and the default textures are located in \"%1\", and more presets can be added by editing \"%2\"."
+
 #define kParamImageShaderSource "imageShaderSource"
 #define kParamImageShaderSourceLabel "Source"
 #define kParamImageShaderSourceHint "Image shader.\n\n"kShaderInputsHint
@@ -669,14 +675,39 @@ using namespace OFX;
 
 #define kClipChannel "iChannel"
 
+struct Preset
+{
+    Preset(const std::string& d, const std::string& f)
+    : description(d)
+    , filename(f)
+    {
+    }
+
+    string description;
+    string filename;
+};
+
+static std::vector<Preset> gPresets;
+
 static
-std::string
+bool
+replace(string& str, const string& from, const string& to)
+{
+    size_t start_pos = str.find(from);
+    if(start_pos == string::npos)
+        return false;
+    str.replace(start_pos, from.length(), to);
+    return true;
+}
+
+static
+string
 unsignedToString(unsigned i)
 {
     if (i == 0) {
         return "0";
     }
-    std::string nb;
+    string nb;
     for (unsigned j = i; j != 0; j /= 10) {
         nb = (char)( '0' + (j % 10) ) + nb;
     }
@@ -701,6 +732,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _formatSize(0)
     , _formatPar(0)
     , _imageShaderFileName(0)
+    , _imageShaderPreset(0)
     , _imageShaderSource(0)
     , _imageShaderCompile(0)
     , _imageShaderTriggerRender(0)
@@ -770,14 +802,14 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     case eContextFilter:
         _srcClips[0] = fetchClip(kOfxImageEffectSimpleSourceClipName);
         for (unsigned j = 1; j < NBINPUTS; ++j) {
-            _srcClips[j] = fetchClip( std::string(kClipChannel) + unsignedToString(j) );
+            _srcClips[j] = fetchClip( string(kClipChannel) + unsignedToString(j) );
         }
         break;
     case eContextGenerator:
     case eContextGeneral:
     default:
         for (unsigned j = 0; j < NBINPUTS; ++j) {
-            _srcClips[j] = fetchClip( std::string(kClipChannel) + unsignedToString(j) );
+            _srcClips[j] = fetchClip( string(kClipChannel) + unsignedToString(j) );
         }
         break;
     }
@@ -785,7 +817,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         assert( (!_srcClips[i] && getContext() == eContextGenerator) ||
                 ( _srcClips[i] && (_srcClips[i]->getPixelComponents() == ePixelComponentRGBA ||
                                    _srcClips[i]->getPixelComponents() == ePixelComponentAlpha) ) );
-        std::string nb = unsignedToString(i);
+        string nb = unsignedToString(i);
         _inputEnable[i] = fetchBooleanParam(kParamInputEnable + nb);
         _inputLabel[i] = fetchStringParam(kParamInputLabel + nb);
         _inputHint[i] = fetchStringParam(kParamInputHint + nb);
@@ -800,6 +832,9 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _formatPar = fetchDoubleParam(kParamFormatPAR);
     assert(_bbox && _format && _formatSize && _formatPar);
     _imageShaderFileName = fetchStringParam(kParamImageShaderFileName);
+    if ( paramExists(kParamImageShaderPreset) ) {
+        _imageShaderPreset = fetchChoiceParam(kParamImageShaderPreset);
+    }
     _imageShaderSource = fetchStringParam(kParamImageShaderSource);
     _imageShaderCompile = fetchPushButtonParam(kParamImageShaderCompile);
     _imageShaderTriggerRender = fetchIntParam(kParamImageShaderTriggerRender);
@@ -816,7 +851,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     assert(_groupExtra && _paramCount);
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
         // generate the number string
-        std::string nb = unsignedToString(i);
+        string nb = unsignedToString(i);
         _paramGroup[i]      = fetchGroupParam   (kGroupParameter  + nb);
         _paramType[i]       = fetchChoiceParam  (kParamType       + nb);
         _paramName[i]       = fetchStringParam  (kParamName       + nb);
@@ -1031,8 +1066,8 @@ ShadertoyPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 
 static inline
 bool
-starts_with(const std::string &str,
-            const std::string &prefix)
+starts_with(const string &str,
+            const string &prefix)
 {
     return (str.substr( 0, prefix.size() ) == prefix);
 }
@@ -1075,10 +1110,10 @@ ShadertoyPlugin::updateClips()
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         bool enabled = _inputEnable[i]->getValue();
         _srcClips[i]->setIsSecret(!enabled);
-        std::string s;
+        string s;
         _inputLabel[i]->getValue(s);
         if ( s.empty() ) {
-            std::string iChannelX(kClipChannel);
+            string iChannelX(kClipChannel);
             iChannelX += unsignedToString(i);
             _srcClips[i]->setLabel(iChannelX);
         } else {
@@ -1101,7 +1136,7 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i,
     bool isVec3 = false;
     bool isVec4 = false;
 
-    std::string name;
+    string name;
     _paramName[i]->getValue(name);
     if ( visible && !name.empty() ) {
         switch (paramType) {
@@ -1188,7 +1223,7 @@ ShadertoyPlugin::updateExtra()
                 if ( _imageShaderInputEnabled[i] != _inputEnable[i]->getValue() ) {
                     _inputEnable[i]->setValue(_imageShaderInputEnabled[i]);
                 }
-                std::string s;
+                string s;
                 _inputLabel[i]->getValue(s);
                 if (_imageShaderInputLabel[i] != s) {
                     _inputLabel[i]->setValue(_imageShaderInputLabel[i]);
@@ -1219,7 +1254,7 @@ ShadertoyPlugin::updateExtra()
                 if (tChanged) {
                     _paramType[i]->setValue( (int)t );
                 }
-                std::string s;
+                string s;
                 _paramName[i]->getValue(s);
                 if (p.getName() != s) {
                     _paramName[i]->setValue( p.getName() );
@@ -1442,9 +1477,9 @@ ShadertoyPlugin::updateExtra()
         if (t == eUniformTypeNone) {
             continue;
         }
-        std::string name;
-        std::string label;
-        std::string hint;
+        string name;
+        string label;
+        string hint;
         _paramName[i]->getValue(name);
         _paramLabel[i]->getValue(label);
         _paramHint[i]->getValue(hint);
@@ -1629,7 +1664,7 @@ ShadertoyPlugin::resetParamsValues()
 
 void
 ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
-                              const std::string &paramName)
+                              const string &paramName)
 {
     const double time = args.time;
 
@@ -1647,14 +1682,14 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
     } else if ( (paramName == kParamImageShaderFileName) ||
                 ( paramName == kParamImageShaderReload) ) {
         // load image shader from file
-        std::string imageShaderFileName;
+        string imageShaderFileName;
         _imageShaderFileName->getValueAtTime(time, imageShaderFileName);
         if ( !imageShaderFileName.empty() ) {
             std::ifstream t( imageShaderFileName.c_str() );
             if ( t.bad() ) {
-                sendMessage(Message::eMessageError, "", std::string("Error: Cannot open file ") + imageShaderFileName);
+                sendMessage(Message::eMessageError, "", string("Error: Cannot open file ") + imageShaderFileName);
             } else {
-                std::string str;
+                string str;
                 t.seekg(0, std::ios::end);
                 str.reserve( t.tellg() );
                 t.seekg(0, std::ios::beg);
@@ -1663,6 +1698,39 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
                 _imageShaderSource->setValue(str);
             }
         }
+    } else if (paramName == kParamImageShaderPreset) {
+        int preset = _imageShaderPreset->getValue() - 1;
+        if ( preset >= 0 && preset < (int)gPresets.size() ) {
+            // load image shader from file
+            string imageShaderFileName = gPresets[preset].filename;
+            if ( !imageShaderFileName.empty() ) {
+                std::ifstream t( imageShaderFileName.c_str() );
+                if ( t.bad() ) {
+                    sendMessage(Message::eMessageError, "", string("Error: Cannot open file ") + imageShaderFileName);
+                } else {
+                    string str;
+                    t.seekg(0, std::ios::end);
+                    str.reserve( t.tellg() );
+                    t.seekg(0, std::ios::beg);
+                    str.assign( ( std::istreambuf_iterator<char>(t) ),
+                               std::istreambuf_iterator<char>() );
+                    _imageShaderSource->setValue(str);
+                }
+            }
+            // same as kParamImageShaderCompile below, except ask for param update
+            {
+                AutoMutex lock( _imageShaderMutex.get() );
+                // mark that image shader must be recompiled on next render
+                ++_imageShaderID;
+                _imageShaderUpdateParams = true;
+                _imageShaderCompiled = false;
+            }
+            _imageShaderCompile->setEnabled(false);
+            // trigger a new render which updates params and inputs info
+            clearPersistentMessage();
+            _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValueAtTime(time) + 1);
+        }
+
     } else if (paramName == kParamImageShaderCompile) {
         {
             AutoMutex lock( _imageShaderMutex.get() );
@@ -1705,6 +1773,9 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
         resetParamsValues();
     } else if (paramName == kParamImageShaderSource) {
         _imageShaderCompile->setEnabled(true);
+        if (args.reason == eChangeUserEdit) {
+            _imageShaderPreset->setValue(0);
+        }
     } else if ( ( (paramName == kParamCount) ||
                   starts_with(paramName, kParamName) ) && (args.reason == eChangeUserEdit) ) {
         {
@@ -1740,7 +1811,7 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
     } else if ( (paramName == kParamImageShaderSource) && (args.reason == eChangeUserEdit) ) {
         _imageShaderCompile->setEnabled(true);
     } else if (paramName == kParamRendererInfo) {
-        std::string message;
+        string message;
         {
             AutoMutex lock( _rendererInfoMutex.get() );
             message = _rendererInfo;
@@ -1863,10 +1934,10 @@ ShadertoyPluginFactory::describe(ImageEffectDescriptor &desc)
 
 static void
 defineBooleanSub(ImageEffectDescriptor &desc,
-                 const std::string& nb,
-                 const std::string& name,
-                 const std::string& label,
-                 const std::string& hint,
+                 const string& nb,
+                 const string& name,
+                 const string& label,
+                 const string& hint,
                  bool isExtraParam,
                  PageParamDescriptor *page,
                  GroupParamDescriptor *group)
@@ -1887,7 +1958,7 @@ defineBooleanSub(ImageEffectDescriptor &desc,
 
 static void
 defineBoolean(ImageEffectDescriptor &desc,
-              const std::string& nb,
+              const string& nb,
               PageParamDescriptor *page,
               GroupParamDescriptor *group)
 {
@@ -1896,10 +1967,10 @@ defineBoolean(ImageEffectDescriptor &desc,
 
 static void
 defineIntSub(ImageEffectDescriptor &desc,
-             const std::string& nb,
-             const std::string& name,
-             const std::string& label,
-             const std::string& hint,
+             const string& nb,
+             const string& name,
+             const string& label,
+             const string& hint,
              bool isExtraParam,
              int defaultValue,
              PageParamDescriptor *page,
@@ -1924,7 +1995,7 @@ defineIntSub(ImageEffectDescriptor &desc,
 
 static void
 defineInt(ImageEffectDescriptor &desc,
-          const std::string& nb,
+          const string& nb,
           PageParamDescriptor *page,
           GroupParamDescriptor *group)
 {
@@ -1935,10 +2006,10 @@ defineInt(ImageEffectDescriptor &desc,
 
 static void
 defineDoubleSub(ImageEffectDescriptor &desc,
-                const std::string& nb,
-                const std::string& name,
-                const std::string& label,
-                const std::string& hint,
+                const string& nb,
+                const string& name,
+                const string& label,
+                const string& hint,
                 bool isExtraParam,
                 double defaultValue,
                 PageParamDescriptor *page,
@@ -1963,7 +2034,7 @@ defineDoubleSub(ImageEffectDescriptor &desc,
 
 static void
 defineDouble(ImageEffectDescriptor &desc,
-             const std::string& nb,
+             const string& nb,
              PageParamDescriptor *page,
              GroupParamDescriptor *group)
 {
@@ -1974,10 +2045,10 @@ defineDouble(ImageEffectDescriptor &desc,
 
 static void
 defineDouble2DSub(ImageEffectDescriptor &desc,
-                  const std::string& nb,
-                  const std::string& name,
-                  const std::string& label,
-                  const std::string& hint,
+                  const string& nb,
+                  const string& name,
+                  const string& label,
+                  const string& hint,
                   bool isExtraParam,
                   double defaultValue,
                   PageParamDescriptor *page,
@@ -2002,7 +2073,7 @@ defineDouble2DSub(ImageEffectDescriptor &desc,
 
 static void
 defineDouble2D(ImageEffectDescriptor &desc,
-               const std::string& nb,
+               const string& nb,
                PageParamDescriptor *page,
                GroupParamDescriptor *group)
 {
@@ -2013,10 +2084,10 @@ defineDouble2D(ImageEffectDescriptor &desc,
 
 static void
 defineDouble3DSub(ImageEffectDescriptor &desc,
-                  const std::string& nb,
-                  const std::string& name,
-                  const std::string& label,
-                  const std::string& hint,
+                  const string& nb,
+                  const string& name,
+                  const string& label,
+                  const string& hint,
                   bool isExtraParam,
                   double defaultValue,
                   PageParamDescriptor *page,
@@ -2041,7 +2112,7 @@ defineDouble3DSub(ImageEffectDescriptor &desc,
 
 static void
 defineDouble3D(ImageEffectDescriptor &desc,
-               const std::string& nb,
+               const string& nb,
                PageParamDescriptor *page,
                GroupParamDescriptor *group)
 {
@@ -2052,10 +2123,10 @@ defineDouble3D(ImageEffectDescriptor &desc,
 
 static void
 defineRGBASub(ImageEffectDescriptor &desc,
-              const std::string& nb,
-              const std::string& name,
-              const std::string& label,
-              const std::string& hint,
+              const string& nb,
+              const string& name,
+              const string& label,
+              const string& hint,
               bool isExtraParam,
               double defaultValue,
               PageParamDescriptor *page,
@@ -2080,7 +2151,7 @@ defineRGBASub(ImageEffectDescriptor &desc,
 
 static void
 defineRGBA(ImageEffectDescriptor &desc,
-           const std::string& nb,
+           const string& nb,
            PageParamDescriptor *page,
            GroupParamDescriptor *group)
 {
@@ -2100,6 +2171,59 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 #endif
 
+    // parse the Shadertoy.txt file from the resources to fetch the presets
+    string resourcesPath = desc.getPropertySet().propGetString(kOfxPluginPropFilePath, /*throwOnFailure=*/false) + "/Contents/Resources";
+    {
+        //std::printf( kOfxPluginPropFilePath"= %s", filePath.c_str() );
+        char line[1024];
+        FILE* fp = std::fopen( (resourcesPath + "/Shadertoy.txt").c_str(), "r" );
+        if (fp != NULL) {
+            //int i = 0;
+            while (1) {
+                if (std::fgets(line, sizeof(line), fp) == NULL) {
+                    break;
+                }
+                //++i;
+                //printf("%3d: %s", i, line);
+                if (line[0] == '#') { // skip comments
+                    continue;
+                }
+                // a line looks like
+                //    {"Ball",                            "ball.frag.glsl",                 99,-1,-1,-1},
+                const char* desc = std::strchr(line, '"');
+                if (desc == NULL) {
+                    continue;
+                }
+                ++desc;
+                const char* desc_end = std::strchr(desc, '"');
+                if (desc_end == NULL) {
+                    continue;
+                }
+                string description(desc, desc_end);
+                ++desc_end;
+                const char* file = std::strchr(desc_end, '"');
+                if (file == NULL) {
+                    continue;
+                }
+                ++file;
+                const char* file_end = std::strchr(file, '"');
+                if (file_end == NULL) {
+                    continue;
+                }
+                string filename = resourcesPath + '/' + string(file, file_end);
+                //printf("%s,%s\n", description.c_str(), filename.c_str());
+                // check if file is readable
+                FILE* fps = std::fopen( filename.c_str(), "r" );
+                if (fps == NULL) {
+                    //printf("%s cannot open\n", filename.c_str());
+                    continue;
+                }
+                gPresets.push_back( Preset(description, filename) );
+            }
+            std::fclose(fp);
+        }
+    }
+
     // Source clip only in the filter context
     // create the mandated source clip
     {
@@ -2114,7 +2238,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         srcClip->setOptional( !(context == eContextFilter) );
     }
     for (unsigned i = 1; i < NBINPUTS; ++i) {
-        std::string iChannelX(kClipChannel);
+        string iChannelX(kClipChannel);
         iChannelX += unsignedToString(i);
         ClipDescriptor *srcClip = desc.defineClip(iChannelX);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -2169,7 +2293,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
         // generate the number string
-        std::string nb = unsignedToString(i);
+        string nb = unsignedToString(i);
         defineBooleanSub(desc, nb, kParamValueBool, kParamValueLabel, kParamValueHint, true, page, NULL);
         defineIntSub(desc, nb, kParamValueInt, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
         defineDoubleSub(desc, nb, kParamValueFloat, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
@@ -2210,6 +2334,27 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamImageShaderReload);
             param->setLabel(kParamImageShaderReloadLabel);
             param->setHint(kParamImageShaderReloadHint);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        if ( !gPresets.empty() ) {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageShaderPreset);
+            param->setLabel(kParamImageShaderPresetLabel);
+            string hint = kParamImageShaderPresetHint;
+            replace(hint, "%1", resourcesPath);
+            replace(hint, "%2", resourcesPath + "/Shadertoy.txt");
+            param->setHint(hint);
+            param->appendOption("No preset");
+            for (std::vector<Preset>::iterator it = gPresets.begin(); it != gPresets.end(); ++it) {
+                param->appendOption(it->description);
+            }
+            param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
+            param->setAnimates(false);
             if (page) {
                 page->addChild(*param);
             }
@@ -2303,7 +2448,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
 
         for (unsigned i = 0; i < NBINPUTS; ++i) {
-            std::string nb = unsignedToString(i);
+            string nb = unsignedToString(i);
             {
                 StringParamDescriptor* param = desc.defineStringParam(kParamInputName + nb);
                 param->setLabel("");
@@ -2416,8 +2561,8 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamBBoxOptionIntersection, kParamBBoxOptionIntersectionHint);
             assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxIChannel);
             for (unsigned i = 0; i < NBINPUTS; ++i) {
-                std::string nb = unsignedToString(i);
-                param->appendOption(std::string(kParamBBoxOptionIChannel) + nb, std::string(kParamBBoxOptionIChannelHint) + nb + '.');
+                string nb = unsignedToString(i);
+                param->appendOption(string(kParamBBoxOptionIChannel) + nb, string(kParamBBoxOptionIChannelHint) + nb + '.');
             }
             param->setAnimates(true);
             param->setDefault( (int)ShadertoyPlugin::eBBoxDefault );
@@ -2559,7 +2704,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
             for (unsigned i = 0; i < NBUNIFORMS; ++i) {
                 // generate the number string
-                std::string nb = unsignedToString(i);
+                string nb = unsignedToString(i);
                 GroupParamDescriptor* pgroup = desc.defineGroupParam(kGroupParameter + nb);
                 if (pgroup) {
                     pgroup->setLabel(kGroupParameterLabel + nb);
@@ -2573,7 +2718,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 }
 
                 {
-                    ChoiceParamDescriptor* param = desc.defineChoiceParam(std::string(kParamType) + nb);
+                    ChoiceParamDescriptor* param = desc.defineChoiceParam(string(kParamType) + nb);
                     param->setLabel(kParamTypeLabel);
                     param->setHint(kParamTypeHint);
                     assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeNone);
@@ -2601,7 +2746,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                     }
                 }
                 {
-                    StringParamDescriptor* param = desc.defineStringParam(std::string(kParamName) + nb);
+                    StringParamDescriptor* param = desc.defineStringParam(string(kParamName) + nb);
                     param->setLabel(kParamNameLabel);
                     param->setHint(kParamNameHint);
                     param->setEvaluateOnChange(true);
@@ -2615,7 +2760,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                     }
                 }
                 {
-                    StringParamDescriptor* param = desc.defineStringParam(std::string(kParamLabel) + nb);
+                    StringParamDescriptor* param = desc.defineStringParam(string(kParamLabel) + nb);
                     param->setLabel(kParamLabelLabel);
                     param->setHint(kParamLabelHint);
                     param->setEvaluateOnChange(false);
@@ -2628,7 +2773,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                     }
                 }
                 {
-                    StringParamDescriptor* param = desc.defineStringParam(std::string(kParamHint) + nb);
+                    StringParamDescriptor* param = desc.defineStringParam(string(kParamHint) + nb);
                     param->setLabel(kParamHintLabel);
                     param->setHint(kParamHintHint);
                     param->setEvaluateOnChange(false);

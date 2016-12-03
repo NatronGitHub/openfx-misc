@@ -390,6 +390,7 @@ private:
     OFX::Int2DParam *_formatSize;
     OFX::DoubleParam *_formatPar;
     OFX::StringParam *_imageShaderFileName;
+    OFX::ChoiceParam *_imageShaderPreset;
     OFX::StringParam *_imageShaderSource;
     OFX::PushButtonParam *_imageShaderCompile;
     OFX::IntParam *_imageShaderTriggerRender;
