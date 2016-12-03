@@ -1,3 +1,4 @@
+// https://www.shadertoy.com/view/llXGDN
 void mainImage( out vec4 f, in vec2 w ) 
 {
 	vec2 r = iResolution.xy, p = (w-r*.5) / r.x;

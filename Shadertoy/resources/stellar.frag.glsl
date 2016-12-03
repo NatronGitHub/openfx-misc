@@ -1,6 +1,8 @@
 // from https://www.shadertoy.com/view/Xdl3D2
 
+#ifdef GL_ES
 precision lowp float;
+#endif
 
 vec4 Noise( in ivec2 x )
 {

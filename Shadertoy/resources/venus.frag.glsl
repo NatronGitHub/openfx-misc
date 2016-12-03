@@ -1,3 +1,4 @@
+// https://www.shadertoy.com/view/llsGWM
 #define X c += texture2D(iChannel0, p*.1 - t*.002); p *= .4; c *= .7;
 
 void mainImage( out vec4 f, in vec2 w ) {

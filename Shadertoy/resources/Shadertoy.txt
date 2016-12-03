@@ -1,5 +1,5 @@
 # The sample shaders were collected by popcornmix@github in https://github.com/popcornmix/screensaver.shadertoy,
-# And were adapted (parameters, renderscale, inputs) for the OpenFX Shadertoy.
+# and were adapted (parameters, renderscale, inputs) for the OpenFX Shadertoy.
 # Following is the list of plugins used to build the presets menu, taken from
 # https://github.com/popcornmix/screensaver.shadertoy/blob/master/src/main.cpp
 # The four last colum specify the inputs:

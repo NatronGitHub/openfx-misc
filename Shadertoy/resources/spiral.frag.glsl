@@ -1,6 +1,9 @@
+// https://www.shadertoy.com/view/XdSGzR
 	float     u_time=iGlobalTime*0.2;
         vec2      u_k = vec2(32.0, 32.0);
+#ifdef GL_ES
         precision mediump float;
+#endif
         const float PI=3.1415926535897932384626433832795;
 	const float TAU=6.283185307179586;
 

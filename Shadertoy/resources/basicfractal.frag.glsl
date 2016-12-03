@@ -1,3 +1,4 @@
+// https://www.shadertoy.com/view/Mss3Wf
 //Basic fractal by @paulofalcao
 
 const int maxIterations=6;//a nice value for fullscreen is 8

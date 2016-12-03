@@ -1,3 +1,4 @@
+// https://www.shadertoy.com/view/ldXGRl
 // much simplified version of the fire shader by @301z
 
 const float SCALE = 16.0;
