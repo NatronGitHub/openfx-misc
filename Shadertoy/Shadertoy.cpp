@@ -537,18 +537,21 @@ using std::string;
     "    fragColor = vec4(amplitude*sinetex + (1 - amplitude)*texture2D( iChannel0, uv ).xyz,1.0);\n"  \
     "}"
 
-// mouse parameters, see https://www.shadertoy.com/view/Mss3zH
+// mouse parameters, see:
+// https://www.shadertoy.com/view/Mss3zH
+// https://www.shadertoy.com/view/4sf3RN
+// https://www.shadertoy.com/view/XsGSDz
 #define kParamMouseParams "mouseParams"
 #define kParamMouseParamsLabel "Mouse Params."
 #define kParamMouseParamsHint "Enable mouse parameters."
 
 #define kParamMousePosition "mousePosition"
 #define kParamMousePositionLabel "Mouse Pos."
-#define kParamMousePositionHint "Mouse position, in pixels. Gets mapped to the xy components of the iMouse input."
+#define kParamMousePositionHint "Mouse position, in pixels. Gets mapped to the xy components of the iMouse input. Note that in the web version of Shadertoy, the y coordinate goes from 1 to height."
 
 #define kParamMouseClick "mouseClick"
 #define kParamMouseClickLabel "Click Pos."
-#define kParamMouseClickHint "Mouse click position, in pixels. The zw components of the iMouse input contain mouseClick if mousePressed is checked, else -mouseClick."
+#define kParamMouseClickHint "Mouse click position, in pixels. The zw components of the iMouse input contain mouseClick if mousePressed is checked, else -mouseClick. The default is (1.,1.)"
 
 #define kParamMousePressed "mousePressed"
 #define kParamMousePressedLabel "Mouse Pressed"
@@ -2358,6 +2361,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamMouseClickHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
+        param->setDefault(1.,1.);
         param->setUseHostNativeOverlayHandle(true);
         param->setAnimates(true);
         if (page) {
