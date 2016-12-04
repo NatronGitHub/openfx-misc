@@ -940,8 +940,8 @@ QuantizePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         bool staticSeed = _staticSeed->getValue();
         if (!staticSeed) {
             clipPreferences.setOutputFrameVarying(true);
+            clipPreferences.setOutputHasContinuousSamples(true);
         }
-        clipPreferences.setOutputHasContinuousSamples(true);
     }
 }
 
