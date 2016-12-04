@@ -4,8 +4,7 @@ PLUGINOBJECTS = \
 PLUGINNAME = Shadertoy
 
 RESOURCES = \
-presets \
-textures
+presets
 
 OSMESA_PATH ?= /opt/osmesa
 LLVM_PATH ?= /opt/llvm
