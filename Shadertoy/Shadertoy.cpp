@@ -491,11 +491,11 @@ using std::string;
 
 #define kParamImageShaderPresetDir "imageShaderPresetDir"
 #define kParamImageShaderPresetDirLabel "Presets Directory"
-#define kParamImageShaderPresetDirHint "The directory where presets (and predefined textures) are located. There must be a \"Shadertoy.txt\" file in this directory to give the list of presets (see the default presets directory for an example)."
+#define kParamImageShaderPresetDirHint "The directory where presets are located. There must be a \"Shadertoy.txt\" file in this directory to give the list of presets (see the default presets directory for an example). The default textures are located in \"%1\"."
 
 #define kParamImageShaderPreset "imageShaderPreset"
 #define kParamImageShaderPresetLabel "Load from Preset"
-#define kParamImageShaderPresetHint "Load the source from the preset. The presets and the default textures are located in \"%1\", and more presets can be added by editing \"%2\"."
+#define kParamImageShaderPresetHint "Load the source from the preset. The default textures are located in \"%1\", and more presets can be added by editing \"Shadertoy.txt\" in the Presets Directory."
 
 #define kParamImageShaderSource "imageShaderSource"
 #define kParamImageShaderSourceLabel "Source"
@@ -2304,7 +2304,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     // parse the Shadertoy.txt file from the resources to fetch the presets
     string resourcesPath = desc.getPropertySet().propGetString(kOfxPluginPropFilePath, /*throwOnFailure=*/false) + "/Contents/Resources";
-    presetsFromDir(resourcesPath, gPresetsDefault);
+    presetsFromDir(resourcesPath + "/presets/default", gPresetsDefault);
 
 
     // Source clip only in the filter context
@@ -2428,9 +2428,11 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         if ( !gPresetsDefault.empty() ) {
             StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderPresetDir);
             param->setLabel(kParamImageShaderPresetDirLabel);
-            param->setHint(kParamImageShaderPresetDirHint);
+            string hint = kParamImageShaderPresetDirHint;
+            replace(hint, "%1", resourcesPath + "/presets");
+            param->setHint(hint);
             param->setStringType(eStringTypeDirectoryPath);
-            param->setDefault(resourcesPath);
+            param->setDefault(resourcesPath + "/presets/default");
             param->setEnabled(getImageEffectHostDescription()->isNatron);
             param->setFilePathExists(true);
             param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
@@ -2446,8 +2448,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageShaderPreset);
             param->setLabel(kParamImageShaderPresetLabel);
             string hint = kParamImageShaderPresetHint;
-            replace(hint, "%1", resourcesPath);
-            replace(hint, "%2", resourcesPath + "/Shadertoy.txt");
+            replace(hint, "%1", resourcesPath + "/presets");
             param->setHint(hint);
             param->appendOption("No preset");
             for (std::vector<ShadertoyPlugin::Preset>::iterator it = gPresetsDefault.begin(); it != gPresetsDefault.end(); ++it) {
