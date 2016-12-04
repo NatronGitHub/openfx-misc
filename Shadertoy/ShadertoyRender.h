@@ -1573,6 +1573,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glUniform3fv(shadertoy->iChannelResolutionLoc, NBINPUTS, rv);
     }
     if (shadertoy->iMouseLoc >= 0) {
+        // mouse parameters, see:
+        // https://www.shadertoy.com/view/Mss3zH
+        // https://www.shadertoy.com/view/4sf3RN
+        // https://www.shadertoy.com/view/XsGSDz
+
         double x, y, xc, yc;
         if ( !_mouseParams->getValueAtTime(time) ) {
             x = y = xc = yc = 0.;
@@ -1688,8 +1693,46 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     glCheckError();
     if (shadertoy->iDateLoc >= 0) {
+        // https://www.shadertoy.com/view/4sf3RN
+        // month starts at 0
+        // day starts at 1
+        // time in seconds is from 0 to 86400 (24*60*60)
         // do not use the current date, as it may generate a different image at each render
-        glUniform4f(shadertoy->iDateLoc, 1970, 1, 1, 0);
+        double year, month, day, seconds;
+        _date->getValueAtTime(time, year, month, day, seconds);
+        year = std::floor(year);
+        month = std::floor(month);
+        day = std::floor(day);
+        seconds += t;
+        int dayincr = std::floor(seconds / (24*60*60));
+        seconds = seconds - dayincr * (24*60*60);
+        day += dayincr;
+        if (month == 0 || // jan
+            month == 2 || // mar
+            month == 4 || // mai
+            month == 6 || // jul
+            month == 7 || // aug
+            month == 9 || // oct
+            month == 11) { // dec
+            if (day > 31) {
+                day -= 31;
+                month = ((int)month + 1) % 12;
+            }
+        } else if (month == 3 || // apr
+                   month == 5 || // jun
+                   month == 8 || // sep
+                   month == 10) { // nov
+            if (day > 30) {
+                day -= 30;
+                month = ((int)month + 1) % 12;
+            }
+        } else if (month == 1) { // feb
+            if (day > 28) { // don't care about leap years
+                day -= 28;
+                month = ((int)month + 1) % 12;
+            }
+        }
+        glUniform4f(shadertoy->iDateLoc, year, month, day, seconds);
     }
     if (shadertoy->iSampleRateLoc >= 0) {
         glUniform1f(shadertoy->iSampleRateLoc, 44100);

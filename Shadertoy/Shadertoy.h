@@ -413,6 +413,7 @@ private:
     OFX::Double2DParam *_mousePosition;
     OFX::Double2DParam *_mouseClick;
     OFX::BooleanParam *_mousePressed;
+    OFX::RGBAParam *_date;
     OFX::GroupParam *_groupExtra;
     OFX::IntParam *_paramCount;
     std::vector<OFX::GroupParam *> _paramGroup;

@@ -557,6 +557,10 @@ using std::string;
 #define kParamMousePressedLabel "Mouse Pressed"
 #define kParamMousePressedHint "When checked, the zw components of the iMouse input contain mouseClick, else they contain -mouseClick. If the host does not support animating this parameter, use negative values for mouseClick to emulate a released mouse button."
 
+#define kParamDate "startDate"
+#define kParamDateLabel "Start Date"
+#define kParamDateHint "The date (yyyy,mm,dd,s) corresponding to frame 0. The month starts at 0 for january, the day starts at 1, and the seconds start from 0 at midnight and should be at most 24*60*60=86400. December 28, 1895 at 10:30 would thus the be (1895,11,28,37800)."
+
 #define kGroupExtraParameters "extraParametersGroup"
 #define kGroupExtraParametersLabel "Extra Parameters"
 #define kGroupExtraParametersHint "Description of extra parameters (a.k.a. uniforms) used by the shader source. Note that these parameters must be explicitely declared as uniforms in the shader (to keep compatibility with shadertoy, they may also have a default value set in the shader source)."
@@ -833,6 +837,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _mousePosition(0)
     , _mouseClick(0)
     , _mousePressed(0)
+    , _date(0)
     , _groupExtra(0)
     , _paramCount(0)
     , _paramGroup     (NBUNIFORMS, (GroupParam*)   NULL)
@@ -940,6 +945,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _mouseClick = fetchDouble2DParam(kParamMouseClick);
     _mousePressed = fetchBooleanParam(kParamMousePressed);
     assert(_mousePosition && _mousePressed && _mouseClick);
+    _date = fetchRGBAParam(kParamDate);
+    assert(_date);
     _groupExtra = fetchGroupParam(kGroupExtraParameters);
     _paramCount = fetchIntParam(kParamCount);
     assert(_groupExtra && _paramCount);
@@ -2770,6 +2777,23 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setHint(kParamMouseParamsHint);
             param->setDefault(true);
             param->setAnimates(false);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamDate);
+            param->setLabel(kParamDateLabel);
+            param->setHint(kParamDateHint);
+            param->setDefault(1970., 0., 1., 0.);
+            param->setRange(0, 0, 1, 0, 9999, 11, 31, 24*60*60);
+            param->setDisplayRange(0, 0, 1, 0, 9999, 11, 31, 24*60*60);
+            param->setDimensionLabels("y", "m", "d", "s");
+            param->setAnimates(true);
             if (page) {
                 page->addChild(*param);
             }
