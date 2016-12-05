@@ -1,5 +1,9 @@
 // https://www.shadertoy.com/view/llsGWM
+
+// Style variation of : https://www.shadertoy.com/view/ltXGD7
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked, or tex16.png), filter=mipmap, wrap=repeat
+
 #define X c += texture2D(iChannel0, p*.1 - t*.002); p *= .4; c *= .7;
 
 void mainImage( out vec4 f, in vec2 w ) {

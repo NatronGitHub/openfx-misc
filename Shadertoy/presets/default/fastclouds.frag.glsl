@@ -1,4 +1,7 @@
 // See: https://www.shadertoy.com/view/XsjSRt
+
+// Testing noise generation for 2D real time fbm clouds
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked, or tex12.png), filter=mipmap, wrap=repeat
 
 //SETTINGS//

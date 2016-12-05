@@ -1,5 +1,7 @@
 // from: https://www.shadertoy.com/view/Xs2GDd
 
+// A colony of single cell organisms
+
 #define PI 3.14159265359
 
 uniform vec3 col1 = vec3(0.216, 0.471, 0.698); // blue

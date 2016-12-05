@@ -1,5 +1,7 @@
 // from: https://www.shadertoy.com/view/ltB3zw
 
+// Three colored sine-bands interweaving
+
 vec3 calcSine(vec2 uv, 
               float frequency, float amplitude, float shift, float offset,
               vec3 color, float width)

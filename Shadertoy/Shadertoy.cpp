@@ -2461,6 +2461,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             string hint = kParamImageShaderPresetHint;
             replace(hint, "%1", resourcesPath + "/presets");
             param->setHint(hint);
+            param->setCascading(true);
             param->appendOption("No preset");
             for (std::vector<ShadertoyPlugin::Preset>::iterator it = gPresetsDefault.begin(); it != gPresetsDefault.end(); ++it) {
                 param->appendOption(it->description);

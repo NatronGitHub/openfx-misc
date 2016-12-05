@@ -1,5 +1,7 @@
 // Taken from https://www.shadertoy.com/view/llS3RK
 
+// A simple Worley noise shader. Full tutorial at ibreakdownshaders.blogspot.com. Original shader from  http://glslsandbox.com/e#23237.0
+
 //Calculate the squared length of a vector
 float length2(vec2 p){
     return dot(p,p);

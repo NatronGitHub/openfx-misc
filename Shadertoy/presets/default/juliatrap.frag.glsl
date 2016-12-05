@@ -1,4 +1,7 @@
 // https://www.shadertoy.com/view/4d23WG
+
+// Minimun code showing orbit trapping (line 21) for coloring fractals (and other dynamic systems)
+
 // max_iterations was 17 in the screensaver version
 uniform int max_iterations = 128; // Max. Iterations (Maximum number of iterations), min=0, max=500
 

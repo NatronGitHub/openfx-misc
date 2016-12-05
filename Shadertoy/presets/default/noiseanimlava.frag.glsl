@@ -1,4 +1,7 @@
 // Taken from https://www.shadertoy.com/view/lslXRS
+
+// Playing with different ways of animating noise. In this version, the noise is made using the ideas behind "flow noise", I'm not quite sure it qualifies though, but it looks decent enough.
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked or tex12.png), filter=mipmap, wrap=repeat
 
 //Noise animation - Lava

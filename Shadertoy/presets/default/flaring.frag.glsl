@@ -1,4 +1,7 @@
 // https://www.shadertoy.com/view/lsSGzy
+
+// Procedural flares with easy to tweak settings. Using ridged noise to get sharp noise patterns.
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked, or tex12.png), filter=mipmap, wrap=repeat
 
 //Flaring by nimitz (twitter: @stormoid)

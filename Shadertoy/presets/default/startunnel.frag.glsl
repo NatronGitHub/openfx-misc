@@ -1,4 +1,8 @@
 // see: https://www.shadertoy.com/view/MdlXWr
+
+// Single pass starfield inspired by old school tunnel effects.
+// I wanted to try to render a starfield without any loops or iteration. Each angular segment of space around the viewer generates a random star xy radius from the viewer and z repeat distance.
+
 // mousePosition gives the focus of expansion
 // mouseClick must be non-zero
 // mousePressed must be true

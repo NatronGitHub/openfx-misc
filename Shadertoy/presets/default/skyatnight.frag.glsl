@@ -1,5 +1,7 @@
 // Taken from https://www.shadertoy.com/view/Mlf3WX
 
+// Very cheap clouds and stars
+
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 // Created by S.Guillitte
 

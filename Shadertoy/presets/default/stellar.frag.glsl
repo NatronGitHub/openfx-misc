@@ -1,4 +1,7 @@
 // from https://www.shadertoy.com/view/Xdl3D2
+
+// March through a 2D grid, offsetting stars along z for each grid cell. This is much faster than doing a loop over all stars, but creates some artefacts.
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked, or tex16.png), filter=mipmap, wrap=repeat
 
 #ifdef GL_ES

@@ -1,5 +1,7 @@
 // from: https://www.shadertoy.com/view/XtjGRD
 
+// Hypnotic color circles.
+
 float circle(in vec2 pos, in float t, in float mult)
 {
     vec2 center = vec2(0.5, 0.5 * iResolution.y / iResolution.x);

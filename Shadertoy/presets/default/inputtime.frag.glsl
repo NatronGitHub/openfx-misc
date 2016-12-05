@@ -1,5 +1,7 @@
 // See: https://www.shadertoy.com/view/lsXGz8
 
+// Simple realtime, real time, watch. The background changes with the time of day - dark grey at night, and blue during the day
+
 float R = iResolution.y;		// Screen 'DPI'
 
 // Created by inigo quilez - iq/2013

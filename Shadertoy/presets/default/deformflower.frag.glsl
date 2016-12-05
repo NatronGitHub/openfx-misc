@@ -1,4 +1,7 @@
 // https://www.shadertoy.com/view/4dX3Rn
+
+// A simple abstract flower-like pattern
+
 // Created by inigo quilez - iq/2013
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 

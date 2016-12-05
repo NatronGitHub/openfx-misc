@@ -1,4 +1,7 @@
 // Based on https://www.shadertoy.com/view/ldlXRS
+
+// Playing with different ways of animating noise. In this version, the domain is displaced by two random fbm noise calls (one for each axis).
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked or tex12.png), filter=mipmap, wrap=repeat
 
 //Noise animation - Electric

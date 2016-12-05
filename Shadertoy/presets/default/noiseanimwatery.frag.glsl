@@ -1,4 +1,7 @@
 // Taken from https://www.shadertoy.com/view/MssSRS
+
+// Playing with different ways of animating noise. In this version every point in the domain is rotated by random (fbm) value.
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked or tex12.png), filter=mipmap, wrap=repeat
 
 //Noise animation - Watery by nimitz (twitter: @stormoid)

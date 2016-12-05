@@ -1,5 +1,7 @@
 // from: https://www.shadertoy.com/view/Ml2GWy
 
+// Inspired by the previous Smooth XOR experiment. https://www.shadertoy.com/view/ll2GWy
+
 // Created by inigo quilez - iq/2015
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 

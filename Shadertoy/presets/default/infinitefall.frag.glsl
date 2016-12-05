@@ -1,4 +1,7 @@
 // See: https://www.shadertoy.com/view/ltjXDW
+
+// Conceptually along the same lines as Fabrice Neyret's infinite noise texture example, but with a few minor differences.
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked or tex12.png), filter=mipmap, wrap=repeat
 
 /*

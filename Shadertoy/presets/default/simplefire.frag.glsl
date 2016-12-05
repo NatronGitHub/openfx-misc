@@ -1,4 +1,7 @@
 // https://www.shadertoy.com/view/ldXGRl
+
+// Simpler and faster fire shader based on @301z's fire shader
+
 // much simplified version of the fire shader by @301z
 
 const float SCALE = 16.0;

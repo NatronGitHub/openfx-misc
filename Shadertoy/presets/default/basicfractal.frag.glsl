@@ -1,4 +1,7 @@
 // https://www.shadertoy.com/view/Mss3Wf
+
+// A very very simple fractal, just mirror, rotate and scale ;)
+
 //Basic fractal by @paulofalcao
 
 uniform int maxIterations=6; // Max. Iterations (maximum number of iterations. A nice value for fullscreen is 8), min=1,max=10

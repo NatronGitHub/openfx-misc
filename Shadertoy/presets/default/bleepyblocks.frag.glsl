@@ -1,7 +1,10 @@
 // See: https://www.shadertoy.com/view/MsXSzM
+
+// Wanted to test this funky square pattern before applying it in a raymarched tunnel.. which I hope is coming soon
+
 // iChannel0: Source (tex15.png or any other image), filter=nearest, wrap=repeat
 
-#define TIMESCALE 0.25 
+#define TIMESCALE 0.25
 #define TILES 8
 #define COLOR 0.7, 1.6, 2.8
 

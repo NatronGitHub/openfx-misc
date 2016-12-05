@@ -1,4 +1,7 @@
 // Taken from https://www.shadertoy.com/view/XdX3WN
+
+// 3 points of a glowing triangle orbit round each other. Sine waves with various coefficients define the orbits. The links are rendered by using dot products to determine how close a given fragment is to the edge of the triangle.
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked or tex11.png), filter=mipmap, wrap=repeat
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )

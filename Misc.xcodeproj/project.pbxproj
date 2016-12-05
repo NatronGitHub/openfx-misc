@@ -725,6 +725,51 @@
 		1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */; };
 		1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */; };
 		1EA330AD19E846F7002EFA5B /* CImgEqualize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */; };
+		1EA70F7D1DF5AA2A0039BC64 /* bubbles.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F6E1DF58D6C0039BC64 /* bubbles.frag.glsl */; };
+		1EA70F7E1DF5AA2A0039BC64 /* interationsshiny.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F6F1DF58D6C0039BC64 /* interationsshiny.frag.glsl */; };
+		1EA70F7F1DF5AA2A0039BC64 /* iterationscoral.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F701DF58D6C0039BC64 /* iterationscoral.frag.glsl */; };
+		1EA70F801DF5AA2A0039BC64 /* iterationsguts.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F711DF58D6C0039BC64 /* iterationsguts.frag.glsl */; };
+		1EA70F811DF5AA2A0039BC64 /* iterationsinv.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F721DF58D6C0039BC64 /* iterationsinv.frag.glsl */; };
+		1EA70F821DF5AA2A0039BC64 /* iterationstrig.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F731DF58D6C0039BC64 /* iterationstrig.frag.glsl */; };
+		1EA70F831DF5AA2A0039BC64 /* iterationsworms.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F741DF58D6C0039BC64 /* iterationsworms.frag.glsl */; };
+		1EA70F841DF5AA2A0039BC64 /* lensflare.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F7A1DF5A9740039BC64 /* lensflare.frag.glsl */; };
+		1EA70F851DF5AA2A0039BC64 /* mpegartifacts.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F751DF58D6C0039BC64 /* mpegartifacts.frag.glsl */; };
+		1EA70F861DF5AA2A0039BC64 /* noiseblur.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F761DF58D6C0039BC64 /* noiseblur.frag.glsl */; };
+		1EA70F871DF5AA2A0039BC64 /* warpproc1.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F771DF58D6C0039BC64 /* warpproc1.frag.glsl */; };
+		1EA70F881DF5AA2A0039BC64 /* warpproc2.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F781DF58D6C0039BC64 /* warpproc2.frag.glsl */; };
+		1EA70F891DF5AA2A0039BC64 /* warpproc3.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F7B1DF5A9740039BC64 /* warpproc3.frag.glsl */; };
+		1EA70F8A1DF5AA2A0039BC64 /* warpproc4.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F7C1DF5A9740039BC64 /* warpproc4.frag.glsl */; };
+		1EA70F8B1DF5AA2A0039BC64 /* warptex.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F791DF58D6C0039BC64 /* warptex.frag.glsl */; };
+		1EA70FA71DF5C1360039BC64 /* barrelblurchroma.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F8F1DF5C0500039BC64 /* barrelblurchroma.frag.glsl */; };
+		1EA70FA81DF5C1360039BC64 /* bilateralfilter.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F901DF5C0500039BC64 /* bilateralfilter.frag.glsl */; };
+		1EA70FA91DF5C1360039BC64 /* bloompostproc.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F911DF5C0500039BC64 /* bloompostproc.frag.glsl */; };
+		1EA70FAA1DF5C1360039BC64 /* blurpoissondisc.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F921DF5C0500039BC64 /* blurpoissondisc.frag.glsl */; };
+		1EA70FAB1DF5C1360039BC64 /* chromaticaberration.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F931DF5C0500039BC64 /* chromaticaberration.frag.glsl */; };
+		1EA70FAC1DF5C1360039BC64 /* circularblur.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F941DF5C0500039BC64 /* circularblur.frag.glsl */; };
+		1EA70FAD1DF5C1360039BC64 /* cmykhalftone.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F951DF5C0500039BC64 /* cmykhalftone.frag.glsl */; };
+		1EA70FAE1DF5C1360039BC64 /* fastblur.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F961DF5C0500039BC64 /* fastblur.frag.glsl */; };
+		1EA70FAF1DF5C1360039BC64 /* filmgrain.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F971DF5C0500039BC64 /* filmgrain.frag.glsl */; };
+		1EA70FB01DF5C1360039BC64 /* gaussianblur.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F981DF5C0500039BC64 /* gaussianblur.frag.glsl */; };
+		1EA70FB11DF5C1360039BC64 /* glitch01.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F991DF5C0500039BC64 /* glitch01.frag.glsl */; };
+		1EA70FB21DF5C1360039BC64 /* glitch02.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F9A1DF5C0500039BC64 /* glitch02.frag.glsl */; };
+		1EA70FB31DF5C1360039BC64 /* hdrbloom.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F9B1DF5C0500039BC64 /* hdrbloom.frag.glsl */; };
+		1EA70FB41DF5C1360039BC64 /* imagecelshade.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F9C1DF5C0500039BC64 /* imagecelshade.frag.glsl */; };
+		1EA70FB51DF5C1360039BC64 /* juliabulb.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F9D1DF5C0500039BC64 /* juliabulb.frag.glsl */; };
+		1EA70FB61DF5C1360039BC64 /* mandelbrotdist.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F9E1DF5C0500039BC64 /* mandelbrotdist.frag.glsl */; };
+		1EA70FB71DF5C1360039BC64 /* medianfilter.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F9F1DF5C0500039BC64 /* medianfilter.frag.glsl */; };
+		1EA70FB81DF5C1360039BC64 /* montecarloblur.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FA01DF5C0500039BC64 /* montecarloblur.frag.glsl */; };
+		1EA70FB91DF5C1360039BC64 /* oldvideo.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FA11DF5C0500039BC64 /* oldvideo.frag.glsl */; };
+		1EA70FBA1DF5C1360039BC64 /* postprocessing.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FA21DF5C0500039BC64 /* postprocessing.frag.glsl */; };
+		1EA70FBB1DF5C1360039BC64 /* radialblur.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FA31DF5C0500039BC64 /* radialblur.frag.glsl */; };
+		1EA70FBC1DF5C1360039BC64 /* raining.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FA41DF5C0500039BC64 /* raining.frag.glsl */; };
+		1EA70FBD1DF5C1360039BC64 /* tvsnow.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FA51DF5C0500039BC64 /* tvsnow.frag.glsl */; };
+		1EA70FBE1DF5C1360039BC64 /* vangogh.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FA61DF5C0500039BC64 /* vangogh.frag.glsl */; };
+		1EA70FBF1DF5C1360039BC64 /* mandelbrottrap.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F8C1DF5AD490039BC64 /* mandelbrottrap.frag.glsl */; };
+		1EA70FC01DF5C1360039BC64 /* moneyfilter.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F8D1DF5AD490039BC64 /* moneyfilter.frag.glsl */; };
+		1EA70FC11DF5C1360039BC64 /* notebook.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70F8E1DF5AD490039BC64 /* notebook.frag.glsl */; };
+		1EA70FC51DF5CDA10039BC64 /* c64.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FC21DF5C51B0039BC64 /* c64.frag.glsl */; };
+		1EA70FC61DF5CDA10039BC64 /* glitchA.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FC31DF5C51B0039BC64 /* glitchA.frag.glsl */; };
+		1EA70FC71DF5CDA10039BC64 /* glitchB.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA70FC41DF5C51B0039BC64 /* glitchB.frag.glsl */; };
 		1EA7BC9C1C5AA7450026C46A /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EA7BC9D1C5AA7450026C46A /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EA7BC9E1C5AA7450026C46A /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -2178,6 +2223,51 @@
 			dstPath = presets/default;
 			dstSubfolderSpec = 7;
 			files = (
+				1EA70FC51DF5CDA10039BC64 /* c64.frag.glsl in CopyFiles */,
+				1EA70FC61DF5CDA10039BC64 /* glitchA.frag.glsl in CopyFiles */,
+				1EA70FC71DF5CDA10039BC64 /* glitchB.frag.glsl in CopyFiles */,
+				1EA70FA71DF5C1360039BC64 /* barrelblurchroma.frag.glsl in CopyFiles */,
+				1EA70FA81DF5C1360039BC64 /* bilateralfilter.frag.glsl in CopyFiles */,
+				1EA70FA91DF5C1360039BC64 /* bloompostproc.frag.glsl in CopyFiles */,
+				1EA70FAA1DF5C1360039BC64 /* blurpoissondisc.frag.glsl in CopyFiles */,
+				1EA70FAB1DF5C1360039BC64 /* chromaticaberration.frag.glsl in CopyFiles */,
+				1EA70FAC1DF5C1360039BC64 /* circularblur.frag.glsl in CopyFiles */,
+				1EA70FAD1DF5C1360039BC64 /* cmykhalftone.frag.glsl in CopyFiles */,
+				1EA70FAE1DF5C1360039BC64 /* fastblur.frag.glsl in CopyFiles */,
+				1EA70FAF1DF5C1360039BC64 /* filmgrain.frag.glsl in CopyFiles */,
+				1EA70FB01DF5C1360039BC64 /* gaussianblur.frag.glsl in CopyFiles */,
+				1EA70FB11DF5C1360039BC64 /* glitch01.frag.glsl in CopyFiles */,
+				1EA70FB21DF5C1360039BC64 /* glitch02.frag.glsl in CopyFiles */,
+				1EA70FB31DF5C1360039BC64 /* hdrbloom.frag.glsl in CopyFiles */,
+				1EA70FB41DF5C1360039BC64 /* imagecelshade.frag.glsl in CopyFiles */,
+				1EA70FB51DF5C1360039BC64 /* juliabulb.frag.glsl in CopyFiles */,
+				1EA70FB61DF5C1360039BC64 /* mandelbrotdist.frag.glsl in CopyFiles */,
+				1EA70FB71DF5C1360039BC64 /* medianfilter.frag.glsl in CopyFiles */,
+				1EA70FB81DF5C1360039BC64 /* montecarloblur.frag.glsl in CopyFiles */,
+				1EA70FB91DF5C1360039BC64 /* oldvideo.frag.glsl in CopyFiles */,
+				1EA70FBA1DF5C1360039BC64 /* postprocessing.frag.glsl in CopyFiles */,
+				1EA70FBB1DF5C1360039BC64 /* radialblur.frag.glsl in CopyFiles */,
+				1EA70FBC1DF5C1360039BC64 /* raining.frag.glsl in CopyFiles */,
+				1EA70FBD1DF5C1360039BC64 /* tvsnow.frag.glsl in CopyFiles */,
+				1EA70FBE1DF5C1360039BC64 /* vangogh.frag.glsl in CopyFiles */,
+				1EA70FBF1DF5C1360039BC64 /* mandelbrottrap.frag.glsl in CopyFiles */,
+				1EA70FC01DF5C1360039BC64 /* moneyfilter.frag.glsl in CopyFiles */,
+				1EA70FC11DF5C1360039BC64 /* notebook.frag.glsl in CopyFiles */,
+				1EA70F7D1DF5AA2A0039BC64 /* bubbles.frag.glsl in CopyFiles */,
+				1EA70F7E1DF5AA2A0039BC64 /* interationsshiny.frag.glsl in CopyFiles */,
+				1EA70F7F1DF5AA2A0039BC64 /* iterationscoral.frag.glsl in CopyFiles */,
+				1EA70F801DF5AA2A0039BC64 /* iterationsguts.frag.glsl in CopyFiles */,
+				1EA70F811DF5AA2A0039BC64 /* iterationsinv.frag.glsl in CopyFiles */,
+				1EA70F821DF5AA2A0039BC64 /* iterationstrig.frag.glsl in CopyFiles */,
+				1EA70F831DF5AA2A0039BC64 /* iterationsworms.frag.glsl in CopyFiles */,
+				1EA70F841DF5AA2A0039BC64 /* lensflare.frag.glsl in CopyFiles */,
+				1EA70F851DF5AA2A0039BC64 /* mpegartifacts.frag.glsl in CopyFiles */,
+				1EA70F861DF5AA2A0039BC64 /* noiseblur.frag.glsl in CopyFiles */,
+				1EA70F871DF5AA2A0039BC64 /* warpproc1.frag.glsl in CopyFiles */,
+				1EA70F881DF5AA2A0039BC64 /* warpproc2.frag.glsl in CopyFiles */,
+				1EA70F891DF5AA2A0039BC64 /* warpproc3.frag.glsl in CopyFiles */,
+				1EA70F8A1DF5AA2A0039BC64 /* warpproc4.frag.glsl in CopyFiles */,
+				1EA70F8B1DF5AA2A0039BC64 /* warptex.frag.glsl in CopyFiles */,
 				1E738B671DF41E30000F582E /* ball.frag.glsl in CopyFiles */,
 				1E738B681DF41E30000F582E /* basicfractal.frag.glsl in CopyFiles */,
 				1E738B691DF41E30000F582E /* bleepyblocks.frag.glsl in CopyFiles */,
@@ -3283,6 +3373,51 @@
 		1EA0C21519BA1243006AB602 /* Dissolve.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Dissolve.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgPlasma.cpp; path = Plasma/CImgPlasma.cpp; sourceTree = "<group>"; };
 		1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgEqualize.cpp; path = Equalize/CImgEqualize.cpp; sourceTree = "<group>"; };
+		1EA70F6E1DF58D6C0039BC64 /* bubbles.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bubbles.frag.glsl; sourceTree = "<group>"; };
+		1EA70F6F1DF58D6C0039BC64 /* interationsshiny.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = interationsshiny.frag.glsl; sourceTree = "<group>"; };
+		1EA70F701DF58D6C0039BC64 /* iterationscoral.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = iterationscoral.frag.glsl; sourceTree = "<group>"; };
+		1EA70F711DF58D6C0039BC64 /* iterationsguts.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = iterationsguts.frag.glsl; sourceTree = "<group>"; };
+		1EA70F721DF58D6C0039BC64 /* iterationsinv.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = iterationsinv.frag.glsl; sourceTree = "<group>"; };
+		1EA70F731DF58D6C0039BC64 /* iterationstrig.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = iterationstrig.frag.glsl; sourceTree = "<group>"; };
+		1EA70F741DF58D6C0039BC64 /* iterationsworms.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = iterationsworms.frag.glsl; sourceTree = "<group>"; };
+		1EA70F751DF58D6C0039BC64 /* mpegartifacts.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mpegartifacts.frag.glsl; sourceTree = "<group>"; };
+		1EA70F761DF58D6C0039BC64 /* noiseblur.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = noiseblur.frag.glsl; sourceTree = "<group>"; };
+		1EA70F771DF58D6C0039BC64 /* warpproc1.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = warpproc1.frag.glsl; sourceTree = "<group>"; };
+		1EA70F781DF58D6C0039BC64 /* warpproc2.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = warpproc2.frag.glsl; sourceTree = "<group>"; };
+		1EA70F791DF58D6C0039BC64 /* warptex.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = warptex.frag.glsl; sourceTree = "<group>"; };
+		1EA70F7A1DF5A9740039BC64 /* lensflare.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = lensflare.frag.glsl; sourceTree = "<group>"; };
+		1EA70F7B1DF5A9740039BC64 /* warpproc3.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = warpproc3.frag.glsl; sourceTree = "<group>"; };
+		1EA70F7C1DF5A9740039BC64 /* warpproc4.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = warpproc4.frag.glsl; sourceTree = "<group>"; };
+		1EA70F8C1DF5AD490039BC64 /* mandelbrottrap.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mandelbrottrap.frag.glsl; sourceTree = "<group>"; };
+		1EA70F8D1DF5AD490039BC64 /* moneyfilter.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = moneyfilter.frag.glsl; sourceTree = "<group>"; };
+		1EA70F8E1DF5AD490039BC64 /* notebook.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = notebook.frag.glsl; sourceTree = "<group>"; };
+		1EA70F8F1DF5C0500039BC64 /* barrelblurchroma.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = barrelblurchroma.frag.glsl; sourceTree = "<group>"; };
+		1EA70F901DF5C0500039BC64 /* bilateralfilter.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bilateralfilter.frag.glsl; sourceTree = "<group>"; };
+		1EA70F911DF5C0500039BC64 /* bloompostproc.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bloompostproc.frag.glsl; sourceTree = "<group>"; };
+		1EA70F921DF5C0500039BC64 /* blurpoissondisc.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = blurpoissondisc.frag.glsl; sourceTree = "<group>"; };
+		1EA70F931DF5C0500039BC64 /* chromaticaberration.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = chromaticaberration.frag.glsl; sourceTree = "<group>"; };
+		1EA70F941DF5C0500039BC64 /* circularblur.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = circularblur.frag.glsl; sourceTree = "<group>"; };
+		1EA70F951DF5C0500039BC64 /* cmykhalftone.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cmykhalftone.frag.glsl; sourceTree = "<group>"; };
+		1EA70F961DF5C0500039BC64 /* fastblur.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = fastblur.frag.glsl; sourceTree = "<group>"; };
+		1EA70F971DF5C0500039BC64 /* filmgrain.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = filmgrain.frag.glsl; sourceTree = "<group>"; };
+		1EA70F981DF5C0500039BC64 /* gaussianblur.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = gaussianblur.frag.glsl; sourceTree = "<group>"; };
+		1EA70F991DF5C0500039BC64 /* glitch01.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = glitch01.frag.glsl; sourceTree = "<group>"; };
+		1EA70F9A1DF5C0500039BC64 /* glitch02.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = glitch02.frag.glsl; sourceTree = "<group>"; };
+		1EA70F9B1DF5C0500039BC64 /* hdrbloom.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = hdrbloom.frag.glsl; sourceTree = "<group>"; };
+		1EA70F9C1DF5C0500039BC64 /* imagecelshade.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = imagecelshade.frag.glsl; sourceTree = "<group>"; };
+		1EA70F9D1DF5C0500039BC64 /* juliabulb.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = juliabulb.frag.glsl; sourceTree = "<group>"; };
+		1EA70F9E1DF5C0500039BC64 /* mandelbrotdist.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mandelbrotdist.frag.glsl; sourceTree = "<group>"; };
+		1EA70F9F1DF5C0500039BC64 /* medianfilter.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = medianfilter.frag.glsl; sourceTree = "<group>"; };
+		1EA70FA01DF5C0500039BC64 /* montecarloblur.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = montecarloblur.frag.glsl; sourceTree = "<group>"; };
+		1EA70FA11DF5C0500039BC64 /* oldvideo.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = oldvideo.frag.glsl; sourceTree = "<group>"; };
+		1EA70FA21DF5C0500039BC64 /* postprocessing.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = postprocessing.frag.glsl; sourceTree = "<group>"; };
+		1EA70FA31DF5C0500039BC64 /* radialblur.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = radialblur.frag.glsl; sourceTree = "<group>"; };
+		1EA70FA41DF5C0500039BC64 /* raining.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = raining.frag.glsl; sourceTree = "<group>"; };
+		1EA70FA51DF5C0500039BC64 /* tvsnow.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tvsnow.frag.glsl; sourceTree = "<group>"; };
+		1EA70FA61DF5C0500039BC64 /* vangogh.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = vangogh.frag.glsl; sourceTree = "<group>"; };
+		1EA70FC21DF5C51B0039BC64 /* c64.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = c64.frag.glsl; sourceTree = "<group>"; };
+		1EA70FC31DF5C51B0039BC64 /* glitchA.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = glitchA.frag.glsl; sourceTree = "<group>"; };
+		1EA70FC41DF5C51B0039BC64 /* glitchB.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = glitchB.frag.glsl; sourceTree = "<group>"; };
 		1EA7BCAC1C5AA7450026C46A /* Despill.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Despill.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EA7BCAE1C5AA7820026C46A /* Despill.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Despill.cpp; sourceTree = "<group>"; };
 		1EA7BCAF1C5AA7820026C46A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -4885,28 +5020,65 @@
 			isa = PBXGroup;
 			children = (
 				1E738B2F1DF41DD3000F582E /* ball.frag.glsl */,
+				1EA70F8F1DF5C0500039BC64 /* barrelblurchroma.frag.glsl */,
 				1E738B301DF41DD3000F582E /* basicfractal.frag.glsl */,
+				1EA70F901DF5C0500039BC64 /* bilateralfilter.frag.glsl */,
 				1E738B311DF41DD3000F582E /* bleepyblocks.frag.glsl */,
+				1EA70F911DF5C0500039BC64 /* bloompostproc.frag.glsl */,
+				1EA70F921DF5C0500039BC64 /* blurpoissondisc.frag.glsl */,
+				1EA70F6E1DF58D6C0039BC64 /* bubbles.frag.glsl */,
+				1EA70FC21DF5C51B0039BC64 /* c64.frag.glsl */,
 				1E738B321DF41DD3000F582E /* cellular.frag.glsl */,
+				1EA70F931DF5C0500039BC64 /* chromaticaberration.frag.glsl */,
+				1EA70F941DF5C0500039BC64 /* circularblur.frag.glsl */,
+				1EA70F951DF5C0500039BC64 /* cmykhalftone.frag.glsl */,
 				1E738B331DF41DD3000F582E /* colorcircles.frag.glsl */,
 				1E738B341DF41DD3000F582E /* deformflower.frag.glsl */,
 				1E738B351DF41DD3000F582E /* dotdotdot.frag.glsl */,
+				1EA70F961DF5C0500039BC64 /* fastblur.frag.glsl */,
 				1E738B361DF41DD3000F582E /* fastclouds.frag.glsl */,
+				1EA70F971DF5C0500039BC64 /* filmgrain.frag.glsl */,
 				1E738B371DF41DD3000F582E /* fireball.frag.glsl */,
 				1E738B381DF41DD3000F582E /* flaring.frag.glsl */,
 				1E738B391DF41DD3000F582E /* fractaltiling.frag.glsl */,
+				1EA70F981DF5C0500039BC64 /* gaussianblur.frag.glsl */,
+				1EA70F991DF5C0500039BC64 /* glitch01.frag.glsl */,
+				1EA70F9A1DF5C0500039BC64 /* glitch02.frag.glsl */,
+				1EA70FC31DF5C51B0039BC64 /* glitchA.frag.glsl */,
+				1EA70FC41DF5C51B0039BC64 /* glitchB.frag.glsl */,
 				1E738B3A1DF41DD3000F582E /* glowingthing.frag.glsl */,
+				1EA70F9B1DF5C0500039BC64 /* hdrbloom.frag.glsl */,
+				1EA70F9C1DF5C0500039BC64 /* imagecelshade.frag.glsl */,
 				1E738B3B1DF41DD3000F582E /* infinitefall.frag.glsl */,
 				1E738B3C1DF41DD3000F582E /* inputtime.frag.glsl */,
+				1EA70F6F1DF58D6C0039BC64 /* interationsshiny.frag.glsl */,
+				1EA70F701DF58D6C0039BC64 /* iterationscoral.frag.glsl */,
+				1EA70F711DF58D6C0039BC64 /* iterationsguts.frag.glsl */,
+				1EA70F721DF58D6C0039BC64 /* iterationsinv.frag.glsl */,
+				1EA70F731DF58D6C0039BC64 /* iterationstrig.frag.glsl */,
+				1EA70F741DF58D6C0039BC64 /* iterationsworms.frag.glsl */,
+				1EA70F9D1DF5C0500039BC64 /* juliabulb.frag.glsl */,
 				1E738B3D1DF41DD3000F582E /* juliasm.frag.glsl */,
 				1E738B3E1DF41DD3000F582E /* juliatrap.frag.glsl */,
+				1EA70F7A1DF5A9740039BC64 /* lensflare.frag.glsl */,
+				1EA70F9E1DF5C0500039BC64 /* mandelbrotdist.frag.glsl */,
+				1EA70F8C1DF5AD490039BC64 /* mandelbrottrap.frag.glsl */,
+				1EA70F9F1DF5C0500039BC64 /* medianfilter.frag.glsl */,
+				1EA70F8D1DF5AD490039BC64 /* moneyfilter.frag.glsl */,
+				1EA70FA01DF5C0500039BC64 /* montecarloblur.frag.glsl */,
+				1EA70F751DF58D6C0039BC64 /* mpegartifacts.frag.glsl */,
 				1E738B3F1DF41DD3000F582E /* noise.frag.glsl */,
 				1E738B401DF41DD3000F582E /* noiseanimelectric.frag.glsl */,
 				1E738B411DF41DD3000F582E /* noiseanimlava.frag.glsl */,
 				1E738B421DF41DD3000F582E /* noiseanimwatery.frag.glsl */,
+				1EA70F761DF58D6C0039BC64 /* noiseblur.frag.glsl */,
+				1EA70F8E1DF5AD490039BC64 /* notebook.frag.glsl */,
+				1EA70FA11DF5C0500039BC64 /* oldvideo.frag.glsl */,
 				1E738B431DF41DD3000F582E /* plasma2.frag.glsl */,
 				1E738B441DF41DD3000F582E /* plasmatriangle.frag.glsl */,
-				1E738B451DF41DD3000F582E /* Shadertoy.txt */,
+				1EA70FA21DF5C0500039BC64 /* postprocessing.frag.glsl */,
+				1EA70FA31DF5C0500039BC64 /* radialblur.frag.glsl */,
+				1EA70FA41DF5C0500039BC64 /* raining.frag.glsl */,
 				1E738B461DF41DD3000F582E /* silexarst.frag.glsl */,
 				1E738B471DF41DD3000F582E /* simplefire.frag.glsl */,
 				1E738B481DF41DD3000F582E /* sinebands.frag.glsl */,
@@ -4915,10 +5087,18 @@
 				1E738B4B1DF41DD3000F582E /* startunnel.frag.glsl */,
 				1E738B4C1DF41DD3000F582E /* stellar.frag.glsl */,
 				1E738B4D1DF41DD3000F582E /* test.frag.glsl */,
+				1EA70FA51DF5C0500039BC64 /* tvsnow.frag.glsl */,
+				1EA70FA61DF5C0500039BC64 /* vangogh.frag.glsl */,
 				1E738B4E1DF41DD3000F582E /* venus.frag.glsl */,
 				1E738B4F1DF41DD3000F582E /* warp.frag.glsl */,
+				1EA70F771DF58D6C0039BC64 /* warpproc1.frag.glsl */,
+				1EA70F781DF58D6C0039BC64 /* warpproc2.frag.glsl */,
+				1EA70F7B1DF5A9740039BC64 /* warpproc3.frag.glsl */,
+				1EA70F7C1DF5A9740039BC64 /* warpproc4.frag.glsl */,
+				1EA70F791DF58D6C0039BC64 /* warptex.frag.glsl */,
 				1E738B501DF41DD3000F582E /* watercaustic.frag.glsl */,
 				1E738B511DF41DD3000F582E /* worleynoisewaters.frag.glsl */,
+				1E738B451DF41DD3000F582E /* Shadertoy.txt */,
 			);
 			path = default;
 			sourceTree = "<group>";

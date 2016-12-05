@@ -1,5 +1,7 @@
 // from https://www.shadertoy.com/view/4lB3DG
 
+// My first nice-looking (or at least not-too-bad-looking) fragment shader. \o/
+
 void mainImage(out vec4 f, vec2 u )
 {
 	u /= iResolution.xy;

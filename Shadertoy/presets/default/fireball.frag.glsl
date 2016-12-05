@@ -1,4 +1,7 @@
 // https://www.shadertoy.com/view/llXGDN
+
+// [2TC 15] FireBall : tweaked version of : https://www.shadertoy.com/view/lsf3RH
+
 // iChannel0: Rand (The output of a Rand plugin with Static Seed checked, or tex16.png), filter=mipmap, wrap=repeat
 
 void mainImage( out vec4 f, in vec2 w )

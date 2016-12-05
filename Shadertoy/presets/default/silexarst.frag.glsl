@@ -1,5 +1,7 @@
 // Taken from https://www.shadertoy.com/view/XsXXDn
 
+// My first release in the demoscene. Achieved second place @ DemoJS 2011. It has been said that it is the first 1k WebGL intro ever released.
+
 // http://www.pouet.net/prod.php?which=57245
 
 #define t iGlobalTime

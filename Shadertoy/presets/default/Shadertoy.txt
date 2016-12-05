@@ -1,14 +1,8 @@
 # The sample shaders were collected by popcornmix@github in https://github.com/popcornmix/screensaver.shadertoy,
 # and were adapted (parameters, renderscale, inputs) for the OpenFX Shadertoy.
-# Following is the list of plugins used to build the presets menu, taken from
+# Following is the list of plugins used to build the presets menu, taken from variable g_presets in
 # https://github.com/popcornmix/screensaver.shadertoy/blob/master/src/main.cpp
-# The format is actually simpler that it seems: there should be two strings between
-# quotes per line:
-# - the shader description
-# - the shader file name, relative to the presets directory
-# Everything else is ignored.
-# Lines starting with '#' are ignored too.
-# The four last colums, which are ignored, specify the inputs:
+# The four last columns, which are ignored, specify the inputs:
 # -1: no input
 # 0-15: one of the default textures, indices 0 to 12 are tex00-tex12, 13 is tex15,
 #       14 is tex16, 15 is tex14
@@ -19,38 +13,88 @@
 # tex00.jpg tex01.jpg tex02.jpg tex03.jpg tex04.jpg tex05.jpg tex06.jpg tex07.jpg
 # tex17.jpg tex18.jpg tex19.jpg tex20.jpg tex08.jpg tex09.jpg tex10.png tex11.png
 # tex12.png tex15.png tex16.png tex14.png
+
+# The format is actually simple: there should be two strings between
+# quotes per line:
+# - the shader description
+# - the shader file name, relative to the presets directory
+# Everything else is ignored.
+# Lines starting with '#' are ignored too.
     
-   {"Ball",                            "ball.frag.glsl",                 99,-1,-1,-1},
-   {"Basic Fractal",                   "basicfractal.frag.glsl",         -1,-1,-1,-1},
-   {"Bleepy Blocks",                   "bleepyblocks.frag.glsl",         99,-1,-1,-1},
-   {"Cellular",                        "cellular.frag.glsl",             -1,-1,-1,-1},
-   {"Coloured Circles",                "colorcircles.frag.glsl",         -1,-1,-1,-1},
-   {"Deform Flower",                   "deformflower.frag.glsl",         -1,-1,-1,-1},
-   {"Dot Dot Dot",                     "dotdotdot.frag.glsl",            -1,-1,-1,-1},
-   {"Fast Clouds",                     "fastclouds.frag.glsl",           12,-1,-1,-1},
-   {"Fireball",                        "fireball.frag.glsl",             14,-1,-1,-1},
-   {"Flaring",                         "flaring.frag.glsl",              12,-1,-1,-1},
-   {"Fractal Tiling",                  "fractaltiling.frag.glsl",        -1,-1,-1,-1},
-   {"Glowing Thing",                   "glowingthing.frag.glsl",         -1,-1,-1,-1},
-   {"Infinite Fall",                   "infinitefall.frag.glsl",         98,-1,-1,-1},
-   {"Input Time",                      "inputtime.frag.glsl",            -1,-1,-1,-1},
-   {"Interstellar",                    "stellar.frag.glsl",              14,-1,-1,-1},
-   {"Interweaving Sine bands",         "sinebands.frag.glsl",            -1,-1,-1,-1},
-   {"Juliasm",                         "juliasm.frag.glsl",              -1,-1,-1,-1},
-   {"Julia Trap",                      "juliatrap.frag.glsl",            -1,-1,-1,-1},
-   {"Noise",                           "noise.frag.glsl",                -1,-1,-1,-1},
-   {"Noise Animation Electric",        "noiseanimelectric.frag.glsl",    12,-1,-1,-1},
-   {"Noise Animation Lava",            "noiseanimlava.frag.glsl",        12,-1,-1,-1},
-   {"Noise Animation Watery",          "noiseanimwatery.frag.glsl",      12,-1,-1,-1},
-   {"Plasma Triangle",                 "plasmatriangle.frag.glsl",       11,-1,-1,-1},
-   {"Plasma2",                         "plasma2.frag.glsl",              -1,-1,-1,-1},
-   {"Silexars Creation",               "silexarst.frag.glsl",            -1,-1,-1,-1},
-   {"Simple Fire",                     "simplefire.frag.glsl",           -1,-1,-1,-1},
-   {"Sky at Night",                    "skyatnight.frag.glsl",           -1,-1,-1,-1},
-   {"Spiral",                          "spiral.frag.glsl",               -1,-1,-1,-1},
-   {"Star Tunnel",                     "startunnel.frag.glsl",           -1,-1,-1,-1},
-   {"Venus",                           "venus.frag.glsl",                14,-1,-1,-1},
-   {"Warp",                            "warp.frag.glsl",                 99,-1,-1,-1},
+"Bleepy Blocks" "bleepyblocks.frag.glsl"
+"Blur/Bilateral Filter" "bilateralfilter.frag.glsl"
+"Blur/Bloom Post-PRocess" "bloompostproc.frag.glsl"
+"Blur/Circular Blur" "circularblur.frag.glsl"
+"Blur/Fast Blur" "fastblur.frag.glsl"
+"Blur/Gaussian Blur" "gaussianblur.frag.glsl"
+"Blur/HDR Bloom" "hdrbloom.frag.glsl"
+"Blur/Monte Carlo Blur" "montecarloblur.frag.glsl"
+"Blur/Poisson Disc" "blurpoissondisc.frag.glsl"
+"Blur/Simple Radial Blur" "radialblur.frag.glsl"
+"Bubbles" "bubbles.frag.glsl"
+"Cellular" "cellular.frag.glsl"
+"Coloured Circles" "colorcircles.frag.glsl"
+"Deform Flower" "deformflower.frag.glsl"
+"Dot Dot Dot" "dotdotdot.frag.glsl"
+"Effect/Ball" "ball.frag.glsl"
+"Effect/Barrel Blur Chroma" "barrelblurchroma.frag.glsl"
+"Effect/C64" "c64.frag.glsl"
+"Effect/Chromatic Aberration" "chromaticaberration.frag.glsl"
+"Effect/CMYK Halftone" "cmykhalftone.frag.glsl"
+"Effect/Film Grain" "filmgrain.frag.glsl"
+"Effect/Glitch 01" "glitch01.frag.glsl"
+"Effect/Glitch 02" "glitch02.frag.glsl"
+"Effect/Glitch A" "glitchA.frag.glsl"
+"Effect/Glitch B" "glitchB.frag.glsl"
+"Effect/Image Cel Shade" "imagecelshade.frag.glsl"
+"Effect/Median Filter" "medianfilter.frag.glsl"
+"Effect/Money Filter" "moneyfilter.frag.glsl"
+"Effect/Old Video" "oldvideo.frag.glsl"
+"Effect/Postprocessing" "postprocessing.frag.glsl"
+"Effect/TV Snow" "tvsnow.frag.glsl"
+"Effect/Van Gogh" "vangogh.frag.glsl"
+"Fast Clouds" "fastclouds.frag.glsl"
+"Fireball" "fireball.frag.glsl"
+"Flaring" "flaring.frag.glsl"
+"Fractal/Basic Fractal" "basicfractal.frag.glsl"
+"Fractal/Fractal Tiling" "fractaltiling.frag.glsl"
+"Fractal/Juliasm" "juliasm.frag.glsl"
+"Fractal/Julia Bulb" "juliabulb.frag.glsl"
+"Fractal/Julia Trap" "juliatrap.frag.glsl"
+"Fractal/Mandelbrot Distance" "mandelbrotdist.frag.glsl"
+"Fractal/Mandelbrot Orbit Trap" "mandelbrottrap.frag.glsl"
+"Glowing Thing" "glowingthing.frag.glsl"
+"Infinite Fall" "infinitefall.frag.glsl"
+"Input Time" "inputtime.frag.glsl"
+"Interstellar" "stellar.frag.glsl"
+"Interweaving Sine bands" "sinebands.frag.glsl"
+"Iterations/Coral" iterationscoral.frag.glsl"
+"Iterations/Guts" "iterationsguts.frag.glsl"
+"Iterations/Inversion" "iterationsinv.frag.glsl"
+"Iterations/Shiny" "iterationsshiny.frag.glsl"
+"Iterations/Trigonometric" "iterationstrig.frag.glsl"
+"Iterations/Worms" "iterationsworms.frag.glsl"
+"Lens Flare" "lensflare.frag.glsl"
+"Noise" "noise.frag.glsl"
+"Noise Animation Electric" "noiseanimelectric.frag.glsl"
+"Noise Animation Lava" "noiseanimlava.frag.glsl"
+"Noise Animation Watery" "noiseanimwatery.frag.glsl"
+"Noise Blur" "noiseblur.frag.glsl"
+"Notebook Drawings" "notebook.frag.glsl"
+"Plasma Triangle" "plasmatriangle.frag.glsl"
+"Plasma2" "plasma2.frag.glsl"
+"Silexars Creation" "silexarst.frag.glsl"
+"Simple Fire" "simplefire.frag.glsl"
+"Sky at Night" "skyatnight.frag.glsl"
+"Spiral" "spiral.frag.glsl"
+"Star Tunnel" "startunnel.frag.glsl"
+"Venus" "venus.frag.glsl"
+"Warping/Warp" "warp.frag.glsl"
+"Warping/Procedural 1" "warpproc1.frag.glsl"
+"Warping/Procedural 2" "warpproc2.frag.glsl"
+"Warping/Procedural 3" "warpproc3.frag.glsl"
+"Warping/Procedural 4" "warpproc4.frag.glsl"
+"Warping/Texture" "warptex.frag.glsl"
    {"Water Caustic",                   "watercaustic.frag.glsl",         -1,-1,-1,-1},
 
 # for some reason, the following are not in the screensaver.shadertoy list

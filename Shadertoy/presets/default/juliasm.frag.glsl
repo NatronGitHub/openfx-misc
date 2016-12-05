@@ -1,4 +1,7 @@
 // See: https://www.shadertoy.com/view/XssXDr
+
+// An animating julia set, heavy colored
+
 // max_iterations was 14 in the screensaver version
 uniform int max_iterations = 255; // Max. Iterations (Maximum number of iterations), min=0, max=500
 
