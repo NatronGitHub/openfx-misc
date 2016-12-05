@@ -442,9 +442,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = OFX::ePixelComponentNone;
-        srcPixelComponentCount = 0;
-        srcBitDepth = OFX::eBitDepthNone;
+        srcPixelComponents = _srcClip->getPixelComponents();
+        srcPixelComponentCount = _srcClip->getPixelComponentCount();
+        srcBitDepth = _srcClip->getPixelDepth();
         srcRowBytes = 0;
     } else {
         assert(_srcClip);
@@ -647,9 +647,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = OFX::ePixelComponentNone;
-        srcPixelComponentCount = 0;
-        srcBitDepth = OFX::eBitDepthNone;
+        srcPixelComponents = _srcClip->getPixelComponents();
+        srcPixelComponentCount = _srcClip->getPixelComponentCount();
+        srcBitDepth = _srcClip->getPixelDepth();
         srcRowBytes = 0;
     }
 
