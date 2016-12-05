@@ -3,6 +3,7 @@
 // Image Effect
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 vec2 Circle(float Start, float Points, float Point) 
 {

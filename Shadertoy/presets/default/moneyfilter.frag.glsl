@@ -4,6 +4,7 @@
 // My website: http://kyrie.pe
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 // Money filter by Giacomo Preciado
 // Based on: "Free Engraved Illustration Effect Action for Photoshop" - http://snip.ly/j0gq

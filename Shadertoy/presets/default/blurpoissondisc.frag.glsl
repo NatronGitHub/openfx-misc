@@ -3,6 +3,9 @@
 // Just a regular poisson-disc blur.
 // (bottom picking from mipmap instead)
 
+// iChannel0: Source, filter=mipmap, wrap=repeat
+// BBox: iChannel0
+
 #define ANIMATE_NOISE
 
 float nrand( vec2 n ) {

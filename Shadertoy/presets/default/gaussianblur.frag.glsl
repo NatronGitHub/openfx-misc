@@ -3,6 +3,7 @@
 // Could be faster with two passes
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 #ifdef GL_ES
 precision mediump float;

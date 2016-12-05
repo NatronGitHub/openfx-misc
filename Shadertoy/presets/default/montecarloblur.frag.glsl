@@ -3,6 +3,7 @@
 // Monte Carlo blur.
 
 // iChannel0: Source, filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 #define ITER 32
 #define SIZE 16.0

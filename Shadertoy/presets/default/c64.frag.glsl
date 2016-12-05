@@ -3,6 +3,7 @@
 // Comodore like post processing shader
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 float find_closest(int x, int y, float c0) {
 

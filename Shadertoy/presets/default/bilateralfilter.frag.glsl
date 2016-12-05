@@ -4,6 +4,7 @@
 // You can drag the active zone using the mouse.
 
 // iChannel0: Source, filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 #ifdef GL_ES
 precision mediump float;

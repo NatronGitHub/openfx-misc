@@ -4,6 +4,7 @@
 // Second glitch-effect from the demo 'shampain': http://www.pouet.net/prod.php?which=60539
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 float sat( float t ) {
 	return clamp( t, 0.0, 1.0 );

@@ -4,6 +4,7 @@
 // The shader itself is pretty useless, but well, it was fun to do. Any comments are welcomed, of course!
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 #define BLACK_AND_WHITE
 #define LINES_AND_FLICKER

@@ -4,6 +4,7 @@
 // Update: Now with mouse support
 
 // iChannel0: Source, filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 const int nsamples = 10;
 

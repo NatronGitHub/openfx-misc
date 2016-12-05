@@ -2,7 +2,7 @@
 
 // Warp. Tutorial here: http://www.iquilezles.org/www/articles/warp/warp.htm
 
-// iChannel0: Rand, filter=linear, wrap=repeat
+// iChannel0: Rand (The output of a Rand plugin with Static Seed checked, or tex12.png), filter=linear, wrap=repeat
 
 // Created by inigo quilez - iq/2013
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.

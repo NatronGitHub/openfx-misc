@@ -3,6 +3,7 @@
 // Median filter via sorting networks. Was mostly just curious to see if I could break WebGL with sorting networks.  It's a pretty dodgy way to do median.
 
 // iChannel0: Source, filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 //Looks like 16 is too much for Windows!
 //16/32 is pretty good on Mac, 64 works but slow.

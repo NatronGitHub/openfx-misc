@@ -4,6 +4,7 @@
 // Original idea by Kusma: https://github.com/kusma/vlee/blob/master/data/postprocess.fx
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 float linterp( float t ) {
 	return clamp( 1.0 - abs( 2.0*t - 1.0 ), 0.0, 1.0 );

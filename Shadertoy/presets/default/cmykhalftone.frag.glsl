@@ -3,6 +3,7 @@
 // CMYK halftone shader. Use mouse to scale and rotate halftone pattern. View in full screen for best result.
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 #define DOTSIZE 1.48
 #define D2R(d) radians(d)

@@ -4,6 +4,7 @@
 
 // iChannel0: Source, filter=mipmap, wrap=repeat
 // iChannel1: Dither (The tex15.png texture), filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 float nrand( vec2 n ) {
 	return fract(sin(dot(n.xy, vec2(12.9898, 78.233)))* 43758.5453);

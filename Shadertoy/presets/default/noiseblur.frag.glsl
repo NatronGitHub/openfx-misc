@@ -3,6 +3,7 @@
 // Or a line integral, pretty much inspired by fizzer's "funcky planet". I used to know this as "directional blur" in the demoscene times. Here it is anyway, a doodling that ended up looking cute I think ^_^
 
 // iChannel0: Source, filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 // Created by inigo quilez - iq/2013
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.

@@ -4,6 +4,7 @@
 // Dragging the mouse along the x-axis changes bloom intensity, dragging along the y-axis changes bloom threshold.
 
 // iChannel0: Source, filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 float Threshold = 0.0+iMouse.y/iResolution.y*1.0;
 float Intensity = 2.0-iMouse.x/iResolution.x*2.0;

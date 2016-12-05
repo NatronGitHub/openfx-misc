@@ -3,6 +3,7 @@
 // Click to set the glitch boundary.
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 float GlitchAmount = 1.0;
 

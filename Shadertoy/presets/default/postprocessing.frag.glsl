@@ -3,6 +3,7 @@
 // Image postprocessing in GLSL. Includes zooming, contrast, vigneting, color separation, tint, tv lines and brightness flicker
 
 // iChannel0: Source, filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 // Created by inigo quilez - iq/2013
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.

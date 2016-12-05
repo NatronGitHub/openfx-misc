@@ -4,6 +4,7 @@
 // Posterize directly RGB(right image) values gives a bad result with color banding particulary with low colors values
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 float nColors =4.0;
 

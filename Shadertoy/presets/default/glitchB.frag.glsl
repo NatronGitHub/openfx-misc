@@ -3,11 +3,14 @@
 // Increasing corruption from left to right.
 
 // iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 #define PI 3.14159265
 #define TILE_SIZE 16.0
 
+#ifdef GL_ES
 precision highp float;
+#endif
 
 float wow;
 float Amount = 1.0;

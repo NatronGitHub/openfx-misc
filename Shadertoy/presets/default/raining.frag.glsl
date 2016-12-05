@@ -6,6 +6,7 @@
 
 // iChannel0: Source, filter=mipmap, wrap=repeat
 // iChannel1: Distortion (The distortion texture, try with a Rand), filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {

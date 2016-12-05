@@ -5,7 +5,8 @@
 // Probably not the best (or most efficient) way to create a blur, but works for what I've done. I've also exaggerated the blur to show it off, because the videos aren't HDR :P
 
 // iChannel0: Source, filter=linear, wrap=clamp
-// iChannel0: LensDirt, filter=mipmap, wrap=repeat
+// iChannel1: LensDirt, filter=mipmap, wrap=repeat
+// BBox: iChannel0
 
 //Bloom Settings
 //BLOOM_THRESHOLD - how bright a pixel needs to be to become blurred

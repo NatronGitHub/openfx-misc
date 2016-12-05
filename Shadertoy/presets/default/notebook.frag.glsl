@@ -5,6 +5,7 @@
 
 // iChannel0: Source, filter=linear, wrap=clamp
 // iChannel1: Rand (The output of a Rand plugin with Static Seed checked, or tex11.png), filter=linear, wrap=repeat
+// BBox: iChannel0
 
 // created by florian berger (flockaroo) - 2016
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
