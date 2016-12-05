@@ -79,8 +79,6 @@ public:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        assert(_srcBounds.x1 < _srcBounds.x2 && _srcBounds.y1 < _srcBounds.y2); // image should be non-empty
-
         if (flip) {
             assert(_srcBounds.y1 <= ( _yoff - (procWindow.y2 - 1) ) && (_yoff - procWindow.y1) < _srcBounds.y2);
         } else {
