@@ -22,6 +22,9 @@
 
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
+#if defined(OFX_EXTENSIONS_NUKE) && defined(TEST_SETTINGS)
+#include "nukeOfxGlobalSettings.h"
+#endif
 
 #include <cmath>
 #include <cfloat> // DBL_MAX
@@ -58,6 +61,41 @@ public:
         // NON-GENERIC
         _translate = fetchDouble2DParam(kParamPositionTranslate);
         assert(_translate);
+#if defined(OFX_EXTENSIONS_NUKE) && defined(TEST_SETTINGS)
+        NukeOfxGlobalSettingsSuiteV1* gGlobalSettingsSuite = (NukeOfxGlobalSettingsSuiteV1*)fetchSuite(kNukeOfxGlobalSettingsSuite, 1, true);
+        if (gGlobalSettingsSuite) {
+            // enumerate all settings
+            int settingsCount;
+            OfxStatus stat;
+            stat = gGlobalSettingsSuite->getSettingsCount(handle, &settingsCount);
+            if (stat != kOfxStatOK) {
+                std::cout << "Could not get settings count\n";
+            } else {
+                std::cout << "Found " << settingsCount << " settings:\n";
+                for (int i = 0; i < settingsCount; ++i) {
+                    char* settingsName;
+                    stat = gGlobalSettingsSuite->getSettingsName(handle, i, &settingsName);
+                    throwSuiteStatusException(stat);
+                    std::cout << "Name: " << settingsName << std::endl;
+                    char* strvalue = NULL;
+                    stat = gGlobalSettingsSuite->getSettingStringValue(handle, settingsName, &strvalue);
+                    if (stat == kOfxStatOK && strvalue != NULL) {
+                        std::cout << "Value=" << strvalue << std::endl;
+                        free(strvalue);
+                    } else {
+                        for (int d = 0; d < 4; ++d) {
+                            double value = -1;
+                            stat = gGlobalSettingsSuite->getSettingDoubleValue(handle, settingsName, d, &value);
+                            if (stat == kOfxStatOK) {
+                                std::cout << "Value[" << d << "]=" << value << std::endl;
+                            }
+                        }
+                    }
+                    free(settingsName);
+                }
+            }
+        }
+#endif
     }
 
 private:
