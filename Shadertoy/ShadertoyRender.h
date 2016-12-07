@@ -1497,8 +1497,107 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
                 glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
             }
-
-            glTexImage2D( srcTarget[i], 0, format,
+            GLenum internalFormat = format;
+            switch (format) {
+            case GL_ALPHA:
+                switch (type) {
+                case GL_UNSIGNED_BYTE:
+                    internalFormat = GL_ALPHA8;
+                    break;
+                case GL_UNSIGNED_SHORT:
+                    internalFormat = GL_ALPHA16;
+                    break;
+                case GL_FLOAT:
+                    internalFormat = GL_ALPHA32F_ARB;
+                    break;
+                case GL_HALF_FLOAT_ARB:
+                    internalFormat = GL_ALPHA16F_ARB;
+                    break;
+                default:
+                    //format/type combo not supported
+                    break;
+                }
+                break;
+            case GL_LUMINANCE:
+                switch (type) {
+                case GL_UNSIGNED_BYTE:
+                    internalFormat = GL_R8;// GL_LUMINANCE8;
+                    break;
+                case GL_UNSIGNED_SHORT:
+                    internalFormat = GL_LUMINANCE16;
+                    break;
+                case GL_FLOAT:
+                    internalFormat = GL_LUMINANCE32F_ARB;
+                    break;
+                case GL_HALF_FLOAT_ARB:
+                    internalFormat = GL_LUMINANCE16F_ARB;
+                    break;
+                default:
+                    //format/type combo not supported
+                    break;
+                }
+                break;
+            case GL_LUMINANCE_ALPHA:
+                switch (type) {
+                case GL_UNSIGNED_BYTE:
+                    internalFormat = GL_RG8;// GL_LUMINANCE8_ALPHA8;
+                    break;
+                case GL_UNSIGNED_SHORT:
+                    internalFormat = GL_LUMINANCE16_ALPHA16;
+                    break;
+                case GL_FLOAT:
+                    internalFormat = GL_LUMINANCE_ALPHA32F_ARB;
+                    break;
+                case GL_HALF_FLOAT_ARB:
+                    internalFormat = GL_LUMINANCE_ALPHA16F_ARB;
+                    break;
+                default:
+                    //format/type combo not supported
+                    break;
+                }
+                break;
+            case GL_RGB:
+                switch (type) {
+                case GL_UNSIGNED_BYTE:
+                    internalFormat = GL_RGB8;
+                    break;
+                case GL_UNSIGNED_SHORT:
+                    internalFormat = GL_RGB16;
+                    break;
+                case GL_FLOAT:
+                    internalFormat = GL_RGB32F_ARB;
+                    break;
+                case GL_HALF_FLOAT_ARB:
+                    internalFormat = GL_RGB16F_ARB;
+                    break;
+                default:
+                    //format/type combo not supported
+                    break;
+                }
+                break;
+            case GL_RGBA:
+                switch (type) {
+                case GL_UNSIGNED_BYTE:
+                    internalFormat = GL_RGBA8;
+                    break;
+                case GL_UNSIGNED_SHORT:
+                    internalFormat = GL_RGBA16;
+                    break;
+                case GL_FLOAT:
+                    internalFormat = GL_RGBA32F_ARB;
+                    break;
+                case GL_HALF_FLOAT_ARB:
+                    internalFormat = GL_RGBA16F_ARB;
+                    break;
+                default:
+                    break;
+                    //format/type combo not supported
+                }
+            default:
+                //bad format
+                break;
+            }
+            glTexImage2D( srcTarget[i], 0, internalFormat,
                           srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
                           format, type, src[i]->getPixelData() );
             glBindTexture(srcTarget[i], 0);
