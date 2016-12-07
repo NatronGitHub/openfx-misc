@@ -80,9 +80,9 @@ public:
     {
         // NON-GENERIC
         if (isDirBlur) {
-            _amount = fetchDoubleParam(kParamTransform3x3Amount);
-            _centered = fetchBooleanParam(kParamTransform3x3Centered);
-            _fading = fetchDoubleParam(kParamTransform3x3Fading);
+            _dirBlurAmount = fetchDoubleParam(kParamTransform3x3DirBlurAmount);
+            _dirBlurCentered = fetchBooleanParam(kParamTransform3x3DirBlurCentered);
+            _dirBlurFading = fetchDoubleParam(kParamTransform3x3DirBlurFading);
         }
 
         _translate = fetchDouble2DParam(kParamTransformTranslateOld);
@@ -92,6 +92,9 @@ public:
         _skewX = fetchDoubleParam(kParamTransformSkewXOld);
         _skewY = fetchDoubleParam(kParamTransformSkewYOld);
         _skewOrder = fetchChoiceParam(kParamTransformSkewOrderOld);
+        if (!isDirBlur) {
+            _transformAmount = fetchDoubleParam(kParamTransformAmount);
+        }
         _center = fetchDouble2DParam(kParamTransformCenterOld);
         _centerChanged = fetchBooleanParam(kParamTransformCenterChanged);
         _interactive = fetchBooleanParam(kParamTransformInteractiveOld);
@@ -128,6 +131,7 @@ private:
     DoubleParam* _skewX;
     DoubleParam* _skewY;
     ChoiceParam* _skewOrder;
+    DoubleParam* _transformAmount;
     Double2DParam* _center;
     BooleanParam* _centerChanged;
     BooleanParam* _interactive;
@@ -139,6 +143,13 @@ bool
 TransformPlugin::isIdentity(double time)
 {
     // NON-GENERIC
+    if (_paramsType != eTransform3x3ParamsTypeDirBlur) {
+        double amount = _transformAmount->getValueAtTime(time);
+        if (amount == 0.) {
+            return true;
+        }
+    }
+
     OfxPointD scaleParam = { 1., 1. };
 
     if (_scale) {
@@ -197,23 +208,26 @@ TransformPlugin::getInverseTransformCanonical(double time,
     }
     bool scaleUniform = false;
     if (_scaleUniform) {
-        _scaleUniform->getValueAtTime(time, scaleUniform);
+        scaleUniform = _scaleUniform->getValueAtTime(time);
     }
     double rotate = 0.;
     if (_rotate) {
-        _rotate->getValueAtTime(time, rotate);
+        rotate = _rotate->getValueAtTime(time);
     }
     double skewX = 0.;
     if (_skewX) {
-        _skewX->getValueAtTime(time, skewX);
+        skewX = _skewX->getValueAtTime(time);
     }
     double skewY = 0.;
     if (_skewY) {
-        _skewY->getValueAtTime(time, skewY);
+        skewY = _skewY->getValueAtTime(time);
     }
     int skewOrder = 0;
     if (_skewOrder) {
-        _skewOrder->getValueAtTime(time, skewOrder);
+        skewOrder = _skewOrder->getValueAtTime(time);
+    }
+    if (_transformAmount) {
+        amount *= _transformAmount->getValueAtTime(time);
     }
 
     OfxPointD scale = { 1., 1. };
@@ -390,7 +404,7 @@ TransformPluginDescribeInContext(ImageEffectDescriptor &desc,
 {
     // NON-GENERIC PARAMETERS
     //
-    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true);
+    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*hasAmount=*/ true, /*noTranslate=*/ false);
 }
 
 void

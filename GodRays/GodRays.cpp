@@ -1162,7 +1162,7 @@ GodRaysPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     // NON-GENERIC PARAMETERS
     //
-    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*noTranslate=*/ true);
+    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*hasAmount=*/ true, /*noTranslate=*/ true);
 
     // invert
     {

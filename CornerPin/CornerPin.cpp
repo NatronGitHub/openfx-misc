@@ -123,6 +123,10 @@ static const char* const kParamFrom[4] = {
 #define kParamOverlayPointsOptionTo "To"
 #define kParamOverlayPointsOptionFrom "From"
 
+#define kParamTransformAmount "transformAmount"
+#define kParamTransformAmountLabel "Amount"
+#define kParamTransformAmountHint "Amount of transform to apply (excluding the extra matrix, which is always applied). 0 means the transform is identity, 1 means to apply the full transform."
+
 #define kGroupExtraMatrix "transformMatrix"
 #define kGroupExtraMatrixLabel "Extra Matrix"
 #define kGroupExtraMatrixHint "This matrix gets concatenated to the transform defined by the other parameters."
@@ -153,6 +157,7 @@ public:
     CornerPinPlugin(OfxImageEffectHandle handle,
                     bool masked)
         : Transform3x3Plugin(handle, masked, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur)
+        , _transformAmount(0)
         , _extraMatrixRow1(0)
         , _extraMatrixRow2(0)
         , _extraMatrixRow3(0)
@@ -165,7 +170,7 @@ public:
             _from[i] = fetchDouble2DParam(kParamFrom[i]);
             assert(_to[i] && _enable[i] && _from[i]);
         }
-
+        _transformAmount = fetchDoubleParam(kParamTransformAmount);
         _extraMatrixRow1 = fetchDouble3DParam(kParamExtraMatrixRow1);
         _extraMatrixRow2 = fetchDouble3DParam(kParamExtraMatrixRow2);
         _extraMatrixRow3 = fetchDouble3DParam(kParamExtraMatrixRow3);
@@ -231,6 +236,7 @@ private:
     // NON-GENERIC
     Double2DParam* _to[4];
     BooleanParam* _enable[4];
+    DoubleParam* _transformAmount;
     Double3DParam* _extraMatrixRow1;
     Double3DParam* _extraMatrixRow2;
     Double3DParam* _extraMatrixRow3;
@@ -262,6 +268,8 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
         }
         p[0][i].z = p[1][i].z = 1.;
     }
+
+    amount *= _transformAmount->getValueAtTime(time);
 
     if (amount != 1.) {
         int k = 0;
@@ -322,6 +330,14 @@ CornerPinPlugin::isIdentity(double time)
     }
 
     // extraMat is identity.
+
+    // check if amount is zero
+    if (_paramsType != eTransform3x3ParamsTypeDirBlur) {
+        double amount = _transformAmount->getValueAtTime(time);
+        if (amount == 0.) {
+            return true;
+        }
+    }
 
     // The transform is identity either if no point is enabled, or if
     // all enabled from's are equal to their counterpart to
@@ -1158,6 +1174,24 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
             if (page) {
                 page->addChild(*param);
             }
+        }
+    }
+
+    // amount
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTransformAmount);
+        param->setLabel(kParamTransformAmountLabel);
+        param->setHint(kParamTransformAmountHint);
+        param->setDoubleType(eDoubleTypeScale);
+        param->setDefault(1.);
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setDisplayRange(0., 1.);
+        param->setIncrement(0.01);
+        //if (group) {
+        //    param->setParent(*group);
+        //}
+        if (page) {
+            page->addChild(*param);
         }
     }
 
