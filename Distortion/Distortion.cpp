@@ -788,7 +788,7 @@ private:
                     break;
                 }
                 } // switch
-                double Jxx = 0., Jxy = 0., Jyx = 0., Jyy = 0.;
+                double Jxx = 1., Jxy = 0., Jyx = 0., Jyy = 1.;
                 if (_transformIsIdentity) {
                     if (filter != eFilterImpulse) {
                         Jxx = sxx;
