@@ -100,31 +100,31 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamBlackPoint "blackPoint"
 #define kParamBlackPointLabel "Black Point"
-#define kParamBlackPointHint "Set the color of the darkest pixels in the image"
+#define kParamBlackPointHint "Set the color of the darkest pixels in the image."
 
 #define kParamWhitePoint "whitePoint"
 #define kParamWhitePointLabel "White Point"
-#define kParamWhitePointHint "Set the color of the brightest pixels in the image"
+#define kParamWhitePointHint "Set the color of the brightest pixels in the image."
 
 #define kParamBlack "black"
 #define kParamBlackLabel "Black"
-#define kParamBlackHint "Colors corresponding to the blackpoint are set to this value"
+#define kParamBlackHint "Colors corresponding to the blackpoint are set to this value."
 
 #define kParamWhite "white"
 #define kParamWhiteLabel "White"
-#define kParamWhiteHint "Colors corresponding to the whitepoint are set to this value"
+#define kParamWhiteHint "Colors corresponding to the whitepoint are set to this value."
 
 #define kParamMultiply "multiply"
 #define kParamMultiplyLabel "Multiply"
-#define kParamMultiplyHint "Multiplies the result by this value"
+#define kParamMultiplyHint "Multiplies the result by this value."
 
 #define kParamOffset "offset"
 #define kParamOffsetLabel "Offset"
-#define kParamOffsetHint "Adds this value to the result (this applies to black and white)"
+#define kParamOffsetHint "Adds this value to the result (this applies to black and white)."
 
 #define kParamGamma "gamma"
 #define kParamGammaLabel "Gamma"
-#define kParamGammaHint "Final gamma correction"
+#define kParamGammaHint "Final gamma correction. Negative values are not affected by gamma."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -245,8 +245,10 @@ public:
 
             return;
         }
-        if (A <= 0) {
-            *v = 0.; // pow would produce NaNs in that case (in Nuke, negative values produce 0 on output in Grade, and v in Gamma)
+        if (gamma == 1.) {
+            *v = A;
+        } else if (A <= 0) {
+            *v = A; // pow would produce NaNs in that case (in Nuke, negative values produce v on output in Grade and Gamma)
         } else {
             double invgamma = 1. / gamma;
             *v = std::pow(A, invgamma);
