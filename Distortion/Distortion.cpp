@@ -224,11 +224,12 @@ enum WrapEnum
 #define kParamDistortionModelOptionNuke "Nuke"
 #define kParamDistortionModelOptionNukeHint "The model used in Nuke's LensDistortion plugin (reverse engineered)."
 
+
 /*
    Possible distortion models:
    (see also <http://michaelkarp.net/distortion.htm>)
 
-   From Oblique <http://s3aws.obliquefx.com/public/shaders/help_files/Obq_LensDistortion.html>
+   From Oblique <https://github.com/madesjardins/Obq_Shaders/wiki/Obq_LensDistortion>
    PFBarrel	:	PFTrack's distortion model.
    Nuke	:	Nuke's distortion model.
    3DE Classic LD Model	:	Science-D-Visions LDPK (3DEqualizer). see <http://www.3dequalizer.com/user_daten/tech_docs/pdf/ldpk.pdf>
@@ -251,6 +252,40 @@ enum WrapEnum
 enum DistortionModelEnum
 {
     eDistortionModelNuke,
+    //eDistortionModelClassic3DE,
+    //eDistortionModelAnamorphic6,
+    //eDistortionModelFishEye8,
+    //eDistortionModelStandard,
+    //eDistortionModelRadialDecenteredCylindric4,
+    //eDistortionModelAnamorphic4,
+    //eDistortionModelPFBarrel,
+};
+
+
+#define kParamDistortionDirection "direction"
+#define kParamDistortionDirectionLabel "Direction"
+#define kParamDistortionDirectionHint "Should the output corrspond to applying or to removing distortion."
+#define kParamDistortionDirectionOptionDistort "Distort"
+#define kParamDistortionDirectionOptionDistortHint "The output corresponds to applying distortion."
+#define kParamDistortionDirectionOptionUndistort "Undistort"
+#define kParamDistortionDirectionOptionUndistortHint "The output corresponds to removing distortion."
+
+enum DirectionEnum {
+    eDirectionDistort,
+    eDirectionUndistort,
+};
+
+#define kParamDistortionOutputMode "outputMode"
+#define kParamDistortionOutputModeLabel "Output Mode"
+#define kParamDistortionOutputModeHint "Choice of the output, which may be either a distorted/undistorted image, or a distortion/undistortion STMap."
+#define kParamDistortionOutputModeOptionImage "Image"
+#define kParamDistortionOutputModeOptionImageHint "The output is the distorted/undistorted Source."
+#define kParamDistortionOutputModeOptionSTMap "STMap"
+#define kParamDistortionOutputModeOptionSTMapHint "The output is a distortion/undistortion STMap."
+
+enum OutputModeEnum {
+    eOutputModeImage,
+    eOutputModeSTMap,
 };
 
 #define kParamK1 "k1"
@@ -318,6 +353,8 @@ protected:
     WrapEnum _uWrap;
     WrapEnum _vWrap;
     DistortionModelEnum _distortionModel;
+    DirectionEnum _direction;
+    OutputModeEnum _outputMode;
     double _par;
     double _k1;
     double _k2;
@@ -355,6 +392,8 @@ public:
         , _uWrap(eWrapClamp)
         , _vWrap(eWrapClamp)
         , _distortionModel(eDistortionModelNuke)
+        , _direction(eDirectionDistort)
+        , _outputMode(eOutputModeImage)
         , _par(1.)
         , _k1(0.)
         , _k2(0.)
@@ -397,6 +436,8 @@ public:
                    WrapEnum uWrap,
                    WrapEnum vWrap,
                    DistortionModelEnum distortionModel,
+                   DirectionEnum direction,
+                   OutputModeEnum outputMode,
                    double par,
                    double k1,
                    double k2,
@@ -427,6 +468,8 @@ public:
         _uWrap = uWrap;
         _vWrap = vWrap;
         _distortionModel = distortionModel;
+        _direction = direction;
+        _outputMode = outputMode;
         _par = par;
         _k1 = k1;
         _k2 = k2;
@@ -772,13 +815,21 @@ private:
                     }
                 }
 
-                if (filter == eFilterImpulse) {
-                    ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
+                if (_outputMode == eOutputModeSTMap) {
+                    // 0,0 corresponds to the lower left corner of the first pixel
+                    tmpPix[0] = (sx - srcx1) / (srcx2 - srcx1); // u
+                    tmpPix[1] = (sy - srcy1) / (srcy2 - srcy1); // v
+                    tmpPix[2] = 1.; // a
+                    tmpPix[3] = 1.; // be opaque
                 } else {
-                    ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
-                }
-                for (unsigned c = 0; c < nComponents; ++c) {
-                    tmpPix[c] *= a;
+                    if (filter == eFilterImpulse) {
+                        ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
+                    } else {
+                        ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+                    }
+                    for (unsigned c = 0; c < nComponents; ++c) {
+                        tmpPix[c] *= a;
+                    }
                 }
                 ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
@@ -838,6 +889,8 @@ public:
         , _uWrap(0)
         , _vWrap(0)
         , _distortionModel(0)
+        , _direction(NULL)
+        , _outputMode(NULL)
         , _k1(0)
         , _k2(0)
         , _k3(0)
@@ -903,6 +956,8 @@ public:
            }*/
         if (_plugin == eDistortionPluginLensDistortion) {
             _distortionModel = fetchChoiceParam(kParamDistortionModel);
+            _direction = fetchChoiceParam(kParamDistortionDirection);
+            _outputMode = fetchChoiceParam(kParamDistortionOutputMode);
             _k1 = fetchDoubleParam(kParamK1);
             _k2 = fetchDoubleParam(kParamK2);
             _k3 = fetchDoubleParam(kParamK3);
@@ -971,6 +1026,8 @@ private:
     ChoiceParam* _uWrap;
     ChoiceParam* _vWrap;
     ChoiceParam* _distortionModel;
+    ChoiceParam* _direction;
+    ChoiceParam* _outputMode;
     DoubleParam* _k1;
     DoubleParam* _k2;
     DoubleParam* _k3;
@@ -1345,7 +1402,9 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         uScale *= args.renderScale.x;
         vScale *= args.renderScale.y;
     }
-    DistortionModelEnum distortionModel = eDistortionModelNuke;
+    DistortionModelEnum distortionModel = _distortionModel ? (DistortionModelEnum)_distortionModel->getValue() : eDistortionModelNuke;
+    DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
+    OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
     double par = 1., k1 = 0., k2 = 0., k3 = 0., p1 = 0., p2 = 0., cx = 0., cy = 0., squeeze = 1., ax = 0., ay = 0.;
     if (_plugin == eDistortionPluginLensDistortion) {
         distortionModel = (DistortionModelEnum)_distortionModel->getValueAtTime(time);
@@ -1378,7 +1437,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                         uOffset, vOffset,
                         uScale, vScale,
                         uWrap, vWrap,
-                        distortionModel, par, k1, k2, k3, p1, p2, cx, cy, squeeze, ax, ay,
+                        distortionModel,
+                        direction,
+                        outputMode,
+                        par, k1, k2, k3, p1, p2, cx, cy, squeeze, ax, ay,
                         blackOutside, mix);
 
     // Call the base class process member, this will call the derived templated process code
@@ -2138,13 +2200,40 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             }
         }
         {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionDirection);
+            param->setLabel(kParamDistortionDirectionLabel);
+            param->setHint(kParamDistortionDirectionHint);
+            assert(param->getNOptions() == eDirectionDistort);
+            param->appendOption(kParamDistortionDirectionOptionDistort, kParamDistortionDirectionOptionDistortHint);
+            assert(param->getNOptions() == eDirectionUndistort);
+            param->appendOption(kParamDistortionDirectionOptionUndistort, kParamDistortionDirectionOptionUndistortHint);
+#pragma message WARN("TODO: undistort")
+            param->setIsSecretAndDisabled(true);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionOutputMode);
+            param->setLabel(kParamDistortionOutputModeLabel);
+            param->setHint(kParamDistortionOutputModeHint);
+            assert(param->getNOptions() == eOutputModeImage);
+            param->appendOption(kParamDistortionOutputModeOptionImage, kParamDistortionOutputModeOptionImageHint);
+            assert(param->getNOptions() == eOutputModeSTMap);
+            param->appendOption(kParamDistortionOutputModeOptionSTMap, kParamDistortionOutputModeOptionSTMapHint);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK1);
             param->setLabel(kParamK1Label);
             param->setHint(kParamK1Hint);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.3, 0.3);
 #ifdef OFX_EXTENSIONS_NUKE
-            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            //param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
             if (page) {
                 page->addChild(*param);
@@ -2157,7 +2246,7 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
 #ifdef OFX_EXTENSIONS_NUKE
-            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            //param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
             if (page) {
                 page->addChild(*param);
@@ -2180,7 +2269,7 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
 #ifdef OFX_EXTENSIONS_NUKE
-            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            //param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
             if (page) {
                 page->addChild(*param);
