@@ -273,15 +273,15 @@ private:
                 for (int c = 0; c < 4; ++c) {
                     if (unpPix[c] <= 0.) {
                         // gamma function is not defined for negative values
-                        tmpPix[c] = unpPix[c]; // pow would produce NaNs in that case (in Nuke, negative values produce 0 on output in Grade, and v in Gamma)
+                        tmpPix[c] = unpPix[c]; // pow would produce NaNs in that case (in Nuke, negative values produce v on output in Grade and Gamma)
                     } else if ( processR && (c == 0) ) {
-                        tmpPix[0] = unpPix[0] > 0. ? std::pow(unpPix[0], (float)_value.r) : unpPix[0];
+                        tmpPix[0] = (_value.r != 1.) ? std::pow(unpPix[0], (float)_value.r) : unpPix[0];
                     } else if ( processG && (c == 1) ) {
-                        tmpPix[1] = unpPix[1] > 0. ? std::pow(unpPix[1], (float)_value.g) : unpPix[1];
+                        tmpPix[1] = (_value.g != 1.) ? std::pow(unpPix[1], (float)_value.g) : unpPix[1];
                     } else if ( processB && (c == 2) ) {
-                        tmpPix[2] = unpPix[2] > 0. ? std::pow(unpPix[2], (float)_value.b) : unpPix[2];
+                        tmpPix[2] = (_value.b != 1.) ? std::pow(unpPix[2], (float)_value.b) : unpPix[2];
                     } else if ( processA && (c == 3) ) {
-                        tmpPix[3] = unpPix[3] > 0. ? std::pow(unpPix[3], (float)_value.a) : unpPix[3];
+                        tmpPix[3] = (_value.a != 1.) ? std::pow(unpPix[3], (float)_value.a) : unpPix[3];
                     } else {
                         tmpPix[c] = unpPix[c];
                     }
