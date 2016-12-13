@@ -51,7 +51,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Apply a parametric lookup curve to each channel separately.\n" \
     "The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
-    "Computation is faster for values that are within the given range.\n" \
+    "Computation is faster for values that are within the given range, so it is recommended to set the Range parameter if the input range goes beyond [0,1].\n" \
     "\n" \
     "Note that you can easily do color remapping by setting Source and Target colors and clicking \"Set RGB\" or \"Set RGBA\" below.\n" \
     "This will add control points on the curve to match the target from the source. You can add as many point as you like.\n" \
@@ -212,7 +212,7 @@ public:
     }
 
 protected:
-    // clamp for integer types
+    // clamp for integer PIX types
     template<class PIX>
     float clamp(float value,
                 int maxValue)
@@ -220,7 +220,7 @@ protected:
         return std::max( 0.f, std::min( value, float(maxValue) ) );
     }
 
-    // clamp for integer types
+    // clamp for integer PIX types
     template<class PIX>
     double clamp(double value,
                  int maxValue)
@@ -234,6 +234,21 @@ protected:
 template<>
 float
 ColorLookupProcessorBase::clamp<float>(float value,
+                                       int maxValue)
+{
+    assert(maxValue == 1.);
+    if ( _clampBlack && (value < 0.) ) {
+        value = 0.f;
+    } else if ( _clampWhite && (value > 1.0) ) {
+        value = 1.0f;
+    }
+
+    return value;
+}
+
+template<>
+double
+ColorLookupProcessorBase::clamp<float>(double value,
                                        int maxValue)
 {
     assert(maxValue == 1.);
