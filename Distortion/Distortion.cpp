@@ -20,6 +20,10 @@
  * OFX Distortion plugins.
  */
 
+/* TODO:
+ - optionally expand/contract RoD in LensDistortion,
+    see PFBarrelCommon::calculateOutputRect (sample 10 points on each side of image rect)
+ */
 /*
    Although the indications from nuke/fnOfxExtensions.h were followed, and the
    kFnOfxImageEffectActionGetTransform action was implemented in the Support
@@ -222,7 +226,9 @@ enum WrapEnum
 #define kParamDistortionModelLabel "Model"
 #define kParamDistortionModelHint "Choice of the distortion model, i.e. the function that goes from distorted to undistorted image coordinates."
 #define kParamDistortionModelOptionNuke "Nuke"
-#define kParamDistortionModelOptionNukeHint "The model used in Nuke's LensDistortion plugin (reverse engineered)."
+#define kParamDistortionModelOptionNukeHint "The model used in Nuke's LensDistortion plugin."
+#define kParamDistortionModelOptionPFBarrel "PFBarrel"
+#define kParamDistortionModelOptionPFBarrelHint "The PFBarrel model used in PFTrack by PixelFarm."
 
 
 /*
@@ -252,13 +258,13 @@ enum WrapEnum
 enum DistortionModelEnum
 {
     eDistortionModelNuke,
+    eDistortionModelPFBarrel,
     //eDistortionModelClassic3DE,
     //eDistortionModelAnamorphic6,
     //eDistortionModelFishEye8,
     //eDistortionModelStandard,
     //eDistortionModelRadialDecenteredCylindric4,
     //eDistortionModelAnamorphic4,
-    //eDistortionModelPFBarrel,
 };
 
 
@@ -281,7 +287,7 @@ enum DirectionEnum {
 #define kParamDistortionOutputModeOptionImage "Image"
 #define kParamDistortionOutputModeOptionImageHint "The output is the distorted/undistorted Source."
 #define kParamDistortionOutputModeOptionSTMap "STMap"
-#define kParamDistortionOutputModeOptionSTMapHint "The output is a distortion/undistortion STMap."
+#define kParamDistortionOutputModeOptionSTMapHint "The output is a distortion/undistortion STMap. It is recommended to insert a FrameHold node at the Source input."
 
 enum OutputModeEnum {
     eOutputModeImage,
@@ -296,6 +302,7 @@ enum OutputModeEnum {
 #define kParamK2Label "K2"
 #define kParamK2Hint "Second radial distortion coefficient (coefficient for r^4)."
 
+#if 0
 #define kParamK3 "k3"
 #define kParamK3Label "K3"
 #define kParamK3Hint "Third radial distortion coefficient (coefficient for r^6)."
@@ -307,6 +314,7 @@ enum OutputModeEnum {
 #define kParamP2 "p2"
 #define kParamP2Label "P2"
 #define kParamP2Hint "Second tangential distortion coefficient."
+#endif
 
 #define kParamCenter "center"
 #define kParamCenterLabel "Center"
@@ -320,6 +328,312 @@ enum OutputModeEnum {
 #define kParamAsymmetricLabel "Asymmetric"
 #define kParamAsymmetricHint "Asymmetric distortion (only for anamorphic lens)."
 
+#define kParamPFC3 "pfC3"
+#define kParamPFC3Label "C3"
+#define kParamPFC3Hint "Low order radial distortion coefficient."
+
+#define kParamPFC5 "pfC5"
+#define kParamPFC5Label "C5"
+#define kParamPFC5Hint "Low order radial distortion coefficient."
+
+#define kParamPFSqueeze "pfSqueeze"
+#define kParamPFSqueezeLabel "Squeeze"
+#define kParamPFSqueezeHint "Anamorphic squeeze (only for anamorphic lens)."
+
+#define kParamPFP "pfP"
+#define kParamPFPLabel "Center"
+#define kParamPFPHint "The distortion center of the lens (specified as a factor rather than a pixel value)"
+
+// a generic distortion model abstract class (distortion parameters are added by the derived class)
+class DistortionModel
+{
+protected:
+    DistortionModel() {};
+
+public:
+    virtual ~DistortionModel() {};
+
+private:  // noncopyable
+    DistortionModel( const DistortionModel& );
+    DistortionModel& operator=( const DistortionModel& );
+
+public:
+    // function used to distort a point or undistort an image
+    virtual void distort(double xu, double yu, double* xd, double *yd) const = 0;
+
+    // function used to undistort a point or distort an image
+    virtual void undistort(double xd, double yd, double* xu, double *yu) const = 0;
+};
+
+// parameters for Newton method:
+#define EPSJAC 1.e-3 // epsilon for Jacobian calculation
+#define EPSCONV 1.e-4 // epsilon for convergence test
+
+// a distortion model class where ony the undistort function is given, and distort is solved by Newton
+class DistortionModelUndistort
+: public DistortionModel
+{
+protected:
+    DistortionModelUndistort() {};
+
+    virtual ~DistortionModelUndistort() {};
+
+private:
+    // function used to distort a point or undistort an image
+    virtual void distort(const double xu,
+			 const double yu,
+			 double* xd,
+			 double *yd) const OVERRIDE FINAL
+    {
+	// build initial guess
+	double x = xu;
+	double y = yu;
+
+	// always converges in a couple of iterations
+	for (int iter= 0; iter< 10; iter++) {
+	    // calculate the function gradient at the current guess
+
+	    // TODO: analytic derivatives
+	    double x00, y00, x10, y10, x01, y01;
+	    undistort(x, y, &x00, &y00);
+	    undistort(x + EPSJAC, y, &x10, &y10);
+	    undistort(x, y + EPSJAC, &x01, &y01);
+
+	    // perform newton iteration
+	    x00 -= xu;
+	    y00 -= yu;
+	    x10 -= xu;
+	    y10 -= yu;
+	    x01 -= xu;
+	    y01 -= yu;
+
+	    x10 -= x00;
+	    y10 -= y00;
+	    x01 -= x00;
+	    y01 -= y00;
+
+	    // approximate using finite differences
+	    const double dx = std::sqrt(x10 * x10 + y10 * y10) / EPSJAC;
+	    const double dy = std::sqrt(x01 * x01 + y01 * y01) / EPSJAC;
+
+	    if (dx < DBL_EPSILON || dy < DBL_EPSILON) { // was dx == 0. || dy == 0.
+		break;
+	    }
+
+	    // make a step towards the root
+	    const double x1 = x - x00 / dx;
+	    const double y1 = y - y00 / dy;
+
+	    x -= x1;
+	    y -= y1;
+
+	    const double dist= x * x + y * y;
+
+	    x = x1;
+	    y = y1;
+
+	    //printf("%d : %g,%g: dist= %g\n",iter,x,y,dist);
+
+	    // converged?
+	    if (dist < EPSCONV) {
+		break;
+	    }
+	}
+
+	// default
+	*xd = x;
+	*yd = y;
+    }
+
+    // function used to undistort a point or distort an image
+    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE = 0;
+};
+
+class DistortionModelNuke
+: public DistortionModelUndistort
+{
+public:
+    DistortionModelNuke(const OfxRectI& srcRoDPixel,
+			double par,
+			double k1,
+			double k2,
+			double cx,
+			double cy,
+			double squeeze,
+			double ax,
+			double ay)
+    : _par(par)
+    , _k1(k1)
+    , _k2(k2)
+    , _cx(cx)
+    , _cy(cy)
+    , _squeeze(squeeze)
+    , _ax(ax)
+    , _ay(ay)
+    {
+	double fx = (srcRoDPixel.x2 - srcRoDPixel.x1) / 2.;
+	double fy = (srcRoDPixel.y2 - srcRoDPixel.y1) / 2.;
+	_f = std::max(fx, fy); // TODO: distortion scaling param for LensDistortion?
+	_xSrcCenter = (srcRoDPixel.x1 + srcRoDPixel.x2) / 2.;
+	_ySrcCenter = (srcRoDPixel.y1 + srcRoDPixel.y2) / 2.;
+    }
+
+    virtual ~DistortionModelNuke() {};
+
+private:
+    // function used to undistort a point or distort an image
+    // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
+    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
+    {
+	double xdn = _par * (xd - _xSrcCenter) / _f;
+	double ydn = (yd - _ySrcCenter) / _f;
+	double sx, sy;
+	undistort_nuke(xdn, ydn,
+		       _k1, _k2, _cx, _cy, _squeeze, _ax, _ay,
+		       &sx, &sy);
+	sx /= _par;
+	sx *= _f;
+	sx += _xSrcCenter;
+	sy *= _f;
+	sy += _ySrcCenter;
+
+	*xu = sx;
+	*yu = sy;
+    }
+
+    // Nuke's distortion function, reverse engineered from the resulting images on a checkerboard (and a little science, too)
+    // this function undistorts positions, but is also used to distort the image.
+    // Similar to the function distortNuke in Obq_LensDistortion.h
+    static inline void
+    undistort_nuke(double xd,
+		   double yd,            // distorted position in normalized coordinates ([-1..1] on the largest image dimension, (0,0 at image center))
+		   double k1,
+		   double k2,            // radial distortion
+		   double cx,
+		   double cy,            // distortion center, (0,0) at center of image
+		   double squeeze, // anamorphic squeeze
+		   double ax,
+		   double ay,            // asymmetric distortion
+		   double *xu,
+		   double *yu)             // distorted position in normalized coordinates
+    {
+	// nuke?
+	// k1 = radial distortion 1
+	// k2 = radial distortion 2
+	// squeeze = anamorphic squeeze
+	// p1 = asymmetric distortion x
+	// p2 = asymmetric distortion y
+	double x = (xd - cx);
+	double y = (yd - cy);
+	double x2 = x * x, y2 = y * y;
+	double r2 = x2 + y2;
+	double k2r2pk1 = k2 * r2 + k1;
+	//double kry = 1 + ((k2r2pk1 + ay)*x2 + k2r2pk1*y2);
+	double kry = 1 + (k2r2pk1 * r2 + ay * x2);
+
+	*yu = (y / kry) + cy;
+	//double krx = 1 + (k2r2pk1*x2 + (k2r2pk1 + ax)*y2)/squeeze;
+	double krx = 1 + (k2r2pk1 * r2 + ax * y2) / squeeze;
+	*xu = (x / krx) + cx;
+    }
+
+    double _par;
+    double _f;
+    double _xSrcCenter;
+    double _ySrcCenter;
+    double _k1;
+    double _k2;
+    double _cx;
+    double _cy;
+    double _squeeze;
+    double _ax;
+    double _ay;
+};
+
+class DistortionModelPFBarrel
+: public DistortionModelUndistort
+{
+public:
+    DistortionModelPFBarrel(const OfxRectI& srcRoDPixel,
+			double par,
+			double c3,
+			double c5,
+			double xp,
+			double yp,
+			double squeeze)
+    : _par(par)
+    , _c3(c3)
+    , _c5(c5)
+    , _xp(xp)
+    , _yp(yp)
+    , _squeeze(squeeze)
+    {
+	/*
+	double fx = (srcRoDPixel.x2 - srcRoDPixel.x1) / 2.;
+	double fy = (srcRoDPixel.y2 - srcRoDPixel.y1) / 2.;
+	_f = std::max(fx, fy); // TODO: distortion scaling param for LensDistortion?
+	_xSrcCenter = (srcRoDPixel.x1 + srcRoDPixel.x2) / 2.;
+	_ySrcCenter = (srcRoDPixel.y1 + srcRoDPixel.y2) / 2.;
+	 */
+	_fw = srcRoDPixel.x2 - srcRoDPixel.x1;
+	_fh = srcRoDPixel.y2 - srcRoDPixel.y1;
+	_normx = std::sqrt(2.0/(_fw * _fw + _fh * _fh));
+    }
+
+    virtual ~DistortionModelPFBarrel() {};
+
+private:
+    // function used to undistort a point or distort an image
+    // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
+    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
+    {
+	// PFBarrel model seems to apply to the corner of the corresponding full-res pixel
+	//xd -= 0.5 * rs.x;
+	//yd -= 0.5 * rs.y;
+
+	double centx = _xp * _fw * _normx;
+	double x = xd * _normx;
+	// remove anamorphic squeeze
+	double centy = _yp * _fh * _normx / _squeeze;
+	double y = yd * _normx / _squeeze;
+
+	// distort
+	const double px = x - centx;
+	const double py = y - centy;
+
+	const double px2 = px * px;
+	const double py2 = py * py;
+	const double r = std::sqrt(px2 + py2);
+	const double r2 = r*r;
+	//#ifdef THREE_POWER
+	//const double dr_r= r2*r*(C3C5.x+r2*C3C5.y);
+	//#else
+	const double dr_r= r2 * (_c3+ r2 * _c5);
+	//#endif
+
+	// re-apply squeeze and remove normalization
+	x += px * dr_r;
+	x /= _normx;
+	y += py * dr_r;
+	y *= _squeeze / _normx;
+
+	// x += 0.5 * rs.x;
+	// y += 0.5 * rs.y;
+
+	*xu = x;
+	*yu = y;
+    }
+
+
+    double _par;
+    double _c3;
+    double _c5;
+    double _xp;
+    double _yp;
+    double _squeeze;
+    double _normx;
+    double _fw, _fh;
+};
 
 static bool gIsMultiPlane;
 struct InputPlaneChannel
@@ -352,20 +666,9 @@ protected:
     double _vScale;
     WrapEnum _uWrap;
     WrapEnum _vWrap;
-    DistortionModelEnum _distortionModel;
+    const DistortionModel* _distortionModel;
     DirectionEnum _direction;
     OutputModeEnum _outputMode;
-    double _par;
-    double _k1;
-    double _k2;
-    double _k3;
-    double _p1;
-    double _p2;
-    double _cx;
-    double _cy;
-    double _squeeze;
-    double _ax;
-    double _ay;
     bool _blackOutside;
     bool _doMasking;
     double _mix;
@@ -374,170 +677,104 @@ protected:
 public:
 
     DistortionProcessorBase(ImageEffect &instance)
-        : ImageProcessor(instance)
-        , _srcImg(0)
-        , _maskImg(0)
-        , _processR(true)
-        , _processG(true)
-        , _processB(true)
-        , _processA(false)
-        , _transformIsIdentity(true)
-        , _srcTransformInverse()
-        , _planeChannels()
-        , _unpremultUV(true)
-        , _uOffset(0.)
-        , _vOffset(0.)
-        , _uScale(1.)
-        , _vScale(1.)
-        , _uWrap(eWrapClamp)
-        , _vWrap(eWrapClamp)
-        , _distortionModel(eDistortionModelNuke)
-        , _direction(eDirectionDistort)
-        , _outputMode(eOutputModeImage)
-        , _par(1.)
-        , _k1(0.)
-        , _k2(0.)
-        , _k3(0.)
-        , _p1(0.)
-        , _p2(0.)
-        , _cx(0.)
-        , _cy(0.)
-        , _squeeze(1.)
-        , _ax(0.)
-        , _ay(0.)
-        , _blackOutside(false)
-        , _doMasking(false)
-        , _mix(1.)
-        , _maskInvert(false)
+	: ImageProcessor(instance)
+	, _srcImg(0)
+	, _maskImg(0)
+	, _processR(true)
+	, _processG(true)
+	, _processB(true)
+	, _processA(false)
+	, _transformIsIdentity(true)
+	, _srcTransformInverse()
+	, _planeChannels()
+	, _unpremultUV(true)
+	, _uOffset(0.)
+	, _vOffset(0.)
+	, _uScale(1.)
+	, _vScale(1.)
+	, _uWrap(eWrapClamp)
+	, _vWrap(eWrapClamp)
+	, _distortionModel(NULL)
+	, _direction(eDirectionDistort)
+	, _outputMode(eOutputModeImage)
+	, _blackOutside(false)
+	, _doMasking(false)
+	, _mix(1.)
+	, _maskInvert(false)
     {
-        _srcRoDPixel.x1 = _srcRoDPixel.y1 = _srcRoDPixel.x2 = _srcRoDPixel.y2 = 0;
+	_srcRoDPixel.x1 = _srcRoDPixel.y1 = _srcRoDPixel.x2 = _srcRoDPixel.y2 = 0;
     }
 
     void setSrcImgs(const Image *src) {_srcImg = src; }
 
     void setMaskImg(const Image *v,
-                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+		    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v; }
 
     void setValues(bool processR,
-                   bool processG,
-                   bool processB,
-                   bool processA,
-                   bool transformIsIdentity,
-                   const Matrix3x3 &srcTransformInverse,
-                   const OfxRectI& srcRoDPixel,
-                   const std::vector<InputPlaneChannel>& planeChannels,
-                   bool unpremultUV,
-                   double uOffset,
-                   double vOffset,
-                   double uScale,
-                   double vScale,
-                   WrapEnum uWrap,
-                   WrapEnum vWrap,
-                   DistortionModelEnum distortionModel,
-                   DirectionEnum direction,
-                   OutputModeEnum outputMode,
-                   double par,
-                   double k1,
-                   double k2,
-                   double k3,
-                   double p1,
-                   double p2,
-                   double cx,
-                   double cy,
-                   double squeeze,
-                   double ax,
-                   double ay,
-                   bool blackOutside,
-                   double mix)
+		   bool processG,
+		   bool processB,
+		   bool processA,
+		   bool transformIsIdentity,
+		   const Matrix3x3 &srcTransformInverse,
+		   const OfxRectI& srcRoDPixel,
+		   const std::vector<InputPlaneChannel>& planeChannels,
+		   bool unpremultUV,
+		   double uOffset,
+		   double vOffset,
+		   double uScale,
+		   double vScale,
+		   WrapEnum uWrap,
+		   WrapEnum vWrap,
+		   const DistortionModel* distortionModel,
+		   DirectionEnum direction,
+		   OutputModeEnum outputMode,
+		   bool blackOutside,
+		   double mix)
     {
-        _processR = processR;
-        _processG = processG;
-        _processB = processB;
-        _processA = processA;
-        _transformIsIdentity = transformIsIdentity;
-        _srcTransformInverse = srcTransformInverse;
-        _srcRoDPixel = srcRoDPixel;
-        _planeChannels = planeChannels;
-        _unpremultUV = unpremultUV;
-        _uOffset = uOffset;
-        _vOffset = vOffset;
-        _uScale = uScale;
-        _vScale = vScale;
-        _uWrap = uWrap;
-        _vWrap = vWrap;
-        _distortionModel = distortionModel;
-        _direction = direction;
-        _outputMode = outputMode;
-        _par = par;
-        _k1 = k1;
-        _k2 = k2;
-        _k3 = k3;
-        _p1 = p1;
-        _p2 = p2;
-        _cx = cx,
-        _cy = cy;
-        _squeeze = squeeze;
-        _ax = ax;
-        _ay = ay;
-        _blackOutside = blackOutside;
-        _mix = mix;
+	_processR = processR;
+	_processG = processG;
+	_processB = processB;
+	_processA = processA;
+	_transformIsIdentity = transformIsIdentity;
+	_srcTransformInverse = srcTransformInverse;
+	_srcRoDPixel = srcRoDPixel;
+	_planeChannels = planeChannels;
+	_unpremultUV = unpremultUV;
+	_uOffset = uOffset;
+	_vOffset = vOffset;
+	_uScale = uScale;
+	_vScale = vScale;
+	_uWrap = uWrap;
+	_vWrap = vWrap;
+	_distortionModel = distortionModel;
+	_direction = direction;
+	_outputMode = outputMode;
+	_blackOutside = blackOutside;
+	_mix = mix;
     }
 
 private:
 };
 
 
-// Nuke's distortion function, reverse engineered from the resulting images on a checkerboard (and a little science, too)
-static inline void
-distort_nuke(double xu,
-             double yu,            // undistorted position in normalized coordinates ([-1..1] on the largest image dimension, (0,0 at image center))
-             double k1,
-             double k2,            // radial distortion
-             double cx,
-             double cy,            // distortion center, (0,0) at center of image
-             double squeeze, // anamorphic squeeze
-             double ax,
-             double ay,            // asymmetric distortion
-             double *xd,
-             double *yd)             // distorted position in normalized coordinates
-{
-    // nuke?
-    // k1 = radial distortion 1
-    // k2 = radial distortion 2
-    // squeeze = anamorphic squeeze
-    // p1 = asymmetric distortion x
-    // p2 = asymmetric distortion y
-    double x = (xu - cx);
-    double y = (yu - cy);
-    double x2 = x * x, y2 = y * y;
-    double r2 = x2 + y2;
-    double k2r2pk1 = k2 * r2 + k1;
-    //double kry = 1 + ((k2r2pk1 + ay)*x2 + k2r2pk1*y2);
-    double kry = 1 + (k2r2pk1 * r2 + ay * x2);
-
-    *yd = (y / kry) + cy;
-    //double krx = 1 + (k2r2pk1*x2 + (k2r2pk1 + ax)*y2)/squeeze;
-    double krx = 1 + (k2r2pk1 * r2 + ax * y2) / squeeze;
-    *xd = (x / krx) + cx;
-}
 
 #if 0
 // see https://github.com/Itseez/opencv/blob/master/modules/imgproc/src/undistort.cpp
 static inline void
 distort_opencv(double xu,
-               double yu,            // undistorted position in normalized coordinates ([-1..1] on the largest image dimension, (0,0 at image center))
-               double k1,
-               double k2,
-               double k3,
-               double p1,
-               double p2,
-               double cx,
-               double cy,
-               double squeeze,
-               double *xd,
-               double *yd)      // distorted position in normalized coordinates
+	       double yu,            // undistorted position in normalized coordinates ([-1..1] on the largest image dimension, (0,0 at image center))
+	       double k1,
+	       double k2,
+	       double k3,
+	       double p1,
+	       double p2,
+	       double cx,
+	       double cy,
+	       double squeeze,
+	       double *xd,
+	       double *yd)      // distorted position in normalized coordinates
 {
     // opencv
     const double k4 = 0.;
@@ -568,7 +805,7 @@ class DistortionProcessor
 {
 public:
     DistortionProcessor(ImageEffect &instance)
-        : DistortionProcessorBase(instance)
+	: DistortionProcessorBase(instance)
     {
     }
 
@@ -576,290 +813,274 @@ private:
 
 
     static inline double wrap(double x,
-                              WrapEnum wrap)
+			      WrapEnum wrap)
     {
-        switch (wrap) {
-        default:
-        case eWrapClamp:
+	switch (wrap) {
+	default:
+	case eWrapClamp:
 
-            return x;
-        case eWrapRepeat:
+	    return x;
+	case eWrapRepeat:
 
-            return x - std::floor(x);
-        case eWrapMirror: {
-            double x2 = x / 2 - std::floor(x / 2);
+	    return x - std::floor(x);
+	case eWrapMirror: {
+	    double x2 = x / 2 - std::floor(x / 2);
 
-            return (x2 <= 0.5) ? (2 * x2) : (2 - 2 * x2);
-        }
-        }
+	    return (x2 <= 0.5) ? (2 * x2) : (2 - 2 * x2);
+	}
+	}
     }
 
     const PIX * getPix(unsigned channel,
-                       int x,
-                       int y)
+		       int x,
+		       int y)
     {
-        return (const PIX *)  (_planeChannels[channel].img ? _planeChannels[channel].img->getPixelAddress(x, y) : 0);
+	return (const PIX *)  (_planeChannels[channel].img ? _planeChannels[channel].img->getPixelAddress(x, y) : 0);
     }
 
     double getVal(unsigned channel,
-                  const PIX* p,
-                  const PIX* pp)
+		  const PIX* p,
+		  const PIX* pp)
     {
-        if (!_planeChannels[channel].img) {
-            return _planeChannels[channel].fillZero ? 0. : 1.;
-        }
-        if (!p) {
-            return pp ? pp[_planeChannels[channel].channelIndex] : 0.;
-        }
+	if (!_planeChannels[channel].img) {
+	    return _planeChannels[channel].fillZero ? 0. : 1.;
+	}
+	if (!p) {
+	    return pp ? pp[_planeChannels[channel].channelIndex] : 0.;
+	}
 
-        return p[_planeChannels[channel].channelIndex];
+	return p[_planeChannels[channel].channelIndex];
     }
 
     void unpremult(double a,
-                   double *u,
-                   double *v)
+		   double *u,
+		   double *v)
     {
-        if ( _unpremultUV && (a != 0.) ) {
-            *u /= a;
-            *v /= a;
-        }
+	if ( _unpremultUV && (a != 0.) ) {
+	    *u /= a;
+	    *v /= a;
+	}
     }
 
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
-        assert(_dstImg);
-        assert(_planeChannels.size() == 3);
+	assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
+	assert(_dstImg);
+	assert(!(plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) || _planeChannels.size() == 3);
 
-        int srcx1 = 0, srcx2 = 1, srcy1 = 0, srcy2 = 0;
-        double f = 0, par = 1.;
-        if ( ( (plugin == eDistortionPluginSTMap) || (plugin == eDistortionPluginLensDistortion) ) && _srcImg ) {
-            // not valid if there is a transform on src: //const OfxRectI& srcBounds = _srcImg->getBounds();
-            srcx1 = _srcRoDPixel.x1;
-            srcx2 = _srcRoDPixel.x2;
-            srcy1 = _srcRoDPixel.y1;
-            srcy2 = _srcRoDPixel.y2;
-            if (plugin == eDistortionPluginLensDistortion) {
-                double fx = (_srcRoDPixel.x2 - _srcRoDPixel.x1) / 2.;
-                double fy = (_srcRoDPixel.y2 - _srcRoDPixel.y1) / 2.;
-                f = std::max(fx, fy); // TODO: distortion scaling param for LensDistortion?
-            }
-        }
-        float tmpPix[4];
-        for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if ( _effect.abort() ) {
-                break;
-            }
+	int srcx1 = 0, srcx2 = 1, srcy1 = 0, srcy2 = 0;
+	if ( (plugin == eDistortionPluginSTMap) && _srcImg ) {
+	    // not valid if there is a transform on src: //const OfxRectI& srcBounds = _srcImg->getBounds();
+	    srcx1 = _srcRoDPixel.x1;
+	    srcx2 = _srcRoDPixel.x2;
+	    srcy1 = _srcRoDPixel.y1;
+	    srcy2 = _srcRoDPixel.y2;
+	}
+	float tmpPix[4];
+	for (int y = procWindow.y1; y < procWindow.y2; y++) {
+	    if ( _effect.abort() ) {
+		break;
+	    }
 
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+	    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
-            for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                double sx, sy, sxx, sxy, syx, syy; // the source pixel coordinates and their derivatives
-                double a = 1.;
+	    for (int x = procWindow.x1; x < procWindow.x2; x++) {
+		double sx, sy, sxx, sxy, syx, syy; // the source pixel coordinates and their derivatives
+		double a = 1.;
 
-                switch (plugin) {
-                case eDistortionPluginSTMap:
-                case eDistortionPluginIDistort: {
-                    const PIX *uPix    = getPix(0, x, y  );
-                    const PIX *uPix_xn = getPix(0, x + 1, y  );
-                    const PIX *uPix_xp = getPix(0, x - 1, y  );
-                    const PIX *uPix_yn = getPix(0, x, y + 1);
-                    const PIX *uPix_yp = getPix(0, x, y - 1);
-                    const PIX *vPix, *vPix_xn, *vPix_xp, *vPix_yn, *vPix_yp;
-                    if (_planeChannels[1].img == _planeChannels[0].img) {
-                        vPix    = uPix;
-                        vPix_xn = uPix_xn;
-                        vPix_xp = uPix_xp;
-                        vPix_yn = uPix_yn;
-                        vPix_yp = uPix_yp;
-                    } else {
-                        vPix =    getPix(1, x, y  );
-                        vPix_xn = getPix(1, x + 1, y  );
-                        vPix_xp = getPix(1, x - 1, y  );
-                        vPix_yn = getPix(1, x, y + 1);
-                        vPix_yp = getPix(1, x, y - 1);
-                    }
-                    const PIX *aPix, *aPix_xn, *aPix_xp, *aPix_yn, *aPix_yp;
-                    if (_planeChannels[2].img == _planeChannels[0].img) {
-                        aPix = uPix;
-                        aPix_xn = uPix_xn;
-                        aPix_xp = uPix_xp;
-                        aPix_yn = uPix_yn;
-                        aPix_yp = uPix_yp;
-                    } else if (_planeChannels[2].img == _planeChannels[1].img) {
-                        aPix = vPix;
-                        aPix_xn = vPix_xn;
-                        aPix_xp = vPix_xp;
-                        aPix_yn = vPix_yn;
-                        aPix_yp = vPix_yp;
-                    } else {
-                        aPix =    getPix(2, x, y  );
-                        aPix_xn = getPix(2, x + 1, y  );
-                        aPix_xp = getPix(2, x - 1, y  );
-                        aPix_yn = getPix(2, x, y + 1);
-                        aPix_yp = getPix(2, x, y - 1);
-                    }
-                    // compute gradients before wrapping
-                    double u = getVal(0, uPix, NULL);
-                    double v = getVal(1, vPix, NULL);
-                    a = getVal(2, aPix, NULL);
-                    unpremult(a, &u, &v);
+		switch (plugin) {
+		case eDistortionPluginSTMap:
+		case eDistortionPluginIDistort: {
+		    const PIX *uPix    = getPix(0, x, y  );
+		    const PIX *uPix_xn = getPix(0, x + 1, y  );
+		    const PIX *uPix_xp = getPix(0, x - 1, y  );
+		    const PIX *uPix_yn = getPix(0, x, y + 1);
+		    const PIX *uPix_yp = getPix(0, x, y - 1);
+		    const PIX *vPix, *vPix_xn, *vPix_xp, *vPix_yn, *vPix_yp;
+		    if (_planeChannels[1].img == _planeChannels[0].img) {
+			vPix    = uPix;
+			vPix_xn = uPix_xn;
+			vPix_xp = uPix_xp;
+			vPix_yn = uPix_yn;
+			vPix_yp = uPix_yp;
+		    } else {
+			vPix =    getPix(1, x, y  );
+			vPix_xn = getPix(1, x + 1, y  );
+			vPix_xp = getPix(1, x - 1, y  );
+			vPix_yn = getPix(1, x, y + 1);
+			vPix_yp = getPix(1, x, y - 1);
+		    }
+		    const PIX *aPix, *aPix_xn, *aPix_xp, *aPix_yn, *aPix_yp;
+		    if (_planeChannels[2].img == _planeChannels[0].img) {
+			aPix = uPix;
+			aPix_xn = uPix_xn;
+			aPix_xp = uPix_xp;
+			aPix_yn = uPix_yn;
+			aPix_yp = uPix_yp;
+		    } else if (_planeChannels[2].img == _planeChannels[1].img) {
+			aPix = vPix;
+			aPix_xn = vPix_xn;
+			aPix_xp = vPix_xp;
+			aPix_yn = vPix_yn;
+			aPix_yp = vPix_yp;
+		    } else {
+			aPix =    getPix(2, x, y  );
+			aPix_xn = getPix(2, x + 1, y  );
+			aPix_xp = getPix(2, x - 1, y  );
+			aPix_yn = getPix(2, x, y + 1);
+			aPix_yp = getPix(2, x, y - 1);
+		    }
+		    // compute gradients before wrapping
+		    double u = getVal(0, uPix, NULL);
+		    double v = getVal(1, vPix, NULL);
+		    a = getVal(2, aPix, NULL);
+		    unpremult(a, &u, &v);
 
-                    double ux, uy, vx, vy;
-                    {
-                        double u_xn = getVal(0, uPix_xn, uPix);
-                        double u_xp = getVal(0, uPix_xp, uPix);
-                        double u_yn = getVal(0, uPix_yn, uPix);
-                        double u_yp = getVal(0, uPix_yp, uPix);
-                        double v_xn = getVal(1, vPix_xn, vPix);
-                        double v_xp = getVal(1, vPix_xp, vPix);
-                        double v_yn = getVal(1, vPix_yn, vPix);
-                        double v_yp = getVal(1, vPix_yp, vPix);
-                        if (_unpremultUV) {
-                            unpremult(getVal(2, aPix_xn, aPix), &u_xn, &v_xn);
-                            unpremult(getVal(2, aPix_xp, aPix), &u_xp, &v_xp);
-                            unpremult(getVal(2, aPix_yn, aPix), &u_yn, &v_yn);
-                            unpremult(getVal(2, aPix_yp, aPix), &u_yp, &v_yp);
-                        }
-                        ux = (u_xn - u_xp) / 2.;
-                        vx = (v_xn - v_xp) / 2.;
-                        uy = (u_yn - u_yp) / 2.;
-                        vy = (v_yn - v_yp) / 2.;
-                    }
-                    u = (u - _uOffset) * _uScale;
-                    ux *= _uScale;
-                    uy *= _uScale;
-                    v = (v - _vOffset) * _vScale;
-                    vx *= _vScale;
-                    vy *= _vScale;
-                    switch (plugin) {
-                    case eDistortionPluginSTMap:
-                        // wrap u and v
-                        u = wrap(u, _uWrap);
-                        v = wrap(v, _vWrap);
-                        sx = srcx1 + u * (srcx2 - srcx1);
-                        sy = srcy1 + v * (srcy2 - srcy1);         // 0,0 corresponds to the lower left corner of the first pixel
-                        // scale gradients by (srcx2 - srcx1)
-                        if (filter != eFilterImpulse) {
-                            sxx = ux * (srcx2 - srcx1);
-                            sxy = uy * (srcx2 - srcx1);
-                            syx = vx * (srcy2 - srcy1);
-                            syy = vy * (srcy2 - srcy1);
-                        }
-                        break;
-                    case eDistortionPluginIDistort:
-                        // 0,0 corresponds to the lower left corner of the first pixel, so we have to add 0.5
-                        // (x,y) = (0,0) and (u,v) = (0,0) means to pick color at (0.5,0.5)
-                        sx = x + u + 0.5;
-                        sy = y + v + 0.5;
-                        if (filter != eFilterImpulse) {
-                            sxx = 1 + ux;
-                            sxy = uy;
-                            syx = vx;
-                            syy = 1 + vy;
-                        }
-                        break;
-                    default:
-                        assert(false);
-                        break;
-                    }
-                    break;
-                }
-                case eDistortionPluginLensDistortion: {
-                    switch (_distortionModel) {
-                    case eDistortionModelNuke: {
-                        double xu = _par * (x + 0.5 - (srcx2 + srcx1) / 2.) / f;
-                        double yu = (y + 0.5 - (srcy2 + srcy1) / 2.) / f;
-                        distort_nuke(xu, yu,
-                                     _k1, _k2, _cx / par, _cy, _squeeze, _ax, _ay,
-                                     &sx, &sy);
-                        sx /= _par;
-                        break;
-                    }
-                    }
-                    sx *= f;
-                    sx += (srcx2 + srcx1) / 2.;
-                    sy *= f;
-                    sy += (srcy2 + srcy1) / 2.;
-                    sxx = 1;     // TODO: Jacobian
-                    sxy = 0;
-                    syx = 0;
-                    syy = 1;
-                    break;
-                }
-                } // switch
-                double Jxx = 1., Jxy = 0., Jyx = 0., Jyy = 1.;
-                if (_transformIsIdentity) {
-                    if (filter != eFilterImpulse) {
-                        Jxx = sxx;
-                        Jxy = sxy;
-                        Jyx = syx;
-                        Jyy = syy;
-                    }
-                } else {
-                    const Matrix3x3 & H = _srcTransformInverse;
-                    double transformedx = H.a * sx + H.b * sy + H.c;
-                    double transformedy = H.d * sx + H.e * sy + H.f;
-                    double transformedz = H.g * sx + H.h * sy + H.i;
-                    if (transformedz == 0) {
-                        sx = sy = std::numeric_limits<double>::infinity();
-                    } else {
-                        sx = transformedx / transformedz;
-                        sy = transformedy / transformedz;
-                        if (filter != eFilterImpulse) {
-                            Jxx = (H.a * transformedz - transformedx * H.g) / (transformedz * transformedz);
-                            Jxy = (H.b * transformedz - transformedx * H.h) / (transformedz * transformedz);
-                            Jyx = (H.d * transformedz - transformedy * H.g) / (transformedz * transformedz);
-                            Jyy = (H.e * transformedz - transformedy * H.h) / (transformedz * transformedz);
-                        }
-                    }
-                }
+		    double ux, uy, vx, vy;
+		    {
+			double u_xn = getVal(0, uPix_xn, uPix);
+			double u_xp = getVal(0, uPix_xp, uPix);
+			double u_yn = getVal(0, uPix_yn, uPix);
+			double u_yp = getVal(0, uPix_yp, uPix);
+			double v_xn = getVal(1, vPix_xn, vPix);
+			double v_xp = getVal(1, vPix_xp, vPix);
+			double v_yn = getVal(1, vPix_yn, vPix);
+			double v_yp = getVal(1, vPix_yp, vPix);
+			if (_unpremultUV) {
+			    unpremult(getVal(2, aPix_xn, aPix), &u_xn, &v_xn);
+			    unpremult(getVal(2, aPix_xp, aPix), &u_xp, &v_xp);
+			    unpremult(getVal(2, aPix_yn, aPix), &u_yn, &v_yn);
+			    unpremult(getVal(2, aPix_yp, aPix), &u_yp, &v_yp);
+			}
+			ux = (u_xn - u_xp) / 2.;
+			vx = (v_xn - v_xp) / 2.;
+			uy = (u_yn - u_yp) / 2.;
+			vy = (v_yn - v_yp) / 2.;
+		    }
+		    u = (u - _uOffset) * _uScale;
+		    ux *= _uScale;
+		    uy *= _uScale;
+		    v = (v - _vOffset) * _vScale;
+		    vx *= _vScale;
+		    vy *= _vScale;
+		    switch (plugin) {
+		    case eDistortionPluginSTMap:
+			// wrap u and v
+			u = wrap(u, _uWrap);
+			v = wrap(v, _vWrap);
+			sx = srcx1 + u * (srcx2 - srcx1);
+			sy = srcy1 + v * (srcy2 - srcy1);         // 0,0 corresponds to the lower left corner of the first pixel
+			// scale gradients by (srcx2 - srcx1)
+			if (filter != eFilterImpulse) {
+			    sxx = ux * (srcx2 - srcx1);
+			    sxy = uy * (srcx2 - srcx1);
+			    syx = vx * (srcy2 - srcy1);
+			    syy = vy * (srcy2 - srcy1);
+			}
+			break;
+		    case eDistortionPluginIDistort:
+			// 0,0 corresponds to the lower left corner of the first pixel, so we have to add 0.5
+			// (x,y) = (0,0) and (u,v) = (0,0) means to pick color at (0.5,0.5)
+			sx = x + u + 0.5;
+			sy = y + v + 0.5;
+			if (filter != eFilterImpulse) {
+			    sxx = 1 + ux;
+			    sxy = uy;
+			    syx = vx;
+			    syy = 1 + vy;
+			}
+			break;
+		    default:
+			assert(false);
+			break;
+		    }
+		    break;
+		}
+		case eDistortionPluginLensDistortion: {
+		    if (_direction == eDirectionDistort) {
+			_distortionModel->undistort(x + 0.5, y + 0.5, &sx, &sy);
+		    } else {
+			_distortionModel->distort(x + 0.5, y + 0.5, &sx, &sy);
+		    }
+		    sxx = 1;     // TODO: Jacobian
+		    sxy = 0;
+		    syx = 0;
+		    syy = 1;
+		    break;
+		}
+		} // switch
+		double Jxx = 1., Jxy = 0., Jyx = 0., Jyy = 1.;
+		if (_transformIsIdentity) {
+		    if (filter != eFilterImpulse) {
+			Jxx = sxx;
+			Jxy = sxy;
+			Jyx = syx;
+			Jyy = syy;
+		    }
+		} else {
+		    const Matrix3x3 & H = _srcTransformInverse;
+		    double transformedx = H.a * sx + H.b * sy + H.c;
+		    double transformedy = H.d * sx + H.e * sy + H.f;
+		    double transformedz = H.g * sx + H.h * sy + H.i;
+		    if (transformedz == 0) {
+			sx = sy = std::numeric_limits<double>::infinity();
+		    } else {
+			sx = transformedx / transformedz;
+			sy = transformedy / transformedz;
+			if (filter != eFilterImpulse) {
+			    Jxx = (H.a * transformedz - transformedx * H.g) / (transformedz * transformedz);
+			    Jxy = (H.b * transformedz - transformedx * H.h) / (transformedz * transformedz);
+			    Jyx = (H.d * transformedz - transformedy * H.g) / (transformedz * transformedz);
+			    Jyy = (H.e * transformedz - transformedy * H.h) / (transformedz * transformedz);
+			}
+		    }
+		}
 
-                if (_outputMode == eOutputModeSTMap) {
-                    // 0,0 corresponds to the lower left corner of the first pixel
-                    tmpPix[0] = (sx - srcx1) / (srcx2 - srcx1); // u
-                    tmpPix[1] = (sy - srcy1) / (srcy2 - srcy1); // v
-                    tmpPix[2] = 1.; // a
-                    tmpPix[3] = 1.; // be opaque
-                } else {
-                    if (filter == eFilterImpulse) {
-                        ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
-                    } else {
-                        ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
-                    }
-                    for (unsigned c = 0; c < nComponents; ++c) {
-                        tmpPix[c] *= a;
-                    }
-                }
-                ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
-                // copy back original values from unprocessed channels
-                if (nComponents == 1) {
-                    if (!_processA) {
-                        const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                } else if ( (nComponents == 3) || (nComponents == 4) ) {
-                    const PIX *srcPix = 0;
-                    if ( !_processR || !_processG || !_processB || ( !_processA && (nComponents == 4) ) ) {
-                        srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                    }
-                    if (!_processR) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                    if (!_processG) {
-                        dstPix[1] = srcPix ? srcPix[1] : PIX();
-                    }
-                    if (!_processB) {
-                        dstPix[2] = srcPix ? srcPix[2] : PIX();
-                    }
-                    if ( !_processA && (nComponents == 4) ) {
-                        dstPix[3] = srcPix ? srcPix[3] : PIX();
-                    }
-                }
-                // increment the dst pixel
-                dstPix += nComponents;
-            }
-        }
+		if (_outputMode == eOutputModeSTMap) {
+		    // 0,0 corresponds to the lower left corner of the first pixel
+		    tmpPix[0] = (sx - srcx1) / (srcx2 - srcx1); // u
+		    tmpPix[1] = (sy - srcy1) / (srcy2 - srcy1); // v
+		    tmpPix[2] = 1.; // a
+		    tmpPix[3] = 1.; // be opaque
+		} else {
+		    if (filter == eFilterImpulse) {
+			ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
+		    } else {
+			ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+		    }
+		    for (unsigned c = 0; c < nComponents; ++c) {
+			tmpPix[c] *= a;
+		    }
+		}
+		ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+		// copy back original values from unprocessed channels
+		if (nComponents == 1) {
+		    if (!_processA) {
+			const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+			dstPix[0] = srcPix ? srcPix[0] : PIX();
+		    }
+		} else if ( (nComponents == 3) || (nComponents == 4) ) {
+		    const PIX *srcPix = 0;
+		    if ( !_processR || !_processG || !_processB || ( !_processA && (nComponents == 4) ) ) {
+			srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+		    }
+		    if (!_processR) {
+			dstPix[0] = srcPix ? srcPix[0] : PIX();
+		    }
+		    if (!_processG) {
+			dstPix[1] = srcPix ? srcPix[1] : PIX();
+		    }
+		    if (!_processB) {
+			dstPix[2] = srcPix ? srcPix[2] : PIX();
+		    }
+		    if ( !_processA && (nComponents == 4) ) {
+			dstPix[3] = srcPix ? srcPix[3] : PIX();
+		    }
+		}
+		// increment the dst pixel
+		dstPix += nComponents;
+	    }
+	}
     } // multiThreadProcessImages
 };
 
@@ -872,112 +1093,114 @@ class DistortionPlugin
 public:
     /** @brief ctor */
     DistortionPlugin(OfxImageEffectHandle handle,
-                     DistortionPluginEnum plugin)
-        : MultiPlane::MultiPlaneEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _uvClip(0)
-        , _maskClip(0)
-        , _processR(0)
-        , _processG(0)
-        , _processB(0)
-        , _processA(0)
-        , _uvChannels()
-        , _unpremultUV(0)
-        , _uvOffset(0)
-        , _uvScale(0)
-        , _uWrap(0)
-        , _vWrap(0)
-        , _distortionModel(0)
-        , _direction(NULL)
-        , _outputMode(NULL)
-        , _k1(0)
-        , _k2(0)
-        , _k3(0)
-        , _p1(0)
-        , _p2(0)
-        , _center(0)
-        , _squeeze(0)
-        , _asymmetric(0)
-        , _filter(0)
-        , _clamp(0)
-        , _blackOutside(0)
-        , _mix(0)
-        , _maskApply(0)
-        , _maskInvert(0)
-        , _plugin(plugin)
+		     DistortionPluginEnum plugin)
+	: MultiPlane::MultiPlaneEffect(handle)
+	, _dstClip(0)
+	, _srcClip(0)
+	, _uvClip(0)
+	, _maskClip(0)
+	, _processR(0)
+	, _processG(0)
+	, _processB(0)
+	, _processA(0)
+	, _uvChannels()
+	, _unpremultUV(0)
+	, _uvOffset(0)
+	, _uvScale(0)
+	, _uWrap(0)
+	, _vWrap(0)
+	, _distortionModel(0)
+	, _direction(NULL)
+	, _outputMode(NULL)
+	, _k1(0)
+	, _k2(0)
+	, _center(0)
+	, _squeeze(0)
+	, _asymmetric(0)
+	, _pfC3(NULL)
+	, _pfC5(NULL)
+	, _pfSqueeze(NULL)
+	, _pfP(NULL)
+	, _filter(0)
+	, _clamp(0)
+	, _blackOutside(0)
+	, _mix(0)
+	, _maskApply(0)
+	, _maskInvert(0)
+	, _plugin(plugin)
     {
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                             _dstClip->getPixelComponents() == ePixelComponentRGBA ||
-                             _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                               _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
-        if ( (_plugin == eDistortionPluginIDistort) || (_plugin == eDistortionPluginSTMap) ) {
-            _uvClip = fetchClip(kClipUV);
-            assert( _uvClip && (_uvClip->getPixelComponents() == ePixelComponentRGB || _uvClip->getPixelComponents() == ePixelComponentRGBA || _uvClip->getPixelComponents() == ePixelComponentAlpha) );
-        }
-        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
-        assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
-        assert(_processR && _processG && _processB && _processA);
-        if ( (plugin == eDistortionPluginIDistort) || (plugin == eDistortionPluginSTMap) ) {
-            _uvChannels[0] = fetchChoiceParam(kParamChannelU);
-            _uvChannels[1] = fetchChoiceParam(kParamChannelV);
-            _uvChannels[2] = fetchChoiceParam(kParamChannelA);
-            if (gIsMultiPlane) {
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelU, _uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelV, _uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelA, _uvClip);
-            }
-            _unpremultUV = fetchBooleanParam(kParamChannelUnpremultUV);
-            _uvOffset = fetchDouble2DParam(kParamUVOffset);
-            _uvScale = fetchDouble2DParam(kParamUVScale);
-            assert(_uvChannels[0] && _uvChannels[1] && _uvChannels[2] && _uvOffset && _uvScale);
-            if (plugin == eDistortionPluginSTMap) {
-                _uWrap = fetchChoiceParam(kParamWrapU);
-                _vWrap = fetchChoiceParam(kParamWrapV);
-                assert(_uWrap && _vWrap);
-            }
-        } else {
-            _uvChannels[0] = _uvChannels[1] = _uvChannels[2] = NULL;
-        }
+	_dstClip = fetchClip(kOfxImageEffectOutputClipName);
+	assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
+			     _dstClip->getPixelComponents() == ePixelComponentRGBA ||
+			     _dstClip->getPixelComponents() == ePixelComponentAlpha) );
+	_srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+	assert( (!_srcClip && getContext() == eContextGenerator) ||
+		( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
+			       _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+			       _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
+	if ( (_plugin == eDistortionPluginIDistort) || (_plugin == eDistortionPluginSTMap) ) {
+	    _uvClip = fetchClip(kClipUV);
+	    assert( _uvClip && (_uvClip->getPixelComponents() == ePixelComponentRGB || _uvClip->getPixelComponents() == ePixelComponentRGBA || _uvClip->getPixelComponents() == ePixelComponentAlpha) );
+	}
+	_maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
+	assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+	_processR = fetchBooleanParam(kParamProcessR);
+	_processG = fetchBooleanParam(kParamProcessG);
+	_processB = fetchBooleanParam(kParamProcessB);
+	_processA = fetchBooleanParam(kParamProcessA);
+	assert(_processR && _processG && _processB && _processA);
+	if ( (plugin == eDistortionPluginIDistort) || (plugin == eDistortionPluginSTMap) ) {
+	    _uvChannels[0] = fetchChoiceParam(kParamChannelU);
+	    _uvChannels[1] = fetchChoiceParam(kParamChannelV);
+	    _uvChannels[2] = fetchChoiceParam(kParamChannelA);
+	    if (gIsMultiPlane) {
+		fetchDynamicMultiplaneChoiceParameter(kParamChannelU, _uvClip);
+		fetchDynamicMultiplaneChoiceParameter(kParamChannelV, _uvClip);
+		fetchDynamicMultiplaneChoiceParameter(kParamChannelA, _uvClip);
+	    }
+	    _unpremultUV = fetchBooleanParam(kParamChannelUnpremultUV);
+	    _uvOffset = fetchDouble2DParam(kParamUVOffset);
+	    _uvScale = fetchDouble2DParam(kParamUVScale);
+	    assert(_uvChannels[0] && _uvChannels[1] && _uvChannels[2] && _uvOffset && _uvScale);
+	    if (plugin == eDistortionPluginSTMap) {
+		_uWrap = fetchChoiceParam(kParamWrapU);
+		_vWrap = fetchChoiceParam(kParamWrapV);
+		assert(_uWrap && _vWrap);
+	    }
+	} else {
+	    _uvChannels[0] = _uvChannels[1] = _uvChannels[2] = NULL;
+	}
 
-        /* if (gIsMultiPlane) {
-             _outputLayer = fetchChoiceParam(kParamOutputChannels);
-             _outputLayerStr = fetchStringParam(kParamOutputChannelsChoice);
-             assert(_outputLayer && _outputLayerStr);
-           }*/
-        if (_plugin == eDistortionPluginLensDistortion) {
-            _distortionModel = fetchChoiceParam(kParamDistortionModel);
-            _direction = fetchChoiceParam(kParamDistortionDirection);
-            _outputMode = fetchChoiceParam(kParamDistortionOutputMode);
-            _k1 = fetchDoubleParam(kParamK1);
-            _k2 = fetchDoubleParam(kParamK2);
-            _k3 = fetchDoubleParam(kParamK3);
-            _p1 = fetchDoubleParam(kParamP1);
-            _p2 = fetchDoubleParam(kParamP2);
-            _center = fetchDouble2DParam(kParamCenter);
-            _squeeze = fetchDoubleParam(kParamSqueeze);
-            _asymmetric = fetchDouble2DParam(kParamAsymmetric);
-            assert(_k1 && _k2 && _k3 && _p1 && _p2 && _center && _squeeze && _asymmetric);
-        }
-        _filter = fetchChoiceParam(kParamFilterType);
-        _clamp = fetchBooleanParam(kParamFilterClamp);
-        _blackOutside = fetchBooleanParam(kParamFilterBlackOutside);
-        assert(_filter && _clamp && _blackOutside);
-        _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
-        _maskInvert = fetchBooleanParam(kParamMaskInvert);
-        assert(_mix && _maskInvert);
+	/* if (gIsMultiPlane) {
+	     _outputLayer = fetchChoiceParam(kParamOutputChannels);
+	     _outputLayerStr = fetchStringParam(kParamOutputChannelsChoice);
+	     assert(_outputLayer && _outputLayerStr);
+	   }*/
+	if (_plugin == eDistortionPluginLensDistortion) {
+	    _distortionModel = fetchChoiceParam(kParamDistortionModel);
+	    _direction = fetchChoiceParam(kParamDistortionDirection);
+	    _outputMode = fetchChoiceParam(kParamDistortionOutputMode);
+	    _k1 = fetchDoubleParam(kParamK1);
+	    _k2 = fetchDoubleParam(kParamK2);
+	    _center = fetchDouble2DParam(kParamCenter);
+	    _squeeze = fetchDoubleParam(kParamSqueeze);
+	    _asymmetric = fetchDouble2DParam(kParamAsymmetric);
+	    assert(_k1 && _k2 && _center && _squeeze && _asymmetric);
+	    _pfC3 = fetchDoubleParam(kParamPFC3);
+	    _pfC5 = fetchDoubleParam(kParamPFC5);
+	    _pfSqueeze = fetchDoubleParam(kParamPFSqueeze);
+	    _pfP = fetchDouble2DParam(kParamPFP);
+	}
+	_filter = fetchChoiceParam(kParamFilterType);
+	_clamp = fetchBooleanParam(kParamFilterClamp);
+	_blackOutside = fetchBooleanParam(kParamFilterBlackOutside);
+	assert(_filter && _clamp && _blackOutside);
+	_mix = fetchDoubleParam(kParamMix);
+	_maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+	_maskInvert = fetchBooleanParam(kParamMaskInvert);
+	assert(_mix && _maskInvert);
 
-        updateVisibility();
+	updateVisibility();
     }
 
 private:
@@ -1030,12 +1253,13 @@ private:
     ChoiceParam* _outputMode;
     DoubleParam* _k1;
     DoubleParam* _k2;
-    DoubleParam* _k3;
-    DoubleParam* _p1;
-    DoubleParam* _p2;
     Double2DParam* _center;
     DoubleParam* _squeeze;
     Double2DParam* _asymmetric;
+    DoubleParam* _pfC3;
+    DoubleParam* _pfC5;
+    DoubleParam* _pfSqueeze;
+    Double2DParam* _pfP;
     ChoiceParam* _filter;
     BooleanParam* _clamp;
     BooleanParam* _blackOutside;
@@ -1053,10 +1277,10 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     PixelComponentEnum dstPixelComps = _dstClip->getPixelComponents();
 
     if (_srcClip) {
-        clipPreferences.setClipComponents(*_srcClip, dstPixelComps);
+	clipPreferences.setClipComponents(*_srcClip, dstPixelComps);
     }
     if (gIsMultiPlane && _uvClip) {
-        buildChannelMenus();
+	buildChannelMenus();
     }
 }
 
@@ -1071,20 +1295,20 @@ class InputImagesHolder_RAII
 public:
 
     InputImagesHolder_RAII()
-        : images()
+	: images()
     {
     }
 
     void appendImage(Image* img)
     {
-        images.push_back(img);
+	images.push_back(img);
     }
 
     ~InputImagesHolder_RAII()
     {
-        for (std::size_t i = 0; i < images.size(); ++i) {
-            delete images[i];
-        }
+	for (std::size_t i = 0; i < images.size(); ++i) {
+	    delete images[i];
+	}
     }
 };
 
@@ -1094,58 +1318,58 @@ public:
 static
 int
 getChannelIndex(InputChannelEnum e,
-                PixelComponentEnum comps)
+		PixelComponentEnum comps)
 {
     int retval;
 
     switch (e) {
     case eInputChannelR: {
-        if (
+	if (
 #ifdef OFX_EXTENSIONS_NATRON
-            comps == ePixelComponentXY ||
+	    comps == ePixelComponentXY ||
 #endif
-            comps == ePixelComponentRGB || comps == ePixelComponentRGBA) {
-            retval = 0;
-        } else {
-            retval = -1;
-        }
-        break;
+	    comps == ePixelComponentRGB || comps == ePixelComponentRGBA) {
+	    retval = 0;
+	} else {
+	    retval = -1;
+	}
+	break;
     }
     case eInputChannelG: {
-        if (
+	if (
 #ifdef OFX_EXTENSIONS_NATRON
-            comps == ePixelComponentXY ||
+	    comps == ePixelComponentXY ||
 #endif
-            comps == ePixelComponentRGB || comps == ePixelComponentRGBA) {
-            retval = 1;
-        } else {
-            retval = -1;
-        }
-        break;
+	    comps == ePixelComponentRGB || comps == ePixelComponentRGBA) {
+	    retval = 1;
+	} else {
+	    retval = -1;
+	}
+	break;
     }
     case eInputChannelB: {
-        if ( ( comps == ePixelComponentRGB) || ( comps == ePixelComponentRGBA) ) {
-            retval = 2;
-        } else {
-            retval = -1;
-        }
-        break;
+	if ( ( comps == ePixelComponentRGB) || ( comps == ePixelComponentRGBA) ) {
+	    retval = 2;
+	} else {
+	    retval = -1;
+	}
+	break;
     }
     case eInputChannelA: {
-        if (comps == ePixelComponentAlpha) {
-            return 0;
-        } else if (comps == ePixelComponentRGBA) {
-            retval = 3;
-        } else {
-            retval = -1;
-        }
-        break;
+	if (comps == ePixelComponentAlpha) {
+	    return 0;
+	} else if (comps == ePixelComponentRGBA) {
+	    retval = 3;
+	} else {
+	    retval = -1;
+	}
+	break;
     }
     case eInputChannel0:
     case eInputChannel1:
     default: {
-        retval = -1;
-        break;
+	retval = -1;
+	break;
     }
     } // switch
 
@@ -1155,169 +1379,176 @@ getChannelIndex(InputChannelEnum e,
 /* set up and run a processor */
 void
 DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
-                                  const RenderArguments &args)
+				  const RenderArguments &args)
 {
     const double time = args.time;
 
     std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        throwSuiteStatusException(kOfxStatFailed);
+	throwSuiteStatusException(kOfxStatFailed);
     }
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-         ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        throwSuiteStatusException(kOfxStatFailed);
+	 ( dstComponents != _dstClip->getPixelComponents() ) ) {
+	setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+	throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
+	 ( dst->getRenderScale().y != args.renderScale.y) ||
+	 ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+	setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+	throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                    _srcClip->fetchImage(time) : 0 );
+
+    OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
+
+#warning "TODO: do not fetch src if outputmode == eOutputModeSTMap"
+    std::auto_ptr<const Image> src( ( /*(outputMode == eOutputModeImage) &&*/ _srcClip && _srcClip->isConnected() ) ?
+				    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
-        BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        PixelComponentEnum srcComponents = src->getPixelComponents();
-        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            throwSuiteStatusException(kOfxStatErrImageFormat);
-        }
+	if ( (src->getRenderScale().x != args.renderScale.x) ||
+	     ( src->getRenderScale().y != args.renderScale.y) ||
+	     ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+	    setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+	    throwSuiteStatusException(kOfxStatFailed);
+	}
+	BitDepthEnum srcBitDepth      = src->getPixelDepth();
+	PixelComponentEnum srcComponents = src->getPixelComponents();
+	if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+	    throwSuiteStatusException(kOfxStatErrImageFormat);
+	}
     }
 
     InputImagesHolder_RAII imagesHolder;
     std::vector<InputPlaneChannel> planeChannels;
 
+#warning "if (_uvClip) { ?"
     if (gIsMultiPlane) {
-        BitDepthEnum srcBitDepth = eBitDepthNone;
-        std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
-        bool isCreatingAlpha;
-        for (int i = 0; i < 3; ++i) {
-            InputPlaneChannel p;
-            p.channelIndex = i;
-            p.fillZero = false;
-            if (_uvClip) {
-                Clip* clip = 0;
-                std::string plane, ofxComp;
-                bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &plane, &ofxComp, &p.channelIndex, &isCreatingAlpha);
-                if (!ok) {
-                    setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
-                    throwSuiteStatusException(kOfxStatFailed);
-                }
+	BitDepthEnum srcBitDepth = eBitDepthNone;
+	std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
+	bool isCreatingAlpha;
+	for (int i = 0; i < 3; ++i) {
+	    InputPlaneChannel p;
+	    p.channelIndex = i;
+	    p.fillZero = false;
+	    if (_uvClip) {
+		Clip* clip = 0;
+		std::string plane, ofxComp;
+		bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &plane, &ofxComp, &p.channelIndex, &isCreatingAlpha);
+		if (!ok) {
+		    setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
+		    throwSuiteStatusException(kOfxStatFailed);
+		}
 
-                p.img = 0;
-                if (ofxComp == kMultiPlaneParamOutputOption0) {
-                    p.fillZero = true;
-                } else if (ofxComp == kMultiPlaneParamOutputOption1) {
-                    p.fillZero = false;
-                } else {
-                    std::map<std::string, Image*>& clipPlanes = fetchedPlanes[clip];
-                    std::map<std::string, Image*>::iterator foundPlane = clipPlanes.find(plane);
-                    if ( foundPlane != clipPlanes.end() ) {
-                        p.img = foundPlane->second;
-                    } else {
+		p.img = 0;
+		if (ofxComp == kMultiPlaneParamOutputOption0) {
+		    p.fillZero = true;
+		} else if (ofxComp == kMultiPlaneParamOutputOption1) {
+		    p.fillZero = false;
+		} else {
+		    std::map<std::string, Image*>& clipPlanes = fetchedPlanes[clip];
+		    std::map<std::string, Image*>::iterator foundPlane = clipPlanes.find(plane);
+		    if ( foundPlane != clipPlanes.end() ) {
+			p.img = foundPlane->second;
+		    } else {
 #ifdef OFX_EXTENSIONS_NUKE
-                        p.img = clip->fetchImagePlane( time, args.renderView, plane.c_str() );
+			p.img = clip->fetchImagePlane( time, args.renderView, plane.c_str() );
 #else
-                        p.img = ( clip && clip->isConnected() ) ? clip->fetchImage(time) : 0;
+			p.img = ( clip && clip->isConnected() ) ? clip->fetchImage(time) : 0;
 #endif
-                        if (p.img) {
-                            clipPlanes.insert( std::make_pair(plane, p.img) );
-                            imagesHolder.appendImage(p.img);
-                        }
-                    }
-                }
+			if (p.img) {
+			    clipPlanes.insert( std::make_pair(plane, p.img) );
+			    imagesHolder.appendImage(p.img);
+			}
+		    }
+		}
 
-                if (p.img) {
-                    if ( (p.img->getRenderScale().x != args.renderScale.x) ||
-                         ( p.img->getRenderScale().y != args.renderScale.y) ||
-                         ( ( p.img->getField() != eFieldNone) /* for DaVinci Resolve */ && ( p.img->getField() != args.fieldToRender) ) ) {
-                        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                        throwSuiteStatusException(kOfxStatFailed);
-                    }
-                    if (srcBitDepth == eBitDepthNone) {
-                        srcBitDepth = p.img->getPixelDepth();
-                    } else {
-                        // both input must have the same bit depth and components
-                        if ( (srcBitDepth != eBitDepthNone) && ( srcBitDepth != p.img->getPixelDepth() ) ) {
-                            throwSuiteStatusException(kOfxStatErrImageFormat);
-                        }
-                    }
-                }
-            }
-            planeChannels.push_back(p);
-        }
+		if (p.img) {
+		    if ( (p.img->getRenderScale().x != args.renderScale.x) ||
+			 ( p.img->getRenderScale().y != args.renderScale.y) ||
+			 ( ( p.img->getField() != eFieldNone) /* for DaVinci Resolve */ && ( p.img->getField() != args.fieldToRender) ) ) {
+			setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+			throwSuiteStatusException(kOfxStatFailed);
+		    }
+		    if (srcBitDepth == eBitDepthNone) {
+			srcBitDepth = p.img->getPixelDepth();
+		    } else {
+			// both input must have the same bit depth and components
+			if ( (srcBitDepth != eBitDepthNone) && ( srcBitDepth != p.img->getPixelDepth() ) ) {
+			    throwSuiteStatusException(kOfxStatErrImageFormat);
+			}
+		    }
+		}
+	    }
+	    planeChannels.push_back(p);
+	}
     } else { //!gIsMultiPlane
-        InputChannelEnum uChannel = eInputChannelR;
-        InputChannelEnum vChannel = eInputChannelG;
-        InputChannelEnum aChannel = eInputChannelA;
-        if (_uvChannels[0]) {
-            uChannel = (InputChannelEnum)_uvChannels[0]->getValueAtTime(time);
-        }
-        if (_uvChannels[1]) {
-            vChannel = (InputChannelEnum)_uvChannels[1]->getValueAtTime(time);
-        }
-        if (_uvChannels[2]) {
-            aChannel = (InputChannelEnum)_uvChannels[2]->getValueAtTime(time);
-        }
+	InputChannelEnum uChannel = eInputChannelR;
+	InputChannelEnum vChannel = eInputChannelG;
+	InputChannelEnum aChannel = eInputChannelA;
+	if (_uvChannels[0]) {
+	    uChannel = (InputChannelEnum)_uvChannels[0]->getValueAtTime(time);
+	}
+	if (_uvChannels[1]) {
+	    vChannel = (InputChannelEnum)_uvChannels[1]->getValueAtTime(time);
+	}
+	if (_uvChannels[2]) {
+	    aChannel = (InputChannelEnum)_uvChannels[2]->getValueAtTime(time);
+	}
 
-        Image* uv = 0;
-        if ( ( (uChannel != eInputChannel0) && (uChannel != eInputChannel1) ) ||
-             ( (vChannel != eInputChannel0) && (vChannel != eInputChannel1) ) ||
-             ( (aChannel != eInputChannel0) && (aChannel != eInputChannel1) ) ) {
-            uv = ( _uvClip && _uvClip->isConnected() ) ? _uvClip->fetchImage(time) : 0;
-        }
+	Image* uv = NULL;
+	if ( ( ( (uChannel != eInputChannel0) && (uChannel != eInputChannel1) ) ||
+	       ( (vChannel != eInputChannel0) && (vChannel != eInputChannel1) ) ||
+	       ( (aChannel != eInputChannel0) && (aChannel != eInputChannel1) ) ) &&
+	     ( _uvClip && _uvClip->isConnected() ) ) {
+	    uv =  _uvClip->fetchImage(time);
+	}
 
-        PixelComponentEnum uvComponents = ePixelComponentNone;
-        if (uv) {
-            imagesHolder.appendImage(uv);
-            if ( (uv->getRenderScale().x != args.renderScale.x) ||
-                 ( uv->getRenderScale().y != args.renderScale.y) ||
-                 ( ( uv->getField() != eFieldNone) /* for DaVinci Resolve */ && ( uv->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
-            }
-            BitDepthEnum uvBitDepth      = uv->getPixelDepth();
-            uvComponents = uv->getPixelComponents();
-            // only eBitDepthFloat is supported for now (other types require special processing for uv values)
-            if ( (uvBitDepth != eBitDepthFloat) /*|| (uvComponents != dstComponents)*/ ) {
-                throwSuiteStatusException(kOfxStatErrImageFormat);
-            }
-        }
+	PixelComponentEnum uvComponents = ePixelComponentNone;
+	if (uv) {
+	    imagesHolder.appendImage(uv);
+	    if ( (uv->getRenderScale().x != args.renderScale.x) ||
+		 ( uv->getRenderScale().y != args.renderScale.y) ||
+		 ( ( uv->getField() != eFieldNone) /* for DaVinci Resolve */ && ( uv->getField() != args.fieldToRender) ) ) {
+		setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+		throwSuiteStatusException(kOfxStatFailed);
+	    }
+	    BitDepthEnum uvBitDepth      = uv->getPixelDepth();
+	    uvComponents = uv->getPixelComponents();
+	    // only eBitDepthFloat is supported for now (other types require special processing for uv values)
+	    if ( (uvBitDepth != eBitDepthFloat) /*|| (uvComponents != dstComponents)*/ ) {
+		throwSuiteStatusException(kOfxStatErrImageFormat);
+	    }
+	}
 
-        // fillZero is only used when the channelIndex is -1 (i.e. it does not exist), and in this case:
-        // - it is true if the inputchannel is 0, R, G or B
-        // - it is false if the inputchannel is 1, A (images without alpha are considered opaque)
-        {
-            InputPlaneChannel u;
-            u.channelIndex = getChannelIndex(uChannel, uvComponents);
-            u.img = (u.channelIndex >= 0) ? uv : NULL;
-            u.fillZero = (u.channelIndex >= 0) ? false : !(uChannel == eInputChannel1 || uChannel == eInputChannelA);
-            planeChannels.push_back(u);
-        }
-        {
-            InputPlaneChannel v;
-            v.channelIndex = getChannelIndex(vChannel, uvComponents);
-            v.img = (v.channelIndex >= 0) ? uv : NULL;
-            v.fillZero = (v.channelIndex >= 0) ? false : !(vChannel == eInputChannel1 || vChannel == eInputChannelA);
-            planeChannels.push_back(v);
-        }
-        {
-            InputPlaneChannel a;
-            a.channelIndex = getChannelIndex(aChannel, uvComponents);
-            a.img = (a.channelIndex >= 0) ? uv : NULL;
-            a.fillZero = (a.channelIndex >= 0) ? false : !(aChannel == eInputChannel1 || aChannel == eInputChannelA);
-            planeChannels.push_back(a);
-        }
+	// fillZero is only used when the channelIndex is -1 (i.e. it does not exist), and in this case:
+	// - it is true if the inputchannel is 0, R, G or B
+	// - it is false if the inputchannel is 1, A (images without alpha are considered opaque)
+	{
+	    InputPlaneChannel u;
+	    u.channelIndex = getChannelIndex(uChannel, uvComponents);
+	    u.img = (u.channelIndex >= 0) ? uv : NULL;
+	    u.fillZero = (u.channelIndex >= 0) ? false : !(uChannel == eInputChannel1 || uChannel == eInputChannelA);
+	    planeChannels.push_back(u);
+	}
+	{
+	    InputPlaneChannel v;
+	    v.channelIndex = getChannelIndex(vChannel, uvComponents);
+	    v.img = (v.channelIndex >= 0) ? uv : NULL;
+	    v.fillZero = (v.channelIndex >= 0) ? false : !(vChannel == eInputChannel1 || vChannel == eInputChannelA);
+	    planeChannels.push_back(v);
+	}
+	{
+	    InputPlaneChannel a;
+	    a.channelIndex = getChannelIndex(aChannel, uvComponents);
+	    a.img = (a.channelIndex >= 0) ? uv : NULL;
+	    a.fillZero = (a.channelIndex >= 0) ? false : !(aChannel == eInputChannel1 || aChannel == eInputChannelA);
+	    planeChannels.push_back(a);
+	}
     }
+#warning "    } // if (_uvClip)"
 
 
     // auto ptr for the mask.
@@ -1325,18 +1556,17 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     // do we do masking
     if (doMasking) {
-        if ( mask.get() ) {
-            if ( (mask->getRenderScale().x != args.renderScale.x) ||
-                 ( mask->getRenderScale().y != args.renderScale.y) ||
-                 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
-            }
-        }
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
-        processor.doMasking(true);
-        processor.setMaskImg(mask.get(), maskInvert);
+	if ( mask.get() ) {
+	    if ( (mask->getRenderScale().x != args.renderScale.x) ||
+		 ( mask->getRenderScale().y != args.renderScale.y) ||
+		 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+		setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+		throwSuiteStatusException(kOfxStatFailed);
+	    }
+	}
+	bool maskInvert = _maskInvert->getValueAtTime(time);
+	processor.doMasking(true);
+	processor.setMaskImg(mask.get(), maskInvert);
     }
 
     // set the images
@@ -1345,103 +1575,127 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
+    bool processR = _processR->getValueAtTime(time);
+    bool processG = _processG->getValueAtTime(time);
+    bool processB = _processB->getValueAtTime(time);
+    bool processA = _processA->getValueAtTime(time);
     bool unpremultUV = false;
     double uScale = 1., vScale = 1.;
     double uOffset = 0., vOffset = 0.;
     WrapEnum uWrap = eWrapClamp;
     WrapEnum vWrap = eWrapClamp;
     if ( (_plugin == eDistortionPluginIDistort) || (_plugin == eDistortionPluginSTMap) ) {
-        unpremultUV = _unpremultUV->getValueAtTime(time);
-        _uvOffset->getValueAtTime(time, uOffset, vOffset);
-        _uvScale->getValueAtTime(time, uScale, vScale);
-        if (_plugin == eDistortionPluginSTMap) {
-            uWrap = (WrapEnum)_uWrap->getValueAtTime(time);
-            vWrap = (WrapEnum)_vWrap->getValueAtTime(time);
-        }
+	unpremultUV = _unpremultUV->getValueAtTime(time);
+	_uvOffset->getValueAtTime(time, uOffset, vOffset);
+	_uvScale->getValueAtTime(time, uScale, vScale);
+	if (_plugin == eDistortionPluginSTMap) {
+	    uWrap = (WrapEnum)_uWrap->getValueAtTime(time);
+	    vWrap = (WrapEnum)_vWrap->getValueAtTime(time);
+	}
     }
-    bool blackOutside;
-    _blackOutside->getValueAtTime(time, blackOutside);
-    double mix;
-    _mix->getValueAtTime(time, mix);
+    bool blackOutside = _blackOutside->getValueAtTime(time);
+    double mix = _mix->getValueAtTime(time);
 
     bool transformIsIdentity = true;
     Matrix3x3 srcTransformInverse;
 #ifdef OFX_EXTENSIONS_NUKE
     if ( src.get() ) {
-        transformIsIdentity = src->getTransformIsIdentity();
+	transformIsIdentity = src->getTransformIsIdentity();
     }
     if (!transformIsIdentity) {
-        double srcTransform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
-        src->getTransform(srcTransform);
-        Matrix3x3 srcTransformMat;
-        srcTransformMat.a = srcTransform[0];
-        srcTransformMat.b = srcTransform[1];
-        srcTransformMat.c = srcTransform[2];
-        srcTransformMat.d = srcTransform[3];
-        srcTransformMat.e = srcTransform[4];
-        srcTransformMat.f = srcTransform[5];
-        srcTransformMat.g = srcTransform[6];
-        srcTransformMat.h = srcTransform[7];
-        srcTransformMat.i = srcTransform[8];
-        // invert it
-        double det = srcTransformMat.determinant();
-        if (det != 0.) {
-            srcTransformInverse = srcTransformMat.inverse(det);
-        } else {
-            transformIsIdentity = true; // no transform
-        }
+	double srcTransform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
+	src->getTransform(srcTransform);
+	Matrix3x3 srcTransformMat;
+	srcTransformMat.a = srcTransform[0];
+	srcTransformMat.b = srcTransform[1];
+	srcTransformMat.c = srcTransform[2];
+	srcTransformMat.d = srcTransform[3];
+	srcTransformMat.e = srcTransform[4];
+	srcTransformMat.f = srcTransform[5];
+	srcTransformMat.g = srcTransform[6];
+	srcTransformMat.h = srcTransform[7];
+	srcTransformMat.i = srcTransform[8];
+	// invert it
+	double det = srcTransformMat.determinant();
+	if (det != 0.) {
+	    srcTransformInverse = srcTransformMat.inverse(det);
+	} else {
+	    transformIsIdentity = true; // no transform
+	}
     }
 #endif
     if (_plugin == eDistortionPluginIDistort) {
-        // in IDistort, displacement is given in full-scale pixels
-        uScale *= args.renderScale.x;
-        vScale *= args.renderScale.y;
-    }
-    DistortionModelEnum distortionModel = _distortionModel ? (DistortionModelEnum)_distortionModel->getValue() : eDistortionModelNuke;
-    DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
-    OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
-    double par = 1., k1 = 0., k2 = 0., k3 = 0., p1 = 0., p2 = 0., cx = 0., cy = 0., squeeze = 1., ax = 0., ay = 0.;
-    if (_plugin == eDistortionPluginLensDistortion) {
-        distortionModel = (DistortionModelEnum)_distortionModel->getValueAtTime(time);
-        switch (distortionModel) {
-        case eDistortionModelNuke:
-            if (_srcClip) {
-                par = _srcClip->getPixelAspectRatio();
-            }
-            _k1->getValueAtTime(time, k1);
-            _k2->getValueAtTime(time, k2);
-            //_k3->getValueAtTime(time, k3);
-            //_p1->getValueAtTime(time, p1);
-            //_p2->getValueAtTime(time, p2);
-            _center->getValueAtTime(time, cx, cy);
-            _squeeze->getValueAtTime(time, squeeze);
-            _asymmetric->getValueAtTime(time, ax, ay);
-            break;
-        }
+	// in IDistort, displacement is given in full-scale pixels
+	uScale *= args.renderScale.x;
+	vScale *= args.renderScale.y;
     }
     OfxRectI srcRoDPixel = {0, 0, 0, 0};
     if (_srcClip) {
-        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
-        Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
+	const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+	Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
+    }
+
+    DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
+    std::auto_ptr<DistortionModel> distortionModel;
+    if (_plugin == eDistortionPluginLensDistortion) {
+	DistortionModelEnum distortionModelE = (DistortionModelEnum)_distortionModel->getValueAtTime(time);
+	switch (distortionModelE) {
+	case eDistortionModelNuke: {
+	    double par = 1.;
+	    if (_srcClip) {
+		par = _srcClip->getPixelAspectRatio();
+	    }
+	    double k1 = _k1->getValueAtTime(time);
+	    double k2 = _k2->getValueAtTime(time);
+	    double cx, cy;
+	    _center->getValueAtTime(time, cx, cy);
+	    double squeeze = _squeeze->getValueAtTime(time);
+	    double ax, ay;
+	    _asymmetric->getValueAtTime(time, ax, ay);
+	    distortionModel.reset( new DistortionModelNuke(srcRoDPixel,
+							   par,
+							   k1,
+							   k2,
+							   cx,
+							   cy,
+							   squeeze,
+							   ax,
+							   ay) );
+	    break;
+	}
+	case eDistortionModelPFBarrel: {
+	    double par = 1.;
+	    if (_srcClip) {
+		par = _srcClip->getPixelAspectRatio();
+	    }
+	    double c3 = _pfC5->getValueAtTime(time);
+	    double c5 = _pfC5->getValueAtTime(time);
+	    double xp, yp;
+	    _pfP->getValueAtTime(time, xp, yp);
+	    double squeeze = _pfSqueeze->getValueAtTime(time);
+	    distortionModel.reset( new DistortionModelPFBarrel(srcRoDPixel,
+							       par,
+							       c3,
+							       c5,
+							       xp,
+							       yp,
+							       squeeze) );
+	    break;
+	}
+	}
     }
     processor.setValues(processR, processG, processB, processA,
-                        transformIsIdentity, srcTransformInverse,
-                        srcRoDPixel,
-                        planeChannels,
-                        unpremultUV,
-                        uOffset, vOffset,
-                        uScale, vScale,
-                        uWrap, vWrap,
-                        distortionModel,
-                        direction,
-                        outputMode,
-                        par, k1, k2, k3, p1, p2, cx, cy, squeeze, ax, ay,
-                        blackOutside, mix);
+			transformIsIdentity, srcTransformInverse,
+			srcRoDPixel,
+			planeChannels,
+			unpremultUV,
+			uOffset, vOffset,
+			uScale, vScale,
+			uWrap, vWrap,
+			distortionModel.get(),
+			direction,
+			outputMode,
+			blackOutside, mix);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -1455,76 +1709,76 @@ DistortionPlugin::renderInternalForBitDepth(const RenderArguments &args)
     FilterEnum filter = args.renderQualityDraft ? eFilterImpulse : eFilterCubic;
 
     if (!args.renderQualityDraft && _filter) {
-        filter = (FilterEnum)_filter->getValueAtTime(time);
+	filter = (FilterEnum)_filter->getValueAtTime(time);
     }
     bool clamp = false;
     if (_clamp) {
-        clamp = _clamp->getValueAtTime(time);
+	clamp = _clamp->getValueAtTime(time);
     }
 
     // as you may see below, some filters don't need explicit clamping, since they are
     // "clamped" by construction.
     switch (filter) {
     case eFilterImpulse: {
-        DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterImpulse, false> fred(*this);
-        setupAndProcess(fred, args);
-        break;
+	DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterImpulse, false> fred(*this);
+	setupAndProcess(fred, args);
+	break;
     }
     case eFilterBilinear: {
-        DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterBilinear, false> fred(*this);
-        setupAndProcess(fred, args);
-        break;
+	DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterBilinear, false> fred(*this);
+	setupAndProcess(fred, args);
+	break;
     }
     case eFilterCubic: {
-        DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterCubic, false> fred(*this);
-        setupAndProcess(fred, args);
-        break;
+	DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterCubic, false> fred(*this);
+	setupAndProcess(fred, args);
+	break;
     }
     case eFilterKeys:
-        if (clamp) {
-            DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterKeys, true> fred(*this);
-            setupAndProcess(fred, args);
-        } else {
-            DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterKeys, false> fred(*this);
-            setupAndProcess(fred, args);
-        }
-        break;
+	if (clamp) {
+	    DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterKeys, true> fred(*this);
+	    setupAndProcess(fred, args);
+	} else {
+	    DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterKeys, false> fred(*this);
+	    setupAndProcess(fred, args);
+	}
+	break;
     case eFilterSimon:
-        if (clamp) {
-            DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterSimon, true> fred(*this);
-            setupAndProcess(fred, args);
-        } else {
-            DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterSimon, false> fred(*this);
-            setupAndProcess(fred, args);
-        }
-        break;
+	if (clamp) {
+	    DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterSimon, true> fred(*this);
+	    setupAndProcess(fred, args);
+	} else {
+	    DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterSimon, false> fred(*this);
+	    setupAndProcess(fred, args);
+	}
+	break;
     case eFilterRifman:
-        if (clamp) {
-            DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterRifman, true> fred(*this);
-            setupAndProcess(fred, args);
-        } else {
-            DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterRifman, false> fred(*this);
-            setupAndProcess(fred, args);
-        }
-        break;
+	if (clamp) {
+	    DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterRifman, true> fred(*this);
+	    setupAndProcess(fred, args);
+	} else {
+	    DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterRifman, false> fred(*this);
+	    setupAndProcess(fred, args);
+	}
+	break;
     case eFilterMitchell:
-        if (clamp) {
-            DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterMitchell, true> fred(*this);
-            setupAndProcess(fred, args);
-        } else {
-            DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterMitchell, false> fred(*this);
-            setupAndProcess(fred, args);
-        }
-        break;
+	if (clamp) {
+	    DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterMitchell, true> fred(*this);
+	    setupAndProcess(fred, args);
+	} else {
+	    DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterMitchell, false> fred(*this);
+	    setupAndProcess(fred, args);
+	}
+	break;
     case eFilterParzen: {
-        DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterParzen, false> fred(*this);
-        setupAndProcess(fred, args);
-        break;
+	DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterParzen, false> fred(*this);
+	setupAndProcess(fred, args);
+	break;
     }
     case eFilterNotch: {
-        DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterNotch, false> fred(*this);
-        setupAndProcess(fred, args);
-        break;
+	DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterNotch, false> fred(*this);
+	setupAndProcess(fred, args);
+	break;
     }
     } // switch
 } // renderInternalForBitDepth
@@ -1533,20 +1787,20 @@ DistortionPlugin::renderInternalForBitDepth(const RenderArguments &args)
 template <int nComponents, DistortionPluginEnum plugin>
 void
 DistortionPlugin::renderInternal(const RenderArguments &args,
-                                 BitDepthEnum dstBitDepth)
+				 BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
     case eBitDepthUByte:
-        renderInternalForBitDepth<unsigned char, nComponents, 255, plugin>(args);
-        break;
+	renderInternalForBitDepth<unsigned char, nComponents, 255, plugin>(args);
+	break;
     case eBitDepthUShort:
-        renderInternalForBitDepth<unsigned short, nComponents, 65535, plugin>(args);
-        break;
+	renderInternalForBitDepth<unsigned short, nComponents, 65535, plugin>(args);
+	break;
     case eBitDepthFloat:
-        renderInternalForBitDepth<float, nComponents, 1, plugin>(args);
-        break;
+	renderInternalForBitDepth<float, nComponents, 1, plugin>(args);
+	break;
     default:
-        throwSuiteStatusException(kOfxStatErrUnsupported);
+	throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -1566,131 +1820,142 @@ DistortionPlugin::render(const RenderArguments &args)
     assert(dstComponents == ePixelComponentAlpha || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentRGBA);
 #endif
     if (dstComponents == ePixelComponentRGBA) {
-        switch (_plugin) {
-        case eDistortionPluginSTMap:
-            renderInternal<4, eDistortionPluginSTMap>(args, dstBitDepth);
-            break;
-        case eDistortionPluginIDistort:
-            renderInternal<4, eDistortionPluginIDistort>(args, dstBitDepth);
-            break;
-        case eDistortionPluginLensDistortion:
-            renderInternal<4, eDistortionPluginLensDistortion>(args, dstBitDepth);
-            break;
-        }
+	switch (_plugin) {
+	case eDistortionPluginSTMap:
+	    renderInternal<4, eDistortionPluginSTMap>(args, dstBitDepth);
+	    break;
+	case eDistortionPluginIDistort:
+	    renderInternal<4, eDistortionPluginIDistort>(args, dstBitDepth);
+	    break;
+	case eDistortionPluginLensDistortion:
+	    renderInternal<4, eDistortionPluginLensDistortion>(args, dstBitDepth);
+	    break;
+	}
     } else if (dstComponents == ePixelComponentRGB) {
-        switch (_plugin) {
-        case eDistortionPluginSTMap:
-            renderInternal<3, eDistortionPluginSTMap>(args, dstBitDepth);
-            break;
-        case eDistortionPluginIDistort:
-            renderInternal<3, eDistortionPluginIDistort>(args, dstBitDepth);
-            break;
-        case eDistortionPluginLensDistortion:
-            renderInternal<3, eDistortionPluginLensDistortion>(args, dstBitDepth);
-            break;
-        }
+	switch (_plugin) {
+	case eDistortionPluginSTMap:
+	    renderInternal<3, eDistortionPluginSTMap>(args, dstBitDepth);
+	    break;
+	case eDistortionPluginIDistort:
+	    renderInternal<3, eDistortionPluginIDistort>(args, dstBitDepth);
+	    break;
+	case eDistortionPluginLensDistortion:
+	    renderInternal<3, eDistortionPluginLensDistortion>(args, dstBitDepth);
+	    break;
+	}
 #ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
-        switch (_plugin) {
-        case eDistortionPluginSTMap:
-            renderInternal<2, eDistortionPluginSTMap>(args, dstBitDepth);
-            break;
-        case eDistortionPluginIDistort:
-            renderInternal<2, eDistortionPluginIDistort>(args, dstBitDepth);
-            break;
-        case eDistortionPluginLensDistortion:
-            renderInternal<2, eDistortionPluginLensDistortion>(args, dstBitDepth);
-            break;
-        }
+	switch (_plugin) {
+	case eDistortionPluginSTMap:
+	    renderInternal<2, eDistortionPluginSTMap>(args, dstBitDepth);
+	    break;
+	case eDistortionPluginIDistort:
+	    renderInternal<2, eDistortionPluginIDistort>(args, dstBitDepth);
+	    break;
+	case eDistortionPluginLensDistortion:
+	    renderInternal<2, eDistortionPluginLensDistortion>(args, dstBitDepth);
+	    break;
+	}
 #endif
     } else {
-        assert(dstComponents == ePixelComponentAlpha);
-        switch (_plugin) {
-        case eDistortionPluginSTMap:
-            renderInternal<1, eDistortionPluginSTMap>(args, dstBitDepth);
-            break;
-        case eDistortionPluginIDistort:
-            renderInternal<1, eDistortionPluginIDistort>(args, dstBitDepth);
-            break;
-        case eDistortionPluginLensDistortion:
-            renderInternal<1, eDistortionPluginLensDistortion>(args, dstBitDepth);
-            break;
-        }
+	assert(dstComponents == ePixelComponentAlpha);
+	switch (_plugin) {
+	case eDistortionPluginSTMap:
+	    renderInternal<1, eDistortionPluginSTMap>(args, dstBitDepth);
+	    break;
+	case eDistortionPluginIDistort:
+	    renderInternal<1, eDistortionPluginIDistort>(args, dstBitDepth);
+	    break;
+	case eDistortionPluginLensDistortion:
+	    renderInternal<1, eDistortionPluginLensDistortion>(args, dstBitDepth);
+	    break;
+	}
     }
 } // DistortionPlugin::render
 
 bool
 DistortionPlugin::isIdentity(const IsIdentityArguments &args,
-                             Clip * &identityClip,
-                             double & /*identityTime*/)
+			     Clip * &identityClip,
+			     double & /*identityTime*/)
 {
     const double time = args.time;
 
     if ( (_plugin == eDistortionPluginIDistort) || (_plugin == eDistortionPluginSTMap) ) {
-        if ( !_uvClip || !_uvClip->isConnected() ) {
-            identityClip = _srcClip;
+	if ( !_uvClip || !_uvClip->isConnected() ) {
+	    identityClip = _srcClip;
 
-            return true;
-        }
+	    return true;
+	}
     }
     if (_plugin == eDistortionPluginLensDistortion) {
-        bool identity = false;
-        DistortionModelEnum distortionModel = (DistortionModelEnum)_distortionModel->getValueAtTime(time);
-        switch (distortionModel) {
-        case eDistortionModelNuke:
-            double k1 = _k1->getValueAtTime(time);
-            double k2 = _k2->getValueAtTime(time);
-            double ax, ay;
-            _asymmetric->getValueAtTime(time, ax, ay);
-            identity = (k1 == 0.) && (k2 == 0.) && (ax == 0.) && (ay == 0.);
-            break;
-        }
-        if (identity) {
-            identityClip = _srcClip;
+	OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
+	if (outputMode == eOutputModeSTMap) {
+	    return false;
+	}
+	bool identity = false;
+	DistortionModelEnum distortionModel = (DistortionModelEnum)_distortionModel->getValueAtTime(time);
+	switch (distortionModel) {
+	case eDistortionModelNuke: {
+	    double k1 = _k1->getValueAtTime(time);
+	    double k2 = _k2->getValueAtTime(time);
+	    double ax, ay;
+	    _asymmetric->getValueAtTime(time, ax, ay);
+	    identity = (k1 == 0.) && (k2 == 0.) && (ax == 0.) && (ay == 0.);
+	    break;
+	}
+	case eDistortionModelPFBarrel: {
+	    double pfC3 = _pfC3->getValueAtTime(time);
+	    double pfC5 = _pfC5->getValueAtTime(time);
+	    identity = (pfC3 == 0.) && (pfC5 == 0.);
+	    break;
+	}
+	}
+	if (identity) {
+	    identityClip = _srcClip;
 
-            return true;
-        }
+	    return true;
+	}
     }
     double mix;
     _mix->getValueAtTime(time, mix);
 
     if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
-        identityClip = _srcClip;
+	identityClip = _srcClip;
 
-        return true;
+	return true;
     }
 
     {
-        bool processR, processG, processB, processA;
-        _processR->getValueAtTime(time, processR);
-        _processG->getValueAtTime(time, processG);
-        _processB->getValueAtTime(time, processB);
-        _processA->getValueAtTime(time, processA);
-        if (!processR && !processG && !processB && !processA) {
-            identityClip = _srcClip;
+	bool processR, processG, processB, processA;
+	_processR->getValueAtTime(time, processR);
+	_processG->getValueAtTime(time, processG);
+	_processB->getValueAtTime(time, processB);
+	_processA->getValueAtTime(time, processA);
+	if (!processR && !processG && !processB && !processA) {
+	    identityClip = _srcClip;
 
-            return true;
-        }
+	    return true;
+	}
     }
 
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            if (getImageEffectHostDescription()->supportsMultiResolution) {
-                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-                // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    identityClip = _srcClip;
+	bool maskInvert;
+	_maskInvert->getValueAtTime(time, maskInvert);
+	if (!maskInvert) {
+	    OfxRectI maskRoD;
+	    if (getImageEffectHostDescription()->supportsMultiResolution) {
+		// In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+		// In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
+		Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+		// effect is identity if the renderWindow doesn't intersect the mask RoD
+		if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+		    identityClip = _srcClip;
 
-                    return true;
-                }
-            }
-        }
+		    return true;
+		}
+	    }
+	}
     }
 
     return false;
@@ -1701,51 +1966,51 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
 // (this is the case here)
 void
 DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
-                                       RegionOfInterestSetter &rois)
+				       RegionOfInterestSetter &rois)
 {
     const double time = args.time;
 
     if (!_srcClip) {
-        return;
+	return;
     }
     // ask for full RoD of srcClip
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
     rois.setRegionOfInterest(*_srcClip, srcRod);
     // only ask for the renderWindow (intersected with the RoD) from uvClip
     if (_uvClip) {
-        OfxRectD uvRoI = _uvClip->getRegionOfDefinition(time);
-        Coords::rectIntersection(uvRoI, args.regionOfInterest, &uvRoI);
-        rois.setRegionOfInterest(*_uvClip, uvRoI);
+	OfxRectD uvRoI = _uvClip->getRegionOfDefinition(time);
+	Coords::rectIntersection(uvRoI, args.regionOfInterest, &uvRoI);
+	rois.setRegionOfInterest(*_uvClip, uvRoI);
     }
 }
 
 bool
 DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
-                                        OfxRectD &rod)
+					OfxRectD &rod)
 {
     const double time = args.time;
 
     switch (_plugin) {
     case eDistortionPluginSTMap:
-        if (_uvClip) {
-            // IDistort: RoD is the same as uv map
-            rod = _uvClip->getRegionOfDefinition(time);
+	if (_uvClip) {
+	    // IDistort: RoD is the same as uv map
+	    rod = _uvClip->getRegionOfDefinition(time);
 
-            return true;
-        }
-        break;
+	    return true;
+	}
+	break;
     case eDistortionPluginIDistort:
-        if (_srcClip) {
-            // IDistort: RoD is the same as srcClip
-            rod = _srcClip->getRegionOfDefinition(time);
+	if (_srcClip) {
+	    // IDistort: RoD is the same as srcClip
+	    rod = _srcClip->getRegionOfDefinition(time);
 
-            return true;
-        }
-        break;
+	    return true;
+	}
+	break;
     case eDistortionPluginLensDistortion:
 
-        return false;     // use source RoD
-        break;
+	return false;     // use source RoD
+	break;
     }
 
     return false;
@@ -1754,7 +2019,7 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 #ifdef OFX_EXTENSIONS_NUKE
 void
 DistortionPlugin::getClipComponents(const ClipComponentsArguments& args,
-                                    ClipComponentsSetter& clipComponents)
+				    ClipComponentsSetter& clipComponents)
 {
     assert(gIsMultiPlane);
 
@@ -1769,34 +2034,34 @@ DistortionPlugin::getClipComponents(const ClipComponentsArguments& args,
     clipComponents.addClipComponents(*_srcClip, dstPx);
 
     if (_uvClip) {
-        std::map<Clip*, std::set<std::string> > clipMap;
-        bool isCreatingAlpha;
-        for (int i = 0; i < 2; ++i) {
-            std::string ofxComp, ofxPlane;
-            int channelIndex;
-            Clip* clip = 0;
-            bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &ofxPlane, &ofxComp, &channelIndex, &isCreatingAlpha);
-            if (!ok) {
-                continue;
-            }
-            if ( (ofxComp == kMultiPlaneParamOutputOption0) || (ofxComp == kMultiPlaneParamOutputOption1) ) {
-                continue;
-            }
-            assert(clip);
+	std::map<Clip*, std::set<std::string> > clipMap;
+	bool isCreatingAlpha;
+	for (int i = 0; i < 2; ++i) {
+	    std::string ofxComp, ofxPlane;
+	    int channelIndex;
+	    Clip* clip = 0;
+	    bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &ofxPlane, &ofxComp, &channelIndex, &isCreatingAlpha);
+	    if (!ok) {
+		continue;
+	    }
+	    if ( (ofxComp == kMultiPlaneParamOutputOption0) || (ofxComp == kMultiPlaneParamOutputOption1) ) {
+		continue;
+	    }
+	    assert(clip);
 
-            std::map<Clip*, std::set<std::string> >::iterator foundClip = clipMap.find(clip);
-            if ( foundClip == clipMap.end() ) {
-                std::set<std::string> s;
-                s.insert(ofxComp);
-                clipMap.insert( std::make_pair(clip, s) );
-                clipComponents.addClipComponents(*clip, ofxComp);
-            } else {
-                std::pair<std::set<std::string>::iterator, bool> ret = foundClip->second.insert(ofxComp);
-                if (ret.second) {
-                    clipComponents.addClipComponents(*clip, ofxComp);
-                }
-            }
-        }
+	    std::map<Clip*, std::set<std::string> >::iterator foundClip = clipMap.find(clip);
+	    if ( foundClip == clipMap.end() ) {
+		std::set<std::string> s;
+		s.insert(ofxComp);
+		clipMap.insert( std::make_pair(clip, s) );
+		clipComponents.addClipComponents(*clip, ofxComp);
+	    } else {
+		std::pair<std::set<std::string>::iterator, bool> ret = foundClip->second.insert(ofxComp);
+		if (ret.second) {
+		    clipComponents.addClipComponents(*clip, ofxComp);
+		}
+	    }
+	}
     }
 } // getClipComponents
 
@@ -1806,37 +2071,36 @@ void
 DistortionPlugin::updateVisibility()
 {
     if (_plugin == eDistortionPluginLensDistortion) {
-        DistortionModelEnum distortionModel = (DistortionModelEnum)_distortionModel->getValue();
-        switch (distortionModel) {
-        case eDistortionModelNuke:
-            _k1->setIsSecretAndDisabled(false);
-            _k2->setIsSecretAndDisabled(false);
-            _k3->setIsSecretAndDisabled(true);
-            _p1->setIsSecretAndDisabled(true);
-            _p2->setIsSecretAndDisabled(true);
-            _center->setIsSecretAndDisabled(false);
-            _squeeze->setIsSecretAndDisabled(false);
-            _asymmetric->setIsSecretAndDisabled(false);
-            break;
-        }
+	DistortionModelEnum distortionModel = (DistortionModelEnum)_distortionModel->getValue();
+
+	_k1->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
+	_k2->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
+	_center->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
+	_squeeze->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
+	_asymmetric->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
+
+	_pfC3->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
+	_pfC5->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
+	_pfSqueeze->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
+	_pfP->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
     }
 }
 
 void
 DistortionPlugin::changedParam(const InstanceChangedArgs &args,
-                               const std::string &paramName)
+			       const std::string &paramName)
 {
     if (_plugin == eDistortionPluginLensDistortion) {
-        if ( (paramName == kParamDistortionModel) && (args.reason == eChangeUserEdit) ) {
-            updateVisibility();
-        }
+	if ( (paramName == kParamDistortionModel) && (args.reason == eChangeUserEdit) ) {
+	    updateVisibility();
+	}
 
-        return;
+	return;
     }
     if (gIsMultiPlane) {
-        if ( handleChangedParamForAllDynamicChoices(paramName, args.reason) ) {
-            return;
-        }
+	if ( handleChangedParamForAllDynamicChoices(paramName, args.reason) ) {
+	    return;
+	}
     }
 }
 
@@ -1863,20 +2127,20 @@ DistortionPluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
     // basic labels
     switch (plugin) {
     case eDistortionPluginSTMap:
-        desc.setLabel(kPluginSTMapName);
-        desc.setPluginGrouping(kPluginSTMapGrouping);
-        desc.setPluginDescription(kPluginSTMapDescription);
-        break;
+	desc.setLabel(kPluginSTMapName);
+	desc.setPluginGrouping(kPluginSTMapGrouping);
+	desc.setPluginDescription(kPluginSTMapDescription);
+	break;
     case eDistortionPluginIDistort:
-        desc.setLabel(kPluginIDistortName);
-        desc.setPluginGrouping(kPluginIDistortGrouping);
-        desc.setPluginDescription(kPluginIDistortDescription);
-        break;
+	desc.setLabel(kPluginIDistortName);
+	desc.setPluginGrouping(kPluginIDistortGrouping);
+	desc.setPluginDescription(kPluginIDistortDescription);
+	break;
     case eDistortionPluginLensDistortion:
-        desc.setLabel(kPluginLensDistortionName);
-        desc.setPluginGrouping(kPluginLensDistortionGrouping);
-        desc.setPluginDescription(kPluginLensDistortionDescription);
-        break;
+	desc.setLabel(kPluginLensDistortionName);
+	desc.setPluginGrouping(kPluginLensDistortionGrouping);
+	desc.setPluginDescription(kPluginLensDistortionDescription);
+	break;
     }
 
     //desc.addSupportedContext(eContextFilter);
@@ -1884,20 +2148,20 @@ DistortionPluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
     //desc.addSupportedContext(eContextPaint);
     switch (plugin) {
     case eDistortionPluginSTMap:
-        //desc.addSupportedBitDepth(eBitDepthUByte); // not yet supported (requires special processing for uv clip values)
-        //desc.addSupportedBitDepth(eBitDepthUShort);
-        desc.addSupportedBitDepth(eBitDepthFloat);
-        break;
+	//desc.addSupportedBitDepth(eBitDepthUByte); // not yet supported (requires special processing for uv clip values)
+	//desc.addSupportedBitDepth(eBitDepthUShort);
+	desc.addSupportedBitDepth(eBitDepthFloat);
+	break;
     case eDistortionPluginIDistort:
-        //desc.addSupportedBitDepth(eBitDepthUByte); // not yet supported (requires special processing for uv clip values)
-        //desc.addSupportedBitDepth(eBitDepthUShort);
-        desc.addSupportedBitDepth(eBitDepthFloat);
-        break;
+	//desc.addSupportedBitDepth(eBitDepthUByte); // not yet supported (requires special processing for uv clip values)
+	//desc.addSupportedBitDepth(eBitDepthUShort);
+	desc.addSupportedBitDepth(eBitDepthFloat);
+	break;
     case eDistortionPluginLensDistortion:
-        desc.addSupportedBitDepth(eBitDepthUByte);
-        desc.addSupportedBitDepth(eBitDepthUShort);
-        desc.addSupportedBitDepth(eBitDepthFloat);
-        break;
+	desc.addSupportedBitDepth(eBitDepthUByte);
+	desc.addSupportedBitDepth(eBitDepthUShort);
+	desc.addSupportedBitDepth(eBitDepthFloat);
+	break;
     }
 
 
@@ -1927,18 +2191,18 @@ DistortionPluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
 #if defined(OFX_EXTENSIONS_NUKE) && defined(OFX_EXTENSIONS_NATRON)
     gIsMultiPlane = getImageEffectHostDescription()->supportsDynamicChoices && getImageEffectHostDescription()->isMultiPlanar;
     if (gIsMultiPlane) {
-        // This enables fetching different planes from the input.
-        // Generally the user will read a multi-layered EXR file in the Reader node and then use the shuffle
-        // to redirect the plane's channels into RGBA color plane.
+	// This enables fetching different planes from the input.
+	// Generally the user will read a multi-layered EXR file in the Reader node and then use the shuffle
+	// to redirect the plane's channels into RGBA color plane.
 
-        desc.setIsMultiPlanar(true);
+	desc.setIsMultiPlanar(true);
     }
 #endif
 } // >::describe
 
 static void
 addWrapOptions(ChoiceParamDescriptor* channel,
-               WrapEnum def)
+	       WrapEnum def)
 {
     assert(channel->getNOptions() == eWrapClamp);
     channel->appendOption(kParamWrapOptionClamp, kParamWrapOptionClampHint);
@@ -1952,27 +2216,27 @@ addWrapOptions(ChoiceParamDescriptor* channel,
 template<DistortionPluginEnum plugin>
 void
 DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
-                                                   ContextEnum context)
+						   ContextEnum context)
 {
 #ifdef OFX_EXTENSIONS_NUKE
     if ( gIsMultiPlane && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
-        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
+	throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 #endif
 
     if (plugin ==  eDistortionPluginSTMap) {
-        // create the uv clip
-        // uv clip is defined first, because the output format is taken from the RoD of the first clip in Nuke
-        ClipDescriptor *uvClip = desc.defineClip(kClipUV);
-        uvClip->addSupportedComponent(ePixelComponentRGBA);
-        uvClip->addSupportedComponent(ePixelComponentRGB);
+	// create the uv clip
+	// uv clip is defined first, because the output format is taken from the RoD of the first clip in Nuke
+	ClipDescriptor *uvClip = desc.defineClip(kClipUV);
+	uvClip->addSupportedComponent(ePixelComponentRGBA);
+	uvClip->addSupportedComponent(ePixelComponentRGB);
 #ifdef OFX_EXTENSIONS_NUKE
-        uvClip->addSupportedComponent(ePixelComponentXY);
+	uvClip->addSupportedComponent(ePixelComponentXY);
 #endif
-        uvClip->addSupportedComponent(ePixelComponentAlpha);
-        uvClip->setTemporalClipAccess(false);
-        uvClip->setSupportsTiles(kSupportsTiles);
-        uvClip->setIsMask(false);
+	uvClip->addSupportedComponent(ePixelComponentAlpha);
+	uvClip->setTemporalClipAccess(false);
+	uvClip->setSupportsTiles(kSupportsTiles);
+	uvClip->setIsMask(false);
     }
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -1989,17 +2253,17 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
 #endif
     srcClip->setIsMask(false);
     if (plugin == eDistortionPluginIDistort) {
-        // create the uv clip
-        ClipDescriptor *uvClip = desc.defineClip(kClipUV);
-        uvClip->addSupportedComponent(ePixelComponentRGBA);
-        uvClip->addSupportedComponent(ePixelComponentRGB);
+	// create the uv clip
+	ClipDescriptor *uvClip = desc.defineClip(kClipUV);
+	uvClip->addSupportedComponent(ePixelComponentRGBA);
+	uvClip->addSupportedComponent(ePixelComponentRGB);
 #ifdef OFX_EXTENSIONS_NUKE
-        uvClip->addSupportedComponent(ePixelComponentXY);
+	uvClip->addSupportedComponent(ePixelComponentXY);
 #endif
-        uvClip->addSupportedComponent(ePixelComponentAlpha);
-        uvClip->setTemporalClipAccess(false);
-        uvClip->setSupportsTiles(kSupportsTiles);
-        uvClip->setIsMask(false);
+	uvClip->addSupportedComponent(ePixelComponentAlpha);
+	uvClip->setTemporalClipAccess(false);
+	uvClip->setSupportsTiles(kSupportsTiles);
+	uvClip->setIsMask(false);
     }
 
     // create the mandated output clip
@@ -2016,7 +2280,7 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     maskClip->addSupportedComponent(ePixelComponentAlpha);
     maskClip->setTemporalClipAccess(false);
     if (context != eContextPaint) {
-        maskClip->setOptional(true);
+	maskClip->setOptional(true);
     }
     maskClip->setSupportsTiles(kSupportsTiles);
     maskClip->setIsMask(true);
@@ -2025,301 +2289,306 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabel(kParamProcessRLabel);
-        param->setHint(kParamProcessRHint);
-        param->setDefault(true);
+	BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+	param->setLabel(kParamProcessRLabel);
+	param->setHint(kParamProcessRHint);
+	param->setDefault(true);
 #ifdef OFX_EXTENSIONS_NUKE
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+	param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
-        if (page) {
-            page->addChild(*param);
-        }
+	if (page) {
+	    page->addChild(*param);
+	}
     }
     {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabel(kParamProcessGLabel);
-        param->setHint(kParamProcessGHint);
-        param->setDefault(true);
+	BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+	param->setLabel(kParamProcessGLabel);
+	param->setHint(kParamProcessGHint);
+	param->setDefault(true);
 #ifdef OFX_EXTENSIONS_NUKE
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+	param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
-        if (page) {
-            page->addChild(*param);
-        }
+	if (page) {
+	    page->addChild(*param);
+	}
     }
     {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabel(kParamProcessBLabel);
-        param->setHint(kParamProcessBHint);
-        param->setDefault(true);
+	BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+	param->setLabel(kParamProcessBLabel);
+	param->setHint(kParamProcessBHint);
+	param->setDefault(true);
 #ifdef OFX_EXTENSIONS_NUKE
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+	param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
-        if (page) {
-            page->addChild(*param);
-        }
+	if (page) {
+	    page->addChild(*param);
+	}
     }
     {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabel(kParamProcessALabel);
-        param->setHint(kParamProcessAHint);
-        param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
-        }
+	BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+	param->setLabel(kParamProcessALabel);
+	param->setHint(kParamProcessAHint);
+	param->setDefault(true);
+	if (page) {
+	    page->addChild(*param);
+	}
     }
 
     if ( (plugin == eDistortionPluginIDistort) ||
-         ( plugin == eDistortionPluginSTMap) ) {
-        std::vector<std::string> clipsForChannels(1);
-        clipsForChannels[0] = kClipUV;
+	 ( plugin == eDistortionPluginSTMap) ) {
+	std::vector<std::string> clipsForChannels(1);
+	clipsForChannels[0] = kClipUV;
 
-        if (gIsMultiPlane) {
-            {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
+	if (gIsMultiPlane) {
+	    {
+		ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
 #ifdef OFX_EXTENSIONS_NUKE
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+		param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
-                param->setDefault(eInputChannelR);
-            }
-            {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
-                param->setDefault(eInputChannelG);
-            }
-            {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelA, kParamChannelALabel, kParamChannelAHint);
-                param->setDefault(eInputChannelA);
-            }
-        } else {
-            {
-                ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelU);
-                param->setLabel(kParamChannelULabel);
-                param->setHint(kParamChannelUHint);
+		param->setDefault(eInputChannelR);
+	    }
+	    {
+		ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
+		param->setDefault(eInputChannelG);
+	    }
+	    {
+		ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelA, kParamChannelALabel, kParamChannelAHint);
+		param->setDefault(eInputChannelA);
+	    }
+	} else {
+	    {
+		ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelU);
+		param->setLabel(kParamChannelULabel);
+		param->setHint(kParamChannelUHint);
 #ifdef OFX_EXTENSIONS_NUKE
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+		param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
-                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
-                param->setDefault(eInputChannelR);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-            {
-                ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelV);
-                param->setLabel(kParamChannelVLabel);
-                param->setHint(kParamChannelVHint);
-                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
-                param->setDefault(eInputChannelG);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-            {
-                ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelA);
-                param->setLabel(kParamChannelALabel);
-                param->setHint(kParamChannelAHint);
-                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
-                param->setDefault(eInputChannelA);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-        }
-        {
-            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamChannelUnpremultUV);
-            param->setLabel(kParamChannelUnpremultUVLabel);
-            param->setHint(kParamChannelUnpremultUVHint);
-            param->setDefault(false);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVOffset);
-            param->setLabel(kParamUVOffsetLabel);
-            param->setHint(kParamUVOffsetHint);
-            param->setDefault(0., 0.);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(0., 0., 1., 1.);
-            param->setDimensionLabels("U", "V");
-            param->setUseHostNativeOverlayHandle(false);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVScale);
-            param->setLabel(kParamUVScaleLabel);
-            param->setHint(kParamUVScaleHint);
-            param->setDoubleType(eDoubleTypeScale);
-            param->setDefault(1., 1.);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(0., 0., 100., 100.);
-            param->setDimensionLabels("U", "V");
-            param->setUseHostNativeOverlayHandle(false);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
+		MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+		param->setDefault(eInputChannelR);
+		if (page) {
+		    page->addChild(*param);
+		}
+	    }
+	    {
+		ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelV);
+		param->setLabel(kParamChannelVLabel);
+		param->setHint(kParamChannelVHint);
+		MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+		param->setDefault(eInputChannelG);
+		if (page) {
+		    page->addChild(*param);
+		}
+	    }
+	    {
+		ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelA);
+		param->setLabel(kParamChannelALabel);
+		param->setHint(kParamChannelAHint);
+		MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+		param->setDefault(eInputChannelA);
+		if (page) {
+		    page->addChild(*param);
+		}
+	    }
+	}
+	{
+	    BooleanParamDescriptor* param = desc.defineBooleanParam(kParamChannelUnpremultUV);
+	    param->setLabel(kParamChannelUnpremultUVLabel);
+	    param->setHint(kParamChannelUnpremultUVHint);
+	    param->setDefault(false);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVOffset);
+	    param->setLabel(kParamUVOffsetLabel);
+	    param->setHint(kParamUVOffsetHint);
+	    param->setDefault(0., 0.);
+	    param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(0., 0., 1., 1.);
+	    param->setDimensionLabels("U", "V");
+	    param->setUseHostNativeOverlayHandle(false);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVScale);
+	    param->setLabel(kParamUVScaleLabel);
+	    param->setHint(kParamUVScaleHint);
+	    param->setDoubleType(eDoubleTypeScale);
+	    param->setDefault(1., 1.);
+	    param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(0., 0., 100., 100.);
+	    param->setDimensionLabels("U", "V");
+	    param->setUseHostNativeOverlayHandle(false);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
 
-        if (plugin == eDistortionPluginSTMap) {
-            {
-                ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapU);
-                param->setLabel(kParamWrapULabel);
-                param->setHint(kParamWrapUHint);
+	if (plugin == eDistortionPluginSTMap) {
+	    {
+		ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapU);
+		param->setLabel(kParamWrapULabel);
+		param->setHint(kParamWrapUHint);
 #ifdef OFX_EXTENSIONS_NUKE
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+		param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
-                addWrapOptions(param, eWrapClamp);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-            {
-                ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapV);
-                param->setLabel(kParamWrapVLabel);
-                param->setHint(kParamWrapVHint);
-                addWrapOptions(param, eWrapClamp);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-        }
+		addWrapOptions(param, eWrapClamp);
+		if (page) {
+		    page->addChild(*param);
+		}
+	    }
+	    {
+		ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapV);
+		param->setLabel(kParamWrapVLabel);
+		param->setHint(kParamWrapVHint);
+		addWrapOptions(param, eWrapClamp);
+		if (page) {
+		    page->addChild(*param);
+		}
+	    }
+	}
     }
 
     if (plugin == eDistortionPluginLensDistortion) {
-        {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionModel);
-            param->setLabel(kParamDistortionModelLabel);
-            param->setHint(kParamDistortionModelHint);
-            assert(param->getNOptions() == eDistortionModelNuke);
-            param->appendOption(kParamDistortionModelOptionNuke, kParamDistortionModelOptionNukeHint);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionDirection);
-            param->setLabel(kParamDistortionDirectionLabel);
-            param->setHint(kParamDistortionDirectionHint);
-            assert(param->getNOptions() == eDirectionDistort);
-            param->appendOption(kParamDistortionDirectionOptionDistort, kParamDistortionDirectionOptionDistortHint);
-            assert(param->getNOptions() == eDirectionUndistort);
-            param->appendOption(kParamDistortionDirectionOptionUndistort, kParamDistortionDirectionOptionUndistortHint);
-#pragma message WARN("TODO: undistort")
-            param->setIsSecretAndDisabled(true);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionOutputMode);
-            param->setLabel(kParamDistortionOutputModeLabel);
-            param->setHint(kParamDistortionOutputModeHint);
-            assert(param->getNOptions() == eOutputModeImage);
-            param->appendOption(kParamDistortionOutputModeOptionImage, kParamDistortionOutputModeOptionImageHint);
-            assert(param->getNOptions() == eOutputModeSTMap);
-            param->appendOption(kParamDistortionOutputModeOptionSTMap, kParamDistortionOutputModeOptionSTMapHint);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
+	{
+	    ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionModel);
+	    param->setLabel(kParamDistortionModelLabel);
+	    param->setHint(kParamDistortionModelHint);
+	    assert(param->getNOptions() == eDistortionModelNuke);
+	    param->appendOption(kParamDistortionModelOptionNuke, kParamDistortionModelOptionNukeHint);
+	    assert(param->getNOptions() == eDistortionModelPFBarrel);
+	    param->appendOption(kParamDistortionModelOptionPFBarrel, kParamDistortionModelOptionPFBarrelHint);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionDirection);
+	    param->setLabel(kParamDistortionDirectionLabel);
+	    param->setHint(kParamDistortionDirectionHint);
+	    assert(param->getNOptions() == eDirectionDistort);
+	    param->appendOption(kParamDistortionDirectionOptionDistort, kParamDistortionDirectionOptionDistortHint);
+	    assert(param->getNOptions() == eDirectionUndistort);
+	    param->appendOption(kParamDistortionDirectionOptionUndistort, kParamDistortionDirectionOptionUndistortHint);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionOutputMode);
+	    param->setLabel(kParamDistortionOutputModeLabel);
+	    param->setHint(kParamDistortionOutputModeHint);
+	    assert(param->getNOptions() == eOutputModeImage);
+	    param->appendOption(kParamDistortionOutputModeOptionImage, kParamDistortionOutputModeOptionImageHint);
+	    assert(param->getNOptions() == eOutputModeSTMap);
+	    param->appendOption(kParamDistortionOutputModeOptionSTMap, kParamDistortionOutputModeOptionSTMapHint);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
 
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK1);
-            param->setLabel(kParamK1Label);
-            param->setHint(kParamK1Hint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(-0.3, 0.3);
-#ifdef OFX_EXTENSIONS_NUKE
-            //param->setLayoutHint(eLayoutHintNoNewLine, 1);
-#endif
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK2);
-            param->setLabel(kParamK2Label);
-            param->setHint(kParamK2Hint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(-0.1, 0.1);
-#ifdef OFX_EXTENSIONS_NUKE
-            //param->setLayoutHint(eLayoutHintNoNewLine, 1);
-#endif
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK3);
-            param->setLabel(kParamK3Label);
-            param->setHint(kParamK3Hint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(-0.1, 0.1);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamP1);
-            param->setLabel(kParamP1Label);
-            param->setHint(kParamP1Hint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(-0.1, 0.1);
-#ifdef OFX_EXTENSIONS_NUKE
-            //param->setLayoutHint(eLayoutHintNoNewLine, 1);
-#endif
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamP2);
-            param->setLabel(kParamP2Label);
-            param->setHint(kParamP2Hint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(-0.1, 0.1);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamCenter);
-            param->setLabel(kParamCenterLabel);
-            param->setHint(kParamCenterHint);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setUseHostNativeOverlayHandle(false);
-            param->setDisplayRange(-1, -1, 1, 1);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSqueeze);
-            param->setLabel(kParamSqueezeLabel);
-            param->setHint(kParamSqueezeHint);
-            param->setDefault(1.);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(0., 1.);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamAsymmetric);
-            param->setLabel(kParamAsymmetricLabel);
-            param->setHint(kParamAsymmetricHint);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(-0.5, -0.5, 0.5, 0.5);
-            param->setUseHostNativeOverlayHandle(false);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
+	// Nuke
+	{
+	    DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK1);
+	    param->setLabel(kParamK1Label);
+	    param->setHint(kParamK1Hint);
+	    param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(-0.3, 0.3);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK2);
+	    param->setLabel(kParamK2Label);
+	    param->setHint(kParamK2Hint);
+	    param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(-0.1, 0.1);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamCenter);
+	    param->setLabel(kParamCenterLabel);
+	    param->setHint(kParamCenterHint);
+	    param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setUseHostNativeOverlayHandle(false);
+	    param->setDisplayRange(-1, -1, 1, 1);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSqueeze);
+	    param->setLabel(kParamSqueezeLabel);
+	    param->setHint(kParamSqueezeHint);
+	    param->setDefault(1.);
+	    param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(0., 1.);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamAsymmetric);
+	    param->setLabel(kParamAsymmetricLabel);
+	    param->setHint(kParamAsymmetricHint);
+	    param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(-0.5, -0.5, 0.5, 0.5);
+	    param->setUseHostNativeOverlayHandle(false);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+
+	// PFBarrel
+	{
+	    DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPFC3);
+	    param->setLabel(kParamPFC3Label);
+	    param->setHint(kParamPFC3Hint);
+	    param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(-0.5, 0.5);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPFC5);
+	    param->setLabel(kParamPFC5Label);
+	    param->setHint(kParamPFC5Hint);
+	    param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(-0.5, 0.5);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamPFP);
+	    param->setLabel(kParamPFPLabel);
+	    param->setHint(kParamPFPHint);
+	    param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(0., 0., 1., 1.);
+	    param->setDoubleType(eDoubleTypePlain);
+	    param->setUseHostNativeOverlayHandle(false);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
+	{
+	    DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPFSqueeze);
+	    param->setLabel(kParamPFSqueezeLabel);
+	    param->setHint(kParamPFSqueezeHint);
+	    param->setRange(0., DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+	    param->setDisplayRange(0.1, 0.3);
+	    if (page) {
+		page->addChild(*param);
+	    }
+	}
     }
-
 
     ofxsFilterDescribeParamsInterpolate2D( desc, page, (plugin == eDistortionPluginSTMap) );
     ofxsPremultDescribeParams(desc, page);
@@ -2329,7 +2598,7 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
 template<DistortionPluginEnum plugin>
 ImageEffect*
 DistortionPluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
-                                                ContextEnum /*context*/)
+						ContextEnum /*context*/)
 {
     return new DistortionPlugin(handle, plugin);
 }
