@@ -94,7 +94,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginLensDistortionName "LensDistortionOFX"
 #define kPluginLensDistortionGrouping "Transform"
 #define kPluginLensDistortionDescription \
-    "Add or remove lens distortion.\n" \
+    "Add or remove lens distortion, or produce an STMap that can be used to apply that transform.\n" \
+    "If the distortion parameters are not animated, it is recommended to produce an STmap rather than directly transform the image, so that the geometric transform is computed only once, and to feed it to an STMap plugin. In this case, there should be a FrameHold node at the Source input, so that the STMap is computed only once rather than at each frame.\n" \
     "This plugin concatenates transforms upstream." \
 
 #define kPluginLensDistortionIdentifier "net.sf.openfx.LensDistortion"
@@ -287,7 +288,7 @@ enum DirectionEnum {
 #define kParamDistortionOutputModeOptionImage "Image"
 #define kParamDistortionOutputModeOptionImageHint "The output is the distorted/undistorted Source."
 #define kParamDistortionOutputModeOptionSTMap "STMap"
-#define kParamDistortionOutputModeOptionSTMapHint "The output is a distortion/undistortion STMap. It is recommended to insert a FrameHold node at the Source input."
+#define kParamDistortionOutputModeOptionSTMapHint "The output is a distortion/undistortion STMap. It is recommended to insert a FrameHold node at the Source input so that the STMap is computed only once if the parameters are not animated."
 
 enum OutputModeEnum {
     eOutputModeImage,
@@ -862,227 +863,230 @@ private:
 	}
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow)
-    {
-	assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
-	assert(_dstImg);
-	assert(!(plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) || _planeChannels.size() == 3);
-
-	int srcx1 = 0, srcx2 = 1, srcy1 = 0, srcy2 = 0;
-	if ( (plugin == eDistortionPluginSTMap) && _srcImg ) {
-	    // not valid if there is a transform on src: //const OfxRectI& srcBounds = _srcImg->getBounds();
-	    srcx1 = _srcRoDPixel.x1;
-	    srcx2 = _srcRoDPixel.x2;
-	    srcy1 = _srcRoDPixel.y1;
-	    srcy2 = _srcRoDPixel.y2;
-	}
-	float tmpPix[4];
-	for (int y = procWindow.y1; y < procWindow.y2; y++) {
-	    if ( _effect.abort() ) {
-		break;
-	    }
-
-	    PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
-	    for (int x = procWindow.x1; x < procWindow.x2; x++) {
-		double sx, sy, sxx, sxy, syx, syy; // the source pixel coordinates and their derivatives
-		double a = 1.;
-
-		switch (plugin) {
-		case eDistortionPluginSTMap:
-		case eDistortionPluginIDistort: {
-		    const PIX *uPix    = getPix(0, x, y  );
-		    const PIX *uPix_xn = getPix(0, x + 1, y  );
-		    const PIX *uPix_xp = getPix(0, x - 1, y  );
-		    const PIX *uPix_yn = getPix(0, x, y + 1);
-		    const PIX *uPix_yp = getPix(0, x, y - 1);
-		    const PIX *vPix, *vPix_xn, *vPix_xp, *vPix_yn, *vPix_yp;
-		    if (_planeChannels[1].img == _planeChannels[0].img) {
-			vPix    = uPix;
-			vPix_xn = uPix_xn;
-			vPix_xp = uPix_xp;
-			vPix_yn = uPix_yn;
-			vPix_yp = uPix_yp;
-		    } else {
-			vPix =    getPix(1, x, y  );
-			vPix_xn = getPix(1, x + 1, y  );
-			vPix_xp = getPix(1, x - 1, y  );
-			vPix_yn = getPix(1, x, y + 1);
-			vPix_yp = getPix(1, x, y - 1);
-		    }
-		    const PIX *aPix, *aPix_xn, *aPix_xp, *aPix_yn, *aPix_yp;
-		    if (_planeChannels[2].img == _planeChannels[0].img) {
-			aPix = uPix;
-			aPix_xn = uPix_xn;
-			aPix_xp = uPix_xp;
-			aPix_yn = uPix_yn;
-			aPix_yp = uPix_yp;
-		    } else if (_planeChannels[2].img == _planeChannels[1].img) {
-			aPix = vPix;
-			aPix_xn = vPix_xn;
-			aPix_xp = vPix_xp;
-			aPix_yn = vPix_yn;
-			aPix_yp = vPix_yp;
-		    } else {
-			aPix =    getPix(2, x, y  );
-			aPix_xn = getPix(2, x + 1, y  );
-			aPix_xp = getPix(2, x - 1, y  );
-			aPix_yn = getPix(2, x, y + 1);
-			aPix_yp = getPix(2, x, y - 1);
-		    }
-		    // compute gradients before wrapping
-		    double u = getVal(0, uPix, NULL);
-		    double v = getVal(1, vPix, NULL);
-		    a = getVal(2, aPix, NULL);
-		    unpremult(a, &u, &v);
-
-		    double ux, uy, vx, vy;
-		    {
-			double u_xn = getVal(0, uPix_xn, uPix);
-			double u_xp = getVal(0, uPix_xp, uPix);
-			double u_yn = getVal(0, uPix_yn, uPix);
-			double u_yp = getVal(0, uPix_yp, uPix);
-			double v_xn = getVal(1, vPix_xn, vPix);
-			double v_xp = getVal(1, vPix_xp, vPix);
-			double v_yn = getVal(1, vPix_yn, vPix);
-			double v_yp = getVal(1, vPix_yp, vPix);
-			if (_unpremultUV) {
-			    unpremult(getVal(2, aPix_xn, aPix), &u_xn, &v_xn);
-			    unpremult(getVal(2, aPix_xp, aPix), &u_xp, &v_xp);
-			    unpremult(getVal(2, aPix_yn, aPix), &u_yn, &v_yn);
-			    unpremult(getVal(2, aPix_yp, aPix), &u_yp, &v_yp);
-			}
-			ux = (u_xn - u_xp) / 2.;
-			vx = (v_xn - v_xp) / 2.;
-			uy = (u_yn - u_yp) / 2.;
-			vy = (v_yn - v_yp) / 2.;
-		    }
-		    u = (u - _uOffset) * _uScale;
-		    ux *= _uScale;
-		    uy *= _uScale;
-		    v = (v - _vOffset) * _vScale;
-		    vx *= _vScale;
-		    vy *= _vScale;
-		    switch (plugin) {
-		    case eDistortionPluginSTMap:
-			// wrap u and v
-			u = wrap(u, _uWrap);
-			v = wrap(v, _vWrap);
-			sx = srcx1 + u * (srcx2 - srcx1);
-			sy = srcy1 + v * (srcy2 - srcy1);         // 0,0 corresponds to the lower left corner of the first pixel
-			// scale gradients by (srcx2 - srcx1)
-			if (filter != eFilterImpulse) {
-			    sxx = ux * (srcx2 - srcx1);
-			    sxy = uy * (srcx2 - srcx1);
-			    syx = vx * (srcy2 - srcy1);
-			    syy = vy * (srcy2 - srcy1);
-			}
-			break;
-		    case eDistortionPluginIDistort:
-			// 0,0 corresponds to the lower left corner of the first pixel, so we have to add 0.5
-			// (x,y) = (0,0) and (u,v) = (0,0) means to pick color at (0.5,0.5)
-			sx = x + u + 0.5;
-			sy = y + v + 0.5;
-			if (filter != eFilterImpulse) {
-			    sxx = 1 + ux;
-			    sxy = uy;
-			    syx = vx;
-			    syy = 1 + vy;
-			}
-			break;
-		    default:
-			assert(false);
-			break;
-		    }
-		    break;
-		}
-		case eDistortionPluginLensDistortion: {
-		    if (_direction == eDirectionDistort) {
-			_distortionModel->undistort(x + 0.5, y + 0.5, &sx, &sy);
-		    } else {
-			_distortionModel->distort(x + 0.5, y + 0.5, &sx, &sy);
-		    }
-		    sxx = 1;     // TODO: Jacobian
-		    sxy = 0;
-		    syx = 0;
-		    syy = 1;
-		    break;
-		}
-		} // switch
-		double Jxx = 1., Jxy = 0., Jyx = 0., Jyy = 1.;
-		if (_transformIsIdentity) {
-		    if (filter != eFilterImpulse) {
-			Jxx = sxx;
-			Jxy = sxy;
-			Jyx = syx;
-			Jyy = syy;
-		    }
-		} else {
-		    const Matrix3x3 & H = _srcTransformInverse;
-		    double transformedx = H.a * sx + H.b * sy + H.c;
-		    double transformedy = H.d * sx + H.e * sy + H.f;
-		    double transformedz = H.g * sx + H.h * sy + H.i;
-		    if (transformedz == 0) {
-			sx = sy = std::numeric_limits<double>::infinity();
-		    } else {
-			sx = transformedx / transformedz;
-			sy = transformedy / transformedz;
-			if (filter != eFilterImpulse) {
-			    Jxx = (H.a * transformedz - transformedx * H.g) / (transformedz * transformedz);
-			    Jxy = (H.b * transformedz - transformedx * H.h) / (transformedz * transformedz);
-			    Jyx = (H.d * transformedz - transformedy * H.g) / (transformedz * transformedz);
-			    Jyy = (H.e * transformedz - transformedy * H.h) / (transformedz * transformedz);
-			}
-		    }
-		}
-
-		if (_outputMode == eOutputModeSTMap) {
-		    // 0,0 corresponds to the lower left corner of the first pixel
-		    tmpPix[0] = (sx - srcx1) / (srcx2 - srcx1); // u
-		    tmpPix[1] = (sy - srcy1) / (srcy2 - srcy1); // v
-		    tmpPix[2] = 1.; // a
-		    tmpPix[3] = 1.; // be opaque
-		} else {
-		    if (filter == eFilterImpulse) {
-			ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
-		    } else {
-			ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
-		    }
-		    for (unsigned c = 0; c < nComponents; ++c) {
-			tmpPix[c] *= a;
-		    }
-		}
-		ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
-		// copy back original values from unprocessed channels
-		if (nComponents == 1) {
-		    if (!_processA) {
-			const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-			dstPix[0] = srcPix ? srcPix[0] : PIX();
-		    }
-		} else if ( (nComponents == 3) || (nComponents == 4) ) {
-		    const PIX *srcPix = 0;
-		    if ( !_processR || !_processG || !_processB || ( !_processA && (nComponents == 4) ) ) {
-			srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-		    }
-		    if (!_processR) {
-			dstPix[0] = srcPix ? srcPix[0] : PIX();
-		    }
-		    if (!_processG) {
-			dstPix[1] = srcPix ? srcPix[1] : PIX();
-		    }
-		    if (!_processB) {
-			dstPix[2] = srcPix ? srcPix[2] : PIX();
-		    }
-		    if ( !_processA && (nComponents == 4) ) {
-			dstPix[3] = srcPix ? srcPix[3] : PIX();
-		    }
-		}
-		// increment the dst pixel
-		dstPix += nComponents;
-	    }
-	}
-    } // multiThreadProcessImages
+    void multiThreadProcessImages(OfxRectI procWindow);
 };
+
+template <class PIX, int nComponents, int maxValue, DistortionPluginEnum plugin, FilterEnum filter, bool clamp>
+void
+DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThreadProcessImages(OfxRectI procWindow)
+{
+    assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
+    assert(_dstImg);
+    assert(!(plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) || _planeChannels.size() == 3);
+
+    // requires for STMap and LensDistortion
+    //if (plugin == eDistortionPluginSTMap || _outputMode == eOutputModeSTMap) {
+    int srcx1 = _srcRoDPixel.x1;
+    int srcx2 = _srcRoDPixel.x2;
+    int srcy1 = _srcRoDPixel.y1;
+    int srcy2 = _srcRoDPixel.y2;
+    //}
+    float tmpPix[4];
+    for (int y = procWindow.y1; y < procWindow.y2; y++) {
+        if ( _effect.abort() ) {
+            break;
+        }
+
+        PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+        for (int x = procWindow.x1; x < procWindow.x2; x++) {
+            double sx, sy, sxx, sxy, syx, syy; // the source pixel coordinates and their derivatives
+            double a = 1.;
+
+            switch (plugin) {
+            case eDistortionPluginSTMap:
+            case eDistortionPluginIDistort: {
+                const PIX *uPix    = getPix(0, x, y  );
+                const PIX *uPix_xn = getPix(0, x + 1, y  );
+                const PIX *uPix_xp = getPix(0, x - 1, y  );
+                const PIX *uPix_yn = getPix(0, x, y + 1);
+                const PIX *uPix_yp = getPix(0, x, y - 1);
+                const PIX *vPix, *vPix_xn, *vPix_xp, *vPix_yn, *vPix_yp;
+                if (_planeChannels[1].img == _planeChannels[0].img) {
+                    vPix    = uPix;
+                    vPix_xn = uPix_xn;
+                    vPix_xp = uPix_xp;
+                    vPix_yn = uPix_yn;
+                    vPix_yp = uPix_yp;
+                } else {
+                    vPix =    getPix(1, x, y  );
+                    vPix_xn = getPix(1, x + 1, y  );
+                    vPix_xp = getPix(1, x - 1, y  );
+                    vPix_yn = getPix(1, x, y + 1);
+                    vPix_yp = getPix(1, x, y - 1);
+                }
+                const PIX *aPix, *aPix_xn, *aPix_xp, *aPix_yn, *aPix_yp;
+                if (_planeChannels[2].img == _planeChannels[0].img) {
+                    aPix = uPix;
+                    aPix_xn = uPix_xn;
+                    aPix_xp = uPix_xp;
+                    aPix_yn = uPix_yn;
+                    aPix_yp = uPix_yp;
+                } else if (_planeChannels[2].img == _planeChannels[1].img) {
+                    aPix = vPix;
+                    aPix_xn = vPix_xn;
+                    aPix_xp = vPix_xp;
+                    aPix_yn = vPix_yn;
+                    aPix_yp = vPix_yp;
+                } else {
+                    aPix =    getPix(2, x, y  );
+                    aPix_xn = getPix(2, x + 1, y  );
+                    aPix_xp = getPix(2, x - 1, y  );
+                    aPix_yn = getPix(2, x, y + 1);
+                    aPix_yp = getPix(2, x, y - 1);
+                }
+                // compute gradients before wrapping
+                double u = getVal(0, uPix, NULL);
+                double v = getVal(1, vPix, NULL);
+                a = getVal(2, aPix, NULL);
+                unpremult(a, &u, &v);
+
+                double ux, uy, vx, vy;
+                {
+                    double u_xn = getVal(0, uPix_xn, uPix);
+                    double u_xp = getVal(0, uPix_xp, uPix);
+                    double u_yn = getVal(0, uPix_yn, uPix);
+                    double u_yp = getVal(0, uPix_yp, uPix);
+                    double v_xn = getVal(1, vPix_xn, vPix);
+                    double v_xp = getVal(1, vPix_xp, vPix);
+                    double v_yn = getVal(1, vPix_yn, vPix);
+                    double v_yp = getVal(1, vPix_yp, vPix);
+                    if (_unpremultUV) {
+                        unpremult(getVal(2, aPix_xn, aPix), &u_xn, &v_xn);
+                        unpremult(getVal(2, aPix_xp, aPix), &u_xp, &v_xp);
+                        unpremult(getVal(2, aPix_yn, aPix), &u_yn, &v_yn);
+                        unpremult(getVal(2, aPix_yp, aPix), &u_yp, &v_yp);
+                    }
+                    ux = (u_xn - u_xp) / 2.;
+                    vx = (v_xn - v_xp) / 2.;
+                    uy = (u_yn - u_yp) / 2.;
+                    vy = (v_yn - v_yp) / 2.;
+                }
+                u = (u - _uOffset) * _uScale;
+                ux *= _uScale;
+                uy *= _uScale;
+                v = (v - _vOffset) * _vScale;
+                vx *= _vScale;
+                vy *= _vScale;
+                switch (plugin) {
+                    case eDistortionPluginSTMap:
+                        // wrap u and v
+                        u = wrap(u, _uWrap);
+                        v = wrap(v, _vWrap);
+                        sx = srcx1 + u * (srcx2 - srcx1);
+                        sy = srcy1 + v * (srcy2 - srcy1);         // 0,0 corresponds to the lower left corner of the first pixel
+                        // scale gradients by (srcx2 - srcx1)
+                        if (filter != eFilterImpulse) {
+                            sxx = ux * (srcx2 - srcx1);
+                            sxy = uy * (srcx2 - srcx1);
+                            syx = vx * (srcy2 - srcy1);
+                            syy = vy * (srcy2 - srcy1);
+                        }
+                        break;
+                    case eDistortionPluginIDistort:
+                        // 0,0 corresponds to the lower left corner of the first pixel, so we have to add 0.5
+                        // (x,y) = (0,0) and (u,v) = (0,0) means to pick color at (0.5,0.5)
+                        sx = x + u + 0.5;
+                        sy = y + v + 0.5;
+                        if (filter != eFilterImpulse) {
+                            sxx = 1 + ux;
+                            sxy = uy;
+                            syx = vx;
+                            syy = 1 + vy;
+                        }
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+                break;
+            }
+            case eDistortionPluginLensDistortion: {
+                if (_direction == eDirectionDistort) {
+                    _distortionModel->undistort(x + 0.5, y + 0.5, &sx, &sy);
+                } else {
+                    _distortionModel->distort(x + 0.5, y + 0.5, &sx, &sy);
+                }
+                sxx = 1;     // TODO: Jacobian
+                sxy = 0;
+                syx = 0;
+                syy = 1;
+                break;
+            }
+            } // switch
+            double Jxx = 1., Jxy = 0., Jyx = 0., Jyy = 1.;
+            if (_transformIsIdentity) {
+                if (filter != eFilterImpulse) {
+                    Jxx = sxx;
+                    Jxy = sxy;
+                    Jyx = syx;
+                    Jyy = syy;
+                }
+            } else {
+                const Matrix3x3 & H = _srcTransformInverse;
+                double transformedx = H.a * sx + H.b * sy + H.c;
+                double transformedy = H.d * sx + H.e * sy + H.f;
+                double transformedz = H.g * sx + H.h * sy + H.i;
+                if (transformedz == 0) {
+                    sx = sy = std::numeric_limits<double>::infinity();
+                } else {
+                    sx = transformedx / transformedz;
+                    sy = transformedy / transformedz;
+                    if (filter != eFilterImpulse) {
+                        Jxx = (H.a * transformedz - transformedx * H.g) / (transformedz * transformedz);
+                        Jxy = (H.b * transformedz - transformedx * H.h) / (transformedz * transformedz);
+                        Jyx = (H.d * transformedz - transformedy * H.g) / (transformedz * transformedz);
+                        Jyy = (H.e * transformedz - transformedy * H.h) / (transformedz * transformedz);
+                    }
+                }
+            }
+            
+            if (_outputMode == eOutputModeSTMap) {
+                // 0,0 corresponds to the lower left corner of the first pixel
+                tmpPix[0] = (sx - srcx1) / (srcx2 - srcx1); // u
+                tmpPix[1] = (sy - srcy1) / (srcy2 - srcy1); // v
+                tmpPix[2] = 1.; // a
+                tmpPix[3] = 1.; // be opaque
+            } else {
+                if (filter == eFilterImpulse) {
+                    ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
+                } else {
+                    ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+                }
+                for (unsigned c = 0; c < nComponents; ++c) {
+                    tmpPix[c] *= a;
+                }
+            }
+            ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+            // copy back original values from unprocessed channels
+            if (nComponents == 1) {
+                if (!_processA) {
+                    const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                    dstPix[0] = srcPix ? srcPix[0] : PIX();
+                }
+            } else if ( (nComponents == 3) || (nComponents == 4) ) {
+                const PIX *srcPix = 0;
+                if ( !_processR || !_processG || !_processB || ( !_processA && (nComponents == 4) ) ) {
+                    srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                }
+                if (!_processR) {
+                    dstPix[0] = srcPix ? srcPix[0] : PIX();
+                }
+                if (!_processG) {
+                    dstPix[1] = srcPix ? srcPix[1] : PIX();
+                }
+                if (!_processB) {
+                    dstPix[2] = srcPix ? srcPix[2] : PIX();
+                }
+                if ( !_processA && (nComponents == 4) ) {
+                    dstPix[3] = srcPix ? srcPix[3] : PIX();
+                }
+            }
+            // increment the dst pixel
+            dstPix += nComponents;
+        }
+    }
+    } // multiThreadProcessImages
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1629,10 +1633,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
 	uScale *= args.renderScale.x;
 	vScale *= args.renderScale.y;
     }
-    OfxRectI srcRoDPixel = {0, 0, 0, 0};
-    if (_srcClip) {
-	const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
-	Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
+    OfxRectI srcRoDPixel = {0, 1, 0, 1};
+    if ( _srcClip && _srcClip->isConnected() ) {
+        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+        Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
     }
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
