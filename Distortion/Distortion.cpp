@@ -328,6 +328,14 @@ enum OutputModeEnum {
 #define kParamAsymmetricLabel "Asymmetric"
 #define kParamAsymmetricHint "Asymmetric distortion (only for anamorphic lens)."
 
+#define kParamPFFile "pfFile"
+#define kParamPFFileLabel "File"
+#define kParamPFFileHint "The location of the PFBarrel .pfb file to use. Keyframes are set if present in the file."
+
+#define kParamPFFileReload "pfReload"
+#define kParamPFFileReloadLabel "Reload"
+#define kParamPFFileReloadHint "Click to reread the PFBarrel file"
+
 #define kParamPFC3 "pfC3"
 #define kParamPFC3Label "C3"
 #define kParamPFC3Hint "Low order radial distortion coefficient."
@@ -555,13 +563,13 @@ class DistortionModelPFBarrel
 {
 public:
     DistortionModelPFBarrel(const OfxRectI& srcRoDPixel,
-                        double par,
-                        double c3,
-                        double c5,
-                        double xp,
-                        double yp,
-                        double squeeze)
-    : _par(par)
+                            const OfxPointD& renderScale,
+                            double c3,
+                            double c5,
+                            double xp,
+                            double yp,
+                            double squeeze)
+    : _rs(renderScale)
     , _c3(c3)
     , _c5(c5)
     , _xp(xp)
@@ -588,8 +596,9 @@ private:
     virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
     {
         // PFBarrel model seems to apply to the corner of the corresponding full-res pixel
-        //xd -= 0.5 * rs.x;
-        //yd -= 0.5 * rs.y;
+        // at least that's what the official PFBarrel Nuke plugin does
+        xd -= 0.5 * _rs.x;
+        yd -= 0.5 * _rs.y;
 
         double centx = _xp * _fw * _normx;
         double x = xd * _normx;
@@ -603,8 +612,8 @@ private:
 
         const double px2 = px * px;
         const double py2 = py * py;
-        const double r = std::sqrt(px2 + py2);
-        const double r2 = r*r;
+        //const double r = std::sqrt(px2 + py2);
+        const double r2 = px2 + py2;
         //#ifdef THREE_POWER
         //const double dr_r= r2*r*(C3C5.x+r2*C3C5.y);
         //#else
@@ -617,15 +626,15 @@ private:
         y += py * dr_r;
         y *= _squeeze / _normx;
 
-        // x += 0.5 * rs.x;
-        // y += 0.5 * rs.y;
+        x += 0.5 * _rs.x;
+        y += 0.5 * _rs.y;
 
         *xu = x;
         *yu = y;
     }
 
 
-    double _par;
+    OfxPointD _rs;
     double _c3;
     double _c5;
     double _xp;
@@ -1120,6 +1129,8 @@ public:
         , _center(0)
         , _squeeze(0)
         , _asymmetric(0)
+        , _pfFile(NULL)
+        , _pfReload(NULL)
         , _pfC3(NULL)
         , _pfC5(NULL)
         , _pfSqueeze(NULL)
@@ -1189,6 +1200,10 @@ public:
             _squeeze = fetchDoubleParam(kParamSqueeze);
             _asymmetric = fetchDouble2DParam(kParamAsymmetric);
             assert(_k1 && _k2 && _center && _squeeze && _asymmetric);
+            _pfFile = fetchStringParam(kParamPFFile);
+            if ( paramExists(kParamPFFileReload) ) {
+                _pfReload = fetchPushButtonParam(kParamPFFileReload);
+            }
             _pfC3 = fetchDoubleParam(kParamPFC3);
             _pfC5 = fetchDoubleParam(kParamPFC5);
             _pfSqueeze = fetchDoubleParam(kParamPFSqueeze);
@@ -1259,6 +1274,8 @@ private:
     Double2DParam* _center;
     DoubleParam* _squeeze;
     Double2DParam* _asymmetric;
+    StringParam* _pfFile;
+    PushButtonParam* _pfReload;
     DoubleParam* _pfC3;
     DoubleParam* _pfC5;
     DoubleParam* _pfSqueeze;
@@ -1651,7 +1668,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             double k2 = _k2->getValueAtTime(time);
             double cx, cy;
             _center->getValueAtTime(time, cx, cy);
-            double squeeze = _squeeze->getValueAtTime(time);
+            double squeeze = std::max(0.001, _squeeze->getValueAtTime(time));
             double ax, ay;
             _asymmetric->getValueAtTime(time, ax, ay);
             distortionModel.reset( new DistortionModelNuke(srcRoDPixel,
@@ -1670,13 +1687,14 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             if (_srcClip) {
                 par = _srcClip->getPixelAspectRatio();
             }
-            double c3 = _pfC5->getValueAtTime(time);
+            double c3 = _pfC3->getValueAtTime(time);
             double c5 = _pfC5->getValueAtTime(time);
             double xp, yp;
             _pfP->getValueAtTime(time, xp, yp);
             double squeeze = _pfSqueeze->getValueAtTime(time);
             distortionModel.reset( new DistortionModelPFBarrel(srcRoDPixel,
-                                                               par,
+                                                               args.renderScale,
+                                                               //par,
                                                                c3,
                                                                c5,
                                                                xp,
@@ -2085,6 +2103,10 @@ DistortionPlugin::updateVisibility()
         _squeeze->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
         _asymmetric->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
 
+        _pfFile->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
+        if (_pfReload) {
+            _pfReload->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
+        }
         _pfC3->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
         _pfC5->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
         _pfSqueeze->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
@@ -2100,12 +2122,18 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
         if ( (paramName == kParamDistortionModel) && (args.reason == eChangeUserEdit) ) {
             updateVisibility();
         }
+        if ( (paramName == kParamPFFileReload) ||
+            ( (paramName == kParamPFFile) && (args.reason == eChangeUserEdit) ) ) {
 
+        }
         return;
     }
-    if (gIsMultiPlane) {
+    if (_plugin == eDistortionPluginIDistort ||
+        _plugin == eDistortionPluginSTMap) {
+        if (gIsMultiPlane) {
         if ( handleChangedParamForAllDynamicChoices(paramName, args.reason) ) {
             return;
+        }
         }
     }
 }
@@ -2553,6 +2581,26 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
 
         // PFBarrel
         {
+            StringParamDescriptor *param = desc.defineStringParam(kParamPFFile);
+            param->setLabel(kParamPFFileLabel);
+            param->setHint(kParamPFFileHint);
+            param->setStringType(eStringTypeFilePath);
+            param->setFilePathExists(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        if (!getImageEffectHostDescription()->isNatron) {
+            // Natron has its own reload button
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamPFFileReload);
+            param->setLabel(kParamPFFileReloadLabel);
+            param->setHint(kParamPFFileReloadHint);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPFC3);
             param->setLabel(kParamPFC3Label);
             param->setHint(kParamPFC3Hint);
@@ -2578,6 +2626,7 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->setHint(kParamPFPHint);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 1., 1.);
+            param->setDefault(0.5, 0.5);
             param->setDoubleType(eDoubleTypePlain);
             param->setUseHostNativeOverlayHandle(false);
             if (page) {
@@ -2588,8 +2637,9 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPFSqueeze);
             param->setLabel(kParamPFSqueezeLabel);
             param->setHint(kParamPFSqueezeHint);
-            param->setRange(0., DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setRange(0.0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.1, 0.3);
+            param->setDefault(1.);
             if (page) {
                 page->addChild(*param);
             }
