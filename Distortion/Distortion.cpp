@@ -2803,7 +2803,9 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->setStringType(eStringTypeFilePath);
             param->setFilePathExists(true);
 #ifdef OFX_EXTENSIONS_NUKE
-            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (!getImageEffectHostDescription()->isNatron) {
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            }
 #endif
             if (page) {
                 page->addChild(*param);
