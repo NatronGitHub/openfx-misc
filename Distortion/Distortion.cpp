@@ -39,6 +39,8 @@
 
 #include <cmath>
 #include <cfloat> // DBL_MAX
+#include <cstdlib> // atoi
+#include <cstdio> // fopen
 #include <iostream>
 #include <sstream>
 #include <set>
@@ -557,6 +559,197 @@ private:
     double _ax;
     double _ay;
 };
+
+
+// PFBarrel file reader
+
+// Copyright (C) 2011 The Pixel Farm Ltd
+// The class that implements compositor-neutral functionality
+
+class PFBarrelCommon
+{
+
+public:
+
+    class FileReader
+    {
+
+    public:
+
+        FileReader(const std::string &filename);
+        ~FileReader();
+
+        std::string readRawLine(void);
+        std::string readLine(void);
+        double readDouble(void);
+        int readInt(void);
+
+        void dump(void);
+
+        FILE *f_;
+        std::string error_;
+
+        int version_;
+        int orig_w_, orig_h_;
+        double orig_pa_;
+        int undist_w_, undist_h_;
+        int model_;
+        double squeeze_;
+        int nkeys_;
+        std::vector<int> frame_;
+        std::vector<double> c3_;
+        std::vector<double> c5_;
+        std::vector<double> xp_;
+        std::vector<double> yp_;
+    };
+};
+
+PFBarrelCommon::FileReader::FileReader(const std::string &filename)
+{
+    std::string ln;
+
+    version_= -1;
+    error_= "";
+    orig_w_= -1;
+    orig_h_= -1;
+    undist_w_= -1;
+    undist_h_= -1;
+    model_= -1;
+    squeeze_= -1;
+    nkeys_= 0;
+
+    f_= std::fopen(filename.c_str(), "r");
+
+    if (!f_) {
+        error_= "Failed to open file";
+        return;
+    }
+
+    ln= readRawLine();
+    if (ln=="#PFBarrel 2011 v1") {
+        version_= 1;
+    } else if (ln=="#PFBarrel 2011 v2") {
+        version_= 2;
+    } else {
+        error_= "Bad header";
+        return;
+    }
+
+    orig_w_= readInt(); if (error_!="") return;
+    orig_h_= readInt(); if (error_!="") return;
+
+    if (version_==2) {
+        orig_pa_= readDouble(); if (error_!="") return;
+    } else {
+        orig_pa_= 1.0;
+    }
+
+    undist_w_= readInt(); if (error_!="") return;
+    undist_h_= readInt(); if (error_!="") return;
+
+    ln= readLine(); if (error_!="") return;
+
+    if (ln=="Low Order") {
+        model_= 0;
+    } else if (ln=="High Order") {
+        model_= 1;
+    } else {
+        error_= "Bad model";
+        return;
+    }
+
+    squeeze_= readDouble(); if (error_!="") return;
+    nkeys_= readInt(); if (error_!="") return;
+
+    for (int i=0; i<nkeys_; i++) {
+        frame_.push_back(readInt()); if (error_!="") return;
+        c3_.push_back(readDouble()); if (error_!="") return;
+
+        double c5= readDouble(); if (error_!="") return;
+        if (model_==0)
+            c5_.push_back(0.0);
+        else
+            c5_.push_back(c5);
+
+        xp_.push_back(readDouble()); if (error_!="") return;
+        yp_.push_back(readDouble()); if (error_!="") return;
+    }
+}
+
+
+
+PFBarrelCommon::FileReader::~FileReader()
+{
+    if (f_) {
+        std::fclose(f_);
+        f_ = NULL;
+    }
+}
+
+
+
+std::string PFBarrelCommon::FileReader::readLine(void)
+{
+    std::string rv;
+    while (error_=="" && (rv=="" || rv[0]=='#')) {
+        rv= readRawLine();
+    }
+
+    return rv;
+}
+
+
+
+double PFBarrelCommon::FileReader::readDouble(void)
+{
+    return std::atof(readLine().c_str());
+}
+
+
+
+int PFBarrelCommon::FileReader::readInt(void)
+{
+    return std::atoi(readLine().c_str());
+}
+
+
+
+std::string PFBarrelCommon::FileReader::readRawLine(void)
+{
+    std::string rv;
+
+    char buf[512];
+
+    if (std::fgets(buf, sizeof(buf), f_)) {
+        rv= buf;
+        rv= rv.erase(rv.length()-1);
+    } else {
+        error_= "Parse error";
+    }
+
+    return rv;
+}
+
+
+
+void PFBarrelCommon::FileReader::dump(void)
+{
+    std::printf("VERSION [%i]\n", version_);
+    std::printf("ERROR [%s]\n", error_.c_str());
+    std::printf("ORIG WH %i %i PA %f\n", orig_w_, orig_h_, orig_pa_);
+    std::printf("UNDIST WH %i %i\n", undist_w_, undist_h_);
+    std::printf("MODEL %i\n", model_);
+    std::printf("SQUEEZE %f\n", squeeze_);
+    std::printf("NKEYS %i\n", nkeys_);
+    
+    for (int i = 0; i < nkeys_; i++) {
+        std::printf("KEY %i FRAME %i\n", i, frame_[i]);
+        std::printf("KEY %i C3 %f\n", i, c3_[i]);
+        std::printf("KEY %i C5 %f\n", i, c5_[i]);
+        std::printf("KEY %i XP %f\n", i, xp_[i]);
+        std::printf("KEY %i YP %f\n", i, yp_[i]);
+    }
+}
 
 class DistortionModelPFBarrel
 : public DistortionModelUndistort
@@ -1428,8 +1621,8 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            ( src->getRenderScale().y != args.renderScale.y) ||
+            ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             throwSuiteStatusException(kOfxStatFailed);
         }
@@ -1443,16 +1636,16 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     InputImagesHolder_RAII imagesHolder;
     std::vector<InputPlaneChannel> planeChannels;
 
-#warning "if (_uvClip) { ?"
-    if (gIsMultiPlane) {
-        BitDepthEnum srcBitDepth = eBitDepthNone;
-        std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
-        bool isCreatingAlpha;
-        for (int i = 0; i < 3; ++i) {
-            InputPlaneChannel p;
-            p.channelIndex = i;
-            p.fillZero = false;
-            if (_uvClip) {
+    if (_uvClip) {
+        if (gIsMultiPlane) {
+            BitDepthEnum srcBitDepth = eBitDepthNone;
+            std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
+            bool isCreatingAlpha;
+            for (int i = 0; i < 3; ++i) {
+                InputPlaneChannel p;
+                p.channelIndex = i;
+                p.fillZero = false;
+                //if (_uvClip) {
                 Clip* clip = 0;
                 std::string plane, ofxComp;
                 bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &plane, &ofxComp, &p.channelIndex, &isCreatingAlpha);
@@ -1486,8 +1679,8 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
 
                 if (p.img) {
                     if ( (p.img->getRenderScale().x != args.renderScale.x) ||
-                         ( p.img->getRenderScale().y != args.renderScale.y) ||
-                         ( ( p.img->getField() != eFieldNone) /* for DaVinci Resolve */ && ( p.img->getField() != args.fieldToRender) ) ) {
+                        ( p.img->getRenderScale().y != args.renderScale.y) ||
+                        ( ( p.img->getField() != eFieldNone) /* for DaVinci Resolve */ && ( p.img->getField() != args.fieldToRender) ) ) {
                         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                         throwSuiteStatusException(kOfxStatFailed);
                     }
@@ -1500,74 +1693,74 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                         }
                     }
                 }
+                //}
+                planeChannels.push_back(p);
             }
-            planeChannels.push_back(p);
-        }
-    } else { //!gIsMultiPlane
-        InputChannelEnum uChannel = eInputChannelR;
-        InputChannelEnum vChannel = eInputChannelG;
-        InputChannelEnum aChannel = eInputChannelA;
-        if (_uvChannels[0]) {
-            uChannel = (InputChannelEnum)_uvChannels[0]->getValueAtTime(time);
-        }
-        if (_uvChannels[1]) {
-            vChannel = (InputChannelEnum)_uvChannels[1]->getValueAtTime(time);
-        }
-        if (_uvChannels[2]) {
-            aChannel = (InputChannelEnum)_uvChannels[2]->getValueAtTime(time);
-        }
-
-        Image* uv = NULL;
-        if ( ( ( (uChannel != eInputChannel0) && (uChannel != eInputChannel1) ) ||
-               ( (vChannel != eInputChannel0) && (vChannel != eInputChannel1) ) ||
-               ( (aChannel != eInputChannel0) && (aChannel != eInputChannel1) ) ) &&
-             ( _uvClip && _uvClip->isConnected() ) ) {
-            uv =  _uvClip->fetchImage(time);
-        }
-
-        PixelComponentEnum uvComponents = ePixelComponentNone;
-        if (uv) {
-            imagesHolder.appendImage(uv);
-            if ( (uv->getRenderScale().x != args.renderScale.x) ||
-                 ( uv->getRenderScale().y != args.renderScale.y) ||
-                 ( ( uv->getField() != eFieldNone) /* for DaVinci Resolve */ && ( uv->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
+        } else { //!gIsMultiPlane
+            InputChannelEnum uChannel = eInputChannelR;
+            InputChannelEnum vChannel = eInputChannelG;
+            InputChannelEnum aChannel = eInputChannelA;
+            if (_uvChannels[0]) {
+                uChannel = (InputChannelEnum)_uvChannels[0]->getValueAtTime(time);
             }
-            BitDepthEnum uvBitDepth      = uv->getPixelDepth();
-            uvComponents = uv->getPixelComponents();
-            // only eBitDepthFloat is supported for now (other types require special processing for uv values)
-            if ( (uvBitDepth != eBitDepthFloat) /*|| (uvComponents != dstComponents)*/ ) {
-                throwSuiteStatusException(kOfxStatErrImageFormat);
+            if (_uvChannels[1]) {
+                vChannel = (InputChannelEnum)_uvChannels[1]->getValueAtTime(time);
+            }
+            if (_uvChannels[2]) {
+                aChannel = (InputChannelEnum)_uvChannels[2]->getValueAtTime(time);
+            }
+
+            Image* uv = NULL;
+            if ( ( ( (uChannel != eInputChannel0) && (uChannel != eInputChannel1) ) ||
+                  ( (vChannel != eInputChannel0) && (vChannel != eInputChannel1) ) ||
+                  ( (aChannel != eInputChannel0) && (aChannel != eInputChannel1) ) ) &&
+                ( _uvClip && _uvClip->isConnected() ) ) {
+                uv =  _uvClip->fetchImage(time);
+            }
+
+            PixelComponentEnum uvComponents = ePixelComponentNone;
+            if (uv) {
+                imagesHolder.appendImage(uv);
+                if ( (uv->getRenderScale().x != args.renderScale.x) ||
+                    ( uv->getRenderScale().y != args.renderScale.y) ||
+                    ( ( uv->getField() != eFieldNone) /* for DaVinci Resolve */ && ( uv->getField() != args.fieldToRender) ) ) {
+                    setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                    throwSuiteStatusException(kOfxStatFailed);
+                }
+                BitDepthEnum uvBitDepth      = uv->getPixelDepth();
+                uvComponents = uv->getPixelComponents();
+                // only eBitDepthFloat is supported for now (other types require special processing for uv values)
+                if ( (uvBitDepth != eBitDepthFloat) /*|| (uvComponents != dstComponents)*/ ) {
+                    throwSuiteStatusException(kOfxStatErrImageFormat);
+                }
+            }
+
+            // fillZero is only used when the channelIndex is -1 (i.e. it does not exist), and in this case:
+            // - it is true if the inputchannel is 0, R, G or B
+            // - it is false if the inputchannel is 1, A (images without alpha are considered opaque)
+            {
+                InputPlaneChannel u;
+                u.channelIndex = getChannelIndex(uChannel, uvComponents);
+                u.img = (u.channelIndex >= 0) ? uv : NULL;
+                u.fillZero = (u.channelIndex >= 0) ? false : !(uChannel == eInputChannel1 || uChannel == eInputChannelA);
+                planeChannels.push_back(u);
+            }
+            {
+                InputPlaneChannel v;
+                v.channelIndex = getChannelIndex(vChannel, uvComponents);
+                v.img = (v.channelIndex >= 0) ? uv : NULL;
+                v.fillZero = (v.channelIndex >= 0) ? false : !(vChannel == eInputChannel1 || vChannel == eInputChannelA);
+                planeChannels.push_back(v);
+            }
+            {
+                InputPlaneChannel a;
+                a.channelIndex = getChannelIndex(aChannel, uvComponents);
+                a.img = (a.channelIndex >= 0) ? uv : NULL;
+                a.fillZero = (a.channelIndex >= 0) ? false : !(aChannel == eInputChannel1 || aChannel == eInputChannelA);
+                planeChannels.push_back(a);
             }
         }
-
-        // fillZero is only used when the channelIndex is -1 (i.e. it does not exist), and in this case:
-        // - it is true if the inputchannel is 0, R, G or B
-        // - it is false if the inputchannel is 1, A (images without alpha are considered opaque)
-        {
-            InputPlaneChannel u;
-            u.channelIndex = getChannelIndex(uChannel, uvComponents);
-            u.img = (u.channelIndex >= 0) ? uv : NULL;
-            u.fillZero = (u.channelIndex >= 0) ? false : !(uChannel == eInputChannel1 || uChannel == eInputChannelA);
-            planeChannels.push_back(u);
-        }
-        {
-            InputPlaneChannel v;
-            v.channelIndex = getChannelIndex(vChannel, uvComponents);
-            v.img = (v.channelIndex >= 0) ? uv : NULL;
-            v.fillZero = (v.channelIndex >= 0) ? false : !(vChannel == eInputChannel1 || vChannel == eInputChannelA);
-            planeChannels.push_back(v);
-        }
-        {
-            InputPlaneChannel a;
-            a.channelIndex = getChannelIndex(aChannel, uvComponents);
-            a.img = (a.channelIndex >= 0) ? uv : NULL;
-            a.fillZero = (a.channelIndex >= 0) ? false : !(aChannel == eInputChannel1 || aChannel == eInputChannelA);
-            planeChannels.push_back(a);
-        }
-    }
-#warning "    } // if (_uvClip)"
+    } // if (_uvClip)"
 
 
     // auto ptr for the mask.
@@ -2124,16 +2317,39 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
         }
         if ( (paramName == kParamPFFileReload) ||
             ( (paramName == kParamPFFile) && (args.reason == eChangeUserEdit) ) ) {
+            std::string filename;
+            PFBarrelCommon::FileReader f(filename);
 
+            beginEditBlock(kParamPFFile);
+            _pfC3->deleteAllKeys();
+            _pfC5->deleteAllKeys();
+            _pfP->deleteAllKeys();
+            if (f.model_ == 0) {
+                _pfC5->setValue(0.);
+            }
+            if (f.nkeys_ == 1) {
+                _pfC3->setValue(f.c3_[0]);
+                _pfC5->setValue(f.c5_[0]);
+                _pfP->setValue(f.xp_[0], f.yp_[0]);
+            } else {
+                for (int i = 0; i < f.nkeys_; ++i) {
+                    _pfC3->setValueAtTime(f.frame_[i], f.c3_[0]);
+                    if (f.model_ == 1) {
+                        _pfC5->setValueAtTime(f.frame_[i], f.c5_[0]);
+                    }
+                    _pfP->setValueAtTime(f.frame_[i], f.xp_[0], f.yp_[0]);
+                }
+            }
+            endEditBlock();
         }
         return;
     }
     if (_plugin == eDistortionPluginIDistort ||
         _plugin == eDistortionPluginSTMap) {
         if (gIsMultiPlane) {
-        if ( handleChangedParamForAllDynamicChoices(paramName, args.reason) ) {
-            return;
-        }
+            if ( handleChangedParamForAllDynamicChoices(paramName, args.reason) ) {
+                return;
+            }
         }
     }
 }
@@ -2586,7 +2802,9 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->setHint(kParamPFFileHint);
             param->setStringType(eStringTypeFilePath);
             param->setFilePathExists(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
+#ifdef OFX_EXTENSIONS_NUKE
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
             if (page) {
                 page->addChild(*param);
             }
