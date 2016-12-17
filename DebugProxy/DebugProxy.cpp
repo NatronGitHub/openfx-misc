@@ -30,7 +30,7 @@
 
 #include <cstring>
 #include <cstdlib>
-#include <sstream>
+#include <sstream> // stringstream
 #include <stdexcept>
 #include <new>
 #include <cassert>

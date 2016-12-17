@@ -24,6 +24,8 @@
 #include <windows.h>
 #endif
 
+#include <sstream> // stringstream
+
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 

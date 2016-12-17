@@ -25,6 +25,8 @@
 #include <windows.h>
 #endif
 
+#include <sstream> // stringstream
+
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
