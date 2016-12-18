@@ -97,7 +97,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginLensDistortionGrouping "Transform"
 #define kPluginLensDistortionDescription \
     "Add or remove lens distortion, or produce an STMap that can be used to apply that transform.\n" \
-    "If the distortion parameters are not animated, it is recommended to produce an STmap rather than directly transform the image, so that the geometric transform is computed only once, and to feed it to an STMap plugin. In this case, there should be a FrameHold node at the Source input, so that the STMap is computed only once rather than at each frame.\n" \
+    "LensDistortion can directly apply distortion/undistortion, but if the distortion parameters are not animated, the most efficient way to use LensDistortion and avoid repeated distortion function calculations is the following:\n" \
+    "- If the footage size is not the same as the project size, insert a FrameHold plugin between the footage to distort or undistort and the Source input of LensDistortion. This connection is only used to get the size of the input footage.\n" \
+    "- Set Output Mode to \"STMap\" in LensDistortion.\n" \
+    "- feed the LensDistortion output into the UV input of STMap, and feed the footage into the Source input of STMap.\n" \
     "This plugin concatenates transforms upstream." \
 
 #define kPluginLensDistortionIdentifier "net.sf.openfx.LensDistortion"
@@ -904,7 +907,8 @@ public:
         , _mix(1.)
         , _maskInvert(false)
     {
-        _srcRoDPixel.x1 = _srcRoDPixel.y1 = _srcRoDPixel.x2 = _srcRoDPixel.y2 = 0;
+        _srcRoDPixel.x1 = _srcRoDPixel.y1 = 0.;
+        _srcRoDPixel.x2 = _srcRoDPixel.y2 = 1.;
     }
 
     void setSrcImgs(const Image *src) {_srcImg = src; }
@@ -1845,6 +1849,16 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     if ( _srcClip && _srcClip->isConnected() ) {
         const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
         Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
+    } else {
+        // default to Project Size
+        OfxRectD srcRoD;
+        OfxPointD siz = getProjectSize();
+        OfxPointD off = getProjectOffset();
+        srcRoD.x1 = off.x;
+        srcRoD.x2 = off.x + siz.x;
+        srcRoD.y1 = off.y;
+        srcRoD.y2 = off.y + siz.y;
+        Coords::toPixelEnclosing(srcRoD, args.renderScale, getProjectPixelAspectRatio(), &srcRoDPixel);
     }
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
@@ -2502,6 +2516,10 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     srcClip->setCanTransform(true); // we can concatenate transforms upwards on srcClip only
 #endif
     srcClip->setIsMask(false);
+    if (plugin == eDistortionPluginLensDistortion) {
+        // in LensDistrortion, if Output Mode is set to STMap, the size is taken from the project size
+        srcClip->setOptional(true);
+    }
     if (plugin == eDistortionPluginIDistort) {
         // create the uv clip
         ClipDescriptor *uvClip = desc.defineClip(kClipUV);
