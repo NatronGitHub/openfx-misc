@@ -234,6 +234,8 @@ enum WrapEnum
 #define kParamDistortionModelOptionNukeHint "The model used in Nuke's LensDistortion plugin."
 #define kParamDistortionModelOptionPFBarrel "PFBarrel"
 #define kParamDistortionModelOptionPFBarrelHint "The PFBarrel model used in PFTrack by PixelFarm."
+#define kParamDistortionModelOption3DEClassic "3DE Classic"
+#define kParamDistortionModelOption3DEClassicHint "Degree-2 anamorphic and degree-4 radial mixed model used in 3DEqualizer by Science-D-Visions."
 
 
 /*
@@ -243,7 +245,8 @@ enum WrapEnum
    From Oblique <https://github.com/madesjardins/Obq_Shaders/wiki/Obq_LensDistortion>
    PFBarrel: PFTrack's distortion model.
    Nuke: Nuke's distortion model.
-   3DE Classic LD Model: Science-D-Visions LDPK (3DEqualizer). see <http://www.3dequalizer.com/user_daten/tech_docs/pdf/ldpk.pdf>
+   3DE Classic LD Model: Degree-2 anamorphic and degree-4 radial mixed model
+ Science-D-Visions LDPK (3DEqualizer). see <http://www.3dequalizer.com/user_daten/tech_docs/pdf/ldpk.pdf>
    3DE4 Anamorphic, Degree 6:
    3DE4 Radial - Fisheye, Degree 8:
    3DE4 Radial - Standard, Degree 4: A deprecated model.
@@ -264,7 +267,7 @@ enum DistortionModelEnum
 {
     eDistortionModelNuke,
     eDistortionModelPFBarrel,
-    //eDistortionModelClassic3DE,
+    eDistortionModel3DEClassic,
     //eDistortionModelAnamorphic6,
     //eDistortionModelFishEye8,
     //eDistortionModelStandard,
@@ -356,6 +359,75 @@ enum OutputModeEnum {
 #define kParamPFP "pfP"
 #define kParamPFPLabel "Center"
 #define kParamPFPHint "The distortion center of the lens (specified as a factor rather than a pixel value)"
+
+// 3D Equalizer 4
+
+//Double_knob(callback,&_xa_fov_unit,DD::Image::IRange(0.0,1.0),"field_of_view_xa_unit","fov left [unit coord]");
+#define kParam3DE4_xa_fov_unit "tde4_field_of_view_xa_unit"
+#define kParam3DE4_xa_fov_unitLabel "fov left [unit coord]"
+
+//Double_knob(callback,&_ya_fov_unit,DD::Image::IRange(0.0,1.0),"field_of_view_ya_unit","fov bottom [unit coord]");
+#define kParam3DE4_ya_fov_unit "tde4_field_of_view_ya_unit"
+#define kParam3DE4_ya_fov_unitLabel "fov bottom [unit coord]"
+
+//Double_knob(callback,&_xb_fov_unit,DD::Image::IRange(0.0,1.0),"field_of_view_xb_unit","fov right [unit coord]");
+#define kParam3DE4_xb_fov_unit "tde4_field_of_view_xb_unit"
+#define kParam3DE4_xb_fov_unitLabel "fov right [unit coord]"
+
+//Double_knob(callback,&_yb_fov_unit,DD::Image::IRange(0.0,1.0),"field_of_view_yb_unit","fov top [unit coord]");
+#define kParam3DE4_yb_fov_unit "tde4_field_of_view_yb_unit"
+#define kParam3DE4_yb_fov_unitLabel "fov top [unit coord]"
+
+// First the seven built-in parameters, in this order.
+
+//fl_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(0.5,50.0),"tde4_focal_length_cm","tde4 focal length [cm]");
+#define kParam3DE4_focal_length_cm "tde4_focal_length_cm"
+#define kParam3DE4_focal_length_cmLabel "tde4 focal length [cm]"
+
+//fd_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(10.0,1000.0),"tde4_custom_focus_distance_cm","tde4 focus distance [cm]");
+#define kParam3DE4_custom_focus_distance_cm "tde4_custom_focus_distance_cm"
+#define kParam3DE4_custom_focus_distance_cmLabel "tde4 focus distance [cm]"
+
+//w_fb_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(.1,10.0),"tde4_filmback_width_cm","tde4 filmback width [cm]");
+#define kParam3DE4_filmback_width_cm "tde4_filmback_width_cm"
+#define kParam3DE4_filmback_width_cmLabel "tde4 filmback width [cm]"
+
+//h_fb_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(.1,10.0),"tde4_filmback_height_cm","tde4 filmback height [cm]");
+#define kParam3DE4_filmback_height_cm "tde4_filmback_height_cm"
+#define kParam3DE4_filmback_height_cmLabel "tde4 filmback height [cm]"
+
+//x_lco_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(-5.0,5.0),"tde4_lens_center_offset_x_cm","tde4 lens center offset x [cm]");
+#define kParam3DE4_lens_center_offset_x_cm "tde4_lens_center_offset_x_cm"
+#define kParam3DE4_lens_center_offset_x_cmLabel "tde4 lens center offset x [cm]"
+
+//y_lco_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(-5.0,5.0),"tde4_lens_center_offset_y_cm","tde4 lens center offset y [cm]");
+#define kParam3DE4_lens_center_offset_y_cm "tde4_lens_center_offset_y_cm"
+#define kParam3DE4_lens_center_offset_y_cmLabel "tde4 lens center offset y [cm]"
+
+//pa: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(0.25,4.0),"tde4_pixel_aspect","tde4 pixel aspect");
+#define kParam3DE4_pixel_aspect "tde4_pixel_aspect"
+#define kParam3DE4_pixel_aspectLabel "tde4 pixel aspect"
+
+
+// 3DE_Classic_LD_Model
+//"Distortion", -0.5 .. 0.5
+#define kParam3DE_Classic_LD_Model_Distortion "tde4_Distortion"
+#define kParam3DE_Classic_LD_Model_DistortionLabel "Distortion"
+//"Anamorphic Squeeze", 0.25 ... 4.
+#define kParam3DE_Classic_LD_Model_Anamorphic_Squeeze "Anamorphic_Squeeze"
+#define kParam3DE_Classic_LD_Model_Anamorphic_SqueezeLabel "Anamorphic Squeeze"
+
+//"Curvature X", -0.5 .. 0.5
+#define kParam3DE_Classic_LD_Model_Curvature_X "tde4_Curvature_X"
+#define kParam3DE_Classic_LD_Model_Curvature_XLabel "Curvature X"
+
+//"Curvature Y", -0.5 .. 0.5
+#define kParam3DE_Classic_LD_Model_Curvature_Y "tde4_Curvature_Y"
+#define kParam3DE_Classic_LD_Model_Curvature_YLabel "Curvature Y"
+
+//"Quartic Distortion" -0.5 .. 0.5
+#define kParam3DE_Classic_LD_Model_Quartic_Distortion "tde4_Quartic_Distortion"
+#define kParam3DE_Classic_LD_Model_Quartic_DistortionLabel "Quartic Distortion"
 
 // a generic distortion model abstract class (distortion parameters are added by the derived class)
 class DistortionModel
@@ -840,6 +912,278 @@ private:
     double _fw, _fh;
 };
 
+
+
+/////////////////////// 3DEqualizer
+
+
+/// this base class handles the 4 fov parameters & the seven built-in parameters
+class DistortionModel3DEBase
+: public DistortionModelUndistort
+{
+protected:
+    DistortionModel3DEBase(const OfxRectI& srcRoDPixel,
+                           const OfxPointD& renderScale,
+                           double xa_fov_unit,
+                           double ya_fov_unit,
+                           double xb_fov_unit,
+                           double yb_fov_unit,
+                           double fl_cm,
+                           double fd_cm,
+                           double w_fb_cm,
+                           double h_fb_cm,
+                           double x_lco_cm,
+                           double y_lco_cm,
+                           double pa)
+    : _srcRoDPixel(srcRoDPixel)
+    , _rs(renderScale)
+    , _w(srcRoDPixel.x2 - srcRoDPixel.x1)
+    , _h(srcRoDPixel.y2 - srcRoDPixel.y1)
+    , _xa_fov_unit(xa_fov_unit)
+    , _ya_fov_unit(ya_fov_unit)
+    , _xb_fov_unit(xb_fov_unit)
+    , _yb_fov_unit(yb_fov_unit)
+    , _xd_fov_unit(_xb_fov_unit - _xa_fov_unit)
+    , _yd_fov_unit(_yb_fov_unit - _ya_fov_unit)
+    , _fl_cm(fl_cm)
+    , _fd_cm(fd_cm)
+    , _w_fb_cm(w_fb_cm)
+    , _h_fb_cm(h_fb_cm)
+    , _x_lco_cm(x_lco_cm)
+    , _y_lco_cm(y_lco_cm)
+    , _pa(pa)
+    {
+        _r_fb_cm = std::sqrt(w_fb_cm * w_fb_cm + h_fb_cm * h_fb_cm) / 2.0;
+    }
+
+    virtual ~DistortionModel3DEBase() {};
+
+    // the following must be implemented by each model, and corresponds to operator () in ldpk
+    // Remove distortion. p is a point in diagonally normalized coordinates.
+    virtual void undistort_dn(double xd, double yd, double* xu, double *yu) const = 0;
+
+private:
+    // function used to undistort a point or distort an image
+    // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
+    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
+    {
+        OfxPointD p_pix = {xd, yd};
+        OfxPointD p_dn;
+        map_pix_to_dn(p_pix, &p_dn);
+        OfxPointD p_dn_u;
+        undistort_dn(p_dn.x, p_dn.y, &p_dn_u.x, &p_dn_u.y);
+        map_dn_to_pix(p_dn_u, &p_pix);
+        *xu = p_pix.x;
+        *yu = p_pix.y;
+    }
+
+private:
+    void
+    map_pix_to_dn(const OfxPointD& p_pix, OfxPointD* p_dn) const
+    {
+        OfxPointD p_unit;
+        map_pix_to_unit(p_pix, &p_unit);
+        map_unit_to_dn(p_unit, p_dn);
+    }
+
+    // The result already contains the (half,half) shift.
+    void
+    map_dn_to_pix(const OfxPointD& p_dn, OfxPointD* p_pix) const
+    {
+        OfxPointD p_unit;
+        map_dn_to_unit(p_dn, &p_unit);
+        map_unit_to_pix(p_unit, p_pix);
+    }
+
+    void
+    map_unit_to_dn(const OfxPointD& p_unit, OfxPointD* p_dn) const
+    {
+        double p_cm_x = (p_unit.x - 1.0/2.0) * _w_fb_cm - _x_lco_cm;
+        double p_cm_y = (p_unit.y - 1.0/2.0) * _h_fb_cm - _y_lco_cm;
+        p_dn->x = p_cm_x / _r_fb_cm;
+        p_dn->y = p_cm_y / _r_fb_cm;
+    }
+
+    void
+    map_dn_to_unit(const OfxPointD& p_dn, OfxPointD* p_unit) const
+    {
+        double p_cm_x = p_dn.x * _r_fb_cm + _w_fb_cm / 2 + _x_lco_cm;
+        double p_cm_y = p_dn.y * _r_fb_cm + _h_fb_cm / 2 + _y_lco_cm;
+        p_unit->x = p_cm_x / _w_fb_cm;
+        p_unit->y = p_cm_y / _h_fb_cm;
+    }
+
+#if 0
+    // the following twho funcs are for when 0,0 is the center of the bottomleft pixel (see nuke plugin)
+    void
+    map_pix_to_unit(const OfxPointI& p_pix, OfxPointD* p_unit) const
+    {
+        // We construct (x_s,y_s) in a way, so that the image area is mapped to the unit interval [0,1]^2,
+        // which is required by our 3DE4 lens distortion plugin class. Nuke's coordinates are pixel based,
+        // (0,0) is the left lower corner of the left lower pixel, while (1,1) is the right upper corner
+        // of that pixel. The center of any pixel (ix,iy) is (ix+0.5,iy+0.5), so we add 0.5 here.
+        double x_s = (0.5 + p_pix.x) / _w;
+        double y_s = (0.5 + p_pix.y) / _h;
+        p_unit->x = map_in_fov_x(x_s);
+        p_unit->y = map_in_fov_y(y_s);
+    }
+
+    void
+    map_unit_to_pix(const OfxPointD& p_unit, OfxPointD* p_pix) const
+    {
+        // The result already contains the (half,half) shift. Reformulate in Nuke's coordinates. Weave "out" 3DE4's field of view.
+        p_pix->x = map_out_fov_x(p_unit.x) * _w;
+        p_pix->y = map_out_fov_y(p_unit.y) * _h;
+    }
+#endif
+
+    void
+    map_pix_to_unit(const OfxPointD& p_pix, OfxPointD* p_unit) const
+    {
+        double x_s = p_pix.x / _w;
+        double y_s = p_pix.y / _h;
+        p_unit->x = map_in_fov_x(x_s);
+        p_unit->y = map_in_fov_y(y_s);
+    }
+
+    void
+    map_unit_to_pix(const OfxPointD& p_unit, OfxPointD* p_pix) const
+    {
+        // The result already contains the (half,half) shift. Reformulate in Nuke's coordinates. Weave "out" 3DE4's field of view.
+        p_pix->x = map_out_fov_x(p_unit.x) * _w;
+        p_pix->y = map_out_fov_y(p_unit.y) * _h;
+    }
+
+    // Map x-coordinate from unit cordinates to fov coordinates.
+    double
+    map_in_fov_x(double x_unit) const
+    {
+        return  (x_unit - _xa_fov_unit) / _xd_fov_unit;
+    }
+
+    // Map y-coordinate from unit cordinates to fov coordinates.
+    double
+    map_in_fov_y(double y_unit) const
+    {
+        return  (y_unit - _ya_fov_unit) / _yd_fov_unit;
+    }
+
+    // Map x-coordinate from fov cordinates to unit coordinates.
+    double
+    map_out_fov_x(double x_fov) const
+    {
+        return x_fov * _xd_fov_unit + _xa_fov_unit;
+    }
+
+    // Map y-coordinate from fov cordinates to unit coordinates.
+    double
+    map_out_fov_y(double y_fov) const
+    {
+        return y_fov * _yd_fov_unit + _ya_fov_unit;
+    }
+
+protected:
+
+    OfxRectI _srcRoDPixel;
+    OfxPointD _rs;
+        double _w;
+        double _h;
+    double _xa_fov_unit;
+    double _ya_fov_unit;
+    double _xb_fov_unit;
+    double _yb_fov_unit;
+    double _xd_fov_unit;
+    double _yd_fov_unit;
+    double _fl_cm;
+    double _fd_cm;
+    double _w_fb_cm;
+    double _h_fb_cm;
+    double _x_lco_cm;
+    double _y_lco_cm;
+    double _pa;
+    double _r_fb_cm;
+};
+
+/// this class handles the Degree-2 anamorphic and degree-4 radial mixed model
+class DistortionModel3DEClassic
+: public DistortionModel3DEBase
+{
+public:
+    DistortionModel3DEClassic(const OfxRectI& srcRoDPixel,
+                              const OfxPointD& renderScale,
+                              double xa_fov_unit,
+                              double ya_fov_unit,
+                              double xb_fov_unit,
+                              double yb_fov_unit,
+                              double fl_cm,
+                              double fd_cm,
+                              double w_fb_cm,
+                              double h_fb_cm,
+                              double x_lco_cm,
+                              double y_lco_cm,
+                              double pa,
+                              double ld,
+                              double sq,
+                              double cx,
+                              double cy,
+                              double qu)
+    : DistortionModel3DEBase(srcRoDPixel, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
+    , _ld(ld)
+    , _sq(sq)
+    , _cx(cx)
+    , _cy(cy)
+    , _qu(qu)
+    , _cxx(_ld / _sq)
+    , _cxy( (_ld + _cx) / _sq )
+    , _cyx(_ld + _cy)
+    , _cyy(_ld)
+    , _cxxx(_qu / _sq)
+    , _cxxy(2.0 * _qu / _sq)
+    , _cxyy(_qu / _sq)
+    , _cyxx(_qu)
+    , _cyyx(2.0 * _qu)
+    , _cyyy(_qu)
+    {
+    }
+
+    virtual ~DistortionModel3DEClassic() {};
+
+private:
+    // Remove distortion. p is a point in diagonally normalized coordinates.
+    void undistort_dn(double xd, double yd, double* xu, double *yu) const
+    {
+        double p0_2 = xd * xd;
+        double p1_2 = yd * yd;
+        double p0_4 = p0_2 * p0_2;
+        double p1_4 = p1_2 * p1_2;
+        double p01_2 = p0_2 * p1_2;
+
+        *xu = xd * (1 + _cxx * p0_2 + _cxy * p1_2 + _cxxx * p0_4 + _cxxy * p01_2 + _cxyy * p1_4);
+        *yu = yd * (1 + _cyx * p0_2 + _cyy * p1_2 + _cyxx * p0_4 + _cyyx * p01_2 + _cyyy * p1_4);
+    }
+
+private:
+    double _ld;
+    double _sq;
+    double _cx;
+    double _cy;
+    double _qu;
+    double _cxx;
+    double _cxy;
+    double _cyx;
+    double _cyy;
+    double _cxxx;
+    double _cxxy;
+    double _cxyy;
+    double _cyxx;
+    double _cyyx;
+    double _cyyy;
+};
+
+
+
+
+
 static bool gIsMultiPlane;
 struct InputPlaneChannel
 {
@@ -1304,40 +1648,56 @@ public:
     DistortionPlugin(OfxImageEffectHandle handle,
                      DistortionPluginEnum plugin)
         : MultiPlane::MultiPlaneEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _uvClip(0)
-        , _maskClip(0)
-        , _processR(0)
-        , _processG(0)
-        , _processB(0)
-        , _processA(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _uvClip(NULL)
+        , _maskClip(NULL)
+        , _processR(NULL)
+        , _processG(NULL)
+        , _processB(NULL)
+        , _processA(NULL)
         , _uvChannels()
-        , _unpremultUV(0)
-        , _uvOffset(0)
-        , _uvScale(0)
-        , _uWrap(0)
-        , _vWrap(0)
-        , _distortionModel(0)
+        , _unpremultUV(NULL)
+        , _uvOffset(NULL)
+        , _uvScale(NULL)
+        , _uWrap(NULL)
+        , _vWrap(NULL)
+        , _distortionModel(NULL)
         , _direction(NULL)
         , _outputMode(NULL)
-        , _k1(0)
-        , _k2(0)
-        , _center(0)
-        , _squeeze(0)
-        , _asymmetric(0)
+        , _k1(NULL)
+        , _k2(NULL)
+        , _center(NULL)
+        , _squeeze(NULL)
+        , _asymmetric(NULL)
         , _pfFile(NULL)
         , _pfReload(NULL)
         , _pfC3(NULL)
         , _pfC5(NULL)
         , _pfSqueeze(NULL)
         , _pfP(NULL)
-        , _filter(0)
-        , _clamp(0)
-        , _blackOutside(0)
-        , _mix(0)
-        , _maskApply(0)
-        , _maskInvert(0)
+        , _xa_fov_unit(NULL)
+        , _ya_fov_unit(NULL)
+        , _xb_fov_unit(NULL)
+        , _yb_fov_unit(NULL)
+        , _fl_cm(NULL)
+        , _fd_cm(NULL)
+        , _w_fb_cm(NULL)
+        , _h_fb_cm(NULL)
+        , _x_lco_cm(NULL)
+        , _y_lco_cm(NULL)
+        , _pa(NULL)
+        , _ld(NULL)
+        , _sq(NULL)
+        , _cx(NULL)
+        , _cy(NULL)
+        , _qu(NULL)
+        , _filter(NULL)
+        , _clamp(NULL)
+        , _blackOutside(NULL)
+        , _mix(NULL)
+        , _maskApply(NULL)
+        , _maskInvert(NULL)
         , _plugin(plugin)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -1391,12 +1751,16 @@ public:
             _distortionModel = fetchChoiceParam(kParamDistortionModel);
             _direction = fetchChoiceParam(kParamDistortionDirection);
             _outputMode = fetchChoiceParam(kParamDistortionOutputMode);
+
+            // Nuke
             _k1 = fetchDoubleParam(kParamK1);
             _k2 = fetchDoubleParam(kParamK2);
             _center = fetchDouble2DParam(kParamCenter);
             _squeeze = fetchDoubleParam(kParamSqueeze);
             _asymmetric = fetchDouble2DParam(kParamAsymmetric);
             assert(_k1 && _k2 && _center && _squeeze && _asymmetric);
+
+            // PFBarrel
             _pfFile = fetchStringParam(kParamPFFile);
             if ( paramExists(kParamPFFileReload) ) {
                 _pfReload = fetchPushButtonParam(kParamPFFileReload);
@@ -1405,6 +1769,25 @@ public:
             _pfC5 = fetchDoubleParam(kParamPFC5);
             _pfSqueeze = fetchDoubleParam(kParamPFSqueeze);
             _pfP = fetchDouble2DParam(kParamPFP);
+
+            // 3DEqualizer
+            _xa_fov_unit = fetchDoubleParam(kParam3DE4_xa_fov_unit);
+            _ya_fov_unit = fetchDoubleParam(kParam3DE4_ya_fov_unit);
+            _xb_fov_unit = fetchDoubleParam(kParam3DE4_xb_fov_unit);
+            _yb_fov_unit = fetchDoubleParam(kParam3DE4_yb_fov_unit);
+            _fl_cm = fetchDoubleParam(kParam3DE4_focal_length_cm);
+            _fd_cm = fetchDoubleParam(kParam3DE4_custom_focus_distance_cm);
+            _w_fb_cm = fetchDoubleParam(kParam3DE4_filmback_width_cm);
+            _h_fb_cm = fetchDoubleParam(kParam3DE4_filmback_height_cm);
+            _x_lco_cm = fetchDoubleParam(kParam3DE4_lens_center_offset_x_cm);
+            _y_lco_cm = fetchDoubleParam(kParam3DE4_lens_center_offset_y_cm);
+            _pa = fetchDoubleParam(kParam3DE4_pixel_aspect);
+            _ld = fetchDoubleParam(kParam3DE_Classic_LD_Model_Distortion);
+            _sq = fetchDoubleParam(kParam3DE_Classic_LD_Model_Anamorphic_Squeeze);
+            _cx = fetchDoubleParam(kParam3DE_Classic_LD_Model_Curvature_X);
+            _cy = fetchDoubleParam(kParam3DE_Classic_LD_Model_Curvature_Y);
+            _qu = fetchDoubleParam(kParam3DE_Classic_LD_Model_Quartic_Distortion);
+
         }
         _filter = fetchChoiceParam(kParamFilterType);
         _clamp = fetchBooleanParam(kParamFilterClamp);
@@ -1466,17 +1849,43 @@ private:
     ChoiceParam* _distortionModel;
     ChoiceParam* _direction;
     ChoiceParam* _outputMode;
+
+    // Nuke
     DoubleParam* _k1;
     DoubleParam* _k2;
     Double2DParam* _center;
     DoubleParam* _squeeze;
     Double2DParam* _asymmetric;
+
+    // PFBarrel
     StringParam* _pfFile;
     PushButtonParam* _pfReload;
     DoubleParam* _pfC3;
     DoubleParam* _pfC5;
     DoubleParam* _pfSqueeze;
     Double2DParam* _pfP;
+
+    // 3DEqualizer
+    // fov parameters
+    DoubleParam* _xa_fov_unit;
+    DoubleParam* _ya_fov_unit;
+    DoubleParam* _xb_fov_unit;
+    DoubleParam* _yb_fov_unit;
+    // seven builtin parameters
+    DoubleParam* _fl_cm;
+    DoubleParam* _fd_cm;
+    DoubleParam* _w_fb_cm;
+    DoubleParam* _h_fb_cm;
+    DoubleParam* _x_lco_cm;
+    DoubleParam* _y_lco_cm;
+    DoubleParam* _pa;
+    // Classic model
+    DoubleParam* _ld;
+    DoubleParam* _sq;
+    DoubleParam* _cx;
+    DoubleParam* _cy;
+    DoubleParam* _qu;
+
     ChoiceParam* _filter;
     BooleanParam* _clamp;
     BooleanParam* _blackOutside;
@@ -1909,6 +2318,47 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                                                                squeeze) );
             break;
         }
+        case eDistortionModel3DEClassic: {
+            //double pa = 1.;
+            //if (_srcClip) {
+            //    pa = _srcClip->getPixelAspectRatio();
+            //}
+            double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
+            double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
+            double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
+            double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
+            double fl_cm = _fl_cm->getValueAtTime(time);
+            double fd_cm = _fd_cm->getValueAtTime(time);
+            double w_fb_cm = _w_fb_cm->getValueAtTime(time);
+            double h_fb_cm = _h_fb_cm->getValueAtTime(time);
+            double x_lco_cm = _x_lco_cm->getValueAtTime(time);
+            double y_lco_cm = _y_lco_cm->getValueAtTime(time);
+            double pa = _pa->getValueAtTime(time);
+            double ld = _ld->getValueAtTime(time);
+            double sq = _sq->getValueAtTime(time);
+            double cx = _cx->getValueAtTime(time);
+            double cy = _cy->getValueAtTime(time);
+            double qu = _qu->getValueAtTime(time);
+            distortionModel.reset( new DistortionModel3DEClassic(srcRoDPixel,
+                                                                 args.renderScale,
+                                                                 xa_fov_unit,
+                                                                 ya_fov_unit,
+                                                                 xb_fov_unit,
+                                                                 yb_fov_unit,
+                                                                 fl_cm,
+                                                                 fd_cm,
+                                                                 w_fb_cm,
+                                                                 h_fb_cm,
+                                                                 x_lco_cm,
+                                                                 y_lco_cm,
+                                                                 pa,
+                                                                 ld,
+                                                                 sq,
+                                                                 cx,
+                                                                 cy,
+                                                                 qu) );
+            break;
+        }
         }
     }
     processor.setValues(processR, processG, processB, processA,
@@ -2318,6 +2768,25 @@ DistortionPlugin::updateVisibility()
         _pfC5->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
         _pfSqueeze->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
         _pfP->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
+
+        bool distortionModel3DE = (distortionModel == eDistortionModel3DEClassic/* || ...*/);
+        _xa_fov_unit->setIsSecretAndDisabled(!distortionModel3DE);
+        _ya_fov_unit->setIsSecretAndDisabled(!distortionModel3DE);
+        _xb_fov_unit->setIsSecretAndDisabled(!distortionModel3DE);
+        _yb_fov_unit->setIsSecretAndDisabled(!distortionModel3DE);
+        _fl_cm->setIsSecretAndDisabled(!distortionModel3DE);
+        _fd_cm->setIsSecretAndDisabled(!distortionModel3DE);
+        _w_fb_cm->setIsSecretAndDisabled(!distortionModel3DE);
+        _h_fb_cm->setIsSecretAndDisabled(!distortionModel3DE);
+        _x_lco_cm->setIsSecretAndDisabled(!distortionModel3DE);
+        _y_lco_cm->setIsSecretAndDisabled(!distortionModel3DE);
+        _pa->setIsSecretAndDisabled(!distortionModel3DE);
+
+        _ld->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEClassic);
+        _sq->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEClassic);
+        _cx->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEClassic);
+        _cy->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEClassic);
+        _qu->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEClassic);
     }
 }
 
@@ -2729,6 +3198,8 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamDistortionModelOptionNuke, kParamDistortionModelOptionNukeHint);
             assert(param->getNOptions() == eDistortionModelPFBarrel);
             param->appendOption(kParamDistortionModelOptionPFBarrel, kParamDistortionModelOptionPFBarrelHint);
+            assert(param->getNOptions() == eDistortionModel3DEClassic);
+            param->appendOption(kParamDistortionModelOption3DEClassic, kParamDistortionModelOption3DEClassicHint);
             if (page) {
                 page->addChild(*param);
             }
@@ -2813,6 +3284,7 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             }
         }
 
+        ////////////
         // PFBarrel
         {
             StringParamDescriptor *param = desc.defineStringParam(kParamPFFile);
@@ -2878,6 +3350,188 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->setRange(0.0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.1, 0.3);
             param->setDefault(1.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        ////////////////
+        // 3DEqualizer
+        // fov parameters
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_xa_fov_unit);
+            param->setLabel(kParam3DE4_xa_fov_unitLabel);
+            //param->setHint(kParam3DE4_xa_fov_unitHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 1.);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_ya_fov_unit);
+            param->setLabel(kParam3DE4_ya_fov_unitLabel);
+            //param->setHint(kParam3DE4_ya_fov_unitHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 1.);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_xb_fov_unit);
+            param->setLabel(kParam3DE4_xb_fov_unitLabel);
+            //param->setHint(kParam3DE4_xb_fov_unitHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 1.);
+            param->setDefault(1.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_yb_fov_unit);
+            param->setLabel(kParam3DE4_yb_fov_unitLabel);
+            //param->setHint(kParam3DE4_yb_fov_unitHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 1.);
+            param->setDefault(1.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // seven builtin parameters
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_focal_length_cm);
+            param->setLabel(kParam3DE4_focal_length_cmLabel);
+            //param->setHint(kParam3DE4_focal_length_cmHint);
+            param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0.5, 50.);
+            param->setDefault(1.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_custom_focus_distance_cm);
+            param->setLabel(kParam3DE4_custom_focus_distance_cmLabel);
+            //param->setHint(kParam3DE4_custom_focus_distance_cmHint);
+            param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(10, 1000.);
+            param->setDefault(100.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_filmback_width_cm);
+            param->setLabel(kParam3DE4_filmback_width_cmLabel);
+            //param->setHint(kParam3DE4_filmback_width_cmHint);
+            param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0.1, 10.);
+            param->setDefault(0.8);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_filmback_height_cm);
+            param->setLabel(kParam3DE4_filmback_height_cmLabel);
+            //param->setHint(kParam3DE4_filmback_height_cmHint);
+            param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0.1, 10.);
+            param->setDefault(0.6);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_lens_center_offset_x_cm);
+            param->setLabel(kParam3DE4_lens_center_offset_x_cmLabel);
+            //param->setHint(kParam3DE4_lens_center_offset_x_cmHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-5., 5.);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_lens_center_offset_y_cm);
+            param->setLabel(kParam3DE4_lens_center_offset_y_cmLabel);
+            //param->setHint(kParam3DE4_lens_center_offset_y_cmHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-5., 5.);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_pixel_aspect);
+            param->setLabel(kParam3DE4_pixel_aspectLabel);
+            //param->setHint(kParam3DE4_pixel_aspectHint);
+            param->setRange(0., DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0.25, 4.);
+            param->setDefault(1.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // 3DE Classic model
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE_Classic_LD_Model_Distortion);
+            param->setLabel(kParam3DE_Classic_LD_Model_DistortionLabel);
+            //param->setHint(kParam3DE_Classic_LD_Model_DistortionHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE_Classic_LD_Model_Anamorphic_Squeeze);
+            param->setLabel(kParam3DE_Classic_LD_Model_Anamorphic_SqueezeLabel);
+            //param->setHint(kParam3DE_Classic_LD_Model_Anamorphic_SqueezeHint);
+            param->setRange(0., DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0.25, 4.);
+            param->setDefault(1.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE_Classic_LD_Model_Curvature_X);
+            param->setLabel(kParam3DE_Classic_LD_Model_Curvature_XLabel);
+            //param->setHint(kParam3DE_Classic_LD_Model_Curvature_XHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE_Classic_LD_Model_Curvature_Y);
+            param->setLabel(kParam3DE_Classic_LD_Model_Curvature_YLabel);
+            //param->setHint(kParam3DE_Classic_LD_Model_Curvature_YHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE_Classic_LD_Model_Quartic_Distortion);
+            param->setLabel(kParam3DE_Classic_LD_Model_Quartic_DistortionLabel);
+            //param->setHint(kParam3DE_Classic_LD_Model_Quartic_DistortionHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
             if (page) {
                 page->addChild(*param);
             }
