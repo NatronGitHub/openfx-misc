@@ -235,10 +235,11 @@ enum WrapEnum
 #define kParamDistortionModelOptionPFBarrel "PFBarrel"
 #define kParamDistortionModelOptionPFBarrelHint "The PFBarrel model used in PFTrack by PixelFarm."
 #define kParamDistortionModelOption3DEClassic "3DE Classic"
-#define kParamDistortionModelOption3DEClassicHint "Degree-2 anamorphic and degree-4 radial mixed model used in 3DEqualizer by Science-D-Visions."
-#define kParamDistortionModelOption3DEStandard "3DE Radial Standard Degree 4"
-#define kParamDistortionModelOption3DEStandardHint "Radial lens distortion model, which compensates for decentered lenses (and beam splitter artefacts in stereo rigs) used in 3DEqualizer by Science-D-Visions."
-
+#define kParamDistortionModelOption3DEClassicHint "Degree-2 anamorphic and degree-4 radial mixed model, used in 3DEqualizer by Science-D-Visions. Works, but it is recommended to use 3DE4 Radial Standard Degree 4 or 3DE4 Anamorphic Standard Degree 4 instead."
+#define kParamDistortionModelOption3DEStandard "3DE4 Radial Standard Degree 4"
+#define kParamDistortionModelOption3DEStandardHint "Radial lens distortion model, which compensates for decentered lenses (and beam splitter artefacts in stereo rigs), used in 3DEqualizer by Science-D-Visions."
+#define kParamDistortionModelOption3DEAnamorphic4 "3DE4 Anamorphic Standard Degree 4"
+#define kParamDistortionModelOption3DEAnamorphic4Hint "Degree-4 anamorphic model with anamorphic lens rotation, which handles 'human-touched' mounted anamorphic lenses, used in 3DEqualizer by Science-D-Visions."
 
 /*
    Possible distortion models:
@@ -274,7 +275,7 @@ enum DistortionModelEnum
     //eDistortionModel3DEFishEye8,
     eDistortionModel3DEStandard,
     //eDistortionModel3DERadialDecenteredCylindric4,
-    //eDistortionModel3DEAnamorphic4,
+    eDistortionModel3DEAnamorphic4,
 };
 
 
@@ -448,6 +449,34 @@ enum OutputModeEnum {
 #define kParam3DEPhiCylindricDirectionLabel "Phi - Cylindric Direction"
 #define kParam3DEBCylindricBending "tde4_B_Cylindric_Bending"
 #define kParam3DEBCylindricBendingLabel "B - Cylindric Bending"
+
+// 3DE4_Anamorphic_Standard_Degree_4
+#define kParam3DECx02Degree2 "tde4_Cx02_Degree_2"
+#define kParam3DECx02Degree2Label "Cx02 - Degree 2"
+#define kParam3DECy02Degree2 "tde4_Cy02_Degree_2"
+#define kParam3DECy02Degree2Label "Cy02 - Degree 2"
+#define kParam3DECx22Degree2 "tde4_Cx22_Degree_2"
+#define kParam3DECx22Degree2Label "Cx22 - Degree 2"
+#define kParam3DECy22Degree2 "tde4_Cy22_Degree_2"
+#define kParam3DECy22Degree2Label "Cy22 - Degree 2"
+#define kParam3DECx04Degree4 "tde4_Cx04_Degree_4"
+#define kParam3DECx04Degree4Label "Cx04 - Degree 4"
+#define kParam3DECy04Degree4 "tde4_Cy04_Degree_4"
+#define kParam3DECy04Degree4Label "Cy04 - Degree 4"
+#define kParam3DECx24Degree4 "tde4_Cx24_Degree_4"
+#define kParam3DECx24Degree4Label "Cx24 - Degree 4"
+#define kParam3DECy24Degree4 "tde4_Cy24_Degree_4"
+#define kParam3DECy24Degree4Label "Cy24 - Degree 4"
+#define kParam3DECx44Degree4 "tde4_Cx44_Degree_4"
+#define kParam3DECx44Degree4Label "Cx44 - Degree 4"
+#define kParam3DECy44Degree4 "tde4_Cy44_Degree_4"
+#define kParam3DECy44Degree4Label "Cy44 - Degree 4"
+#define kParam3DELensRotation "tde4_Lens_Rotation"
+#define kParam3DELensRotationLabel "Lens Rotation 4"
+#define kParam3DESqueezeX "tde4_Squeeze_X"
+#define kParam3DESqueezeXLabel "Squeeze-X"
+#define kParam3DESqueezeY "tde4_Squeeze_Y"
+#define kParam3DESqueezeYLabel "Squeeze-Y"
 
 // a generic distortion model abstract class (distortion parameters are added by the derived class)
 class DistortionModel
@@ -1200,7 +1229,7 @@ private:
     double _cyyy;
 };
 
-/// this class handles the Degree-2 anamorphic and degree-4 radial mixed model
+/// this class handles the radial distortion with decentering and optional compensation for beam-splitter artefacts model
 class DistortionModel3DEStandard
 : public DistortionModel3DEBase
 {
@@ -1233,9 +1262,17 @@ public:
     , _c4(c4)
     , _u3(u3)
     , _v3(v3)
-    , _phi(phi)
-    , _b(b)
     {
+        //calc_m()
+        double q = std::sqrt(1.0 + b);
+        double c = std::cos(phi * M_PI / 180.0);
+        double s = std::sin(phi * M_PI / 180.0);
+        //mat2_type para = tensq(vec2_type(cos(_phi * M_PI / 180.0),sin(_phi * M_PI / 180.0)));
+        //m = _b * para + mat2_type(1.0);
+        // m = [[mxx, mxy],[myx,myy]] (m is symmetric)
+        _mxx = c*c*q + s*s/q;
+        _mxy = (q - 1.0/q)*c*s;
+        _myy = c*c/q + s*s*q;
     }
 
     virtual ~DistortionModel3DEStandard() {};
@@ -1258,19 +1295,9 @@ private:
 
         // _cylindric.eval(
         // see cylindric_extender_2
-        //calc_m()
-        double q = std::sqrt(1.0 + _b);
-        double c = std::cos(_phi * M_PI / 180.0);
-        double s = std::sin(_phi * M_PI / 180.0);
-        //mat2_type para = tensq(vec2_type(cos(_phi * M_PI / 180.0),sin(_phi * M_PI / 180.0)));
-        //m = _b * para + mat2_type(1.0);
-        // m = [[mxx, mxy],[myx,myy]] (m is symmetric)
-        double mxx = c*c*q + s*s/q;
-        double mxy = (q - 1.0/q)*c*s;
-        double myy = c*c/q + s*s*q;
         //(xu,yu) = m * (x_dn, y_dn);
-        *xu = mxx * x_dn + mxy * y_dn;
-        *yu = mxy * x_dn + myy * y_dn;
+        *xu = _mxx * x_dn + _mxy * y_dn;
+        *yu = _mxy * x_dn + _myy * y_dn;
     }
 
 private:
@@ -1280,10 +1307,122 @@ private:
     double _c4;
     double _u3;
     double _v3;
-    double _phi;
-    double _b;
+    double _mxx;
+    double _mxy;
+    double _myy;
 };
 
+// Degree-4 anamorphic model with anamorphic lens rotation
+class DistortionModel3DEAnamorphic4
+: public DistortionModel3DEBase
+{
+public:
+    DistortionModel3DEAnamorphic4(const OfxRectI& srcRoDPixel,
+                                  const OfxPointD& renderScale,
+                                  double xa_fov_unit,
+                                  double ya_fov_unit,
+                                  double xb_fov_unit,
+                                  double yb_fov_unit,
+                                  double fl_cm,
+                                  double fd_cm,
+                                  double w_fb_cm,
+                                  double h_fb_cm,
+                                  double x_lco_cm,
+                                  double y_lco_cm,
+                                  double pa,
+                                  double cx02,
+                                  double cy02,
+                                  double cx22,
+                                  double cy22,
+                                  double cx04,
+                                  double cy04,
+                                  double cx24,
+                                  double cy24,
+                                  double cx44,
+                                  double cy44,
+                                  double phi,
+                                  double sqx,
+                                  double sqy)
+    : DistortionModel3DEBase(srcRoDPixel, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
+    , _cosphi( std::cos(phi * M_PI / 180.0) )
+    , _sinphi( std::sin(phi * M_PI / 180.0) )
+    , _sqx(sqx)
+    , _sqy(sqy)
+    {
+        // generic_anamorphic_distortion<VEC2,MAT2,4>::prepare()
+        _cx_for_x2 = cx02 + cx22;
+        _cx_for_y2 = cx02 - cx22;
+
+        _cx_for_x4 = cx04 + cx24 + cx44;
+        _cx_for_x2_y2 = 2 * cx04 - 6 * cx44;
+        _cx_for_y4 = cx04 - cx24 + cx44;
+
+        _cy_for_x2 = cy02 + cy22;
+        _cy_for_y2 = cy02 - cy22;
+
+        _cy_for_x4 = cy04 + cy24 + cy44;
+        _cy_for_x2_y2 = 2 * cy04 - 6 * cy44;
+        _cy_for_y4 = cy04 - cy24 + cy44;
+    }
+
+    virtual ~DistortionModel3DEAnamorphic4() {};
+
+private:
+    // Remove distortion. p is a point in diagonally normalized coordinates.
+    void undistort_dn(double xd, double yd, double* xu, double *yu) const
+    {
+        /*
+                    _rotation.eval(
+						_squeeze_x.eval(
+							_squeeze_y.eval(
+								_pa.eval(
+									_anamorphic.eval(
+										_rotation.eval_inv(
+											_pa.eval_inv(
+         */
+
+        //_pa.eval_inv(
+        xd /= _pa;
+        // _rotation.eval_inv(
+        //   _m_rot = mat2_type(cos(_phi),-sin(_phi),sin(_phi),cos(_phi));
+        //   _inv_m_rot = trans(_m_rot);
+        double x = _cosphi * xd + _sinphi * yd;
+        double y = -_sinphi * xd + _cosphi * yd;
+        // _anamorphic.eval(
+        double x2 = x * x;
+        double x4 = x2 * x2;
+        double y2 = y * y;
+        double y4 = y2 * y2;
+        double xq = x * (1.0
+                         + x2 * _cx_for_x2 + y2 * _cx_for_y2
+                         + x4 * _cx_for_x4 + x2 * y2 * _cx_for_x2_y2 + y4 * _cx_for_y4);
+        double yq = y * (1.0
+                         + x2 * _cy_for_x2 + y2 * _cy_for_y2
+                         + x4 * _cy_for_x4 + x2 * y2 * _cy_for_x2_y2 + y4 * _cy_for_y4);
+        //double xq = x;
+        //double yq = y;
+        // _pa.eval(
+        xq *= _pa;
+        // _squeeze_y.eval(
+        yq *= _sqy;
+        // _squeeze_x.eval(
+        xq *= _sqx;
+        // _rotation.eval(
+        x = _cosphi * xq - _sinphi * yq;
+        y = _sinphi * xq + _cosphi * yq;
+
+        *xu = x;
+        *yu = y;
+    }
+
+private:
+    double _cx_for_x2,_cx_for_y2,_cx_for_x4,_cx_for_x2_y2,_cx_for_y4;
+    double _cy_for_x2,_cy_for_y2,_cy_for_x4,_cy_for_x2_y2,_cy_for_y4;
+    double _cosphi;
+    double _sinphi;
+    double _sqx;
+    double _sqy;
+};
 
 
 
@@ -1885,11 +2024,15 @@ public:
             _x_lco_cm = fetchDoubleParam(kParam3DE4_lens_center_offset_x_cm);
             _y_lco_cm = fetchDoubleParam(kParam3DE4_lens_center_offset_y_cm);
             _pa = fetchDoubleParam(kParam3DE4_pixel_aspect);
+
+            // 3DEclassic
             _ld = fetchDoubleParam(kParam3DEDistortion);
             _sq = fetchDoubleParam(kParam3DEAnamorphicSqueeze);
             _cx = fetchDoubleParam(kParam3DECurvatureX);
             _cy = fetchDoubleParam(kParam3DECurvatureY);
             _qu = fetchDoubleParam(kParam3DEQuarticDistortion);
+
+            // 3DEStandard
             _c2 = fetchDoubleParam(kParam3DEDistortionDegree2);
             _u1 = fetchDoubleParam(kParam3DEUDegree2);
             _v1 = fetchDoubleParam(kParam3DEVDegree2);
@@ -1898,7 +2041,21 @@ public:
             _v3 = fetchDoubleParam(kParam3DEVDegree4);
             _phi = fetchDoubleParam(kParam3DEPhiCylindricDirection);
             _b = fetchDoubleParam(kParam3DEBCylindricBending);
-            
+
+            // 3DEAnamorphic4
+            _cx02 = fetchDoubleParam(kParam3DECx02Degree2);
+            _cy02 = fetchDoubleParam(kParam3DECy02Degree2);
+            _cx22 = fetchDoubleParam(kParam3DECx22Degree2);
+            _cy22 = fetchDoubleParam(kParam3DECy22Degree2);
+            _cx04 = fetchDoubleParam(kParam3DECx04Degree4);
+            _cy04 = fetchDoubleParam(kParam3DECy04Degree4);
+            _cx24 = fetchDoubleParam(kParam3DECx24Degree4);
+            _cy24 = fetchDoubleParam(kParam3DECy24Degree4);
+            _cx44 = fetchDoubleParam(kParam3DECx44Degree4);
+            _cy44 = fetchDoubleParam(kParam3DECy44Degree4);
+            _a4phi = fetchDoubleParam(kParam3DELensRotation);
+            _a4sqx = fetchDoubleParam(kParam3DESqueezeX);
+            _a4sqy = fetchDoubleParam(kParam3DESqueezeY);
         }
         _filter = fetchChoiceParam(kParamFilterType);
         _clamp = fetchBooleanParam(kParamFilterClamp);
@@ -1990,13 +2147,13 @@ private:
     DoubleParam* _x_lco_cm;
     DoubleParam* _y_lco_cm;
     DoubleParam* _pa;
-    // Classic model
+    // 3DEClassic model
     DoubleParam* _ld;
     DoubleParam* _sq;
     DoubleParam* _cx;
     DoubleParam* _cy;
     DoubleParam* _qu;
-    // Standard model
+    // 3DEStandard model
     DoubleParam* _c2;
     DoubleParam* _u1;
     DoubleParam* _v1;
@@ -2005,6 +2162,20 @@ private:
     DoubleParam* _v3;
     DoubleParam* _phi;
     DoubleParam* _b;
+    // 3DEAnamorphic4 model
+    DoubleParam* _cx02;
+    DoubleParam* _cy02;
+    DoubleParam* _cx22;
+    DoubleParam* _cy22;
+    DoubleParam* _cx04;
+    DoubleParam* _cy04;
+    DoubleParam* _cx24;
+    DoubleParam* _cy24;
+    DoubleParam* _cx44;
+    DoubleParam* _cy44;
+    DoubleParam* _a4phi;
+    DoubleParam* _a4sqx;
+    DoubleParam* _a4sqy;
 
     ChoiceParam* _filter;
     BooleanParam* _clamp;
@@ -2454,6 +2625,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             double x_lco_cm = _x_lco_cm->getValueAtTime(time);
             double y_lco_cm = _y_lco_cm->getValueAtTime(time);
             double pa = _pa->getValueAtTime(time);
+
             double ld = _ld->getValueAtTime(time);
             double sq = _sq->getValueAtTime(time);
             double cx = _cx->getValueAtTime(time);
@@ -2495,6 +2667,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             double x_lco_cm = _x_lco_cm->getValueAtTime(time);
             double y_lco_cm = _y_lco_cm->getValueAtTime(time);
             double pa = _pa->getValueAtTime(time);
+
             double c2 = _c2->getValueAtTime(time);
             double u1 = _u1->getValueAtTime(time);
             double v1 = _v1->getValueAtTime(time);
@@ -2526,6 +2699,65 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                                                                   b) );
             break;
         }
+        case eDistortionModel3DEAnamorphic4: {
+            //double pa = 1.;
+            //if (_srcClip) {
+            //    pa = _srcClip->getPixelAspectRatio();
+            //}
+            double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
+            double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
+            double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
+            double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
+            double fl_cm = _fl_cm->getValueAtTime(time);
+            double fd_cm = _fd_cm->getValueAtTime(time);
+            double w_fb_cm = _w_fb_cm->getValueAtTime(time);
+            double h_fb_cm = _h_fb_cm->getValueAtTime(time);
+            double x_lco_cm = _x_lco_cm->getValueAtTime(time);
+            double y_lco_cm = _y_lco_cm->getValueAtTime(time);
+            double pa = _pa->getValueAtTime(time);
+
+            double cx02 = _cx02->getValueAtTime(time);
+            double cy02 = _cy02->getValueAtTime(time);
+            double cx22 = _cx22->getValueAtTime(time);
+            double cy22 = _cy22->getValueAtTime(time);
+            double cx04 = _cx04->getValueAtTime(time);
+            double cy04 = _cy04->getValueAtTime(time);
+            double cx24 = _cx24->getValueAtTime(time);
+            double cy24 = _cy24->getValueAtTime(time);
+            double cx44 = _cx44->getValueAtTime(time);
+            double cy44 = _cy44->getValueAtTime(time);
+            double phi = _a4phi->getValueAtTime(time);
+            double sqx = _a4sqx->getValueAtTime(time);
+            double sqy = _a4sqy->getValueAtTime(time);
+            distortionModel.reset( new DistortionModel3DEAnamorphic4(srcRoDPixel,
+                                                                     args.renderScale,
+                                                                     xa_fov_unit,
+                                                                     ya_fov_unit,
+                                                                     xb_fov_unit,
+                                                                     yb_fov_unit,
+                                                                     fl_cm,
+                                                                     fd_cm,
+                                                                     w_fb_cm,
+                                                                     h_fb_cm,
+                                                                     x_lco_cm,
+                                                                     y_lco_cm,
+                                                                     pa,
+                                                                     cx02,
+                                                                     cy02,
+                                                                     cx22,
+                                                                     cy22,
+                                                                     cx04,
+                                                                     cy04,
+                                                                     cx24,
+                                                                     cy24,
+                                                                     cx44,
+                                                                     cy44,
+                                                                     phi,
+                                                                     sqx,
+                                                                     sqy) );
+            break;
+        }
+
         }
     }
     processor.setValues(processR, processG, processB, processA,
@@ -2938,7 +3170,8 @@ DistortionPlugin::updateVisibility()
         _pfP->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
 
         bool distortionModel3DE = (distortionModel == eDistortionModel3DEClassic ||
-                                   distortionModel == eDistortionModel3DEStandard);
+                                   distortionModel == eDistortionModel3DEStandard ||
+                                   distortionModel == eDistortionModel3DEAnamorphic4);
         _xa_fov_unit->setIsSecretAndDisabled(!distortionModel3DE);
         _ya_fov_unit->setIsSecretAndDisabled(!distortionModel3DE);
         _xb_fov_unit->setIsSecretAndDisabled(!distortionModel3DE);
@@ -2965,7 +3198,21 @@ DistortionPlugin::updateVisibility()
         _v3->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
         _phi->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
         _b->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
-}
+
+        _cx02->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _cy02->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _cx22->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _cy22->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _cx04->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _cy04->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _cx24->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _cy24->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _cx44->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _cy44->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _a4phi->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _a4sqx->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+        _a4sqy->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+    }
 }
 
 void
@@ -3380,6 +3627,8 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamDistortionModelOption3DEClassic, kParamDistortionModelOption3DEClassicHint);
             assert(param->getNOptions() == eDistortionModel3DEStandard);
             param->appendOption(kParamDistortionModelOption3DEStandard, kParamDistortionModelOption3DEStandardHint);
+            assert(param->getNOptions() == eDistortionModel3DEAnamorphic4);
+            param->appendOption(kParamDistortionModelOption3DEAnamorphic4, kParamDistortionModelOption3DEAnamorphic4Hint);
             if (page) {
                 page->addChild(*param);
             }
@@ -3801,6 +4050,150 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
             param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // 3DE4_Anamorphic_Standard_Degree_4
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx02Degree2);
+            param->setLabel(kParam3DECx02Degree2Label);
+            //param->setHint(kParam3DECx02Degree2Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy02Degree2);
+            param->setLabel(kParam3DECy02Degree2Label);
+            //param->setHint(kParam3DECy02Degree2Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx22Degree2);
+            param->setLabel(kParam3DECx22Degree2Label);
+            //param->setHint(kParam3DECx22Degree2Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy22Degree2);
+            param->setLabel(kParam3DECy22Degree2Label);
+            //param->setHint(kParam3DECy22Degree2Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx04Degree4);
+            param->setLabel(kParam3DECx04Degree4Label);
+            //param->setHint(kParam3DECx04Degree4Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy04Degree4);
+            param->setLabel(kParam3DECy04Degree4Label);
+            //param->setHint(kParam3DECy04Degree4Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx24Degree4);
+            param->setLabel(kParam3DECx24Degree4Label);
+            //param->setHint(kParam3DECx24Degree4Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy24Degree4);
+            param->setLabel(kParam3DECy24Degree4Label);
+            //param->setHint(kParam3DECy24Degree4Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx44Degree4);
+            param->setLabel(kParam3DECx44Degree4Label);
+            //param->setHint(kParam3DECx44Degree4Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy44Degree4);
+            param->setLabel(kParam3DECy44Degree4Label);
+            //param->setHint(kParam3DECy44Degree4Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DELensRotation);
+            param->setLabel(kParam3DELensRotationLabel);
+            //param->setHint(kParam3DELensRotationHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-2., 2.);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DESqueezeX);
+            param->setLabel(kParam3DESqueezeXLabel);
+            //param->setHint(kParam3DESqueezeXHint);
+            param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0.9, 1.1);
+            param->setDefault(1.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DESqueezeY);
+            param->setLabel(kParam3DESqueezeYLabel);
+            //param->setHint(kParam3DESqueezeYHint);
+            param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0.9, 1.1);
+            param->setDefault(1.);
             if (page) {
                 page->addChild(*param);
             }
