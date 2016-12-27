@@ -241,7 +241,7 @@ enum WrapEnum
 #define kParamDistortionModelOption3DEFishEye8 "3DE4 Radial Fisheye Degree 8"
 #define kParamDistortionModelOption3DEFishEye8Hint "Radial lens distortion model with equisolid-angle fisheye projection, used in 3DEqualizer by Science-D-Visions."
 #define kParamDistortionModelOption3DEStandard "3DE4 Radial Standard Degree 4"
-#define kParamDistortionModelOption3DEStandardHint "Radial lens distortion model, which compensates for decentered lenses (and beam splitter artefacts in stereo rigs), used in 3DEqualizer by Science-D-Visions."
+#define kParamDistortionModelOption3DEStandardHint "Radial lens distortion model, a.k.a. radial decentered cylindric degree 4, which compensates for decentered lenses (and beam splitter artefacts in stereo rigs), used in 3DEqualizer by Science-D-Visions."
 #define kParamDistortionModelOption3DEAnamorphic4 "3DE4 Anamorphic Standard Degree 4"
 #define kParamDistortionModelOption3DEAnamorphic4Hint "Degree-4 anamorphic model with anamorphic lens rotation, which handles 'human-touched' mounted anamorphic lenses, used in 3DEqualizer by Science-D-Visions."
 
@@ -278,7 +278,6 @@ enum DistortionModelEnum
     eDistortionModel3DEAnamorphic6,
     eDistortionModel3DEFishEye8,
     eDistortionModel3DEStandard,
-    //eDistortionModel3DERadialDecenteredCylindric4,
     eDistortionModel3DEAnamorphic4,
 };
 
@@ -2323,6 +2322,10 @@ private:
 
     void updateVisibility();
 
+    DistortionModel* getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPointD& renderScale, double time);
+
+    void getSrcRoDPixel(double time, const OfxPointD& renderScale, OfxRectI *srcRoDPixel);
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -2531,6 +2534,338 @@ getChannelIndex(InputChannelEnum e,
 
     return retval;
 } // getChannelIndex
+
+DistortionModel*
+DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPointD& renderScale, double time)
+{
+    if (_plugin != eDistortionPluginLensDistortion) {
+        return NULL;
+    }
+    DistortionModelEnum distortionModelE = (DistortionModelEnum)_distortionModel->getValueAtTime(time);
+    switch (distortionModelE) {
+    case eDistortionModelNuke: {
+        double par = 1.;
+        if (_srcClip) {
+            par = _srcClip->getPixelAspectRatio();
+        }
+        double k1 = _k1->getValueAtTime(time);
+        double k2 = _k2->getValueAtTime(time);
+        double cx, cy;
+        _center->getValueAtTime(time, cx, cy);
+        double squeeze = std::max(0.001, _squeeze->getValueAtTime(time));
+        double ax, ay;
+        _asymmetric->getValueAtTime(time, ax, ay);
+        return new DistortionModelNuke(srcRoDPixel,
+                                       par,
+                                       k1,
+                                       k2,
+                                       cx,
+                                       cy,
+                                       squeeze,
+                                       ax,
+                                       ay);
+        break;
+    }
+    case eDistortionModelPFBarrel: {
+        double par = 1.;
+        if (_srcClip) {
+            par = _srcClip->getPixelAspectRatio();
+        }
+        double c3 = _pfC3->getValueAtTime(time);
+        double c5 = _pfC5->getValueAtTime(time);
+        double xp, yp;
+        _pfP->getValueAtTime(time, xp, yp);
+        double squeeze = _pfSqueeze->getValueAtTime(time);
+        return new DistortionModelPFBarrel(srcRoDPixel,
+                                           renderScale,
+                                           //par,
+                                           c3,
+                                           c5,
+                                           xp,
+                                           yp,
+                                           squeeze);
+        break;
+    }
+    case eDistortionModel3DEClassic: {
+        //double pa = 1.;
+        //if (_srcClip) {
+        //    pa = _srcClip->getPixelAspectRatio();
+        //}
+        double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
+        double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
+        double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
+        double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
+        double fl_cm = _fl_cm->getValueAtTime(time);
+        double fd_cm = _fd_cm->getValueAtTime(time);
+        double w_fb_cm = _w_fb_cm->getValueAtTime(time);
+        double h_fb_cm = _h_fb_cm->getValueAtTime(time);
+        double x_lco_cm = _x_lco_cm->getValueAtTime(time);
+        double y_lco_cm = _y_lco_cm->getValueAtTime(time);
+        double pa = _pa->getValueAtTime(time);
+
+        double ld = _ld->getValueAtTime(time);
+        double sq = _sq->getValueAtTime(time);
+        double cx = _cx->getValueAtTime(time);
+        double cy = _cy->getValueAtTime(time);
+        double qu = _qu->getValueAtTime(time);
+        return new DistortionModel3DEClassic(srcRoDPixel,
+                                             renderScale,
+                                             xa_fov_unit,
+                                             ya_fov_unit,
+                                             xb_fov_unit,
+                                             yb_fov_unit,
+                                             fl_cm,
+                                             fd_cm,
+                                             w_fb_cm,
+                                             h_fb_cm,
+                                             x_lco_cm,
+                                             y_lco_cm,
+                                             pa,
+                                             ld,
+                                             sq,
+                                             cx,
+                                             cy,
+                                             qu);
+        break;
+    }
+    case eDistortionModel3DEAnamorphic6: {
+        //double pa = 1.;
+        //if (_srcClip) {
+        //    pa = _srcClip->getPixelAspectRatio();
+        //}
+        double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
+        double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
+        double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
+        double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
+        double fl_cm = _fl_cm->getValueAtTime(time);
+        double fd_cm = _fd_cm->getValueAtTime(time);
+        double w_fb_cm = _w_fb_cm->getValueAtTime(time);
+        double h_fb_cm = _h_fb_cm->getValueAtTime(time);
+        double x_lco_cm = _x_lco_cm->getValueAtTime(time);
+        double y_lco_cm = _y_lco_cm->getValueAtTime(time);
+        double pa = _pa->getValueAtTime(time);
+
+        double cx02 = _cx02->getValueAtTime(time);
+        double cy02 = _cy02->getValueAtTime(time);
+        double cx22 = _cx22->getValueAtTime(time);
+        double cy22 = _cy22->getValueAtTime(time);
+        double cx04 = _cx04->getValueAtTime(time);
+        double cy04 = _cy04->getValueAtTime(time);
+        double cx24 = _cx24->getValueAtTime(time);
+        double cy24 = _cy24->getValueAtTime(time);
+        double cx44 = _cx44->getValueAtTime(time);
+        double cy44 = _cy44->getValueAtTime(time);
+        double cx06 = _cx06->getValueAtTime(time);
+        double cy06 = _cy06->getValueAtTime(time);
+        double cx26 = _cx26->getValueAtTime(time);
+        double cy26 = _cy26->getValueAtTime(time);
+        double cx46 = _cx46->getValueAtTime(time);
+        double cy46 = _cy46->getValueAtTime(time);
+        double cx66 = _cx66->getValueAtTime(time);
+        double cy66 = _cy66->getValueAtTime(time);
+        return new DistortionModel3DEAnamorphic6(srcRoDPixel,
+                                                 renderScale,
+                                                 xa_fov_unit,
+                                                 ya_fov_unit,
+                                                 xb_fov_unit,
+                                                 yb_fov_unit,
+                                                 fl_cm,
+                                                 fd_cm,
+                                                 w_fb_cm,
+                                                 h_fb_cm,
+                                                 x_lco_cm,
+                                                 y_lco_cm,
+                                                 pa,
+                                                 cx02,
+                                                 cy02,
+                                                 cx22,
+                                                 cy22,
+                                                 cx04,
+                                                 cy04,
+                                                 cx24,
+                                                 cy24,
+                                                 cx44,
+                                                 cy44,
+                                                 cx06,
+                                                 cy06,
+                                                 cx26,
+                                                 cy26,
+                                                 cx46,
+                                                 cy46,
+                                                 cx66,
+                                                 cy66);
+        break;
+    }
+    case eDistortionModel3DEFishEye8: {
+        //double pa = 1.;
+        //if (_srcClip) {
+        //    pa = _srcClip->getPixelAspectRatio();
+        //}
+        double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
+        double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
+        double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
+        double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
+        double fl_cm = _fl_cm->getValueAtTime(time);
+        double fd_cm = _fd_cm->getValueAtTime(time);
+        double w_fb_cm = _w_fb_cm->getValueAtTime(time);
+        double h_fb_cm = _h_fb_cm->getValueAtTime(time);
+        double x_lco_cm = _x_lco_cm->getValueAtTime(time);
+        double y_lco_cm = _y_lco_cm->getValueAtTime(time);
+        double pa = _pa->getValueAtTime(time);
+
+        double c2 = _c2->getValueAtTime(time);
+        double c4 = _c4->getValueAtTime(time);
+        double c6 = _c6->getValueAtTime(time);
+        double c8 = _c8->getValueAtTime(time);
+        return new DistortionModel3DEFishEye8(srcRoDPixel,
+                                              renderScale,
+                                              xa_fov_unit,
+                                              ya_fov_unit,
+                                              xb_fov_unit,
+                                              yb_fov_unit,
+                                              fl_cm,
+                                              fd_cm,
+                                              w_fb_cm,
+                                              h_fb_cm,
+                                              x_lco_cm,
+                                              y_lco_cm,
+                                              pa,
+                                              c2,
+                                              c4,
+                                              c6,
+                                              c8);
+        break;
+    }
+    case eDistortionModel3DEStandard: {
+        //double pa = 1.;
+        //if (_srcClip) {
+        //    pa = _srcClip->getPixelAspectRatio();
+        //}
+        double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
+        double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
+        double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
+        double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
+        double fl_cm = _fl_cm->getValueAtTime(time);
+        double fd_cm = _fd_cm->getValueAtTime(time);
+        double w_fb_cm = _w_fb_cm->getValueAtTime(time);
+        double h_fb_cm = _h_fb_cm->getValueAtTime(time);
+        double x_lco_cm = _x_lco_cm->getValueAtTime(time);
+        double y_lco_cm = _y_lco_cm->getValueAtTime(time);
+        double pa = _pa->getValueAtTime(time);
+
+        double c2 = _c2->getValueAtTime(time);
+        double u1 = _u1->getValueAtTime(time);
+        double v1 = _v1->getValueAtTime(time);
+        double c4 = _c4->getValueAtTime(time);
+        double u3 = _u3->getValueAtTime(time);
+        double v3 = _v3->getValueAtTime(time);
+        double phi = _phi->getValueAtTime(time);
+        double b = _b->getValueAtTime(time);
+        return new DistortionModel3DEStandard(srcRoDPixel,
+                                              renderScale,
+                                              xa_fov_unit,
+                                              ya_fov_unit,
+                                              xb_fov_unit,
+                                              yb_fov_unit,
+                                              fl_cm,
+                                              fd_cm,
+                                              w_fb_cm,
+                                              h_fb_cm,
+                                              x_lco_cm,
+                                              y_lco_cm,
+                                              pa,
+                                              c2,
+                                              u1,
+                                              v1,
+                                              c4,
+                                              u3,
+                                              v3,
+                                              phi,
+                                              b);
+        break;
+    }
+    case eDistortionModel3DEAnamorphic4: {
+        //double pa = 1.;
+        //if (_srcClip) {
+        //    pa = _srcClip->getPixelAspectRatio();
+        //}
+        double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
+        double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
+        double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
+        double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
+        double fl_cm = _fl_cm->getValueAtTime(time);
+        double fd_cm = _fd_cm->getValueAtTime(time);
+        double w_fb_cm = _w_fb_cm->getValueAtTime(time);
+        double h_fb_cm = _h_fb_cm->getValueAtTime(time);
+        double x_lco_cm = _x_lco_cm->getValueAtTime(time);
+        double y_lco_cm = _y_lco_cm->getValueAtTime(time);
+        double pa = _pa->getValueAtTime(time);
+
+        double cx02 = _cx02->getValueAtTime(time);
+        double cy02 = _cy02->getValueAtTime(time);
+        double cx22 = _cx22->getValueAtTime(time);
+        double cy22 = _cy22->getValueAtTime(time);
+        double cx04 = _cx04->getValueAtTime(time);
+        double cy04 = _cy04->getValueAtTime(time);
+        double cx24 = _cx24->getValueAtTime(time);
+        double cy24 = _cy24->getValueAtTime(time);
+        double cx44 = _cx44->getValueAtTime(time);
+        double cy44 = _cy44->getValueAtTime(time);
+        double phi = _a4phi->getValueAtTime(time);
+        double sqx = _a4sqx->getValueAtTime(time);
+        double sqy = _a4sqy->getValueAtTime(time);
+        return new DistortionModel3DEAnamorphic4(srcRoDPixel,
+                                                 renderScale,
+                                                 xa_fov_unit,
+                                                 ya_fov_unit,
+                                                 xb_fov_unit,
+                                                 yb_fov_unit,
+                                                 fl_cm,
+                                                 fd_cm,
+                                                 w_fb_cm,
+                                                 h_fb_cm,
+                                                 x_lco_cm,
+                                                 y_lco_cm,
+                                                 pa,
+                                                 cx02,
+                                                 cy02,
+                                                 cx22,
+                                                 cy22,
+                                                 cx04,
+                                                 cy04,
+                                                 cx24,
+                                                 cy24,
+                                                 cx44,
+                                                 cy44,
+                                                 phi,
+                                                 sqx,
+                                                 sqy);
+        break;
+    }
+    }
+    assert(false);
+}
+
+void
+DistortionPlugin::getSrcRoDPixel(double time,
+                                 const OfxPointD& renderScale,
+                                 OfxRectI *srcRoDPixel)
+{
+    if ( _srcClip && _srcClip->isConnected() ) {
+        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+        Coords::toPixelEnclosing(srcRod, renderScale, _srcClip->getPixelAspectRatio(), srcRoDPixel);
+    } else {
+        // default to Project Size
+        OfxRectD srcRoD;
+        OfxPointD siz = getProjectSize();
+        OfxPointD off = getProjectOffset();
+        srcRoD.x1 = off.x;
+        srcRoD.x2 = off.x + siz.x;
+        srcRoD.y1 = off.y;
+        srcRoD.y2 = off.y + siz.y;
+        Coords::toPixelEnclosing(srcRoD, renderScale, getProjectPixelAspectRatio(), srcRoDPixel);
+    }
+}
 
 /* set up and run a processor */
 void
@@ -2785,328 +3120,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         vScale *= args.renderScale.y;
     }
     OfxRectI srcRoDPixel = {0, 1, 0, 1};
-    if ( _srcClip && _srcClip->isConnected() ) {
-        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
-        Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
-    } else {
-        // default to Project Size
-        OfxRectD srcRoD;
-        OfxPointD siz = getProjectSize();
-        OfxPointD off = getProjectOffset();
-        srcRoD.x1 = off.x;
-        srcRoD.x2 = off.x + siz.x;
-        srcRoD.y1 = off.y;
-        srcRoD.y2 = off.y + siz.y;
-        Coords::toPixelEnclosing(srcRoD, args.renderScale, getProjectPixelAspectRatio(), &srcRoDPixel);
-    }
+    getSrcRoDPixel(time, args.renderScale, &srcRoDPixel);
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
-    std::auto_ptr<DistortionModel> distortionModel;
-    if (_plugin == eDistortionPluginLensDistortion) {
-        DistortionModelEnum distortionModelE = (DistortionModelEnum)_distortionModel->getValueAtTime(time);
-        switch (distortionModelE) {
-        case eDistortionModelNuke: {
-            double par = 1.;
-            if (_srcClip) {
-                par = _srcClip->getPixelAspectRatio();
-            }
-            double k1 = _k1->getValueAtTime(time);
-            double k2 = _k2->getValueAtTime(time);
-            double cx, cy;
-            _center->getValueAtTime(time, cx, cy);
-            double squeeze = std::max(0.001, _squeeze->getValueAtTime(time));
-            double ax, ay;
-            _asymmetric->getValueAtTime(time, ax, ay);
-            distortionModel.reset( new DistortionModelNuke(srcRoDPixel,
-                                                           par,
-                                                           k1,
-                                                           k2,
-                                                           cx,
-                                                           cy,
-                                                           squeeze,
-                                                           ax,
-                                                           ay) );
-            break;
-        }
-        case eDistortionModelPFBarrel: {
-            double par = 1.;
-            if (_srcClip) {
-                par = _srcClip->getPixelAspectRatio();
-            }
-            double c3 = _pfC3->getValueAtTime(time);
-            double c5 = _pfC5->getValueAtTime(time);
-            double xp, yp;
-            _pfP->getValueAtTime(time, xp, yp);
-            double squeeze = _pfSqueeze->getValueAtTime(time);
-            distortionModel.reset( new DistortionModelPFBarrel(srcRoDPixel,
-                                                               args.renderScale,
-                                                               //par,
-                                                               c3,
-                                                               c5,
-                                                               xp,
-                                                               yp,
-                                                               squeeze) );
-            break;
-        }
-        case eDistortionModel3DEClassic: {
-            //double pa = 1.;
-            //if (_srcClip) {
-            //    pa = _srcClip->getPixelAspectRatio();
-            //}
-            double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
-            double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
-            double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
-            double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
-            double fl_cm = _fl_cm->getValueAtTime(time);
-            double fd_cm = _fd_cm->getValueAtTime(time);
-            double w_fb_cm = _w_fb_cm->getValueAtTime(time);
-            double h_fb_cm = _h_fb_cm->getValueAtTime(time);
-            double x_lco_cm = _x_lco_cm->getValueAtTime(time);
-            double y_lco_cm = _y_lco_cm->getValueAtTime(time);
-            double pa = _pa->getValueAtTime(time);
-
-            double ld = _ld->getValueAtTime(time);
-            double sq = _sq->getValueAtTime(time);
-            double cx = _cx->getValueAtTime(time);
-            double cy = _cy->getValueAtTime(time);
-            double qu = _qu->getValueAtTime(time);
-            distortionModel.reset( new DistortionModel3DEClassic(srcRoDPixel,
-                                                                 args.renderScale,
-                                                                 xa_fov_unit,
-                                                                 ya_fov_unit,
-                                                                 xb_fov_unit,
-                                                                 yb_fov_unit,
-                                                                 fl_cm,
-                                                                 fd_cm,
-                                                                 w_fb_cm,
-                                                                 h_fb_cm,
-                                                                 x_lco_cm,
-                                                                 y_lco_cm,
-                                                                 pa,
-                                                                 ld,
-                                                                 sq,
-                                                                 cx,
-                                                                 cy,
-                                                                 qu) );
-            break;
-        }
-        case eDistortionModel3DEAnamorphic6: {
-            //double pa = 1.;
-            //if (_srcClip) {
-            //    pa = _srcClip->getPixelAspectRatio();
-            //}
-            double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
-            double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
-            double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
-            double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
-            double fl_cm = _fl_cm->getValueAtTime(time);
-            double fd_cm = _fd_cm->getValueAtTime(time);
-            double w_fb_cm = _w_fb_cm->getValueAtTime(time);
-            double h_fb_cm = _h_fb_cm->getValueAtTime(time);
-            double x_lco_cm = _x_lco_cm->getValueAtTime(time);
-            double y_lco_cm = _y_lco_cm->getValueAtTime(time);
-            double pa = _pa->getValueAtTime(time);
-
-            double cx02 = _cx02->getValueAtTime(time);
-            double cy02 = _cy02->getValueAtTime(time);
-            double cx22 = _cx22->getValueAtTime(time);
-            double cy22 = _cy22->getValueAtTime(time);
-            double cx04 = _cx04->getValueAtTime(time);
-            double cy04 = _cy04->getValueAtTime(time);
-            double cx24 = _cx24->getValueAtTime(time);
-            double cy24 = _cy24->getValueAtTime(time);
-            double cx44 = _cx44->getValueAtTime(time);
-            double cy44 = _cy44->getValueAtTime(time);
-            double cx06 = _cx06->getValueAtTime(time);
-            double cy06 = _cy06->getValueAtTime(time);
-            double cx26 = _cx26->getValueAtTime(time);
-            double cy26 = _cy26->getValueAtTime(time);
-            double cx46 = _cx46->getValueAtTime(time);
-            double cy46 = _cy46->getValueAtTime(time);
-            double cx66 = _cx66->getValueAtTime(time);
-            double cy66 = _cy66->getValueAtTime(time);
-            distortionModel.reset( new DistortionModel3DEAnamorphic6(srcRoDPixel,
-                                                                     args.renderScale,
-                                                                     xa_fov_unit,
-                                                                     ya_fov_unit,
-                                                                     xb_fov_unit,
-                                                                     yb_fov_unit,
-                                                                     fl_cm,
-                                                                     fd_cm,
-                                                                     w_fb_cm,
-                                                                     h_fb_cm,
-                                                                     x_lco_cm,
-                                                                     y_lco_cm,
-                                                                     pa,
-                                                                     cx02,
-                                                                     cy02,
-                                                                     cx22,
-                                                                     cy22,
-                                                                     cx04,
-                                                                     cy04,
-                                                                     cx24,
-                                                                     cy24,
-                                                                     cx44,
-                                                                     cy44,
-                                                                     cx06,
-                                                                     cy06,
-                                                                     cx26,
-                                                                     cy26,
-                                                                     cx46,
-                                                                     cy46,
-                                                                     cx66,
-                                                                     cy66) );
-            break;
-        }
-        case eDistortionModel3DEFishEye8: {
-            //double pa = 1.;
-            //if (_srcClip) {
-            //    pa = _srcClip->getPixelAspectRatio();
-            //}
-            double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
-            double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
-            double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
-            double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
-            double fl_cm = _fl_cm->getValueAtTime(time);
-            double fd_cm = _fd_cm->getValueAtTime(time);
-            double w_fb_cm = _w_fb_cm->getValueAtTime(time);
-            double h_fb_cm = _h_fb_cm->getValueAtTime(time);
-            double x_lco_cm = _x_lco_cm->getValueAtTime(time);
-            double y_lco_cm = _y_lco_cm->getValueAtTime(time);
-            double pa = _pa->getValueAtTime(time);
-
-            double c2 = _c2->getValueAtTime(time);
-            double c4 = _c4->getValueAtTime(time);
-            double c6 = _c6->getValueAtTime(time);
-            double c8 = _c8->getValueAtTime(time);
-            distortionModel.reset( new DistortionModel3DEFishEye8(srcRoDPixel,
-                                                                  args.renderScale,
-                                                                  xa_fov_unit,
-                                                                  ya_fov_unit,
-                                                                  xb_fov_unit,
-                                                                  yb_fov_unit,
-                                                                  fl_cm,
-                                                                  fd_cm,
-                                                                  w_fb_cm,
-                                                                  h_fb_cm,
-                                                                  x_lco_cm,
-                                                                  y_lco_cm,
-                                                                  pa,
-                                                                  c2,
-                                                                  c4,
-                                                                  c6,
-                                                                  c8) );
-            break;
-        }
-        case eDistortionModel3DEStandard: {
-            //double pa = 1.;
-            //if (_srcClip) {
-            //    pa = _srcClip->getPixelAspectRatio();
-            //}
-            double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
-            double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
-            double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
-            double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
-            double fl_cm = _fl_cm->getValueAtTime(time);
-            double fd_cm = _fd_cm->getValueAtTime(time);
-            double w_fb_cm = _w_fb_cm->getValueAtTime(time);
-            double h_fb_cm = _h_fb_cm->getValueAtTime(time);
-            double x_lco_cm = _x_lco_cm->getValueAtTime(time);
-            double y_lco_cm = _y_lco_cm->getValueAtTime(time);
-            double pa = _pa->getValueAtTime(time);
-
-            double c2 = _c2->getValueAtTime(time);
-            double u1 = _u1->getValueAtTime(time);
-            double v1 = _v1->getValueAtTime(time);
-            double c4 = _c4->getValueAtTime(time);
-            double u3 = _u3->getValueAtTime(time);
-            double v3 = _v3->getValueAtTime(time);
-            double phi = _phi->getValueAtTime(time);
-            double b = _b->getValueAtTime(time);
-            distortionModel.reset( new DistortionModel3DEStandard(srcRoDPixel,
-                                                                  args.renderScale,
-                                                                  xa_fov_unit,
-                                                                  ya_fov_unit,
-                                                                  xb_fov_unit,
-                                                                  yb_fov_unit,
-                                                                  fl_cm,
-                                                                  fd_cm,
-                                                                  w_fb_cm,
-                                                                  h_fb_cm,
-                                                                  x_lco_cm,
-                                                                  y_lco_cm,
-                                                                  pa,
-                                                                  c2,
-                                                                  u1,
-                                                                  v1,
-                                                                  c4,
-                                                                  u3,
-                                                                  v3,
-                                                                  phi,
-                                                                  b) );
-            break;
-        }
-        case eDistortionModel3DEAnamorphic4: {
-            //double pa = 1.;
-            //if (_srcClip) {
-            //    pa = _srcClip->getPixelAspectRatio();
-            //}
-            double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
-            double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
-            double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
-            double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
-            double fl_cm = _fl_cm->getValueAtTime(time);
-            double fd_cm = _fd_cm->getValueAtTime(time);
-            double w_fb_cm = _w_fb_cm->getValueAtTime(time);
-            double h_fb_cm = _h_fb_cm->getValueAtTime(time);
-            double x_lco_cm = _x_lco_cm->getValueAtTime(time);
-            double y_lco_cm = _y_lco_cm->getValueAtTime(time);
-            double pa = _pa->getValueAtTime(time);
-
-            double cx02 = _cx02->getValueAtTime(time);
-            double cy02 = _cy02->getValueAtTime(time);
-            double cx22 = _cx22->getValueAtTime(time);
-            double cy22 = _cy22->getValueAtTime(time);
-            double cx04 = _cx04->getValueAtTime(time);
-            double cy04 = _cy04->getValueAtTime(time);
-            double cx24 = _cx24->getValueAtTime(time);
-            double cy24 = _cy24->getValueAtTime(time);
-            double cx44 = _cx44->getValueAtTime(time);
-            double cy44 = _cy44->getValueAtTime(time);
-            double phi = _a4phi->getValueAtTime(time);
-            double sqx = _a4sqx->getValueAtTime(time);
-            double sqy = _a4sqy->getValueAtTime(time);
-            distortionModel.reset( new DistortionModel3DEAnamorphic4(srcRoDPixel,
-                                                                     args.renderScale,
-                                                                     xa_fov_unit,
-                                                                     ya_fov_unit,
-                                                                     xb_fov_unit,
-                                                                     yb_fov_unit,
-                                                                     fl_cm,
-                                                                     fd_cm,
-                                                                     w_fb_cm,
-                                                                     h_fb_cm,
-                                                                     x_lco_cm,
-                                                                     y_lco_cm,
-                                                                     pa,
-                                                                     cx02,
-                                                                     cy02,
-                                                                     cx22,
-                                                                     cy22,
-                                                                     cx04,
-                                                                     cy04,
-                                                                     cx24,
-                                                                     cy24,
-                                                                     cx44,
-                                                                     cy44,
-                                                                     phi,
-                                                                     sqx,
-                                                                     sqy) );
-            break;
-        }
-        }
-        assert( distortionModel.get() );
-    }
+    std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(srcRoDPixel, args.renderScale, time) );
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
                         srcRoDPixel,
@@ -3439,8 +3456,66 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         break;
     }
     case eDistortionPluginLensDistortion: {
+        OfxRectI srcRoDPixel = {0, 1, 0, 1};
+        getSrcRoDPixel(time, args.renderScale, &srcRoDPixel);
 
-        return false;     // use source RoD
+        DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
+        std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(srcRoDPixel, args.renderScale, time) );
+
+        OfxRectD rodPixel = { std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
+        assert( OFX::Coords::rectIsEmpty(rodPixel) );
+
+        const int step = 10;
+        const double w= (srcRoDPixel.x2 - srcRoDPixel.x1);
+        const double h= (srcRoDPixel.y2 - srcRoDPixel.y1);
+        const double xstep = w / step;
+        const double ystep= h / step;
+        for (int i = 0; i <= step; ++i) {
+            for (int j = 0; j < 2; ++j) {
+                double x = srcRoDPixel.x1 + xstep * i;
+                double y = srcRoDPixel.y1 + h * j;
+                double xo, yo;
+                if (direction == eDirectionDistort) {
+                    distortionModel->distort(x, y, &xo, &yo);
+                } else {
+                    distortionModel->undistort(x, y, &xo, &yo);
+                }
+                rodPixel.x1 = std::min(rodPixel.x1, xo);
+                rodPixel.x2 = std::max(rodPixel.x2, xo);
+                rodPixel.y1 = std::min(rodPixel.y1, yo);
+                rodPixel.y2 = std::max(rodPixel.y2, yo);
+            }
+        }
+        for (int i = 0; i < 2; ++i) {
+            for (int j = 1; j < step; ++j) {
+                double x = srcRoDPixel.x1 + w * i;
+                double y = srcRoDPixel.y1 + ystep * j;
+                double xo, yo;
+                if (direction == eDirectionDistort) {
+                    distortionModel->distort(x, y, &xo, &yo);
+                } else {
+                    distortionModel->undistort(x, y, &xo, &yo);
+                }
+                rodPixel.x1 = std::min(rodPixel.x1, xo);
+                rodPixel.x2 = std::max(rodPixel.x2, xo);
+                rodPixel.y1 = std::min(rodPixel.y1, yo);
+                rodPixel.y2 = std::max(rodPixel.y2, yo);
+            }
+        }
+        assert( !OFX::Coords::rectIsEmpty(rodPixel) );
+
+        double par = 1.;
+        if ( _srcClip && _srcClip->isConnected() ) {
+            par = _srcClip->getPixelAspectRatio();
+        } else {
+            par = getProjectPixelAspectRatio();
+        }
+
+        OFX::Coords::toCanonical(rodPixel, args.renderScale, par, &rod);
+        assert( !OFX::Coords::rectIsEmpty(rod) );
+
+        return true;
+        //return false;     // use source RoD
         break;
     }
     } // switch (_plugin)
