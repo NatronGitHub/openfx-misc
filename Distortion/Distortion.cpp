@@ -238,6 +238,8 @@ enum WrapEnum
 #define kParamDistortionModelOption3DEClassicHint "Degree-2 anamorphic and degree-4 radial mixed model, used in 3DEqualizer by Science-D-Visions. Works, but it is recommended to use 3DE4 Radial Standard Degree 4 or 3DE4 Anamorphic Standard Degree 4 instead."
 #define kParamDistortionModelOption3DEAnamorphic6 "3DE4 Anamorphic Degree 6"
 #define kParamDistortionModelOption3DEAnamorphic6Hint "Degree-6 anamorphic model, used in 3DEqualizer by Science-D-Visions."
+#define kParamDistortionModelOption3DEFishEye8 "3DE4 Radial Fisheye Degree 8"
+#define kParamDistortionModelOption3DEFishEye8Hint "Radial lens distortion model with equisolid-angle fisheye projection, used in 3DEqualizer by Science-D-Visions."
 #define kParamDistortionModelOption3DEStandard "3DE4 Radial Standard Degree 4"
 #define kParamDistortionModelOption3DEStandardHint "Radial lens distortion model, which compensates for decentered lenses (and beam splitter artefacts in stereo rigs), used in 3DEqualizer by Science-D-Visions."
 #define kParamDistortionModelOption3DEAnamorphic4 "3DE4 Anamorphic Standard Degree 4"
@@ -274,7 +276,7 @@ enum DistortionModelEnum
     eDistortionModelPFBarrel,
     eDistortionModel3DEClassic,
     eDistortionModel3DEAnamorphic6,
-    //eDistortionModel3DEFishEye8,
+    eDistortionModel3DEFishEye8,
     eDistortionModel3DEStandard,
     //eDistortionModel3DERadialDecenteredCylindric4,
     eDistortionModel3DEAnamorphic4,
@@ -497,6 +499,13 @@ enum OutputModeEnum {
 #define kParam3DECx66Degree6Label "Cx66 - Degree 6"
 #define kParam3DECy66Degree6 "tde4_Cy66_Degree_6"
 #define kParam3DECy66Degree6Label "Cy66 - Degree 6"
+
+// 3DE4_Radial_Fisheye_Degree_8
+#define kParam3DEDegree6 "tde4_Degree_6"
+#define kParam3DEDegree6Label "Degree 6"
+#define kParam3DEDegree8 "tde4_Degree_8"
+#define kParam3DEDegree8Label "Degree 8"
+
 
 // a generic distortion model abstract class (distortion parameters are added by the derived class)
 class DistortionModel
@@ -1219,7 +1228,7 @@ public:
 
 private:
     // Remove distortion. p is a point in diagonally normalized coordinates.
-    void undistort_dn(double xd, double yd, double* xu, double *yu) const
+    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
     {
         double p0_2 = xd * xd;
         double p1_2 = yd * yd;
@@ -1317,7 +1326,7 @@ public:
 
 private:
     // Remove distortion. p is a point in diagonally normalized coordinates.
-    void undistort_dn(double xd, double yd, double* xu, double *yu) const
+    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
     {
         // _anamorphic.eval(
         double x = xd;
@@ -1344,6 +1353,90 @@ private:
 private:
     double _cx_for_x2, _cx_for_y2, _cx_for_x4, _cx_for_x2_y2, _cx_for_y4, _cx_for_x6, _cx_for_x4_y2, _cx_for_x2_y4, _cx_for_y6;
     double _cy_for_x2, _cy_for_y2, _cy_for_x4, _cy_for_x2_y2, _cy_for_y4, _cy_for_x6, _cy_for_x4_y2, _cy_for_x2_y4, _cy_for_y6;
+};
+
+// radial lens distortion model with equisolid-angle fisheye projection
+class DistortionModel3DEFishEye8
+: public DistortionModel3DEBase
+{
+public:
+    DistortionModel3DEFishEye8(const OfxRectI& srcRoDPixel,
+                                  const OfxPointD& renderScale,
+                                  double xa_fov_unit,
+                                  double ya_fov_unit,
+                                  double xb_fov_unit,
+                                  double yb_fov_unit,
+                                  double fl_cm,
+                                  double fd_cm,
+                                  double w_fb_cm,
+                                  double h_fb_cm,
+                                  double x_lco_cm,
+                                  double y_lco_cm,
+                                  double pa,
+                                  double c2,
+                                  double c4,
+                                  double c6,
+                                  double c8)
+    : DistortionModel3DEBase(srcRoDPixel, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
+    , _c2(c2)
+    , _c4(c4)
+    , _c6(c6)
+    , _c8(c8)
+    {
+    }
+
+    virtual ~DistortionModel3DEFishEye8() {};
+
+private:
+    // Remove distortion. p is a point in diagonally normalized coordinates.
+    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
+    {
+        double x_plain, y_plain;
+        esa2plain(xd, yd, &x_plain, &y_plain);
+
+        double r2 = x_plain * x_plain + y_plain * y_plain;
+        double r4 = r2 * r2;
+        double r6 = r4 * r2;
+        double r8 = r4 * r4;
+
+        double q = 1. + _c2 * r2 + _c4 * r4 + _c6 * r6 + _c8 * r8;
+        *xu = x_plain * q;
+        *yu = y_plain * q;
+
+         // Clipping to a reasonable area, still n times as large as the image.
+         //if(norm2(q_dn) > 50.0) q_dn = 50.0 * unit(q_dn);
+    }
+
+    void
+    esa2plain(double x_esa_dn, double y_esa_dn, double *x_plain_dn, double *y_plain_dn) const
+    {
+        double f_dn = _fl_cm / _r_fb_cm;
+        // Remove fisheye projection
+        double r_esa_dn = std::sqrt(x_esa_dn * x_esa_dn + y_esa_dn * y_esa_dn);
+        if (r_esa_dn <= 0) {
+            // avoid division by zero
+            *x_plain_dn = *y_plain_dn = 0.;
+            return;
+        }
+        double arg = r_esa_dn / (2 * f_dn);
+        // Black areas, undefined.
+        double arg_clip = std::min(1., arg);
+        double phi = 2 * std::asin(arg_clip);
+        double r_plain_dn;
+        if (phi >= M_PI / 2.0) {
+            r_plain_dn = 5.;
+        } else {
+            r_plain_dn = std::min( 5., f_dn * std::tan(phi) );
+        }
+        *x_plain_dn = x_esa_dn * r_plain_dn / r_esa_dn;
+        *y_plain_dn = y_esa_dn * r_plain_dn / r_esa_dn;
+    }
+
+private:
+    double _c2;
+    double _c4;
+    double _c6;
+    double _c8;
 };
 
 /// this class handles the radial distortion with decentering and optional compensation for beam-splitter artefacts model
@@ -1396,7 +1489,7 @@ public:
 
 private:
     // Remove distortion. p is a point in diagonally normalized coordinates.
-    void undistort_dn(double xd, double yd, double* xu, double *yu) const
+    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
     {
         // _radial.eval(
         double x_dn,y_dn;
@@ -1486,7 +1579,7 @@ public:
 
 private:
     // Remove distortion. p is a point in diagonally normalized coordinates.
-    void undistort_dn(double xd, double yd, double* xu, double *yu) const
+    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
     {
         /*
                     _rotation.eval(
@@ -2184,6 +2277,10 @@ public:
             _cy46 = fetchDoubleParam(kParam3DECy46Degree6);
             _cx66 = fetchDoubleParam(kParam3DECx66Degree6);
             _cy66 = fetchDoubleParam(kParam3DECy66Degree6);
+
+            // 3DEFishEye8
+            _c6 = fetchDoubleParam(kParam3DEDegree6);
+            _c8 = fetchDoubleParam(kParam3DEDegree6);
         }
         _filter = fetchChoiceParam(kParamFilterType);
         _clamp = fetchBooleanParam(kParamFilterClamp);
@@ -2314,6 +2411,10 @@ private:
     DoubleParam* _cy46;
     DoubleParam* _cx66;
     DoubleParam* _cy66;
+
+    // 3DEFishEye8 model
+    DoubleParam* _c6;
+    DoubleParam* _c8;
 
     ChoiceParam* _filter;
     BooleanParam* _clamp;
@@ -2857,6 +2958,46 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                                                                      cy66) );
             break;
         }
+        case eDistortionModel3DEFishEye8: {
+            //double pa = 1.;
+            //if (_srcClip) {
+            //    pa = _srcClip->getPixelAspectRatio();
+            //}
+            double xa_fov_unit = _xa_fov_unit->getValueAtTime(time);
+            double ya_fov_unit = _ya_fov_unit->getValueAtTime(time);
+            double xb_fov_unit = _xb_fov_unit->getValueAtTime(time);
+            double yb_fov_unit = _yb_fov_unit->getValueAtTime(time);
+            double fl_cm = _fl_cm->getValueAtTime(time);
+            double fd_cm = _fd_cm->getValueAtTime(time);
+            double w_fb_cm = _w_fb_cm->getValueAtTime(time);
+            double h_fb_cm = _h_fb_cm->getValueAtTime(time);
+            double x_lco_cm = _x_lco_cm->getValueAtTime(time);
+            double y_lco_cm = _y_lco_cm->getValueAtTime(time);
+            double pa = _pa->getValueAtTime(time);
+
+            double c2 = _c2->getValueAtTime(time);
+            double c4 = _c4->getValueAtTime(time);
+            double c6 = _c6->getValueAtTime(time);
+            double c8 = _c8->getValueAtTime(time);
+            distortionModel.reset( new DistortionModel3DEFishEye8(srcRoDPixel,
+                                                                  args.renderScale,
+                                                                  xa_fov_unit,
+                                                                  ya_fov_unit,
+                                                                  xb_fov_unit,
+                                                                  yb_fov_unit,
+                                                                  fl_cm,
+                                                                  fd_cm,
+                                                                  w_fb_cm,
+                                                                  h_fb_cm,
+                                                                  x_lco_cm,
+                                                                  y_lco_cm,
+                                                                  pa,
+                                                                  c2,
+                                                                  c4,
+                                                                  c6,
+                                                                  c8) );
+            break;
+        }
         case eDistortionModel3DEStandard: {
             //double pa = 1.;
             //if (_srcClip) {
@@ -3192,6 +3333,10 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
             break;
         }
 #warning TODO
+        case eDistortionModel3DEFishEye8: {
+            // fisheye is never identity
+            break;
+        }
         } // switch (distortionModel) {
 
         if (identity) {
@@ -3377,6 +3522,7 @@ DistortionPlugin::updateVisibility()
 
         bool distortionModel3DE = (distortionModel == eDistortionModel3DEClassic ||
                                    distortionModel == eDistortionModel3DEAnamorphic6 ||
+                                   distortionModel == eDistortionModel3DEFishEye8 ||
                                    distortionModel == eDistortionModel3DEStandard ||
                                    distortionModel == eDistortionModel3DEAnamorphic4);
         _xa_fov_unit->setIsSecretAndDisabled(!distortionModel3DE);
@@ -3397,10 +3543,12 @@ DistortionPlugin::updateVisibility()
         _cy->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEClassic);
         _qu->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEClassic);
 
-        _c2->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
+        _c2->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard &&
+                                    distortionModel != eDistortionModel3DEFishEye8);
         _u1->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
         _v1->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
-        _c4->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
+        _c4->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard &&
+                                    distortionModel != eDistortionModel3DEFishEye8);
         _u3->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
         _v3->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
         _phi->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEStandard);
@@ -3437,6 +3585,9 @@ DistortionPlugin::updateVisibility()
         _a4phi->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
         _a4sqx->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
         _a4sqy->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEAnamorphic4);
+
+        _c6->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEFishEye8);
+        _c8->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEFishEye8);
     }
 }
 
@@ -3852,6 +4003,8 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamDistortionModelOption3DEClassic, kParamDistortionModelOption3DEClassicHint);
             assert(param->getNOptions() == eDistortionModel3DEAnamorphic6);
             param->appendOption(kParamDistortionModelOption3DEAnamorphic6, kParamDistortionModelOption3DEAnamorphic6Hint);
+            assert(param->getNOptions() == eDistortionModel3DEFishEye8);
+            param->appendOption(kParamDistortionModelOption3DEFishEye8, kParamDistortionModelOption3DEFishEye8Hint);
             assert(param->getNOptions() == eDistortionModel3DEStandard);
             param->appendOption(kParamDistortionModelOption3DEStandard, kParamDistortionModelOption3DEStandardHint);
             assert(param->getNOptions() == eDistortionModel3DEAnamorphic4);
@@ -4510,6 +4663,29 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.9, 1.1);
             param->setDefault(1.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // 3DEFishEye8
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEDegree6);
+            param->setLabel(kParam3DEDegree6Label);
+            //param->setHint(kParam3DEDegree6Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEDegree8);
+            param->setLabel(kParam3DEDegree8Label);
+            //param->setHint(kParam3DEDegree8Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.5, 0.5);
+            param->setDefault(0.);
             if (page) {
                 page->addChild(*param);
             }
