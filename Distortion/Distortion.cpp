@@ -740,6 +740,7 @@ protected:
     double _vScale;
     WrapEnum _uWrap;
     WrapEnum _vWrap;
+    OfxPointD _renderScale;
     const DistortionModel* _distortionModel;
     DirectionEnum _direction;
     OutputModeEnum _outputMode;
@@ -776,6 +777,7 @@ public:
         , _mix(1.)
         , _maskInvert(false)
     {
+        _renderScale.x = _renderScale.y = 1.;
         _format.x1 = _format.y1 = 0.;
         _format.x2 = _format.y2 = 1.;
     }
@@ -802,6 +804,7 @@ public:
                    double vScale,
                    WrapEnum uWrap,
                    WrapEnum vWrap,
+                   const OfxPointD& renderScale,
                    const DistortionModel* distortionModel,
                    DirectionEnum direction,
                    OutputModeEnum outputMode,
@@ -823,6 +826,7 @@ public:
         _vScale = vScale;
         _uWrap = uWrap;
         _vWrap = vWrap;
+        _renderScale = renderScale;
         _distortionModel = distortionModel;
         _direction = direction;
         _outputMode = outputMode;
@@ -1078,10 +1082,16 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             case eDistortionPluginLensDistortion: {
                 assert(_distortionModel);
                 if (_direction == eDirectionDistort) {
-                    _distortionModel->undistort(x + 0.5, y + 0.5, &sx, &sy);
+                    _distortionModel->undistort( (x + 0.5) / _renderScale.x,
+                                                 (y + 0.5) / _renderScale.y,
+                                                 &sx, &sy);
                 } else {
-                    _distortionModel->distort(x + 0.5, y + 0.5, &sx, &sy);
+                    _distortionModel->distort( (x + 0.5) / _renderScale.x,
+                                               (y + 0.5) / _renderScale.y,
+                                               &sx, &sy);
                 }
+                sx *= _renderScale.x;
+                sy *= _renderScale.y;
                 sxx = 1;     // TODO: Jacobian
                 sxy = 0;
                 syx = 0;
@@ -1368,7 +1378,7 @@ public:
 
             // 3DEFishEye8
             _c6 = fetchDoubleParam(kParam3DEDegree6);
-            _c8 = fetchDoubleParam(kParam3DEDegree6);
+            _c8 = fetchDoubleParam(kParam3DEDegree8);
         }
         _filter = fetchChoiceParam(kParamFilterType);
         _clamp = fetchBooleanParam(kParamFilterClamp);
@@ -2303,6 +2313,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                         uOffset, vOffset,
                         uScale, vScale,
                         uWrap, vWrap,
+                        args.renderScale,
                         distortionModel.get(),
                         direction,
                         outputMode,
@@ -2590,6 +2601,79 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     if (!_srcClip) {
         return;
     }
+
+    if (_plugin == eDistortionPluginLensDistortion) {
+        OfxRectI format = {0, 1, 0, 1};
+        double par = 1.;
+        getLensDistortionFormat(time, args.renderScale, &format, &par);
+
+        DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
+        std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
+
+        OfxRectD roiPixel = { std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
+        assert( OFX::Coords::rectIsEmpty(roiPixel) );
+
+        OfxRectI renderWinPixel;
+        OFX::Coords::toPixelEnclosing(args.regionOfInterest, args.renderScale, par, &renderWinPixel);
+        OfxRectD renderWin;
+        renderWin.x1 = renderWinPixel.x1 / args.renderScale.x;
+        renderWin.y1 = renderWinPixel.y1 / args.renderScale.y;
+        renderWin.x2 = renderWinPixel.x2 / args.renderScale.x;
+        renderWin.y2 = renderWinPixel.y2 / args.renderScale.y;
+
+        const int step = 10;
+        const double w= (renderWin.x2 - renderWin.x1);
+        const double h= (renderWin.y2 - renderWin.y1);
+        const double xstep = w / step;
+        const double ystep= h / step;
+        for (int i = 0; i <= step; ++i) {
+            for (int j = 0; j < 2; ++j) {
+                double x = renderWin.x1 + xstep * i;
+                double y = renderWin.y1 + h * j;
+                double xi, yi;
+                if (direction == eDirectionDistort) {
+                    distortionModel->undistort(x, y, &xi, &yi); // inverse of getRoD
+                } else {
+                    distortionModel->distort(x, y, &xi, &yi); // inverse of getRoD
+                }
+                roiPixel.x1 = std::min(roiPixel.x1, xi);
+                roiPixel.x2 = std::max(roiPixel.x2, xi);
+                roiPixel.y1 = std::min(roiPixel.y1, yi);
+                roiPixel.y2 = std::max(roiPixel.y2, yi);
+            }
+        }
+        for (int i = 0; i < 2; ++i) {
+            for (int j = 1; j < step; ++j) {
+                double x = renderWin.x1 + w * i;
+                double y = renderWin.y1 + ystep * j;
+                double xi, yi;
+                if (direction == eDirectionDistort) {
+                    distortionModel->undistort(x, y, &xi, &yi); // inverse of getRoD
+                } else {
+                    distortionModel->distort(x, y, &xi, &yi); // inverse of getRoD
+                }
+                roiPixel.x1 = std::min(roiPixel.x1, xi);
+                roiPixel.x2 = std::max(roiPixel.x2, xi);
+                roiPixel.y1 = std::min(roiPixel.y1, yi);
+                roiPixel.y2 = std::max(roiPixel.y2, yi);
+            }
+        }
+        assert( !OFX::Coords::rectIsEmpty(roiPixel) );
+        // Slight extra margin, just in case.
+        roiPixel.x1 -= 2;
+        roiPixel.x2 += 2;
+        roiPixel.y1 -= 2;
+        roiPixel.y2 += 2;
+
+        OfxPointD rs1 = {1., 1.};
+        OfxRectD roi;
+        OFX::Coords::toCanonical(roiPixel, rs1, par, &roi);
+        assert( !OFX::Coords::rectIsEmpty(roi) );
+        rois.setRegionOfInterest(*_srcClip, roi);
+
+        return;
+    }
+
     // ask for full RoD of srcClip
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
     rois.setRegionOfInterest(*_srcClip, srcRod);
@@ -2627,25 +2711,42 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         break;
     }
     case eDistortionPluginLensDistortion: {
+        const OfxPointD rs1 = {1., 1.};
         OfxRectI format = {0, 1, 0, 1};
         double par = 1.;
-        getLensDistortionFormat(time, args.renderScale, &format, &par);
+        getLensDistortionFormat(time, rs1, &format, &par);
 
         DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
-        std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
+        std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, rs1, time) );
 
         OfxRectD rodPixel = { std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
         assert( OFX::Coords::rectIsEmpty(rodPixel) );
 
+        OfxRectD srcRod;
+        if (_srcClip && _srcClip->isConnected()) {
+            OfxRectD rod = _srcClip->getRegionOfDefinition(time);
+            double srcPar = _srcClip->getPixelAspectRatio();
+            OfxRectI srcRodPixel;
+            OFX::Coords::toPixelEnclosing(rod, rs1, srcPar, &srcRodPixel);
+            srcRod.x1 = srcRodPixel.x1;
+            srcRod.y1 = srcRodPixel.y1;
+            srcRod.x2 = srcRodPixel.x2;
+            srcRod.y2 = srcRodPixel.y2;
+        } else {
+            srcRod.x1 = format.x1;
+            srcRod.y1 = format.y1;
+            srcRod.x2 = format.x2;
+            srcRod.y2 = format.y2;
+        }
         const int step = 10;
-        const double w= (format.x2 - format.x1);
-        const double h= (format.y2 - format.y1);
+        const double w= (srcRod.x2 - srcRod.x1);
+        const double h= (srcRod.y2 - srcRod.y1);
         const double xstep = w / step;
         const double ystep= h / step;
         for (int i = 0; i <= step; ++i) {
             for (int j = 0; j < 2; ++j) {
-                double x = format.x1 + xstep * i;
-                double y = format.y1 + h * j;
+                double x = srcRod.x1 + xstep * i;
+                double y = srcRod.y1 + h * j;
                 double xo, yo;
                 if (direction == eDirectionDistort) {
                     distortionModel->distort(x, y, &xo, &yo);
@@ -2660,8 +2761,8 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         }
         for (int i = 0; i < 2; ++i) {
             for (int j = 1; j < step; ++j) {
-                double x = format.x1 + w * i;
-                double y = format.y1 + ystep * j;
+                double x = srcRod.x1 + w * i;
+                double y = srcRod.y1 + ystep * j;
                 double xo, yo;
                 if (direction == eDirectionDistort) {
                     distortionModel->distort(x, y, &xo, &yo);
@@ -2688,7 +2789,7 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         rodPixel.y1 -= 2;
         rodPixel.y2 += 2;
 
-        OFX::Coords::toCanonical(rodPixel, args.renderScale, par, &rod);
+        OFX::Coords::toCanonical(rodPixel, rs1, par, &rod);
         assert( !OFX::Coords::rectIsEmpty(rod) );
 
         return true;
