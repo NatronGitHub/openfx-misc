@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Distortion.o DistortionModel.o ofxsOGLTextRenderer.o ofxsMultiPlane.o ofxsOGLFontData.o
+PLUGINOBJECTS = Distortion.o DistortionModel.o ofxsOGLTextRenderer.o ofxsMultiPlane.o ofxsOGLFontData.o ofxsGenerator.o
 PLUGINNAME = Distortion
 RESOURCES = net.sf.openfx.IDistort.png net.sf.openfx.IDistort.svg net.sf.openfx.STMap.png net.sf.openfx.STMap.svg net.sf.openfx.LensDistortion.png net.sf.openfx.LensDistortion.svg
 

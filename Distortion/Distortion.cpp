@@ -121,6 +121,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+// version 1.0: initial version
+// version 2.0: use kNatronOfxParamProcess* parameters
+// version 3.0: use format instead of rod as the default for distortion domain
+#define kPluginVersionLensDistortionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionLensDistortionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -1146,8 +1152,10 @@ class DistortionPlugin
 public:
     /** @brief ctor */
     DistortionPlugin(OfxImageEffectHandle handle,
+                     int majorVersion,
                      DistortionPluginEnum plugin)
         : MultiPlane::MultiPlaneEffect(handle)
+        , _majorVersion(majorVersion)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _uvClip(NULL)
@@ -1390,6 +1398,8 @@ private:
     bool getLensDistortionFormat(double time, const OfxPointD& renderScale, OfxRectI *format, double *par);
 
 private:
+    int _majorVersion;
+
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -1985,7 +1995,11 @@ DistortionPlugin::getLensDistortionFormat(double time,
         }
         case eGeneratorExtentDefault:
             if ( _srcClip && _srcClip->isConnected() ) {
-                _srcClip->getFormat(*format);
+                format->x1 = format->y1 = format->x2 = format->y2 = 0; // default value
+                if (_majorVersion >= 3) {
+                    // before version 3, LensDistortion was only using RoD
+                    _srcClip->getFormat(*format);
+                }
                 *par = _srcClip->getPixelAspectRatio();
                 if ( OFX::Coords::rectIsEmpty(*format) ) {
                     // no format is available, use the RoD instead
@@ -3102,6 +3116,10 @@ DistortionPluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
     }
 #endif
     desc.setOverlayInteractDescriptor(new GeneratorOverlayDescriptor);
+    if ( (plugin == eDistortionPluginLensDistortion && this->getMajorVersion() < kPluginVersionLensDistortionMajor) ||
+         (plugin != eDistortionPluginLensDistortion && this->getMajorVersion() < kPluginVersionMajor) ) {
+        desc.setIsDeprecated(true);
+    }
 } // >::describe
 
 static void
@@ -4222,14 +4240,16 @@ ImageEffect*
 DistortionPluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
                                                 ContextEnum /*context*/)
 {
-    return new DistortionPlugin(handle, plugin);
+    return new DistortionPlugin(handle, this->getMajorVersion(), plugin);
 }
 
 static DistortionPluginFactory<eDistortionPluginIDistort> p1(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static DistortionPluginFactory<eDistortionPluginSTMap> p2(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion> p3(kPluginLensDistortionIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion> p3(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion> p4(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
+mRegisterPluginFactoryInstance(p4)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
