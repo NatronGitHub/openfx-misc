@@ -33,6 +33,7 @@ Grade.o \
 HSVTool.o \
 HueCorrect.o \
 Distortion.o \
+DistortionModel.o \
 ImageStatistics.o \
 Invert.o \
 JoinViews.o \
