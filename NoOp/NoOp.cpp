@@ -1025,7 +1025,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             //assert(param->getNOptions() == eGeneratorExtentDefault);
             //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
             param->setDefault(eGeneratorExtentFormat);
-            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
@@ -1038,7 +1038,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamGeneratorCenter);
             param->setLabel(kParamGeneratorCenterLabel);
             param->setHint(kParamGeneratorCenterHint);
-            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (page) {
                 page->addChild(*param);
             }
@@ -1129,7 +1129,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
-            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             param->setHint("Coordinates of the bottom left corner of the size rectangle.");
             param->setDigits(0);
             if (page) {
