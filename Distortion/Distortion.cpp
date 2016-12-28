@@ -839,42 +839,6 @@ private:
 
 
 
-#if 0
-// see https://github.com/Itseez/opencv/blob/master/modules/imgproc/src/undistort.cpp
-static inline void
-distort_opencv(double xu,
-               double yu,            // undistorted position in normalized coordinates ([-1..1] on the largest image dimension, (0,0 at image center))
-               double k1,
-               double k2,
-               double k3,
-               double p1,
-               double p2,
-               double cx,
-               double cy,
-               double squeeze,
-               double *xd,
-               double *yd)      // distorted position in normalized coordinates
-{
-    // opencv
-    const double k4 = 0.;
-    const double k5 = 0.;
-    const double k6 = 0.;
-    const double s1 = 0.;
-    const double s2 = 0.;
-    const double s3 = 0.;
-    const double s4 = 0.;
-    double x = (xu - cx) * squeeze;
-    double y = yu - cy;
-    double x2 = x * x, y2 = y * y;
-    double r2 = x2 + y2;
-    double _2xy = 2 * x * y;
-    double kr = (1 + ( (k3 * r2 + k2) * r2 + k1 ) * r2) / (1 + ( (k6 * r2 + k5) * r2 + k4 ) * r2);
-
-    *xd = ( (x * kr + p1 * _2xy + p2 * (r2 + 2 * x2) + s1 * r2 + s2 * r2 * r2) ) / squeeze + cx;
-    *yd = (y * kr + p1 * (r2 + 2 * y2) + p2 * _2xy + s3 * r2 + s4 * r2 * r2) + cy;
-}
-
-#endif
 
 // The "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
