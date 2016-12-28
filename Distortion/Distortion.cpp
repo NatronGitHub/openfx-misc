@@ -64,6 +64,10 @@
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
 #include "ofxsMultiPlane.h"
+#include "ofxsGenerator.h"
+#include "ofxsFormatResolution.h"
+
+#include "DistortionModel.h"
 
 using namespace OFX;
 
@@ -226,6 +230,10 @@ enum WrapEnum
 #define kParamUVScale "uvScale"
 #define kParamUVScaleLabel "UV Scale"
 #define kParamUVScaleHint "Scale factor to apply to the U and V channel (useful if these were stored in a file that can only store integer values)"
+
+#define kParamFormat kParamGeneratorExtent
+#define kParamFormatLabel "Format"
+#define kParamFormatHint "Reference format for lens distortion."
 
 #define kParamDistortionModel "model"
 #define kParamDistortionModelLabel "Model"
@@ -506,211 +514,6 @@ enum OutputModeEnum {
 #define kParam3DEDegree8Label "Degree 8"
 
 
-// a generic distortion model abstract class (distortion parameters are added by the derived class)
-class DistortionModel
-{
-protected:
-    DistortionModel() {};
-
-public:
-    virtual ~DistortionModel() {};
-
-private:  // noncopyable
-    DistortionModel( const DistortionModel& );
-    DistortionModel& operator=( const DistortionModel& );
-
-public:
-    // function used to distort a point or undistort an image
-    virtual void distort(double xu, double yu, double* xd, double *yd) const = 0;
-
-    // function used to undistort a point or distort an image
-    virtual void undistort(double xd, double yd, double* xu, double *yu) const = 0;
-};
-
-// parameters for Newton method:
-#define EPSJAC 1.e-3 // epsilon for Jacobian calculation
-#define EPSCONV 1.e-4 // epsilon for convergence test
-
-// a distortion model class where ony the undistort function is given, and distort is solved by Newton
-class DistortionModelUndistort
-: public DistortionModel
-{
-protected:
-    DistortionModelUndistort() {};
-
-    virtual ~DistortionModelUndistort() {};
-
-private:
-    // function used to distort a point or undistort an image
-    virtual void distort(const double xu,
-                         const double yu,
-                         double* xd,
-                         double *yd) const OVERRIDE FINAL
-    {
-        // build initial guess
-        double x = xu;
-        double y = yu;
-
-        // always converges in a couple of iterations
-        for (int iter= 0; iter< 10; iter++) {
-            // calculate the function gradient at the current guess
-
-            // TODO: analytic derivatives
-            double x00, y00, x10, y10, x01, y01;
-            undistort(x, y, &x00, &y00);
-            undistort(x + EPSJAC, y, &x10, &y10);
-            undistort(x, y + EPSJAC, &x01, &y01);
-
-            // perform newton iteration
-            x00 -= xu;
-            y00 -= yu;
-            x10 -= xu;
-            y10 -= yu;
-            x01 -= xu;
-            y01 -= yu;
-
-            x10 -= x00;
-            y10 -= y00;
-            x01 -= x00;
-            y01 -= y00;
-
-            // approximate using finite differences
-            const double dx = std::sqrt(x10 * x10 + y10 * y10) / EPSJAC;
-            const double dy = std::sqrt(x01 * x01 + y01 * y01) / EPSJAC;
-
-            if (dx < DBL_EPSILON || dy < DBL_EPSILON) { // was dx == 0. || dy == 0.
-                break;
-            }
-
-            // make a step towards the root
-            const double x1 = x - x00 / dx;
-            const double y1 = y - y00 / dy;
-
-            x -= x1;
-            y -= y1;
-
-            const double dist= x * x + y * y;
-
-            x = x1;
-            y = y1;
-
-            //printf("%d : %g,%g: dist= %g\n",iter,x,y,dist);
-
-            // converged?
-            if (dist < EPSCONV) {
-                break;
-            }
-        }
-
-        // default
-        *xd = x;
-        *yd = y;
-    }
-
-    // function used to undistort a point or distort an image
-    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE = 0;
-};
-
-class DistortionModelNuke
-: public DistortionModelUndistort
-{
-public:
-    DistortionModelNuke(const OfxRectI& srcRoDPixel,
-                        double par,
-                        double k1,
-                        double k2,
-                        double cx,
-                        double cy,
-                        double squeeze,
-                        double ax,
-                        double ay)
-    : _par(par)
-    , _k1(k1)
-    , _k2(k2)
-    , _cx(cx)
-    , _cy(cy)
-    , _squeeze(squeeze)
-    , _ax(ax)
-    , _ay(ay)
-    {
-        double fx = (srcRoDPixel.x2 - srcRoDPixel.x1) / 2.;
-        double fy = (srcRoDPixel.y2 - srcRoDPixel.y1) / 2.;
-        _f = std::max(fx, fy); // TODO: distortion scaling param for LensDistortion?
-        _xSrcCenter = (srcRoDPixel.x1 + srcRoDPixel.x2) / 2.;
-        _ySrcCenter = (srcRoDPixel.y1 + srcRoDPixel.y2) / 2.;
-    }
-
-    virtual ~DistortionModelNuke() {};
-
-private:
-    // function used to undistort a point or distort an image
-    // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
-    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
-    {
-        double xdn = _par * (xd - _xSrcCenter) / _f;
-        double ydn = (yd - _ySrcCenter) / _f;
-        double sx, sy;
-        undistort_nuke(xdn, ydn,
-                       _k1, _k2, _cx, _cy, _squeeze, _ax, _ay,
-                       &sx, &sy);
-        sx /= _par;
-        sx *= _f;
-        sx += _xSrcCenter;
-        sy *= _f;
-        sy += _ySrcCenter;
-
-        *xu = sx;
-        *yu = sy;
-    }
-
-    // Nuke's distortion function, reverse engineered from the resulting images on a checkerboard (and a little science, too)
-    // this function undistorts positions, but is also used to distort the image.
-    // Similar to the function distortNuke in Obq_LensDistortion.h
-    static inline void
-    undistort_nuke(double xd,
-                   double yd,            // distorted position in normalized coordinates ([-1..1] on the largest image dimension, (0,0 at image center))
-                   double k1,
-                   double k2,            // radial distortion
-                   double cx,
-                   double cy,            // distortion center, (0,0) at center of image
-                   double squeeze, // anamorphic squeeze
-                   double ax,
-                   double ay,            // asymmetric distortion
-                   double *xu,
-                   double *yu)             // distorted position in normalized coordinates
-    {
-        // nuke?
-        // k1 = radial distortion 1
-        // k2 = radial distortion 2
-        // squeeze = anamorphic squeeze
-        // p1 = asymmetric distortion x
-        // p2 = asymmetric distortion y
-        double x = (xd - cx);
-        double y = (yd - cy);
-        double x2 = x * x, y2 = y * y;
-        double r2 = x2 + y2;
-        double k2r2pk1 = k2 * r2 + k1;
-        //double kry = 1 + ((k2r2pk1 + ay)*x2 + k2r2pk1*y2);
-        double kry = 1 + (k2r2pk1 * r2 + ay * x2);
-
-        *yu = (y / kry) + cy;
-        //double krx = 1 + (k2r2pk1*x2 + (k2r2pk1 + ax)*y2)/squeeze;
-        double krx = 1 + (k2r2pk1 * r2 + ax * y2) / squeeze;
-        *xu = (x / krx) + cx;
-    }
-
-    double _par;
-    double _f;
-    double _xSrcCenter;
-    double _ySrcCenter;
-    double _k1;
-    double _k2;
-    double _cx;
-    double _cy;
-    double _squeeze;
-    double _ax;
-    double _ay;
-};
 
 
 // PFBarrel file reader
@@ -903,735 +706,6 @@ void PFBarrelCommon::FileReader::dump(void)
     }
 }
 
-class DistortionModelPFBarrel
-: public DistortionModelUndistort
-{
-public:
-    DistortionModelPFBarrel(const OfxRectI& srcRoDPixel,
-                            const OfxPointD& renderScale,
-                            double c3,
-                            double c5,
-                            double xp,
-                            double yp,
-                            double squeeze)
-    : _rs(renderScale)
-    , _c3(c3)
-    , _c5(c5)
-    , _xp(xp)
-    , _yp(yp)
-    , _squeeze(squeeze)
-    {
-        /*
-        double fx = (srcRoDPixel.x2 - srcRoDPixel.x1) / 2.;
-        double fy = (srcRoDPixel.y2 - srcRoDPixel.y1) / 2.;
-        _f = std::max(fx, fy); // TODO: distortion scaling param for LensDistortion?
-        _xSrcCenter = (srcRoDPixel.x1 + srcRoDPixel.x2) / 2.;
-        _ySrcCenter = (srcRoDPixel.y1 + srcRoDPixel.y2) / 2.;
-         */
-        _fw = srcRoDPixel.x2 - srcRoDPixel.x1;
-        _fh = srcRoDPixel.y2 - srcRoDPixel.y1;
-        _normx = std::sqrt(2.0/(_fw * _fw + _fh * _fh));
-    }
-
-    virtual ~DistortionModelPFBarrel() {};
-
-private:
-    // function used to undistort a point or distort an image
-    // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
-    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
-    {
-        // PFBarrel model seems to apply to the corner of the corresponding full-res pixel
-        // at least that's what the official PFBarrel Nuke plugin does
-        xd -= 0.5 * _rs.x;
-        yd -= 0.5 * _rs.y;
-
-        double centx = _xp * _fw * _normx;
-        double x = xd * _normx;
-        // remove anamorphic squeeze
-        double centy = _yp * _fh * _normx / _squeeze;
-        double y = yd * _normx / _squeeze;
-
-        // distort
-        const double px = x - centx;
-        const double py = y - centy;
-
-        const double px2 = px * px;
-        const double py2 = py * py;
-        //const double r = std::sqrt(px2 + py2);
-        const double r2 = px2 + py2;
-        //#ifdef THREE_POWER
-        //const double dr_r= r2*r*(C3C5.x+r2*C3C5.y);
-        //#else
-        const double dr_r= r2 * (_c3+ r2 * _c5);
-        //#endif
-
-        // re-apply squeeze and remove normalization
-        x += px * dr_r;
-        x /= _normx;
-        y += py * dr_r;
-        y *= _squeeze / _normx;
-
-        x += 0.5 * _rs.x;
-        y += 0.5 * _rs.y;
-
-        *xu = x;
-        *yu = y;
-    }
-
-
-    OfxPointD _rs;
-    double _c3;
-    double _c5;
-    double _xp;
-    double _yp;
-    double _squeeze;
-    double _normx;
-    double _fw, _fh;
-};
-
-
-
-/////////////////////// 3DEqualizer
-
-
-/// this base class handles the 4 fov parameters & the seven built-in parameters
-class DistortionModel3DEBase
-: public DistortionModelUndistort
-{
-protected:
-    DistortionModel3DEBase(const OfxRectI& srcRoDPixel,
-                           const OfxPointD& renderScale,
-                           double xa_fov_unit,
-                           double ya_fov_unit,
-                           double xb_fov_unit,
-                           double yb_fov_unit,
-                           double fl_cm,
-                           double fd_cm,
-                           double w_fb_cm,
-                           double h_fb_cm,
-                           double x_lco_cm,
-                           double y_lco_cm,
-                           double pa)
-    : _srcRoDPixel(srcRoDPixel)
-    , _rs(renderScale)
-    , _w(srcRoDPixel.x2 - srcRoDPixel.x1)
-    , _h(srcRoDPixel.y2 - srcRoDPixel.y1)
-    , _xa_fov_unit(xa_fov_unit)
-    , _ya_fov_unit(ya_fov_unit)
-    , _xb_fov_unit(xb_fov_unit)
-    , _yb_fov_unit(yb_fov_unit)
-    , _xd_fov_unit(_xb_fov_unit - _xa_fov_unit)
-    , _yd_fov_unit(_yb_fov_unit - _ya_fov_unit)
-    , _fl_cm(fl_cm)
-    , _fd_cm(fd_cm)
-    , _w_fb_cm(w_fb_cm)
-    , _h_fb_cm(h_fb_cm)
-    , _x_lco_cm(x_lco_cm)
-    , _y_lco_cm(y_lco_cm)
-    , _pa(pa)
-    {
-        _r_fb_cm = std::sqrt(w_fb_cm * w_fb_cm + h_fb_cm * h_fb_cm) / 2.0;
-    }
-
-    virtual ~DistortionModel3DEBase() {};
-
-    // the following must be implemented by each model, and corresponds to operator () in ldpk
-    // Remove distortion. p is a point in diagonally normalized coordinates.
-    virtual void undistort_dn(double xd, double yd, double* xu, double *yu) const = 0;
-
-private:
-    // function used to undistort a point or distort an image
-    // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
-    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
-    {
-        OfxPointD p_pix = {xd, yd};
-        OfxPointD p_dn;
-        map_pix_to_dn(p_pix, &p_dn);
-        OfxPointD p_dn_u;
-        undistort_dn(p_dn.x, p_dn.y, &p_dn_u.x, &p_dn_u.y);
-        map_dn_to_pix(p_dn_u, &p_pix);
-        *xu = p_pix.x;
-        *yu = p_pix.y;
-    }
-
-private:
-    void
-    map_pix_to_dn(const OfxPointD& p_pix, OfxPointD* p_dn) const
-    {
-        OfxPointD p_unit;
-        map_pix_to_unit(p_pix, &p_unit);
-        map_unit_to_dn(p_unit, p_dn);
-    }
-
-    // The result already contains the (half,half) shift.
-    void
-    map_dn_to_pix(const OfxPointD& p_dn, OfxPointD* p_pix) const
-    {
-        OfxPointD p_unit;
-        map_dn_to_unit(p_dn, &p_unit);
-        map_unit_to_pix(p_unit, p_pix);
-    }
-
-    void
-    map_unit_to_dn(const OfxPointD& p_unit, OfxPointD* p_dn) const
-    {
-        double p_cm_x = (p_unit.x - 1.0/2.0) * _w_fb_cm - _x_lco_cm;
-        double p_cm_y = (p_unit.y - 1.0/2.0) * _h_fb_cm - _y_lco_cm;
-        p_dn->x = p_cm_x / _r_fb_cm;
-        p_dn->y = p_cm_y / _r_fb_cm;
-    }
-
-    void
-    map_dn_to_unit(const OfxPointD& p_dn, OfxPointD* p_unit) const
-    {
-        double p_cm_x = p_dn.x * _r_fb_cm + _w_fb_cm / 2 + _x_lco_cm;
-        double p_cm_y = p_dn.y * _r_fb_cm + _h_fb_cm / 2 + _y_lco_cm;
-        p_unit->x = p_cm_x / _w_fb_cm;
-        p_unit->y = p_cm_y / _h_fb_cm;
-    }
-
-#if 0
-    // the following twho funcs are for when 0,0 is the center of the bottomleft pixel (see nuke plugin)
-    void
-    map_pix_to_unit(const OfxPointI& p_pix, OfxPointD* p_unit) const
-    {
-        // We construct (x_s,y_s) in a way, so that the image area is mapped to the unit interval [0,1]^2,
-        // which is required by our 3DE4 lens distortion plugin class. Nuke's coordinates are pixel based,
-        // (0,0) is the left lower corner of the left lower pixel, while (1,1) is the right upper corner
-        // of that pixel. The center of any pixel (ix,iy) is (ix+0.5,iy+0.5), so we add 0.5 here.
-        double x_s = (0.5 + p_pix.x) / _w;
-        double y_s = (0.5 + p_pix.y) / _h;
-        p_unit->x = map_in_fov_x(x_s);
-        p_unit->y = map_in_fov_y(y_s);
-    }
-
-    void
-    map_unit_to_pix(const OfxPointD& p_unit, OfxPointD* p_pix) const
-    {
-        // The result already contains the (half,half) shift. Reformulate in Nuke's coordinates. Weave "out" 3DE4's field of view.
-        p_pix->x = map_out_fov_x(p_unit.x) * _w;
-        p_pix->y = map_out_fov_y(p_unit.y) * _h;
-    }
-#endif
-
-    void
-    map_pix_to_unit(const OfxPointD& p_pix, OfxPointD* p_unit) const
-    {
-        double x_s = p_pix.x / _w;
-        double y_s = p_pix.y / _h;
-        p_unit->x = map_in_fov_x(x_s);
-        p_unit->y = map_in_fov_y(y_s);
-    }
-
-    void
-    map_unit_to_pix(const OfxPointD& p_unit, OfxPointD* p_pix) const
-    {
-        // The result already contains the (half,half) shift. Reformulate in Nuke's coordinates. Weave "out" 3DE4's field of view.
-        p_pix->x = map_out_fov_x(p_unit.x) * _w;
-        p_pix->y = map_out_fov_y(p_unit.y) * _h;
-    }
-
-    // Map x-coordinate from unit cordinates to fov coordinates.
-    double
-    map_in_fov_x(double x_unit) const
-    {
-        return  (x_unit - _xa_fov_unit) / _xd_fov_unit;
-    }
-
-    // Map y-coordinate from unit cordinates to fov coordinates.
-    double
-    map_in_fov_y(double y_unit) const
-    {
-        return  (y_unit - _ya_fov_unit) / _yd_fov_unit;
-    }
-
-    // Map x-coordinate from fov cordinates to unit coordinates.
-    double
-    map_out_fov_x(double x_fov) const
-    {
-        return x_fov * _xd_fov_unit + _xa_fov_unit;
-    }
-
-    // Map y-coordinate from fov cordinates to unit coordinates.
-    double
-    map_out_fov_y(double y_fov) const
-    {
-        return y_fov * _yd_fov_unit + _ya_fov_unit;
-    }
-
-protected:
-
-    OfxRectI _srcRoDPixel;
-    OfxPointD _rs;
-        double _w;
-        double _h;
-    double _xa_fov_unit;
-    double _ya_fov_unit;
-    double _xb_fov_unit;
-    double _yb_fov_unit;
-    double _xd_fov_unit;
-    double _yd_fov_unit;
-    double _fl_cm;
-    double _fd_cm;
-    double _w_fb_cm;
-    double _h_fb_cm;
-    double _x_lco_cm;
-    double _y_lco_cm;
-    double _pa;
-    double _r_fb_cm;
-};
-
-/// this class handles the Degree-2 anamorphic and degree-4 radial mixed model
-class DistortionModel3DEClassic
-: public DistortionModel3DEBase
-{
-public:
-    DistortionModel3DEClassic(const OfxRectI& srcRoDPixel,
-                              const OfxPointD& renderScale,
-                              double xa_fov_unit,
-                              double ya_fov_unit,
-                              double xb_fov_unit,
-                              double yb_fov_unit,
-                              double fl_cm,
-                              double fd_cm,
-                              double w_fb_cm,
-                              double h_fb_cm,
-                              double x_lco_cm,
-                              double y_lco_cm,
-                              double pa,
-                              double ld,
-                              double sq,
-                              double cx,
-                              double cy,
-                              double qu)
-    : DistortionModel3DEBase(srcRoDPixel, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
-    , _ld(ld)
-    , _sq(sq)
-    , _cx(cx)
-    , _cy(cy)
-    , _qu(qu)
-    , _cxx(_ld / _sq)
-    , _cxy( (_ld + _cx) / _sq )
-    , _cyx(_ld + _cy)
-    , _cyy(_ld)
-    , _cxxx(_qu / _sq)
-    , _cxxy(2.0 * _qu / _sq)
-    , _cxyy(_qu / _sq)
-    , _cyxx(_qu)
-    , _cyyx(2.0 * _qu)
-    , _cyyy(_qu)
-    {
-    }
-
-    virtual ~DistortionModel3DEClassic() {};
-
-private:
-    // Remove distortion. p is a point in diagonally normalized coordinates.
-    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
-    {
-        double p0_2 = xd * xd;
-        double p1_2 = yd * yd;
-        double p0_4 = p0_2 * p0_2;
-        double p1_4 = p1_2 * p1_2;
-        double p01_2 = p0_2 * p1_2;
-
-        *xu = xd * (1 + _cxx * p0_2 + _cxy * p1_2 + _cxxx * p0_4 + _cxxy * p01_2 + _cxyy * p1_4);
-        *yu = yd * (1 + _cyx * p0_2 + _cyy * p1_2 + _cyxx * p0_4 + _cyyx * p01_2 + _cyyy * p1_4);
-    }
-
-private:
-    double _ld;
-    double _sq;
-    double _cx;
-    double _cy;
-    double _qu;
-    double _cxx;
-    double _cxy;
-    double _cyx;
-    double _cyy;
-    double _cxxx;
-    double _cxxy;
-    double _cxyy;
-    double _cyxx;
-    double _cyyx;
-    double _cyyy;
-};
-
-// Degree-6 anamorphic model
-class DistortionModel3DEAnamorphic6
-: public DistortionModel3DEBase
-{
-public:
-    DistortionModel3DEAnamorphic6(const OfxRectI& srcRoDPixel,
-                                  const OfxPointD& renderScale,
-                                  double xa_fov_unit,
-                                  double ya_fov_unit,
-                                  double xb_fov_unit,
-                                  double yb_fov_unit,
-                                  double fl_cm,
-                                  double fd_cm,
-                                  double w_fb_cm,
-                                  double h_fb_cm,
-                                  double x_lco_cm,
-                                  double y_lco_cm,
-                                  double pa,
-                                  double cx02,
-                                  double cy02,
-                                  double cx22,
-                                  double cy22,
-                                  double cx04,
-                                  double cy04,
-                                  double cx24,
-                                  double cy24,
-                                  double cx44,
-                                  double cy44,
-                                  double cx06,
-                                  double cy06,
-                                  double cx26,
-                                  double cy26,
-                                  double cx46,
-                                  double cy46,
-                                  double cx66,
-                                  double cy66)
-    : DistortionModel3DEBase(srcRoDPixel, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
-    {
-        // generic_anamorphic_distortion<VEC2,MAT2,6>::prepare()
-        _cx_for_x2 = cx02 + cx22;
-        _cx_for_y2 = cx02 - cx22;
-
-        _cx_for_x4 = cx04 + cx24 + cx44;
-        _cx_for_x2_y2 = 2 * cx04 - 6 * cx44;
-        _cx_for_y4 = cx04 - cx24 + cx44;
-
-        _cx_for_x6 = cx06 + cx26 + cx46 + cx66;
-        _cx_for_x4_y2 = 3 * cx06 + cx26 - 5 * cx46 - 15 * cx66;
-        _cx_for_x2_y4 = 3 * cx06 - cx26 - 5 * cx46 + 15 * cx66;
-        _cx_for_y6 = cx06 - cx26 + cx46 - cx66;
-
-        _cy_for_x2 = cy02 + cy22;
-        _cy_for_y2 = cy02 - cy22;
-
-        _cy_for_x4 = cy04 + cy24 + cy44;
-        _cy_for_x2_y2 = 2 * cy04 - 6 * cy44;
-        _cy_for_y4 = cy04 - cy24 + cy44;
-
-        _cy_for_x6 = cy06 + cy26 + cy46 + cy66;
-        _cy_for_x4_y2 = 3 * cy06 + cy26 - 5 * cy46 - 15 * cy66;
-        _cy_for_x2_y4 = 3 * cy06 - cy26 - 5 * cy46 + 15 * cy66;
-        _cy_for_y6 = cy06 - cy26 + cy46 - cy66;
-    }
-
-    virtual ~DistortionModel3DEAnamorphic6() {};
-
-private:
-    // Remove distortion. p is a point in diagonally normalized coordinates.
-    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
-    {
-        // _anamorphic.eval(
-        double x = xd;
-        double y = yd;
-        double x2 = x * x;
-        double x4 = x2 * x2;
-        double x6 = x4 * x2;
-        double y2 = y * y;
-        double y4 = y2 * y2;
-        double y6 = y4 * y2;
-        double xq = x * (1.0
-                         + x2 * _cx_for_x2 + y2 * _cx_for_y2
-                         + x4 * _cx_for_x4 + x2 * y2 * _cx_for_x2_y2 + y4 * _cx_for_y4
-                         + x6 * _cx_for_x6 + x4 * y2 * _cx_for_x4_y2 + x2 * y4 * _cx_for_x2_y4 + y6 * _cx_for_y6);
-        double yq = y * (1.0
-                         + x2 * _cy_for_x2 + y2 * _cy_for_y2
-                         + x4 * _cy_for_x4 + x2 * y2 * _cy_for_x2_y2 + y4 * _cy_for_y4
-                         + x6 * _cy_for_x6 + x4 * y2 * _cy_for_x4_y2 + x2 * y4 * _cy_for_x2_y4 + y6 * _cy_for_y6);
-
-        *xu = xq;
-        *yu = yq;
-    }
-
-private:
-    double _cx_for_x2, _cx_for_y2, _cx_for_x4, _cx_for_x2_y2, _cx_for_y4, _cx_for_x6, _cx_for_x4_y2, _cx_for_x2_y4, _cx_for_y6;
-    double _cy_for_x2, _cy_for_y2, _cy_for_x4, _cy_for_x2_y2, _cy_for_y4, _cy_for_x6, _cy_for_x4_y2, _cy_for_x2_y4, _cy_for_y6;
-};
-
-// radial lens distortion model with equisolid-angle fisheye projection
-class DistortionModel3DEFishEye8
-: public DistortionModel3DEBase
-{
-public:
-    DistortionModel3DEFishEye8(const OfxRectI& srcRoDPixel,
-                                  const OfxPointD& renderScale,
-                                  double xa_fov_unit,
-                                  double ya_fov_unit,
-                                  double xb_fov_unit,
-                                  double yb_fov_unit,
-                                  double fl_cm,
-                                  double fd_cm,
-                                  double w_fb_cm,
-                                  double h_fb_cm,
-                                  double x_lco_cm,
-                                  double y_lco_cm,
-                                  double pa,
-                                  double c2,
-                                  double c4,
-                                  double c6,
-                                  double c8)
-    : DistortionModel3DEBase(srcRoDPixel, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
-    , _c2(c2)
-    , _c4(c4)
-    , _c6(c6)
-    , _c8(c8)
-    {
-    }
-
-    virtual ~DistortionModel3DEFishEye8() {};
-
-private:
-    // Remove distortion. p is a point in diagonally normalized coordinates.
-    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
-    {
-        double x_plain, y_plain;
-        esa2plain(xd, yd, &x_plain, &y_plain);
-
-        double r2 = x_plain * x_plain + y_plain * y_plain;
-        double r4 = r2 * r2;
-        double r6 = r4 * r2;
-        double r8 = r4 * r4;
-
-        double q = 1. + _c2 * r2 + _c4 * r4 + _c6 * r6 + _c8 * r8;
-        *xu = x_plain * q;
-        *yu = y_plain * q;
-
-         // Clipping to a reasonable area, still n times as large as the image.
-         //if(norm2(q_dn) > 50.0) q_dn = 50.0 * unit(q_dn);
-    }
-
-    void
-    esa2plain(double x_esa_dn, double y_esa_dn, double *x_plain_dn, double *y_plain_dn) const
-    {
-        double f_dn = _fl_cm / _r_fb_cm;
-        // Remove fisheye projection
-        double r_esa_dn = std::sqrt(x_esa_dn * x_esa_dn + y_esa_dn * y_esa_dn);
-        if (r_esa_dn <= 0) {
-            // avoid division by zero
-            *x_plain_dn = *y_plain_dn = 0.;
-            return;
-        }
-        double arg = r_esa_dn / (2 * f_dn);
-        // Black areas, undefined.
-        double arg_clip = std::min(1., arg);
-        double phi = 2 * std::asin(arg_clip);
-        double r_plain_dn;
-        if (phi >= M_PI / 2.0) {
-            r_plain_dn = 5.;
-        } else {
-            r_plain_dn = std::min( 5., f_dn * std::tan(phi) );
-        }
-        *x_plain_dn = x_esa_dn * r_plain_dn / r_esa_dn;
-        *y_plain_dn = y_esa_dn * r_plain_dn / r_esa_dn;
-    }
-
-private:
-    double _c2;
-    double _c4;
-    double _c6;
-    double _c8;
-};
-
-/// this class handles the radial distortion with decentering and optional compensation for beam-splitter artefacts model
-class DistortionModel3DEStandard
-: public DistortionModel3DEBase
-{
-public:
-    DistortionModel3DEStandard(const OfxRectI& srcRoDPixel,
-                               const OfxPointD& renderScale,
-                               double xa_fov_unit,
-                               double ya_fov_unit,
-                               double xb_fov_unit,
-                               double yb_fov_unit,
-                               double fl_cm,
-                               double fd_cm,
-                               double w_fb_cm,
-                               double h_fb_cm,
-                               double x_lco_cm,
-                               double y_lco_cm,
-                               double pa,
-                               double c2,
-                               double u1,
-                               double v1,
-                               double c4,
-                               double u3,
-                               double v3,
-                               double phi,
-                               double b)
-    : DistortionModel3DEBase(srcRoDPixel, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
-    , _c2(c2)
-    , _u1(u1)
-    , _v1(v1)
-    , _c4(c4)
-    , _u3(u3)
-    , _v3(v3)
-    {
-        //calc_m()
-        double q = std::sqrt(1.0 + b);
-        double c = std::cos(phi * M_PI / 180.0);
-        double s = std::sin(phi * M_PI / 180.0);
-        //mat2_type para = tensq(vec2_type(cos(_phi * M_PI / 180.0),sin(_phi * M_PI / 180.0)));
-        //m = _b * para + mat2_type(1.0);
-        // m = [[mxx, mxy],[myx,myy]] (m is symmetric)
-        _mxx = c*c*q + s*s/q;
-        _mxy = (q - 1.0/q)*c*s;
-        _myy = c*c/q + s*s*q;
-    }
-
-    virtual ~DistortionModel3DEStandard() {};
-
-private:
-    // Remove distortion. p is a point in diagonally normalized coordinates.
-    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
-    {
-        // _radial.eval(
-        double x_dn,y_dn;
-        double x = xd;
-        double y = yd;
-        double x2 = x * x;
-        double y2 = y * y;
-        double xy = x * y;
-        double r2 = x2 + y2;
-        double r4 = r2 * r2;
-        x_dn = x * (1.0 + _c2 * r2 + _c4 * r4) + (r2 + 2.0 * x2) * (_u1 + _u3 * r2) + 2.0 * xy * (_v1 + _v3 * r2);
-        y_dn = y * (1.0 + _c2 * r2 + _c4 * r4) + (r2 + 2.0 * y2) * (_v1 + _v3 * r2) + 2.0 * xy * (_u1 + _u3 * r2);
-
-        // _cylindric.eval(
-        // see cylindric_extender_2
-        //(xu,yu) = m * (x_dn, y_dn);
-        *xu = _mxx * x_dn + _mxy * y_dn;
-        *yu = _mxy * x_dn + _myy * y_dn;
-    }
-
-private:
-    double _c2;
-    double _u1;
-    double _v1;
-    double _c4;
-    double _u3;
-    double _v3;
-    double _mxx;
-    double _mxy;
-    double _myy;
-};
-
-// Degree-4 anamorphic model with anamorphic lens rotation
-class DistortionModel3DEAnamorphic4
-: public DistortionModel3DEBase
-{
-public:
-    DistortionModel3DEAnamorphic4(const OfxRectI& srcRoDPixel,
-                                  const OfxPointD& renderScale,
-                                  double xa_fov_unit,
-                                  double ya_fov_unit,
-                                  double xb_fov_unit,
-                                  double yb_fov_unit,
-                                  double fl_cm,
-                                  double fd_cm,
-                                  double w_fb_cm,
-                                  double h_fb_cm,
-                                  double x_lco_cm,
-                                  double y_lco_cm,
-                                  double pa,
-                                  double cx02,
-                                  double cy02,
-                                  double cx22,
-                                  double cy22,
-                                  double cx04,
-                                  double cy04,
-                                  double cx24,
-                                  double cy24,
-                                  double cx44,
-                                  double cy44,
-                                  double phi,
-                                  double sqx,
-                                  double sqy)
-    : DistortionModel3DEBase(srcRoDPixel, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
-    , _cosphi( std::cos(phi * M_PI / 180.0) )
-    , _sinphi( std::sin(phi * M_PI / 180.0) )
-    , _sqx(sqx)
-    , _sqy(sqy)
-    {
-        // generic_anamorphic_distortion<VEC2,MAT2,4>::prepare()
-        _cx_for_x2 = cx02 + cx22;
-        _cx_for_y2 = cx02 - cx22;
-
-        _cx_for_x4 = cx04 + cx24 + cx44;
-        _cx_for_x2_y2 = 2 * cx04 - 6 * cx44;
-        _cx_for_y4 = cx04 - cx24 + cx44;
-
-        _cy_for_x2 = cy02 + cy22;
-        _cy_for_y2 = cy02 - cy22;
-
-        _cy_for_x4 = cy04 + cy24 + cy44;
-        _cy_for_x2_y2 = 2 * cy04 - 6 * cy44;
-        _cy_for_y4 = cy04 - cy24 + cy44;
-    }
-
-    virtual ~DistortionModel3DEAnamorphic4() {};
-
-private:
-    // Remove distortion. p is a point in diagonally normalized coordinates.
-    void undistort_dn(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL
-    {
-        /*
-                    _rotation.eval(
-						_squeeze_x.eval(
-							_squeeze_y.eval(
-								_pa.eval(
-									_anamorphic.eval(
-										_rotation.eval_inv(
-											_pa.eval_inv(
-         */
-
-        //_pa.eval_inv(
-        xd /= _pa;
-        // _rotation.eval_inv(
-        //   _m_rot = mat2_type(cos(_phi),-sin(_phi),sin(_phi),cos(_phi));
-        //   _inv_m_rot = trans(_m_rot);
-        double x = _cosphi * xd + _sinphi * yd;
-        double y = -_sinphi * xd + _cosphi * yd;
-        // _anamorphic.eval(
-        double x2 = x * x;
-        double x4 = x2 * x2;
-        double y2 = y * y;
-        double y4 = y2 * y2;
-        double xq = x * (1.0
-                         + x2 * _cx_for_x2 + y2 * _cx_for_y2
-                         + x4 * _cx_for_x4 + x2 * y2 * _cx_for_x2_y2 + y4 * _cx_for_y4);
-        double yq = y * (1.0
-                         + x2 * _cy_for_x2 + y2 * _cy_for_y2
-                         + x4 * _cy_for_x4 + x2 * y2 * _cy_for_x2_y2 + y4 * _cy_for_y4);
-        //double xq = x;
-        //double yq = y;
-        // _pa.eval(
-        xq *= _pa;
-        // _squeeze_y.eval(
-        yq *= _sqy;
-        // _squeeze_x.eval(
-        xq *= _sqx;
-        // _rotation.eval(
-        x = _cosphi * xq - _sinphi * yq;
-        y = _sinphi * xq + _cosphi * yq;
-
-        *xu = x;
-        *yu = y;
-    }
-
-private:
-    double _cx_for_x2, _cx_for_y2, _cx_for_x4, _cx_for_x2_y2, _cx_for_y4;
-    double _cy_for_x2, _cy_for_y2, _cy_for_x4, _cy_for_x2_y2, _cy_for_y4;
-    double _cosphi;
-    double _sinphi;
-    double _sqx;
-    double _sqy;
-};
 
 
 
@@ -1657,7 +731,7 @@ protected:
     bool _processA;
     bool _transformIsIdentity;
     Matrix3x3 _srcTransformInverse;
-    OfxRectI _srcRoDPixel;
+    OfxRectI _format;
     std::vector<InputPlaneChannel> _planeChannels;
     bool _unpremultUV;
     double _uOffset;
@@ -1702,8 +776,8 @@ public:
         , _mix(1.)
         , _maskInvert(false)
     {
-        _srcRoDPixel.x1 = _srcRoDPixel.y1 = 0.;
-        _srcRoDPixel.x2 = _srcRoDPixel.y2 = 1.;
+        _format.x1 = _format.y1 = 0.;
+        _format.x2 = _format.y2 = 1.;
     }
 
     void setSrcImgs(const Image *src) {_srcImg = src; }
@@ -1719,7 +793,7 @@ public:
                    bool processA,
                    bool transformIsIdentity,
                    const Matrix3x3 &srcTransformInverse,
-                   const OfxRectI& srcRoDPixel,
+                   const OfxRectI& format,
                    const std::vector<InputPlaneChannel>& planeChannels,
                    bool unpremultUV,
                    double uOffset,
@@ -1740,7 +814,7 @@ public:
         _processA = processA;
         _transformIsIdentity = transformIsIdentity;
         _srcTransformInverse = srcTransformInverse;
-        _srcRoDPixel = srcRoDPixel;
+        _format = format;
         _planeChannels = planeChannels;
         _unpremultUV = unpremultUV;
         _uOffset = uOffset;
@@ -1876,10 +950,10 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
 
     // requires for STMap and LensDistortion
     //if (plugin == eDistortionPluginSTMap || _outputMode == eOutputModeSTMap) {
-    int srcx1 = _srcRoDPixel.x1;
-    int srcx2 = _srcRoDPixel.x2;
-    int srcy1 = _srcRoDPixel.y1;
-    int srcy2 = _srcRoDPixel.y2;
+    int srcx1 = _format.x1;
+    int srcx2 = _format.x2;
+    int srcy1 = _format.y1;
+    int srcy2 = _format.y2;
     //}
     float tmpPix[4];
     for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -2114,6 +1188,13 @@ public:
         , _uvScale(NULL)
         , _uWrap(NULL)
         , _vWrap(NULL)
+        , _extent(NULL)
+        , _format(NULL)
+        , _formatSize(NULL)
+        , _formatPar(NULL)
+        , _btmLeft(NULL)
+        , _size(NULL)
+        , _recenter(NULL)
         , _distortionModel(NULL)
         , _direction(NULL)
         , _outputMode(NULL)
@@ -2200,6 +1281,14 @@ public:
              assert(_outputLayer && _outputLayerStr);
            }*/
         if (_plugin == eDistortionPluginLensDistortion) {
+            _extent = fetchChoiceParam(kParamGeneratorExtent);
+            _format = fetchChoiceParam(kParamGeneratorFormat);
+            _formatSize = fetchInt2DParam(kParamGeneratorSize);
+            _formatPar= fetchDoubleParam(kParamGeneratorPAR);
+            _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
+            _size = fetchDouble2DParam(kParamRectangleInteractSize);
+            _recenter = fetchPushButtonParam(kParamGeneratorCenter);
+
             _distortionModel = fetchChoiceParam(kParamDistortionModel);
             _direction = fetchChoiceParam(kParamDistortionDirection);
             _outputMode = fetchChoiceParam(kParamDistortionOutputMode);
@@ -2322,9 +1411,9 @@ private:
 
     void updateVisibility();
 
-    DistortionModel* getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPointD& renderScale, double time);
+    DistortionModel* getDistortionModel(const OfxRectI& format, const OfxPointD& renderScale, double time);
 
-    void getSrcRoDPixel(double time, const OfxPointD& renderScale, OfxRectI *srcRoDPixel);
+    bool getLensDistortionFormat(double time, const OfxPointD& renderScale, OfxRectI *format, double *par);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -2342,6 +1431,19 @@ private:
     Double2DParam *_uvScale;
     ChoiceParam* _uWrap;
     ChoiceParam* _vWrap;
+
+    ///////////////////
+    // LensDistortion
+
+    // format params
+    ChoiceParam* _extent;
+    ChoiceParam* _format;
+    Int2DParam* _formatSize;
+    DoubleParam* _formatPar;
+    Double2DParam* _btmLeft;
+    Double2DParam* _size;
+    PushButtonParam *_recenter;
+
     ChoiceParam* _distortionModel;
     ChoiceParam* _direction;
     ChoiceParam* _outputMode;
@@ -2441,6 +1543,18 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     if (gIsMultiPlane && _uvClip) {
         buildChannelMenus();
     }
+    if (_plugin == eDistortionPluginLensDistortion) {
+        OfxRectI format;
+        double par;
+        OfxPointD renderScale = {1., 1.};
+
+        // we pass 0 as time, since anyway the input RoD is never used, thanks to the test on the return value
+        bool setFormat = getLensDistortionFormat(0, renderScale, &format, &par);
+        if (setFormat) {
+            clipPreferences.setOutputFormat(format);
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2536,7 +1650,7 @@ getChannelIndex(InputChannelEnum e,
 } // getChannelIndex
 
 DistortionModel*
-DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPointD& renderScale, double time)
+DistortionPlugin::getDistortionModel(const OfxRectI& format, const OfxPointD& renderScale, double time)
 {
     if (_plugin != eDistortionPluginLensDistortion) {
         return NULL;
@@ -2555,7 +1669,7 @@ DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPoint
         double squeeze = std::max(0.001, _squeeze->getValueAtTime(time));
         double ax, ay;
         _asymmetric->getValueAtTime(time, ax, ay);
-        return new DistortionModelNuke(srcRoDPixel,
+        return new DistortionModelNuke(format,
                                        par,
                                        k1,
                                        k2,
@@ -2576,7 +1690,7 @@ DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPoint
         double xp, yp;
         _pfP->getValueAtTime(time, xp, yp);
         double squeeze = _pfSqueeze->getValueAtTime(time);
-        return new DistortionModelPFBarrel(srcRoDPixel,
+        return new DistortionModelPFBarrel(format,
                                            renderScale,
                                            //par,
                                            c3,
@@ -2608,7 +1722,7 @@ DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPoint
         double cx = _cx->getValueAtTime(time);
         double cy = _cy->getValueAtTime(time);
         double qu = _qu->getValueAtTime(time);
-        return new DistortionModel3DEClassic(srcRoDPixel,
+        return new DistortionModel3DEClassic(format,
                                              renderScale,
                                              xa_fov_unit,
                                              ya_fov_unit,
@@ -2663,7 +1777,7 @@ DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPoint
         double cy46 = _cy46->getValueAtTime(time);
         double cx66 = _cx66->getValueAtTime(time);
         double cy66 = _cy66->getValueAtTime(time);
-        return new DistortionModel3DEAnamorphic6(srcRoDPixel,
+        return new DistortionModel3DEAnamorphic6(format,
                                                  renderScale,
                                                  xa_fov_unit,
                                                  ya_fov_unit,
@@ -2717,7 +1831,7 @@ DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPoint
         double c4 = _c4->getValueAtTime(time);
         double c6 = _c6->getValueAtTime(time);
         double c8 = _c8->getValueAtTime(time);
-        return new DistortionModel3DEFishEye8(srcRoDPixel,
+        return new DistortionModel3DEFishEye8(format,
                                               renderScale,
                                               xa_fov_unit,
                                               ya_fov_unit,
@@ -2761,7 +1875,7 @@ DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPoint
         double v3 = _v3->getValueAtTime(time);
         double phi = _phi->getValueAtTime(time);
         double b = _b->getValueAtTime(time);
-        return new DistortionModel3DEStandard(srcRoDPixel,
+        return new DistortionModel3DEStandard(format,
                                               renderScale,
                                               xa_fov_unit,
                                               ya_fov_unit,
@@ -2814,7 +1928,7 @@ DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPoint
         double phi = _a4phi->getValueAtTime(time);
         double sqx = _a4sqx->getValueAtTime(time);
         double sqy = _a4sqy->getValueAtTime(time);
-        return new DistortionModel3DEAnamorphic4(srcRoDPixel,
+        return new DistortionModel3DEAnamorphic4(format,
                                                  renderScale,
                                                  xa_fov_unit,
                                                  ya_fov_unit,
@@ -2846,25 +1960,81 @@ DistortionPlugin::getDistortionModel(const OfxRectI& srcRoDPixel, const OfxPoint
     assert(false);
 }
 
-void
-DistortionPlugin::getSrcRoDPixel(double time,
-                                 const OfxPointD& renderScale,
-                                 OfxRectI *srcRoDPixel)
+// returns true if fixed format (i.e. not the input RoD) and setFormat can be called in getClipPrefs
+bool
+DistortionPlugin::getLensDistortionFormat(double time,
+                                          const OfxPointD& renderScale,
+                                          OfxRectI *format,
+                                          double *par)
 {
-    if ( _srcClip && _srcClip->isConnected() ) {
-        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
-        Coords::toPixelEnclosing(srcRod, renderScale, _srcClip->getPixelAspectRatio(), srcRoDPixel);
-    } else {
-        // default to Project Size
-        OfxRectD srcRoD;
-        OfxPointD siz = getProjectSize();
-        OfxPointD off = getProjectOffset();
-        srcRoD.x1 = off.x;
-        srcRoD.x2 = off.x + siz.x;
-        srcRoD.y1 = off.y;
-        srcRoD.y2 = off.y + siz.y;
-        Coords::toPixelEnclosing(srcRoD, renderScale, getProjectPixelAspectRatio(), srcRoDPixel);
+    assert(_plugin == eDistortionPluginLensDistortion);
+
+    GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+
+    switch (extent) {
+        case eGeneratorExtentFormat: {
+            int w, h;
+            _formatSize->getValue(w, h);
+            *par = _formatPar->getValue();
+            format->x1 = format->y1 = 0;
+            format->x2 = std::ceil(w * renderScale.x);
+            format->y2 = std::ceil(h * renderScale.y);
+
+            return true;
+            break;
+        }
+        case eGeneratorExtentSize: {
+            OfxRectD rod;
+            _size->getValue(rod.x2, rod.y2);
+            _btmLeft->getValue(rod.x1, rod.y1);
+            rod.x2 += rod.x1;
+            rod.y2 += rod.y1;
+            *par = _srcClip->getPixelAspectRatio();
+            Coords::toPixelNearest(rod, renderScale, *par, format);
+
+            return true;
+            break;
+        }
+        case eGeneratorExtentProject: {
+            OfxRectD rod;
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            rod.x1 = off.x;
+            rod.x2 = off.x + siz.x;
+            rod.y1 = off.y;
+            rod.y2 = off.y + siz.y;
+            *par = getProjectPixelAspectRatio();
+            Coords::toPixelNearest(rod, renderScale, *par, format);
+
+            return true;
+            break;
+        }
+        case eGeneratorExtentDefault:
+            if ( _srcClip && _srcClip->isConnected() ) {
+                _srcClip->getFormat(*format);
+                *par = _srcClip->getPixelAspectRatio();
+                if ( OFX::Coords::rectIsEmpty(*format) ) {
+                    // no format is available, use the RoD instead
+                    const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+                    Coords::toPixelEnclosing(srcRod, renderScale, *par, format);
+                }
+            } else {
+                // default to Project Size
+                OfxRectD srcRoD;
+                OfxPointD siz = getProjectSize();
+                OfxPointD off = getProjectOffset();
+                srcRoD.x1 = off.x;
+                srcRoD.x2 = off.x + siz.x;
+                srcRoD.y1 = off.y;
+                srcRoD.y2 = off.y + siz.y;
+                *par = getProjectPixelAspectRatio();
+                Coords::toPixelEnclosing(srcRoD, renderScale, *par, format);
+            }
+
+            return false;
+            break;
     }
+    return false;
 }
 
 /* set up and run a processor */
@@ -3119,14 +2289,15 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         uScale *= args.renderScale.x;
         vScale *= args.renderScale.y;
     }
-    OfxRectI srcRoDPixel = {0, 1, 0, 1};
-    getSrcRoDPixel(time, args.renderScale, &srcRoDPixel);
+    OfxRectI format = {0, 1, 0, 1};
+    double par = 1.;
+    getLensDistortionFormat(time, args.renderScale, &format, &par);
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
-    std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(srcRoDPixel, args.renderScale, time) );
+    std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
-                        srcRoDPixel,
+                        format,
                         planeChannels,
                         unpremultUV,
                         uOffset, vOffset,
@@ -3456,24 +2627,25 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         break;
     }
     case eDistortionPluginLensDistortion: {
-        OfxRectI srcRoDPixel = {0, 1, 0, 1};
-        getSrcRoDPixel(time, args.renderScale, &srcRoDPixel);
+        OfxRectI format = {0, 1, 0, 1};
+        double par = 1.;
+        getLensDistortionFormat(time, args.renderScale, &format, &par);
 
         DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
-        std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(srcRoDPixel, args.renderScale, time) );
+        std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
 
         OfxRectD rodPixel = { std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
         assert( OFX::Coords::rectIsEmpty(rodPixel) );
 
         const int step = 10;
-        const double w= (srcRoDPixel.x2 - srcRoDPixel.x1);
-        const double h= (srcRoDPixel.y2 - srcRoDPixel.y1);
+        const double w= (format.x2 - format.x1);
+        const double h= (format.y2 - format.y1);
         const double xstep = w / step;
         const double ystep= h / step;
         for (int i = 0; i <= step; ++i) {
             for (int j = 0; j < 2; ++j) {
-                double x = srcRoDPixel.x1 + xstep * i;
-                double y = srcRoDPixel.y1 + h * j;
+                double x = format.x1 + xstep * i;
+                double y = format.y1 + h * j;
                 double xo, yo;
                 if (direction == eDirectionDistort) {
                     distortionModel->distort(x, y, &xo, &yo);
@@ -3488,8 +2660,8 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         }
         for (int i = 0; i < 2; ++i) {
             for (int j = 1; j < step; ++j) {
-                double x = srcRoDPixel.x1 + w * i;
-                double y = srcRoDPixel.y1 + ystep * j;
+                double x = format.x1 + w * i;
+                double y = format.y1 + ystep * j;
                 double xo, yo;
                 if (direction == eDirectionDistort) {
                     distortionModel->distort(x, y, &xo, &yo);
@@ -3503,13 +2675,18 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
             }
         }
         assert( !OFX::Coords::rectIsEmpty(rodPixel) );
-
-        double par = 1.;
-        if ( _srcClip && _srcClip->isConnected() ) {
-            par = _srcClip->getPixelAspectRatio();
-        } else {
-            par = getProjectPixelAspectRatio();
+        // extra margin for blackOutside
+        if ( _blackOutside->getValueAtTime(time) ) {
+            rodPixel.x1 -= 1;
+            rodPixel.x2 += 1;
+            rodPixel.y1 -= 1;
+            rodPixel.y2 += 1;
         }
+        // Slight extra margin, just in case.
+        rodPixel.x1 -= 2;
+        rodPixel.x2 += 2;
+        rodPixel.y1 -= 2;
+        rodPixel.y2 += 2;
 
         OFX::Coords::toCanonical(rodPixel, args.renderScale, par, &rod);
         assert( !OFX::Coords::rectIsEmpty(rod) );
@@ -3578,6 +2755,17 @@ void
 DistortionPlugin::updateVisibility()
 {
     if (_plugin == eDistortionPluginLensDistortion) {
+        {
+            GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+            bool hasFormat = (extent == eGeneratorExtentFormat);
+            bool hasSize = (extent == eGeneratorExtentSize);
+
+            _format->setIsSecretAndDisabled(!hasFormat);
+            _size->setIsSecretAndDisabled(!hasSize);
+            _recenter->setIsSecretAndDisabled(!hasSize);
+            _btmLeft->setIsSecretAndDisabled(!hasSize);
+        }
+
         DistortionModelEnum distortionModel = (DistortionModelEnum)_distortionModel->getValue();
 
         _k1->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
@@ -3673,8 +2861,7 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
     if (_plugin == eDistortionPluginLensDistortion) {
         if ( (paramName == kParamDistortionModel) && (args.reason == eChangeUserEdit) ) {
             updateVisibility();
-        }
-        if ( (paramName == kParamPFFileReload) ||
+        } else if ( (paramName == kParamPFFileReload) ||
             ( (paramName == kParamPFFile) && (args.reason == eChangeUserEdit) ) ) {
             std::string filename;
             PFBarrelCommon::FileReader f(filename);
@@ -3700,6 +2887,48 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
                 }
             }
             endEditBlock();
+        } else if (paramName == kParamGeneratorExtent) {
+            updateVisibility();
+        } else if (paramName == kParamGeneratorFormat) {
+            //the host does not handle the format itself, do it ourselves
+            EParamFormat format = (EParamFormat)_format->getValue();
+            int w = 0, h = 0;
+            double par = -1;
+            getFormatResolution(format, &w, &h, &par);
+            assert(par != -1);
+            _formatPar->setValue(par);
+            _formatSize->setValue(w, h);
+        } else if (paramName == kParamGeneratorCenter) {
+            Clip* srcClip = _srcClip;
+            OfxRectD srcRoD;
+            if ( srcClip && srcClip->isConnected() ) {
+                srcRoD = srcClip->getRegionOfDefinition(args.time);
+            } else {
+                OfxPointD siz = getProjectSize();
+                OfxPointD off = getProjectOffset();
+                srcRoD.x1 = off.x;
+                srcRoD.x2 = off.x + siz.x;
+                srcRoD.y1 = off.y;
+                srcRoD.y2 = off.y + siz.y;
+            }
+            OfxPointD center;
+            center.x = (srcRoD.x2 + srcRoD.x1) / 2.;
+            center.y = (srcRoD.y2 + srcRoD.y1) / 2.;
+
+            OfxRectD rectangle;
+            _size->getValue(rectangle.x2, rectangle.y2);
+            _btmLeft->getValue(rectangle.x1, rectangle.y1);
+            rectangle.x2 += rectangle.x1;
+            rectangle.y2 += rectangle.y1;
+
+            OfxRectD newRectangle;
+            newRectangle.x1 = center.x - (rectangle.x2 - rectangle.x1) / 2.;
+            newRectangle.y1 = center.y - (rectangle.y2 - rectangle.y1) / 2.;
+            newRectangle.x2 = newRectangle.x1 + (rectangle.x2 - rectangle.x1);
+            newRectangle.y2 = newRectangle.y1 + (rectangle.y2 - rectangle.y1);
+            
+            _size->setValue(newRectangle.x2 - newRectangle.x1, newRectangle.y2 - newRectangle.y1);
+            _btmLeft->setValue(newRectangle.x1, newRectangle.y1);
         }
         return;
     }
@@ -3807,6 +3036,7 @@ DistortionPluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
         desc.setIsMultiPlanar(true);
     }
 #endif
+    desc.setOverlayInteractDescriptor(new GeneratorOverlayDescriptor);
 } // >::describe
 
 static void
@@ -4066,6 +3296,156 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     }
 
     if (plugin == eDistortionPluginLensDistortion) {
+        { // Frame format
+            const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+
+            // extent
+            {
+                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
+                param->setLabel(kParamFormatLabel);
+                param->setHint(kParamFormatHint);
+                assert(param->getNOptions() == eGeneratorExtentFormat);
+                param->appendOption(kParamGeneratorExtentOptionFormat, kParamGeneratorExtentOptionFormatHint);
+                assert(param->getNOptions() == eGeneratorExtentSize);
+                param->appendOption(kParamGeneratorExtentOptionSize, kParamGeneratorExtentOptionSizeHint);
+                assert(param->getNOptions() == eGeneratorExtentProject);
+                param->appendOption(kParamGeneratorExtentOptionProject, kParamGeneratorExtentOptionProjectHint);
+                assert(param->getNOptions() == eGeneratorExtentDefault);
+                param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
+                param->setDefault(eGeneratorExtentDefault);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                param->setAnimates(false);
+                desc.addClipPreferencesSlaveParam(*param);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            // recenter
+            {
+                PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamGeneratorCenter);
+                param->setLabel(kParamGeneratorCenterLabel);
+                param->setHint(kParamGeneratorCenterHint);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            // format
+            {
+                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamGeneratorFormat);
+                param->setLabel(kParamGeneratorFormatLabel);
+                assert(param->getNOptions() == eParamFormatPCVideo);
+                param->appendOption(kParamFormatPCVideoLabel);
+                assert(param->getNOptions() == eParamFormatNTSC);
+                param->appendOption(kParamFormatNTSCLabel);
+                assert(param->getNOptions() == eParamFormatPAL);
+                param->appendOption(kParamFormatPALLabel);
+                assert(param->getNOptions() == eParamFormatHD);
+                param->appendOption(kParamFormatHDLabel);
+                assert(param->getNOptions() == eParamFormatNTSC169);
+                param->appendOption(kParamFormatNTSC169Label);
+                assert(param->getNOptions() == eParamFormatPAL169);
+                param->appendOption(kParamFormatPAL169Label);
+                assert(param->getNOptions() == eParamFormat1kSuper35);
+                param->appendOption(kParamFormat1kSuper35Label);
+                assert(param->getNOptions() == eParamFormat1kCinemascope);
+                param->appendOption(kParamFormat1kCinemascopeLabel);
+                assert(param->getNOptions() == eParamFormat2kSuper35);
+                param->appendOption(kParamFormat2kSuper35Label);
+                assert(param->getNOptions() == eParamFormat2kCinemascope);
+                param->appendOption(kParamFormat2kCinemascopeLabel);
+                assert(param->getNOptions() == eParamFormat4kSuper35);
+                param->appendOption(kParamFormat4kSuper35Label);
+                assert(param->getNOptions() == eParamFormat4kCinemascope);
+                param->appendOption(kParamFormat4kCinemascopeLabel);
+                assert(param->getNOptions() == eParamFormatSquare256);
+                param->appendOption(kParamFormatSquare256Label);
+                assert(param->getNOptions() == eParamFormatSquare512);
+                param->appendOption(kParamFormatSquare512Label);
+                assert(param->getNOptions() == eParamFormatSquare1k);
+                param->appendOption(kParamFormatSquare1kLabel);
+                assert(param->getNOptions() == eParamFormatSquare2k);
+                param->appendOption(kParamFormatSquare2kLabel);
+                param->setDefault(eParamFormatPCVideo);
+                param->setHint(kParamGeneratorFormatHint);
+                param->setAnimates(false);
+                desc.addClipPreferencesSlaveParam(*param);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            {
+                int w = 0, h = 0;
+                double par = -1.;
+                getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
+                assert(par != -1);
+                {
+                    Int2DParamDescriptor* param = desc.defineInt2DParam(kParamGeneratorSize);
+                    param->setLabel(kParamGeneratorSizeLabel);
+                    param->setHint(kParamGeneratorSizeHint);
+                    param->setIsSecretAndDisabled(true);
+                    param->setDefault(w, h);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                }
+
+                {
+                    DoubleParamDescriptor* param = desc.defineDoubleParam(kParamGeneratorPAR);
+                    param->setLabel(kParamGeneratorPARLabel);
+                    param->setHint(kParamGeneratorPARHint);
+                    param->setIsSecretAndDisabled(true);
+                    param->setRange(0., DBL_MAX);
+                    param->setDisplayRange(0.5, 2.);
+                    param->setDefault(par);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                }
+            }
+
+            // btmLeft
+            {
+                Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+                param->setLabel(kParamRectangleInteractBtmLeftLabel);
+                param->setDoubleType(eDoubleTypeXYAbsolute);
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+                param->setDefault(0., 0.);
+                param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+                param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+                param->setIncrement(1.);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                param->setHint("Coordinates of the bottom left corner of the size rectangle.");
+                param->setDigits(0);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            // size
+            {
+                Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
+                param->setLabel(kParamRectangleInteractSizeLabel);
+                param->setDoubleType(eDoubleTypeXY);
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+                param->setDefault(1., 1.);
+                param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+                param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+                param->setIncrement(1.);
+                param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+                param->setHint("Width and height of the size rectangle.");
+                param->setIncrement(1.);
+                param->setDigits(0);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+        }
+
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionModel);
             param->setLabel(kParamDistortionModelLabel);

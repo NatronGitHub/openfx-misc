@@ -919,6 +919,8 @@
 		1EC1B5C41A9C994C001D7020 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EC1B5D21A9C99A1001D7020 /* FrameBlend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B5CD1A9C999B001D7020 /* FrameBlend.cpp */; };
 		1EC1B5D31A9C99A4001D7020 /* FrameBlend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B5CD1A9C999B001D7020 /* FrameBlend.cpp */; };
+		1EC6BC9E1E13CC0000C68CE7 /* DistortionModel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC6BC9C1E13C36B00C68CE7 /* DistortionModel.cpp */; };
+		1EC6BC9F1E13CC0300C68CE7 /* DistortionModel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC6BC9C1E13C36B00C68CE7 /* DistortionModel.cpp */; };
 		1ECA4DE41A3F3A6500C5128B /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1ECA4DE51A3F3A6500C5128B /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1ECA4DE61A3F3A6500C5128B /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -3476,6 +3478,8 @@
 		1EC1B5CD1A9C999B001D7020 /* FrameBlend.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FrameBlend.cpp; sourceTree = "<group>"; };
 		1EC1B5CF1A9C999B001D7020 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EC1B5D01A9C999B001D7020 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EC6BC9C1E13C36B00C68CE7 /* DistortionModel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DistortionModel.cpp; sourceTree = "<group>"; };
+		1EC6BC9D1E13C36B00C68CE7 /* DistortionModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DistortionModel.h; sourceTree = "<group>"; };
 		1EC7C7F818BF4F4C002A246F /* ofxReadWrite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxReadWrite.h; sourceTree = "<group>"; };
 		1EC7C7F918BF4F85002A246F /* ofxDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxDialog.h; path = openfx/include/ofxDialog.h; sourceTree = SOURCE_ROOT; };
 		1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxSonyVegas.h; path = openfx/include/ofxSonyVegas.h; sourceTree = SOURCE_ROOT; };
@@ -5492,6 +5496,8 @@
 		1ED851381AAB5DD9003F65A3 /* Distortion */ = {
 			isa = PBXGroup;
 			children = (
+				1EC6BC9C1E13C36B00C68CE7 /* DistortionModel.cpp */,
+				1EC6BC9D1E13C36B00C68CE7 /* DistortionModel.h */,
 				1ED851391AAB6229003F65A3 /* Distortion.cpp */,
 				1ED8513B1AAB6229003F65A3 /* Info.plist */,
 				AC0626761ABDC65800B3D105 /* net.sf.openfx.IDistort.png */,
@@ -7800,6 +7806,7 @@
 				1ED4AEAC1973DD4800EE64C8 /* Rand.cpp in Sources */,
 				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
 				1E0072F71A40421100E77042 /* Rectangle.cpp in Sources */,
+				1EC6BC9F1E13CC0300C68CE7 /* DistortionModel.cpp in Sources */,
 				AC29F7A91C3FE91C006B0019 /* Reformat.cpp in Sources */,
 				1E2A935C1990EEB60061B1F1 /* Retime.cpp in Sources */,
 				1EEED3191D8FE78D00B2B246 /* PIK.cpp in Sources */,
@@ -8255,6 +8262,7 @@
 				1ED851481AAB6245003F65A3 /* ofxsParams.cpp in Sources */,
 				1ED851491AAB6245003F65A3 /* ofxsProperty.cpp in Sources */,
 				1ED8514A1AAB6245003F65A3 /* ofxsPropertyValidation.cpp in Sources */,
+				1EC6BC9E1E13CC0000C68CE7 /* DistortionModel.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
