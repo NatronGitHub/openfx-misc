@@ -2689,6 +2689,9 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         break;
     }
     case eDistortionPluginLensDistortion: {
+        if (_majorVersion < 3) {
+             return false; // use source RoD
+        }
         const OfxPointD rs1 = {1., 1.};
         OfxRectI format = {0, 1, 0, 1};
         double par = 1.;
@@ -3022,12 +3025,12 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
 }
 
 //mDeclarePluginFactory(DistortionPluginFactory, {}, {});
-template<DistortionPluginEnum plugin>
+template<DistortionPluginEnum plugin, int majorVersion>
 class DistortionPluginFactory
-    : public PluginFactoryHelper<DistortionPluginFactory<plugin> >
+    : public PluginFactoryHelper<DistortionPluginFactory<plugin, majorVersion> >
 {
 public:
-    DistortionPluginFactory<plugin>(const std::string & id, unsigned int verMaj, unsigned int verMin)
+    DistortionPluginFactory<plugin, majorVersion>(const std::string & id, unsigned int verMaj, unsigned int verMin)
     : PluginFactoryHelper<DistortionPluginFactory>(id, verMaj, verMin)
     {
     }
@@ -3037,9 +3040,9 @@ public:
     virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
 };
 
-template<DistortionPluginEnum plugin>
+template<DistortionPluginEnum plugin, int majorVersion>
 void
-DistortionPluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
+DistortionPluginFactory<plugin, majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     switch (plugin) {
@@ -3135,9 +3138,9 @@ addWrapOptions(ChoiceParamDescriptor* channel,
     channel->setDefault(def);
 }
 
-template<DistortionPluginEnum plugin>
+template<DistortionPluginEnum plugin, int majorVersion>
 void
-DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
+DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                                    ContextEnum context)
 {
 #ifdef OFX_EXTENSIONS_NUKE
@@ -3559,7 +3562,7 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamDistortionDirectionOptionDistort, kParamDistortionDirectionOptionDistortHint);
             assert(param->getNOptions() == eDirectionUndistort);
             param->appendOption(kParamDistortionDirectionOptionUndistort, kParamDistortionDirectionOptionUndistortHint);
-            param->setDefault((int)eDirectionUndistort);
+            param->setDefault((int)eDirectionDistort); // same default as in Nuke, and also the most straightforward (non-iterative) transform for most models
             if (page) {
                 page->addChild(*param);
             }
@@ -4235,18 +4238,18 @@ DistortionPluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 } // >::describeInContext
 
-template<DistortionPluginEnum plugin>
+template<DistortionPluginEnum plugin, int majorVersion>
 ImageEffect*
-DistortionPluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
+DistortionPluginFactory<plugin, majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                 ContextEnum /*context*/)
 {
     return new DistortionPlugin(handle, this->getMajorVersion(), plugin);
 }
 
-static DistortionPluginFactory<eDistortionPluginIDistort> p1(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginSTMap> p2(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion> p3(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion> p4(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
+static DistortionPluginFactory<eDistortionPluginIDistort,kPluginVersionMajor> p1(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginSTMap,kPluginVersionMajor> p2(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,2> p3(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,kPluginVersionLensDistortionMajor> p4(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
