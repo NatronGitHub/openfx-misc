@@ -1061,8 +1061,6 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                                                y + 0.5,
                                                &sx, &sy);
                 }
-                sx;
-                sy;
                 sxx = 1;     // TODO: Jacobian
                 sxy = 0;
                 syx = 0;
@@ -2650,18 +2648,18 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         roiPixel.y1 -= 2;
         roiPixel.y2 += 2;
 
-        OfxPointD rs1 = {1., 1.};
         OfxRectD roi;
         OFX::Coords::toCanonical(roiPixel, args.renderScale, par, &roi);
         assert( !OFX::Coords::rectIsEmpty(roi) );
         rois.setRegionOfInterest(*_srcClip, roi);
-
+        /*
         printf("getRegionsOfInterest: rs=(%g,%g) rw=(%g,%g,%g,%g) rwp=(%d,%d,%d,%d) -> roiPixel(%g,%g,%g,%g) roiCanonical=(%g,%g,%g,%g)\n",
                args.renderScale.x, args.renderScale.y,
                renderWin.x1, renderWin.y1, renderWin.x2, renderWin.y2,
                renderWinPixel.x1, renderWinPixel.y1, renderWinPixel.x2, renderWinPixel.y2,
                roiPixel.x1, roiPixel.y1, roiPixel.x2, roiPixel.y2,
                roi.x1, roi.y1, roi.x2, roi.y2);
+         */
 
         return;
     }
@@ -2706,7 +2704,6 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         if (_majorVersion < 3) {
              return false; // use source RoD
         }
-        const OfxPointD rs1 = {1., 1.};
         OfxRectI format = {0, 1, 0, 1};
         double par = 1.;
         getLensDistortionFormat(time, args.renderScale, &format, &par);
@@ -2786,12 +2783,13 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
         OFX::Coords::toCanonical(rodPixel, args.renderScale, par, &rod);
         assert( !OFX::Coords::rectIsEmpty(rod) );
-
-        printf("getRegionOfDefinition: rs=(%g,%g) srcrodp=(%d,%d,%d,%d) -> rodPixel(%g,%g,%g,%g) rodCanonical=(%g,%g,%g,%g)\n",
+        /*
+        printf("getRegionOfDefinition: rs=(%g,%g) srcrodp=(%g,%g,%g,%g) -> rodPixel(%g,%g,%g,%g) rodCanonical=(%g,%g,%g,%g)\n",
                args.renderScale.x, args.renderScale.y,
                srcRod.x1, srcRod.y1, srcRod.x2, srcRod.y2,
                rodPixel.x1, rodPixel.y1, rodPixel.x2, rodPixel.y2,
                rod.x1, rod.y1, rod.x2, rod.y2);
+         */
 
         return true;
         //return false;     // use source RoD
@@ -3403,8 +3401,6 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
 
     if (plugin == eDistortionPluginLensDistortion) {
         { // Frame format
-            const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-
             // extent
             {
                 ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
