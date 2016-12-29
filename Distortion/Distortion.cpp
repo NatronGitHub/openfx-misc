@@ -2512,9 +2512,71 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
             identity = (pfC3 == 0.) && (pfC5 == 0.);
             break;
         }
-#warning TODO
+        case eDistortionModel3DEClassic: {
+            double ld = _ld->getValueAtTime(time);
+            double cx = _cx->getValueAtTime(time);
+            double cy = _cy->getValueAtTime(time);
+            double qu = _qu->getValueAtTime(time);
+            identity = (ld == 0.) && (cx == 0.) && (cy == 0.) && (qu == 0.);
+            break;
+        }
+        case eDistortionModel3DEAnamorphic6: {
+            double cx02 = _cx02->getValueAtTime(time);
+            double cy02 = _cy02->getValueAtTime(time);
+            double cx22 = _cx22->getValueAtTime(time);
+            double cy22 = _cy22->getValueAtTime(time);
+            double cx04 = _cx04->getValueAtTime(time);
+            double cy04 = _cy04->getValueAtTime(time);
+            double cx24 = _cx24->getValueAtTime(time);
+            double cy24 = _cy24->getValueAtTime(time);
+            double cx44 = _cx44->getValueAtTime(time);
+            double cy44 = _cy44->getValueAtTime(time);
+            double cx06 = _cx06->getValueAtTime(time);
+            double cy06 = _cy06->getValueAtTime(time);
+            double cx26 = _cx26->getValueAtTime(time);
+            double cy26 = _cy26->getValueAtTime(time);
+            double cx46 = _cx46->getValueAtTime(time);
+            double cy46 = _cy46->getValueAtTime(time);
+            double cx66 = _cx66->getValueAtTime(time);
+            double cy66 = _cy66->getValueAtTime(time);
+            identity = ( (cx02 == 0.) && (cy02 == 0.) && (cx22 == 0.) && (cy22 == 0.) &&
+                         (cx04 == 0.) && (cy04 == 0.) && (cx24 == 0.) && (cy24 == 0.) && (cx44 == 0.) && (cy44 == 0.) &&
+                         (cx06 == 0.) && (cy06 == 0.) && (cx26 == 0.) && (cy26 == 0.) && (cx46 == 0.) && (cy46 == 0.) && (cx66 == 0.) && (cy66 == 0.) );
+            break;
+        }
         case eDistortionModel3DEFishEye8: {
             // fisheye is never identity
+            break;
+        }
+        case eDistortionModel3DEStandard: {
+            double c2 = _c2->getValueAtTime(time);
+            double u1 = _u1->getValueAtTime(time);
+            double v1 = _v1->getValueAtTime(time);
+            double c4 = _c4->getValueAtTime(time);
+            double u3 = _u3->getValueAtTime(time);
+            double v3 = _v3->getValueAtTime(time);
+            double b = _b->getValueAtTime(time);
+            identity = ( (c2 == 0.) && (u1 == 0.) && (v1 == 0.) && (c4 == 0.) &&
+                         (u3 == 0.) && (v3 == 0.) && (b == 0.) );
+            break;
+        }
+        case eDistortionModel3DEAnamorphic4: {
+            double cx02 = _cx02->getValueAtTime(time);
+            double cy02 = _cy02->getValueAtTime(time);
+            double cx22 = _cx22->getValueAtTime(time);
+            double cy22 = _cy22->getValueAtTime(time);
+            double cx04 = _cx04->getValueAtTime(time);
+            double cy04 = _cy04->getValueAtTime(time);
+            double cx24 = _cx24->getValueAtTime(time);
+            double cy24 = _cy24->getValueAtTime(time);
+            double cx44 = _cx44->getValueAtTime(time);
+            double cy44 = _cy44->getValueAtTime(time);
+            double phi = _a4phi->getValueAtTime(time);
+            double sqx = _a4sqx->getValueAtTime(time);
+            double sqy = _a4sqy->getValueAtTime(time);
+            identity = ( (cx02 == 0.) && (cy02 == 0.) && (cx22 == 0.) && (cy22 == 0.) &&
+                         (cx04 == 0.) && (cy04 == 0.) && (cx24 == 0.) && (cy24 == 0.) && (cx44 == 0.) && (cy44 == 0.) &&
+                         (phi == 0.) && (sqx == 0.) && (sqy == 0.) );
             break;
         }
         } // switch (distortionModel) {
