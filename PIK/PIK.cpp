@@ -2202,6 +2202,9 @@ PIKPlugin::getFramesNeeded(const FramesNeededArguments &args,
         getoutm = true;
         break;
     } // switch
+    if (noKey) {
+        getpfg = false;
+    }
     getc = getc && ( /*!noKey*/true || (outputMode == eOutputModeCleanPlate) ) && screenType != eScreenTypePick;
     getbg = getbg && ( ubl || ubc || (outputMode == eOutputModeComposite) );
 
