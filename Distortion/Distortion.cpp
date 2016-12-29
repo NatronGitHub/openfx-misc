@@ -3715,7 +3715,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             param->setLabel(kParamPFSqueezeLabel);
             param->setHint(kParamPFSqueezeHint);
             param->setRange(0.0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(0.1, 0.3);
+            param->setDisplayRange(0.1, 3.);
             param->setDefault(1.);
             if (page) {
                 page->addChild(*param);
