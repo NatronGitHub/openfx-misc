@@ -142,7 +142,7 @@ CXXFLAGS += \
 CIMGVERSION=572c12d82b2f59ece21be8f52645c38f1dd407e6
 
 CImg.h:
-	curl -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
+	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
 #	patch -p0 -d. < CImg-1.7.1-omp.patch
 
 #git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
