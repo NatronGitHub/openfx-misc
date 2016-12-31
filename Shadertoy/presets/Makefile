@@ -33,7 +33,7 @@ cube05_0.png
 all: $(PRESETS)
 
 $(PRESETS):
-	curl -L -O https://www.shadertoy.com/presets/$@
+	curl -s -S -L -O https://www.shadertoy.com/presets/$@
 
 clean:
 	rm -f $(PRESETS)
