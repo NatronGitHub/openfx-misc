@@ -573,6 +573,7 @@ PFBarrelCommon::FileReader::FileReader(const std::string &filename)
     error_= "";
     orig_w_= -1;
     orig_h_= -1;
+    orig_pa_ = 1.;
     undist_w_= -1;
     undist_h_= -1;
     model_= -1;
@@ -681,8 +682,9 @@ std::string PFBarrelCommon::FileReader::readRawLine(void)
 
     char buf[512];
 
-    if (std::fgets(buf, sizeof(buf), f_)) {
-        rv= buf;
+    char* s = std::fgets(buf, sizeof(buf), f_);
+    if (s != NULL) {
+        rv= s;
         rv= rv.erase(rv.length()-1);
     } else {
         error_= "Parse error";
@@ -1206,6 +1208,37 @@ public:
         , _cx(NULL)
         , _cy(NULL)
         , _qu(NULL)
+        , _c2(NULL)
+        , _u1(NULL)
+        , _v1(NULL)
+        , _c4(NULL)
+        , _u3(NULL)
+        , _v3(NULL)
+        , _phi(NULL)
+        , _b(NULL)
+        , _cx02(NULL)
+        , _cy02(NULL)
+        , _cx22(NULL)
+        , _cy22(NULL)
+        , _cx04(NULL)
+        , _cy04(NULL)
+        , _cx24(NULL)
+        , _cy24(NULL)
+        , _cx44(NULL)
+        , _cy44(NULL)
+        , _a4phi(NULL)
+        , _a4sqx(NULL)
+        , _a4sqy(NULL)
+        , _cx06(NULL)
+        , _cy06(NULL)
+        , _cx26(NULL)
+        , _cy26(NULL)
+        , _cx46(NULL)
+        , _cy46(NULL)
+        , _cx66(NULL)
+        , _cy66(NULL)
+        , _c6(NULL)
+        , _c8(NULL)
         , _filter(NULL)
         , _clamp(NULL)
         , _blackOutside(NULL)
@@ -1976,7 +2009,7 @@ DistortionPlugin::getLensDistortionFormat(double time,
             _btmLeft->getValue(rod.x1, rod.y1);
             rod.x2 += rod.x1;
             rod.y2 += rod.y1;
-            *par = _srcClip->getPixelAspectRatio();
+            *par = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
             Coords::toPixelNearest(rod, renderScale, *par, format);
 
             return true;

@@ -767,6 +767,7 @@ presetsFromDir(const string &dir, std::vector<ShadertoyPlugin::Preset>& presets)
                 //printf("%s cannot open\n", filename.c_str());
                 continue;
             }
+            std::fclose(fps);
             presets.push_back( ShadertoyPlugin::Preset(description, filename) );
         }
         std::fclose(fp);

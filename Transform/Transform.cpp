@@ -74,6 +74,7 @@ public:
         , _skewX(0)
         , _skewY(0)
         , _skewOrder(0)
+        , _transformAmount(NULL)
         , _center(0)
         , _interactive(0)
         , _srcClipChanged(0)

@@ -445,7 +445,6 @@ private:
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
     bool _imageShaderUpdateParams; // ask to extract parameters from the shader on next compilation
-    bool _imageShaderUpdateParamsReset; // shouldwe also reset params to default values when updating?
     std::vector<ExtraParameter> _imageShaderExtraParameters; // parameters extracted from the shader
     bool _imageShaderHasMouse; // parameters extracted from the shader
     std::vector<bool> _imageShaderInputEnabled;
