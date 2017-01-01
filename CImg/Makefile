@@ -139,7 +139,8 @@ CXXFLAGS += \
 # commit 24d8d833b2ae937f87d88da299314b9cd4561e63 is CImg 1.7.6
 # commit 02ec481605f4dd68dec9d8c5b7b4bd763ad31cac is CImg 1.7.7
 # commit 572c12d82b2f59ece21be8f52645c38f1dd407e6 is CImg 1.7.8
-CIMGVERSION=572c12d82b2f59ece21be8f52645c38f1dd407e6
+# commit 6cf2f433edd9ef07a9c865282c3fd84cc4e9b327 is CImg 1.7.9
+CIMGVERSION=6cf2f433edd9ef07a9c865282c3fd84cc4e9b327
 
 CImg.h:
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
