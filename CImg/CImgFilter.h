@@ -442,9 +442,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = _srcClip ? _srcClip->getPixelComponents() : ePixelComponentNone;
+        srcPixelComponents = _srcClip ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
         srcPixelComponentCount = _srcClip ? _srcClip->getPixelComponentCount() : 0;
-        srcBitDepth = _srcClip ? _srcClip->getPixelDepth() : eBitDepthNone;
+        srcBitDepth = _srcClip ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
         srcRowBytes = 0;
     } else {
         assert(_srcClip);
