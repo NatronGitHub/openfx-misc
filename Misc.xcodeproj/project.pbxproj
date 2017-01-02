@@ -3190,6 +3190,7 @@
 		1E69CA031A2B2F350099D609 /* Saturation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Saturation.cpp; sourceTree = "<group>"; };
 		1E69CA091A2B2F4B0099D609 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E69CA0A1A2B2F4B0099D609 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E6AFCF91E1AA940006FB53B /* tex21.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tex21.png; sourceTree = "<group>"; };
 		1E6B4DB71C43C0F3004478D5 /* TestOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestOpenGL.h; sourceTree = "<group>"; };
 		1E6B4DB81C43D9A5004478D5 /* CImgFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgFilter.h; sourceTree = "<group>"; };
 		1E6B4DB91C43D9B4004478D5 /* CImgOperator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgOperator.h; sourceTree = "<group>"; };
@@ -5011,6 +5012,7 @@
 				1E738BA21DF426A1000F582E /* tex18.jpg */,
 				1E738BA31DF426A1000F582E /* tex19.png */,
 				1E738BA41DF426A1000F582E /* tex20.jpg */,
+				1E6AFCF91E1AA940006FB53B /* tex21.png */,
 				1E738BA51DF426A1000F582E /* vid00.ogv */,
 				1E738BA61DF426A1000F582E /* vid01.webm */,
 				1E738BA71DF426A1000F582E /* vid02.ogv */,

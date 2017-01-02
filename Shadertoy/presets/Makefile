@@ -19,6 +19,7 @@ tex17.jpg \
 tex18.jpg \
 tex19.png \
 tex20.jpg \
+tex21.png \
 vid00.ogv \
 vid01.webm \
 vid02.ogv \

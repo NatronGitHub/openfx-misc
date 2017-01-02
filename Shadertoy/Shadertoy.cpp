@@ -20,7 +20,7 @@
  * OFX Shadertoy plugin.
  *
  * References:
- * https://www.shadertoy.com (v0.8.3 as of march 22, 2016)
+ * https://www.shadertoy.com (v0.8.7 https://www.shadertoy.com/changelog)
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
  *
  * TODO:
@@ -67,7 +67,7 @@ using std::string;
 #define kPluginDescription \
     "Apply a Shadertoy fragment shader. See http://www.shadertoy.com\n" \
     "\n" \
-    "This plugin implements Shadertoy 0.8.5, but multipass shaders and sound are not supported.\n" \
+    "This plugin implements Shadertoy 0.8.7, but multipass shaders and sound are not supported.\n" \
     "\n" \
     "This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
     "For the complete specification please have a look at GLSL ES specification " \
@@ -246,7 +246,7 @@ using std::string;
 #define kPluginDescriptionMarkdown \
     "Apply a [Shadertoy](http://www.shadertoy.com) fragment shader.\n" \
     "\n" \
-    "This plugin implements [Shadertoy 0.8.5](https://www.shadertoy.com/changelog), but multipass shaders and sound are not supported.\n" \
+    "This plugin implements [Shadertoy 0.8.7](https://www.shadertoy.com/changelog), but multipass shaders and sound are not supported.\n" \
     "\n" \
     "This help only covers the parts of GLSL ES that are relevant for Shadertoy. For the complete specification please have a look at [GLSL ES specification](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf)  or pages 3 and 4 of the [OpenGL ES 2.0 quick reference card](https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf).\n" \
     "See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).\n" \
