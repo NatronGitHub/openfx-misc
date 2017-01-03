@@ -25,7 +25,7 @@ $(OBJECTPATH)/ShadertoyRenderGL.o: ShadertoyRenderGL.cpp ShadertoyRender.h Shade
 
 $(OBJECTPATH)/ShadertoyRenderMesa.o: ShadertoyRenderMesa.cpp ShadertoyRender.h Shadertoy.h
 	@mkdir -p $(OBJECTPATH)
-	$(CXX) -c -I$(OSMESA_PATH)/include $(CXXFLAGS) $< -o $@
+	$(AM_V_CXX)$(CXX) -c -I$(OSMESA_PATH)/include $(CXXFLAGS) $< -o $@
 
 presets/tex00.jpg:
 	$(MAKE) -C presets
