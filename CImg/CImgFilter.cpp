@@ -20,10 +20,14 @@
 
 using namespace OFX;
 
-#ifdef HAVE_THREAD_LOCAL
+#if defined(HAVE_THREAD_LOCAL)
 thread_local ImageEffect *tls::gImageEffect = 0;
-
+#elif defined(HAVE_PTHREAD)
+#include <assert.h>
+#include <pthread.h>
+pthread_once_t tls::gImageEffect_once = PTHREAD_ONCE_INIT;
 #endif
+
 
 #define kParamPremultChanged "premultChanged"
 
