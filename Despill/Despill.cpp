@@ -177,6 +177,12 @@ public:
 private:
 };
 
+template<class PIX, int maxValue>
+static float
+sampleToFloat(PIX value)
+{
+    return (maxValue == 1) ? value : (value / (float)maxValue);
+}
 
 template <class PIX, int nComponents, int maxValue, ScreenTypeEnum screen>
 class DespillProcessor
@@ -196,22 +202,29 @@ private:
 
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
+        if (!_dstImg) {
+            return;
+        }
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            assert(dstPix);
+            if (!dstPix) {
+                continue;
+            }
             const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(procWindow.x1, y) : 0);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 double spillmap;
                 if (srcPix) {
-                    tmpPix[0] = (double)srcPix[0] / maxValue;
-                    tmpPix[1] = (double)srcPix[1] / maxValue;
-                    tmpPix[2] = (double)srcPix[2] / maxValue;
+                    tmpPix[0] = sampleToFloat<PIX, maxValue>(srcPix[0]);
+                    tmpPix[1] = sampleToFloat<PIX, maxValue>(srcPix[1]);
+                    tmpPix[2] = sampleToFloat<PIX, maxValue>(srcPix[2]);
                     if (nComponents == 4) {
-                        tmpPix[3] = (double)srcPix[3] / maxValue;
+                        tmpPix[3] = sampleToFloat<PIX, maxValue>(srcPix[3]);
                     } else {
                         tmpPix[3] = 0.;
                     }
