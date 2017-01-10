@@ -1009,9 +1009,9 @@ static ColorTransformPluginFactory<eColorTransformXYZToLab> p23(kPluginXYZToLabI
 // LabToXYZ
 static ColorTransformPluginFactory<eColorTransformLabToXYZ> p24(kPluginLabToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // XYZToxyY
-static ColorTransformPluginFactory<eColorTransformXYZToxyY> p25(kPluginXYZToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformXYZToxyY> p25(kPluginXYZToxyYIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // xyYToXYZ
-static ColorTransformPluginFactory<eColorTransformxyYToXYZ> p26(kPluginLabToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformxyYToXYZ> p26(kPluginxyYToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
