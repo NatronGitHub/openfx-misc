@@ -37,8 +37,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Enlarges the input image by a given amount of black and transparent pixels."
 #define kPluginIdentifier "net.sf.openfx.AdjustRoDPlugin"
+// History:
+// 1.0 initial version
+// 1.1 add boundary param
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -51,6 +54,26 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamAddPixelsLabel "Add Pixels"
 #define kParamAddPixelsHint "How many pixels to add on each side for both dimensions (width/height)"
 
+#define kParamBoundary "boundary"
+#define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
+#define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Nearest (Neumann) conditions should be used. If the image represents gradients or derivatives, Black (Dirichlet) boundary conditions should be used."
+#define kParamBoundaryOptionDirichlet "Black"
+#define kParamBoundaryOptionDirichletHint "Dirichlet boundary condition: pixel values out of the image domain are zero."
+#define kParamBoundaryOptionNeumann "Nearest"
+#define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain."
+#define kParamBoundaryOptionPeriodic "Periodic"
+#define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
+#define kParamBoundaryDefault eBoundaryDirichlet
+#define kParamBoundaryDefaultLaplacian eBoundaryNeumann
+#define kParamBoundaryDefaultBloom eBoundaryNeumann
+#define kParamBoundaryDefaultEdgeExtend eBoundaryNeumann
+
+enum BoundaryEnum
+{
+    eBoundaryDirichlet = 0,
+    eBoundaryNeumann,
+    //eBoundaryPeriodic,
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -76,7 +99,8 @@ public:
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
         _size = fetchDouble2DParam(kParamAddPixels);
-        assert(_size);
+        _boundary  = fetchChoiceParam(kParamBoundary);
+        assert(_size && _boundary);
     }
 
 private:
@@ -99,6 +123,7 @@ private:
     Clip *_dstClip;
     Clip *_srcClip;
     Double2DParam* _size;
+    ChoiceParam* _boundary;
 };
 
 
@@ -113,7 +138,8 @@ void
 AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
                               const RenderArguments &args)
 {
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    const double time = args.time;
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -138,7 +164,7 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
 
     // set the images
     processor.setDstImg( dst.get() );
-    processor.setSrcImg( src.get() );
+    processor.setSrcImg( src.get(), _boundary->getValueAtTime(time) );
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);
@@ -368,6 +394,22 @@ AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDimensionLabels("w", "h");
         param->setIncrement(1.);
         param->setDigits(0);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
+        param->setLabel(kParamBoundaryLabel);
+        param->setHint(kParamBoundaryHint);
+        assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
+        param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
+        assert(param->getNOptions() == eBoundaryNeumann && param->getNOptions() == 1);
+        param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
+        //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
+        //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
+        param->setDefault( (int)eBoundaryNeumann ); // aka zero
         if (page) {
             page->addChild(*param);
         }
