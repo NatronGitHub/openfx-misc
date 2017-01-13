@@ -302,7 +302,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "- The mathematical parser understands the following set of functions, operators and variables:\n" \
     "    + Usual operators: `||` (logical or), `&&` (logical and), `|` (bitwise or), `&` (bitwise and), `!=`, `==`, `<=`, `>=`, `<`, `>`, `<<` (left bitwise shift), `>>` (right bitwise shift), `-`, `+`, `*`, `/`, `%` (modulo), `^` (power), `!` (logical not), `~` (bitwise not), `++`, `--`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `>>=`, `<<=` (in-place operators).\n" \
     "    + Usual functions: `abs()`, `acos()`, `arg()`, `argmax()`, `argmin()`, `asin()`, `atan()`, `atan2()`, `cbrt()`, `cos()`, `cosh()`, `cut()`, `exp()`, `fact()`, `fibo()`, `gauss()`, `hypoth()`, `int()`, `isval()`, `isnan()`, `isinf()`, `isint()`, `isbool()`, `isfile()`, `isdir()`, `isin()`, `kth()`, `log()`, `log2()`, `log10()`, `max()`, `mean()`, `med()`, `min()`, `narg()`, `prod()`, `rol()` (left bit rotation), `ror()` (right bit rotation), `round()`, `sign()`, `sin()`, `sinc()`, `sinh()`, `sqrt()`, `std()`, `sum()`, `tan()`, `tanh()`, `variance()`.\n" \
-    "        * `atan2(x,y)` is the version of `atan()` with two arguments `y` and `x` (as in C/C\+\+).\n" \
+    "        * `atan2(x,y)` is the version of `atan()` with two arguments `y` and `x` (as in C/C\\+\\+).\n" \
     "        * `hypoth(x,y)` computes the square root of the sum of the squares of x and y.\n" \
     "        * `permut(k,n,with_order)` computes the number of permutations of k objects from a set of k objects.\n" \
     "        * `gauss(x,_sigma)` returns `exp(-x^2/(2*s^2))/sqrt(2*pi*sigma^2)`.\n" \

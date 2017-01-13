@@ -17,7 +17,7 @@ CImg is a free, open-source library distributed under the CeCILL-C (close to the
 - The mathematical parser understands the following set of functions, operators and variables:
     + Usual operators: `||` (logical or), `&&` (logical and), `|` (bitwise or), `&` (bitwise and), `!=`, `==`, `<=`, `>=`, `<`, `>`, `<<` (left bitwise shift), `>>` (right bitwise shift), `-`, `+`, `*`, `/`, `%` (modulo), `^` (power), `!` (logical not), `~` (bitwise not), `++`, `--`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `>>=`, `<<=` (in-place operators).
     + Usual functions: `abs()`, `acos()`, `arg()`, `argmax()`, `argmin()`, `asin()`, `atan()`, `atan2()`, `cbrt()`, `cos()`, `cosh()`, `cut()`, `exp()`, `fact()`, `fibo()`, `gauss()`, `hypoth()`, `int()`, `isval()`, `isnan()`, `isinf()`, `isint()`, `isbool()`, `isfile()`, `isdir()`, `isin()`, `kth()`, `log()`, `log2()`, `log10()`, `max()`, `mean()`, `med()`, `min()`, `narg()`, `prod()`, `rol()` (left bit rotation), `ror()` (right bit rotation), `round()`, `sign()`, `sin()`, `sinc()`, `sinh()`, `sqrt()`, `std()`, `sum()`, `tan()`, `tanh()`, `variance()`.
-        * `atan2(x,y)` is the version of `atan()` with two arguments `y` and `x` (as in C/C\+\+).
+        * `atan2(x,y)` is the version of `atan()` with two arguments `y` and `x` (as in C/C\\+\\+).
         * `hypoth(x,y)` computes the square root of the sum of the squares of x and y.
         * `permut(k,n,with_order)` computes the number of permutations of k objects from a set of k objects.
         * `gauss(x,_sigma)` returns `exp(-x^2/(2*s^2))/sqrt(2*pi*sigma^2)`.
