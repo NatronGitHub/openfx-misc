@@ -51,6 +51,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Input A is first merged with B (or with a black and transparent background if B is not connected), then A2, if connected, is merged with the intermediary result, then A3, etc.\n\n" \
     "A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "\n"
+#define kPluginDescriptionStartRoto \
+    "Pixel-by-pixel merge operation between two inputs using and external alpha component for input A.\n" \
+    "All channels from input A arge merged with those from B, using RotoMask as the alpha component for input A: the alpha channel from A is thus merged onto the alpha channel from B using the RotoMask as the alpha value (\"a\" in the formulas).\n" \
+    "This may be useful, for example, to \"paint\" alpha values from A onto the alpha channel of B using a given operation with an external alpha mask (which may be opaque even where the alpha channel of A is zero).\n\n" \
+    "A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
+    "\n"
 #define kPluginDescriptionMidRGB \
     "Note that if an input with only RGB components is connected to A or B, its alpha channel " \
     "is considered to be transparent (zero) by default, and the \"A\" checkbox for the given " \
@@ -73,6 +79,22 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "- \"Primacy of the B Feed\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Primacy_of_the_B_Feed\n" \
     "- grain-extract and grain-merge are described in http://docs.gimp.org/en/gimp-concepts-layer-modes.html"
 
+// merge plugin // default merge function
+enum MergePluginEnum
+{
+    eMergePluginMerge, // eMergeOver
+    eMergePluginPlus, // eMergePlus
+    eMergePluginMatte, // eMergeMatte
+    eMergePluginMultiply, // eMergeMultiply
+    eMergePluginIn, // eMergeIn
+    eMergePluginOut, // eMergeOut
+    eMergePluginScreen, // eMergeScreen
+    eMergePluginMax, // eMergeMax
+    eMergePluginMin, // eMergeMin
+    eMergePluginAbsMinus, // eMergeDifference
+    eMergePluginRoto, // eMergeOver
+};
+
 #define kPluginGroupingSub "Merge/Merges"
 
 #define kPluginNamePlus "PlusOFX"
@@ -84,6 +106,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginNameMax "MaxOFX"
 #define kPluginNameMin "MinOFX"
 #define kPluginNameAbsminus "AbsminusOFX"
+#define kPluginNameRoto "RotoMerge"
 
 #define kPluginIdentifier "net.sf.openfx.MergePlugin"
 #define kPluginIdentifierSub "net.sf.openfx.Merge"
@@ -186,8 +209,43 @@ enum BBoxEnum
 #define kClipAHint "The image sequence to merge with input B."
 #define kClipB "B"
 #define kClipBHint "The main input. This input is passed through when the merge node is disabled."
+#define kClipRotoMask "RotoMask"
+#define kClipRotoMaskHint "A roto mask, which is used as the alpha channel in the merge operations."
 
 #define kMaximumAInputs 64
+
+using namespace MergeImages2D;
+
+static
+MergingFunctionEnum
+getDefaultOperation(MergePluginEnum e)
+{
+    switch(e) {
+        case eMergePluginMerge:
+            return eMergeOver;
+        case eMergePluginPlus:
+            return eMergePlus;
+        case eMergePluginMatte:
+            return eMergeMatte;
+        case eMergePluginMultiply:
+            return eMergeMultiply;
+        case eMergePluginIn:
+            return eMergeIn;
+        case eMergePluginOut:
+            return eMergeOut;
+        case eMergePluginScreen:
+            return eMergeScreen;
+        case eMergePluginMax:
+            return eMergeMax;
+        case eMergePluginMin:
+            return eMergeMin;
+        case eMergePluginAbsMinus:
+            return eMergeDifference;
+        case eMergePluginRoto:
+            return eMergeOver;
+    }
+    return eMergeOver;
+}
 
 static
 std::string
@@ -203,8 +261,6 @@ unsignedToString(unsigned i)
 
     return nb;
 }
-
-using namespace MergeImages2D;
 
 /*
    For explanations on why we use bitset instead of vector<bool>, see:
@@ -227,6 +283,7 @@ protected:
     const Image *_srcImgA;
     const Image *_srcImgB;
     const Image *_maskImg;
+    const Image *_rotoMaskImg;
     std::vector<const Image*> _optionalAImages;
     bool _doMasking;
     bool _alphaMasking;
@@ -243,6 +300,7 @@ public:
         , _srcImgA(0)
         , _srcImgB(0)
         , _maskImg(0)
+        , _rotoMaskImg(0)
         , _doMasking(false)
         , _alphaMasking(false)
         , _mix(1.)
@@ -264,6 +322,8 @@ public:
 
     void setMaskImg(const Image *v,
                     bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+
+    void setRotoMaskImg(const Image *v) { _rotoMaskImg = v; }
 
     void doMasking(bool v) {_doMasking = v; }
 
@@ -337,7 +397,19 @@ private:
                         tmpB[3] = (_bChannels[3] && srcPixB) ? 1. : 0.;
                     }
                     // work in float: clamping is done when mixing
-                    mergePixel<f, float, 4, 1>(_alphaMasking, tmpA, tmpB, tmpPix);
+                    float a;
+                    if (_rotoMaskImg) {
+                        const PIX *rotoMaskPix = (const PIX *)_rotoMaskImg->getPixelAddress(x, y);
+                        if (rotoMaskPix) {
+                            a = *rotoMaskPix;
+                        } else {
+                            a = 0.;
+                        }
+                    } else {
+                        a = tmpA[3];
+                    }
+                    float b = tmpB[3];
+                    mergePixel<f, float, 4, 1>(_alphaMasking, tmpA, a, tmpB, b, tmpPix);
                 } else {
                     // everything is black and transparent
                     for (int c = 0; c < 4; ++c) {
@@ -375,7 +447,9 @@ private:
                         }
 
                         // work in float: clamping is done when mixing
-                        mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, tmpPix, tmpPix);
+                        float a = tmpA[3];
+                        float b = tmpPix[3];
+                        mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
 
 #                     ifdef DEBUG
                         // check for NaN
@@ -415,12 +489,15 @@ class MergePlugin
 public:
     /** @brief ctor */
     MergePlugin(OfxImageEffectHandle handle,
+                MergePluginEnum plugin,
                 bool numerousInputs)
         : ImageEffect(handle)
+        , _plugin(plugin)
         , _dstClip(0)
         , _srcClipA(0)
         , _srcClipB(0)
         , _maskClip(0)
+        , _rotoMaskClip(0)
         , _optionalASrcClips(0)
         , _aChannelAChanged(0)
         , _bChannelAChanged(0)
@@ -443,6 +520,11 @@ public:
         assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+
+        if (plugin == eMergePluginRoto) {
+            _rotoMaskClip = fetchClip(kClipRotoMask);
+            assert(!_rotoMaskClip || !_rotoMaskClip->isConnected() || _rotoMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        }
         _operation = fetchChoiceParam(kParamOperation);
         _operationString = fetchStringParam(kNatronOfxParamStringSublabelName);
         _bbox = fetchChoiceParam(kParamBBox);
@@ -499,11 +581,13 @@ private:
     template <class PIX, int nComponents, int maxValue>
     void renderForBitDepth(const RenderArguments &args);
 
+    MergePluginEnum _plugin;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClipA;
     Clip *_srcClipB;
     Clip *_maskClip;
+    Clip *_rotoMaskClip;
     std::vector<Clip *> _optionalASrcClips;
     ChoiceParam *_operation;
     StringParam *_operationString;
@@ -717,6 +801,9 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         // Set it in the processor
         processor.setMaskImg(mask.get(), maskInvert);
     }
+
+    std::auto_ptr<const Image> rotoMask(_rotoMaskClip ? _rotoMaskClip->fetchImage(time) : 0);
+    processor.setRotoMaskImg(rotoMask.get());
 
     bool alphaMasking = _alphaMasking->getValueAtTime(time);
     double mix = _mix->getValueAtTime(time);
@@ -1055,7 +1142,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
 } // MergePlugin::isIdentity
 
 //mDeclarePluginFactory(MergePluginFactory, {}, {});
-template<MergingFunctionEnum plugin>
+template<MergePluginEnum plugin>
 class MergePluginFactory
     : public PluginFactoryHelper<MergePluginFactory<plugin> >
 {
@@ -1070,55 +1157,59 @@ public:
     virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
 };
 
-template<MergingFunctionEnum plugin>
+template<MergePluginEnum plugin>
 void
 MergePluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
 
     switch (plugin) {
-    case eMergeOver:
+    case eMergePluginMerge:
         desc.setLabel(kPluginName);
         desc.setPluginGrouping(kPluginGrouping);
         break;
-    case eMergePlus:
+    case eMergePluginPlus:
         desc.setLabel(kPluginNamePlus);
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
-    case eMergeMatte:
+    case eMergePluginMatte:
         desc.setLabel(kPluginNameMatte);
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
-    case eMergeMultiply:
+    case eMergePluginMultiply:
         desc.setLabel(kPluginNameMultiply);
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
-    case eMergeIn:
+    case eMergePluginIn:
         desc.setLabel(kPluginNameIn);
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
-    case eMergeOut:
+    case eMergePluginOut:
         desc.setLabel(kPluginNameOut);
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
-    case eMergeScreen:
+    case eMergePluginScreen:
         desc.setLabel(kPluginNameScreen);
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
-    case eMergeMax:
+    case eMergePluginMax:
         desc.setLabel(kPluginNameMax);
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
-    case eMergeMin:
+    case eMergePluginMin:
         desc.setLabel(kPluginNameMin);
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
-    case eMergeDifference:
+    case eMergePluginAbsMinus:
         desc.setLabel(kPluginNameAbsminus);
         desc.setPluginGrouping(kPluginGroupingSub);
         break;
+    case eMergePluginRoto:
+        desc.setLabel(kPluginNameRoto);
+        desc.setPluginGrouping(kPluginGrouping);
+        break;
     }
-    std::string help = kPluginDescriptionStart;
+    std::string help = (plugin == eMergePluginRoto ? kPluginDescriptionStartRoto : kPluginDescriptionStart);
     if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
         // Merge has a special way of handling RGB inputs, which are transparent by default
         help += kPluginDescriptionMidRGB;
@@ -1222,14 +1313,15 @@ addMergeOption(ChoiceParamDescriptor* param,
     }
 }
 
-template<MergingFunctionEnum plugin>
+template<MergePluginEnum plugin>
 void
 MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
                                               ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (getImageEffectHostDescription()->isNatron &&
+    bool numerousInputs =  (plugin != eMergePluginRoto &&
+                            getImageEffectHostDescription()->isNatron &&
                             getImageEffectHostDescription()->versionMajor >= 2);
     ClipDescriptor* srcClipB = desc.defineClip(kClipB);
 
@@ -1267,6 +1359,15 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     maskClip->setSupportsTiles(kSupportsTiles);
     maskClip->setIsMask(true);
 
+    if (plugin == eMergePluginRoto) {
+        ClipDescriptor* rotoMaskClip = desc.defineClip(kClipRotoMask);
+        rotoMaskClip->addSupportedComponent(ePixelComponentAlpha);
+        rotoMaskClip->setTemporalClipAccess(false);
+        rotoMaskClip->setOptional(true);
+        rotoMaskClip->setSupportsTiles(kSupportsTiles);
+        rotoMaskClip->setIsMask(true);
+    }
+
     if (numerousInputs) {
         for (int i = 2; i <= kMaximumAInputs; ++i) {
             ClipDescriptor* optionalSrcClip = desc.defineClip( std::string(kClipA) + unsignedToString(i) );
@@ -1302,7 +1403,7 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
         param->setIsSecretAndDisabled(true); // always secret
         param->setIsPersistent(true);
         param->setEvaluateOnChange(false);
-        param->setDefault( getOperationString(plugin) );
+        param->setDefault( getOperationString( getDefaultOperation(plugin) ) );
         if (page) {
             page->addChild(*param);
         }
@@ -1355,7 +1456,7 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
         addMergeOption(param, eMergeStencil, cascading);
         addMergeOption(param, eMergeUnder, cascading);
         addMergeOption(param, eMergeXOR, cascading);
-        param->setDefault(plugin);
+        param->setDefault( getDefaultOperation(plugin) );
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -1581,7 +1682,7 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 } // >::describeInContext
 
-template<MergingFunctionEnum plugin>
+template<MergePluginEnum plugin>
 ImageEffect*
 MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
                                            ContextEnum /*context*/)
@@ -1589,22 +1690,25 @@ MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
     assert(unsignedToString(12345) == "12345");
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (getImageEffectHostDescription()->isNatron &&
+    bool numerousInputs =  (plugin != eMergePluginRoto &&
+                            getImageEffectHostDescription()->isNatron &&
                             getImageEffectHostDescription()->versionMajor >= 2);
 
-    return new MergePlugin(handle, numerousInputs);
+    return new MergePlugin(handle, plugin, numerousInputs);
 }
 
-static MergePluginFactory<eMergeOver>        p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePlus>        p2(kPluginIdentifierSub "Plus", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeMatte>       p3(kPluginIdentifierSub "Matte", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeMultiply>    p4(kPluginIdentifierSub "Multiply", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeIn>          p5(kPluginIdentifierSub "In", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeOut>         p6(kPluginIdentifierSub "Out", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeScreen>      p7(kPluginIdentifierSub "Screen", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeMax>         p8(kPluginIdentifierSub "Max", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeMin>         p9(kPluginIdentifierSub "Min", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeDifference> p10(kPluginIdentifierSub "Difference", kPluginVersionMajor, kPluginVersionMinor);
+
+static MergePluginFactory<eMergePluginMerge>        p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginPlus>        p2(kPluginIdentifierSub "Plus", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginMatte>       p3(kPluginIdentifierSub "Matte", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginMultiply>    p4(kPluginIdentifierSub "Multiply", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginIn>          p5(kPluginIdentifierSub "In", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginOut>         p6(kPluginIdentifierSub "Out", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginScreen>      p7(kPluginIdentifierSub "Screen", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginMax>         p8(kPluginIdentifierSub "Max", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginMin>         p9(kPluginIdentifierSub "Min", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginAbsMinus>   p10(kPluginIdentifierSub "Difference", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePluginRoto>       p11(kPluginIdentifierSub "Roto", kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
@@ -1615,5 +1719,6 @@ mRegisterPluginFactoryInstance(p7)
 mRegisterPluginFactoryInstance(p8)
 mRegisterPluginFactoryInstance(p9)
 mRegisterPluginFactoryInstance(p10)
+mRegisterPluginFactoryInstance(p11)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
