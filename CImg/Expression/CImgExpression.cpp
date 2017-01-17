@@ -306,14 +306,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "        * `hypoth(x,y)` computes the square root of the sum of the squares of x and y.\n" \
     "        * `permut(k,n,with_order)` computes the number of permutations of k objects from a set of k objects.\n" \
     "        * `gauss(x,_sigma)` returns `exp(-x^2/(2*s^2))/sqrt(2*pi*sigma^2)`.\n" \
-    "        * `cut(value,min,max)` returns value if it is in range \[min,max\], or min or max otherwise.\n" \
+    "        * `cut(value,min,max)` returns value if it is in range \\[min,max\\], or min or max otherwise.\n" \
     "        * `narg(a_1,...,a_N)` returns the number of specified arguments (here, N).\n" \
     "        * `arg(i,a_1,..,a_N)` returns the ith argument `a_i`.\n" \
     "        * `isval()`, `isnan()`, `isinf()`, `isint()`, `isbool()` test the type of the given number or expression, and return 0 (false) or 1 (true).\n" \
     "        * `isfile()` (resp. `isdir()`) returns 0 (false) or 1 (true) whether its argument is a valid path to a file (resp. to a directory) or not.\n" \
     "        * `isin(v,a_1,...,a_n)` returns 0 (false) or 1 (true) whether the first value `v` appears in the set of other values `a_i`.\n" \
     "        * `argmin()`, `argmax()`, `kth()`, `max()`, `mean()`, `med()`, `min()`, `std()`, `sum()` and `variance()` can be called with an arbitrary number of scalar/vector arguments.\n" \
-    "        * `round(value,rounding_value,direction)` returns a rounded value. `direction` can be \{ -1=to-lowest \| 0=to-nearest \| 1=to-highest \}.\n" \
+    "        * `round(value,rounding_value,direction)` returns a rounded value. `direction` can be \\{ -1=to-lowest \\| 0=to-nearest \\| 1=to-highest \\}.\n" \
     "    + Variable names below are pre-defined. They can be overrided.\n" \
     "        * `l`: length of the associated list of images, if any (0 otherwise).\n" \
     "        * `w`: width of the associated image, if any (0 otherwise).\n" \
@@ -325,7 +325,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "        * `whd`: shortcut for width x height x depth.\n" \
     "        * `whds`: shortcut for width x height x depth x spectrum (i.e. total number of pixel values).\n" \
     "        * `i`: current processed pixel value (i.e. value located at (x,y,z,c)) in the associated image, if any (0 otherwise).\n" \
-    "        * `iN`: Nth channel value of current processed pixel (i.e. value located at (x,y,z,N)) in the associated image, if any (0 otherwise). `N` must be an integer in range \[0,7\].\n" \
+    "        * `iN`: Nth channel value of current processed pixel (i.e. value located at (x,y,z,N)) in the associated image, if any (0 otherwise). `N` must be an integer in range \\[0,7\\].\n" \
     "        * `R`,`G`,`B` and `A` are equivalent to `i0`, `i1`, `i2` and `i3` respectively.\n" \
     "        * `im`,`iM`,`ia`,`iv`,`is`,`ip`,`ic`: Respectively the minimum, maximum, average values, variance, sum, product and median value of the associated image, if any (0 otherwise).\n" \
     "        * `xm`,`ym`,`zm`,`cm`: The pixel coordinates of the minimum value in the associated image, if any (0 otherwise).\n" \
@@ -336,12 +336,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "        * `z`: current processed slice of the associated image, if any (0 otherwise).\n" \
     "        * `c`: current processed channel of the associated image, if any (0 otherwise).\n" \
     "        * `t`: thread id when an expression is evaluated with multiple threads (0 means `master thread`).\n" \
-    "        * `T`: current time \[OpenFX-only\].\n" \
-    "        * `K`: render scale (1 means full scale, 0.5 means half scale) \[OpenFX-only\].\n" \
+    "        * `T`: current time \\[OpenFX-only\\].\n" \
+    "        * `K`: render scale (1 means full scale, 0.5 means half scale) \\[OpenFX-only\\].\n" \
     "        * `e`: value of e, i.e. 2.71828..\n" \
     "        * `pi`: value of pi, i.e. 3.1415926..\n" \
-    "        * `u`: a random value between \[0,1\], following a uniform distribution.\n" \
-    "        * `g`: a random value, following a gaussian distribution of variance 1 (roughly in \[-6,6\]).\n" \
+    "        * `u`: a random value between \\[0,1\\], following a uniform distribution.\n" \
+    "        * `g`: a random value, following a gaussian distribution of variance 1 (roughly in \\[-6,6\\]).\n" \
     "        * `interpolation`: value of the default interpolation mode used when reading pixel values with the pixel access operators (i.e. when the interpolation argument is not explicitly specified, see below for more details on pixel access operators). Its initial default value is 0.\n" \
     "        * `boundary`: value of the default boundary conditions used when reading pixel values with the pixel access operators (i.e. when the boundary condition argument is not explicitly specified, see below for more details on pixel access operators). Its initial default value is 0.\n" \
     "    + Vector calculus: Most operators are also able to work with vector-valued elements.\n" \
@@ -349,10 +349,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "        * `vectorN(a0,a1,,..,)` does the same, with the ak being repeated periodically.\n" \
     "        * In both expressions, the ak can be vectors themselves, to be concatenated into a single vector.\n" \
     "        * The scalar element ak of a vector X is retrieved by `X[k]`.\n" \
-    "        * The sub-vector \[ ap..aq \] of a vector X is retrieved by `X[p,q]`.\n" \
+    "        * The sub-vector \\[ ap..aq \\] of a vector X is retrieved by `X[p,q]`.\n" \
     "        * Equality/inequality comparisons between two vectors is possible with the operators `==` and `!=`.\n" \
     "        * Some vector-specific functions can be used on vector values: `cross(X,Y)` (cross product), `dot(X,Y)` (dot product), `size(X)` (vector dimension), `sort(X,_is_increasing,_chunk_size)` (sorting values), `reverse(A)` (reverse order of components) and `same(A,B,_nb_vals,_is_case_sensitive)` (vector equality test).\n" \
-    "        * Function `resize(A,size,_interpolation)` returns a resized version of vector `A` with specified interpolation mode. `interpolation`  can be \{ -1=none (memory content) \| 0=none \| 1=nearest \| 2=average \| 3=linear \| 4=grid \| 5=bicubic \| 6=lanczos \}.\n" \
+    "        * Function `resize(A,size,_interpolation)` returns a resized version of vector `A` with specified interpolation mode. `interpolation`  can be \\{ -1=none (memory content) \\| 0=none \\| 1=nearest \\| 2=average \\| 3=linear \\| 4=grid \\| 5=bicubic \\| 6=lanczos \\}.\n" \
     "        * Function `find(A,B,_is_forward,_starting_indice)` returns the index where sub-vector B appears in vector A, (or -1 if B is not found in A). Argument A can be also replaced by an image indice #ind.\n" \
     "        * A 2-dimensional vector may be seen as a complex number and used in those particular functions/operators: `**` (complex multiplication), `//` (complex division), `^^` (complex exponentiation), `**=` (complex self-multiplication), `//=` (complex self-division), `^^=` (complex self-exponentiation), `cabs()` (complex modulus), `carg()` (complex argument), `cconj()` (complex conjugate), `cexp()` (complex exponential) and `clog()` (complex logarithm).\n" \
     "        * A MN-dimensional vector may be seen as a M x N matrix and used in those particular functions/operators: `**` (matrix-vector multiplication), `det(A)` (determinant), `diag(V)` (diagonal matrix from vector), `eig(A)` (eigenvalues/eigenvectors), `eye(n)` (n x n identity matrix), `inv(A)` (matrix inverse), `mul(A,B,_nb_colsB)` (matrix-matrix multiplication), `rot(x,y,z,angle)` (3d rotation matrix), `rot(angle)` (2d rotation matrix), `solve(A,B,_nb_colsB)` (least-square solver of linear system A.X = B), `trace(A)` (matrix trace) and `transp(A,nb_colsA)` (matrix transpose). Argument `nb_colsB` may be omitted if equal to 1.\n" \
@@ -368,20 +368,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "        * `=`: variable assignment. Variables in mathematical parser can only refer to numerical values. Variable names are case-sensitive. Use this operator in conjunction with `;` to define more complex evaluable expressions, such as `t=cos(x);3*t^2+2*t+1`. These variables remain local to the mathematical parser and cannot be accessed outside the evaluated expression.\n" \
     "    + The following specific functions are also defined:\n" \
     "        * `normP(u1,...,un)` computes the LP-norm of the specified vector (P being an unsigned integer or `inf`).\n" \
-    "        * `u(max)` or `u(min,max)`: return a random value between \[0,max\] or \[min,max\], following a uniform distribution.\n" \
-    "        * `i(_a,_b,_c,_d,_interpolation_type,_boundary_conditions)`: return the value of the pixel located at position (a,b,c,d) in the associated image, if any (0 otherwise). `interpolation_type` can be \{ 0=nearest neighbor \| other=linear \}. `boundary_conditions` can be \{ 0=dirichlet \| 1=neumann \| 2=periodic \}. Omitted coordinates are replaced by their default values which are respectively x, y, z, c, interpolation and boundary. For instance expression `0.5*(i(x+1)-i(x-1))` will estimate the X-derivative of an image with a classical finite difference scheme.\n" \
+    "        * `u(max)` or `u(min,max)`: return a random value between \\[0,max\\] or \\[min,max\\], following a uniform distribution.\n" \
+    "        * `i(_a,_b,_c,_d,_interpolation_type,_boundary_conditions)`: return the value of the pixel located at position (a,b,c,d) in the associated image, if any (0 otherwise). `interpolation_type` can be \\{ 0=nearest neighbor \\| other=linear \\}. `boundary_conditions` can be \\{ 0=dirichlet \\| 1=neumann \\| 2=periodic \\}. Omitted coordinates are replaced by their default values which are respectively x, y, z, c, interpolation and boundary. For instance expression `0.5*(i(x+1)-i(x-1))` will estimate the X-derivative of an image with a classical finite difference scheme.\n" \
     "        * `j(_dx,_dy,_dz,_dc,_interpolation_type,_boundary_conditions)` does the same for the pixel located at position (x+dx,y+dy,z+dz,c+dc) (pixel access relative to the current coordinates).\n" \
     "        * `i[offset,_boundary_conditions]` returns the value of the pixel located at specified `offset` in the associated image buffer (or 0 if offset is out-of-bounds).\n" \
     "        * `j[offset,_boundary_conditions]` does the same for an offset relative to the current pixel (x,y,z,c).\n" \
     "        * `i(#ind,_x,_y,_z,_c,_interpolation,_boundary)`, `j(#ind,_dx,_dy,_dz,_dc,_interpolation,_boundary)`, `i[#ind,offset,_boundary]` and `i[offset,_boundary]` are similar expressions used to access pixel values for any numbered image `[ind]` of the list.\n" \
-    "        * `I/J[offset,_boundary_conditions]` and `I/J(#ind,_x,_y,_z,_interpolation,_boundary)` do the same as `i/j[offset,_boundary_conditions]` and `i/j(#ind,_x,_y,_z,_c,_interpolation,_boundary)` but return a vector instead of a scalar (e.g. a vector \[ R,G,B \] for a pixel at (a,b,c) in a color image).\n" \
+    "        * `I/J[offset,_boundary_conditions]` and `I/J(#ind,_x,_y,_z,_interpolation,_boundary)` do the same as `i/j[offset,_boundary_conditions]` and `i/j(#ind,_x,_y,_z,_c,_interpolation,_boundary)` but return a vector instead of a scalar (e.g. a vector \\[ R,G,B \\] for a pixel at (a,b,c) in a color image).\n" \
     "        * `crop(_#ind,_x,_y,_z,_c,_dx,_dy,_dz,_dc,_boundary)` returns a vector whose values come from the cropped region of image `[ind]` (or from default image selected if `ind` is not specified). Cropped region starts from point (x,y,z,c) and has a size of dx x dy x dz x dc. Arguments for coordinates and sizes can be omitted if they are not ambiguous (e.g. `crop(#ind,x,y,dx,dy)` is a valid invokation of this function).\n" \
     "        * `draw(_#ind,S,x,y,z,c,dx,_dy,_dz,_dc,_opacity,_M,_max_M)` draws a sprite S in image `[ind]` (or in default image selected if `ind` is not specified) at specified coordinates (x,y,z,c). The size of the sprite dx x dy x dz x dc must be specified. You can also specify a corresponding opacity mask M if its size matches S.\n" \
     "        * `if(condition,expr_then,_expr_else)`: return value of `expr_then` or `expr_else`, depending on the value of `condition` (0=false, other=true). `expr_else` can be omitted in which case 0 is returned if the condition does not hold. Using the ternary operator `condition?expr_then[:expr_else]` gives an equivalent expression. For instance, G'MIC expressions `if(x%10==0,255,i)` and `x%10?i:255` both draw blank vertical lines on every 10th column of an image.\n" \
     "        * `dowhile(expression,_condition)` repeats the evaluation of `expression` until `condition` vanishes (or until `expression` vanishes if no `condition` is specified). For instance, the expression: `if(N<2,N,n=N-1;F0=0;F1=1;dowhile(F2=F0+F1;F0=F1;F1=F2,n=n-1))` returns the Nth value of the Fibonacci sequence, for N>=0 (e.g., 46368 for N=24). `dowhile(expression,condition)` always evaluates the specified expression at least once, then check for the nullity condition. When done, it returns the last value of `expression`.\n" \
     "        * `for(init,condition,_procedure,body)` first evaluates the expression `init`, then iteratively evaluates `body` (followed by `procedure` if specified) while `condition` is verified (i.e. not zero). It may happen that no iteration is done, in which case the function returns 0. Otherwise, it returns the last value of `body`. For instance, the expression: `if(N<2,N,for(n=N;F0=0;F1=1,n=n-1,F2=F0+F1;F0=F1;F1=F2))` returns the Nth value of the Fibonacci sequence, for N>=0 (e.g., 46368 for N=24).\n" \
     "        * `whiledo(condition,expression)` is exactly the same as `for(init,condition,expression)` without the specification of an initializing expression.\n" \
-    "        * `date(attr,path)` returns the date attribute for the given `path` (file or directory), with `attr` being \{ 0=year \| 1=month \| 2=day \| 3=day of week \| 4=hour \| 5=minute \| 6=second \}.\n" \
+    "        * `date(attr,path)` returns the date attribute for the given `path` (file or directory), with `attr` being \\{ 0=year \\| 1=month \\| 2=day \\| 3=day of week \\| 4=hour \\| 5=minute \\| 6=second \\}.\n" \
     "        * `date(_attr)` returns the specified attribute for the current (locale) date.\n" \
     "        * `print(expression)` prints the value of the specified expression on the console (and returns its value).\n" \
     "        * `debug(expression)` prints detailed debug information about the sequence of operations done by the math parser to evaluate the expression (and returns its value).\n" \
