@@ -2314,8 +2314,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         vScale *= args.renderScale.y;
     }
     OfxRectI format = {0, 1, 0, 1};
-    double par = 1.;
-    getLensDistortionFormat(time, args.renderScale, &format, &par);
+    if (_plugin == eDistortionPluginLensDistortion) {
+        double par = 1.;
+        getLensDistortionFormat(time, args.renderScale, &format, &par);
+    }
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
     std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
