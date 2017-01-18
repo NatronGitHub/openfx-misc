@@ -1701,10 +1701,10 @@ DistortionPlugin::getDistortionModel(const OfxRectI& format, const OfxPointD& re
         break;
     }
     case eDistortionModelPFBarrel: {
-        double par = 1.;
-        if (_srcClip) {
-            par = _srcClip->getPixelAspectRatio();
-        }
+        //double par = 1.;
+        //if (_srcClip) {
+        //    par = _srcClip->getPixelAspectRatio();
+        //}
         double c3 = _pfC3->getValueAtTime(time);
         double c5 = _pfC5->getValueAtTime(time);
         double xp, yp;

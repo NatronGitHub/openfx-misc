@@ -407,7 +407,7 @@ ReformatPlugin::getOutputFormat(const double time,
 
         return;
     }
-    OfxRectD boxRod = { 0., 0., boxSize.x * boxPAR, boxSize.y};
+    OfxRectD boxRod = { 0., 0., (double)boxSize.x * boxPAR, (double)boxSize.y};
 #ifdef OFX_EXTENSIONS_NATRON
     OfxRectD srcRod;
     OfxRectI srcFormat;
