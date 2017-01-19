@@ -924,7 +924,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
     assert(_dstImg);
     assert(!(plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) || _planeChannels.size() == 3);
 
-    // requires for STMap and LensDistortion
+    // required for STMap and LensDistortion
     //if (plugin == eDistortionPluginSTMap || _outputMode == eOutputModeSTMap) {
     int srcx1 = _format.x1;
     int srcx2 = _format.x2;
@@ -1142,7 +1142,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             dstPix += nComponents;
         }
     }
-    } // multiThreadProcessImages
+} // multiThreadProcessImages
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1570,6 +1570,18 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             clipPreferences.setOutputFormat(format);
             clipPreferences.setPixelAspectRatio(*_dstClip, par);
         }
+    } else if ( _plugin == eDistortionPluginSTMap && _uvClip && _uvClip->isConnected() ) {
+        OfxRectI uvFormat;
+        _uvClip->getFormat(uvFormat);
+        double par = _uvClip->getPixelAspectRatio();
+        if ( OFX::Coords::rectIsEmpty(uvFormat) ) {
+            // no format is available, use the RoD instead
+            const OfxRectD& srcRod = _uvClip->getRegionOfDefinition(0);
+            const OfxPointD rs1 = {1., 1.};
+            Coords::toPixelNearest(srcRod, rs1, par, &uvFormat);
+        }
+        clipPreferences.setOutputFormat(uvFormat);
+        clipPreferences.setPixelAspectRatio(*_dstClip, par);
     }
 }
 
@@ -2313,10 +2325,13 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         uScale *= args.renderScale.x;
         vScale *= args.renderScale.y;
     }
-    OfxRectI format = {0, 1, 0, 1};
+    OfxRectI format = {0, 0, 1, 1};
     if (_plugin == eDistortionPluginLensDistortion) {
         double par = 1.;
         getLensDistortionFormat(time, args.renderScale, &format, &par);
+    } else if (_srcClip && _srcClip->isConnected()) {
+        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+        Coords::toPixelNearest(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &format);
     }
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
@@ -3233,7 +3248,9 @@ DistortionPluginFactory<plugin, majorVersion>::describe(ImageEffectDescriptor &d
         desc.setIsMultiPlanar(true);
     }
 #endif
-    desc.setOverlayInteractDescriptor(new GeneratorOverlayDescriptor);
+    if (plugin == eDistortionPluginLensDistortion) {
+        desc.setOverlayInteractDescriptor(new GeneratorOverlayDescriptor);
+    }
     if ( (plugin == eDistortionPluginLensDistortion && this->getMajorVersion() < kPluginVersionLensDistortionMajor) ||
          (plugin != eDistortionPluginLensDistortion && this->getMajorVersion() < kPluginVersionMajor) ) {
         desc.setIsDeprecated(true);
@@ -3277,6 +3294,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         uvClip->setTemporalClipAccess(false);
         uvClip->setSupportsTiles(kSupportsTiles);
         uvClip->setIsMask(false);
+        uvClip->setOptional(false);
     }
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
