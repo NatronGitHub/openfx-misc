@@ -171,6 +171,10 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         float tmpPix[4];
+        for (int c = 0; c < 4; ++c) {
+            tmpPix[c] = 0;
+        }
+
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
                 break;

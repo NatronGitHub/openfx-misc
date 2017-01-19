@@ -280,6 +280,19 @@ struct RGBAValues
 
 struct Results
 {
+    Results()
+    : min( std::numeric_limits<double>::infinity() )
+    , max( -std::numeric_limits<double>::infinity() )
+    , mean(0.)
+    , sdev( std::numeric_limits<double>::infinity() )
+    , skewness( std::numeric_limits<double>::infinity() )
+    , kurtosis( std::numeric_limits<double>::infinity() )
+    , maxVal( -std::numeric_limits<double>::infinity() )
+    , minVal( std::numeric_limits<double>::infinity() )
+    {
+        maxPos.x = maxPos.y = minPos.x = minPos.y = 0.;
+    }
+
     RGBAValues min;
     RGBAValues max;
     RGBAValues mean;
