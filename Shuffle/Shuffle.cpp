@@ -653,7 +653,7 @@ ShufflePlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
         int channelIndex = -1;
         MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_channelParam[i]->getName(), &clip, &plane, &channelIndex);
 
-        if (stat != MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum::eGetPlaneNeededRetCodeReturnedChannelInPlane) {
+        if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane) {
             continue;
         }
         assert(clip);
@@ -1937,7 +1937,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     if (gSupportsRGB || gSupportsRGBA) {
         // outputR
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
-            ChoiceParamDescriptor* r = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputG, kParamOutputGLabel, kParamOutputGHint);
+            ChoiceParamDescriptor* r = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputR, kParamOutputRLabel, kParamOutputRHint);
             r->setDefault(eInputChannelAR);
             ChoiceParamDescriptor* g = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputG, kParamOutputGLabel, kParamOutputGHint);
             g->setDefault(eInputChannelAG);
