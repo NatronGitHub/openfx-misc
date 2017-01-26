@@ -629,7 +629,7 @@ private:
 };
 
 void
-ShufflePlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
+ShufflePlugin::getClipComponents(const ClipComponentsArguments& args,
                                  ClipComponentsSetter& clipComponents)
 {
     assert(gIsMultiPlanarV2 || gIsMultiPlanarV1);
@@ -645,6 +645,8 @@ ShufflePlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
         }
         clipComponents.addClipComponents(*_dstClip, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
     }
+
+    clipComponents.setPassThroughClip(_srcClipA, args.time, args.view);
 
     std::map<Clip*, std::set<std::string> > clipMap;
     for (int i = 0; i < 4; ++i) {
@@ -952,10 +954,6 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
         }
     }
 
-    // Follow the OpenFX spec:
-    // check that dstComponents is consistent with the result of getClipPreferences
-    // (@see getClipPreferences)
-    assert(!dstPlane.isColorPlane() || dstPlane.getNumComponents() == _dstClip->getPixelComponentCount());
 
     std::auto_ptr<Image> dst( _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(dstPlane).c_str() ) );
     if ( !dst.get() ) {
