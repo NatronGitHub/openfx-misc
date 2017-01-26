@@ -2939,7 +2939,7 @@ DistortionPlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
             }
             assert(clip);
 
-            std::string ofxPlaneStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(plane);
+            std::string ofxPlaneStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane);
 
             std::set<std::string>& clipPlanes = clipMap[clip];
             std::pair<std::set<std::string>::iterator, bool> ret = clipPlanes.insert(ofxPlaneStr);

@@ -608,7 +608,7 @@ private:
     void setupAndProcess(ShufflerBase &, const RenderArguments &args);
     void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const RenderArguments &args);
 
-    void getDstPixelComps(bool doBuildMenus, PixelComponentEnum* originalDstPixelComps, PixelComponentEnum* dstPixelComps);
+    void getDstPixelComps(PixelComponentEnum* originalDstPixelComps, PixelComponentEnum* dstPixelComps);
 
     void updateVisibility(PixelComponentEnum originalOutputComponents, PixelComponentEnum outputComponentsWithCreateAlpha);
 
@@ -643,7 +643,7 @@ ShufflePlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
         if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
             return;
         }
-        clipComponents.addClipComponents(*_dstClip, MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(plane));
+        clipComponents.addClipComponents(*_dstClip, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
     }
 
     std::map<Clip*, std::set<std::string> > clipMap;
@@ -660,7 +660,7 @@ ShufflePlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
 
         std::set<std::string>& availablePlanes = clipMap[clip];
 
-        std::string ofxComponentsStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(plane);
+        std::string ofxComponentsStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane);
         std::pair<std::set<std::string>::iterator, bool> ret = availablePlanes.insert(ofxComponentsStr);
         if (ret.second) {
             clipComponents.addClipComponents(*clip, ofxComponentsStr);
@@ -985,7 +985,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
         Clip* clip = 0;
         MultiPlane::ImagePlaneDesc plane;
         MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(nDstComponents == 1 ? _channelParam[3]->getName() : _channelParam[i]->getName(), &clip, &plane, &p.channelIndex);
-        if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
+        if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
             setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
             throwSuiteStatusException(kOfxStatFailed);
             return;
@@ -1200,23 +1200,22 @@ ShufflePlugin::render(const RenderArguments &args)
 } // ShufflePlugin::render
 
 void
-ShufflePlugin::getDstPixelComps(bool doBuildMenus,
-                                PixelComponentEnum* originalDstPixelComps,
+ShufflePlugin::getDstPixelComps(PixelComponentEnum* originalDstPixelComps,
                                 PixelComponentEnum* dstPixelComps)
 {
-    if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
+
+
+
+   // if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
 
         // If non multi-planar, map the user selected components to the host supported components.
         *dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
         *originalDstPixelComps = *dstPixelComps;
-    } else {
+#if 0
+    }
+    else {
 
-        // If multi-planar, get the user selected plane in output then map it to color plane components given
-        // the number of components then map it to the host supported components.
-        // This will anyway only be used for the color plane.
-        if (doBuildMenus) {
-            buildChannelMenus();
-        }
+
 
 
         // Fetch the plane
@@ -1250,17 +1249,21 @@ ShufflePlugin::getDstPixelComps(bool doBuildMenus,
             *dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
         }
     }
+#endif
 } // getDstPixelComps
 
 void
 ShufflePlugin::onMetadataChanged()
 {
-    assert(gHostIsNatronVersion3OrGreater);
     PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
     PixelComponentEnum dstPixelComps = ePixelComponentNone;
     
 
-    getDstPixelComps(true /*buildChannelMenus*/, &originalDstPixelComps, &dstPixelComps);
+    if (gIsMultiPlanarV2) {
+        buildChannelMenus();
+    }
+
+    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
 
     // Enable components
     enableComponents();
@@ -1294,7 +1297,10 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     PixelComponentEnum dstPixelComps = ePixelComponentNone;
 
     // Refresh the channel menus on Natron < 3, otherwise this is done in clipChanged in Natron >= 3
-    getDstPixelComps(gHostIsNatronVersion3OrGreater /*doBuildMenus*/,&originalDstPixelComps, &dstPixelComps);
+    if (!gHostIsNatronVersion3OrGreater) {
+        buildChannelMenus();
+    }
+    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
 
 
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
@@ -1559,7 +1565,9 @@ ShufflePlugin::changedClip(const InstanceChangedArgs & /*args*/,
             }
         }
     }
-    onMetadataChanged();
+    if (gHostIsNatronVersion3OrGreater) {
+        onMetadataChanged();
+    }
 
 }
 
