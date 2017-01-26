@@ -1274,9 +1274,10 @@ public:
             _uvChannels[1] = fetchChoiceParam(kParamChannelV);
             _uvChannels[2] = fetchChoiceParam(kParamChannelA);
             if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelU, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/, false /*isOutput*/, _uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelV, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/, false /*isOutput*/,_uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelA, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/,false /*isOutput*/, _uvClip);
+                fetchDynamicMultiplaneChoiceParameter(kParamChannelU, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, _uvClip);
+                fetchDynamicMultiplaneChoiceParameter(kParamChannelV, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, _uvClip);
+                fetchDynamicMultiplaneChoiceParameter(kParamChannelA, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/,false /*isOutput*/, /*hideIfClipDisconnected*/ false, _uvClip);
+                onAllParametersFetched();
             }
             _unpremultUV = fetchBooleanParam(kParamChannelUnpremultUV);
             _uvOffset = fetchDouble2DParam(kParamUVOffset);
@@ -1559,7 +1560,7 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         clipPreferences.setClipComponents(*_srcClip, dstPixelComps);
     }
     if (gIsMultiPlaneV2 && _uvClip) {
-        buildChannelMenus();
+        MultiPlaneEffect::getClipPreferences(clipPreferences);
     }
     if (_plugin == eDistortionPluginLensDistortion) {
         OfxRectI format;
@@ -3137,9 +3138,7 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
     if (_plugin == eDistortionPluginIDistort ||
         _plugin == eDistortionPluginSTMap) {
         if (gIsMultiPlaneV2) {
-            if ( handleChangedParamForAllDynamicChoices(paramName, args.reason) ) {
-                return;
-            }
+            MultiPlaneEffect::changedParam(args, paramName);
         }
     }
 }

@@ -556,11 +556,12 @@ public:
             std::vector<Clip*> abClips(2);
             abClips[0] = _srcClipA;
             abClips[1] = _srcClipB;
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputR, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/,abClips);
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputG, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/,abClips);
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputB, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/,abClips);
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputA, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/,abClips);
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, false /*splitPlanesIntoChannels*/, false/*addNoneOption*/, true /*isOutput*/,_dstClip);
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputR, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false,abClips);
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputG, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, abClips);
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputB, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, abClips);
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputA, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, abClips);
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, false /*splitPlanesIntoChannels*/, false/*addNoneOption*/, true /*isOutput*/, /*hideIfClipDisconnected*/ false, _dstClip);
+            onAllParametersFetched();
         }
 
         _outputPremult = fetchChoiceParam(kParamOutputPremultiplication);
@@ -1255,11 +1256,6 @@ ShufflePlugin::onMetadataChanged()
 {
     PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
     PixelComponentEnum dstPixelComps = ePixelComponentNone;
-    
-
-    if (gIsMultiPlanarV2) {
-        buildChannelMenus();
-    }
 
     getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
 
@@ -1294,12 +1290,9 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
     PixelComponentEnum dstPixelComps = ePixelComponentNone;
 
-    // Refresh the channel menus on Natron < 3, otherwise this is done in clipChanged in Natron >= 3
-    if (!gHostIsNatronVersion3OrGreater) {
-        buildChannelMenus();
-    }
-    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
+    MultiPlaneEffect::getClipPreferences(clipPreferences);
 
+    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
 
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
 
@@ -1520,34 +1513,18 @@ ShufflePlugin::changedParam(const InstanceChangedArgs &args,
         }
         msg += "\n";
         sendMessage(Message::eMessageMessage, "", msg);
-    }
-
-
-    if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
-        MultiPlane::MultiPlaneEffect::ChangedParamRetCode trappedRParam = checkIfChangedParamCalledOnDynamicChoice(paramName, _channelParam[0]->getName(), args.reason);
-        if (trappedRParam != MultiPlane::MultiPlaneEffect::eChangedParamRetCodeNoChange) {
-            if (trappedRParam == MultiPlane::MultiPlaneEffect::eChangedParamRetCodeChoiceParamChanged) {
+    } else if (paramName == _channelParam[0]->getName()) {
 #ifdef OFX_EXTENSIONS_NATRON
-                setChannelsFromRed(args.time);
+        setChannelsFromRed(args.time);
 #endif
-            }
-
-            return;
-        }
-        for (int i = 1; i < 4; ++i) {
-            if ( checkIfChangedParamCalledOnDynamicChoice(paramName,  _channelParam[i]->getName(), args.reason) ) {
-                return;
-            }
-        }
-        assert(_outputLayer);
-        if ( checkIfChangedParamCalledOnDynamicChoice(paramName, _outputLayer->getName(), args.reason) ) {
-            return;
-        }
+    } else {
+        MultiPlaneEffect::changedParam(args, paramName);
     }
+
 } // ShufflePlugin::changedParam
 
 void
-ShufflePlugin::changedClip(const InstanceChangedArgs & /*args*/,
+ShufflePlugin::changedClip(const InstanceChangedArgs & args,
                            const std::string &clipName)
 {
     if ( (getContext() == eContextGeneral) &&
@@ -1563,9 +1540,10 @@ ShufflePlugin::changedClip(const InstanceChangedArgs & /*args*/,
             }
         }
     }
-    if (gHostIsNatronVersion3OrGreater) {
-        onMetadataChanged();
-    }
+
+    MultiPlaneEffect::changedClip(args, clipName);
+    onMetadataChanged();
+
 
 }
 
