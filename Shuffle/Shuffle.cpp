@@ -1037,7 +1037,6 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         outputBitDepth = gOutputBitDepthMap[_outputBitDepth->getValueAtTime(time)];
     }
-    assert(outputBitDepth == dstBitDepth);
 
     processor.setValues(nDstComponents, outputBitDepth, planes);
 
@@ -1655,11 +1654,11 @@ ShufflePluginFactory::describe(ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
-    if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
-        for (ImageEffectHostDescription::PixelDepthArray::const_iterator it = getImageEffectHostDescription()->_supportedPixelDepths.begin();
-             it != getImageEffectHostDescription()->_supportedPixelDepths.end();
-             ++it) {
-            switch (*it) {
+
+    for (ImageEffectHostDescription::PixelDepthArray::const_iterator it = getImageEffectHostDescription()->_supportedPixelDepths.begin();
+         it != getImageEffectHostDescription()->_supportedPixelDepths.end();
+         ++it) {
+        switch (*it) {
             case eBitDepthUByte:
                 gSupportsBytes  = true;
                 break;
@@ -1672,9 +1671,9 @@ ShufflePluginFactory::describe(ImageEffectDescriptor &desc)
             default:
                 // other bitdepths are not supported by this plugin
                 break;
-            }
         }
     }
+
     {
         int i = 0;
         // Note: gOutputBitDepthMap must have size # of bit depths + 1 !
