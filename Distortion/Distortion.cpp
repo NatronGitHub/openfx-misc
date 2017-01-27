@@ -717,7 +717,9 @@ void PFBarrelCommon::FileReader::dump(void)
 
 
 
-static bool gIsMultiPlane;
+static bool gIsMultiPlaneV1;
+static bool gIsMultiPlaneV2;
+
 struct InputPlaneChannel
 {
     Image* img;
@@ -1271,10 +1273,11 @@ public:
             _uvChannels[0] = fetchChoiceParam(kParamChannelU);
             _uvChannels[1] = fetchChoiceParam(kParamChannelV);
             _uvChannels[2] = fetchChoiceParam(kParamChannelA);
-            if (gIsMultiPlane) {
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelU, _uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelV, _uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelA, _uvClip);
+            if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
+                fetchDynamicMultiplaneChoiceParameter(kParamChannelU, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, _uvClip);
+                fetchDynamicMultiplaneChoiceParameter(kParamChannelV, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, _uvClip);
+                fetchDynamicMultiplaneChoiceParameter(kParamChannelA, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/,false /*isOutput*/, /*hideIfClipDisconnected*/ false, _uvClip);
+                onAllParametersFetched();
             }
             _unpremultUV = fetchBooleanParam(kParamChannelUnpremultUV);
             _uvOffset = fetchDouble2DParam(kParamUVOffset);
@@ -1556,8 +1559,8 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     if (_srcClip) {
         clipPreferences.setClipComponents(*_srcClip, dstPixelComps);
     }
-    if (gIsMultiPlane && _uvClip) {
-        buildChannelMenus();
+    if (gIsMultiPlaneV2 && _uvClip) {
+        MultiPlaneEffect::getClipPreferences(clipPreferences);
     }
     if (_plugin == eDistortionPluginLensDistortion) {
         OfxRectI format;
@@ -2121,41 +2124,41 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     std::vector<InputPlaneChannel> planeChannels;
 
     if (_uvClip) {
-        if (gIsMultiPlane) {
+        if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
             BitDepthEnum srcBitDepth = eBitDepthNone;
             std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
-            bool isCreatingAlpha;
             for (int i = 0; i < 3; ++i) {
                 InputPlaneChannel p;
                 p.channelIndex = i;
                 p.fillZero = false;
                 //if (_uvClip) {
                 Clip* clip = 0;
-                std::string plane, ofxComp;
-                bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &plane, &ofxComp, &p.channelIndex, &isCreatingAlpha);
-                if (!ok) {
+                MultiPlane::ImagePlaneDesc plane;
+                MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_uvChannels[i]->getName(), &clip, &plane, &p.channelIndex);
+                if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
                     setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
                     throwSuiteStatusException(kOfxStatFailed);
                 }
 
                 p.img = 0;
-                if (ofxComp == kMultiPlaneParamOutputOption0) {
+                if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant0 ||
+                    (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane && plane.getNumComponents() == 0)) {
                     p.fillZero = true;
-                } else if (ofxComp == kMultiPlaneParamOutputOption1) {
+                } else if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1) {
                     p.fillZero = false;
                 } else {
                     std::map<std::string, Image*>& clipPlanes = fetchedPlanes[clip];
-                    std::map<std::string, Image*>::iterator foundPlane = clipPlanes.find(plane);
+                    std::map<std::string, Image*>::iterator foundPlane = clipPlanes.find(plane.getPlaneID());
                     if ( foundPlane != clipPlanes.end() ) {
                         p.img = foundPlane->second;
                     } else {
 #ifdef OFX_EXTENSIONS_NUKE
-                        p.img = clip->fetchImagePlane( time, args.renderView, plane.c_str() );
+                        p.img = clip->fetchImagePlane( time, args.renderView, plane.getPlaneID().c_str() );
 #else
                         p.img = ( clip && clip->isConnected() ) ? clip->fetchImage(time) : 0;
 #endif
                         if (p.img) {
-                            clipPlanes.insert( std::make_pair(plane, p.img) );
+                            clipPlanes.insert( std::make_pair(plane.getPlaneID(), p.img) );
                             imagesHolder.appendImage(p.img);
                         }
                     }
@@ -2914,49 +2917,37 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
 #ifdef OFX_EXTENSIONS_NUKE
 void
-DistortionPlugin::getClipComponents(const ClipComponentsArguments& args,
+DistortionPlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
                                     ClipComponentsSetter& clipComponents)
 {
-    assert(gIsMultiPlane);
+    assert(gIsMultiPlaneV2);
 
-    const double time = args.time;
-
-    /*std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
-       std::string ofxPlane,ofxComp;
-       getPlaneNeededInOutput(outputComponents, _outputLayer, &ofxPlane, &ofxComp);
-       clipComponents.addClipComponents(*_dstClip, ofxComp);*/
     PixelComponentEnum dstPx = _dstClip->getPixelComponents();
     clipComponents.addClipComponents(*_dstClip, dstPx);
     clipComponents.addClipComponents(*_srcClip, dstPx);
 
     if (_uvClip) {
         std::map<Clip*, std::set<std::string> > clipMap;
-        bool isCreatingAlpha;
         for (int i = 0; i < 2; ++i) {
-            std::string ofxComp, ofxPlane;
+            MultiPlane::ImagePlaneDesc plane;
             int channelIndex;
             Clip* clip = 0;
-            bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &ofxPlane, &ofxComp, &channelIndex, &isCreatingAlpha);
-            if (!ok) {
-                continue;
-            }
-            if ( (ofxComp == kMultiPlaneParamOutputOption0) || (ofxComp == kMultiPlaneParamOutputOption1) ) {
+            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_uvChannels[i]->getName(), &clip, &plane, &channelIndex);
+            if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed ||
+                stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant0 ||
+                stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1) {
                 continue;
             }
             assert(clip);
 
-            std::map<Clip*, std::set<std::string> >::iterator foundClip = clipMap.find(clip);
-            if ( foundClip == clipMap.end() ) {
-                std::set<std::string> s;
-                s.insert(ofxComp);
-                clipMap.insert( std::make_pair(clip, s) );
-                clipComponents.addClipComponents(*clip, ofxComp);
-            } else {
-                std::pair<std::set<std::string>::iterator, bool> ret = foundClip->second.insert(ofxComp);
-                if (ret.second) {
-                    clipComponents.addClipComponents(*clip, ofxComp);
-                }
+            std::string ofxPlaneStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane);
+
+            std::set<std::string>& clipPlanes = clipMap[clip];
+            std::pair<std::set<std::string>::iterator, bool> ret = clipPlanes.insert(ofxPlaneStr);
+            if (ret.second) {
+                clipComponents.addClipComponents(*clip, ofxPlaneStr);
             }
+
         }
     }
 } // getClipComponents
@@ -3146,10 +3137,8 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
     }
     if (_plugin == eDistortionPluginIDistort ||
         _plugin == eDistortionPluginSTMap) {
-        if (gIsMultiPlane) {
-            if ( handleChangedParamForAllDynamicChoices(paramName, args.reason) ) {
-                return;
-            }
+        if (gIsMultiPlaneV2) {
+            MultiPlaneEffect::changedParam(args, paramName);
         }
     }
 }
@@ -3236,11 +3225,14 @@ DistortionPluginFactory<plugin, majorVersion>::describe(ImageEffectDescriptor &d
 #endif
 
 
-    gIsMultiPlane = false;
-
+    gIsMultiPlaneV1 = false;
+    gIsMultiPlaneV2 = false;
+#if defined(OFX_EXTENSIONS_NUKE)
+    gIsMultiPlaneV1 = getImageEffectHostDescription()->isMultiPlanar;
+#endif
 #if defined(OFX_EXTENSIONS_NUKE) && defined(OFX_EXTENSIONS_NATRON)
-    gIsMultiPlane = getImageEffectHostDescription()->supportsDynamicChoices && getImageEffectHostDescription()->isMultiPlanar;
-    if (gIsMultiPlane) {
+    gIsMultiPlaneV2 = getImageEffectHostDescription()->supportsDynamicChoices && gIsMultiPlaneV1;
+    if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
         // This enables fetching different planes from the input.
         // Generally the user will read a multi-layered EXR file in the Reader node and then use the shuffle
         // to redirect the plane's channels into RGBA color plane.
@@ -3276,7 +3268,9 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                                                    ContextEnum context)
 {
 #ifdef OFX_EXTENSIONS_NUKE
-    if ( gIsMultiPlane && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
+    if ( gIsMultiPlaneV2 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
+        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
+    } else if (gIsMultiPlaneV1 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 #endif
@@ -3401,20 +3395,20 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         std::vector<std::string> clipsForChannels(1);
         clipsForChannels[0] = kClipUV;
 
-        if (gIsMultiPlane) {
+        if (gIsMultiPlaneV2) {
             {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
+                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
 #ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
                 param->setDefault(eInputChannelR);
             }
             {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
+                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
                 param->setDefault(eInputChannelG);
             }
             {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelA, kParamChannelALabel, kParamChannelAHint);
+                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelA, kParamChannelALabel, kParamChannelAHint);
                 param->setDefault(eInputChannelA);
             }
         } else {
@@ -3425,7 +3419,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
 #ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
-                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
                 param->setDefault(eInputChannelR);
                 if (page) {
                     page->addChild(*param);
@@ -3435,7 +3429,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelV);
                 param->setLabel(kParamChannelVLabel);
                 param->setHint(kParamChannelVHint);
-                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
                 param->setDefault(eInputChannelG);
                 if (page) {
                     page->addChild(*param);
@@ -3445,7 +3439,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelA);
                 param->setLabel(kParamChannelALabel);
                 param->setHint(kParamChannelAHint);
-                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
                 param->setDefault(eInputChannelA);
                 if (page) {
                     page->addChild(*param);
