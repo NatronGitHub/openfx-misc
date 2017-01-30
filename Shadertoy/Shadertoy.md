@@ -3,6 +3,16 @@ Apply a [Shadertoy](http://www.shadertoy.com) fragment shader (multipass shaders
 This help only covers the parts of GLSL ES that are relevant for Shadertoy. For the complete specification please have a look at [GLSL ES specification](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf) or pages 3 and 4 of the [OpenGL ES 2.0 quick reference card](https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf).
 See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 
+### Image shaders
+
+Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsability of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:
+
+`void mainImage( out vec4 fragColor, in vec2 fragCoord );`
+
+where `fragCoord` contains the pixel coordinates for which the shader needs to compute a color. The coordinates are in pixel units, ranging from 0.5 to resolution-0.5, over the rendering surface, where the resolution is passed to the shader through the `iResolution` uniform (see below).
+
+The resulting color is gathered in `fragColor` as a four component vector.
+
 ### Language:
 
 * __Preprocessor:__ `#` `#define` `#undef` `#if` `#ifdef` `#ifndef` `#else` `#elif` `#endif` `#error` `#pragma` `#extension` `#version` `#line`

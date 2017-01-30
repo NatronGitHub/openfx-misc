@@ -76,6 +76,16 @@ using std::string;
     "https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf\n" \
     "A Shadertoy/GLSL tutorial can be found at https://www.shadertoy.com/view/Md23DV\n" \
     "\n" \
+    "Image shaders\n" \
+    "\n" \
+    "Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsability of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:\n" \
+    "\n" \
+    "`void mainImage( out vec4 fragColor, in vec2 fragCoord );`\n" \
+    "\n" \
+    "where `fragCoord` contains the pixel coordinates for which the shader needs to compute a color. The coordinates are in pixel units, ranging from 0.5 to resolution-0.5, over the rendering surface, where the resolution is passed to the shader through the `iResolution` uniform (see below).\n" \
+    "\n" \
+    "The resulting color is gathered in `fragColor` as a four component vector.\n" \
+    "\n" \
     "Language:\n" \
     "\n" \
     "    Preprocessor: # #define #undef #if #ifdef #ifndef #else #elif #endif #error #pragma #extension #version #line\n" \
@@ -260,6 +270,16 @@ using std::string;
     "\n" \
     "This help only covers the parts of GLSL ES that are relevant for Shadertoy. For the complete specification please have a look at [GLSL ES specification](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf)  or pages 3 and 4 of the [OpenGL ES 2.0 quick reference card](https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf).\n" \
     "See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).\n" \
+    "\n" \
+    "### Image shaders\n" \
+    "\n" \
+    "Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsability of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:\n" \
+    "\n" \
+    "`void mainImage( out vec4 fragColor, in vec2 fragCoord );`\n" \
+    "\n" \
+    "where `fragCoord` contains the pixel coordinates for which the shader needs to compute a color. The coordinates are in pixel units, ranging from 0.5 to resolution-0.5, over the rendering surface, where the resolution is passed to the shader through the `iResolution` uniform (see below).\n" \
+    "\n" \
+    "The resulting color is gathered in `fragColor` as a four component vector.\n" \
     "\n" \
     "### Language:\n" \
     "\n" \
@@ -704,6 +724,10 @@ using std::string;
 #define kParamRendererInfo "rendererInfo"
 #define kParamRendererInfoLabel "Renderer Info..."
 #define kParamRendererInfoHint "Retrieve information about the current OpenGL renderer."
+
+#define kParamHelp "helpButton"
+#define kParamHelpLabel "Help..."
+#define kParamHelpHint "Display help about using Shadertoy."
 
 #define kClipChannel "iChannel"
 
@@ -1982,6 +2006,8 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
         } else {
             sendMessage(Message::eMessageMessage, "", message);
         }
+    } else if (paramName == kParamHelp) {
+        sendMessage(Message::eMessageMessage, "", kPluginDescription);
 #if defined(HAVE_OSMESA)
     } else if (paramName == kParamEnableGPU) {
         setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
@@ -2998,6 +3024,14 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamRendererInfo);
         param->setLabel(kParamRendererInfoLabel);
         param->setHint(kParamRendererInfoHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamHelp);
+        param->setLabel(kParamHelpLabel);
+        param->setHint(kParamHelpHint);
         if (page) {
             page->addChild(*param);
         }
