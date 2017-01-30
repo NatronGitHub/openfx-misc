@@ -25,6 +25,9 @@
  *
  * TODO:
  * - add multipass support (using tabs for UI as in shadertoys)
+ * - synthclipse-compatible comments http://synthclipse.sourceforge.net/user_guide/fragx/commands.html
+ * - use .stoy for the presets shaders, and add the default shadertoy uniforms at the beginning, as in http://synthclipse.sourceforge.net/user_guide/shadertoy.html
+ * - ShaderToy export as in synthclipse http://synthclipse.sourceforge.net/user_guide/shadertoy.html
  */
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) || defined(HAVE_OSMESA) // at least one is required for this plugin
