@@ -240,7 +240,17 @@ using std::string;
     "* This one also sets the filter and wrap parameters:\n" \
     "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`\n" \
     "* And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):\n" \
-    "  `// BBox: iChannel0`"
+    "  `// BBox: iChannel0`\n" \
+    "\n" \
+    "\n" \
+    "Default textures and videos\n" \
+    "\n" \
+    "The default shadertoy textures and videos are avalaible from the Shadertoy web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.\n" \
+    "\n" \
+    "- Textures: https://www.shadertoy.com/presets/tex00.jpg https://www.shadertoy.com/presets/tex01.jpg https://www.shadertoy.com/presets/tex02.jpg https://www.shadertoy.com/presets/tex03.jpg https://www.shadertoy.com/presets/tex04.jpg https://www.shadertoy.com/presets/tex05.jpg https://www.shadertoy.com/presets/tex06.jpg https://www.shadertoy.com/presets/tex07.jpg https://www.shadertoy.com/presets/tex08.jpg https://www.shadertoy.com/presets/tex09.jpg https://www.shadertoy.com/presets/tex10.png https://www.shadertoy.com/presets/tex11.png https://www.shadertoy.com/presets/tex12.png ttps://www.shadertoy.com/presets/tex14.png https://www.shadertoy.com/presets/tex15.png https://www.shadertoy.com/presets/tex16.png https://www.shadertoy.com/presets/tex17.jpg https://www.shadertoy.com/presets/tex18.jpg https://www.shadertoy.com/presets/tex19.png https://www.shadertoy.com/presets/tex20.jpg https://www.shadertoy.com/presets/tex21.png\n" \
+    "- Videos: https://www.shadertoy.com/presets/vid00.ogv https://www.shadertoy.com/presets/vid01.webm https://www.shadertoy.com/presets/vid02.ogv https://www.shadertoy.com/presets/vid03.webm\n" \
+    "- Cubemaps: https://www.shadertoy.com/presets/cube00_0.jpg https://www.shadertoy.com/presets/cube01_0.png https://www.shadertoy.com/presets/cube02_0.jpg https://www.shadertoy.com/presets/cube03_0.png https://www.shadertoy.com/presets/cube04_0.png https://www.shadertoy.com/presets/cube05_0.png" \
+
 
 
 #define kPluginDescriptionMarkdown \
@@ -424,7 +434,15 @@ using std::string;
     "* This one also sets the filter and wrap parameters:\n" \
     "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`\n" \
     "* And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):\n" \
-    "  `// BBox: iChannel0`"
+    "  `// BBox: iChannel0`\n" \
+    "\n" \
+    "### Default textures and videos\n" \
+    "\n" \
+    "The default shadertoy textures and videos are avalaible from the [Shadertoy](http://www.shadertoy.com) web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.\n" \
+    "\n" \
+    "- Textures: [tex00](https://www.shadertoy.com/presets/tex00.jpg),  [tex01](https://www.shadertoy.com/presets/tex01.jpg),  [tex02](https://www.shadertoy.com/presets/tex02.jpg),  [tex03](https://www.shadertoy.com/presets/tex03.jpg),  [tex04](https://www.shadertoy.com/presets/tex04.jpg),  [tex05](https://www.shadertoy.com/presets/tex05.jpg),  [tex06](https://www.shadertoy.com/presets/tex06.jpg),  [tex07](https://www.shadertoy.com/presets/tex07.jpg),  [tex08](https://www.shadertoy.com/presets/tex08.jpg),  [tex09](https://www.shadertoy.com/presets/tex09.jpg),  [tex10](https://www.shadertoy.com/presets/tex10.png),  [tex11](https://www.shadertoy.com/presets/tex11.png),  [tex12](https://www.shadertoy.com/presets/tex12.png),  [tex14](https://www.shadertoy.com/presets/tex14.png),  [tex15](https://www.shadertoy.com/presets/tex15.png),  [tex16](https://www.shadertoy.com/presets/tex16.png),  [tex17](https://www.shadertoy.com/presets/tex17.jpg),  [tex18](https://www.shadertoy.com/presets/tex18.jpg),  [tex19](https://www.shadertoy.com/presets/tex19.png),  [tex20](https://www.shadertoy.com/presets/tex20.jpg),  [tex21](https://www.shadertoy.com/presets/tex21.png).\n" \
+    "- Videos: [vid00](https://www.shadertoy.com/presets/vid00.ogv),  [vid01](https://www.shadertoy.com/presets/vid01.webm),  [vid02](https://www.shadertoy.com/presets/vid02.ogv),  [vid03](https://www.shadertoy.com/presets/vid03.webm).\n" \
+    "- Cubemaps: [cube00_0](https://www.shadertoy.com/presets/cube00_0.jpg),  [cube01_0](https://www.shadertoy.com/presets/cube01_0.png),  [cube02_0](https://www.shadertoy.com/presets/cube02_0.jpg),  [cube03_0](https://www.shadertoy.com/presets/cube03_0.png),  [cube04_0](https://www.shadertoy.com/presets/cube04_0.png),  [cube05](https://www.shadertoy.com/presets/cube05_0.png)"
 
 #define kPluginIdentifier "net.sf.openfx.Shadertoy"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
