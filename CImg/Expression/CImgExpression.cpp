@@ -429,7 +429,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamExpressionDefault "i"
 
 #define kParamHelp "help"
-#define kParamHelpLabel "Help"
+#define kParamHelpLabel "Help..."
 #define kParamHelpHint "Display help for writing GMIC expressions."
 
 
