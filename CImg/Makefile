@@ -1,4 +1,6 @@
+# (ofxsLut required for ChromaBlur)
 PLUGINOBJECTS = \
+ofxsLut.o \
 CImgBilateral.o \
 CImgBlur.o \
 CImgDenoise.o \
@@ -16,11 +18,8 @@ CImgRollingGuidance.o \
 CImgSharpenInvDiff.o \
 CImgSharpenShock.o \
 CImgSmooth.o \
-ofxsLut.o \
 CImgFilter.o \
 CImgOperator.o \
-ofxsLut.o
-# (ofxsLut required for ChromaBlur)
 
 # no ofxsInteract.o
 SUPPORTOBJECTS = \
@@ -30,7 +29,7 @@ ofxsLog.o \
 ofxsCore.o \
 ofxsPropertyValidation.o \
 ofxsImageEffect.o \
-ofxsParams.o 
+ofxsParams.o \
 
 PLUGINNAME = CImg
 
