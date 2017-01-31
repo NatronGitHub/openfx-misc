@@ -1454,19 +1454,19 @@ ShufflePlugin::setChannelsFromRed(double time)
                 if ( (chan == ".G") || (chan == ".g") ) {
                     _channelParam[1]->setValue(i);
                     if (_channelStringParam[1]) {
-                        _channelStringParam[1]->setValue(chan);
+                        _channelStringParam[1]->setValue(opt);
                     }
                     gSet = true;
                 } else if ( (chan == ".B") || (chan == ".b") ) {
                     _channelParam[2]->setValue(i);
                     if (_channelStringParam[2]) {
-                        _channelStringParam[2]->setValue(chan);
+                        _channelStringParam[2]->setValue(opt);
                     }
                     bSet = true;
                 } else if ( (chan == ".A") || (chan == ".a") ) {
                     _channelParam[3]->setValue(i);
                     if (_channelStringParam[3]) {
-                        _channelStringParam[3]->setValue(chan);
+                        _channelStringParam[3]->setValue(opt);
                     }
                     aSet = true;
                 }
