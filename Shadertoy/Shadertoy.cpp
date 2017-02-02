@@ -25,6 +25,9 @@
  *
  * TODO:
  * - add multipass support (using tabs for UI as in shadertoys)
+ * - synthclipse-compatible comments http://synthclipse.sourceforge.net/user_guide/fragx/commands.html
+ * - use .stoy for the presets shaders, and add the default shadertoy uniforms at the beginning, as in http://synthclipse.sourceforge.net/user_guide/shadertoy.html
+ * - ShaderToy export as in synthclipse http://synthclipse.sourceforge.net/user_guide/shadertoy.html
  */
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) || defined(HAVE_OSMESA) // at least one is required for this plugin
@@ -75,6 +78,16 @@ using std::string;
     "or pages 3 and 4 of the OpenGL ES 2.0 quick reference card " \
     "https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf\n" \
     "A Shadertoy/GLSL tutorial can be found at https://www.shadertoy.com/view/Md23DV\n" \
+    "\n" \
+    "Image shaders\n" \
+    "\n" \
+    "Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsability of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:\n" \
+    "\n" \
+    "`void mainImage( out vec4 fragColor, in vec2 fragCoord );`\n" \
+    "\n" \
+    "where `fragCoord` contains the pixel coordinates for which the shader needs to compute a color. The coordinates are in pixel units, ranging from 0.5 to resolution-0.5, over the rendering surface, where the resolution is passed to the shader through the `iResolution` uniform (see below).\n" \
+    "\n" \
+    "The resulting color is gathered in `fragColor` as a four component vector.\n" \
     "\n" \
     "Language:\n" \
     "\n" \
@@ -240,7 +253,17 @@ using std::string;
     "* This one also sets the filter and wrap parameters:\n" \
     "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`\n" \
     "* And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):\n" \
-    "  `// BBox: iChannel0`"
+    "  `// BBox: iChannel0`\n" \
+    "\n" \
+    "\n" \
+    "Default textures and videos\n" \
+    "\n" \
+    "The default shadertoy textures and videos are avalaible from the Shadertoy web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.\n" \
+    "\n" \
+    "- Textures: https://www.shadertoy.com/presets/tex00.jpg https://www.shadertoy.com/presets/tex01.jpg https://www.shadertoy.com/presets/tex02.jpg https://www.shadertoy.com/presets/tex03.jpg https://www.shadertoy.com/presets/tex04.jpg https://www.shadertoy.com/presets/tex05.jpg https://www.shadertoy.com/presets/tex06.jpg https://www.shadertoy.com/presets/tex07.jpg https://www.shadertoy.com/presets/tex08.jpg https://www.shadertoy.com/presets/tex09.jpg https://www.shadertoy.com/presets/tex10.png https://www.shadertoy.com/presets/tex11.png https://www.shadertoy.com/presets/tex12.png ttps://www.shadertoy.com/presets/tex14.png https://www.shadertoy.com/presets/tex15.png https://www.shadertoy.com/presets/tex16.png https://www.shadertoy.com/presets/tex17.jpg https://www.shadertoy.com/presets/tex18.jpg https://www.shadertoy.com/presets/tex19.png https://www.shadertoy.com/presets/tex20.jpg https://www.shadertoy.com/presets/tex21.png\n" \
+    "- Videos: https://www.shadertoy.com/presets/vid00.ogv https://www.shadertoy.com/presets/vid01.webm https://www.shadertoy.com/presets/vid02.ogv https://www.shadertoy.com/presets/vid03.webm\n" \
+    "- Cubemaps: https://www.shadertoy.com/presets/cube00_0.jpg https://www.shadertoy.com/presets/cube01_0.png https://www.shadertoy.com/presets/cube02_0.jpg https://www.shadertoy.com/presets/cube03_0.png https://www.shadertoy.com/presets/cube04_0.png https://www.shadertoy.com/presets/cube05_0.png" \
+
 
 
 #define kPluginDescriptionMarkdown \
@@ -250,6 +273,16 @@ using std::string;
     "\n" \
     "This help only covers the parts of GLSL ES that are relevant for Shadertoy. For the complete specification please have a look at [GLSL ES specification](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf)  or pages 3 and 4 of the [OpenGL ES 2.0 quick reference card](https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf).\n" \
     "See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).\n" \
+    "\n" \
+    "### Image shaders\n" \
+    "\n" \
+    "Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsability of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:\n" \
+    "\n" \
+    "`void mainImage( out vec4 fragColor, in vec2 fragCoord );`\n" \
+    "\n" \
+    "where `fragCoord` contains the pixel coordinates for which the shader needs to compute a color. The coordinates are in pixel units, ranging from 0.5 to resolution-0.5, over the rendering surface, where the resolution is passed to the shader through the `iResolution` uniform (see below).\n" \
+    "\n" \
+    "The resulting color is gathered in `fragColor` as a four component vector.\n" \
     "\n" \
     "### Language:\n" \
     "\n" \
@@ -424,7 +457,15 @@ using std::string;
     "* This one also sets the filter and wrap parameters:\n" \
     "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`\n" \
     "* And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):\n" \
-    "  `// BBox: iChannel0`"
+    "  `// BBox: iChannel0`\n" \
+    "\n" \
+    "### Default textures and videos\n" \
+    "\n" \
+    "The default shadertoy textures and videos are avalaible from the [Shadertoy](http://www.shadertoy.com) web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.\n" \
+    "\n" \
+    "- Textures: [tex00](https://www.shadertoy.com/presets/tex00.jpg),  [tex01](https://www.shadertoy.com/presets/tex01.jpg),  [tex02](https://www.shadertoy.com/presets/tex02.jpg),  [tex03](https://www.shadertoy.com/presets/tex03.jpg),  [tex04](https://www.shadertoy.com/presets/tex04.jpg),  [tex05](https://www.shadertoy.com/presets/tex05.jpg),  [tex06](https://www.shadertoy.com/presets/tex06.jpg),  [tex07](https://www.shadertoy.com/presets/tex07.jpg),  [tex08](https://www.shadertoy.com/presets/tex08.jpg),  [tex09](https://www.shadertoy.com/presets/tex09.jpg),  [tex10](https://www.shadertoy.com/presets/tex10.png),  [tex11](https://www.shadertoy.com/presets/tex11.png),  [tex12](https://www.shadertoy.com/presets/tex12.png),  [tex14](https://www.shadertoy.com/presets/tex14.png),  [tex15](https://www.shadertoy.com/presets/tex15.png),  [tex16](https://www.shadertoy.com/presets/tex16.png),  [tex17](https://www.shadertoy.com/presets/tex17.jpg),  [tex18](https://www.shadertoy.com/presets/tex18.jpg),  [tex19](https://www.shadertoy.com/presets/tex19.png),  [tex20](https://www.shadertoy.com/presets/tex20.jpg),  [tex21](https://www.shadertoy.com/presets/tex21.png).\n" \
+    "- Videos: [vid00](https://www.shadertoy.com/presets/vid00.ogv),  [vid01](https://www.shadertoy.com/presets/vid01.webm),  [vid02](https://www.shadertoy.com/presets/vid02.ogv),  [vid03](https://www.shadertoy.com/presets/vid03.webm).\n" \
+    "- Cubemaps: [cube00_0](https://www.shadertoy.com/presets/cube00_0.jpg),  [cube01_0](https://www.shadertoy.com/presets/cube01_0.png),  [cube02_0](https://www.shadertoy.com/presets/cube02_0.jpg),  [cube03_0](https://www.shadertoy.com/presets/cube03_0.png),  [cube04_0](https://www.shadertoy.com/presets/cube04_0.png),  [cube05](https://www.shadertoy.com/presets/cube05_0.png)"
 
 #define kPluginIdentifier "net.sf.openfx.Shadertoy"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -686,6 +727,10 @@ using std::string;
 #define kParamRendererInfo "rendererInfo"
 #define kParamRendererInfoLabel "Renderer Info..."
 #define kParamRendererInfoHint "Retrieve information about the current OpenGL renderer."
+
+#define kParamHelp "helpButton"
+#define kParamHelpLabel "Help..."
+#define kParamHelpHint "Display help about using Shadertoy."
 
 #define kClipChannel "iChannel"
 
@@ -1964,6 +2009,8 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
         } else {
             sendMessage(Message::eMessageMessage, "", message);
         }
+    } else if (paramName == kParamHelp) {
+        sendMessage(Message::eMessageMessage, "", kPluginDescription);
 #if defined(HAVE_OSMESA)
     } else if (paramName == kParamEnableGPU) {
         setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
@@ -2980,6 +3027,14 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamRendererInfo);
         param->setLabel(kParamRendererInfoLabel);
         param->setHint(kParamRendererInfoHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamHelp);
+        param->setLabel(kParamHelpLabel);
+        param->setHint(kParamHelpHint);
         if (page) {
             page->addChild(*param);
         }

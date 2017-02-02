@@ -1,4 +1,16 @@
 PLUGINOBJECTS = \
+ofxsGenerator.o \
+ofxsLut.o \
+ofxsMultiPlane.o \
+ofxsOGLTextRenderer.o \
+ofxsOGLFontData.o  \
+ofxsRamp.o  \
+ofxsShutter.o \
+ofxsTracking.o \
+ofxsTransform3x3.o \
+ofxsTransformInteract.o \
+ofxsRectangleInteract.o \
+randomGenerator.o \
 TimeBuffer.o \
 Add.o \
 AdjustRoD.o \
@@ -73,18 +85,6 @@ TimeOffset.o \
 TrackerPM.o \
 Transform.o \
 VectorToColor.o \
-ofxsGenerator.o \
-ofxsLut.o \
-ofxsMultiPlane.o \
-ofxsOGLTextRenderer.o \
-ofxsOGLFontData.o  \
-ofxsRamp.o  \
-ofxsShutter.o \
-ofxsTracking.o \
-ofxsTransform3x3.o \
-ofxsTransformInteract.o \
-ofxsRectangleInteract.o \
-randomGenerator.o
 
 PLUGINNAME = Misc
 

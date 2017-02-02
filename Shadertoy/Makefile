@@ -19,7 +19,10 @@ LDFLAGS_EXTRA = $(LDFLAGS_MESA)
 TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.master
 
-$(OBJECTPATH)/Shadertoy.o: Shadertoy.cpp Shadertoy.h presets/tex00.jpg
+# to include all textures:
+#$(OBJECTPATH)/Shadertoy.o: Shadertoy.cpp Shadertoy.h presets/tex00.jpg
+
+$(OBJECTPATH)/Shadertoy.o: Shadertoy.cpp Shadertoy.h
 
 $(OBJECTPATH)/ShadertoyRenderGL.o: ShadertoyRenderGL.cpp ShadertoyRender.h Shadertoy.h
 
