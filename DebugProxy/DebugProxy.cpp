@@ -525,19 +525,19 @@ fetchHostDescription(int nth)
         hostDesc.APIVersionMinor = (st == kOfxStatOK) ? v : 0;
     }
     {
-        char *type = 0;
+        const char *type = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxPropType, 0, &type);
         assert(st == kOfxStatOK);
         hostDesc.type = type;
     }
     {
-        char *name = 0;
+        const char *name = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxPropName, 0, &name);
         assert(st == kOfxStatOK);
         hostDesc.hostName = name;
     }
     {
-        char *s = 0;
+        const char *s = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxPropLabel, 0, &s);
         assert(st == kOfxStatOK);
         hostDesc.hostLabel = s;
@@ -552,7 +552,7 @@ fetchHostDescription(int nth)
         hostDesc.versionMicro = (st == kOfxStatOK) ? v : 0;
     }
     {
-        char *s = 0;
+        const char *s = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxPropVersionLabel, 0, &s);
         assert(st == kOfxStatOK);
         hostDesc.versionLabel = s;
@@ -586,7 +586,7 @@ fetchHostDescription(int nth)
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedComponents, &numComponents);
     assert (st == kOfxStatOK);
     for (int i = 0; i < numComponents; ++i) {
-        char *comp = 0;
+        const char *comp = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedComponents, i, &comp);
         assert (st == kOfxStatOK);
         hostDesc._supportedComponents.push_back(comp);
@@ -595,7 +595,7 @@ fetchHostDescription(int nth)
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedContexts, &numContexts);
     assert (st == kOfxStatOK);
     for (int i = 0; i < numContexts; ++i) {
-        char* cont = 0;
+        const char* cont = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedContexts, i, &cont);
         assert (st == kOfxStatOK);
         hostDesc._supportedContexts.push_back(cont);
@@ -604,7 +604,7 @@ fetchHostDescription(int nth)
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedPixelDepths, &numPixelDepths);
     assert (st == kOfxStatOK);
     for (int i = 0; i < numPixelDepths; ++i) {
-        char *depth = 0;
+        const char *depth = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedPixelDepths, i, &depth);
         assert (st == kOfxStatOK);
         hostDesc._supportedPixelDepths.push_back(depth);
@@ -1021,7 +1021,7 @@ getContext(int nth,
 
     assert(st == kOfxStatOK);
     // get context
-    char *context = 0;
+    const char *context = NULL;
     st = gPropHost[nth]->propGetString(propHandle, kOfxImageEffectPropContext, 0, &context);
     assert(st == kOfxStatOK);
 
@@ -1084,7 +1084,7 @@ pluginMain(int nth,
             //     kOfxPropChangeReason - what triggered the change, which will be one of...
 
             // see why it changed
-            char *changeReason = 0;
+            const char *changeReason = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxPropChangeReason, 0, &changeReason);
 
             ss << "(" << handle << "," << changeReason << ")";
@@ -1097,13 +1097,13 @@ pluginMain(int nth,
             //     kOfxImageEffectPropRenderScale - the render scale currently being applied to any image fetched from a clip (for Image Effect Plugins only)
 
             // fetch the type of the object that changed
-            char *typeChanged = 0;
+            const char *typeChanged = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxPropType, 0, &typeChanged);
             // get the name of the thing that changed
-            char *objChanged = 0;
+            const char *objChanged = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxPropName, 0, &objChanged);
             // see why it changed
-            char *changeReason = 0;
+            const char *changeReason = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxPropChangeReason, 0, &changeReason);
             // get the time
             OfxTime time = 0.;
@@ -1131,7 +1131,7 @@ pluginMain(int nth,
             //     kOfxImageEffectPropContext the context being described.
 
             // get the context from the inArgs handle
-            char *context = 0;
+            const char *context = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropContext, 0, &context);
 
             ss << "(" << handle << "," << context << ")";
@@ -1189,7 +1189,7 @@ pluginMain(int nth,
             OfxTime time = 0;
             gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
             // get the field from the inArgs handle
-            char *field = 0;
+            const char *field = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropFieldToRender, 0, &field);
             // get the render window
             int renderWindow[4] = {0, 0, 0, 0};
@@ -1212,7 +1212,7 @@ pluginMain(int nth,
             OfxTime time = 0;
             gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
             // get the field from the inArgs handle
-            char *field = 0;
+            const char *field = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropFieldToRender, 0, &field);
             // get the render window
             int renderWindow[4] = {0, 0, 0, 0};
@@ -1480,7 +1480,7 @@ pluginMain(int nth,
                         firstclip = false;
                         bool firstrange = true;
                         ssr << name << ":(";
-                        char* comp;
+                        const char* comp = NULL;
                         for (int i = 0; i < dim; ++i) {
                             gPropHost[nth]->propGetString(outArgs, clipFrameRangePropName.c_str(), i, &comp);
                             if (!firstrange) {
@@ -1492,7 +1492,7 @@ pluginMain(int nth,
                         ssr << ')';
                     }
                 }
-                char* clipName;
+                const char* clipName = NULL;
                 int clipView;
                 double clipTime;
                 gPropHost[nth]->propGetDouble(outArgs, kFnOfxImageEffectPropPassThroughTime, 0, &clipTime);
@@ -1510,7 +1510,7 @@ pluginMain(int nth,
             //    kOfxPropName this to the name of the clip that should be used if the effect is an identity transform, defaults to the empty string
             //    kOfxPropTime the time to use from the indicated source clip as an identity image (allowing time slips to happen), defaults to the value in kOfxPropTime in inArgs
             if (st == kOfxStatOK) {
-                char *name = 0;
+                const char *name = NULL;
                 gPropHost[nth]->propGetString(outArgs, kOfxPropName, 0, &name);
                 OfxTime time = 0;
                 gPropHost[nth]->propGetDouble(outArgs, kOfxPropTime, 0, &time);
@@ -1541,7 +1541,7 @@ pluginMain(int nth,
                 for (std::list<std::string>::const_iterator it = clips.begin(); it != clips.end(); ++it) {
                     const char* name = it->c_str();
                     bool firstpref = true;
-                    char* components = 0;
+                    const char* components = NULL;
                     std::string clipComponentsPropName = std::string("OfxImageClipPropComponents_") + name;
                     pst = gPropHost[nth]->propGetString(outArgs, clipComponentsPropName.c_str(), 0, &components);
                     if (pst == kOfxStatOK) {
@@ -1558,7 +1558,7 @@ pluginMain(int nth,
                         ssr << "components=" << components;
                     }
 
-                    char *depth = 0;
+                    const char *depth = NULL;
                     std::string clipDepthPropName = std::string("OfxImageClipPropDepth_") + name;
                     pst = gPropHost[nth]->propGetString(outArgs, clipDepthPropName.c_str(), 0, &depth);
                     if (pst == kOfxStatOK) {
