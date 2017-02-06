@@ -2207,7 +2207,7 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
     omp_set_num_threads( MultiThread::getNumCPUs() );
 #endif
 #ifdef DEBUG_STDOUT
-    std::cout << "render!\n";
+    std::cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n";
 #endif
 
     progressStartRender(kPluginName " (render)");
