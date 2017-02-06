@@ -35,22 +35,27 @@ supportsCascadingChoices=0
 supportsChannelSelector=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxImageEffectOpenGLRenderSuite
 
+Caveats/Bugs:
 - version 11 of Resolve Lite (from Mac App Store) does not support symbolic links in /Library/OFX/Plugins
 - in Generators, even if the source clip is defined, it can not be fetched by the plug-in (the source clip should always be fetchable, it is mandatory in OpenFX)
-- all defined clips will appear connected (property kOfxImageClipPropConnected = 1) but give black and transparent (NULL) images. This is a problem for Mask clips, so a "Mask" boolean param must be added specifically for Resolve
+- all defined clips will appear connected (property kOfxImageClipPropConnected = 1) but give black and transparent (NULL) images. This is a problem for Mask clips, so a "Mask" boolean param must be added specifically for Resolve (see kParamMaskApply in openfx-misc)
 - kOfxImagePropField property is always kOfxImageFieldNone on OFX images, regardless of the clip properties
 - OfxParameterSuiteV1::paramCopy does nothing, keys and values have to be copied explicitely (see CornerPin)
 - even though OfxImageEffectOpenGLRenderSuite exists, the render action is never called with OpenGL enabled (is Resolve supposed to support OpenGL rendering?)
 - The range AND display range has to be defined for all Double params (kOfxParamTypeDouble, kOfxParamTypeDouble2D, kOfxParamTypeDouble3D), or a default range of (-1,1) is used, and values cannot lie outsideof this range !
 - The range AND display range has to be defined for Int params (kOfxParamTypeInteger), or a default range of (0,0) is used, and values cannot lie outside of this range !
 - kOfxPropPluginDescription property is absent from the plugin descriptor (although it was introduced in API version 1.2)
-- kOfxParamPropDefaultCoordinateSystem (set by setDefaultCoordinateSystem() in Support) is not present on double parameters (although API version 1.3 is claimed), the only solution is to use a secret boolean and denormalize at instance creation, 
+- kOfxParamPropDefaultCoordinateSystem (set by setDefaultCoordinateSystem(eCoordinatesNormalised) in Support) is not present on double parameters (although API version 1.3 is claimed), the only solution is to use a secret boolean and denormalize at instance creation (see kParamDefaultsNormalised in openfx-misc)
 - kOfxParamTypeInteger2D kOfxParamTypeInteger3D are not supported (crash when opening the parameters page), at least in Generators
 - kOfxImageEffectInstancePropSequentialRender property is missing on the host and the Image Effect descriptor (but exists on the image effect instance)
 - kOfxImageEffectPropPluginHandle property is missing on the image effect instance
 - kOfxPropType property on the image effect instance is 'OfxTypeImageEffect' instead of 'OfxTypeImageEffectInstance'
 - kOfxPropHostOSHandle property is missing on the host (it has to be present, even if it is NULL)
 - boolean params animate by default (they should not, according to the OFX specs)
+- kOfxParamPropEvaluateOnChange property on parameters is not used: any parameter change causes a new render!
+- kOfxImageEffectActionRender is called to generate thumbnails, but the renderscale argument is always (1,1) although it should be much smaller
+
+Extensions:
 - plugin descriptors may have the extra properties OfxImageEffectPropCudaRenderSupported OfxImageEffectPropOpenCLRenderSupported OfxImageEffectPropPlanarIOSupported (see below) OfxImageEffectPropSupportedComponents (redundant with clip descriptors?)
 - there is an extra parameter type OfxParamTypeStrChoice, which is like a string param, but returns a string for each choice.
 - other constants:
@@ -59,6 +64,8 @@ OfxImageEffectPropOpenCLEnabled (render arg?)
 OfxImageEffectPropOpenCLCommandQueue (render arg?)
 OfxImageEffectPropPlanarIOEnabled (render arg? images are represented by planes RRRGGGBBB instead of interleaved RRGBRGBRGB)
 - extra clip property kOfxImageClipPropThumbnail (with a k)
+
+Misc:
 - the working directory when plugin code is executed, (where the ofxTextLog.txt file is written) is "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Resources/"
 - OFX Log is "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Resources/ofxTestLog.txt"
 - the OFX plugins cache is in "/Library/Application Support/Blackmagic Design/DaVinci Resolve/OFXPluginCache.xml"
