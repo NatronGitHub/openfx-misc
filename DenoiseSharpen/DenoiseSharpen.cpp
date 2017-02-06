@@ -47,6 +47,7 @@
  */
 
 #define kUseMultithread // define to use the multithread suite
+//#define DEBUG_STDOUT // output debugging messages on stdout (for Resolve)
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -55,7 +56,9 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm>
-//#include <iostream>
+#ifdef DEBUG_STDOUT
+#include <iostream>
+#endif
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -350,6 +353,9 @@ enum ColorModelEnum
 
 #define kParamPremultChanged "premultChanged"
 
+// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+#define kParamDefaultsNormalised "defaultsNormalised"
+
 #define kLevelMax 4 // 7 // maximum level for denoising
 
 #define kProgressAnalysis // define to enable progress for analysis
@@ -375,6 +381,8 @@ enum ColorModelEnum
 #define progressUpdateRender(x) unused(x)
 #define progressEndRender() ( (void)0 )
 #endif
+
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 // those are the noise levels on HHi subands that correspond to a
 // Gaussian noise, with the dcraw "a trous" wavelets.
@@ -868,6 +876,26 @@ public:
         updateLabels();
         updateSecret();
         analysisLock();
+
+        // honor kParamDefaultsNormalised
+        if ( paramExists(kParamDefaultsNormalised) ) {
+            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+            // handle these ourselves!
+            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
+            assert(param);
+            bool normalised = param->getValue();
+            if (normalised) {
+                OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
+                OfxPointD p;
+                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                p = _btmLeft->getValue();
+                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
+                p = _size->getValue();
+                _size->setValue(p.x * size.x, p.y * size.y);
+                param->setValue(false);
+            }
+        }
     }
 
 private:
@@ -2178,8 +2206,10 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     omp_set_num_threads( MultiThread::getNumCPUs() );
 #endif
+#ifdef DEBUG_STDOUT
+    std::cout << "render!\n";
+#endif
 
-    //std::cout << "render!\n";
     progressStartRender(kPluginName " (render)");
 
     // instantiate the render code based on the pixel depth of the dst clip
@@ -2203,13 +2233,17 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
         renderForComponents<1>(args);
         break;
     default:
-        //std::cout << "components usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "components usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
     progressEndRender();
 
-    //std::cout << "render! OK\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "render! OK\n";
+#endif
 }
 
 template<int nComponents>
@@ -2231,7 +2265,9 @@ DenoiseSharpenPlugin::renderForComponents(const RenderArguments &args)
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-        //std::cout << "depth usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "depth usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -2636,7 +2672,9 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
                                  Clip * &identityClip,
                                  double & /*identityTime*/)
 {
-    //std::cout << "isIdentity!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "isIdentity!\n";
+#endif
     const double time = args.time;
 
     if (kLevelMax - startLevelFromRenderScale(args.renderScale) < 0) {
@@ -2740,7 +2778,9 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-    //std::cout << "isIdentity! false\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "isIdentity! false\n";
+#endif
     return false;
 } // DenoiseSharpenPlugin::isIdentity
 
@@ -2748,7 +2788,9 @@ void
 DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
                                   const std::string &clipName)
 {
-    //std::cout << "changedClip!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "changedClip!\n";
+#endif
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
@@ -2769,7 +2811,9 @@ DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
             }
         }
     }
-    //std::cout << "changedClip OK!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "changedClip OK!\n";
+#endif
 }
 
 void
@@ -2808,7 +2852,9 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
 void
 DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 {
-    //std::cout << "analysis!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "analysis!\n";
+#endif
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
 
     progressStartAnalysis(kPluginName " (noise analysis)");
@@ -2843,7 +2889,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
         analyzeNoiseLevelsForComponents<1>(args);
         break;
     default:
-        //std::cout << "components usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "components usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
@@ -2853,7 +2901,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     _analysisLock->setValue(true);
     endEditBlock();
     progressEndAnalysis();
-    //std::cout << "analysis! OK\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "analysis! OK\n";
+#endif
 }
 
 template<int nComponents>
@@ -2875,7 +2925,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForComponents(const InstanceChangedArgs 
         analyzeNoiseLevelsForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-        //std::cout << "depth usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "depth usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -3092,7 +3144,9 @@ mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::Lu
 void
 DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 {
-    //std::cout << "describe!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "describe!\n";
+#endif
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -3124,14 +3178,18 @@ DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
-    //std::cout << "describe! OK\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "describe! OK\n";
+#endif
 }
 
 void
 DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                                ContextEnum context)
 {
-    //std::cout << "describeInContext!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "describeInContext!\n";
+#endif
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -3320,8 +3378,12 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
             param->setLabel(kParamRectangleInteractBtmLeftLabel);
             param->setDoubleType(eDoubleTypeXYAbsolute);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-            param->setDefault(0., 0.);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
+            param->setDefault(0.1, 0.1);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
@@ -3342,8 +3404,12 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
             param->setLabel(kParamRectangleInteractSizeLabel);
             param->setDoubleType(eDoubleTypeXY);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-            param->setDefault(1., 1.);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
+            param->setDefault(0.8, 0.8);
             param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
@@ -3663,7 +3729,23 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    //std::cout << "describeInContext! OK\n";
+
+    // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+    if (!gHostSupportsDefaultCoordinateSystem) {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDefaultsNormalised);
+        param->setDefault(true);
+        param->setEvaluateOnChange(false);
+        param->setIsSecretAndDisabled(true);
+        param->setIsPersistent(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+#ifdef DEBUG_STDOUT
+    std::cout << "describeInContext! OK\n";
+#endif
 } // DenoiseSharpenPluginFactory::describeInContext
 
 ImageEffect*
