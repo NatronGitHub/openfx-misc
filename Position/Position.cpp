@@ -95,9 +95,11 @@ public:
                 OfxPointD origin = getProjectOffset();
                 OfxPointD p;
                 // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                //beginEditBlock(kParamDefaultsNormalised);
                 p = _translate->getValue();
                 _translate->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                 param->setValue(false);
+                //endEditBlock();
             }
         }
     }
