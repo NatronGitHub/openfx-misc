@@ -189,6 +189,9 @@ enum OutputAlphaEnum
 
 #define kParamPremultChanged "premultChanged"
 
+// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+#define kParamDefaultsNormalised "defaultsNormalised"
+
 // to compute the rolloff for a default distribution, we approximate the gaussian with a piecewise linear function
 // f(0) = 1, f'(0) = 0
 // f(sigma*0.5*sqrt(12)) = 1/2, f'(sigma*0.5*sqrt(12)) = g'(sigma) (g is exp(-x^2/(2*sigma^2)))
@@ -203,6 +206,7 @@ enum OutputAlphaEnum
 // default fraction of the min-max interval to use as rolloff after rectangle analysis
 #define DEFAULT_RECTANGLE_ROLLOFF 0.5
 
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 /* algorithm:
    - convert to HSV
@@ -1067,6 +1071,28 @@ public:
         _size->setIsSecretAndDisabled(!enableRectangle);
         _setSrcFromRectangle->setIsSecretAndDisabled(!enableRectangle);
         _srcColor->setEnabled(!enableRectangle);
+
+        // honor kParamDefaultsNormalised
+        if ( paramExists(kParamDefaultsNormalised) ) {
+            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+            // handle these ourselves!
+            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
+            assert(param);
+            bool normalised = param->getValue();
+            if (normalised) {
+                OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
+                OfxPointD p;
+                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                beginEditBlock(kParamDefaultsNormalised);
+                p = _btmLeft->getValue();
+                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
+                p = _size->getValue();
+                _size->setValue(p.x * size.x, p.y * size.y);
+                param->setValue(false);
+                endEditBlock();
+            }
+        }
     }
 
 private:
@@ -1885,7 +1911,11 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
             param->setLabel(kParamRectangleInteractBtmLeftLabel);
             param->setDoubleType(eDoubleTypeXYAbsolute);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
             param->setDefault(0.25, 0.25);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -1907,7 +1937,11 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
             param->setLabel(kParamRectangleInteractSizeLabel);
             param->setDoubleType(eDoubleTypeXY);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
             param->setDefault(0.5, 0.5);
             param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -2233,6 +2267,19 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+    if (!gHostSupportsDefaultCoordinateSystem) {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDefaultsNormalised);
+        param->setDefault(true);
+        param->setEvaluateOnChange(false);
+        param->setIsSecretAndDisabled(true);
+        param->setIsPersistent(true);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }

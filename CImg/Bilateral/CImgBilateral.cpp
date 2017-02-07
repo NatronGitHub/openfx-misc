@@ -197,7 +197,8 @@ public:
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
-        assert(_sigma_s && _sigma_r);
+        _iterations = fetchIntParam(kParamIterations);
+        assert(_sigma_s && _sigma_r && _iterations);
     }
 
     virtual void getValuesAtTime(double time,
@@ -205,6 +206,7 @@ public:
     {
         _sigma_s->getValueAtTime(time, params.sigma_s);
         _sigma_r->getValueAtTime(time, params.sigma_r);
+        _iterations->getValueAtTime(time, params.iterations);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -260,6 +262,7 @@ private:
     // params
     DoubleParam *_sigma_s;
     DoubleParam *_sigma_r;
+    IntParam *_iterations;
 };
 
 mDeclarePluginFactory(CImgBilateralPluginFactory, {}, {});

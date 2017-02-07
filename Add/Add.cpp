@@ -380,12 +380,20 @@ public:
         , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
+        assert( _dstClip && (!_dstClip->isConnected() ||
+                             _dstClip->getPixelComponents() == ePixelComponentAlpha ||
+#ifdef OFX_EXTENSIONS_NATRON
+                             _dstClip->getPixelComponents() == ePixelComponentXY ||
+#endif
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
+                ( _srcClip && (!_srcClip->isConnected() ||
+                               _srcClip->getPixelComponents() == ePixelComponentAlpha ||
+#ifdef OFX_EXTENSIONS_NATRON
+                               _srcClip->getPixelComponents() == ePixelComponentXY ||
+#endif
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");

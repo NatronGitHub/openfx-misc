@@ -145,7 +145,7 @@ static const char* const kParamFrom[4] = {
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
-static bool gHostSupportsDefaultCoordinateSystem = true;
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -178,12 +178,8 @@ public:
 
         _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
-    }
 
-    // The following is called after the constructor
-    // (it sets values, which may have an undefined behavior)
-    void init()
-    {
+        // honor kParamDefaultsNormalised
         if ( paramExists(kParamDefaultsNormalised) ) {
             // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
             // handle these ourselves!
@@ -192,15 +188,18 @@ public:
             bool normalised = param->getValue();
             if (normalised) {
                 OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
                 OfxPointD p;
                 // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                beginEditBlock(kParamDefaultsNormalised);
                 for (int i = 0; i < 4; ++i) {
                     p = _to[i]->getValue();
-                    _to[i]->setValue(p.x * size.x, p.y * size.y);
+                    _to[i]->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                     p = _from[i]->getValue();
-                    _from[i]->setValue(p.x * size.x, p.y * size.y);
+                    _from[i]->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                 }
                 param->setValue(false);
+                endEditBlock();
             }
         }
     }
@@ -977,9 +976,9 @@ defineCornerPinToDouble2DParam(ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXYAbsolute);
         // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
         if ( param->supportsDefaultCoordinateSystem() ) {
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
         } else {
-            gHostSupportsDefaultCoordinateSystem = false; // no multithread here
+            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
         }
         param->setDefault(x, y);
         param->setDimensionLabels("x", "y");
@@ -1026,9 +1025,9 @@ defineCornerPinFromsDouble2DParam(ImageEffectDescriptor &desc,
     param->setDoubleType(eDoubleTypeXYAbsolute);
     // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
     if ( param->supportsDefaultCoordinateSystem() ) {
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
     } else {
-        gHostSupportsDefaultCoordinateSystem = false; // no multithread here
+        gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
     }
     param->setDefault(x, y);
     param->setDimensionLabels("x", "y");
@@ -1291,11 +1290,7 @@ ImageEffect*
 CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    CornerPinPlugin* p = new CornerPinPlugin(handle, false);
-
-    p->init();
-
-    return p;
+    return new CornerPinPlugin(handle, false);
 }
 
 mDeclarePluginFactory(CornerPinMaskedPluginFactory, {}, {});
@@ -1338,11 +1333,7 @@ ImageEffect*
 CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
                                              ContextEnum /*context*/)
 {
-    CornerPinPlugin* p = new CornerPinPlugin(handle, true);
-
-    p->init();
-
-    return p;
+    return new CornerPinPlugin(handle, true);
 }
 
 static CornerPinPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);

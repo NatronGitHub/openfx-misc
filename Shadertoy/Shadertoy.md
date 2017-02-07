@@ -3,6 +3,16 @@ Apply a [Shadertoy](http://www.shadertoy.com) fragment shader (multipass shaders
 This help only covers the parts of GLSL ES that are relevant for Shadertoy. For the complete specification please have a look at [GLSL ES specification](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf) or pages 3 and 4 of the [OpenGL ES 2.0 quick reference card](https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf).
 See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 
+### Image shaders
+
+Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsability of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:
+
+`void mainImage( out vec4 fragColor, in vec2 fragCoord );`
+
+where `fragCoord` contains the pixel coordinates for which the shader needs to compute a color. The coordinates are in pixel units, ranging from 0.5 to resolution-0.5, over the rendering surface, where the resolution is passed to the shader through the `iResolution` uniform (see below).
+
+The resulting color is gathered in `fragColor` as a four component vector.
+
 ### Language:
 
 * __Preprocessor:__ `#` `#define` `#undef` `#if` `#ifdef` `#ifndef` `#else` `#elif` `#endif` `#error` `#pragma` `#extension` `#version` `#line`
@@ -181,3 +191,10 @@ For sound shaders, the mainSound() function returns a vec2 containing the left a
 * And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):
   `// BBox: iChannel0`
 
+### Default textures and videos
+
+The default shadertoy textures and videos are avalaible from the [Shadertoy](http://www.shadertoy.com) web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.
+
+- Textures: [tex00](https://www.shadertoy.com/presets/tex00.jpg),  [tex01](https://www.shadertoy.com/presets/tex01.jpg),  [tex02](https://www.shadertoy.com/presets/tex02.jpg),  [tex03](https://www.shadertoy.com/presets/tex03.jpg),  [tex04](https://www.shadertoy.com/presets/tex04.jpg),  [tex05](https://www.shadertoy.com/presets/tex05.jpg),  [tex06](https://www.shadertoy.com/presets/tex06.jpg),  [tex07](https://www.shadertoy.com/presets/tex07.jpg),  [tex08](https://www.shadertoy.com/presets/tex08.jpg),  [tex09](https://www.shadertoy.com/presets/tex09.jpg),  [tex10](https://www.shadertoy.com/presets/tex10.png),  [tex11](https://www.shadertoy.com/presets/tex11.png),  [tex12](https://www.shadertoy.com/presets/tex12.png),  [tex14](https://www.shadertoy.com/presets/tex14.png),  [tex15](https://www.shadertoy.com/presets/tex15.png),  [tex16](https://www.shadertoy.com/presets/tex16.png),  [tex17](https://www.shadertoy.com/presets/tex17.jpg),  [tex18](https://www.shadertoy.com/presets/tex18.jpg),  [tex19](https://www.shadertoy.com/presets/tex19.png),  [tex20](https://www.shadertoy.com/presets/tex20.jpg),  [tex21](https://www.shadertoy.com/presets/tex21.png).
+- Videos: [vid00](https://www.shadertoy.com/presets/vid00.ogv),  [vid01](https://www.shadertoy.com/presets/vid01.webm),  [vid02](https://www.shadertoy.com/presets/vid02.ogv),  [vid03](https://www.shadertoy.com/presets/vid03.webm).
+- Cubemaps: [cube00_0](https://www.shadertoy.com/presets/cube00_0.jpg),  [cube01_0](https://www.shadertoy.com/presets/cube01_0.png),  [cube02_0](https://www.shadertoy.com/presets/cube02_0.jpg),  [cube03_0](https://www.shadertoy.com/presets/cube03_0.png),  [cube04_0](https://www.shadertoy.com/presets/cube04_0.png),  [cube05](https://www.shadertoy.com/presets/cube05_0.png)

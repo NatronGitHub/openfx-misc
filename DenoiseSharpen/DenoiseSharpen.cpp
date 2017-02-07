@@ -47,6 +47,7 @@
  */
 
 #define kUseMultithread // define to use the multithread suite
+//#define DEBUG_STDOUT // output debugging messages on stdout (for Resolve)
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -55,7 +56,9 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm>
-//#include <iostream>
+#ifdef DEBUG_STDOUT
+#include <iostream>
+#endif
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -66,6 +69,7 @@
 #include "ofxsLut.h"
 #include "ofxsRectangleInteract.h"
 #include "ofxsMultiThread.h"
+#include "ofxsCopier.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef MultiThread::Mutex Mutex;
@@ -181,7 +185,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamOutputMode "outputMode"
 #define kParamOutputModeLabel "Output"
-#define kParamOutputModeHint "Select"
+#define kParamOutputModeHint "Select which image is output when analysis is locked. When analysis is not locked, the effect does nothing (the output is the source image)."
 #define kParamOutputModeOptionResult "Result"
 #define kParamOutputModeOptionResultHint "The result of denoising and sharpening the Source image."
 #define kParamOutputModeOptionNoise "Noise"
@@ -218,8 +222,8 @@ enum ColorModelEnum
 #define kGroupAnalysis "analysis"
 #define kGroupAnalysisLabel "Analysis"
 #define kParamAnalysisLock "analysisLock"
-#define kParamAnalysisLockLabel "Lock Noise Analysis"
-#define kParamAnalysisLockHint "Lock all noise analysis parameters."
+#define kParamAnalysisLockLabel "Lock Analysis and Apply"
+#define kParamAnalysisLockHint "Lock all noise analysis parameters and apply denoising. When the analysis is not locked, the source image is output."
 #define kParamB3 "useB3Spline"
 #define kParamB3Label "B3 Spline Interpolation"
 #define kParamB3Hint "For wavelet decomposition, use a 5x5 filter based on B3 spline interpolation rather than a 3x3 Lagrange linear filter. Noise levels are reset when this setting is changed. The influence of this parameter is minimal, and it should not be changed."
@@ -350,6 +354,9 @@ enum ColorModelEnum
 
 #define kParamPremultChanged "premultChanged"
 
+// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+#define kParamDefaultsNormalised "defaultsNormalised"
+
 #define kLevelMax 4 // 7 // maximum level for denoising
 
 #define kProgressAnalysis // define to enable progress for analysis
@@ -375,6 +382,8 @@ enum ColorModelEnum
 #define progressUpdateRender(x) unused(x)
 #define progressEndRender() ( (void)0 )
 #endif
+
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 // those are the noise levels on HHi subands that correspond to a
 // Gaussian noise, with the dcraw "a trous" wavelets.
@@ -868,6 +877,28 @@ public:
         updateLabels();
         updateSecret();
         analysisLock();
+
+        // honor kParamDefaultsNormalised
+        if ( paramExists(kParamDefaultsNormalised) ) {
+            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+            // handle these ourselves!
+            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
+            assert(param);
+            bool normalised = param->getValue();
+            if (normalised) {
+                OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
+                OfxPointD p;
+                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                beginEditBlock(kParamDefaultsNormalised);
+                p = _btmLeft->getValue();
+                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
+                p = _size->getValue();
+                _size->setValue(p.x * size.x, p.y * size.y);
+                param->setValue(false);
+                endEditBlock();
+            }
+        }
     }
 
 private:
@@ -932,6 +963,8 @@ private:
     {
         bool locked = _analysisLock->getValue();
 
+        // unlock the output mode
+        _outputMode->setEnabled( locked );
         // lock the color model
         _colorModel->setEnabled( !locked );
         _b3->setEnabled( !locked );
@@ -952,6 +985,7 @@ private:
     {
         bool doMasking;
         bool maskInvert;
+        bool analysisLock;
         bool premult;
         int premultChannel;
         double mix;
@@ -970,6 +1004,7 @@ private:
         Params()
             : doMasking(false)
             , maskInvert(false)
+            , analysisLock(false)
             , premult(false)
             , premultChannel(3)
             , mix(1.)
@@ -2178,8 +2213,10 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     omp_set_num_threads( MultiThread::getNumCPUs() );
 #endif
+#ifdef DEBUG_STDOUT
+    std::cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n";
+#endif
 
-    //std::cout << "render!\n";
     progressStartRender(kPluginName " (render)");
 
     // instantiate the render code based on the pixel depth of the dst clip
@@ -2203,13 +2240,17 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
         renderForComponents<1>(args);
         break;
     default:
-        //std::cout << "components usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "components usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
     progressEndRender();
 
-    //std::cout << "render! OK\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "render! OK\n";
+#endif
 }
 
 template<int nComponents>
@@ -2231,7 +2272,9 @@ DenoiseSharpenPlugin::renderForComponents(const RenderArguments &args)
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-        //std::cout << "depth usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "depth usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -2302,11 +2345,27 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
+    clearPersistentMessage();
+
     p.maskInvert = false;
     if (p.doMasking) {
         _maskInvert->getValueAtTime(time, p.maskInvert);
     }
 
+    // fetch parameter values
+    p.analysisLock = _analysisLock->getValueAtTime(time);
+    if ( !p.analysisLock ) {
+        // all we have to do is copy pixels
+#ifdef DEBUG_STDOUT
+        std::cout << "render called although analysis not locked and isidentity=true\n";
+#endif
+        copyPixels(*this,
+                   args.renderWindow,
+                   src.get(),
+                   dst.get());
+        return;
+
+    }
     p.premult = _premult->getValueAtTime(time);
     p.premultChannel = _premultChannel->getValueAtTime(time);
     p.mix = _mix->getValueAtTime(time);
@@ -2316,7 +2375,6 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     p.process[2] = _processB->getValueAtTime(time);
     p.process[3] = _processA->getValueAtTime(time);
 
-    // fetch parameter values
     p.outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     p.colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
     p.b3 = _b3->getValueAtTime(time);
@@ -2393,6 +2451,10 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
     Params p;
 
     setup(args, src, dst, mask, p);
+    if ( !p.analysisLock ) {
+        // we copied pixels to dst already
+        return;
+    }
 
     const OfxRectI& procWindow = args.renderWindow;
 
@@ -2402,7 +2464,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
     unsigned int iheight = p.srcWindow.y2 - p.srcWindow.y1;
     unsigned int isize = iwidth * iheight;
     std::auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * ( nComponents + 2 + ( (p.adaptiveRadius > 0) ? 1 : 0 ) ), this) );
-    float* tmpPixelData = (float*)tmpData->lock();
+    float* tmpPixelData = tmpData.get() ? (float*)tmpData->lock() : NULL;
     float* fimgcolor[3] = { NULL, NULL, NULL };
     float* fimgalpha = NULL;
     float *fimgtmp[3] = { NULL, NULL, NULL };
@@ -2636,11 +2698,20 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
                                  Clip * &identityClip,
                                  double & /*identityTime*/)
 {
-    //std::cout << "isIdentity!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "isIdentity!\n";
+#endif
     const double time = args.time;
 
     if (kLevelMax - startLevelFromRenderScale(args.renderScale) < 0) {
         // renderScale is too low for denoising
+        identityClip = _srcClip;
+
+        return true;
+    }
+
+    if ( !_analysisLock->getValue() ) {
+        // analysis not locked, always return source image
         identityClip = _srcClip;
 
         return true;
@@ -2740,7 +2811,9 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-    //std::cout << "isIdentity! false\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "isIdentity! false\n";
+#endif
     return false;
 } // DenoiseSharpenPlugin::isIdentity
 
@@ -2748,7 +2821,9 @@ void
 DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
                                   const std::string &clipName)
 {
-    //std::cout << "changedClip!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "changedClip!\n";
+#endif
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
@@ -2769,7 +2844,9 @@ DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
             }
         }
     }
-    //std::cout << "changedClip OK!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "changedClip OK!\n";
+#endif
 }
 
 void
@@ -2788,11 +2865,13 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
     } else if ( (paramName == kParamColorModel) || (paramName == kParamB3) ) {
         updateLabels();
         if (args.reason == eChangeUserEdit) {
+            beginEditBlock(kParamColorModel);
             for (unsigned int c = 0; c < 4; ++c) {
                 for (unsigned int f = 0; f < 4; ++f) {
                     _noiseLevel[c][f]->setValue(0.);
                 }
             }
+            endEditBlock();
         }
     } else if (paramName == kParamAnalysisLock) {
         analysisLock();
@@ -2808,7 +2887,9 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
 void
 DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 {
-    //std::cout << "analysis!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "analysis!\n";
+#endif
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
 
     progressStartAnalysis(kPluginName " (noise analysis)");
@@ -2843,7 +2924,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
         analyzeNoiseLevelsForComponents<1>(args);
         break;
     default:
-        //std::cout << "components usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "components usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
@@ -2853,7 +2936,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     _analysisLock->setValue(true);
     endEditBlock();
     progressEndAnalysis();
-    //std::cout << "analysis! OK\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "analysis! OK\n";
+#endif
 }
 
 template<int nComponents>
@@ -2875,7 +2960,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForComponents(const InstanceChangedArgs 
         analyzeNoiseLevelsForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-        //std::cout << "depth usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "depth usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -2912,6 +2999,11 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
+    if ( !src.get() ) {
+        setPersistentMessage(Message::eMessageError, "", "No Source image to analyze");
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+
     bool maskInvert = doMasking ? _maskInvert->getValueAtTime(time) : false;
     bool premult = _premult->getValueAtTime(time);
     int premultChannel = _premultChannel->getValueAtTime(time);
@@ -2936,6 +3028,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
         setPersistentMessage(Message::eMessageError, "", "The analysis window must be at least 80x80 pixels.");
         throwSuiteStatusException(kOfxStatFailed);
     }
+    clearPersistentMessage();
 
     // temporary buffers: one for each channel plus 2 for processing
     unsigned int iwidth = srcWindow.x2 - srcWindow.x1;
@@ -3092,7 +3185,9 @@ mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::Lu
 void
 DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 {
-    //std::cout << "describe!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "describe!\n";
+#endif
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -3124,14 +3219,18 @@ DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
-    //std::cout << "describe! OK\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "describe! OK\n";
+#endif
 }
 
 void
 DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                                ContextEnum context)
 {
-    //std::cout << "describeInContext!\n";
+#ifdef DEBUG_STDOUT
+    std::cout << "describeInContext!\n";
+#endif
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -3306,7 +3405,7 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamAnalysisLockLabel);
             param->setHint(kParamAnalysisLockHint);
             param->setDefault(false);
-            param->setEvaluateOnChange(false);
+            param->setEvaluateOnChange(true); // changes the output mode
             param->setAnimates(false);
             if (group) {
                 param->setParent(*group);
@@ -3320,8 +3419,12 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
             param->setLabel(kParamRectangleInteractBtmLeftLabel);
             param->setDoubleType(eDoubleTypeXYAbsolute);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-            param->setDefault(0., 0.);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
+            param->setDefault(0.1, 0.1);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
@@ -3342,8 +3445,12 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
             param->setLabel(kParamRectangleInteractSizeLabel);
             param->setDoubleType(eDoubleTypeXY);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-            param->setDefault(1., 1.);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
+            param->setDefault(0.8, 0.8);
             param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
@@ -3663,7 +3770,23 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    //std::cout << "describeInContext! OK\n";
+
+    // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+    if (!gHostSupportsDefaultCoordinateSystem) {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDefaultsNormalised);
+        param->setDefault(true);
+        param->setEvaluateOnChange(false);
+        param->setIsSecretAndDisabled(true);
+        param->setIsPersistent(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+#ifdef DEBUG_STDOUT
+    std::cout << "describeInContext! OK\n";
+#endif
 } // DenoiseSharpenPluginFactory::describeInContext
 
 ImageEffect*

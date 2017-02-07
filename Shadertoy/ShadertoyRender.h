@@ -1208,17 +1208,22 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         AutoMutex lock( _rendererInfoMutex.get() );
         std::string &message = _rendererInfo;
         if ( message.empty() ) {
+            const char* glRenderer = (const char*)glGetString(GL_RENDERER);
+            const char* glVersion = (const char*)glGetString(GL_VERSION);
+            const char* glVendor = (const char*)glGetString(GL_VENDOR);
+            const char* glSlVersion = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+            const char* glExtensions = (const char*)glGetString(GL_EXTENSIONS);
             message += "OpenGL renderer information:";
             message += "\nGL_RENDERER = ";
-            message += (char *) glGetString(GL_RENDERER);
+            message += glRenderer ? glRenderer : "N/A";
             message += "\nGL_VERSION = ";
-            message += (char *) glGetString(GL_VERSION);
+            message += glVersion ? glVersion : "N/A";
             message += "\nGL_VENDOR = ";
-            message += (char *) glGetString(GL_VENDOR);
+            message += glVendor ? glVendor : "N/A";
             message += "\nGL_SHADING_LANGUAGE_VERSION = ";
-            message += (char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
+            message += glSlVersion ? glSlVersion : "N/A";
             message += "\nGL_EXTENSIONS = ";
-            message += (char *) glGetString(GL_EXTENSIONS);
+            message += glExtensions ? glExtensions :  "N/A";
         }
     }
 
@@ -2069,17 +2074,22 @@ ShadertoyPlugin::contextAttached(bool createContextData)
         AutoMutex lock( _rendererInfoMutex.get() );
         std::string &message = _rendererInfo;
         if ( message.empty() ) {
+            const char* glRenderer = (const char*)glGetString(GL_RENDERER);
+            const char* glVersion = (const char*)glGetString(GL_VERSION);
+            const char* glVendor = (const char*)glGetString(GL_VENDOR);
+            const char* glSlVersion = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+            const char* glExtensions = (const char*)glGetString(GL_EXTENSIONS);
             message += "OpenGL renderer information:";
             message += "\nGL_RENDERER = ";
-            message += (char *) glGetString(GL_RENDERER);
+            message += glRenderer ? glRenderer : "N/A";
             message += "\nGL_VERSION = ";
-            message += (char *) glGetString(GL_VERSION);
+            message += glVersion ? glVersion : "N/A";
             message += "\nGL_VENDOR = ";
-            message += (char *) glGetString(GL_VENDOR);
+            message += glVendor ? glVendor : "N/A";
             message += "\nGL_SHADING_LANGUAGE_VERSION = ";
-            message += (char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
+            message += glSlVersion ? glSlVersion : "N/A";
             message += "\nGL_EXTENSIONS = ";
-            message += (char *) glGetString(GL_EXTENSIONS);
+            message += glExtensions ? glExtensions :  "N/A";
         }
     }
 

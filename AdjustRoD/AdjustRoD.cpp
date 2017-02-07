@@ -89,7 +89,8 @@ public:
         , _size(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
+        assert( _dstClip && (!_dstClip->isConnected() ||
+                             _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
