@@ -26,6 +26,7 @@
 #endif
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -596,7 +597,7 @@ InvertPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(InvertPluginFactory, {}, {});
+mDeclarePluginFactory(InvertPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 InvertPluginFactory::describe(ImageEffectDescriptor &desc)
 {

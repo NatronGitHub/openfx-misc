@@ -27,6 +27,7 @@
 #include <sstream> // stringstream
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -546,7 +547,7 @@ TestGroupsPlugin::changedParam(const InstanceChangedArgs &args,
     }
 } // TestGroupsPlugin::changedParam
 
-mDeclarePluginFactory(TestGroupsPluginFactory, {}, {});
+mDeclarePluginFactory(TestGroupsPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 TestGroupsPluginFactory::describe(ImageEffectDescriptor &desc)
 {

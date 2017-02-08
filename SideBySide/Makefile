@@ -1,4 +1,4 @@
-PLUGINOBJECTS = SideBySide.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o SideBySide.o
 PLUGINNAME = SideBySide
 RESOURCES = net.sf.openfx.sideBySidePlugin.png net.sf.openfx.sideBySidePlugin.svg
 

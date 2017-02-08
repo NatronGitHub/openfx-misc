@@ -30,6 +30,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -701,7 +702,7 @@ ClipTestPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(ClipTestPluginFactory, {}, {});
+mDeclarePluginFactory(ClipTestPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ClipTestPluginFactory::describe(ImageEffectDescriptor &desc)
 {

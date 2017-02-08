@@ -1,4 +1,4 @@
-PLUGINOBJECTS = HSVTool.o ofxsLut.o ofxsRectangleInteract.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o HSVTool.o ofxsLut.o ofxsRectangleInteract.o
 PLUGINNAME = HSVTool
 RESOURCES = net.sf.openfx.HSVToolPlugin.png net.sf.openfx.HSVToolPlugin.svg
 

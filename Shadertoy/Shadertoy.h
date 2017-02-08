@@ -29,6 +29,7 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifndef OFX_USE_MULTITHREAD_MUTEX
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)

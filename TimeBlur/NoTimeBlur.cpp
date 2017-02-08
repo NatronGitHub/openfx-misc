@@ -210,7 +210,7 @@ NoTimeBlurPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 }
 
-mDeclarePluginFactory(NoTimeBlurPluginFactory, {}, {});
+mDeclarePluginFactory(NoTimeBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 NoTimeBlurPluginFactory::describe(ImageEffectDescriptor &desc)
 {

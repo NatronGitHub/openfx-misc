@@ -29,6 +29,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsTracking.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
@@ -926,7 +927,7 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
     }
 } // TrackerPMPlugin::trackInternal
 
-mDeclarePluginFactory(TrackerPMPluginFactory, {}, {});
+mDeclarePluginFactory(TrackerPMPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 TrackerPMPluginFactory::describe(ImageEffectDescriptor &desc)
 {

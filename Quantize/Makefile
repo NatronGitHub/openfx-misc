@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Quantize.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Quantize.o
 PLUGINNAME = Templates
 #RESOURCES = net.sf.openfx.Quantize.png net.sf.openfx.Quantize.svg
 

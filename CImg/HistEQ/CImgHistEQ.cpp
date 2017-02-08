@@ -169,7 +169,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgHistEQPluginFactory, {}, {});
+mDeclarePluginFactory(CImgHistEQPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgHistEQPluginFactory::describe(ImageEffectDescriptor& desc)

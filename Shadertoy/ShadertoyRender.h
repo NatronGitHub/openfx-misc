@@ -33,6 +33,7 @@
 #endif
 
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsCoords.h"
 

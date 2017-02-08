@@ -154,7 +154,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgMedianPluginFactory, {}, {});
+mDeclarePluginFactory(CImgMedianPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgMedianPluginFactory::describe(ImageEffectDescriptor& desc)

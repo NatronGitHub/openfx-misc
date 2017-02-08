@@ -27,6 +27,7 @@
 #endif
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -912,8 +913,7 @@ AppendClipPlugin::getTimeDomain(OfxRangeD &range)
     return true;
 }
 
-mDeclarePluginFactory(AppendClipPluginFactory, {}, {}
-                      );
+mDeclarePluginFactory(AppendClipPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 AppendClipPluginFactory::describe(ImageEffectDescriptor &desc)
 {

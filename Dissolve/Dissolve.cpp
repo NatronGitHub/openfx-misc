@@ -24,6 +24,7 @@
 #include <algorithm>
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -482,8 +483,7 @@ DissolvePlugin::changedClip(const InstanceChangedArgs & /*args*/,
     updateRange();
 }
 
-mDeclarePluginFactory(DissolvePluginFactory, {}, {}
-                      );
+mDeclarePluginFactory(DissolvePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 DissolvePluginFactory::describe(ImageEffectDescriptor &desc)
 {

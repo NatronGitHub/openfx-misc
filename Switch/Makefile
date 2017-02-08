@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Switch.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Switch.o
 PLUGINNAME = Switch
 RESOURCES = net.sf.openfx.switchPlugin.png net.sf.openfx.switchPlugin.svg
 

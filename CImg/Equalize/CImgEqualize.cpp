@@ -161,7 +161,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgEqualizePluginFactory, {}, {});
+mDeclarePluginFactory(CImgEqualizePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgEqualizePluginFactory::describe(ImageEffectDescriptor& desc)

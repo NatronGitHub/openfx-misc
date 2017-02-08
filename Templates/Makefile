@@ -1,4 +1,4 @@
-PLUGINOBJECTS = MaskableFilter.o MixableFilter.o SimpleFilter.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o MaskableFilter.o MixableFilter.o SimpleFilter.o
 PLUGINNAME = Templates
 #RESOURCES = net.sf.openfx.MaskableFilter.png net.sf.openfx.MaskableFilter.svg
 

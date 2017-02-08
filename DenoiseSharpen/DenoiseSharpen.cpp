@@ -58,6 +58,9 @@
 #include <algorithm>
 #ifdef DEBUG_STDOUT
 #include <iostream>
+#define DBG(x) (x)
+#else
+#define DBG(x) (void)0
 #endif
 #ifdef _WINDOWS
 #include <windows.h>
@@ -68,6 +71,7 @@
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
 #include "ofxsRectangleInteract.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsCopier.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
@@ -90,6 +94,10 @@ typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 #endif
 
 using namespace OFX;
+#ifdef DEBUG_STDOUT
+using std::cout;
+using std::endl;
+#endif
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
@@ -2213,9 +2221,7 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     omp_set_num_threads( MultiThread::getNumCPUs() );
 #endif
-#ifdef DEBUG_STDOUT
-    std::cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n";
-#endif
+    DBG(cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n");
 
     progressStartRender(kPluginName " (render)");
 
@@ -2240,17 +2246,13 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
         renderForComponents<1>(args);
         break;
     default:
-#ifdef DEBUG_STDOUT
-        std::cout << "components usupported\n";
-#endif
+        DBG(std::cout << "components usupported\n");
         throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
     progressEndRender();
 
-#ifdef DEBUG_STDOUT
-    std::cout << "render! OK\n";
-#endif
+    DBG(cout << "render! OK\n");
 }
 
 template<int nComponents>
@@ -2272,9 +2274,7 @@ DenoiseSharpenPlugin::renderForComponents(const RenderArguments &args)
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-#ifdef DEBUG_STDOUT
-        std::cout << "depth usupported\n";
-#endif
+        DBG(cout << "depth usupported\n");
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -2356,9 +2356,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     p.analysisLock = _analysisLock->getValueAtTime(time);
     if ( !p.analysisLock ) {
         // all we have to do is copy pixels
-#ifdef DEBUG_STDOUT
-        std::cout << "render called although analysis not locked and isidentity=true\n";
-#endif
+        DBG(cout << "render called although analysis not locked and isidentity=true\n");
         copyPixels(*this,
                    args.renderWindow,
                    src.get(),
@@ -2698,9 +2696,8 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
                                  Clip * &identityClip,
                                  double & /*identityTime*/)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "isIdentity!\n";
-#endif
+    DBG(cout << "isIdentity!\n");
+
     const double time = args.time;
 
     if (kLevelMax - startLevelFromRenderScale(args.renderScale) < 0) {
@@ -2811,9 +2808,8 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-#ifdef DEBUG_STDOUT
-    std::cout << "isIdentity! false\n";
-#endif
+    DBG(cout << "isIdentity! false\n");
+
     return false;
 } // DenoiseSharpenPlugin::isIdentity
 
@@ -2821,9 +2817,8 @@ void
 DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
                                   const std::string &clipName)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "changedClip!\n";
-#endif
+    DBG(cout << "changedClip!\n");
+
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
@@ -2844,9 +2839,7 @@ DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
             }
         }
     }
-#ifdef DEBUG_STDOUT
-    std::cout << "changedClip OK!\n";
-#endif
+    DBG(cout << "changedClip OK!\n");
 }
 
 void
@@ -2887,9 +2880,8 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
 void
 DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "analysis!\n";
-#endif
+    DBG(cout << "analysis!\n");
+
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
 
     progressStartAnalysis(kPluginName " (noise analysis)");
@@ -2936,9 +2928,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     _analysisLock->setValue(true);
     endEditBlock();
     progressEndAnalysis();
-#ifdef DEBUG_STDOUT
-    std::cout << "analysis! OK\n";
-#endif
+
+    DBG(cout << "analysis! OK\n");
 }
 
 template<int nComponents>
@@ -3180,14 +3171,13 @@ class DenoiseSharpenOverlayDescriptor
 {
 };
 
-mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<Mutex>; }, { delete gLutManager; });
+mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
 
 void
 DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "describe!\n";
-#endif
+    DBG(cout << "describe!\n");
+
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -3219,18 +3209,15 @@ DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
-#ifdef DEBUG_STDOUT
-    std::cout << "describe! OK\n";
-#endif
+    DBG(cout << "describe! OK\n");
 }
 
 void
 DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                                ContextEnum context)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "describeInContext!\n";
-#endif
+    DBG(cout << "describeInContext!\n");
+
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -3784,9 +3771,7 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-#ifdef DEBUG_STDOUT
-    std::cout << "describeInContext! OK\n";
-#endif
+    DBG(cout << "describeInContext! OK\n");
 } // DenoiseSharpenPluginFactory::describeInContext
 
 ImageEffect*

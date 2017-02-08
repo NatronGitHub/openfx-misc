@@ -34,6 +34,7 @@
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
@@ -751,7 +752,7 @@ TimeBufferReadPlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferReadPluginFactory, {}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
+mDeclarePluginFactory(TimeBufferReadPluginFactory, {ofxsThreadSuiteCheck();}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
 void
 TimeBufferReadPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -1270,7 +1271,7 @@ TimeBufferWritePlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferWritePluginFactory, {}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
+mDeclarePluginFactory(TimeBufferWritePluginFactory, {ofxsThreadSuiteCheck();}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
 void
 TimeBufferWritePluginFactory::describe(ImageEffectDescriptor &desc)
 {

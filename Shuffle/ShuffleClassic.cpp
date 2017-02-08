@@ -28,6 +28,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -1030,7 +1031,7 @@ ShufflePlugin::enableComponents(void)
     }
 } // ShufflePlugin::enableComponents
 
-mDeclarePluginFactory(ShufflePluginFactory, {}, {});
+mDeclarePluginFactory(ShufflePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ShufflePluginFactory::describe(ImageEffectDescriptor &desc)
 {

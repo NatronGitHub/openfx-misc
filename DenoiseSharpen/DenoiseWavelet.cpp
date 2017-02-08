@@ -1275,10 +1275,7 @@ public:
     {
     }
 
-    virtual void load()
-    {
-        _lut = Color::LutManager<Mutex>::Rec709Lut();
-    }
+    virtual void load() OVERRIDE FINAL { _lut = Color::LutManager<Mutex>::Rec709Lut(); ofxsThreadSuiteCheck(); }
 
     virtual void unload()
     {

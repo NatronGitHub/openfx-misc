@@ -1227,6 +1227,166 @@
 		1EF46F3F194A394E00825BDF /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EF46F47194A39C800825BDF /* Shuffle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF46F45194A39C800825BDF /* Shuffle.cpp */; };
 		1EF46F48194A39C800825BDF /* Shuffle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF46F45194A39C800825BDF /* Shuffle.cpp */; };
+		1EF77B741E4A3CA7005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B751E4A3D85005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77B941E4B63F6005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B951E4B63F6005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B961E4B63F7005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B971E4B63FA005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B981E4B63FB005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B991E4B63FC005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B9A1E4B6400005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B9B1E4B6402005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B9C1E4B6403005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B9D1E4B6404005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B9E1E4B6404005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77B9F1E4B6405005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BA01E4B6406005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BA11E4B6407005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BA21E4B6408005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BA31E4B6409005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BA41E4B640A005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BA51E4B640B005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BA61E4B640B005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BA71E4B640C005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BA91E4B640D005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BAA1E4B640E005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BAB1E4B640F005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BAC1E4B6410005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BAD1E4B6410005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BAE1E4B6411005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BAF1E4B6412005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB01E4B6413005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB11E4B6413005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB21E4B6415005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB31E4B6416005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB41E4B6417005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB51E4B6418005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB61E4B6418005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB71E4B6419005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB81E4B641A005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BB91E4B641B005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BBA1E4B641B005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BBB1E4B641C005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BBC1E4B641D005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BBD1E4B641D005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BBE1E4B641F005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BBF1E4B641F005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BC01E4B6420005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BC11E4B6422005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BC21E4B6423005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BC31E4B6424005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BC41E4B6424005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BC51E4B6425005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BC61E4B6426005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BC71E4B6427005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BC91E4B6429005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BCA1E4B642B005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BCB1E4B642C005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BCC1E4B642D005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BCD1E4B642D005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BCE1E4B642E005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BCF1E4B642F005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD01E4B6431005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD11E4B6432005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD21E4B6433005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD31E4B6434005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD41E4B6435005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD51E4B6435005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD61E4B6436005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD71E4B6437005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD81E4B6438005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BD91E4B6439005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BDA1E4B643B005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BDB1E4B643B005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BDC1E4B643C005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BDD1E4B643E005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BDE1E4B643F005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BDF1E4B643F005C4845 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EF77BE01E4B6445005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BE11E4B6446005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BE21E4B6447005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BE31E4B6447005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BE41E4B6448005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BE51E4B6449005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BE61E4B644A005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BE71E4B644B005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BE81E4B644B005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BE91E4B644C005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BEA1E4B644D005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BEB1E4B644E005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BEC1E4B644E005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BED1E4B644F005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BEE1E4B6450005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BEF1E4B6451005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF01E4B6451005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF11E4B6452005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF21E4B6453005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF31E4B6454005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF41E4B6455005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF51E4B6456005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF61E4B6456005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF71E4B6457005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF81E4B6458005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BF91E4B6459005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BFA1E4B645A005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BFB1E4B645B005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BFC1E4B645C005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BFD1E4B645D005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BFE1E4B645D005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77BFF1E4B645E005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C001E4B645F005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C011E4B6460005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C021E4B6461005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C031E4B6462005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C041E4B6463005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C051E4B6463005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C061E4B6464005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C071E4B6465005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C081E4B6466005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C091E4B6467005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C0A1E4B6468005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C0B1E4B646C005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C0C1E4B646D005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C0D1E4B646D005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C0E1E4B646E005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C0F1E4B646F005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C101E4B6470005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C111E4B6470005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C121E4B6471005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C131E4B6472005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C141E4B6473005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C151E4B6473005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C161E4B6474005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C171E4B6475005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C181E4B6475005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C191E4B6476005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C1A1E4B6477005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C1B1E4B6478005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C1C1E4B6478005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C1D1E4B6479005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C201E4B647C005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C211E4B647D005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C221E4B647D005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C231E4B647F005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C241E4B6480005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C251E4B6480005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C261E4B6481005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C271E4B6482005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C281E4B6483005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C291E4B6483005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C2A1E4B6484005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C2B1E4B6485005C4845 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EF77C2C1E4B670A005C4845 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
+		1EF77C2D1E4B68A4005C4845 /* ofxsGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E75A0311A87BA37005BAA36 /* ofxsGenerator.cpp */; };
+		1EF77C2E1E4B68A6005C4845 /* ofxsGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E75A0311A87BA37005BAA36 /* ofxsGenerator.cpp */; };
+		1EF77C2F1E4B68BC005C4845 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
+		1EF77C301E4B68CC005C4845 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
+		1EF77C311E4B6946005C4845 /* ofxsGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E75A0311A87BA37005BAA36 /* ofxsGenerator.cpp */; };
+		1EF77C321E4B6959005C4845 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
+		1EF77C331E4B6970005C4845 /* ofxsMultiPlane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */; };
+		1EF77C341E4B6982005C4845 /* ofxsGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E75A0311A87BA37005BAA36 /* ofxsGenerator.cpp */; };
+		1EF77C351E4B6986005C4845 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
 		1EFA60EF1A8E1D0B00EA4CBF /* net.sf.openfx.Clamp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60ED1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.png */; };
 		1EFA60F01A8E1D0B00EA4CBF /* net.sf.openfx.Clamp.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60EE1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.svg */; };
 		1EFA60F31A8E1D2A00EA4CBF /* net.sf.openfx.ClipTestPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F11A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.png */; };
@@ -3456,7 +3616,7 @@
 		1ED3A2681BBC34B0008128B1 /* net.sf.openfx.TimeBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.TimeBlur.png; sourceTree = "<group>"; };
 		1ED3A2691BBC34B0008128B1 /* net.sf.openfx.TimeBlur.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.TimeBlur.svg; sourceTree = "<group>"; };
 		1ED4569C19BBB0E00019E8CF /* ofxsImageBlenderMasked.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsImageBlenderMasked.h; sourceTree = "<group>"; };
-		1ED4AEA61973DCAD00EE64C8 /* Noise.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Noise.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1ED4AEA61973DCAD00EE64C8 /* Rand.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Rand.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ED4AEA91973DD4800EE64C8 /* Rand.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Rand.cpp; sourceTree = "<group>"; };
 		1ED4AEB11973DD6D00EE64C8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1ED4AEB21973DD6D00EE64C8 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -3582,6 +3742,10 @@
 		1EF46F45194A39C800825BDF /* Shuffle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Shuffle.cpp; sourceTree = "<group>"; };
 		1EF46F49194A39DB00825BDF /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EF46F4C194A39E800825BDF /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EF77B701E4A3878005C4845 /* tinythread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tinythread.cpp; sourceTree = "<group>"; };
+		1EF77B711E4A3883005C4845 /* tinythread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tinythread.h; sourceTree = "<group>"; };
+		1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsThreadSuite.cpp; sourceTree = "<group>"; };
+		1EF77B731E4A3998005C4845 /* ofxsThreadSuite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsThreadSuite.h; sourceTree = "<group>"; };
 		1EFA60ED1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Clamp.png; sourceTree = "<group>"; };
 		1EFA60EE1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Clamp.svg; sourceTree = "<group>"; };
 		1EFA60F11A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ClipTestPlugin.png; sourceTree = "<group>"; };
@@ -4672,7 +4836,7 @@
 				D7BB85C91955C00100A86649 /* TrackerPM.ofx.bundle */,
 				1E52FFCB1955CE120000FB79 /* Premult.ofx.bundle */,
 				1EB9C080196DD64E003C1849 /* NoOp.ofx.bundle */,
-				1ED4AEA61973DCAD00EE64C8 /* Noise.ofx.bundle */,
+				1ED4AEA61973DCAD00EE64C8 /* Rand.ofx.bundle */,
 				1E2A93581990EE690061B1F1 /* Retime.ofx.bundle */,
 				1E10A7071997BFE400EE87A1 /* ColorMatrix.ofx.bundle */,
 				1EBAEFE1199A81DB0037B3E6 /* Test.ofx.bundle */,
@@ -5122,6 +5286,8 @@
 		1E9B5F46198A51590095C8AA /* SupportExt */ = {
 			isa = PBXGroup;
 			children = (
+				1EF77B701E4A3878005C4845 /* tinythread.cpp */,
+				1EF77B711E4A3883005C4845 /* tinythread.h */,
 				1E5EBA161D4BACD90005A5A8 /* glad.cpp */,
 				1E5EBA171D4BACD90005A5A8 /* glad.h */,
 				1E894E121CF859A1003E7F35 /* fast_mutex.h */,
@@ -5163,6 +5329,8 @@
 				1E9B5F54198A51840095C8AA /* ofxsRectangleInteract.h */,
 				1EE72C0E1B5253A4001B0245 /* ofxsShutter.h */,
 				1EE72C0F1B5253A4001B0245 /* ofxsShutter.cpp */,
+				1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */,
+				1EF77B731E4A3998005C4845 /* ofxsThreadSuite.h */,
 				1E9B5F55198A51840095C8AA /* ofxsTracking.cpp */,
 				1E9B5F56198A51840095C8AA /* ofxsTracking.h */,
 				1E9B5F57198A51840095C8AA /* ofxsTransform3x3.cpp */,
@@ -6658,9 +6826,9 @@
 			productReference = 1ED12E431A4B30B600ABA348 /* Multiply.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
-		1ED4AE951973DCAD00EE64C8 /* Noise.ofx */ = {
+		1ED4AE951973DCAD00EE64C8 /* Rand.ofx */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 1ED4AEA31973DCAD00EE64C8 /* Build configuration list for PBXNativeTarget "Noise.ofx" */;
+			buildConfigurationList = 1ED4AEA31973DCAD00EE64C8 /* Build configuration list for PBXNativeTarget "Rand.ofx" */;
 			buildPhases = (
 				1ED4AE961973DCAD00EE64C8 /* Sources */,
 				1ED4AEA11973DCAD00EE64C8 /* Frameworks */,
@@ -6670,9 +6838,9 @@
 			);
 			dependencies = (
 			);
-			name = Noise.ofx;
+			name = Rand.ofx;
 			productName = basic.ofx;
-			productReference = 1ED4AEA61973DCAD00EE64C8 /* Noise.ofx.bundle */;
+			productReference = 1ED4AEA61973DCAD00EE64C8 /* Rand.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 		1ED5371A1A234CDF007966D5 /* ColorTransform.ofx */ = {
@@ -7151,7 +7319,6 @@
 				1EB0A4831AA21B1300F9C93E /* Mirror.ofx */,
 				1EDE1BCF182D8941002392CB /* MixViews.ofx */,
 				1ED12E311A4B30B600ABA348 /* Multiply.ofx */,
-				1ED4AE951973DCAD00EE64C8 /* Noise.ofx */,
 				1EB9C06F196DD64E003C1849 /* NoOp.ofx */,
 				1EDE1BB6182D3F38002392CB /* OneView.ofx */,
 				1E511D481D8AC9A50037C61F /* PIK.ofx */,
@@ -7161,6 +7328,7 @@
 				1E9A56F81D7817700070646A /* Quantize.ofx */,
 				1ECA4DF91A3F3ACD00C5128B /* Radial.ofx */,
 				1ECA4DE01A3F3A6500C5128B /* Ramp.ofx */,
+				1ED4AE951973DCAD00EE64C8 /* Rand.ofx */,
 				1ECE543C185F2374001ED442 /* ReConverge.ofx */,
 				1E0072D11A40417F00E77042 /* Rectangle.ofx */,
 				AC29F7AA1C3FE922006B0019 /* Reformat.ofx */,
@@ -7208,10 +7376,12 @@
 			files = (
 				1E0072F61A40420F00E77042 /* Rectangle.cpp in Sources */,
 				1E0072D51A40417F00E77042 /* ofxsCore.cpp in Sources */,
+				1EF77BF11E4B6452005C4845 /* tinythread.cpp in Sources */,
 				1E0072D61A40417F00E77042 /* ofxsImageEffect.cpp in Sources */,
 				1E0072D71A40417F00E77042 /* ofxsInteract.cpp in Sources */,
 				1E53E2F31B359A020082B2AB /* ofxsGenerator.cpp in Sources */,
 				1E0072D81A40417F00E77042 /* ofxsRectangleInteract.cpp in Sources */,
+				1EF77BCE1E4B642E005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E0072D91A40417F00E77042 /* ofxsLog.cpp in Sources */,
 				1E0072DA1A40417F00E77042 /* ofxsMultiThread.cpp in Sources */,
 				1E0072DB1A40417F00E77042 /* ofxsParams.cpp in Sources */,
@@ -7224,10 +7394,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C211E4B647D005C4845 /* tinythread.cpp in Sources */,
 				1E08320C199FEB7400A819A5 /* Deinterlace.cpp in Sources */,
 				1E0831F8199FEB1F00A819A5 /* ofxsCore.cpp in Sources */,
 				1E0831F9199FEB1F00A819A5 /* ofxsImageEffect.cpp in Sources */,
 				1E0831FA199FEB1F00A819A5 /* ofxsInteract.cpp in Sources */,
+				1EF77BA91E4B640D005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E0831FB199FEB1F00A819A5 /* ofxsLog.cpp in Sources */,
 				1E0831FC199FEB1F00A819A5 /* ofxsMultiThread.cpp in Sources */,
 				1E0831FD199FEB1F00A819A5 /* ofxsParams.cpp in Sources */,
@@ -7240,10 +7412,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C171E4B6475005C4845 /* tinythread.cpp in Sources */,
 				1E10A70A1997C03100EE87A1 /* ColorMatrix.cpp in Sources */,
 				1E10A6FA1997BFE400EE87A1 /* ofxsCore.cpp in Sources */,
 				1E10A6FB1997BFE400EE87A1 /* ofxsImageEffect.cpp in Sources */,
 				1E10A6FC1997BFE400EE87A1 /* ofxsInteract.cpp in Sources */,
+				1EF77BA01E4B6406005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E10A6FD1997BFE400EE87A1 /* ofxsLog.cpp in Sources */,
 				1E10A6FE1997BFE400EE87A1 /* ofxsMultiThread.cpp in Sources */,
 				1E10A6FF1997BFE400EE87A1 /* ofxsParams.cpp in Sources */,
@@ -7256,10 +7430,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C061E4B6464005C4845 /* tinythread.cpp in Sources */,
 				1E181B0019518DF500FAB9A9 /* Invert.cpp in Sources */,
 				1E181AEE19518CCF00FAB9A9 /* ofxsCore.cpp in Sources */,
 				1E181AEF19518CCF00FAB9A9 /* ofxsImageEffect.cpp in Sources */,
 				1E181AF019518CCF00FAB9A9 /* ofxsInteract.cpp in Sources */,
+				1EF77BB81E4B641A005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E181AF119518CCF00FAB9A9 /* ofxsLog.cpp in Sources */,
 				1E181AF219518CCF00FAB9A9 /* ofxsMultiThread.cpp in Sources */,
 				1E181AF319518CCF00FAB9A9 /* ofxsParams.cpp in Sources */,
@@ -7272,10 +7448,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C0A1E4B6468005C4845 /* tinythread.cpp in Sources */,
 				1E1FB8F61906972200F5515D /* Grade.cpp in Sources */,
 				1E1FB8E6190696F200F5515D /* ofxsCore.cpp in Sources */,
 				1E1FB8E7190696F200F5515D /* ofxsImageEffect.cpp in Sources */,
 				1E1FB8E8190696F200F5515D /* ofxsInteract.cpp in Sources */,
+				1EF77BB41E4B6417005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E1FB8E9190696F200F5515D /* ofxsLog.cpp in Sources */,
 				1E1FB8EA190696F200F5515D /* ofxsMultiThread.cpp in Sources */,
 				1E1FB8EB190696F200F5515D /* ofxsParams.cpp in Sources */,
@@ -7288,10 +7466,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BEA1E4B644D005C4845 /* tinythread.cpp in Sources */,
 				1E235FEE18363CE70019C45F /* SideBySide.cpp in Sources */,
 				1E235FDD18363C850019C45F /* ofxsCore.cpp in Sources */,
 				1E235FDE18363C850019C45F /* ofxsImageEffect.cpp in Sources */,
 				1E235FDF18363C850019C45F /* ofxsInteract.cpp in Sources */,
+				1EF77BD51E4B6435005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E235FE018363C850019C45F /* ofxsLog.cpp in Sources */,
 				1E235FE118363C850019C45F /* ofxsMultiThread.cpp in Sources */,
 				1E235FE218363C850019C45F /* ofxsParams.cpp in Sources */,
@@ -7304,10 +7484,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BE31E4B6447005C4845 /* tinythread.cpp in Sources */,
 				1E23600718369E890019C45F /* TimeOffset.cpp in Sources */,
 				1E235FF618369E4C0019C45F /* ofxsCore.cpp in Sources */,
 				1E235FF718369E4C0019C45F /* ofxsImageEffect.cpp in Sources */,
 				1E235FF918369E4C0019C45F /* ofxsInteract.cpp in Sources */,
+				1EF77BDC1E4B643C005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E235FFA18369E4C0019C45F /* ofxsLog.cpp in Sources */,
 				1E235FFB18369E4C0019C45F /* ofxsMultiThread.cpp in Sources */,
 				1E235FFC18369E4C0019C45F /* ofxsParams.cpp in Sources */,
@@ -7320,10 +7502,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C081E4B6466005C4845 /* tinythread.cpp in Sources */,
 				1E2678B91DAE97120047D737 /* HueCorrect.cpp in Sources */,
 				1E2678A71DAE96E50047D737 /* ofxsCore.cpp in Sources */,
 				1E2678A81DAE96E50047D737 /* ofxsImageEffect.cpp in Sources */,
 				1E2678A91DAE96E50047D737 /* ofxsInteract.cpp in Sources */,
+				1EF77BB61E4B6418005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E2678AA1DAE96E50047D737 /* ofxsLog.cpp in Sources */,
 				1E2678AB1DAE96E50047D737 /* ofxsMultiThread.cpp in Sources */,
 				1E2678AC1DAE96E50047D737 /* ofxsParams.cpp in Sources */,
@@ -7336,10 +7520,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BEF1E4B6451005C4845 /* tinythread.cpp in Sources */,
 				1E2A935B1990EEB60061B1F1 /* Retime.cpp in Sources */,
 				1E2A934B1990EE690061B1F1 /* ofxsCore.cpp in Sources */,
 				1E2A934C1990EE690061B1F1 /* ofxsImageEffect.cpp in Sources */,
 				1E2A934D1990EE690061B1F1 /* ofxsInteract.cpp in Sources */,
+				1EF77BD01E4B6431005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E2A934E1990EE690061B1F1 /* ofxsLog.cpp in Sources */,
 				1E2A934F1990EE690061B1F1 /* ofxsMultiThread.cpp in Sources */,
 				1E2A93501990EE690061B1F1 /* ofxsParams.cpp in Sources */,
@@ -7352,10 +7538,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C011E4B6460005C4845 /* tinythread.cpp in Sources */,
 				1E2D33F01C3FB9F5004E2F03 /* MatteMonitor.cpp in Sources */,
 				1E2D33DF1C3FB9A3004E2F03 /* ofxsCore.cpp in Sources */,
 				1E2D33E01C3FB9A3004E2F03 /* ofxsImageEffect.cpp in Sources */,
 				1E2D33E11C3FB9A3004E2F03 /* ofxsInteract.cpp in Sources */,
+				1EF77BBD1E4B641D005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E2D33E21C3FB9A3004E2F03 /* ofxsLog.cpp in Sources */,
 				1E2D33E31C3FB9A3004E2F03 /* ofxsMultiThread.cpp in Sources */,
 				1E2D33E41C3FB9A3004E2F03 /* ofxsParams.cpp in Sources */,
@@ -7374,6 +7562,7 @@
 				1E868B7E19E6F6B500B793BA /* CImgDenoise.cpp in Sources */,
 				1E868B7519E6E10100B793BA /* CImgDilate.cpp in Sources */,
 				1EA330AD19E846F7002EFA5B /* CImgEqualize.cpp in Sources */,
+				1EF77B9A1E4B6400005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ECF2F5319F2CB9F00E91A38 /* CImgErodeSmooth.cpp in Sources */,
 				1E868B7819E6E28E00B793BA /* CImgErode.cpp in Sources */,
 				1E1DDFEC1A04E432007F45B2 /* CImgGuided.cpp in Sources */,
@@ -7388,6 +7577,7 @@
 				1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */,
 				1EFA77171A24E05F00212DB0 /* ofxsLut.cpp in Sources */,
 				1E31941319D9B2270027D0E2 /* ofxsCore.cpp in Sources */,
+				1EF77C111E4B6470005C4845 /* tinythread.cpp in Sources */,
 				1E31941419D9B2270027D0E2 /* ofxsImageEffect.cpp in Sources */,
 				1E31941519D9B2270027D0E2 /* ofxsInteract.cpp in Sources */,
 				1E31941619D9B2270027D0E2 /* ofxsLog.cpp in Sources */,
@@ -7403,10 +7593,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C101E4B6470005C4845 /* tinythread.cpp in Sources */,
 				1E3451F8190695850080D699 /* ChromaKeyer.cpp in Sources */,
 				1E3451E31906952D0080D699 /* ofxsCore.cpp in Sources */,
 				1E3451E41906952D0080D699 /* ofxsImageEffect.cpp in Sources */,
 				1E3451E61906952D0080D699 /* ofxsInteract.cpp in Sources */,
+				1EF77C2C1E4B670A005C4845 /* ofxsLut.cpp in Sources */,
+				1EF77B991E4B63FC005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E3451E71906952D0080D699 /* ofxsLog.cpp in Sources */,
 				1E3451E91906952D0080D699 /* ofxsMultiThread.cpp in Sources */,
 				1E3451EA1906952D0080D699 /* ofxsParams.cpp in Sources */,
@@ -7419,10 +7612,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C151E4B6473005C4845 /* tinythread.cpp in Sources */,
 				1E3452131906961F0080D699 /* ColorCorrect.cpp in Sources */,
 				1E345200190695DC0080D699 /* ofxsCore.cpp in Sources */,
 				1E345201190695DC0080D699 /* ofxsImageEffect.cpp in Sources */,
 				1E345204190695DC0080D699 /* ofxsInteract.cpp in Sources */,
+				1EF77B9E1E4B6404005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E345205190695DC0080D699 /* ofxsLog.cpp in Sources */,
 				1E345208190695DC0080D699 /* ofxsMultiThread.cpp in Sources */,
 				1E345209190695DC0080D699 /* ofxsParams.cpp in Sources */,
@@ -7435,10 +7630,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BE81E4B644B005C4845 /* tinythread.cpp in Sources */,
 				1E3AC8E018B6216200F228A6 /* Switch.cpp in Sources */,
 				1E3AC8C918B6207600F228A6 /* ofxsCore.cpp in Sources */,
 				1E3AC8CA18B6207600F228A6 /* ofxsImageEffect.cpp in Sources */,
 				1E3AC8CB18B6207600F228A6 /* ofxsInteract.cpp in Sources */,
+				1EF77BD71E4B6437005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E3AC8CC18B6207600F228A6 /* ofxsLog.cpp in Sources */,
 				1E3AC8CD18B6207600F228A6 /* ofxsMultiThread.cpp in Sources */,
 				1E3AC8CE18B6207600F228A6 /* ofxsParams.cpp in Sources */,
@@ -7451,10 +7648,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C161E4B6474005C4845 /* tinythread.cpp in Sources */,
 				1EFC1700180DCE6500AD7B86 /* ColorLookup.cpp in Sources */,
 				1E3E3CBE17995D5C005F2132 /* ofxsCore.cpp in Sources */,
 				1E3E3CBF17995D5C005F2132 /* ofxsImageEffect.cpp in Sources */,
 				1E3E3CC017995D5C005F2132 /* ofxsInteract.cpp in Sources */,
+				1EF77B9F1E4B6405005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E3E3CC117995D5C005F2132 /* ofxsLog.cpp in Sources */,
 				1E3E3CC217995D5C005F2132 /* ofxsMultiThread.cpp in Sources */,
 				1E3E3CC317995D5C005F2132 /* ofxsParams.cpp in Sources */,
@@ -7467,10 +7666,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BF91E4B6459005C4845 /* tinythread.cpp in Sources */,
 				1E511D5E1D8AC9E90037C61F /* PIK.cpp in Sources */,
 				1E511D4B1D8AC9A50037C61F /* ofxsCore.cpp in Sources */,
 				1E511D4C1D8AC9A50037C61F /* ofxsImageEffect.cpp in Sources */,
 				1E511D4D1D8AC9A50037C61F /* ofxsInteract.cpp in Sources */,
+				1EF77BC51E4B6425005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E511D4E1D8AC9A50037C61F /* ofxsLog.cpp in Sources */,
 				1E511D4F1D8AC9A50037C61F /* ofxsMultiThread.cpp in Sources */,
 				1E511D501D8AC9A50037C61F /* ofxsParams.cpp in Sources */,
@@ -7483,10 +7684,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BF61E4B6456005C4845 /* tinythread.cpp in Sources */,
 				1E52FFCF1955CE720000FB79 /* Premult.cpp in Sources */,
 				1E52FFBE1955CE120000FB79 /* ofxsCore.cpp in Sources */,
 				1E52FFBF1955CE120000FB79 /* ofxsImageEffect.cpp in Sources */,
 				1E52FFC01955CE120000FB79 /* ofxsInteract.cpp in Sources */,
+				1EF77BC91E4B6429005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E52FFC11955CE120000FB79 /* ofxsLog.cpp in Sources */,
 				1E52FFC21955CE120000FB79 /* ofxsMultiThread.cpp in Sources */,
 				1E52FFC31955CE120000FB79 /* ofxsParams.cpp in Sources */,
@@ -7501,10 +7704,12 @@
 			files = (
 				1E53BFA41C75D20300623EE0 /* ColorBars.cpp in Sources */,
 				1E53BF901C75D1D500623EE0 /* ofxsCore.cpp in Sources */,
+				1EF77C141E4B6473005C4845 /* tinythread.cpp in Sources */,
 				1E53BF911C75D1D500623EE0 /* ofxsImageEffect.cpp in Sources */,
 				1E53BF921C75D1D500623EE0 /* ofxsInteract.cpp in Sources */,
 				1E53BF931C75D1D500623EE0 /* ofxsGenerator.cpp in Sources */,
 				1E53BF941C75D1D500623EE0 /* ofxsLog.cpp in Sources */,
+				1EF77B9D1E4B6404005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E53BF951C75D1D500623EE0 /* ofxsMultiThread.cpp in Sources */,
 				1E53BF961C75D1D500623EE0 /* ofxsParams.cpp in Sources */,
 				1E53BF971C75D1D500623EE0 /* ofxsProperty.cpp in Sources */,
@@ -7519,10 +7724,12 @@
 			files = (
 				1E593381194A0CF400804448 /* Constant.cpp in Sources */,
 				1E593370194A0C6300804448 /* ofxsCore.cpp in Sources */,
+				1EF77C1B1E4B6478005C4845 /* tinythread.cpp in Sources */,
 				1E593371194A0C6300804448 /* ofxsImageEffect.cpp in Sources */,
 				1E593372194A0C6300804448 /* ofxsInteract.cpp in Sources */,
 				1E75A0331A87BA37005BAA36 /* ofxsGenerator.cpp in Sources */,
 				1E593373194A0C6300804448 /* ofxsLog.cpp in Sources */,
+				1EF77BA41E4B640A005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E593374194A0C6300804448 /* ofxsMultiThread.cpp in Sources */,
 				1E593375194A0C6300804448 /* ofxsParams.cpp in Sources */,
 				1E593376194A0C6300804448 /* ofxsProperty.cpp in Sources */,
@@ -7535,10 +7742,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C281E4B6483005C4845 /* tinythread.cpp in Sources */,
 				1E5D54821AB58D3900B7B1BE /* FrameHold.cpp in Sources */,
 				1E5D546E1AB58CFA00B7B1BE /* ofxsCore.cpp in Sources */,
 				1E5D546F1AB58CFA00B7B1BE /* ofxsImageEffect.cpp in Sources */,
 				1E5D54701AB58CFA00B7B1BE /* ofxsInteract.cpp in Sources */,
+				1EF77BB01E4B6413005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E5D54711AB58CFA00B7B1BE /* ofxsLog.cpp in Sources */,
 				1E5D54721AB58CFA00B7B1BE /* ofxsMultiThread.cpp in Sources */,
 				1E5D54741AB58CFA00B7B1BE /* ofxsParams.cpp in Sources */,
@@ -7551,10 +7760,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C0E1E4B646E005C4845 /* tinythread.cpp in Sources */,
 				1E5D54AB1AB5AA6900B7B1BE /* AppendClip.cpp in Sources */,
 				1E5D54991AB5AA0A00B7B1BE /* ofxsCore.cpp in Sources */,
 				1E5D549A1AB5AA0A00B7B1BE /* ofxsImageEffect.cpp in Sources */,
 				1E5D549B1AB5AA0A00B7B1BE /* ofxsInteract.cpp in Sources */,
+				1EF77B971E4B63FA005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E5D549C1AB5AA0A00B7B1BE /* ofxsLog.cpp in Sources */,
 				1E5D549D1AB5AA0A00B7B1BE /* ofxsMultiThread.cpp in Sources */,
 				1E5D549E1AB5AA0A00B7B1BE /* ofxsParams.cpp in Sources */,
@@ -7567,10 +7778,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C291E4B6483005C4845 /* tinythread.cpp in Sources */,
 				1E5D54CA1AB5EC4700B7B1BE /* FrameRange.cpp in Sources */,
 				1E5D54BA1AB5EC1F00B7B1BE /* ofxsCore.cpp in Sources */,
 				1E5D54BB1AB5EC1F00B7B1BE /* ofxsImageEffect.cpp in Sources */,
 				1E5D54BC1AB5EC1F00B7B1BE /* ofxsInteract.cpp in Sources */,
+				1EF77BB11E4B6413005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E5D54BD1AB5EC1F00B7B1BE /* ofxsLog.cpp in Sources */,
 				1E5D54BE1AB5EC1F00B7B1BE /* ofxsMultiThread.cpp in Sources */,
 				1E5D54BF1AB5EC1F00B7B1BE /* ofxsParams.cpp in Sources */,
@@ -7583,10 +7796,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BED1E4B644F005C4845 /* tinythread.cpp in Sources */,
 				1E69C9F11A2B2EDD0099D609 /* ofxsCore.cpp in Sources */,
 				1E69C9F21A2B2EDD0099D609 /* ofxsImageEffect.cpp in Sources */,
 				1E69C9F31A2B2EDD0099D609 /* ofxsInteract.cpp in Sources */,
 				1E69C9F41A2B2EDD0099D609 /* ofxsLog.cpp in Sources */,
+				1EF77BD21E4B6433005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E69C9F51A2B2EDD0099D609 /* ofxsMultiThread.cpp in Sources */,
 				1E69C9F61A2B2EDD0099D609 /* ofxsParams.cpp in Sources */,
 				1E69CA051A2B2F350099D609 /* Saturation.cpp in Sources */,
@@ -7601,10 +7816,12 @@
 			files = (
 				1E6CC0861A768BCE00173EB3 /* ImageStatistics.cpp in Sources */,
 				1E4551C81A797F060044F01B /* ofxsLut.cpp in Sources */,
+				1EF77C071E4B6465005C4845 /* tinythread.cpp in Sources */,
 				1E6CC0891A76ADEA00173EB3 /* ofxsRectangleInteract.cpp in Sources */,
 				1E6CC06F1A768B7200173EB3 /* ofxsCore.cpp in Sources */,
 				1E6CC0701A768B7200173EB3 /* ofxsImageEffect.cpp in Sources */,
 				1E6CC0711A768B7200173EB3 /* ofxsInteract.cpp in Sources */,
+				1EF77BB71E4B6419005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E6CC0721A768B7200173EB3 /* ofxsLog.cpp in Sources */,
 				1E6CC0731A768B7200173EB3 /* ofxsMultiThread.cpp in Sources */,
 				1E6CC0741A768B7200173EB3 /* ofxsParams.cpp in Sources */,
@@ -7617,10 +7834,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BE41E4B6448005C4845 /* tinythread.cpp in Sources */,
 				1E6E6FFF1BD4F26700B5A00F /* ofxsCore.cpp in Sources */,
 				1E6E70001BD4F26700B5A00F /* ofxsImageEffect.cpp in Sources */,
 				1E6E70011BD4F26700B5A00F /* ofxsInteract.cpp in Sources */,
 				1E6E70021BD4F26700B5A00F /* ofxsLog.cpp in Sources */,
+				1EF77BDA1E4B643B005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E6E70031BD4F26700B5A00F /* ofxsMultiThread.cpp in Sources */,
 				1E6E70041BD4F26700B5A00F /* ofxsParams.cpp in Sources */,
 				1E6E70051BD4F26700B5A00F /* ofxsProperty.cpp in Sources */,
@@ -7635,10 +7854,12 @@
 			files = (
 				1E75A02E1A87A9DB005BAA36 /* CheckerBoard.cpp in Sources */,
 				1E75A01B1A87A97B005BAA36 /* ofxsCore.cpp in Sources */,
+				1EF77C0F1E4B646F005C4845 /* tinythread.cpp in Sources */,
 				1E75A01C1A87A97B005BAA36 /* ofxsImageEffect.cpp in Sources */,
 				1E75A01D1A87A97B005BAA36 /* ofxsInteract.cpp in Sources */,
 				1E75A0321A87BA37005BAA36 /* ofxsGenerator.cpp in Sources */,
 				1E75A01E1A87A97B005BAA36 /* ofxsLog.cpp in Sources */,
+				1EF77B981E4B63FB005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E75A01F1A87A97B005BAA36 /* ofxsMultiThread.cpp in Sources */,
 				1E75A0201A87A97B005BAA36 /* ofxsParams.cpp in Sources */,
 				1E75A0211A87A97B005BAA36 /* ofxsProperty.cpp in Sources */,
@@ -7654,8 +7875,10 @@
 				1E89B5441D81823600F61E6B /* PLogLin.cpp in Sources */,
 				1E89B5331D81820200F61E6B /* ofxsLut.cpp in Sources */,
 				1E89B5341D81820200F61E6B /* ofxsCore.cpp in Sources */,
+				1EF77BF81E4B6458005C4845 /* tinythread.cpp in Sources */,
 				1E89B5351D81820200F61E6B /* ofxsImageEffect.cpp in Sources */,
 				1E89B5361D81820200F61E6B /* ofxsInteract.cpp in Sources */,
+				1EF77BC61E4B6426005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E89B5371D81820200F61E6B /* ofxsLog.cpp in Sources */,
 				1E89B5381D81820200F61E6B /* ofxsMultiThread.cpp in Sources */,
 				1E89B5391D81820200F61E6B /* ofxsParams.cpp in Sources */,
@@ -7671,8 +7894,10 @@
 				1E511D5D1D8AC9CB0037C61F /* Log2Lin.cpp in Sources */,
 				1E89B57A1D81A7C000F61E6B /* ofxsLut.cpp in Sources */,
 				1E89B57B1D81A7C000F61E6B /* ofxsCore.cpp in Sources */,
+				1EF77C021E4B6461005C4845 /* tinythread.cpp in Sources */,
 				1E89B57C1D81A7C000F61E6B /* ofxsImageEffect.cpp in Sources */,
 				1E89B57D1D81A7C000F61E6B /* ofxsInteract.cpp in Sources */,
+				1EF77BBC1E4B641D005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E89B57E1D81A7C000F61E6B /* ofxsLog.cpp in Sources */,
 				1E89B57F1D81A7C000F61E6B /* ofxsMultiThread.cpp in Sources */,
 				1E89B5801D81A7C000F61E6B /* ofxsParams.cpp in Sources */,
@@ -7712,6 +7937,7 @@
 				1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */,
 				1ED851561AAB6482003F65A3 /* Distortion.cpp in Sources */,
 				1EC1B5D31A9C99A4001D7020 /* FrameBlend.cpp in Sources */,
+				1EF77B751E4A3D85005C4845 /* tinythread.cpp in Sources */,
 				1E5D54841AB58D4B00B7B1BE /* FrameHold.cpp in Sources */,
 				1E5D54D01AB5EDF100B7B1BE /* FrameRange.cpp in Sources */,
 				1ED12E621A4B31AC00ABA348 /* Gamma.cpp in Sources */,
@@ -7759,6 +7985,7 @@
 				D780C414198938AD002470C9 /* TrackerPM.cpp in Sources */,
 				D7349E8E18E776780097DB1D /* Transform.cpp in Sources */,
 				1EFBC9991A23A23C00086E7A /* VectorToColor.cpp in Sources */,
+				1EF77B741E4A3CA7005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ED4AEB81973DE1200EE64C8 /* randomGenerator.cpp in Sources */,
 				1EEAA6C81BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */,
 				1EE72C131B5253A4001B0245 /* ofxsShutter.cpp in Sources */,
@@ -7786,10 +8013,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C121E4B6471005C4845 /* tinythread.cpp in Sources */,
 				1E92573719EC1E140018F19A /* Clamp.cpp in Sources */,
 				1E92572319EC1DB80018F19A /* ofxsCore.cpp in Sources */,
 				1E92572419EC1DB80018F19A /* ofxsImageEffect.cpp in Sources */,
 				1E92572519EC1DB80018F19A /* ofxsInteract.cpp in Sources */,
+				1EF77B9B1E4B6402005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E92572619EC1DB80018F19A /* ofxsLog.cpp in Sources */,
 				1E92572719EC1DB80018F19A /* ofxsMultiThread.cpp in Sources */,
 				1E92572819EC1DB80018F19A /* ofxsParams.cpp in Sources */,
@@ -7802,10 +8031,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BF51E4B6456005C4845 /* tinythread.cpp in Sources */,
 				1E9A570D1D78178E0070646A /* Quantize.cpp in Sources */,
 				1E9A56FB1D7817700070646A /* ofxsCore.cpp in Sources */,
 				1E9A56FC1D7817700070646A /* ofxsImageEffect.cpp in Sources */,
 				1E9A56FD1D7817700070646A /* ofxsInteract.cpp in Sources */,
+				1EF77BCA1E4B642B005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E9A56FE1D7817700070646A /* ofxsLog.cpp in Sources */,
 				1E9A56FF1D7817700070646A /* ofxsMultiThread.cpp in Sources */,
 				1E9A57001D7817700070646A /* ofxsParams.cpp in Sources */,
@@ -7818,10 +8049,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C251E4B6480005C4845 /* tinythread.cpp in Sources */,
 				1EA0C21719BA128C006AB602 /* Dissolve.cpp in Sources */,
 				1EA0C20819BA1243006AB602 /* ofxsCore.cpp in Sources */,
 				1EA0C20919BA1243006AB602 /* ofxsImageEffect.cpp in Sources */,
 				1EA0C20A19BA1243006AB602 /* ofxsInteract.cpp in Sources */,
+				1EF77BAD1E4B6410005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EA0C20B19BA1243006AB602 /* ofxsLog.cpp in Sources */,
 				1EA0C20C19BA1243006AB602 /* ofxsMultiThread.cpp in Sources */,
 				1EA0C20D19BA1243006AB602 /* ofxsParams.cpp in Sources */,
@@ -7834,10 +8067,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C231E4B647F005C4845 /* tinythread.cpp in Sources */,
 				1EA7BCB31C5AA7950026C46A /* Despill.cpp in Sources */,
 				1EA7BC9C1C5AA7450026C46A /* ofxsCore.cpp in Sources */,
 				1EA7BC9D1C5AA7450026C46A /* ofxsImageEffect.cpp in Sources */,
 				1EA7BC9E1C5AA7450026C46A /* ofxsInteract.cpp in Sources */,
+				1EF77BAB1E4B640F005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EA7BC9F1C5AA7450026C46A /* ofxsLog.cpp in Sources */,
 				1EA7BCA01C5AA7450026C46A /* ofxsMultiThread.cpp in Sources */,
 				1EA7BCA11C5AA7450026C46A /* ofxsParams.cpp in Sources */,
@@ -7850,10 +8085,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C0C1E4B646D005C4845 /* tinythread.cpp in Sources */,
 				1EAD4AF61A0A695500AF834D /* AdjustRoD.cpp in Sources */,
 				1EAD4AE71A0A691700AF834D /* ofxsCore.cpp in Sources */,
 				1EAD4AE81A0A691700AF834D /* ofxsImageEffect.cpp in Sources */,
 				1EAD4AE91A0A691700AF834D /* ofxsInteract.cpp in Sources */,
+				1EF77B951E4B63F6005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EAD4AEA1A0A691700AF834D /* ofxsLog.cpp in Sources */,
 				1EAD4AEB1A0A691700AF834D /* ofxsMultiThread.cpp in Sources */,
 				1EAD4AEC1A0A691700AF834D /* ofxsParams.cpp in Sources */,
@@ -7866,10 +8103,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BE51E4B6449005C4845 /* tinythread.cpp in Sources */,
 				1EAD4F481C8C78CF00462A1A /* TimeBuffer.cpp in Sources */,
 				1EAD4F321C8C785100462A1A /* ofxsCore.cpp in Sources */,
 				1EAD4F331C8C785100462A1A /* ofxsImageEffect.cpp in Sources */,
 				1EAD4F341C8C785100462A1A /* ofxsInteract.cpp in Sources */,
+				1EF77BDB1E4B643B005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EAD4F351C8C785100462A1A /* ofxsLog.cpp in Sources */,
 				1EAD4F361C8C785100462A1A /* ofxsMultiThread.cpp in Sources */,
 				1EAD4F371C8C785100462A1A /* ofxsParams.cpp in Sources */,
@@ -7882,10 +8121,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C181E4B6475005C4845 /* tinythread.cpp in Sources */,
 				1EAFE3DE1C5D089F00F9E4E4 /* ColorSuppress.cpp in Sources */,
 				1EAFE3C81C5D083700F9E4E4 /* ofxsCore.cpp in Sources */,
 				1EAFE3C91C5D083700F9E4E4 /* ofxsImageEffect.cpp in Sources */,
 				1EAFE3CA1C5D083700F9E4E4 /* ofxsInteract.cpp in Sources */,
+				1EF77BA11E4B6407005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EAFE3CB1C5D083700F9E4E4 /* ofxsLog.cpp in Sources */,
 				1EAFE3CC1C5D083700F9E4E4 /* ofxsMultiThread.cpp in Sources */,
 				1EAFE3CD1C5D083700F9E4E4 /* ofxsParams.cpp in Sources */,
@@ -7900,10 +8141,12 @@
 			files = (
 				1EB0A47A1AA2033A00F9C93E /* Position.cpp in Sources */,
 				1EBB4B941B2D5C280042DBE0 /* ofxsOGLFontData.cpp in Sources */,
+				1EF77BF71E4B6457005C4845 /* tinythread.cpp in Sources */,
 				1EBB4B931B2D5C240042DBE0 /* ofxsOGLTextRenderer.cpp in Sources */,
 				1EB0A4661AA202EC00F9C93E /* ofxsCore.cpp in Sources */,
 				1EB0A4671AA202EC00F9C93E /* ofxsImageEffect.cpp in Sources */,
 				1EB0A4681AA202EC00F9C93E /* ofxsInteract.cpp in Sources */,
+				1EF77BC71E4B6427005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EB0A4691AA202EC00F9C93E /* ofxsLog.cpp in Sources */,
 				1EB0A46A1AA202EC00F9C93E /* ofxsMultiThread.cpp in Sources */,
 				1EB0A46B1AA202EC00F9C93E /* ofxsParams.cpp in Sources */,
@@ -7916,10 +8159,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BFF1E4B645E005C4845 /* tinythread.cpp in Sources */,
 				1EB0A4991AA21B3700F9C93E /* Mirror.cpp in Sources */,
 				1EB0A4871AA21B1300F9C93E /* ofxsCore.cpp in Sources */,
 				1EB0A4881AA21B1300F9C93E /* ofxsImageEffect.cpp in Sources */,
 				1EB0A4891AA21B1300F9C93E /* ofxsInteract.cpp in Sources */,
+				1EF77BBF1E4B641F005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EB0A48A1AA21B1300F9C93E /* ofxsLog.cpp in Sources */,
 				1EB0A48B1AA21B1300F9C93E /* ofxsMultiThread.cpp in Sources */,
 				1EB0A48C1AA21B1300F9C93E /* ofxsParams.cpp in Sources */,
@@ -7932,10 +8177,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BFB1E4B645B005C4845 /* tinythread.cpp in Sources */,
 				1EB9C084196DD697003C1849 /* NoOp.cpp in Sources */,
 				1EB9C073196DD64E003C1849 /* ofxsCore.cpp in Sources */,
 				1EB9C074196DD64E003C1849 /* ofxsImageEffect.cpp in Sources */,
 				1EB9C075196DD64E003C1849 /* ofxsInteract.cpp in Sources */,
+				1EF77C341E4B6982005C4845 /* ofxsGenerator.cpp in Sources */,
+				1EF77C351E4B6986005C4845 /* ofxsRectangleInteract.cpp in Sources */,
+				1EF77BC31E4B6424005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EB9C076196DD64E003C1849 /* ofxsLog.cpp in Sources */,
 				1EB9C077196DD64E003C1849 /* ofxsMultiThread.cpp in Sources */,
 				1EB9C078196DD64E003C1849 /* ofxsParams.cpp in Sources */,
@@ -7962,6 +8211,8 @@
 				1EBAEFD9199A81DB0037B3E6 /* ofxsParams.cpp in Sources */,
 				1EE72C141B525906001B0245 /* ofxsShutter.cpp in Sources */,
 				1EBAEFDA199A81DB0037B3E6 /* ofxsProperty.cpp in Sources */,
+				1EF77BD81E4B6438005C4845 /* ofxsThreadSuite.cpp in Sources */,
+				1EF77BE71E4B644B005C4845 /* tinythread.cpp in Sources */,
 				1EBAEFDB199A81DB0037B3E6 /* ofxsPropertyValidation.cpp in Sources */,
 				1E2868C81B8324F700B18774 /* TestOpenGLRenderGL.cpp in Sources */,
 			);
@@ -7971,10 +8222,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BE91E4B644C005C4845 /* tinythread.cpp in Sources */,
 				1EBB4B8F1B2CA0400042DBE0 /* SlitScan.cpp in Sources */,
 				1EBB4B7B1B2CA01B0042DBE0 /* ofxsCore.cpp in Sources */,
 				1EBB4B7C1B2CA01B0042DBE0 /* ofxsImageEffect.cpp in Sources */,
 				1EBB4B7D1B2CA01B0042DBE0 /* ofxsInteract.cpp in Sources */,
+				1EF77BD61E4B6436005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EBB4B7E1B2CA01B0042DBE0 /* ofxsLog.cpp in Sources */,
 				1EBB4B7F1B2CA01B0042DBE0 /* ofxsMultiThread.cpp in Sources */,
 				1EBB4B811B2CA01B0042DBE0 /* ofxsParams.cpp in Sources */,
@@ -7987,10 +8240,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C031E4B6462005C4845 /* tinythread.cpp in Sources */,
 				1EBEC5F01D928E9E00127BC7 /* ofxsCore.cpp in Sources */,
 				1EBEC5F11D928E9E00127BC7 /* ofxsImageEffect.cpp in Sources */,
 				1EBEC5F21D928E9E00127BC7 /* ofxsInteract.cpp in Sources */,
 				1EBEC5F31D928E9E00127BC7 /* ofxsLog.cpp in Sources */,
+				1EF77BBB1E4B641C005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EBEC5F41D928E9E00127BC7 /* ofxsMultiThread.cpp in Sources */,
 				1EBEC5F51D928E9E00127BC7 /* ofxsParams.cpp in Sources */,
 				1EBEC5F61D928E9E00127BC7 /* ofxsProperty.cpp in Sources */,
@@ -8004,9 +8259,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				1EC1B5121A9656F9001D7020 /* GodRays.cpp in Sources */,
+				1EF77BB31E4B6416005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EC1B50B1A9656F9001D7020 /* ofxsTransform3x3.cpp in Sources */,
 				1EC1B50A1A9656F9001D7020 /* ofxsTransformInteract.cpp in Sources */,
 				1EE72C161B525A4A001B0245 /* ofxsShutter.cpp in Sources */,
+				1EF77C2B1E4B6485005C4845 /* tinythread.cpp in Sources */,
 				1EC1B50C1A9656F9001D7020 /* ofxsCore.cpp in Sources */,
 				1EC1B50D1A9656F9001D7020 /* ofxsImageEffect.cpp in Sources */,
 				1EC1B50E1A9656F9001D7020 /* ofxsInteract.cpp in Sources */,
@@ -8022,10 +8279,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C271E4B6482005C4845 /* tinythread.cpp in Sources */,
 				1EC1B5BB1A9C994C001D7020 /* ofxsCore.cpp in Sources */,
 				1EC1B5BC1A9C994C001D7020 /* ofxsImageEffect.cpp in Sources */,
 				1EC1B5BD1A9C994C001D7020 /* ofxsInteract.cpp in Sources */,
 				1EC1B5BE1A9C994C001D7020 /* ofxsLog.cpp in Sources */,
+				1EF77BAF1E4B6412005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EC1B5BF1A9C994C001D7020 /* ofxsMultiThread.cpp in Sources */,
 				1EC1B5D21A9C99A1001D7020 /* FrameBlend.cpp in Sources */,
 				1EC1B5C01A9C994C001D7020 /* ofxsParams.cpp in Sources */,
@@ -8044,10 +8303,12 @@
 				1E6CC0941A76B1F700173EB3 /* ofxsOGLFontData.cpp in Sources */,
 				1ECA4DE41A3F3A6500C5128B /* ofxsCore.cpp in Sources */,
 				1ECA4DE51A3F3A6500C5128B /* ofxsImageEffect.cpp in Sources */,
+				1EF77BF31E4B6454005C4845 /* tinythread.cpp in Sources */,
 				1ECA4DE61A3F3A6500C5128B /* ofxsInteract.cpp in Sources */,
 				1ECA4DE71A3F3A6500C5128B /* ofxsRectangleInteract.cpp in Sources */,
 				1ECA4DE81A3F3A6500C5128B /* ofxsLog.cpp in Sources */,
 				1ECA4DE91A3F3A6500C5128B /* ofxsMultiThread.cpp in Sources */,
+				1EF77BCC1E4B642D005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ECA4DEA1A3F3A6500C5128B /* ofxsParams.cpp in Sources */,
 				1ECA4DEB1A3F3A6500C5128B /* ofxsProperty.cpp in Sources */,
 				1ECA4DEC1A3F3A6500C5128B /* ofxsPropertyValidation.cpp in Sources */,
@@ -8060,10 +8321,12 @@
 			files = (
 				1E0072EF1A4041E100E77042 /* Radial.cpp in Sources */,
 				1ECA4DFD1A3F3ACD00C5128B /* ofxsCore.cpp in Sources */,
+				1EF77BF41E4B6455005C4845 /* tinythread.cpp in Sources */,
 				1ECA4DFE1A3F3ACD00C5128B /* ofxsImageEffect.cpp in Sources */,
 				1ECA4DFF1A3F3ACD00C5128B /* ofxsInteract.cpp in Sources */,
 				1E53E2F21B359A010082B2AB /* ofxsGenerator.cpp in Sources */,
 				1ECA4E001A3F3ACD00C5128B /* ofxsRectangleInteract.cpp in Sources */,
+				1EF77BCB1E4B642C005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ECA4E011A3F3ACD00C5128B /* ofxsLog.cpp in Sources */,
 				1ECA4E021A3F3ACD00C5128B /* ofxsMultiThread.cpp in Sources */,
 				1ECA4E031A3F3ACD00C5128B /* ofxsParams.cpp in Sources */,
@@ -8078,10 +8341,12 @@
 			files = (
 				1ECE5450185F23E3001ED442 /* ReConverge.cpp in Sources */,
 				1E9B5F74198A5BF60095C8AA /* ofxsOGLTextRenderer.cpp in Sources */,
+				1EF77BF21E4B6453005C4845 /* tinythread.cpp in Sources */,
 				1E9B5F75198A5BFB0095C8AA /* ofxsOGLFontData.cpp in Sources */,
 				1ECE543E185F2374001ED442 /* ofxsCore.cpp in Sources */,
 				1ECE543F185F2374001ED442 /* ofxsImageEffect.cpp in Sources */,
 				1ECE5440185F2374001ED442 /* ofxsInteract.cpp in Sources */,
+				1EF77BCD1E4B642D005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ECE5441185F2374001ED442 /* ofxsLog.cpp in Sources */,
 				1ECE5442185F2374001ED442 /* ofxsMultiThread.cpp in Sources */,
 				1ECE5443185F2374001ED442 /* ofxsParams.cpp in Sources */,
@@ -8103,10 +8368,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C041E4B6463005C4845 /* tinythread.cpp in Sources */,
 				1ECF2FA319F51DA000E91A38 /* Keyer.cpp in Sources */,
 				1ECF2F8E19F51D3400E91A38 /* ofxsCore.cpp in Sources */,
 				1ECF2F8F19F51D3400E91A38 /* ofxsImageEffect.cpp in Sources */,
 				1ECF2F9019F51D3400E91A38 /* ofxsInteract.cpp in Sources */,
+				1EF77BBA1E4B641B005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ECF2F9119F51D3400E91A38 /* ofxsLog.cpp in Sources */,
 				1ECF2F9219F51D3400E91A38 /* ofxsMultiThread.cpp in Sources */,
 				1ECF2F9319F51D3400E91A38 /* ofxsParams.cpp in Sources */,
@@ -8119,10 +8386,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C2A1E4B6484005C4845 /* tinythread.cpp in Sources */,
 				1ED12E631A4B31AD00ABA348 /* Gamma.cpp in Sources */,
 				1ED12E211A4B30AB00ABA348 /* ofxsCore.cpp in Sources */,
 				1ED12E221A4B30AB00ABA348 /* ofxsImageEffect.cpp in Sources */,
 				1ED12E231A4B30AB00ABA348 /* ofxsInteract.cpp in Sources */,
+				1EF77BB21E4B6415005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ED12E241A4B30AB00ABA348 /* ofxsLog.cpp in Sources */,
 				1ED12E251A4B30AB00ABA348 /* ofxsMultiThread.cpp in Sources */,
 				1ED12E261A4B30AB00ABA348 /* ofxsParams.cpp in Sources */,
@@ -8135,10 +8404,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BFD1E4B645D005C4845 /* tinythread.cpp in Sources */,
 				1ED12E5B1A4B319900ABA348 /* Multiply.cpp in Sources */,
 				1ED12E351A4B30B600ABA348 /* ofxsCore.cpp in Sources */,
 				1ED12E361A4B30B600ABA348 /* ofxsImageEffect.cpp in Sources */,
 				1ED12E371A4B30B600ABA348 /* ofxsInteract.cpp in Sources */,
+				1EF77BC11E4B6422005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ED12E381A4B30B600ABA348 /* ofxsLog.cpp in Sources */,
 				1ED12E391A4B30B600ABA348 /* ofxsMultiThread.cpp in Sources */,
 				1ED12E3A1A4B30B600ABA348 /* ofxsParams.cpp in Sources */,
@@ -8154,9 +8425,13 @@
 				1ED4AEAB1973DD4800EE64C8 /* Rand.cpp in Sources */,
 				1ED4AEB71973DE1200EE64C8 /* randomGenerator.cpp in Sources */,
 				1ED4AE991973DCAD00EE64C8 /* ofxsCore.cpp in Sources */,
+				1EF77BFC1E4B645C005C4845 /* tinythread.cpp in Sources */,
 				1ED4AE9A1973DCAD00EE64C8 /* ofxsImageEffect.cpp in Sources */,
 				1ED4AE9B1973DCAD00EE64C8 /* ofxsInteract.cpp in Sources */,
+				1EF77C311E4B6946005C4845 /* ofxsGenerator.cpp in Sources */,
+				1EF77BC21E4B6423005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ED4AE9C1973DCAD00EE64C8 /* ofxsLog.cpp in Sources */,
+				1EF77C321E4B6959005C4845 /* ofxsRectangleInteract.cpp in Sources */,
 				1ED4AE9D1973DCAD00EE64C8 /* ofxsMultiThread.cpp in Sources */,
 				1ED4AE9E1973DCAD00EE64C8 /* ofxsParams.cpp in Sources */,
 				1ED4AE9F1973DCAD00EE64C8 /* ofxsProperty.cpp in Sources */,
@@ -8171,8 +8446,10 @@
 				1ED537331A234D21007966D5 /* ColorTransform.cpp in Sources */,
 				1ED5373C1A2370D1007966D5 /* ofxsLut.cpp in Sources */,
 				1ED5371E1A234CDF007966D5 /* ofxsCore.cpp in Sources */,
+				1EF77C191E4B6476005C4845 /* tinythread.cpp in Sources */,
 				1ED5371F1A234CDF007966D5 /* ofxsImageEffect.cpp in Sources */,
 				1ED537201A234CDF007966D5 /* ofxsInteract.cpp in Sources */,
+				1EF77BA21E4B6408005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ED537211A234CDF007966D5 /* ofxsLog.cpp in Sources */,
 				1ED537221A234CDF007966D5 /* ofxsMultiThread.cpp in Sources */,
 				1ED537231A234CDF007966D5 /* ofxsParams.cpp in Sources */,
@@ -8187,15 +8464,19 @@
 			files = (
 				1ED851551AAB6284003F65A3 /* Distortion.cpp in Sources */,
 				1ED851431AAB6245003F65A3 /* ofxsCore.cpp in Sources */,
+				1EF77C261E4B6481005C4845 /* tinythread.cpp in Sources */,
 				1ED851441AAB6245003F65A3 /* ofxsImageEffect.cpp in Sources */,
 				1ED851451AAB6245003F65A3 /* ofxsInteract.cpp in Sources */,
 				1ED851461AAB6245003F65A3 /* ofxsLog.cpp in Sources */,
 				1ED851471AAB6245003F65A3 /* ofxsMultiThread.cpp in Sources */,
+				1EF77BAE1E4B6411005C4845 /* ofxsThreadSuite.cpp in Sources */,
+				1EF77C2F1E4B68BC005C4845 /* ofxsRectangleInteract.cpp in Sources */,
 				AC29F7CD1C415925006B0019 /* ofxsMultiPlane.cpp in Sources */,
 				1ED851481AAB6245003F65A3 /* ofxsParams.cpp in Sources */,
 				1ED851491AAB6245003F65A3 /* ofxsProperty.cpp in Sources */,
 				1ED8514A1AAB6245003F65A3 /* ofxsPropertyValidation.cpp in Sources */,
 				1EC6BC9E1E13CC0000C68CE7 /* DistortionModel.cpp in Sources */,
+				1EF77C2E1E4B68A6005C4845 /* ofxsGenerator.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -8203,10 +8484,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C0D1E4B646D005C4845 /* tinythread.cpp in Sources */,
 				1EDE1B92182D0552002392CB /* Anaglyph.cpp in Sources */,
 				1EDE1B7E182D04D9002392CB /* ofxsCore.cpp in Sources */,
 				1EDE1B7F182D04D9002392CB /* ofxsImageEffect.cpp in Sources */,
 				1EDE1B80182D04D9002392CB /* ofxsInteract.cpp in Sources */,
+				1EF77B961E4B63F7005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EDE1B81182D04D9002392CB /* ofxsLog.cpp in Sources */,
 				1EDE1B82182D04D9002392CB /* ofxsMultiThread.cpp in Sources */,
 				1EDE1B83182D04D9002392CB /* ofxsParams.cpp in Sources */,
@@ -8219,10 +8502,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C051E4B6463005C4845 /* tinythread.cpp in Sources */,
 				1EDE1BB1182D39FA002392CB /* JoinViews.cpp in Sources */,
 				1EDE1B9F182D3985002392CB /* ofxsCore.cpp in Sources */,
 				1EDE1BA0182D3985002392CB /* ofxsImageEffect.cpp in Sources */,
 				1EDE1BA1182D3985002392CB /* ofxsInteract.cpp in Sources */,
+				1EF77BB91E4B641B005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EDE1BA2182D3985002392CB /* ofxsLog.cpp in Sources */,
 				1EDE1BA3182D3985002392CB /* ofxsMultiThread.cpp in Sources */,
 				1EDE1BA4182D3985002392CB /* ofxsParams.cpp in Sources */,
@@ -8235,10 +8520,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BFA1E4B645A005C4845 /* tinythread.cpp in Sources */,
 				1EDE1BCA182D3F90002392CB /* OneView.cpp in Sources */,
 				1EDE1BB9182D3F38002392CB /* ofxsCore.cpp in Sources */,
 				1EDE1BBA182D3F38002392CB /* ofxsImageEffect.cpp in Sources */,
 				1EDE1BBB182D3F38002392CB /* ofxsInteract.cpp in Sources */,
+				1EF77BC41E4B6424005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EDE1BBC182D3F38002392CB /* ofxsLog.cpp in Sources */,
 				1EDE1BBD182D3F38002392CB /* ofxsMultiThread.cpp in Sources */,
 				1EDE1BBE182D3F38002392CB /* ofxsParams.cpp in Sources */,
@@ -8251,10 +8538,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BFE1E4B645D005C4845 /* tinythread.cpp in Sources */,
 				1EDE1BE3182D8977002392CB /* MixViews.cpp in Sources */,
 				1EDE1BD1182D8941002392CB /* ofxsCore.cpp in Sources */,
 				1EDE1BD3182D8941002392CB /* ofxsImageEffect.cpp in Sources */,
 				1EDE1BD4182D8941002392CB /* ofxsInteract.cpp in Sources */,
+				1EF77BC01E4B6420005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EDE1BD5182D8941002392CB /* ofxsLog.cpp in Sources */,
 				1EDE1BD6182D8941002392CB /* ofxsMultiThread.cpp in Sources */,
 				1EDE1BD7182D8941002392CB /* ofxsParams.cpp in Sources */,
@@ -8268,9 +8557,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				1EDFE9D71CB792D1001E68FA /* ofxsCore.cpp in Sources */,
+				1EF77BD31E4B6434005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E40E4DF1D114A33008DAE8C /* ShadertoyParse.cpp in Sources */,
 				1EDFE9D91CB792D1001E68FA /* ofxsImageEffect.cpp in Sources */,
 				1EDFE9DB1CB792D1001E68FA /* ofxsInteract.cpp in Sources */,
+				1EF77BEC1E4B644E005C4845 /* tinythread.cpp in Sources */,
 				1EDFE9DC1CB792D1001E68FA /* ofxsLog.cpp in Sources */,
 				1EDFE9E01CB792D1001E68FA /* ofxsMultiThread.cpp in Sources */,
 				1EDFE9E11CB792D1001E68FA /* ofxsParams.cpp in Sources */,
@@ -8288,10 +8579,12 @@
 			files = (
 				1EE0A7A31D68A62900B69526 /* DenoiseSharpen.cpp in Sources */,
 				1E15BF9F1E48BCD5000467C7 /* ofxsRectangleInteract.cpp in Sources */,
+				1EF77C221E4B647D005C4845 /* tinythread.cpp in Sources */,
 				1EE0A7A21D68A62500B69526 /* ofxsLut.cpp in Sources */,
 				1EE0A7901D68A60F00B69526 /* ofxsCore.cpp in Sources */,
 				1EE0A7911D68A60F00B69526 /* ofxsImageEffect.cpp in Sources */,
 				1EE0A7921D68A60F00B69526 /* ofxsInteract.cpp in Sources */,
+				1EF77BAA1E4B640E005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EE0A7931D68A60F00B69526 /* ofxsLog.cpp in Sources */,
 				1EE0A7941D68A60F00B69526 /* ofxsMultiThread.cpp in Sources */,
 				1EE0A7951D68A60F00B69526 /* ofxsParams.cpp in Sources */,
@@ -8306,10 +8599,12 @@
 			files = (
 				1EE72C091B524A96001B0245 /* TimeBlur.cpp in Sources */,
 				1EE72C0A1B524A99001B0245 /* NoTimeBlur.cpp in Sources */,
+				1EF77BE61E4B644A005C4845 /* tinythread.cpp in Sources */,
 				1EE72BF51B524A6D001B0245 /* ofxsCore.cpp in Sources */,
 				1EE72BF61B524A6D001B0245 /* ofxsImageEffect.cpp in Sources */,
 				1EE72BF71B524A6D001B0245 /* ofxsInteract.cpp in Sources */,
 				1EE72BF81B524A6D001B0245 /* ofxsLog.cpp in Sources */,
+				1EF77BD91E4B6439005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EE72BF91B524A6D001B0245 /* ofxsMultiThread.cpp in Sources */,
 				1EE72BFB1B524A6D001B0245 /* ofxsParams.cpp in Sources */,
 				1EE72BFD1B524A6D001B0245 /* ofxsProperty.cpp in Sources */,
@@ -8324,10 +8619,12 @@
 			files = (
 				1EE7A8CA1C74B909001AE4BC /* ColorWheel.cpp in Sources */,
 				1EE7A8B21C74B8AD001AE4BC /* ofxsCore.cpp in Sources */,
+				1EF77C1A1E4B6477005C4845 /* tinythread.cpp in Sources */,
 				1EE7A8B31C74B8AD001AE4BC /* ofxsImageEffect.cpp in Sources */,
 				1EE7A8B41C74B8AD001AE4BC /* ofxsInteract.cpp in Sources */,
 				1EE7A8B51C74B8AD001AE4BC /* ofxsGenerator.cpp in Sources */,
 				1EE7A8B61C74B8AD001AE4BC /* ofxsLog.cpp in Sources */,
+				1EF77BA31E4B6409005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EE7A8B71C74B8AD001AE4BC /* ofxsMultiThread.cpp in Sources */,
 				1EE7A8B81C74B8AD001AE4BC /* ofxsParams.cpp in Sources */,
 				1EE7A8B91C74B8AD001AE4BC /* ofxsProperty.cpp in Sources */,
@@ -8340,10 +8637,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C0B1E4B646C005C4845 /* tinythread.cpp in Sources */,
 				1ED12E4A1A4B316F00ABA348 /* Add.cpp in Sources */,
 				1EE9B0971A4B300700869861 /* ofxsCore.cpp in Sources */,
 				1EE9B0981A4B300700869861 /* ofxsImageEffect.cpp in Sources */,
 				1EE9B0991A4B300700869861 /* ofxsInteract.cpp in Sources */,
+				1EF77B941E4B63F6005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EE9B09A1A4B300700869861 /* ofxsLog.cpp in Sources */,
 				1EE9B09B1A4B300700869861 /* ofxsMultiThread.cpp in Sources */,
 				1EE9B09C1A4B300700869861 /* ofxsParams.cpp in Sources */,
@@ -8356,10 +8655,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C131E4B6472005C4845 /* tinythread.cpp in Sources */,
 				1ED12E531A4B318400ABA348 /* ClipTest.cpp in Sources */,
 				1EE9B0C11A4B301500869861 /* ofxsCore.cpp in Sources */,
 				1EE9B0C21A4B301500869861 /* ofxsImageEffect.cpp in Sources */,
 				1EE9B0C31A4B301500869861 /* ofxsInteract.cpp in Sources */,
+				1EF77B9C1E4B6403005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EE9B0C41A4B301500869861 /* ofxsLog.cpp in Sources */,
 				1EE9B0C51A4B301500869861 /* ofxsMultiThread.cpp in Sources */,
 				1EE9B0C61A4B301500869861 /* ofxsParams.cpp in Sources */,
@@ -8372,11 +8673,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C331E4B6970005C4845 /* ofxsMultiPlane.cpp in Sources */,
 				1EF46F47194A39C800825BDF /* Shuffle.cpp in Sources */,
 				1EF46F34194A394E00825BDF /* ofxsCore.cpp in Sources */,
 				1EF46F35194A394E00825BDF /* ofxsImageEffect.cpp in Sources */,
+				1EF77BEB1E4B644E005C4845 /* tinythread.cpp in Sources */,
 				1EF46F36194A394E00825BDF /* ofxsInteract.cpp in Sources */,
 				1E5CD4CB1DE4874000CEC3BA /* ShuffleClassic.cpp in Sources */,
+				1EF77BD41E4B6435005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EF46F37194A394E00825BDF /* ofxsLog.cpp in Sources */,
 				1EF46F38194A394E00825BDF /* ofxsMultiThread.cpp in Sources */,
 				1EF46F3B194A394E00825BDF /* ofxsParams.cpp in Sources */,
@@ -8392,8 +8696,11 @@
 				1E0072FB1A408BB900E77042 /* ofxsLut.cpp in Sources */,
 				1EFA77351A24F13300212DB0 /* HSVTool.cpp in Sources */,
 				1EFA771C1A24F0BA00212DB0 /* ofxsCore.cpp in Sources */,
+				1EF77C091E4B6467005C4845 /* tinythread.cpp in Sources */,
 				1EFA771D1A24F0BA00212DB0 /* ofxsImageEffect.cpp in Sources */,
 				1EFA771E1A24F0BA00212DB0 /* ofxsInteract.cpp in Sources */,
+				1EF77C301E4B68CC005C4845 /* ofxsRectangleInteract.cpp in Sources */,
+				1EF77BB51E4B6418005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EFA771F1A24F0BA00212DB0 /* ofxsLog.cpp in Sources */,
 				1EFA77201A24F0BA00212DB0 /* ofxsMultiThread.cpp in Sources */,
 				1EFA77211A24F0BA00212DB0 /* ofxsParams.cpp in Sources */,
@@ -8406,10 +8713,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C241E4B6480005C4845 /* tinythread.cpp in Sources */,
 				1EFB4E1F19461B76005932AF /* Difference.cpp in Sources */,
 				1EFB4E0E19461B13005932AF /* ofxsCore.cpp in Sources */,
 				1EFB4E0F19461B13005932AF /* ofxsImageEffect.cpp in Sources */,
 				1EFB4E1019461B13005932AF /* ofxsInteract.cpp in Sources */,
+				1EF77BAC1E4B6410005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EFB4E1119461B13005932AF /* ofxsLog.cpp in Sources */,
 				1EFB4E1219461B13005932AF /* ofxsMultiThread.cpp in Sources */,
 				1EFB4E1319461B13005932AF /* ofxsParams.cpp in Sources */,
@@ -8425,8 +8734,10 @@
 				1EFBC9981A23A22D00086E7A /* VectorToColor.cpp in Sources */,
 				1EFA773A1A24F5F500212DB0 /* ofxsLut.cpp in Sources */,
 				1EFBC9831A23A1EB00086E7A /* ofxsCore.cpp in Sources */,
+				1EF77BE01E4B6445005C4845 /* tinythread.cpp in Sources */,
 				1EFBC9841A23A1EB00086E7A /* ofxsImageEffect.cpp in Sources */,
 				1EFBC9851A23A1EB00086E7A /* ofxsInteract.cpp in Sources */,
+				1EF77BDF1E4B643F005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EFBC9861A23A1EB00086E7A /* ofxsLog.cpp in Sources */,
 				1EFBC9871A23A1EB00086E7A /* ofxsMultiThread.cpp in Sources */,
 				1EFBC9881A23A1EB00086E7A /* ofxsParams.cpp in Sources */,
@@ -8441,10 +8752,12 @@
 			files = (
 				AC29F7C71C3FE936006B0019 /* Reformat.cpp in Sources */,
 				AC29F7AF1C3FE922006B0019 /* ofxsTransform3x3.cpp in Sources */,
+				1EF77BF01E4B6451005C4845 /* tinythread.cpp in Sources */,
 				AC29F7B01C3FE922006B0019 /* ofxsCore.cpp in Sources */,
 				AC29F7B11C3FE922006B0019 /* ofxsImageEffect.cpp in Sources */,
 				AC29F7B21C3FE922006B0019 /* ofxsInteract.cpp in Sources */,
 				AC29F7B31C3FE922006B0019 /* ofxsLog.cpp in Sources */,
+				1EF77BCF1E4B642F005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				AC29F7B41C3FE922006B0019 /* ofxsMultiThread.cpp in Sources */,
 				AC29F7B51C3FE922006B0019 /* ofxsParams.cpp in Sources */,
 				AC29F7B61C3FE922006B0019 /* ofxsProperty.cpp in Sources */,
@@ -8457,10 +8770,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77BEE1E4B6450005C4845 /* tinythread.cpp in Sources */,
 				D721EC15191120C50069DB1D /* Roto.cpp in Sources */,
 				D721EC06191120B30069DB1D /* ofxsCore.cpp in Sources */,
 				D721EC07191120B30069DB1D /* ofxsImageEffect.cpp in Sources */,
 				D721EC08191120B30069DB1D /* ofxsInteract.cpp in Sources */,
+				1EF77BD11E4B6432005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				D721EC09191120B30069DB1D /* ofxsLog.cpp in Sources */,
 				D721EC0A191120B30069DB1D /* ofxsMultiThread.cpp in Sources */,
 				D721EC0B191120B30069DB1D /* ofxsParams.cpp in Sources */,
@@ -8479,10 +8794,12 @@
 				D7257D4D192E91120040CD9C /* ofxsCore.cpp in Sources */,
 				D7257D4E192E91120040CD9C /* ofxsImageEffect.cpp in Sources */,
 				D7257D4F192E91120040CD9C /* ofxsInteract.cpp in Sources */,
+				1EF77C1D1E4B6479005C4845 /* tinythread.cpp in Sources */,
 				D7257D50192E91120040CD9C /* ofxsLog.cpp in Sources */,
 				D7257D51192E91120040CD9C /* ofxsMultiThread.cpp in Sources */,
 				D7257D54192E91120040CD9C /* ofxsParams.cpp in Sources */,
 				D7257D55192E91120040CD9C /* ofxsProperty.cpp in Sources */,
+				1EF77BA61E4B640B005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EE72C101B5253A4001B0245 /* ofxsShutter.cpp in Sources */,
 				1E9B5F65198A52270095C8AA /* ofxsOGLFontData.cpp in Sources */,
 				D7257D56192E91120040CD9C /* ofxsPropertyValidation.cpp in Sources */,
@@ -8496,8 +8813,10 @@
 				D730311819518B790024BCA4 /* CopyRectangle.cpp in Sources */,
 				1E9B5F5D198A51E20095C8AA /* ofxsRectangleInteract.cpp in Sources */,
 				D730310919518B6B0024BCA4 /* ofxsCore.cpp in Sources */,
+				1EF77C1C1E4B6478005C4845 /* tinythread.cpp in Sources */,
 				D730310A19518B6B0024BCA4 /* ofxsImageEffect.cpp in Sources */,
 				D730310B19518B6B0024BCA4 /* ofxsInteract.cpp in Sources */,
+				1EF77BA51E4B640B005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				D730310C19518B6B0024BCA4 /* ofxsLog.cpp in Sources */,
 				D730310D19518B6B0024BCA4 /* ofxsMultiThread.cpp in Sources */,
 				D730310E19518B6B0024BCA4 /* ofxsParams.cpp in Sources */,
@@ -8511,9 +8830,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				D7349EA118E7768D0097DB1D /* Transform.cpp in Sources */,
+				1EF77BDE1E4B643F005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EC1B4F81A964209001D7020 /* ofxsTransformInteract.cpp in Sources */,
 				1E9B5F60198A52030095C8AA /* ofxsTransform3x3.cpp in Sources */,
 				D7349E9118E7767D0097DB1D /* ofxsCore.cpp in Sources */,
+				1EF77BE11E4B6446005C4845 /* tinythread.cpp in Sources */,
 				D7349E9218E7767D0097DB1D /* ofxsImageEffect.cpp in Sources */,
 				D7349E9318E7767D0097DB1D /* ofxsInteract.cpp in Sources */,
 				D7349E9418E7767D0097DB1D /* ofxsLog.cpp in Sources */,
@@ -8529,10 +8850,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EF77C001E4B645F005C4845 /* tinythread.cpp in Sources */,
 				D74121E718F9CF5900A81F8B /* Merge.cpp in Sources */,
 				D74121D618F9CF3D00A81F8B /* ofxsCore.cpp in Sources */,
 				D74121D718F9CF3D00A81F8B /* ofxsImageEffect.cpp in Sources */,
 				D74121D818F9CF3D00A81F8B /* ofxsInteract.cpp in Sources */,
+				1EF77BBE1E4B641F005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				D74121D918F9CF3D00A81F8B /* ofxsLog.cpp in Sources */,
 				D74121DC18F9CF3D00A81F8B /* ofxsMultiThread.cpp in Sources */,
 				D74121DD18F9CF3D00A81F8B /* ofxsParams.cpp in Sources */,
@@ -8548,8 +8871,11 @@
 				D74A80C5194059E0007C3E1C /* Crop.cpp in Sources */,
 				D74A80B5194059CC007C3E1C /* ofxsCore.cpp in Sources */,
 				D74A80B6194059CC007C3E1C /* ofxsImageEffect.cpp in Sources */,
+				1EF77C201E4B647C005C4845 /* tinythread.cpp in Sources */,
 				D74A80B7194059CC007C3E1C /* ofxsInteract.cpp in Sources */,
 				1E9B5F5B198A51CC0095C8AA /* ofxsRectangleInteract.cpp in Sources */,
+				1EF77C2D1E4B68A4005C4845 /* ofxsGenerator.cpp in Sources */,
+				1EF77BA71E4B640C005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				D74A80B8194059CC007C3E1C /* ofxsLog.cpp in Sources */,
 				D74A80B9194059CC007C3E1C /* ofxsMultiThread.cpp in Sources */,
 				D74A80BC194059CC007C3E1C /* ofxsParams.cpp in Sources */,
@@ -8563,9 +8889,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				D7704C7A195B5E78002E163E /* TrackerPM.cpp in Sources */,
+				1EF77BDD1E4B643E005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E9B5F69198A52590095C8AA /* ofxsOGLTextRenderer.cpp in Sources */,
 				D7BB85BC1955C00100A86649 /* ofxsCore.cpp in Sources */,
 				1E9B5F68198A52550095C8AA /* ofxsOGLFontData.cpp in Sources */,
+				1EF77BE21E4B6447005C4845 /* tinythread.cpp in Sources */,
 				D7BB85BD1955C00100A86649 /* ofxsImageEffect.cpp in Sources */,
 				D7BB85BE1955C00100A86649 /* ofxsInteract.cpp in Sources */,
 				D7BB85BF1955C00100A86649 /* ofxsLog.cpp in Sources */,
@@ -8797,7 +9125,7 @@
 		};
 		1EA0C22019BA12A0006AB602 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 1ED4AE951973DCAD00EE64C8 /* Noise.ofx */;
+			target = 1ED4AE951973DCAD00EE64C8 /* Rand.ofx */;
 			targetProxy = 1EA0C21F19BA12A0006AB602 /* PBXContainerItemProxy */;
 		};
 		1EA0C22219BA12A0006AB602 /* PBXTargetDependency */ = {
@@ -10303,9 +10631,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Noise/Info.plist;
+				INFOPLIST_FILE = Rand/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = Noise.ofx;
+				PRODUCT_NAME = Rand.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Debug;
@@ -10314,9 +10642,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Noise/Info.plist;
+				INFOPLIST_FILE = Rand/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = Noise.ofx;
+				PRODUCT_NAME = Rand.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -11440,7 +11768,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		1ED4AEA31973DCAD00EE64C8 /* Build configuration list for PBXNativeTarget "Noise.ofx" */ = {
+		1ED4AEA31973DCAD00EE64C8 /* Build configuration list for PBXNativeTarget "Rand.ofx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1ED4AEA41973DCAD00EE64C8 /* Debug */,

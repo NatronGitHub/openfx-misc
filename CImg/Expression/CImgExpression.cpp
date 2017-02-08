@@ -531,7 +531,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgExpressionPluginFactory, {}, {});
+mDeclarePluginFactory(CImgExpressionPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgExpressionPluginFactory::describe(ImageEffectDescriptor& desc)

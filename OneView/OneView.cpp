@@ -279,7 +279,8 @@ OneViewPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(OneViewPluginFactory,; , {});
+mDeclarePluginFactory(OneViewPluginFactory, {ofxsThreadSuiteCheck();}, {});
+#if 0
 void
 OneViewPluginFactory::load()
 {
@@ -289,6 +290,7 @@ OneViewPluginFactory::load()
     //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 }
+#endif
 
 void
 OneViewPluginFactory::describe(ImageEffectDescriptor &desc)

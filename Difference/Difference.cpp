@@ -29,6 +29,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -338,7 +339,7 @@ DifferencePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
 }
 
-mDeclarePluginFactory(DifferencePluginFactory, {}, {});
+mDeclarePluginFactory(DifferencePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 DifferencePluginFactory::describe(ImageEffectDescriptor &desc)
 {

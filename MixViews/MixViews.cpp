@@ -27,6 +27,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -303,7 +304,8 @@ MixViewsPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(MixViewsPluginFactory,; , {});
+mDeclarePluginFactory(MixViewsPluginFactory, {ofxsThreadSuiteCheck();}, {});
+#if 0
 void
 MixViewsPluginFactory::load()
 {
@@ -313,6 +315,7 @@ MixViewsPluginFactory::load()
     //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 }
+#endif
 
 void
 MixViewsPluginFactory::describe(ImageEffectDescriptor &desc)

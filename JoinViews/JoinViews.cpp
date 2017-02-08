@@ -291,7 +291,8 @@ JoinViewsPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(JoinViewsPluginFactory,; , {});
+mDeclarePluginFactory(JoinViewsPluginFactory,{ofxsThreadSuiteCheck();}, {});
+#if 0
 void
 JoinViewsPluginFactory::load()
 {
@@ -301,6 +302,7 @@ JoinViewsPluginFactory::load()
     //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 }
+#endif
 
 void
 JoinViewsPluginFactory::describe(ImageEffectDescriptor &desc)

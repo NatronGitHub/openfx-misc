@@ -1,4 +1,4 @@
-PLUGINOBJECTS = DebugProxy.o ofxhBinary.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o DebugProxy.o ofxhBinary.o
 PLUGINNAME = DebugProxy
 
 TOP_SRCDIR = ..

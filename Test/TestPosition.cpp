@@ -20,18 +20,19 @@
  * OFX TestPosition plugin.
  */
 
-#include "ofxsTransform3x3.h"
-#include "ofxsTransformInteract.h"
-#if defined(OFX_EXTENSIONS_NUKE) && defined(TEST_SETTINGS)
-#include "nukeOfxGlobalSettings.h"
-#endif
-
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <iostream>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
+
+#include "ofxsTransform3x3.h"
+#include "ofxsTransformInteract.h"
+#if defined(OFX_EXTENSIONS_NUKE) && defined(TEST_SETTINGS)
+#include "nukeOfxGlobalSettings.h"
+#endif
+#include "ofxsThreadSuite.h"
 
 #define kPluginPositionName "TestPosition"
 #define kPluginPositionGrouping "Other/Test"
@@ -158,7 +159,7 @@ TestPositionPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(TestPositionPluginFactory, {}, {});
+mDeclarePluginFactory(TestPositionPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 TestPositionPluginFactory::describe(ImageEffectDescriptor &desc)
 {

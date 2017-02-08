@@ -29,6 +29,7 @@
 #include <sstream> // stringstream
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -787,7 +788,7 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::g
     return false;
 }
 
-//mDeclarePluginFactory(TestRenderPluginFactory, {}, {});
+//mDeclarePluginFactory(TestRenderPluginFactory, {ofxsThreadSuiteCheck();}, {});
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 class TestRenderPluginFactory
     : public PluginFactoryHelper<TestRenderPluginFactory<supportsTiles, supportsMultiResolution, supportsRenderScale> >
@@ -797,11 +798,11 @@ public:
                             unsigned int verMaj,
                             unsigned int verMin) : PluginFactoryHelper<TestRenderPluginFactory<supportsTiles, supportsMultiResolution, supportsRenderScale> >(id, verMaj, verMin) {}
 
-    virtual void load() {};
-    virtual void unload() {};
-    virtual void describe(ImageEffectDescriptor &desc);
-    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
-    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
+    virtual void load() OVERRIDE FINAL {ofxsThreadSuiteCheck();}
+    //virtual void unload() {};
+    virtual void describe(ImageEffectDescriptor &desc) OVERRIDE FINAL;
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context) OVERRIDE FINAL;
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context) OVERRIDE FINAL;
 };
 
 
