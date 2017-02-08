@@ -34,6 +34,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -209,6 +210,7 @@ mDeclarePluginFactory(FrameHoldPluginFactory,; , {});
 void
 FrameHoldPluginFactory::load()
 {
+    ofxsThreadSuiteCheck();
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw Exception::HostInadequate("Need random temporal image access to work");

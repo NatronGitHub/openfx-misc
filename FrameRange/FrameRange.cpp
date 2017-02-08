@@ -384,7 +384,7 @@ FrameRangePlugin::getTimeDomain(OfxRangeD &range)
     return true;
 }
 
-mDeclarePluginFactory(FrameRangePluginFactory, {}, {});
+mDeclarePluginFactory(FrameRangePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 FrameRangePluginFactory::describe(ImageEffectDescriptor &desc)
 {

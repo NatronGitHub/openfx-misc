@@ -707,6 +707,7 @@ ColorTransformPlugin<transform>::changedParam(const InstanceChangedArgs &args,
     }
 }
 
+//mDeclarePluginFactory(ColorTransformPluginFactory, {ofxsThreadSuiteCheck();}, {});
 template <ColorTransformEnum transform>
 class ColorTransformPluginFactory
     : public PluginFactoryHelper<ColorTransformPluginFactory<transform> >
@@ -716,11 +717,11 @@ public:
                                 unsigned int verMaj,
                                 unsigned int verMin) : PluginFactoryHelper<ColorTransformPluginFactory<transform> >(id, verMaj, verMin) {}
 
-    //virtual void load() OVERRIDE FINAL {};
+    virtual void load() OVERRIDE FINAL {ofxsThreadSuiteCheck();};
     //virtual void unload() OVERRIDE FINAL {};
-    virtual void describe(ImageEffectDescriptor &desc);
-    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
-    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
+    virtual void describe(ImageEffectDescriptor &desc) OVERRIDE FINAL;
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context) OVERRIDE FINAL;
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context) OVERRIDE FINAL;
 };
 
 template <ColorTransformEnum transform>

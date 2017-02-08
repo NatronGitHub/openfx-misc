@@ -29,6 +29,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -438,7 +439,8 @@ SideBySidePlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(SideBySidePluginFactory,; , {});
+mDeclarePluginFactory(SideBySidePluginFactory, {ofxsThreadSuiteCheck();}, {});
+#if 0
 void
 SideBySidePluginFactory::load()
 {
@@ -448,6 +450,7 @@ SideBySidePluginFactory::load()
     //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 }
+#endif
 
 void
 SideBySidePluginFactory::describe(ImageEffectDescriptor &desc)

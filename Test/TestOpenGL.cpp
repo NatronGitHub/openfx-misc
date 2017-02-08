@@ -317,7 +317,8 @@ TestOpenGLPlugin::changedParam(const InstanceChangedArgs &args,
     }
 } // TestOpenGLPlugin::changedParam
 
-mDeclarePluginFactory(TestOpenGLPluginFactory,; , {});
+mDeclarePluginFactory(TestOpenGLPluginFactory, {ofxsThreadSuiteCheck();}, {});
+#if 0
 void
 TestOpenGLPluginFactory::load()
 {
@@ -330,6 +331,7 @@ TestOpenGLPluginFactory::load()
     //}
     //#endif
 }
+#endif
 
 void
 TestOpenGLPluginFactory::describe(ImageEffectDescriptor &desc)
@@ -559,7 +561,7 @@ TestOpenGLPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamEnableGPUHint);
         const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
         // Resolve advertises OpenGL support in its host description, but never calls render with OpenGL enabled
-        if ( gHostDescription.supportsOpenGLRender && (gHostDescription.hostName != "DaVinciResolveLite") ) {
+        if ( gHostDescription.supportsOpenGLRender && (gHostDescription.hostName.compare(0, 14, "DaVinciResolve") != 0) ) {
             param->setDefault(true);
             if (gHostDescription.APIVersionMajor * 100 + gHostDescription.APIVersionMinor < 104) {
                 // Switching OpenGL render from the plugin was introduced in OFX 1.4

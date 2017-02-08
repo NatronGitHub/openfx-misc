@@ -37,6 +37,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 #ifdef thread_local
 # define HAVE_THREAD_LOCAL

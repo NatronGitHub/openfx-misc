@@ -31,6 +31,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -717,7 +718,7 @@ RampPlugin::changedParam(const InstanceChangedArgs &args,
 //static void intersectToRoD(const OfxRectD& rod,const OfxPointD& p0)
 
 
-mDeclarePluginFactory(RampPluginFactory, {}, {});
+mDeclarePluginFactory(RampPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 RampPluginFactory::describe(ImageEffectDescriptor &desc)
 {

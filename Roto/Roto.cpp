@@ -28,6 +28,7 @@
 #include "ofxsCoords.h"
 #include "ofxsMerging.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -581,7 +582,7 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(RotoPluginFactory, {}, {});
+mDeclarePluginFactory(RotoPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 RotoPluginFactory::describe(ImageEffectDescriptor &desc)
 {

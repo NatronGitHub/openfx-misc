@@ -41,6 +41,7 @@ using std::isnan;
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -961,7 +962,7 @@ public:
     }
 };
 
-mDeclarePluginFactory(ColorLookupPluginFactory, {}, {});
+mDeclarePluginFactory(ColorLookupPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 ColorLookupPluginFactory::describe(ImageEffectDescriptor &desc)

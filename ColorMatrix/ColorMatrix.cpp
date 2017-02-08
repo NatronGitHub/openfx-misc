@@ -30,6 +30,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -686,7 +687,7 @@ ColorMatrixPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(ColorMatrixPluginFactory, {}, {});
+mDeclarePluginFactory(ColorMatrixPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ColorMatrixPluginFactory::describe(ImageEffectDescriptor &desc)
 {

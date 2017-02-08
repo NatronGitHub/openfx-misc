@@ -30,6 +30,7 @@
 #include "ofxsMacros.h"
 #include "ofxsGenerator.h"
 #include "ofxsFormatResolution.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -792,7 +793,7 @@ class CropOverlayDescriptor
 };
 
 
-mDeclarePluginFactory(CropPluginFactory, {}, {});
+mDeclarePluginFactory(CropPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CropPluginFactory::describe(ImageEffectDescriptor &desc)

@@ -611,7 +611,7 @@ MaskableFilterPlugin::changedClip(const InstanceChangedArgs &args,
     //std::cout << "changedClip OK!\n";
 }
 
-mDeclarePluginFactory(MaskableFilterPluginFactory, {}, {});
+mDeclarePluginFactory(MaskableFilterPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 MaskableFilterPluginFactory::describe(ImageEffectDescriptor &desc)
 {

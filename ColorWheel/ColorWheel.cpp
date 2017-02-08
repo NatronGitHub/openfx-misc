@@ -512,7 +512,7 @@ ColorWheelPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
 }
 
-mDeclarePluginFactory(ColorWheelPluginFactory, {}, {});
+mDeclarePluginFactory(ColorWheelPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ColorWheelPluginFactory::describe(ImageEffectDescriptor &desc)
 {

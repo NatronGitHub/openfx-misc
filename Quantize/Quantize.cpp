@@ -32,6 +32,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 //#define USE_RANDOMGENERATOR // randomGenerator is more than 10 times slower than our pseudo-random hash
 #ifdef USE_RANDOMGENERATOR
@@ -945,7 +946,7 @@ QuantizePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(QuantizePluginFactory, {}, {});
+mDeclarePluginFactory(QuantizePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 QuantizePluginFactory::describe(ImageEffectDescriptor &desc)
 {

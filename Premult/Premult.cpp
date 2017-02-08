@@ -28,6 +28,7 @@
 #endif
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -708,7 +709,7 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs & /*args*/,
      */
 } // >::changedClip
 
-//mDeclarePluginFactory(PremultPluginFactory, {}, {});
+//mDeclarePluginFactory(PremultPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<bool isPremult>
 class PremultPluginFactory
@@ -719,11 +720,11 @@ public:
                          unsigned int verMaj,
                          unsigned int verMin) : PluginFactoryHelper<PremultPluginFactory<isPremult> >(id, verMaj, verMin) {}
 
-    virtual void load() {};
-    virtual void unload() {};
-    virtual void describe(ImageEffectDescriptor &desc);
-    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
-    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
+    virtual void load() OVERRIDE FINAL {ofxsThreadSuiteCheck();}
+    //virtual void unload() OVERRIDE FINAL {};
+    virtual void describe(ImageEffectDescriptor &desc) OVERRIDE FINAL;
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context) OVERRIDE FINAL;
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context) OVERRIDE FINAL;
 };
 
 

@@ -346,7 +346,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgDenoisePluginFactory, {}, {});
+mDeclarePluginFactory(CImgDenoisePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgDenoisePluginFactory::describe(ImageEffectDescriptor& desc)

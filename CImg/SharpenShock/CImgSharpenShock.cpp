@@ -285,7 +285,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgSharpenShockPluginFactory, {}, {});
+mDeclarePluginFactory(CImgSharpenShockPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgSharpenShockPluginFactory::describe(ImageEffectDescriptor& desc)

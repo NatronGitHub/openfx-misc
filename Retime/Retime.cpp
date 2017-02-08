@@ -35,6 +35,7 @@
 #include <cassert>
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -582,6 +583,7 @@ mDeclarePluginFactory(RetimePluginFactory,; , {});
 void
 RetimePluginFactory::load()
 {
+    ofxsThreadSuiteCheck();
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw Exception::HostInadequate("Need random temporal image access to work");

@@ -33,6 +33,7 @@
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
 #include "ofxsRectangleInteract.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
@@ -1814,7 +1815,7 @@ class HSVToolOverlayDescriptor
 {
 };
 
-mDeclarePluginFactory(HSVToolPluginFactory, {}, {});
+mDeclarePluginFactory(HSVToolPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 HSVToolPluginFactory::describe(ImageEffectDescriptor &desc)

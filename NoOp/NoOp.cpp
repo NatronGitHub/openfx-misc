@@ -856,7 +856,7 @@ NoOpPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 } // NoOpPlugin::getClipPreferences
 
-mDeclarePluginFactory(NoOpPluginFactory, {}, {});
+mDeclarePluginFactory(NoOpPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 NoOpPluginFactory::describe(ImageEffectDescriptor &desc)
 {

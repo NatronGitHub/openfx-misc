@@ -2944,7 +2944,7 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
 //
 // CImgBlurPluginFactory
 //
-mDeclarePluginFactory(CImgBlurPluginFactory0, {}, {});
+mDeclarePluginFactory(CImgBlurPluginFactory0, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgBlurPluginFactory0::describe(ImageEffectDescriptor& desc)
@@ -2966,7 +2966,7 @@ CImgBlurPluginFactory0::createInstance(OfxImageEffectHandle handle,
     return new CImgBlurPlugin(handle);
 }
 
-mDeclarePluginFactoryVersioned(CImgBlurPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<unsigned int majorVersion>
 void
@@ -2994,7 +2994,7 @@ CImgBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 //
 // CImgLaplacianPluginFactory
 //
-mDeclarePluginFactoryVersioned(CImgLaplacianPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgLaplacianPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<unsigned int majorVersion>
 void
@@ -3022,7 +3022,7 @@ CImgLaplacianPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle ha
 //
 // CImgChromaBlurPluginFactory
 //
-mDeclarePluginFactoryVersioned(CImgChromaBlurPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgChromaBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<unsigned int majorVersion>
 void
@@ -3050,7 +3050,7 @@ CImgChromaBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle h
 //
 // CImgBloomPluginFactory
 //
-mDeclarePluginFactoryVersioned(CImgBloomPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgBloomPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<unsigned int majorVersion>
 void
@@ -3078,7 +3078,7 @@ CImgBloomPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle
 //
 // CImgErodeBlurPluginFactory
 //
-mDeclarePluginFactoryVersioned(CImgErodeBlurPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgErodeBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<unsigned int majorVersion>
 void
@@ -3106,7 +3106,7 @@ CImgErodeBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle ha
 //
 // CImgSharpenPluginFactory
 //
-mDeclarePluginFactoryVersioned(CImgSharpenPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgSharpenPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<unsigned int majorVersion>
 void
@@ -3134,7 +3134,7 @@ CImgSharpenPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle hand
 //
 // CImgSoftenPluginFactory
 //
-mDeclarePluginFactoryVersioned(CImgSoftenPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgSoftenPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<unsigned int majorVersion>
 void
@@ -3162,7 +3162,7 @@ CImgSoftenPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handl
 //
 // CImgEdgeExtendPluginFactory
 //
-mDeclarePluginFactoryVersioned(CImgEdgeExtendPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgEdgeExtendPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<unsigned int majorVersion>
 void
@@ -3190,7 +3190,7 @@ CImgEdgeExtendPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle h
 //
 // CImgEdgeDetectPluginFactory
 //
-mDeclarePluginFactoryVersioned(CImgEdgeDetectPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(CImgEdgeDetectPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<unsigned int majorVersion>
 void

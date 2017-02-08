@@ -520,7 +520,7 @@ MirrorPlugin::changedClip(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(MirrorPluginFactory, {}, {});
+mDeclarePluginFactory(MirrorPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 MirrorPluginFactory::describe(ImageEffectDescriptor &desc)
 {

@@ -29,6 +29,7 @@
 #include "ofxsRectangleInteract.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -606,7 +607,7 @@ CopyRectanglePlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(CopyRectanglePluginFactory, {}, {});
+mDeclarePluginFactory(CopyRectanglePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 CopyRectanglePluginFactory::describe(ImageEffectDescriptor &desc)
 {

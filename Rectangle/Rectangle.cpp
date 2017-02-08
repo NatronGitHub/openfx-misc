@@ -42,6 +42,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -1037,7 +1038,7 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 } // RectanglePlugin::getRegionOfDefinition
 
-mDeclarePluginFactory(RectanglePluginFactory, {}, {});
+mDeclarePluginFactory(RectanglePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 RectanglePluginFactory::describe(ImageEffectDescriptor &desc)
 {

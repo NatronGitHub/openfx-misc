@@ -187,7 +187,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgRollingGuidancePluginFactory, {}, {});
+mDeclarePluginFactory(CImgRollingGuidancePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgRollingGuidancePluginFactory::describe(ImageEffectDescriptor& desc)

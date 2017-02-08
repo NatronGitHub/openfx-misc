@@ -554,7 +554,7 @@ SimpleFilterPlugin::changedClip(const InstanceChangedArgs &args,
     //std::cout << "changedClip OK!\n";
 }
 
-mDeclarePluginFactory(SimpleFilterPluginFactory, {}, {});
+mDeclarePluginFactory(SimpleFilterPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 SimpleFilterPluginFactory::describe(ImageEffectDescriptor &desc)
 {

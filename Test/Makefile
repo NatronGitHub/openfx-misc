@@ -1,4 +1,4 @@
-PLUGINOBJECTS = \
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
 ofxsTransform3x3.o ofxsShutter.o \
 TestRender.o \
 TestPosition.o \

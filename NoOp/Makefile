@@ -1,4 +1,4 @@
-PLUGINOBJECTS = NoOp.o ofxsGenerator.o ofxsRectangleInteract.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o NoOp.o ofxsGenerator.o ofxsRectangleInteract.o
 PLUGINNAME = NoOp
 RESOURCES = net.sf.openfx.NoOpPlugin.png net.sf.openfx.NoOpPlugin.svg
 

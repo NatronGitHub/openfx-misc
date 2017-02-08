@@ -28,6 +28,7 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 #include "ofxsCopier.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -300,7 +301,7 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 }
 
-mDeclarePluginFactory(AdjustRoDPluginFactory, {}, {});
+mDeclarePluginFactory(AdjustRoDPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 AdjustRoDPluginFactory::describe(ImageEffectDescriptor &desc)
 {

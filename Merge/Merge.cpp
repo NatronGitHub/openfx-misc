@@ -39,6 +39,7 @@
 #include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -1141,7 +1142,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     return true;
 } // MergePlugin::isIdentity
 
-//mDeclarePluginFactory(MergePluginFactory, {}, {});
+//mDeclarePluginFactory(MergePluginFactory, {ofxsThreadSuiteCheck();}, {});
 template<MergePluginEnum plugin>
 class MergePluginFactory
     : public PluginFactoryHelper<MergePluginFactory<plugin> >
@@ -1152,9 +1153,10 @@ public:
     {
     }
 
-    virtual void describe(ImageEffectDescriptor &desc);
-    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
-    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
+    virtual void load() OVERRIDE FINAL {ofxsThreadSuiteCheck();}
+    virtual void describe(ImageEffectDescriptor &desc) OVERRIDE FINAL;
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context) OVERRIDE FINAL;
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context) OVERRIDE FINAL;
 };
 
 template<MergePluginEnum plugin>

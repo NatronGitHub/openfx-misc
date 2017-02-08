@@ -35,6 +35,8 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
+
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -385,7 +387,7 @@ ColorBarsPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(ColorBarsPluginFactory, {}, {});
+mDeclarePluginFactory(ColorBarsPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ColorBarsPluginFactory::describe(ImageEffectDescriptor &desc)
 {

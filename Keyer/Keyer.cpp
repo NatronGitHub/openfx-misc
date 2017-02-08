@@ -937,7 +937,7 @@ KeyerPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(KeyerPluginFactory, {}, {});
+mDeclarePluginFactory(KeyerPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 KeyerPluginFactory::describe(ImageEffectDescriptor &desc)
 {

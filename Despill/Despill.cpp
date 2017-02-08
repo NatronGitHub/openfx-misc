@@ -24,6 +24,7 @@
 #include <algorithm>
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -525,7 +526,7 @@ DespillPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(DespillPluginFactory, {}, {} );
+mDeclarePluginFactory(DespillPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 DespillPluginFactory::describe(ImageEffectDescriptor &desc)
 {

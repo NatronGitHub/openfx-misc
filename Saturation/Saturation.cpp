@@ -752,7 +752,7 @@ SaturationPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(SaturationPluginFactory, {}, {});
+mDeclarePluginFactory(SaturationPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 SaturationPluginFactory::describe(ImageEffectDescriptor &desc)
 {
