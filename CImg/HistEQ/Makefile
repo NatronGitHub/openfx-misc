@@ -1,4 +1,4 @@
-PLUGINOBJECTS = \
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
 CImgHistEQ.o \
 CImgFilter.o \
 ofxsLut.o
