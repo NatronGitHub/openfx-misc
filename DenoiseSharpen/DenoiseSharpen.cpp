@@ -111,7 +111,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This plugin allows the separate denoising of image channels in multiple color spaces using wavelets, using the BayesShrink algorithm, and can also sharpen the image details.\n" \
     "\n" \
     "Noise levels for each channel may be either set manually, or analyzed from the image data in each wavelet subband using the MAD (median absolute deviation) estimator.\n" \
-    "Noise analysis is based on a Gaussian noise assumption. If there is speckle noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
+    "Noise analysis is based on the assuption that the noise is Gaussian and additive (it is not intensity-dependent). If there is speckle or salt-and-pepper noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
     "The color model specifies the channels and the transforms used. Noise levels have to be re-adjusted or re-analyzed when changing the color model.\n" \
     "\n" \
     "## Basic Usage\n" \
@@ -121,19 +121,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "For most footage, the effect works best by keeping the default Y'CbCr color model. The color models are made to work with Rec.709 data, but DenoiseSharpen will still work if the input is in another colorspace, as long as the input is linear RGB:\n" \
     "\n" \
     "- The Y'CbCr color model uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B' and the the Rec.709 primaries to convert from R'G'B' to Y'CbCr.\n" \
-    "- The L*a*b color model uses the Rec.709 RGB primaries to convert from RGB to L*a*b..\n" \
+    "- The L * a * b color model uses the Rec.709 RGB primaries to convert from RGB to L * a * b.\n" \
     "- The R'G'B' color model uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B'.\n" \
-    "- The RGB color model (linear) makes no assumption about the RGB color space.\n" \
+    "- The RGB color model (linear) makes no assumption about the RGB color space, and works directly on the RGB components, assuming additive noise. If, say, the noise is known to be multiplicative, one can convert the images to Log before denoising, use this option, and convert back to linear after denoising.\n" \
     "- The Alpha channel, if processed, is always considered to be linear.\n" \
     "\n" \
     "The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, \"Lock Noise Analysis\" is checked in order to avoid modifying the essential parameters by mistake.\n" \
     "\n" \
-    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate.\n" \
+    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero..\n" \
     "\n" \
-    "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
+    "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, and noise analysis can only be performed on areas which also contain details, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
     "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it commes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
     "\n" \
-    "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left. You can then reset the Sharpen Amount, unless you actually want to enhance the contrast of your denoised footage.\n" \
+    "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left and only image details remain in the sharpened image. You can then reset the Sharpen Amount to zero, unless you actually want to enhance the contrast of your denoised footage.\n" \
     "\n" \
     "You can also check what was actually removed from the original image by selecting the \"Noise\" Output mode (instead of \"Result\"). If too many image details are visible in the noise, noise parameters may need to be tuned.\n"
 
