@@ -55,7 +55,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamReformat "reformat"
 #define kParamReformatLabel "Reformat"
 #define kParamReformatHint "Translates the bottom left corner of the crop rectangle to be in (0,0)."
-#define kParamReformatHintExtraNatron " This sets the output format only if 'Format' is selected as the output Extend. In order to actually change the format of this image stream for other Extent choices, feed the output of this node to a either a NoOp node which sets the proper format, or a Reformat node with the same extent and with 'Resize Type' set to None and 'Center' unchecked."
+#define kParamReformatHintExtraNatron " This sets the output format only if 'Format' or 'Project' is selected as the output Extend. In order to actually change the format of this image stream for other Extent choices, feed the output of this node to a either a NoOp node which sets the proper format, or a Reformat node with the same extent and with 'Resize Type' set to None and 'Center' unchecked. The reason is that the Crop size may be animated, but the output format can not be animated."
 #define kParamReformatDefault false
 
 #define kParamIntersect "intersect"
@@ -900,7 +900,7 @@ CropPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReformat);
         param->setLabel(kParamReformatLabel);
-        param->setHint( std::string(kParamReformatHint) + (getImageEffectHostDescription()->isNatron ? "" : kParamReformatHintExtraNatron) );
+        param->setHint( std::string(kParamReformatHint) + (getImageEffectHostDescription()->isNatron ? kParamReformatHintExtraNatron : "") );
         param->setDefault(kParamReformatDefault);
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
