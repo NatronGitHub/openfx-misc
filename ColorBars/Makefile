@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ColorBars.o ofxsRectangleInteract.o ofxsGenerator.o ofxsLut.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ColorBars.o ofxsRectangleInteract.o ofxsGenerator.o ofxsLut.o
 PLUGINNAME = ColorBars
 RESOURCES = net.sf.openfx.ColorBars.png net.sf.openfx.ColorBars.svg
 

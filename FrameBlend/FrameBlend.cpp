@@ -31,6 +31,7 @@
 #include <limits>
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsPixelProcessor.h"
@@ -1025,7 +1026,7 @@ FrameBlendPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(FrameBlendPluginFactory, {}, {});
+mDeclarePluginFactory(FrameBlendPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 FrameBlendPluginFactory::describe(ImageEffectDescriptor &desc)
 {

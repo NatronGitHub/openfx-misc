@@ -25,6 +25,7 @@
 #include <algorithm>
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
@@ -684,7 +685,7 @@ DeinterlacePlugin::getFramesNeeded(const FramesNeededArguments &args,
     frames.setFramesNeeded(*_srcClip, range);
 }
 
-mDeclarePluginFactory(DeinterlacePluginFactory, {}, {});
+mDeclarePluginFactory(DeinterlacePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 DeinterlacePluginFactory::describe(ImageEffectDescriptor &desc)
 {

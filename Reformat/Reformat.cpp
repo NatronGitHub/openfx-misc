@@ -33,6 +33,7 @@
 #include "ofxsTransformInteract.h"
 #include "ofxsFormatResolution.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -731,7 +732,7 @@ ReformatPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 #endif
 }
 
-mDeclarePluginFactory(ReformatPluginFactory, {}, {});
+mDeclarePluginFactory(ReformatPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ReformatPluginFactory::describe(ImageEffectDescriptor &desc)
 {

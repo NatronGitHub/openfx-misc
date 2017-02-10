@@ -1639,7 +1639,7 @@ ShufflePlugin::enableComponents()
     }
 } // ShufflePlugin::enableComponents
 
-mDeclarePluginFactory(ShufflePluginFactory, {}, {});
+mDeclarePluginFactory(ShufflePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ShufflePluginFactory::describe(ImageEffectDescriptor &desc)
 {

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ClipTest.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ClipTest.o
 PLUGINNAME = ClipTest
 RESOURCES = net.sf.openfx.ClipTestPlugin.png net.sf.openfx.ClipTestPlugin.svg
 

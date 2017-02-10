@@ -31,6 +31,7 @@
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -1139,7 +1140,7 @@ GodRaysPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(GodRaysPluginFactory, {}, {});
+mDeclarePluginFactory(GodRaysPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 GodRaysPluginFactory::describe(ImageEffectDescriptor &desc)
 {

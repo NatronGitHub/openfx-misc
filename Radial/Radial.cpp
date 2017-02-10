@@ -33,6 +33,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -898,7 +899,7 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 } // RadialPlugin::getRegionOfDefinition
 
-mDeclarePluginFactory(RadialPluginFactory, {}, {});
+mDeclarePluginFactory(RadialPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 RadialPluginFactory::describe(ImageEffectDescriptor &desc)
 {

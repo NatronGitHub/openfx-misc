@@ -558,7 +558,7 @@ MixableFilterPlugin::changedClip(const InstanceChangedArgs &args,
     //std::cout << "changedClip OK!\n";
 }
 
-mDeclarePluginFactory(MixableFilterPluginFactory, {}, {});
+mDeclarePluginFactory(MixableFilterPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 MixableFilterPluginFactory::describe(ImageEffectDescriptor &desc)
 {

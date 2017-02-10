@@ -31,6 +31,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -796,7 +797,7 @@ PLogLinPlugin::changedClip(const InstanceChangedArgs &args,
     //std::cout << "changedClip OK!\n";
 }
 
-mDeclarePluginFactory(PLogLinPluginFactory, {}, {});
+mDeclarePluginFactory(PLogLinPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 PLogLinPluginFactory::describe(ImageEffectDescriptor &desc)
 {

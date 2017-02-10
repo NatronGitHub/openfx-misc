@@ -34,6 +34,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -672,7 +673,7 @@ AddPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(AddPluginFactory, {}, {});
+mDeclarePluginFactory(AddPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 AddPluginFactory::describe(ImageEffectDescriptor &desc)
 {

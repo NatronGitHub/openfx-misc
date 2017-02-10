@@ -199,7 +199,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgPlasmaPluginFactory, {}, {});
+mDeclarePluginFactory(CImgPlasmaPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgPlasmaPluginFactory::describe(ImageEffectDescriptor& desc)

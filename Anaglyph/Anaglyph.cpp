@@ -29,6 +29,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -366,7 +367,8 @@ AnaglyphPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(AnaglyphPluginFactory,; , {});
+mDeclarePluginFactory(AnaglyphPluginFactory, {ofxsThreadSuiteCheck();}, {});
+#if 0
 void
 AnaglyphPluginFactory::load()
 {
@@ -376,6 +378,7 @@ AnaglyphPluginFactory::load()
     //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 }
+#endif
 
 void
 AnaglyphPluginFactory::describe(ImageEffectDescriptor &desc)

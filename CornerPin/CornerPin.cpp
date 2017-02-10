@@ -47,6 +47,7 @@
 
 #include "ofxsOGLTextRenderer.h"
 #include "ofxsTransform3x3.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -1250,7 +1251,7 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
     }
 } // CornerPinPluginDescribeInContext
 
-mDeclarePluginFactory(CornerPinPluginFactory, {}, {});
+mDeclarePluginFactory(CornerPinPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 CornerPinPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -1293,7 +1294,7 @@ CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new CornerPinPlugin(handle, false);
 }
 
-mDeclarePluginFactory(CornerPinMaskedPluginFactory, {}, {});
+mDeclarePluginFactory(CornerPinMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 CornerPinMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
 {

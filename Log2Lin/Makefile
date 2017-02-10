@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Log2Lin.o ofxsLut.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Log2Lin.o ofxsLut.o
 PLUGINNAME = Templates
 #RESOURCES = net.sf.openfx.Log2Lin.png net.sf.openfx.Log2Lin.svg
 

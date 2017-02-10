@@ -216,7 +216,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgSharpenInvDiffPluginFactory, {}, {});
+mDeclarePluginFactory(CImgSharpenInvDiffPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgSharpenInvDiffPluginFactory::describe(ImageEffectDescriptor& desc)

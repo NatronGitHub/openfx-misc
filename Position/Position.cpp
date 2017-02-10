@@ -301,7 +301,7 @@ PositionPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 }
 
-mDeclarePluginFactory(PositionPluginFactory, {}, {});
+mDeclarePluginFactory(PositionPluginFactory, {ofxsThreadSuiteCheck();}, {});
 struct PositionInteractParam
 {
     static const char * name() { return kParamTranslate; }

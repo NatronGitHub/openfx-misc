@@ -30,6 +30,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -308,7 +309,7 @@ MatteMonitorPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 }
 
-mDeclarePluginFactory(MatteMonitorPluginFactory, {}, {});
+mDeclarePluginFactory(MatteMonitorPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 MatteMonitorPluginFactory::describe(ImageEffectDescriptor &desc)
 {

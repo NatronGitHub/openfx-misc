@@ -32,6 +32,7 @@
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -799,7 +800,7 @@ ColorSuppressPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(ColorSuppressPluginFactory, {}, {});
+mDeclarePluginFactory(ColorSuppressPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ColorSuppressPluginFactory::describe(ImageEffectDescriptor &desc)
 {

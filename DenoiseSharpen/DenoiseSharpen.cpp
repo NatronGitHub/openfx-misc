@@ -58,6 +58,9 @@
 #include <algorithm>
 #ifdef DEBUG_STDOUT
 #include <iostream>
+#define DBG(x) (x)
+#else
+#define DBG(x) (void)0
 #endif
 #ifdef _WINDOWS
 #include <windows.h>
@@ -68,6 +71,7 @@
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
 #include "ofxsRectangleInteract.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsCopier.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
@@ -90,6 +94,10 @@ typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 #endif
 
 using namespace OFX;
+#ifdef DEBUG_STDOUT
+using std::cout;
+using std::endl;
+#endif
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
@@ -103,7 +111,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This plugin allows the separate denoising of image channels in multiple color spaces using wavelets, using the BayesShrink algorithm, and can also sharpen the image details.\n" \
     "\n" \
     "Noise levels for each channel may be either set manually, or analyzed from the image data in each wavelet subband using the MAD (median absolute deviation) estimator.\n" \
-    "Noise analysis is based on a Gaussian noise assumption. If there is speckle noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
+    "Noise analysis is based on the assuption that the noise is Gaussian and additive (it is not intensity-dependent). If there is speckle or salt-and-pepper noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
     "The color model specifies the channels and the transforms used. Noise levels have to be re-adjusted or re-analyzed when changing the color model.\n" \
     "\n" \
     "## Basic Usage\n" \
@@ -113,19 +121,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "For most footage, the effect works best by keeping the default Y'CbCr color model. The color models are made to work with Rec.709 data, but DenoiseSharpen will still work if the input is in another colorspace, as long as the input is linear RGB:\n" \
     "\n" \
     "- The Y'CbCr color model uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B' and the the Rec.709 primaries to convert from R'G'B' to Y'CbCr.\n" \
-    "- The L*a*b color model uses the Rec.709 RGB primaries to convert from RGB to L*a*b..\n" \
+    "- The L * a * b color model uses the Rec.709 RGB primaries to convert from RGB to L * a * b.\n" \
     "- The R'G'B' color model uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B'.\n" \
-    "- The RGB color model (linear) makes no assumption about the RGB color space.\n" \
+    "- The RGB color model (linear) makes no assumption about the RGB color space, and works directly on the RGB components, assuming additive noise. If, say, the noise is known to be multiplicative, one can convert the images to Log before denoising, use this option, and convert back to linear after denoising.\n" \
     "- The Alpha channel, if processed, is always considered to be linear.\n" \
     "\n" \
     "The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, \"Lock Noise Analysis\" is checked in order to avoid modifying the essential parameters by mistake.\n" \
     "\n" \
-    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate.\n" \
+    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero..\n" \
     "\n" \
-    "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
+    "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, and noise analysis can only be performed on areas which also contain details, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
     "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it commes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
     "\n" \
-    "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left. You can then reset the Sharpen Amount, unless you actually want to enhance the contrast of your denoised footage.\n" \
+    "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left and only image details remain in the sharpened image. You can then reset the Sharpen Amount to zero, unless you actually want to enhance the contrast of your denoised footage.\n" \
     "\n" \
     "You can also check what was actually removed from the original image by selecting the \"Noise\" Output mode (instead of \"Result\"). If too many image details are visible in the noise, noise parameters may need to be tuned.\n"
 
@@ -2213,9 +2221,7 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     omp_set_num_threads( MultiThread::getNumCPUs() );
 #endif
-#ifdef DEBUG_STDOUT
-    std::cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n";
-#endif
+    DBG(cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n");
 
     progressStartRender(kPluginName " (render)");
 
@@ -2240,17 +2246,13 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
         renderForComponents<1>(args);
         break;
     default:
-#ifdef DEBUG_STDOUT
-        std::cout << "components usupported\n";
-#endif
+        DBG(std::cout << "components usupported\n");
         throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
     progressEndRender();
 
-#ifdef DEBUG_STDOUT
-    std::cout << "render! OK\n";
-#endif
+    DBG(cout << "render! OK\n");
 }
 
 template<int nComponents>
@@ -2272,9 +2274,7 @@ DenoiseSharpenPlugin::renderForComponents(const RenderArguments &args)
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-#ifdef DEBUG_STDOUT
-        std::cout << "depth usupported\n";
-#endif
+        DBG(cout << "depth usupported\n");
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -2356,9 +2356,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     p.analysisLock = _analysisLock->getValueAtTime(time);
     if ( !p.analysisLock ) {
         // all we have to do is copy pixels
-#ifdef DEBUG_STDOUT
-        std::cout << "render called although analysis not locked and isidentity=true\n";
-#endif
+        DBG(cout << "render called although analysis not locked and isidentity=true\n");
         copyPixels(*this,
                    args.renderWindow,
                    src.get(),
@@ -2698,9 +2696,8 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
                                  Clip * &identityClip,
                                  double & /*identityTime*/)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "isIdentity!\n";
-#endif
+    DBG(cout << "isIdentity!\n");
+
     const double time = args.time;
 
     if (kLevelMax - startLevelFromRenderScale(args.renderScale) < 0) {
@@ -2811,9 +2808,8 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-#ifdef DEBUG_STDOUT
-    std::cout << "isIdentity! false\n";
-#endif
+    DBG(cout << "isIdentity! false\n");
+
     return false;
 } // DenoiseSharpenPlugin::isIdentity
 
@@ -2821,9 +2817,8 @@ void
 DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
                                   const std::string &clipName)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "changedClip!\n";
-#endif
+    DBG(cout << "changedClip!\n");
+
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
@@ -2844,9 +2839,7 @@ DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
             }
         }
     }
-#ifdef DEBUG_STDOUT
-    std::cout << "changedClip OK!\n";
-#endif
+    DBG(cout << "changedClip OK!\n");
 }
 
 void
@@ -2887,9 +2880,8 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
 void
 DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "analysis!\n";
-#endif
+    DBG(cout << "analysis!\n");
+
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
 
     progressStartAnalysis(kPluginName " (noise analysis)");
@@ -2936,9 +2928,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     _analysisLock->setValue(true);
     endEditBlock();
     progressEndAnalysis();
-#ifdef DEBUG_STDOUT
-    std::cout << "analysis! OK\n";
-#endif
+
+    DBG(cout << "analysis! OK\n");
 }
 
 template<int nComponents>
@@ -3180,14 +3171,13 @@ class DenoiseSharpenOverlayDescriptor
 {
 };
 
-mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<Mutex>; }, { delete gLutManager; });
+mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
 
 void
 DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "describe!\n";
-#endif
+    DBG(cout << "describe!\n");
+
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -3219,18 +3209,15 @@ DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
-#ifdef DEBUG_STDOUT
-    std::cout << "describe! OK\n";
-#endif
+    DBG(cout << "describe! OK\n");
 }
 
 void
 DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                                ContextEnum context)
 {
-#ifdef DEBUG_STDOUT
-    std::cout << "describeInContext!\n";
-#endif
+    DBG(cout << "describeInContext!\n");
+
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -3784,9 +3771,7 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-#ifdef DEBUG_STDOUT
-    std::cout << "describeInContext! OK\n";
-#endif
+    DBG(cout << "describeInContext! OK\n");
 } // DenoiseSharpenPluginFactory::describeInContext
 
 ImageEffect*

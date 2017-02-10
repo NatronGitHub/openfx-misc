@@ -2095,7 +2095,7 @@ PIKPlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(PIKPluginFactory, {}, {});
+mDeclarePluginFactory(PIKPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 PIKPluginFactory::describe(ImageEffectDescriptor &desc)
 {

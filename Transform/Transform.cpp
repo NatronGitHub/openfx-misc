@@ -29,6 +29,7 @@
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -396,7 +397,7 @@ TransformPlugin::changedClip(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(TransformPluginFactory, {}, {});
+mDeclarePluginFactory(TransformPluginFactory, {ofxsThreadSuiteCheck();}, {});
 static
 void
 TransformPluginDescribeInContext(ImageEffectDescriptor &desc,
@@ -451,7 +452,7 @@ TransformPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new TransformPlugin(handle, false, false);
 }
 
-mDeclarePluginFactory(TransformMaskedPluginFactory, {}, {});
+mDeclarePluginFactory(TransformMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 TransformMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -495,7 +496,7 @@ TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new TransformPlugin(handle, true, false);
 }
 
-mDeclarePluginFactory(DirBlurPluginFactory, {}, {});
+mDeclarePluginFactory(DirBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 DirBlurPluginFactory::describe(ImageEffectDescriptor &desc)
 {

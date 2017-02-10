@@ -265,7 +265,7 @@ private:
     IntParam *_iterations;
 };
 
-mDeclarePluginFactory(CImgBilateralPluginFactory, {}, {});
+mDeclarePluginFactory(CImgBilateralPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgBilateralPluginFactory::describe(ImageEffectDescriptor& desc)
@@ -357,7 +357,7 @@ CImgBilateralPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new CImgBilateralPlugin(handle);
 }
 
-mDeclarePluginFactory(CImgBilateralGuidedPluginFactory, {}, {});
+mDeclarePluginFactory(CImgBilateralGuidedPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 CImgBilateralGuidedPluginFactory::describe(ImageEffectDescriptor& desc)
 {

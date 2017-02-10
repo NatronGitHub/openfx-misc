@@ -38,6 +38,7 @@
 #include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -572,7 +573,7 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
     return true;
 } // KeyMixPlugin::isIdentity
 
-mDeclarePluginFactory(KeyMixPluginFactory, {}, {});
+mDeclarePluginFactory(KeyMixPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 KeyMixPluginFactory::describe(ImageEffectDescriptor &desc)
 {

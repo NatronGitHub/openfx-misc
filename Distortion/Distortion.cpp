@@ -3170,7 +3170,7 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-//mDeclarePluginFactory(DistortionPluginFactory, {}, {});
+//mDeclarePluginFactory(DistortionPluginFactory, {ofxsThreadSuiteCheck();}, {});
 template<DistortionPluginEnum plugin, int majorVersion>
 class DistortionPluginFactory
     : public PluginFactoryHelper<DistortionPluginFactory<plugin, majorVersion> >
@@ -3180,10 +3180,10 @@ public:
     : PluginFactoryHelper<DistortionPluginFactory>(id, verMaj, verMin)
     {
     }
-
-    virtual void describe(ImageEffectDescriptor &desc);
-    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
-    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
+    virtual void load() OVERRIDE FINAL {ofxsThreadSuiteCheck();}
+    virtual void describe(ImageEffectDescriptor &desc) OVERRIDE FINAL;
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context) OVERRIDE FINAL;
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context) OVERRIDE FINAL;
 };
 
 template<DistortionPluginEnum plugin, int majorVersion>

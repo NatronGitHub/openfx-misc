@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ColorTransform.o ofxsLut.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ColorTransform.o ofxsLut.o
 PLUGINNAME = ColorTransform
 RESOURCES = \
 net.sf.openfx.HSVToRGB.png \
