@@ -322,9 +322,6 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 bool
 ReformatPlugin::isIdentity(const double time)
 {
-    // must clear persistent message in isIdentity, or render() is not called by Nuke after an error
-    clearPersistentMessage();
-
     if ( _center->getValueAtTime(time) || _flip->getValueAtTime(time) ||
          _flop->getValueAtTime(time)   || _turn->getValueAtTime(time) ) {
         return false;
@@ -646,6 +643,9 @@ void
 ReformatPlugin::changedParam(const InstanceChangedArgs &args,
                              const std::string &paramName)
 {
+    // must clear persistent message, or render() is not called by Nuke
+    clearPersistentMessage();
+
     if (paramName == kParamType) {
         refreshVisibility();
     }
