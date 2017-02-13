@@ -41,7 +41,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "ReformatOFX"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Convert the image to another format or size\n" \
+#define kPluginDescription "Convert the image to another format or size.\n" \
+    "An image transform is computed that goes from the input region of definition (RoD) to the selected format. The Resize Type parameter adjust the way the transform is computed.\n" \
+    "This plugin concatenates transforms.\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Reformat"
+
+#define kPluginDescriptionNatron "Convert the image to another format or size.\n" \
+    "An image transform is computed that goes from the input format, regardless of the region of definition (RoD), to the selected format. The Resize Type parameter adjust the way the transform is computed.\n" \
+    "The output format is set by this effect.\n" \
+    "In order to set the output format without transforming the image content, use the NoOp effect.\n" \
     "This plugin concatenates transforms.\n" \
     "See also: http://opticalenquiry.com/nuke/index.php?title=Reformat"
 
@@ -739,7 +747,7 @@ ReformatPluginFactory::describe(ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    desc.setPluginDescription(getImageEffectHostDescription()->isNatron ? kPluginDescriptionNatron : kPluginDescription);
     Transform3x3Describe(desc, false);
     desc.setSupportsMultiResolution(true);
     desc.setSupportsMultipleClipPARs(true);
