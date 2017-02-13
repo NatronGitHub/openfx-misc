@@ -32,11 +32,11 @@
 
 using namespace OFX;
 
-#define kGroupAxis "axis"
-#define kGroupAxisLabel "Axis"
+#define kCameraAxis "axis"
+#define kCameraAxisLabel "Axis"
 
-#define kGroupCam "cam"
-#define kGroupCamLabel "Cam"
+#define kCameraCam "cam"
+#define kCameraCamLabel "Cam"
 
 #define kGroupCard "card"
 #define kGroupCardLabel "Card"
@@ -172,7 +172,7 @@ public:
 
     void changedParam(const InstanceChangedArgs &args, const std::string &paramName);
 
-    void getMatrix(double time, Matrix4x4* mat);
+    void getMatrix(double time, Matrix4x4* mat) const;
 
     /// update visibility/enabledness
     void update()
@@ -377,7 +377,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
 }
 
 void
-PosMatParam::getMatrix(const double t, Matrix4x4* mat)
+PosMatParam::getMatrix(const double t, Matrix4x4* mat) const
 {
     if (_useMatrix->getValueAtTime(t)) {
         for (int i = 0; i < 4; ++i) {
@@ -449,6 +449,19 @@ PosMatParam::getMatrix(const double t, Matrix4x4* mat)
         }
     }
 
+    double skew[3];
+    _skew->getValueAtTime(t, skew[0], skew[1], skew[2]);
+    if (skew[0] != 0. ||
+        skew[1] != 0. ||
+        skew[2] != 0.) {
+        Matrix4x4 K;
+        K(0,1) = std::tan(skew[0] * M_PI / 180.);
+        K(1,0) = std::tan(skew[1] * M_PI / 180.);
+        K(1,2) = std::tan(skew[2] * M_PI / 180.);
+        K(0,0) = K(1,1) = K(2,2) = K(3,3) = 1;
+        R = R * K;
+    }
+
     Matrix4x4 S;
     S(3,3) = 1.;
     _scale->getValueAtTime(t, S(0,0), S(1,1), S(2,2));
@@ -482,19 +495,24 @@ PosMatParam::getMatrix(const double t, Matrix4x4* mat)
             break;
     }
 
-#warning TODO
-    double skew[3];
-    _skew->getValueAtTime(t, skew[0], skew[1], skew[2]);
 
-    // pivot (reuse the T matrix)
-    _pivot->getValueAtTime(t, T(0,3), T(1,3), T(2,3));
-    Matrix4x4 P;
-    P(0,3) = -T(0,3);
-    P(1,3) = -T(1,3);
-    P(2,3) = -T(2,3);
-    P(0,0) = P(1,1) = P(2,2) = P(3,3) = 1;
-    *mat = T * *mat * P;
-
+    // pivot
+    double pivot[3];
+    _pivot->getValueAtTime(t, pivot[0], pivot[1], pivot[2]);
+    if (pivot[0] != 0. ||
+        pivot[1] != 0. ||
+        pivot[2] != 0.) {
+        // (reuse the T matrix)
+        T(0,3) = pivot[0];
+        T(1,3) = pivot[1];
+        T(2,3) = pivot[2];
+        Matrix4x4 P;
+        P(0,3) = -pivot[0];
+        P(1,3) = -pivot[1];
+        P(2,3) = -pivot[2];
+        P(0,0) = P(1,1) = P(2,2) = P(3,3) = 1;
+        *mat = T * *mat * P;
+    }
 }
 
 void
@@ -542,12 +560,21 @@ public:
     Card3DPlugin(OfxImageEffectHandle handle)
         : Transform3x3Plugin(handle, false, eTransform3x3ParamsTypeMotionBlur)
         //, _transformAmount(NULL)
-        , _interactive(0)
-        , _srcClipChanged(0)
-        , _axis(this, kGroupAxis)
-        , _cam(this, kGroupCam)
+        , _interactive(NULL)
+        , _srcClipChanged(NULL)
+        , _axisCamera(NULL)
+        , _camCamera(NULL)
+        , _axisPosMat(NULL)
+        , _camPosMat(NULL)
         , _card(this, kGroupCard)
     {
+        if (getImageEffectHostDescription()->supportsCamera) {
+            _axisCamera = fetchCamera(kCameraAxis);
+            _camCamera = fetchCamera(kCameraCam);
+        } else {
+            _axisPosMat = new PosMatParam(this, kCameraAxis);
+            _camPosMat = new PosMatParam(this, kCameraCam);
+        }
         // NON-GENERIC
         //_transformAmount = fetchDoubleParam(kParamTransformAmount);
         _interactive = fetchBooleanParam(kParamTransformInteractive);
@@ -593,9 +620,13 @@ private:
     //DoubleParam* _transformAmount;
     BooleanParam* _interactive;
     BooleanParam* _srcClipChanged; // set to true the first time the user connects src
-    PosMatParam _axis;
-    PosMatParam _cam;
+    Camera* _axisCamera;
+    Camera* _camCamera;
+    PosMatParam* _axisPosMat;
+    PosMatParam* _camPosMat;
+    // TODO: other camera parameters
     PosMatParam _card;
+    // TODO: other card parameters (haperture, focal, format)
 };
 
 // overridden is identity
@@ -613,11 +644,47 @@ Card3DPlugin::isIdentity(double time)
 
 bool
 Card3DPlugin::getInverseTransformCanonical(double time,
-                                              int /*view*/,
+                                              int view,
                                               double amount,
                                               bool invert,
                                               Matrix3x3* invtransform) const
 {
+    Matrix4x4 axis;
+    if (_axisCamera) {
+        if (_axisCamera->isConnected()) {
+            _axisCamera->getParameter(kNukeOfxCameraParamPositionMatrix, time, view, &axis(0,0), 16);
+        } else {
+            axis(0, 0) = axis(1,1) = axis(2,2) = axis(3,3) = 1.;
+        }
+    } else {
+        _axisPosMat->getMatrix(time, &axis);
+    }
+    Matrix4x4 cam;
+    bool camPerspective = true;
+    double camFocal = 1.;
+    double camHAperture = 1.; // only the ratio focal/haperture matters for card3d
+    double camWinTranslate[2] = {0., 0.};
+    double camWinScale[2] = {1., 1.};
+    double camWinRoll = 0.;
+    if (_camCamera) {
+        if (_camCamera->isConnected()) {
+            _camCamera->getParameter(kNukeOfxCameraParamPositionMatrix, time, view, &cam(0,0), 16);
+            double projectionMode;
+            _camCamera->getParameter(kNukeOfxCameraParamProjectionMode, time, view, &projectionMode, 1);
+            camPerspective = (projectionMode == kNukeOfxCameraProjectionModePerspective); // all other projections are considered as ortho
+            _camCamera->getParameter(kNukeOfxCameraParamFocalLength, time, view, &camFocal, 1);
+            _camCamera->getParameter(kNukeOfxCameraParamHorizontalAperture, time, view, &camHAperture, 1);
+            _camCamera->getParameter(kNukeOfxCameraParamWindowTranslate, time, view, camWinTranslate, 2);
+            _camCamera->getParameter(kNukeOfxCameraParamWindowScale, time, view, camWinScale, 2);
+            _camCamera->getParameter(kNukeOfxCameraParamWindowRoll, time, view, &camWinRoll, 1);
+        }
+    } else {
+        _camPosMat->getMatrix(time, &axis);
+        //camPerspective = (eProjectionMode)_camProjectionMode->getValueAtTime(time) == eProjectionModePerspective;
+    }
+    Matrix4x4 card;
+    _card.getMatrix(time, &card);
+
     // NON-GENERIC
     //if (_transformAmount) {
     //    amount *= _transformAmount->getValueAtTime(time);
@@ -645,8 +712,12 @@ Card3DPlugin::changedParam(const InstanceChangedArgs &args,
     if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _srcClipChanged->setValue(true);
     } else {
-        _axis.changedParam(args, paramName);
-        _cam.changedParam(args, paramName);
+        if (_axisPosMat) {
+            _axisPosMat->changedParam(args, paramName);
+        }
+        if (_camPosMat) {
+            _camPosMat->changedParam(args, paramName);
+        }
         _card.changedParam(args, paramName);
         Transform3x3Plugin::changedParam(args, paramName);
     }
@@ -688,23 +759,37 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
 
-    {
-        GroupParamDescriptor* group = desc.defineGroupParam(kGroupAxis);
-        group->setLabel(kGroupAxisLabel);
-        group->setOpen(false);
-        if (page) {
-            page->addChild(*group);
+    if (getImageEffectHostDescription()->supportsCamera) {
+        {
+            CameraDescriptor* camera = desc.defineCamera(kCameraCam);
+            camera->setLabel(kCameraCamLabel);
+            camera->setOptional(true);
         }
-        PosMatParam::define(desc, page, group, kGroupAxis);
-    }
-    {
-        GroupParamDescriptor* group = desc.defineGroupParam(kGroupCam);
-        group->setLabel(kGroupCamLabel);
-        group->setOpen(false);
-        if (page) {
-            page->addChild(*group);
+        {
+            CameraDescriptor* camera = desc.defineCamera(kCameraAxis);
+            camera->setLabel(kCameraAxisLabel);
+            camera->setOptional(true);
         }
-        PosMatParam::define(desc, page, group, kGroupCam);
+    } else {
+        {
+            GroupParamDescriptor* group = desc.defineGroupParam(kCameraAxis);
+            group->setLabel(kCameraAxisLabel);
+            group->setOpen(false);
+            if (page) {
+                page->addChild(*group);
+            }
+            PosMatParam::define(desc, page, group, kCameraAxis);
+        }
+        {
+            GroupParamDescriptor* group = desc.defineGroupParam(kCameraCam);
+            group->setLabel(kCameraCamLabel);
+            group->setOpen(false);
+            if (page) {
+                page->addChild(*group);
+            }
+            PosMatParam::define(desc, page, group, kCameraCam);
+            // TODO: add other cam params, see camera.h
+        }
     }
 
     PosMatParam::define(desc, page, /*group=*/NULL, /*prefix=*/kGroupCard);
