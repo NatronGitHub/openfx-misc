@@ -685,6 +685,18 @@ Card3DPlugin::getInverseTransformCanonical(double time,
     Matrix4x4 card;
     _card.getMatrix(time, &card);
 
+    // TODO: compose matrices
+
+    // TODO: in-lens aperture and focal
+
+    Matrix3x3 mat;
+    mat(0,0) = card(0,0); mat(0,1) = card(0,1); mat(0,2) = card(0,3);
+    mat(1,0) = card(1,0); mat(1,1) = card(1,1); mat(1,2) = card(1,3);
+    mat(0,0) = card(0,0); mat(0,1) = card(0,1); mat(0,2) = card(0,3);
+    //if (invert) {
+    //    *inv
+    //    (*invtransform)(0,0 = )
+
     // NON-GENERIC
     //if (_transformAmount) {
     //    amount *= _transformAmount->getValueAtTime(time);

@@ -547,9 +547,9 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             double ax = (srcRod.x2 - srcRod.x1) / (dstRod.x2 - dstRod.x1);
             double ay = (srcRod.y2 - srcRod.y1) / (dstRod.y2 - dstRod.y1);
             assert(ax == ax && ay == ay);
-            invtransform->a = ax; invtransform->b =  0; invtransform->c = srcRod.x1 - dstRod.x1 * ax;
-            invtransform->d =  0; invtransform->e = ay; invtransform->f = srcRod.y1 - dstRod.y1 * ay;
-            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+            (*invtransform)(0,0) = ax; (*invtransform)(0,1) =  0; (*invtransform)(0,2) = srcRod.x1 - dstRod.x1 * ax;
+            (*invtransform)(1,0) =  0; (*invtransform)(1,1) = ay; (*invtransform)(1,2) = srcRod.y1 - dstRod.y1 * ay;
+            (*invtransform)(2,0) =  0; (*invtransform)(2,1) =  0; (*invtransform)(2,2) = 1.;
         } else {
             // rotation 90 degrees counterclockwise
             // x <- srcRod.x1 + (y - dstRod.y1) * (srcRod.x2 - srcRod.x1) / (dstRod.y2 - dstRod.y1)
@@ -557,9 +557,9 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             double ax = (srcRod.x2 - srcRod.x1) / (dstRod.y2 - dstRod.y1);
             double ay = (srcRod.y2 - srcRod.y1) / (dstRod.x2 - dstRod.x1);
             assert(ax == ax && ay == ay);
-            invtransform->a =  0; invtransform->b = ax; invtransform->c = srcRod.x1 - dstRod.y1 * ax;
-            invtransform->d = -ay; invtransform->e =  0; invtransform->f = srcRod.y1 + dstRod.x2 * ay;
-            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+            (*invtransform)(0,0) =  0; (*invtransform)(0,1) = ax; (*invtransform)(0,2) = srcRod.x1 - dstRod.y1 * ax;
+            (*invtransform)(1,0) = -ay; (*invtransform)(1,1) =  0; (*invtransform)(1,2) = srcRod.y1 + dstRod.x2 * ay;
+            (*invtransform)(2,0) =  0; (*invtransform)(2,1) =  0; (*invtransform)(2,2) = 1.;
         }
     } else { // invert
         if ( (srcRod.x1 == srcRod.x2) ||
@@ -574,9 +574,9 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             double ax = (dstRod.x2 - dstRod.x1) / (srcRod.x2 - srcRod.x1);
             double ay = (dstRod.y2 - dstRod.y1) / (srcRod.y2 - srcRod.y1);
             assert(ax == ax && ay == ay);
-            invtransform->a = ax; invtransform->b =  0; invtransform->c = dstRod.x1 - srcRod.x1 * ax;
-            invtransform->d =  0; invtransform->e = ay; invtransform->f = dstRod.y1 - srcRod.y1 * ay;
-            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+            (*invtransform)(0,0) = ax; (*invtransform)(0,1) =  0; (*invtransform)(0,2) = dstRod.x1 - srcRod.x1 * ax;
+            (*invtransform)(1,0) =  0; (*invtransform)(1,1) = ay; (*invtransform)(1,2) = dstRod.y1 - srcRod.y1 * ay;
+            (*invtransform)(2,0) =  0; (*invtransform)(2,1) =  0; (*invtransform)(2,2) = 1.;
         } else {
             // rotation 90 degrees counterclockwise
             // x <- dstRod.x1 + (srcRod.y2 - y) * (dstRod.x2 - dstRod.x1) / (srcRod.y2 - srcRod.y1)
@@ -584,14 +584,14 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             double ax = (dstRod.x2 - dstRod.x1) / (srcRod.y2 - srcRod.y1);
             double ay = (dstRod.y2 - dstRod.y1) / (srcRod.x2 - srcRod.x1);
             assert(ax == ax && ay == ay);
-            invtransform->a =  0; invtransform->b = -ax; invtransform->c = dstRod.x1 + srcRod.y2 * ax;
-            invtransform->d = ay; invtransform->e =  0; invtransform->f = dstRod.y1 - srcRod.x1 * ay;
-            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+            (*invtransform)(0,0) =  0; (*invtransform)(0,1) = -ax; (*invtransform)(0,2) = dstRod.x1 + srcRod.y2 * ax;
+            (*invtransform)(1,0) = ay; (*invtransform)(1,1) =  0; (*invtransform)(1,2) = dstRod.y1 - srcRod.x1 * ay;
+            (*invtransform)(2,0) =  0; (*invtransform)(2,1) =  0; (*invtransform)(2,2) = 1.;
         }
     }
-    assert(invtransform->a == invtransform->a && invtransform->b == invtransform->b && invtransform->c == invtransform->c &&
-           invtransform->d == invtransform->d && invtransform->e == invtransform->e && invtransform->f == invtransform->f &&
-           invtransform->g == invtransform->g && invtransform->h == invtransform->h && invtransform->i == invtransform->i);
+    assert((*invtransform)(0,0) == (*invtransform)(0,0) && (*invtransform)(0,1) == (*invtransform)(0,1) && (*invtransform)(0,2) == (*invtransform)(0,2) &&
+           (*invtransform)(1,0) == (*invtransform)(1,0) && (*invtransform)(1,1) == (*invtransform)(1,1) && (*invtransform)(1,2) == (*invtransform)(1,2) &&
+           (*invtransform)(2,0) == (*invtransform)(2,0) && (*invtransform)(2,1) == (*invtransform)(2,1) && (*invtransform)(2,2) == (*invtransform)(2,2));
 
     return true;
 } // ReformatPlugin::getInverseTransformCanonical

@@ -211,9 +211,9 @@ private:
     {
         Matrix3x3 ret;
 
-        _extraMatrixRow1->getValueAtTime(time, ret.a, ret.b, ret.c);
-        _extraMatrixRow2->getValueAtTime(time, ret.d, ret.e, ret.f);
-        _extraMatrixRow3->getValueAtTime(time, ret.g, ret.h, ret.i);
+        _extraMatrixRow1->getValueAtTime(time, ret(0,0), ret(0,1), ret(0,2));
+        _extraMatrixRow2->getValueAtTime(time, ret(1,0), ret(1,1), ret(1,2));
+        _extraMatrixRow3->getValueAtTime(time, ret(2,0), ret(2,1), ret(2,2));
 
         return ret;
     }
