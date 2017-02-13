@@ -449,6 +449,7 @@ PosMatParam::getMatrix(const double t, Matrix4x4* mat) const
         }
     }
 
+    // in Nuke, skew is just before the rotation, xhatever the RTS order is (strange, but true)
     double skew[3];
     _skew->getValueAtTime(t, skew[0], skew[1], skew[2]);
     if (skew[0] != 0. ||
@@ -624,9 +625,9 @@ private:
     Camera* _camCamera;
     PosMatParam* _axisPosMat;
     PosMatParam* _camPosMat;
-    // TODO: other camera parameters
+#warning "TODO: other camera parameters"
     PosMatParam _card;
-    // TODO: other card parameters (haperture, focal, format)
+#warning "TODO: other card parameters (haperture, focal, format)"
 };
 
 // overridden is identity
@@ -685,32 +686,75 @@ Card3DPlugin::getInverseTransformCanonical(double time,
     Matrix4x4 card;
     _card.getMatrix(time, &card);
 
-    // TODO: compose matrices
+#warning "TODO: compose matrices"
 
-    // TODO: in-lens aperture and focal
+#warning "TODO: apply camera params"
+
+#warning "TODO: in-lens aperture and focal"
+
 
     Matrix3x3 mat;
     mat(0,0) = card(0,0); mat(0,1) = card(0,1); mat(0,2) = card(0,3);
     mat(1,0) = card(1,0); mat(1,1) = card(1,1); mat(1,2) = card(1,3);
-    mat(0,0) = card(0,0); mat(0,1) = card(0,1); mat(0,2) = card(0,3);
-    //if (invert) {
-    //    *inv
-    //    (*invtransform)(0,0 = )
+    mat(2,0) = card(2,0); mat(2,1) = card(2,1); mat(2,2) = card(2,3);
 
-    // NON-GENERIC
-    //if (_transformAmount) {
-    //    amount *= _transformAmount->getValueAtTime(time);
-    //}
 
-    if (amount != 1.) {
-        //translate.x *= amount;
-        //...
+
+    // mat is the direct transform, from source coords to output coords.
+    // it is normalized for coordinates in (-0.5,0.5)x(-0.5*h/w,0.5*h/w) with y from to to bottom
+
+    // get the input format (Natron only) or the input RoD (others)
+    OfxRectD srcFormatCanonical;
+    {
+        OfxRectI srcFormat;
+        _srcClip->getFormat(srcFormat);
+        double par = _srcClip->getPixelAspectRatio();
+        if ( OFX::Coords::rectIsEmpty(srcFormat) ) {
+            // no format is available, use the RoD instead
+            srcFormatCanonical = _srcClip->getRegionOfDefinition(time);
+        } else {
+            const OfxPointD rs1 = {1., 1.};
+            Coords::toCanonical(srcFormat, rs1, par, &srcFormatCanonical);
+        }
+    }
+#warning "TODO: params for output format"
+    OfxRectD dstFormatCanonical = srcFormatCanonical;
+
+    Matrix3x3 N; // normalize source
+    {
+        double w = srcFormatCanonical.x2 - srcFormatCanonical.x1;
+        //double h = srcFormatCanonical.y2 - srcFormatCanonical.y1;
+        if (w == 0.) {
+            return false;
+        }
+        N(0,0) = 1./w;
+        N(1,1) = -1./w;
+        N(0,2) = (srcFormatCanonical.x1 + srcFormatCanonical.x2) / (2. * w);
+        N(1,2) = (srcFormatCanonical.y1 + srcFormatCanonical.y2) / (2. * w);
+        N(2,2) = 1.;
     }
 
-    if (!invert) {
-        //*invtransform = ofxsMatInverseTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
+    Matrix3x3 D; // denormalize output
+    {
+        double w = dstFormatCanonical.x2 - dstFormatCanonical.x1;
+        //double h = dstFormatCanonical.y2 - dstFormatCanonical.y1;
+        D(0,0) = w;
+        D(1,1) = -w;
+        D(0,2) = (dstFormatCanonical.x1 + dstFormatCanonical.x2) / 2.;
+        D(1,2) = -(dstFormatCanonical.y1 + dstFormatCanonical.y2) / 2.;
+        D(2,2) = 1.;
+    }
+
+    mat = D * mat * N;
+
+    if (invert) {
+        (*invtransform) = mat;
     } else {
-        //*invtransform = ofxsMatTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
+        double det = mat.determinant();
+        if (det == 0.) {
+            return false;
+        }
+        (*invtransform) = mat.inverse(det);
     }
 
     return true;
@@ -800,7 +844,17 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 page->addChild(*group);
             }
             PosMatParam::define(desc, page, group, kCameraCam);
-            // TODO: add other cam params, see camera.h
+#warning "TODO: add other cam params in a Projection group, see camera.h"
+            /*
+             #define kNukeOfxCameraParamProjectionMode "projection_mode"
+             - \ref kNukeOfxCameraProjectionPerspective
+             - \ref kNukeOfxCameraProjectionOrthographic
+             #define kNukeOfxCameraParamFocalLength "focal"
+             #define kNukeOfxCameraParamHorizontalAperture "haperture"
+             #define kNukeOfxCameraParamWindowTranslate "win_translate" (2D)
+             #define kNukeOfxCameraParamWindowScale "win_scale" (2D)
+             #define kNukeOfxCameraParamWindowRoll "winroll"
+             */
         }
     }
 
