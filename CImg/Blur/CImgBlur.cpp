@@ -454,6 +454,10 @@ using namespace cimg_library;
 #define cimgblur_internal_vanvliet
 #endif
 
+#if cimg_version < 200
+#define cimgblur_internal_boxfilter
+#endif
+
 // Exponentiation by squaring
 // works with positive or negative integer exponents
 template<typename T>
@@ -485,9 +489,12 @@ ipow(T base,
     return result;
 }
 
+#ifdef cimgblur_internal_boxfilter
+
+// see cimg_library::CImg::cimg_blur_box_apply
 static inline
 T
-get_data(T *data,
+get_data(const T *ptr,
          const int N,
          const unsigned long off,
          const bool boundary_conditions,
@@ -495,57 +502,58 @@ get_data(T *data,
 {
     assert(N >= 1);
     if (x < 0) {
-        return boundary_conditions ? data[0] : T();
+        return boundary_conditions ? ptr[0] : T();
     }
     if (x >= N) {
-        return boundary_conditions ? data[(N - 1) * off] : T();
+        return boundary_conditions ? ptr[(N - 1) * off] : T();
     }
 
-    return data[x * off];
+    return ptr[x * off];
 }
 
-// [internal] Apply a box/triangle/quadratic filter (used by CImg<T>::box()).
+// [internal] Apply a box/triangle/quadratic filter (used by CImg<T>::boxfilter() and CImg<T>::blur_box()).
 /**
    \param ptr the pointer of the data
    \param N size of the data
-   \param width width of the box filter
+   \param boxsize Size of the box filter (can be subpixel).
    \param off the offset between two data point
    \param iter number of iterations (1 = box, 2 = triangle, 3 = quadratic)
    \param order the order of the filter 0 (smoothing), 1st derivtive, 2nd derivative, 3rd derivative
    \param boundary_conditions Boundary conditions. Can be <tt>{ 0=dirichlet | 1=neumann }</tt>.
  **/
+// see cimg_library::CImg::cimg_blur_box_apply
 static void
-_cimg_box_apply(T *data,
-                const double width,
-                const int N,
-                const unsigned long off,
-                const int iter,
-                const int order,
-                const bool boundary_conditions)
+_cimg_blur_box_apply(T *ptr,
+                     const float boxsize,
+                     const int N,
+                     const unsigned long off,
+                     const int order,
+                     const bool boundary_conditions,
+                     const unsigned int nb_iter)
 {
     // smooth
-    if ( (width > 1.) && (iter > 0) ) {
-        int w2 = (int)(width - 1) / 2;
-        double frac = ( width - (2 * w2 + 1) ) / 2.;
+    if ( (boxsize > 1.) && (nb_iter > 0) ) {
+        int w2 = (int)(boxsize - 1) / 2;
         int winsize = 2 * w2 + 1;
+        double frac = (boxsize - winsize) / 2.;
         std::vector<T> win(winsize);
-        for (int i = 0; i < iter; ++i) {
+        for (unsigned int iter = 0; iter<nb_iter; ++iter) {
             // prepare for first iteration
             double sum = 0; // window sum
             for (int x = -w2; x <= w2; ++x) {
-                win[x + w2] = get_data(data, N, off, boundary_conditions, x);
+                win[x + w2] = get_data(ptr, N, off, boundary_conditions, x);
                 sum += win[x + w2];
             }
             int ifirst = 0;
             int ilast = 2 * w2;
-            T prev = get_data(data, N, off, boundary_conditions, -w2 - 1);
-            T next = get_data(data, N, off, boundary_conditions, +w2 + 1);
+            T prev = get_data(ptr, N, off, boundary_conditions, -w2 - 1);
+            T next = get_data(ptr, N, off, boundary_conditions, +w2 + 1);
             // main loop
             for (int x = 0; x < N - 1; ++x) {
                 // add partial pixels
-                double sum2 = sum + frac * (prev + next);
+                const double sum2 = sum + frac * (prev + next);
                 // fill result
-                data[x * off] = sum2 / width;
+                ptr[x * off] = sum2 / boxsize;
                 // advance for next iteration
                 prev = win[ifirst];
                 sum -= prev;
@@ -554,13 +562,13 @@ _cimg_box_apply(T *data,
                 assert( (ilast + 1) % winsize == ifirst ); // it is a circular buffer
                 win[ilast] = next;
                 sum += next;
-                next = get_data(data, N, off, boundary_conditions, x + w2 + 2);
+                next = get_data(ptr, N, off, boundary_conditions, x + w2 + 2);
             }
             // last iteration
             // add partial pixels
-            double sum2 = sum + frac * (prev + next);
+            const double sum2 = sum + frac * (prev + next);
             // fill result
-            data[(N - 1) * off] = sum2 / width;
+            ptr[(N - 1) * off] = (T)(sum2 / boxsize);
         }
     }
     // derive
@@ -569,33 +577,33 @@ _cimg_box_apply(T *data,
         // nothing to do
         break;
     case 1: {
-        T p = get_data(data, N, off, boundary_conditions, -1);
-        T c = get_data(data, N, off, boundary_conditions, 0);
-        T n = get_data(data, N, off, boundary_conditions, +1);
+        T p = get_data(ptr, N, off, boundary_conditions, -1);
+        T c = get_data(ptr, N, off, boundary_conditions, 0);
+        T n = get_data(ptr, N, off, boundary_conditions, +1);
         for (int x = 0; x < N - 1; ++x) {
-            data[x * off] = (n - p) / 2.;
+            ptr[x * off] = (n - p) / 2.;
             // advance
             p = c;
             c = n;
-            n = get_data(data, N, off, boundary_conditions, x + 2);
+            n = get_data(ptr, N, off, boundary_conditions, x + 2);
         }
         // last pixel
-        data[(N - 1) * off] = (n - p) / 2.;
+        ptr[(N - 1) * off] = (n - p) / 2.;
     }
     break;
     case 2: {
-        T p = get_data(data, N, off, boundary_conditions, -1);
-        T c = get_data(data, N, off, boundary_conditions, 0);
-        T n = get_data(data, N, off, boundary_conditions, +1);
+        T p = get_data(ptr, N, off, boundary_conditions, -1);
+        T c = get_data(ptr, N, off, boundary_conditions, 0);
+        T n = get_data(ptr, N, off, boundary_conditions, +1);
         for (int x = 0; x < N - 1; ++x) {
-            data[x * off] = n - 2 * c + p;
+            ptr[x * off] = n - 2 * c + p;
             // advance
             p = c;
             c = n;
-            n = get_data(data, N, off, boundary_conditions, x + 2);
+            n = get_data(ptr, N, off, boundary_conditions, x + 2);
         }
         // last pixel
-        data[(N - 1) * off] = n - 2 * c + p;
+        ptr[(N - 1) * off] = n - 2 * c + p;
     }
     break;
     }
@@ -642,51 +650,54 @@ _cimg_box_apply(T *data,
  x > 0 and x <= s: y = 1/2 + x/s - x^2/(2*s^2)
  x > s: y = 1
  */
+// see cimg_library::CImg::boxfilter(), this function has the additional parameter "order" to compute derivatives
 static void
-box(CImg<T>& img,
-    const float width,
-    const int iter,
-    const int order,
-    const char axis = 'x',
-    const bool boundary_conditions = true)
+boxfilter(CImg<T>& img,
+          const float boxsize,
+          const int order,
+          const char axis = 'x',
+          const bool boundary_conditions = true,
+          const unsigned int nb_iter = 1)
 {
-    if ( img.is_empty() ) {
+    if ( img.is_empty() || !boxsize || ( (boxsize <= 1.f) && !order ) ) {
         return /* *this*/;
     }
     const unsigned int _width = img._width, _height = img._height, _depth = img._depth, _spectrum = img._spectrum;
     const char naxis = cimg::lowercase(axis); // was cimg::uncase(axis) before CImg 1.7.2
-    if ( img.is_empty() || ( (width <= 1.f) && !order ) ) {
-        return /* *this*/;
-    }
+    const float nboxsize = (boxsize >= 0) ? boxsize : -boxsize * (naxis=='x'?_width:
+                                                                  naxis=='y'?_height:
+                                                                  naxis=='z'?_depth:
+                                                                  _spectrum) / 100;
     switch (naxis) {
     case 'x': {
         cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forYZC(img, y, z, c)
-        _cimg_box_apply(img.data(0, y, z, c), width, img._width, 1U, iter, order, boundary_conditions);
+        _cimg_blur_box_apply(img.data(0, y, z, c), nboxsize, img._width, 1U, order, boundary_conditions, nb_iter);
+        break;
     }
-    break;
     case 'y': {
         cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXZC(img, x, z, c)
-        _cimg_box_apply(img.data(x, 0, z, c), width, _height, (unsigned long)_width, iter, order, boundary_conditions);
+        _cimg_blur_box_apply(img.data(x, 0, z, c), nboxsize, _height, (unsigned long)_width, order, boundary_conditions, nb_iter);
+        break;
     }
-    break;
     case 'z': {
         cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXYC(img, x, y, c)
-        _cimg_box_apply(img.data(x, y, 0, c), width, _depth, (unsigned long)(_width * _height),
-                        iter, order, boundary_conditions);
+        _cimg_blur_box_apply(img.data(x, y, 0, c), nboxsize, _depth, (unsigned long)(_width * _height),
+                             order, boundary_conditions, nb_iter);
+        break;
     }
-    break;
     default: {
         cimg_pragma_openmp(parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16))
         cimg_forXYZ(img, x, y, z)
-        _cimg_box_apply(img.data(x, y, z, 0), width, _spectrum, (unsigned long)(_width * _height * _depth),
-                        iter, order, boundary_conditions);
+        _cimg_blur_box_apply(img.data(x, y, z, 0), nboxsize, _spectrum, (unsigned long)(_width * _height * _depth),
+                             order, boundary_conditions, nb_iter);
     }
     }
     /* *this*/
 }
+#endif // cimgblur_internal_boxfilter
 
 #ifdef cimgblur_internal_vanvliet
 // [internal] Apply a recursive filter (used by CImg<T>::vanvliet()).
@@ -2041,14 +2052,14 @@ public:
             // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
             // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
             if (filter == eFilterGaussian) {
-#ifdef cimgblur_internal_vanvliet
+#             ifdef cimgblur_internal_vanvliet
                 vanvliet(cimg_blur, /*cimg_blur.vanvliet(*/ sigmax, orderX, 'x', boundary);
                 vanvliet(cimg_blur, /*cimg_blur.vanvliet(*/ sigmay, orderY, 'y', boundary);
-#else
+#             else
                 cimg_blur.vanvliet(sigmax, orderX, 'x', boundary);
                 if ( abort() ) { return false; }
                 cimg_blur.vanvliet(sigmay, orderY, 'y', boundary);
-#endif
+#             endif
             } else {
                 cimg_blur.deriche(sigmax, orderX, 'x', boundary);
                 if ( abort() ) { return false; }
@@ -2059,9 +2070,16 @@ public:
         } else if ( (filter == eFilterBox) || (filter == eFilterTriangle) || (filter == eFilterQuadratic) ) {
             int iter = ( filter == eFilterBox ? 1 :
                         (filter == eFilterTriangle ? 2 : 3) );
-            box(cimg_blur, sx * scale, iter, orderX, 'x', boundary);
+
+#         ifdef cimgblur_internal_boxfilter
+            boxfilter(cimg_blur, /*cimg_blur.boxfilter(*/ sx * scale, orderX, 'x', boundary, iter);
             if ( abort() ) { return false; }
-            box(cimg_blur, sy * scale, iter, orderY, 'y', boundary);
+            boxfilter(cimg_blur, /*cimg_blur.boxfilter(*/ sy * scale,orderY, 'y', boundary, iter);
+#         else
+            cimg_blur.boxfilter(sx * scale, orderX, 'x', boundary, iter);
+            if ( abort() ) { return false; }
+            cimg_blur.boxfilter(sy * scale, orderY, 'y', boundary, iter);
+#         endif
 
             return true;
         }
