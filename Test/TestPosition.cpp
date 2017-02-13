@@ -135,15 +135,15 @@ TestPositionPlugin::getInverseTransformCanonical(double time,
 
     _translate->getValueAtTime(time, x, y);
 
-    invtransform->a = 1.;
-    invtransform->b = 0.;
-    invtransform->c = invert ? x : -x;
-    invtransform->d = 0.;
-    invtransform->e = 1.;
-    invtransform->f = invert ? y : -y;
-    invtransform->g = 0.;
-    invtransform->h = 0.;
-    invtransform->i = 1.;
+    (*invtransform)(0,0) = 1.;
+    (*invtransform)(0,1) = 0.;
+    (*invtransform)(0,2) = invert ? x : -x;
+    (*invtransform)(1,0) = 0.;
+    (*invtransform)(1,1) = 1.;
+    (*invtransform)(1,2) = invert ? y : -y;
+    (*invtransform)(2,0) = 0.;
+    (*invtransform)(2,1) = 0.;
+    (*invtransform)(2,2) = 1.;
 
     return true;
 }
