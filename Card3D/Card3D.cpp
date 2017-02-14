@@ -50,11 +50,6 @@ using namespace OFX;
 #define kParamTransformInteractiveLabel "Interactive Update"
 #define kParamTransformInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
-// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-#define kParamDefaultsNormalised "defaultsNormalised"
-
-static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
-
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "Card3DOFX"
@@ -582,30 +577,6 @@ public:
         assert(_interactive);
         _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
-
-        // honor kParamDefaultsNormalised
-        if ( paramExists(kParamDefaultsNormalised) ) {
-            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-            // handle these ourselves!
-            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
-            assert(param);
-            bool normalised = param->getValue();
-            if (normalised) {
-                OfxPointD size = getProjectExtent();
-                OfxPointD origin = getProjectOffset();
-                OfxPointD p;
-                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                /*
-                beginEditBlock(kParamDefaultsNormalised);
-                p = _btmLeft->getValue();
-                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
-                p = _size->getValue();
-                _size->setValue(p.x * size.x, p.y * size.y);
-                param->setValue(false);
-                endEditBlock();
-                 */
-            }
-        }
     }
 
 private:
@@ -616,6 +587,12 @@ private:
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args,
+                                       OfxRectD &rod) OVERRIDE FINAL
+    {
+        return false;
+    }
 
     // NON-GENERIC
     //DoubleParam* _transformAmount;
@@ -879,19 +856,6 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamTransformInteractiveLabel);
         param->setHint(kParamTransformInteractiveHint);
         param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-    if (!gHostSupportsDefaultCoordinateSystem) {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDefaultsNormalised);
-        param->setDefault(true);
-        param->setEvaluateOnChange(false);
-        param->setIsSecretAndDisabled(true);
-        param->setIsPersistent(true);
-        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
