@@ -123,7 +123,7 @@ TimeOffsetPlugin::getSourceTime(double t) const
 {
     double sourceTime = t - _time_offset->getValueAtTime(t); // no animation
 
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return sourceTime;
     }
     OfxRangeD range = _srcClip->getFrameRange();

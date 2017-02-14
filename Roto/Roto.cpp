@@ -525,7 +525,7 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
                        Clip * &identityClip,
                        double & /*identityTime*/)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     const double time = args.time;
@@ -570,7 +570,7 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
 void
 RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     PreMultiplicationEnum srcPremult = _srcClip->getPreMultiplication();

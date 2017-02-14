@@ -560,7 +560,7 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args,
 {
     const double time = args.time;
 
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     if (isPremult) {
@@ -628,7 +628,7 @@ PremultPlugin<isPremult>::changedParam(const InstanceChangedArgs &args,
     if ( (paramName == kParamClipInfo) && _srcClip && (args.reason == eChangeUserEdit) ) {
         std::string msg;
         msg += "Input; ";
-        if (!_srcClip) {
+        if (!_srcClip || !_srcClip->isConnected()) {
             msg += "N/A";
         } else {
             msg += premultString( _srcClip->getPreMultiplication() );

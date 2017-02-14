@@ -747,7 +747,7 @@ RadialPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     const double time = args.time;

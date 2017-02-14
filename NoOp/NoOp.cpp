@@ -299,7 +299,7 @@ void
 NoOpPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                  RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     if (!_setPixelAspectRatio) {
@@ -328,7 +328,7 @@ bool
 NoOpPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                   OfxRectD &rod)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     if (!_setPixelAspectRatio) {

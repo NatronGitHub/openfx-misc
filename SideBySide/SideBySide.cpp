@@ -244,7 +244,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
     view1_->getValueAtTime(args.time, view1);
     int view2;
     view2_->getValueAtTime(args.time, view2);
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         throwSuiteStatusException(kOfxStatFailed);
 
         return;
@@ -314,7 +314,7 @@ bool
 SideBySidePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     bool vertical = vertical_->getValueAtTime(args.time);
@@ -343,7 +343,7 @@ void
 SideBySidePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                        RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     bool vertical = vertical_->getValueAtTime(args.time);

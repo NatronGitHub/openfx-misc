@@ -1054,7 +1054,7 @@ void
 DenoiseWaveletPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                            RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);

@@ -551,7 +551,7 @@ private:
 void
 TrackerPMPlugin::trackRange(const TrackArguments& args)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
 # ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
@@ -706,7 +706,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
                                  const OfxRectD& trackSearchBounds,
                                  const Image* otherImg)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const double par = _srcClip->getPixelAspectRatio();
