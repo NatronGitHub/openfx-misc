@@ -1087,19 +1087,19 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 }
             } else {
                 const Matrix3x3 & H = _srcTransformInverse;
-                double transformedx = H.a * sx + H.b * sy + H.c;
-                double transformedy = H.d * sx + H.e * sy + H.f;
-                double transformedz = H.g * sx + H.h * sy + H.i;
+                double transformedx = H(0,0) * sx + H(0,1) * sy + H(0,2);
+                double transformedy = H(1,0) * sx + H(1,1) * sy + H(1,2);
+                double transformedz = H(2,0) * sx + H(2,1) * sy + H(2,2);
                 if (transformedz == 0) {
                     sx = sy = std::numeric_limits<double>::infinity();
                 } else {
                     sx = transformedx / transformedz;
                     sy = transformedy / transformedz;
                     if (filter != eFilterImpulse) {
-                        Jxx = (H.a * transformedz - transformedx * H.g) / (transformedz * transformedz);
-                        Jxy = (H.b * transformedz - transformedx * H.h) / (transformedz * transformedz);
-                        Jyx = (H.d * transformedz - transformedy * H.g) / (transformedz * transformedz);
-                        Jyy = (H.e * transformedz - transformedy * H.h) / (transformedz * transformedz);
+                        Jxx = (H(0,0) * transformedz - transformedx * H(2,0)) / (transformedz * transformedz);
+                        Jxy = (H(0,1) * transformedz - transformedx * H(2,1)) / (transformedz * transformedz);
+                        Jyx = (H(1,0) * transformedz - transformedy * H(2,0)) / (transformedz * transformedz);
+                        Jyy = (H(1,1) * transformedz - transformedy * H(2,1)) / (transformedz * transformedz);
                     }
                 }
             }
@@ -2332,15 +2332,15 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         double srcTransform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
         src->getTransform(srcTransform);
         Matrix3x3 srcTransformMat;
-        srcTransformMat.a = srcTransform[0];
-        srcTransformMat.b = srcTransform[1];
-        srcTransformMat.c = srcTransform[2];
-        srcTransformMat.d = srcTransform[3];
-        srcTransformMat.e = srcTransform[4];
-        srcTransformMat.f = srcTransform[5];
-        srcTransformMat.g = srcTransform[6];
-        srcTransformMat.h = srcTransform[7];
-        srcTransformMat.i = srcTransform[8];
+        srcTransformMat(0,0) = srcTransform[0];
+        srcTransformMat(0,1) = srcTransform[1];
+        srcTransformMat(0,2) = srcTransform[2];
+        srcTransformMat(1,0) = srcTransform[3];
+        srcTransformMat(1,1) = srcTransform[4];
+        srcTransformMat(1,2) = srcTransform[5];
+        srcTransformMat(2,0) = srcTransform[6];
+        srcTransformMat(2,1) = srcTransform[7];
+        srcTransformMat(2,2) = srcTransform[8];
         // invert it
         double det = srcTransformMat.determinant();
         if (det != 0.) {

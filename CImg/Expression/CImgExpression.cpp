@@ -501,9 +501,6 @@ public:
     virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgExpressionParams& /*params*/) OVERRIDE FINAL
     {
-        // must clear persistent message in isIdentity, or render() is not called by Nuke
-        clearPersistentMessage();
-
         return false;
     };
 
@@ -520,6 +517,9 @@ public:
         if (paramName == kParamHelp) {
             sendMessage(Message::eMessageMessage, "", kPluginDescriptionUnsafe);
         } else {
+            // must clear persistent message, or render() is not called by Nuke
+            clearPersistentMessage();
+            
             CImgFilterPluginHelper<CImgExpressionParams, true>::changedParam(args, paramName);
         }
     }
