@@ -182,7 +182,7 @@ void
 AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                       RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
@@ -209,7 +209,7 @@ bool
 AdjustRoDPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                        OfxRectD &rod)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(args.time);

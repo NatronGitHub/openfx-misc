@@ -707,7 +707,7 @@ GodRaysPlugin::getInverseTransformCanonical(double time,
 void
 GodRaysPlugin::resetCenter(double time)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     OfxRectD rod = _srcClip->getRegionOfDefinition(time);

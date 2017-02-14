@@ -458,7 +458,7 @@ void
 MirrorPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                    RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const double time = args.time;

@@ -2649,7 +2649,7 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &arg
 {
     const double time = args.time;
 
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);

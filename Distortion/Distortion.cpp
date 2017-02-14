@@ -2718,7 +2718,7 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
 {
     const double time = args.time;
 
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
 
