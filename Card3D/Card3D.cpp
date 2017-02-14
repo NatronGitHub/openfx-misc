@@ -588,12 +588,6 @@ private:
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
-    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args,
-                                       OfxRectD &rod) OVERRIDE FINAL
-    {
-        return false;
-    }
-
     // NON-GENERIC
     //DoubleParam* _transformAmount;
     BooleanParam* _interactive;
