@@ -756,6 +756,7 @@
 		1EA7BCB61C5AA82D0026C46A /* net.sf.openfx.Despill.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA7BCB21C5AA7820026C46A /* net.sf.openfx.Despill.svg */; };
 		1EA8C5681BC69D9B0000FFBF /* CImgMedian.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */; };
 		1EA92DC31B1DD1B400FE3709 /* CImgExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */; };
+		1EAC82CB1E4F7890002994C3 /* Card3D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAC82CA1E4F7818002994C3 /* Card3D.cpp */; };
 		1EAD4AE21A0A68FD00AF834D /* AdjustRoD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */; };
 		1EAD4AE71A0A691700AF834D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EAD4AE81A0A691700AF834D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -3521,6 +3522,9 @@
 		1EA7BCB21C5AA7820026C46A /* net.sf.openfx.Despill.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Despill.svg; sourceTree = "<group>"; };
 		1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgMedian.cpp; path = Median/CImgMedian.cpp; sourceTree = "<group>"; };
 		1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgExpression.cpp; path = Expression/CImgExpression.cpp; sourceTree = "<group>"; };
+		1EAC82C81E4F7807002994C3 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EAC82C91E4F7807002994C3 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EAC82CA1E4F7818002994C3 /* Card3D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Card3D.cpp; sourceTree = "<group>"; };
 		1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdjustRoD.cpp; sourceTree = "<group>"; };
 		1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AdjustRoD.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EAD4F411C8C785100462A1A /* TimeBuffer.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeBuffer.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -4910,6 +4914,7 @@
 				ACC847781A0A3F6400B3FAFE /* AdjustRoD */,
 				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E5D548F1AB5A9BC00B7B1BE /* AppendClip */,
+				1EAC82C71E4F7705002994C3 /* Card3D */,
 				1E759FFF1A879F50005BAA36 /* CheckerBoard */,
 				1E3451E0190695070080D699 /* ChromaKeyer */,
 				1E31940919D998450027D0E2 /* CImg */,
@@ -5378,6 +5383,16 @@
 				1EA7BCB21C5AA7820026C46A /* net.sf.openfx.Despill.svg */,
 			);
 			path = Despill;
+			sourceTree = "<group>";
+		};
+		1EAC82C71E4F7705002994C3 /* Card3D */ = {
+			isa = PBXGroup;
+			children = (
+				1EAC82CA1E4F7818002994C3 /* Card3D.cpp */,
+				1EAC82C81E4F7807002994C3 /* Info.plist */,
+				1EAC82C91E4F7807002994C3 /* Makefile */,
+			);
+			path = Card3D;
 			sourceTree = "<group>";
 		};
 		1EAD4F441C8C789E00462A1A /* TimeBuffer */ = {
@@ -7996,6 +8011,7 @@
 				1E9B5F5F198A51F40095C8AA /* ofxsOGLTextRenderer.cpp in Sources */,
 				1E9B5F67198A52460095C8AA /* ofxsTracking.cpp in Sources */,
 				1E9B5F61198A52060095C8AA /* ofxsTransform3x3.cpp in Sources */,
+				1EAC82CB1E4F7890002994C3 /* Card3D.cpp in Sources */,
 				1E9B5F63198A52210095C8AA /* ofxsOGLFontData.cpp in Sources */,
 				1E8B5D4C18B76A7500C31FDC /* ofxsCore.cpp in Sources */,
 				AC3525D81C2171380063F0C0 /* ofxsMultiPlane.cpp in Sources */,
