@@ -161,6 +161,24 @@
 		1E1FB8EE190696F200F5515D /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E1FB8F0190696F200F5515D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E1FB8F61906972200F5515D /* Grade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D725A2C918E0D308001A1E3E /* Grade.cpp */; };
+		1E2211F21E535F170069EB8D /* ofxsTransform3x3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F57198A51840095C8AA /* ofxsTransform3x3.cpp */; };
+		1E2211F31E535F170069EB8D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1E2211F41E535F170069EB8D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1E2211F51E535F170069EB8D /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1E2211F61E535F170069EB8D /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1E2211F71E535F170069EB8D /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1E2211F81E535F170069EB8D /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1E2211F91E535F170069EB8D /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1E2211FA1E535F170069EB8D /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1E2211FB1E535F170069EB8D /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1E2211FC1E535F170069EB8D /* ofxsShutter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE72C0F1B5253A4001B0245 /* ofxsShutter.cpp */; };
+		1E2211FE1E535F170069EB8D /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1E2212001E535F170069EB8D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E2212021E535F170069EB8D /* net.sf.openfx.CornerPinPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87819C6ED3800E6E3AE /* net.sf.openfx.CornerPinPlugin.png */; };
+		1E2212031E535F170069EB8D /* net.sf.openfx.CornerPinPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9A19C981B200C2C668 /* net.sf.openfx.CornerPinPlugin.svg */; };
+		1E2212041E535F170069EB8D /* net.sf.openfx.CornerPinMaskedPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87719C6ED3800E6E3AE /* net.sf.openfx.CornerPinMaskedPlugin.png */; };
+		1E2212051E535F170069EB8D /* net.sf.openfx.CornerPinMaskedPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9919C981B200C2C668 /* net.sf.openfx.CornerPinMaskedPlugin.svg */; };
+		1E22120B1E535F490069EB8D /* Card3D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAC82CA1E4F7818002994C3 /* Card3D.cpp */; };
 		1E235FDD18363C850019C45F /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E235FDE18363C850019C45F /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E235FDF18363C850019C45F /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -2076,6 +2094,19 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1E2212011E535F170069EB8D /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E2212021E535F170069EB8D /* net.sf.openfx.CornerPinPlugin.png in CopyFiles */,
+				1E2212031E535F170069EB8D /* net.sf.openfx.CornerPinPlugin.svg in CopyFiles */,
+				1E2212041E535F170069EB8D /* net.sf.openfx.CornerPinMaskedPlugin.png in CopyFiles */,
+				1E2212051E535F170069EB8D /* net.sf.openfx.CornerPinMaskedPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E2678B11DAE96E50047D737 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -3144,6 +3175,7 @@
 		1E181AFD19518DF500FAB9A9 /* Invert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Invert.cpp; sourceTree = "<group>"; };
 		1E1DDFEA1A04E432007F45B2 /* CImgGuided.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgGuided.cpp; path = Guided/CImgGuided.cpp; sourceTree = "<group>"; };
 		1E1FB8F4190696F200F5515D /* Grade.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Grade.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E2212091E535F170069EB8D /* Card3D.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Card3D.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E235FEA18363C860019C45F /* SideBySide.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SideBySide.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E235FED18363CE70019C45F /* SideBySide.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SideBySide.cpp; sourceTree = "<group>"; };
 		1E235FEF18363CF10019C45F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -3911,6 +3943,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E1FB8F0190696F200F5515D /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E2211FF1E535F170069EB8D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E2212001E535F170069EB8D /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4889,6 +4929,7 @@
 				1E511D5B1D8AC9A50037C61F /* PIK.ofx.bundle */,
 				1EBEC6001D928E9E00127BC7 /* KeyMix.ofx.bundle */,
 				1E2678B71DAE96E50047D737 /* HueCorrect.ofx.bundle */,
+				1E2212091E535F170069EB8D /* Card3D.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -6059,6 +6100,23 @@
 			name = Grade.ofx;
 			productName = basic.ofx;
 			productReference = 1E1FB8F4190696F200F5515D /* Grade.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+		1E2211EE1E535F170069EB8D /* Card3D.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E2212061E535F170069EB8D /* Build configuration list for PBXNativeTarget "Card3D.ofx" */;
+			buildPhases = (
+				1E2211EF1E535F170069EB8D /* Sources */,
+				1E2211FF1E535F170069EB8D /* Frameworks */,
+				1E2212011E535F170069EB8D /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Card3D.ofx;
+			productName = basic.ofx;
+			productReference = 1E2212091E535F170069EB8D /* Card3D.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 		1E235FD918363C850019C45F /* SideBySide.ofx */ = {
@@ -7292,6 +7350,7 @@
 				1EAD4AE31A0A691700AF834D /* AdjustRoD.ofx */,
 				1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */,
 				1E5D54951AB5AA0A00B7B1BE /* AppendClip.ofx */,
+				1E2211EE1E535F170069EB8D /* Card3D.ofx */,
 				1E75A0171A87A97B005BAA36 /* CheckerBoard.ofx */,
 				1E3451E11906952D0080D699 /* ChromaKeyer.ofx */,
 				1E31940F19D9B2270027D0E2 /* CImg.ofx */,
@@ -7474,6 +7533,26 @@
 				1E1FB8EB190696F200F5515D /* ofxsParams.cpp in Sources */,
 				1E1FB8ED190696F200F5515D /* ofxsProperty.cpp in Sources */,
 				1E1FB8EE190696F200F5515D /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E2211EF1E535F170069EB8D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E22120B1E535F490069EB8D /* Card3D.cpp in Sources */,
+				1E2211F21E535F170069EB8D /* ofxsTransform3x3.cpp in Sources */,
+				1E2211F31E535F170069EB8D /* ofxsCore.cpp in Sources */,
+				1E2211F41E535F170069EB8D /* ofxsImageEffect.cpp in Sources */,
+				1E2211F51E535F170069EB8D /* ofxsInteract.cpp in Sources */,
+				1E2211F61E535F170069EB8D /* tinythread.cpp in Sources */,
+				1E2211F71E535F170069EB8D /* ofxsLog.cpp in Sources */,
+				1E2211F81E535F170069EB8D /* ofxsMultiThread.cpp in Sources */,
+				1E2211F91E535F170069EB8D /* ofxsParams.cpp in Sources */,
+				1E2211FA1E535F170069EB8D /* ofxsProperty.cpp in Sources */,
+				1E2211FB1E535F170069EB8D /* ofxsThreadSuite.cpp in Sources */,
+				1E2211FC1E535F170069EB8D /* ofxsShutter.cpp in Sources */,
+				1E2211FE1E535F170069EB8D /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -9392,6 +9471,28 @@
 				INFOPLIST_FILE = Grade/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = Grade.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		1E2212071E535F170069EB8D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Card3D/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1E2212081E535F170069EB8D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Card3D/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -11346,6 +11447,15 @@
 			buildConfigurations = (
 				1E1FB8F2190696F200F5515D /* Debug */,
 				1E1FB8F3190696F200F5515D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E2212061E535F170069EB8D /* Build configuration list for PBXNativeTarget "Card3D.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E2212071E535F170069EB8D /* Debug */,
+				1E2212081E535F170069EB8D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
