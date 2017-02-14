@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -135,7 +135,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments & /*args*/,
+    virtual void render(const RenderArguments & /*args*/,
                         const CImgEqualizeParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -147,7 +147,7 @@ public:
         cimg.equalize(params.nb_levels, (float)params.min_value, (float)params.max_value);
     }
 
-    //virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgEqualizeParams& /*params*/) OVERRIDE FINAL
+    //virtual bool isIdentity(const IsIdentityArguments &/*args*/, const CImgEqualizeParams& /*params*/) OVERRIDE FINAL
     //{
     //    return false;
     //};
@@ -155,16 +155,16 @@ public:
 private:
 
     // params
-    OFX::IntParam *_nb_levels;
-    OFX::DoubleParam *_min_value;
-    OFX::DoubleParam *_max_value;
+    IntParam *_nb_levels;
+    DoubleParam *_min_value;
+    DoubleParam *_max_value;
 };
 
 
-mDeclarePluginFactory(CImgEqualizePluginFactory, {}, {});
+mDeclarePluginFactory(CImgEqualizePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
-CImgEqualizePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgEqualizePluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -193,22 +193,22 @@ CImgEqualizePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                             OFX::ContextEnum context)
+CImgEqualizePluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                             ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgEqualizePlugin::describeInContextBegin(desc, context,
-                                                                                kSupportsRGBA,
-                                                                                kSupportsRGB,
-                                                                                kSupportsXY,
-                                                                                kSupportsAlpha,
-                                                                                kSupportsTiles,
-                                                                                /*processRGB=*/ true,
-                                                                                /*processAlpha*/ false,
-                                                                                /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgEqualizePlugin::describeInContextBegin(desc, context,
+                                                                           kSupportsRGBA,
+                                                                           kSupportsRGB,
+                                                                           kSupportsXY,
+                                                                           kSupportsAlpha,
+                                                                           kSupportsTiles,
+                                                                           /*processRGB=*/ true,
+                                                                           /*processAlpha*/ false,
+                                                                           /*processIsSecret=*/ false);
 
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamNbLevels);
+        IntParamDescriptor *param = desc.defineIntParam(kParamNbLevels);
         param->setLabel(kParamNbLevelsLabel);
         param->setHint(kParamNbLevelsHint);
         param->setDefault(kParamNbLevelsDefault);
@@ -217,7 +217,7 @@ CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMin);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMin);
         param->setLabel(kParamMinLabel);
         param->setHint(kParamMinHint);
         param->setDefault(kParamMinDefault);
@@ -229,7 +229,7 @@ CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMax);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMax);
         param->setLabel(kParamMaxLabel);
         param->setHint(kParamMaxHint);
         param->setDefault(kParamMaxDefault);
@@ -240,12 +240,13 @@ CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
+
     CImgEqualizePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CImgEqualizePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                          OFX::ContextEnum /*context*/)
+                                          ContextEnum /*context*/)
 {
     return new CImgEqualizePlugin(handle);
 }

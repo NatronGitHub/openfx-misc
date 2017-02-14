@@ -84,11 +84,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 using namespace OFX;
 
 class MaskableFilterProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_maskImg;
+    const Image *_srcImg;
+    const Image *_maskImg;
     bool _premult;
     int _premultChannel;
     bool _doMasking;
@@ -98,9 +98,9 @@ protected:
     // TODO: add plugin parameter values
 
 public:
-    MaskableFilterProcessorBase(OFX::ImageEffect &instance,
-                                const OFX::RenderArguments & /*args*/)
-        : OFX::ImageProcessor(instance)
+    MaskableFilterProcessorBase(ImageEffect &instance,
+                                const RenderArguments & /*args*/)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _premult(false)
@@ -116,9 +116,9 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert) {_maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v; }
@@ -150,8 +150,8 @@ class MaskableFilterProcessor
     : public MaskableFilterProcessorBase
 {
 public:
-    MaskableFilterProcessor(OFX::ImageEffect &instance,
-                            const OFX::RenderArguments &args)
+    MaskableFilterProcessor(ImageEffect &instance,
+                            const RenderArguments &args)
         : MaskableFilterProcessorBase(instance, args)
     {
         //const double time = args.time;
@@ -288,13 +288,13 @@ private:
                 dstPix += nComponents;
             }
         }
-    }
+    } // process
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class MaskableFilterPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
 
@@ -318,12 +318,12 @@ public:
         assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         // TODO: fetch noise parameters
@@ -345,16 +345,16 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template<int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args);
+    void renderForComponents(const RenderArguments &args);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const OFX::RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args);
 
     /* set up and run a processor */
-    void setupAndProcess(MaskableFilterProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(MaskableFilterProcessorBase &, const RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
@@ -363,18 +363,18 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_maskClip;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_maskClip;
     BooleanParam* _processR;
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
 };
 
 
@@ -387,50 +387,51 @@ private:
 /* set up and run a processor */
 void
 MaskableFilterPlugin::setupAndProcess(MaskableFilterProcessorBase &processor,
-                                      const OFX::RenderArguments &args)
+                                      const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ||
-             ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
     if (doMasking) {
@@ -466,32 +467,32 @@ MaskableFilterPlugin::setupAndProcess(MaskableFilterProcessorBase &processor,
 
 // the overridden render function
 void
-MaskableFilterPlugin::render(const OFX::RenderArguments &args)
+MaskableFilterPlugin::render(const RenderArguments &args)
 {
     //std::cout << "render!\n";
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
     // do the rendering
     switch (dstComponents) {
-    case OFX::ePixelComponentRGBA:
+    case ePixelComponentRGBA:
         renderForComponents<4>(args);
         break;
-    case OFX::ePixelComponentRGB:
+    case ePixelComponentRGB:
         renderForComponents<3>(args);
         break;
-    case OFX::ePixelComponentXY:
+    case ePixelComponentXY:
         renderForComponents<2>(args);
         break;
-    case OFX::ePixelComponentAlpha:
+    case ePixelComponentAlpha:
         renderForComponents<1>(args);
         break;
     default:
         //std::cout << "components usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
       //std::cout << "render! OK\n";
@@ -499,31 +500,31 @@ MaskableFilterPlugin::render(const OFX::RenderArguments &args)
 
 template<int nComponents>
 void
-MaskableFilterPlugin::renderForComponents(const OFX::RenderArguments &args)
+MaskableFilterPlugin::renderForComponents(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
         renderForBitDepth<unsigned char, nComponents, 255>(args);
         break;
 
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
         renderForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
 
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
         //std::cout << "depth usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 template <class PIX, int nComponents, int maxValue>
 void
-MaskableFilterPlugin::renderForBitDepth(const OFX::RenderArguments &args)
+MaskableFilterPlugin::renderForBitDepth(const RenderArguments &args)
 {
     MaskableFilterProcessor<PIX, nComponents, maxValue> fred(*this, args);
     setupAndProcess(fred, args);
@@ -575,9 +576,9 @@ MaskableFilterPlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
 
                 return true;
@@ -594,7 +595,7 @@ MaskableFilterPlugin::changedClip(const InstanceChangedArgs &args,
                                   const std::string &clipName)
 {
     //std::cout << "changedClip!\n";
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && _srcClip && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && _srcClip && (args.reason == eChangeUserEdit) ) {
         switch ( _srcClip->getPreMultiplication() ) {
         case eImageOpaque:
             _premult->setValue(false);
@@ -610,9 +611,9 @@ MaskableFilterPlugin::changedClip(const InstanceChangedArgs &args,
     //std::cout << "changedClip OK!\n";
 }
 
-mDeclarePluginFactory(MaskableFilterPluginFactory, {}, {});
+mDeclarePluginFactory(MaskableFilterPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-MaskableFilterPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+MaskableFilterPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
     // basic labels
@@ -639,14 +640,14 @@ MaskableFilterPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
     //std::cout << "describe! OK\n";
 }
 
 void
-MaskableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                               OFX::ContextEnum context)
+MaskableFilterPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                               ContextEnum context)
 {
     //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
@@ -682,7 +683,7 @@ MaskableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -692,7 +693,7 @@ MaskableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -702,7 +703,7 @@ MaskableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -712,7 +713,7 @@ MaskableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
@@ -729,9 +730,9 @@ MaskableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //std::cout << "describeInContext! OK\n";
 } // MaskableFilterPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 MaskableFilterPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                            OFX::ContextEnum /*context*/)
+                                            ContextEnum /*context*/)
 {
     return new MaskableFilterPlugin(handle);
 }

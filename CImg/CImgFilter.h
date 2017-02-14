@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 #ifdef thread_local
 # define HAVE_THREAD_LOCAL
@@ -92,8 +93,16 @@
 #endif
 
 #if !defined(HAVE_THREAD_LOCAL)
+#ifdef WIN32
 #  warning "Most CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
+#else
+// non-Win32 systems should have at least pthread
+#  warning "CImg plugins use pthread-based thread-local storage."
+#include <assert.h>
+#include <pthread.h>
+#define HAVE_PTHREAD
 #endif
+#endif //!HAVE_THREAD_LOCAL
 
 
 //#define CIMG_DEBUG
@@ -116,7 +125,7 @@
 // Abort mechanism:
 // we have a struct with a thread-local storage that holds the OFX::ImageEffect
 // for the thread being rendered
-#ifdef HAVE_THREAD_LOCAL
+#if defined(HAVE_THREAD_LOCAL) || defined(HAVE_PTHREAD)
 #define cimg_abort_test() gImageEffectAbort()
 inline void gImageEffectAbort();
 #endif
@@ -130,7 +139,7 @@ typedef float cimgpix_t;
 
 #define CIMG_ABORTABLE // use abortable versions of CImg functions
 
-#ifdef HAVE_THREAD_LOCAL
+#if defined(HAVE_THREAD_LOCAL)
 struct tls
 {
     static thread_local OFX::ImageEffect *gImageEffect;
@@ -149,7 +158,41 @@ gImageEffectAbort()
     }
 }
 
-#endif // HAVE_THREAD_LOCAL
+#elif defined(HAVE_PTHREAD)
+struct tls
+{
+    // the key is created once and *never* deleted using pthread_key_delete()
+    static pthread_key_t gImageEffect_key;
+    static void gImageEffect_key_delete(void * arg)
+    {
+        assert (NULL != arg);
+        free(arg);
+    }
+    static void gImageEffect_key_create(void)
+    {
+        int _ret;
+        _ret = pthread_key_create(&(gImageEffect_key), gImageEffect_key_delete);
+        cimg_library::cimg::unused(_ret); /* To get rid of warnings in case of NDEBUG */
+        assert (0 == _ret);
+    }
+    static pthread_once_t gImageEffect_once/* = PTHREAD_ONCE_INIT*/;
+};
+
+inline void
+gImageEffectAbort()
+{
+#  ifdef cimg_use_openmp
+    if ( omp_get_thread_num() ) {
+        return;
+    }
+#  endif
+    OFX::ImageEffect **_ptr = (OFX::ImageEffect **)pthread_getspecific(tls::gImageEffect_key);
+    if ( *_ptr && (*_ptr)->abort() ) {
+        throw cimg_library::CImgAbortException("");
+    }
+}
+#endif
+
 
 class CImgFilterPluginHelperBase
     : public OFX::ImageEffect
@@ -444,9 +487,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = OFX::ePixelComponentNone;
-        srcPixelComponentCount = 0;
-        srcBitDepth = OFX::eBitDepthNone;
+        srcPixelComponents = _srcClip ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcPixelComponentCount = _srcClip ? _srcClip->getPixelComponentCount() : 0;
+        srcBitDepth = _srcClip ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
         srcRowBytes = 0;
     } else {
         assert(_srcClip);
@@ -649,9 +692,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = OFX::ePixelComponentNone;
-        srcPixelComponentCount = 0;
-        srcBitDepth = OFX::eBitDepthNone;
+        srcPixelComponents = _srcClip->getPixelComponents();
+        srcPixelComponentCount = _srcClip->getPixelComponentCount();
+        srcBitDepth = _srcClip->getPixelDepth();
         srcRowBytes = 0;
     }
 
@@ -837,17 +880,31 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         //////////////////////////////////////////////////////////////////////////////////////////
         // 3- process the cimg
         printRectI("render srcRoI", srcRoI);
-#ifdef HAVE_THREAD_LOCAL
+#if defined(HAVE_THREAD_LOCAL) || defined(HAVE_PTHREAD)
+#  if defined(HAVE_THREAD_LOCAL)
         tls::gImageEffect = this;
+#  else
+        OFX::ImageEffect **_ptr = (OFX::ImageEffect **)pthread_getspecific(tls::gImageEffect_key);
+        assert (NULL != _ptr);
+        *_ptr = this;
+#  endif
         try {
             render(args, params, srcRoI.x1, srcRoI.y1, cimg, alphaChannel);
         } catch (cimg_library::CImgAbortException) {
+#  if defined(HAVE_THREAD_LOCAL)
             tls::gImageEffect = 0;
+#  else
+            *_ptr = 0;
+#  endif
 
             return;
         }
 
+#  if defined(HAVE_THREAD_LOCAL)
         tls::gImageEffect = 0;
+#  else
+        *_ptr = 0;
+#  endif
 #else
         render(args, params, srcRoI.x1, srcRoI.y1, cimg, alphaChannel);
 #endif

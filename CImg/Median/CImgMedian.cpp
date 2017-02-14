@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -128,7 +128,7 @@ public:
         roi->y2 = rect.y2 + delta_pix_y;
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgMedianParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -140,7 +140,7 @@ public:
         cimg.blur_median( (unsigned int)std::floor(std::max(1, params.size) * args.renderScale.x) * 2 + 1, params.threshold );
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args,
+    virtual bool isIdentity(const IsIdentityArguments &args,
                             const CImgMedianParams& params) OVERRIDE FINAL
     {
         return (std::floor(params.size * args.renderScale.x) == 0);
@@ -149,15 +149,15 @@ public:
 private:
 
     // params
-    OFX::IntParam *_size;
-    OFX::DoubleParam *_threshold;
+    IntParam *_size;
+    DoubleParam *_threshold;
 };
 
 
-mDeclarePluginFactory(CImgMedianPluginFactory, {}, {});
+mDeclarePluginFactory(CImgMedianPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
-CImgMedianPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgMedianPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -186,22 +186,22 @@ CImgMedianPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgMedianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                           OFX::ContextEnum context)
+CImgMedianPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                           ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgMedianPlugin::describeInContextBegin(desc, context,
-                                                                              kSupportsRGBA,
-                                                                              kSupportsRGB,
-                                                                              kSupportsXY,
-                                                                              kSupportsAlpha,
-                                                                              kSupportsTiles,
-                                                                              /*processRGB=*/ true,
-                                                                              /*processAlpha*/ false,
-                                                                              /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgMedianPlugin::describeInContextBegin(desc, context,
+                                                                         kSupportsRGBA,
+                                                                         kSupportsRGB,
+                                                                         kSupportsXY,
+                                                                         kSupportsAlpha,
+                                                                         kSupportsTiles,
+                                                                         /*processRGB=*/ true,
+                                                                         /*processAlpha*/ false,
+                                                                         /*processIsSecret=*/ false);
 
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamSize);
+        IntParamDescriptor *param = desc.defineIntParam(kParamSize);
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(1, 100);
@@ -212,7 +212,7 @@ CImgMedianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamThreshold);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamThreshold);
         param->setLabel(kParamThresholdLabel);
         param->setHint(kParamThresholdHint);
         param->setRange(0, DBL_MAX);
@@ -222,12 +222,13 @@ CImgMedianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
+
     CImgMedianPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CImgMedianPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new CImgMedianPlugin(handle);
 }

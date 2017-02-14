@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -118,7 +118,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments & /*args*/,
+    virtual void render(const RenderArguments & /*args*/,
                         const CImgHistEQParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -136,7 +136,7 @@ public:
             cimg_pragma_openmp(parallel for if (cimg.size()>=1048576))
             cimg_forXY(cimg, x, y) {
                 float h, s, v;
-                OFX::Color::rgb_to_hsv(cimg(x, y, 0, 0), cimg(x, y, 0, 1), cimg(x, y, 0, 2), &h, &s, &v);
+                Color::rgb_to_hsv(cimg(x, y, 0, 0), cimg(x, y, 0, 1), cimg(x, y, 0, 2), &h, &s, &v);
 
                 cimg(x, y, 0, 0) = h;
                 cimg(x, y, 0, 1) = s;
@@ -148,7 +148,7 @@ public:
             vchannel.equalize(params.nb_levels, vmin, vmax);
             cimg_forXY(cimg, x, y) {
                 float r, g, b;
-                OFX::Color::hsv_to_rgb(cimg(x, y, 0, 0), cimg(x, y, 0, 1), cimg(x, y, 0, 2), &r, &g, &b);
+                Color::hsv_to_rgb(cimg(x, y, 0, 0), cimg(x, y, 0, 1), cimg(x, y, 0, 2), &r, &g, &b);
 
                 cimg(x, y, 0, 0) = r;
                 cimg(x, y, 0, 1) = g;
@@ -157,7 +157,7 @@ public:
         }
     }
 
-    //virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgHistEQParams& params) OVERRIDE FINAL
+    //virtual bool isIdentity(const IsIdentityArguments &args, const CImgHistEQParams& params) OVERRIDE FINAL
     //{
     //    return false;
     //};
@@ -165,14 +165,14 @@ public:
 private:
 
     // params
-    OFX::IntParam *_nb_levels;
+    IntParam *_nb_levels;
 };
 
 
-mDeclarePluginFactory(CImgHistEQPluginFactory, {}, {});
+mDeclarePluginFactory(CImgHistEQPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
-CImgHistEQPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgHistEQPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -201,11 +201,11 @@ CImgHistEQPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                           OFX::ContextEnum context)
+CImgHistEQPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                           ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgHistEQPlugin::describeInContextBegin(desc, context,
+    PageParamDescriptor *page = CImgHistEQPlugin::describeInContextBegin(desc, context,
                                                                               kSupportsRGBA,
                                                                               kSupportsRGB,
                                                                               kSupportsXY,
@@ -216,7 +216,7 @@ CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                                               /*processIsSecret=*/ true);
 
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamNbLevels);
+        IntParamDescriptor *param = desc.defineIntParam(kParamNbLevels);
         param->setLabel(kParamNbLevelsLabel);
         param->setHint(kParamNbLevelsHint);
         param->setDefault(kParamNbLevelsDefault);
@@ -227,9 +227,9 @@ CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
     CImgHistEQPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CImgHistEQPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new CImgHistEQPlugin(handle);
 }

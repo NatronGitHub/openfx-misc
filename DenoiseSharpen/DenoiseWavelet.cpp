@@ -34,8 +34,8 @@
 #include "ofxsLut.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
+typedef MultiThread::Mutex Mutex;
+typedef MultiThread::AutoMutex AutoMutex;
 }
 #else
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
@@ -43,7 +43,7 @@ typedef OFX::MultiThread::AutoMutex AutoMutex;
 #include "fast_mutex.h"
 namespace {
 typedef tthread::fast_mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+typedef MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 }
 #endif
 
@@ -106,7 +106,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamColorModelOptionRGBHint "The R'G'B' color model (gamma-corrected RGB) separates an image into channels of red, green, and blue. Note that this choice drastically affects the result."
 #define kParamColorModelOptionLinearRGB "RGB(A)"
 #define kParamColorModelOptionLinearRGBHint "The Linear RGB color model processes the raw linear components."
-enum ColorModelEnum {
+enum ColorModelEnum
+{
     eColorModelYCbCr = 0,
     eColorModelLab,
     eColorModelRGB,
@@ -175,9 +176,11 @@ enum ColorModelEnum {
 #define kLevelMax 4 // 7 // maximum level for denoising
 
 #ifdef _OPENMP
-#define abort_test() if (!omp_get_thread_num() && abort()) OFX::throwSuiteStatusException(kOfxStatFailed)
+#define abort_test() if ( !omp_get_thread_num() && abort() ) \
+        throwSuiteStatusException(kOfxStatFailed)
 #else
-#define abort_test() if (abort()) OFX::throwSuiteStatusException(kOfxStatFailed)
+#define abort_test() if ( abort() ) \
+        throwSuiteStatusException(kOfxStatFailed)
 #endif
 
 // compute the maximum level used in wavelet_denoise (not the number of levels)
@@ -186,6 +189,7 @@ int
 startLevelFromRenderScale(const OfxPointD& renderScale)
 {
     double s = std::min(renderScale.x, renderScale.y);
+
     assert(0. < s && s <= 1.);
     int retval = -(int)std::floor(std::log(s) / M_LN2);
     assert(retval >= 0);
@@ -211,12 +215,16 @@ hat_transform (float *temp, //!< output vector
                int sc) //!< scale
 {
     int i;
-    for (i=0; i < sc; i++)
-        temp[i] = 2*base[st*i] + base[st*(sc-i)] + base[st*(i+sc)];
-    for (; i+sc < size; i++)
-        temp[i] = 2*base[st*i] + base[st*(i-sc)] + base[st*(i+sc)];
-    for (; i < size; i++)
-        temp[i] = 2*base[st*i] + base[st*(i-sc)] + base[st*(2*size-2-(i+sc))];
+
+    for (i = 0; i < sc; i++) {
+        temp[i] = 2 * base[st * i] + base[st * (sc - i)] + base[st * (i + sc)];
+    }
+    for (; i + sc < size; i++) {
+        temp[i] = 2 * base[st * i] + base[st * (i - sc)] + base[st * (i + sc)];
+    }
+    for (; i < size; i++) {
+        temp[i] = 2 * base[st * i] + base[st * (i - sc)] + base[st * ( 2 * size - 2 - (i + sc) )];
+    }
 }
 
 // "A trous" algorithm with a linear interpolation filter.
@@ -256,7 +264,8 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
     // http://www.csee.wvu.edu/~xinl/courses/ee565/TIP2000.pdf
 
     static const float noise[] = { 0.8002, 0.2735, 0.1202, 0.0585, 0.0291, 0.0152, 0.0080, 0.0044 };
-    assert((1 + sizeof(noise) / sizeof(*noise)) >= kLevelMax);
+
+    assert( ( 1 + sizeof(noise) / sizeof(*noise) ) >= kLevelMax );
 
     // a single channel of the original image is in fimg[0],
     // with intensities between 0 and 1.
@@ -294,7 +303,7 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
     // 7. hpass is then set to the smoothed (lpass image), and lpass is set to
     //    the other temporary image.
 
-    if (threshold <= 0. && amount <= 0.) {
+    if ( (threshold <= 0.) && (amount <= 0.) ) {
         return;
     }
 
@@ -350,7 +359,7 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
                 // threshold (adaptive)
 
                 // a priori threshold to compute signal stdev
-                float thold = 5.0 / (1 << 6) * exp (-2.6 * sqrt (lev + startLevel + 1)) * 0.8002 / exp (-2.6);
+                float thold = 5.0 / (1 << 6) * exp ( -2.6 * sqrt (lev + startLevel + 1) ) * 0.8002 / exp (-2.6);
 
                 // initialize stdev values for all intensities
                 // http://www.fredosaurus.com/notes-cpp/arrayptr/array-initialization.html
@@ -364,7 +373,7 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
                     fimg[hpass][i] -= fimg[lpass][i];
 
                     //
-                    if (fimg[hpass][i] < thold && fimg[hpass][i] > -thold) {
+                    if ( (fimg[hpass][i] < thold) && (fimg[hpass][i] > -thold) ) {
 #define MULTIRANGE
 #ifdef MULTIRANGE
                         if (fimg[lpass][i] > 0.8) {
@@ -373,10 +382,10 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
                         } else if (fimg[lpass][i] > 0.6) {
                             stdev[3] += fimg[hpass][i] * fimg[hpass][i];
                             samples[3]++;
-                        }	else if (fimg[lpass][i] > 0.4) {
+                        }       else if (fimg[lpass][i] > 0.4) {
                             stdev[2] += fimg[hpass][i] * fimg[hpass][i];
                             samples[2]++;
-                        }	else if (fimg[lpass][i] > 0.2) {
+                        }       else if (fimg[lpass][i] > 0.2) {
                             stdev[1] += fimg[hpass][i] * fimg[hpass][i];
                             samples[1]++;
                         } else
@@ -387,12 +396,12 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
                         }
                     }
                 }
-                stdev[0] = std::sqrt(stdev[0] / (samples[0] + 1));
+                stdev[0] = std::sqrt( std::max(stdev[0] / (samples[0] + 1), 0.) );
 #ifdef MULTIRANGE
-                stdev[1] = std::sqrt(stdev[1] / (samples[1] + 1));
-                stdev[2] = std::sqrt(stdev[2] / (samples[2] + 1));
-                stdev[3] = std::sqrt(stdev[3] / (samples[3] + 1));
-                stdev[4] = std::sqrt(stdev[4] / (samples[4] + 1));
+                stdev[1] = std::sqrt( std::max(stdev[1] / (samples[1] + 1), 0.) );
+                stdev[2] = std::sqrt( std::max(stdev[2] / (samples[2] + 1), 0.) );
+                stdev[3] = std::sqrt( std::max(stdev[3] / (samples[3] + 1), 0.) );
+                stdev[4] = std::sqrt( std::max(stdev[4] / (samples[4] + 1), 0.) );
 #endif
                 //printf("thold(%d) = %g\n", lev, thold);
                 //printf("stdev(%d) = %g\n", lev, stdev[0]);
@@ -403,12 +412,12 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
 
                 double beta = 1.;
                 if (amount > 0.) {
-                    beta += amount * exp (-((lev + startLevel) - radius) * ((lev + startLevel) - radius) / 1.5);
+                    beta += amount * exp (-( (lev + startLevel) - radius ) * ( (lev + startLevel) - radius ) / 1.5);
                 }
 
                 /* do thresholding */
                 for (unsigned int i = 0; i < size; ++i) {
-                    if (threshold > 0. && low != 1.) {
+                    if ( (threshold > 0.) && (low != 1.) ) {
 #ifdef MULTIRANGE
                         if (fimg[lpass][i] > 0.8) {
                             thold = threshold * stdev[4];
@@ -444,7 +453,7 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
 
                 double beta = 1.;
                 if (amount > 0.) {
-                    beta += amount * exp (-((lev + startLevel) - radius) * ((lev + startLevel) - radius) / 1.5);
+                    beta += amount * exp (-( (lev + startLevel) - radius ) * ( (lev + startLevel) - radius ) / 1.5);
                 }
 
 #ifdef _OPENMP
@@ -454,7 +463,7 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
                     // compute band-pass image as: (smoothed at this lev)-(smoothed at next lev)
                     fimg[hpass][i] -= fimg[lpass][i];
 
-                    if (threshold > 0. && low != 1.) {
+                    if ( (threshold > 0.) && (low != 1.) ) {
                         // apply smooth threshold
                         if (fimg[hpass][i] < -thold) {
                             fimg[hpass][i] += thold - thold * low;
@@ -487,17 +496,18 @@ wavelet_denoise(float *fimg[3], //!< fimg[0] is the channel to process with inte
     } /* end omp parallel */
 } // wavelet_denoise
 
-
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class DenoiseWaveletPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
     struct Params;
+
 public:
 
     /** @brief ctor */
-    DenoiseWaveletPlugin(OfxImageEffectHandle handle, const OFX::Color::LutBase* lut)
+    DenoiseWaveletPlugin(OfxImageEffectHandle handle,
+                         const Color::LutBase* lut)
         : ImageEffect(handle)
         , _lut(lut)
         , _dstClip(0)
@@ -527,12 +537,12 @@ public:
         assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         // TODO: fetch noise parameters
@@ -571,7 +581,7 @@ public:
         assert(_premultChanged);
 
         // adaptive denoising does not support tiles
-        setSupportsTiles(!_adaptive->getValue());
+        setSupportsTiles( !_adaptive->getValue() );
 
         // update the channel labels
         updateLabels();
@@ -579,29 +589,27 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template<int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args);
+    void renderForComponents(const RenderArguments &args);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const OFX::RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args);
 
-    void setup(const OFX::RenderArguments &args,
-               std::auto_ptr<const OFX::Image>& src,
-               std::auto_ptr<OFX::Image>& dst,
-               std::auto_ptr<const OFX::Image>& mask,
+    void setup(const RenderArguments &args,
+               std::auto_ptr<const Image>& src,
+               std::auto_ptr<Image>& dst,
+               std::auto_ptr<const Image>& mask,
                Params& p);
 
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     void updateLabels();
 
@@ -624,15 +632,15 @@ private:
         OfxRectI srcWindow;
 
         Params()
-        : doMasking(false)
-        , maskInvert(false)
-        , premult(false)
-        , premultChannel(3)
-        , mix(1.)
-        , colorModel(eColorModelYCbCr)
-        , adaptive(false)
-        , startLevel(0)
-        , radius(0.5)
+            : doMasking(false)
+            , maskInvert(false)
+            , premult(false)
+            , premultChannel(3)
+            , mix(1.)
+            , colorModel(eColorModelYCbCr)
+            , adaptive(false)
+            , startLevel(0)
+            , radius(0.5)
         {
             process[0] = process[1] = process[2] = process[3] = true;
             threshold[0] = threshold[1] = threshold[2] = threshold[3] = 0.;
@@ -641,12 +649,12 @@ private:
         }
     };
 
-    const OFX::Color::LutBase* _lut;
+    const Color::LutBase* _lut;
 
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_maskClip;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_maskClip;
     BooleanParam* _processR;
     BooleanParam* _processG;
     BooleanParam* _processB;
@@ -664,12 +672,12 @@ private:
     DoubleParam* _sharpenAmount;
     DoubleParam* _sharpenRadius;
     BooleanParam* _sharpenLuminance;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
+    BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -680,32 +688,32 @@ private:
 // basic plugin render function, just a skelington to instantiate templates from
 // the overridden render function
 void
-DenoiseWaveletPlugin::render(const OFX::RenderArguments &args)
+DenoiseWaveletPlugin::render(const RenderArguments &args)
 {
     //std::cout << "render!\n";
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB /*|| dstComponents == OFX::ePixelComponentXY*/ || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB /*|| dstComponents == ePixelComponentXY*/ || dstComponents == ePixelComponentAlpha);
     // do the rendering
     switch (dstComponents) {
-    case OFX::ePixelComponentRGBA:
+    case ePixelComponentRGBA:
         renderForComponents<4>(args);
         break;
-    case OFX::ePixelComponentRGB:
+    case ePixelComponentRGB:
         renderForComponents<3>(args);
         break;
-    //case OFX::ePixelComponentXY:
+    //case ePixelComponentXY:
     //    renderForComponents<2>(args);
     //    break;
-    case OFX::ePixelComponentAlpha:
+    case ePixelComponentAlpha:
         renderForComponents<1>(args);
         break;
     default:
         //std::cout << "components usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
       //std::cout << "render! OK\n";
@@ -713,78 +721,78 @@ DenoiseWaveletPlugin::render(const OFX::RenderArguments &args)
 
 template<int nComponents>
 void
-DenoiseWaveletPlugin::renderForComponents(const OFX::RenderArguments &args)
+DenoiseWaveletPlugin::renderForComponents(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
         renderForBitDepth<unsigned char, nComponents, 255>(args);
         break;
 
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
         renderForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
 
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
         //std::cout << "depth usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
-
 void
-DenoiseWaveletPlugin::setup(const OFX::RenderArguments &args,
-                            std::auto_ptr<const OFX::Image>& src,
-                            std::auto_ptr<OFX::Image>& dst,
-                            std::auto_ptr<const OFX::Image>& mask,
+DenoiseWaveletPlugin::setup(const RenderArguments &args,
+                            std::auto_ptr<const Image>& src,
+                            std::auto_ptr<Image>& dst,
+                            std::auto_ptr<const Image>& mask,
                             Params& p)
 {
     const double time = args.time;
+
     dst.reset( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-        ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
-        ( dst->getRenderScale().y != args.renderScale.y) ||
-        ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     src.reset( ( _srcClip && _srcClip->isConnected() ) ?
-              _srcClip->fetchImage(time) : 0 );
+               _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
-            ( src->getRenderScale().y != args.renderScale.y) ||
-            ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     p.doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     mask.reset(p.doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
-            ( mask->getRenderScale().y != args.renderScale.y) ||
-            ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( mask->getRenderScale().y != args.renderScale.y) ||
+             ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
     p.maskInvert = p.doMasking ? _maskInvert->getValueAtTime(time) : false;
@@ -816,66 +824,66 @@ DenoiseWaveletPlugin::setup(const OFX::RenderArguments &args,
 
     if (!sharpenLuminance) {
         p.amount[1] = p.amount[2] = p.amount[3] = p.amount[0];
-    } else if (p.colorModel == eColorModelRGB || p.colorModel == eColorModelLinearRGB) {
+    } else if ( (p.colorModel == eColorModelRGB) || (p.colorModel == eColorModelLinearRGB) ) {
         p.amount[1] = p.amount[2] = p.amount[0]; // cannot sharpen luminance only
     }
 
-    if (p.colorModel == eColorModelRGB || p.colorModel == eColorModelLinearRGB) {
+    if ( (p.colorModel == eColorModelRGB) || (p.colorModel == eColorModelLinearRGB) ) {
         for (int c = 0; c < 3; ++c) {
-            p.process[c] = p.process[c] && ((p.threshold[c] > 0 && p.softness[c] != 1.) || p.amount[c] > 0.);
+            p.process[c] = p.process[c] && ( (p.threshold[c] > 0 && p.softness[c] != 1.) || p.amount[c] > 0. );
         }
     } else {
         bool processcolor = false;
         for (int c = 0; c < 3; ++c) {
-            processcolor = processcolor || ((p.threshold[c] > 0 && p.softness[c] != 1.) || p.amount[c] > 0.);
+            processcolor = processcolor || ( (p.threshold[c] > 0 && p.softness[c] != 1.) || p.amount[c] > 0. );
         }
         for (int c = 0; c < 3; ++c) {
             p.process[c] = p.process[c] && processcolor;
         }
     }
-    p.process[3] = p.process[3] && ((p.threshold[3] > 0 && p.softness[3] != 1.) || p.amount[3] > 0.);
-    
+    p.process[3] = p.process[3] && ( (p.threshold[3] > 0 && p.softness[3] != 1.) || p.amount[3] > 0. );
+
     // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
-    int maxLev = std::max(0, kLevelMax - startLevelFromRenderScale(args.renderScale));
+    int maxLev = std::max( 0, kLevelMax - startLevelFromRenderScale(args.renderScale) );
     // hat_transform gets the pixel at x+-(1<<maxLev), which is computex from x+-(1<<(maxLev-1)), etc...
     // We thus need pixels at x +- (1<<(maxLev+1))-1
-    int border = (1 << (maxLev+1)) - 1;
+    int border = ( 1 << (maxLev + 1) ) - 1;
     p.srcWindow.x1 = args.renderWindow.x1 - border;
     p.srcWindow.y1 = args.renderWindow.y1 - border;
     p.srcWindow.x2 = args.renderWindow.x2 + border;
     p.srcWindow.y2 = args.renderWindow.y2 + border;
 
     // intersect with srcBounds
-    OFX::Coords::rectIntersection(p.srcWindow, src->getBounds(), &p.srcWindow);
-}
+    Coords::rectIntersection(p.srcWindow, src->getBounds(), &p.srcWindow);
+} // DenoiseWaveletPlugin::setup
 
 template <class PIX, int nComponents, int maxValue>
 void
-DenoiseWaveletPlugin::renderForBitDepth(const OFX::RenderArguments &args)
+DenoiseWaveletPlugin::renderForBitDepth(const RenderArguments &args)
 {
-    std::auto_ptr<const OFX::Image> src;
-    std::auto_ptr<OFX::Image> dst;
-    std::auto_ptr<const OFX::Image> mask;
+    std::auto_ptr<const Image> src;
+    std::auto_ptr<Image> dst;
+    std::auto_ptr<const Image> mask;
     Params p;
 
     setup(args, src, dst, mask, p);
 
     const OfxRectI& procWindow = args.renderWindow;
 
-    
+
     // temporary buffers: one for each channel plus 2 for processing
     unsigned int iwidth = p.srcWindow.x2 - p.srcWindow.x1;
     unsigned int iheight = p.srcWindow.y2 - p.srcWindow.y1;
     unsigned int isize = iwidth * iheight;
-    std::auto_ptr<OFX::ImageMemory> tmpData( new OFX::ImageMemory(sizeof(float) * isize * (nComponents + 2), this) );
+    std::auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * (nComponents + 2), this) );
     float* tmpPixelData = (float*)tmpData->lock();
     float* fimgcolor[3] = { NULL, NULL, NULL };
     float* fimgalpha = NULL;
     float *fimgtmp[2] = { NULL, NULL };
     fimgcolor[0] = (nComponents != 1) ? tmpPixelData : NULL;
     fimgcolor[1] = (nComponents != 1) ? tmpPixelData + isize : NULL;
-    fimgcolor[2] = (nComponents != 1) ? tmpPixelData + 2*isize : NULL;
-    fimgalpha = (nComponents == 1) ? tmpPixelData : ((nComponents == 4) ? tmpPixelData + 3*isize : NULL);
+    fimgcolor[2] = (nComponents != 1) ? tmpPixelData + 2 * isize : NULL;
+    fimgalpha = (nComponents == 1) ? tmpPixelData : ( (nComponents == 4) ? tmpPixelData + 3 * isize : NULL );
     fimgtmp[0] = tmpPixelData + nComponents * isize;
     fimgtmp[1] = tmpPixelData + (nComponents + 1) * isize;
 
@@ -896,7 +904,7 @@ DenoiseWaveletPlugin::renderForBitDepth(const OFX::RenderArguments &args)
             ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, p.premult, p.premultChannel);
             unsigned int pix = (x - p.srcWindow.x1) + (y - p.srcWindow.y1) * iwidth;
             // convert to the appropriate color model and store in tmpPixelData
-            if ( nComponents != 1 && (p.process[0] || p.process[1] || p.process[2]) ) {
+            if ( (nComponents != 1) && (p.process[0] || p.process[1] || p.process[2]) ) {
                 if (p.colorModel == eColorModelLab) {
                     if (sizeof(PIX) == 1) {
                         // convert to linear
@@ -904,7 +912,7 @@ DenoiseWaveletPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                             unpPix[c] = _lut->fromColorSpaceFloatToLinearFloat(unpPix[c]);
                         }
                     }
-                    OFX::Color::rgb709_to_lab(unpPix[0], unpPix[1], unpPix[2], &unpPix[0], &unpPix[1], &unpPix[2]);
+                    Color::rgb709_to_lab(unpPix[0], unpPix[1], unpPix[2], &unpPix[0], &unpPix[1], &unpPix[2]);
                     // bring each component in the 0..1 range
                     unpPix[0] = unpPix[0] / 116.0 + 0 * 16 * 27 / 24389.0;
                     unpPix[1] = unpPix[1] / 500.0 / 2.0 + 0.5;
@@ -919,7 +927,7 @@ DenoiseWaveletPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                         }
                     }
                     if (p.colorModel == eColorModelYCbCr) {
-                        OFX::Color::rgb_to_ypbpr709(unpPix[0], unpPix[1], unpPix[2], &unpPix[0], &unpPix[1], &unpPix[2]);
+                        Color::rgb_to_ypbpr709(unpPix[0], unpPix[1], unpPix[2], &unpPix[0], &unpPix[1], &unpPix[2]);
                         // bring to the 0-1 range
                         unpPix[1] += 0.5;
                         unpPix[2] += 0.5;
@@ -927,7 +935,7 @@ DenoiseWaveletPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                 }
                 // store in tmpPixelData
                 for (int c = 0; c < 3; ++c) {
-                    if (!(p.colorModel == eColorModelRGB || p.colorModel == eColorModelLinearRGB) || p.process[c]) {
+                    if (!( (p.colorModel == eColorModelRGB) || (p.colorModel == eColorModelLinearRGB) ) || p.process[c]) {
                         fimgcolor[c][pix] = unpPix[c];
                     }
                 }
@@ -941,21 +949,21 @@ DenoiseWaveletPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 
     // denoise
 
-    if ( nComponents != 1 && (p.process[0] || p.process[1] || p.process[2]) ) {
+    if ( (nComponents != 1) && (p.process[0] || p.process[1] || p.process[2]) ) {
         // process color channels
         for (int c = 0; c < 3; ++c) {
-            if (!(p.colorModel == eColorModelRGB || p.colorModel == eColorModelLinearRGB) || p.process[c]) {
+            if (!( (p.colorModel == eColorModelRGB) || (p.colorModel == eColorModelLinearRGB) ) || p.process[c]) {
                 assert(fimgcolor[c]);
                 float* fimg[3] = { fimgcolor[c], fimgtmp[0], fimgtmp[1] };
                 wavelet_denoise(fimg, iwidth, iheight, p.threshold[c], p.softness[c], p.adaptive, p.amount[c], p.radius, p.startLevel, (float)c / nComponents, 1.f / nComponents);
             }
         }
     }
-    if (nComponents != 3 && p.process[3]) {
+    if ( (nComponents != 3) && p.process[3] ) {
         assert(fimgalpha);
         // process alpha
         float* fimg[3] = { fimgalpha, fimgtmp[0], fimgtmp[1] };
-        wavelet_denoise(fimg, iwidth, iheight, p.threshold[3], p.softness[3], p.adaptive, p.amount[3], p.radius, p.startLevel, (float)(nComponents-1) / nComponents, 1.f / nComponents);
+        wavelet_denoise(fimg, iwidth, iheight, p.threshold[3], p.softness[3], p.adaptive, p.amount[3], p.radius, p.startLevel, (float)(nComponents - 1) / nComponents, 1.f / nComponents);
     }
 
     // store back into the result
@@ -991,7 +999,7 @@ DenoiseWaveletPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                     tmpPix[1] = (tmpPix[1] - 0.5) * 500 * 2;
                     tmpPix[2] = (tmpPix[2] - 0.5) * 200 * 2.2;
 
-                    OFX::Color::lab_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::lab_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     if (sizeof(PIX) == 1.) {
                         // convert from linear
                         for (int c = 0; c < 3; ++c) {
@@ -1003,7 +1011,7 @@ DenoiseWaveletPlugin::renderForBitDepth(const OFX::RenderArguments &args)
                         // bring to the -0.5-0.5 range
                         tmpPix[1] -= 0.5;
                         tmpPix[2] -= 0.5;
-                        OFX::Color::ypbpr_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        Color::ypbpr_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     }
                     if (p.colorModel != eColorModelLinearRGB) {
                         if (sizeof(PIX) != 1) {
@@ -1037,50 +1045,50 @@ DenoiseWaveletPlugin::renderForBitDepth(const OFX::RenderArguments &args)
         }
     }
     abort_test();
-}
-
+} // DenoiseWaveletPlugin::renderForBitDepth
 
 // override the roi call
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-DenoiseWaveletPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                      OFX::RegionOfInterestSetter &rois)
+DenoiseWaveletPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                           RegionOfInterestSetter &rois)
 {
     if (!_srcClip) {
         return;
     }
     const OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
-    if ( OFX::Coords::rectIsEmpty(srcRod) || OFX::Coords::rectIsEmpty(args.regionOfInterest) ) {
+    if ( Coords::rectIsEmpty(srcRod) || Coords::rectIsEmpty(args.regionOfInterest) ) {
         return;
     }
 
     if ( _adaptive->getValueAtTime(args.time) ) {
         // adaptive denoising requires the full image to compute stats
         rois.setRegionOfInterest(*_srcClip, srcRod);
+
         return;
     }
 
     double par = _srcClip->getPixelAspectRatio();
     const OfxRectD& regionOfInterest = args.regionOfInterest;
     OfxRectI regionOfInterestPixels;
-    OFX::Coords::toPixelEnclosing(regionOfInterest, args.renderScale, par, &regionOfInterestPixels);
+    Coords::toPixelEnclosing(regionOfInterest, args.renderScale, par, &regionOfInterestPixels);
 
     // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
     int maxLev = std::max( 0, startLevelFromRenderScale(args.renderScale) );
     // hat_transform gets the pixel at x+-(1<<maxLev), which is computex from x+-(1<<(maxLev-1)), etc...
     // We thus need pixels at x +- (1<<(maxLev+1))-1
-    int border = (1 << (maxLev+1)) - 1;
+    int border = ( 1 << (maxLev + 1) ) - 1;
     regionOfInterestPixels.x1 -= border;
     regionOfInterestPixels.y1 -= border;
     regionOfInterestPixels.x2 += border;
     regionOfInterestPixels.y2 += border;
 
     OfxRectD srcRoI;
-    OFX::Coords::toCanonical(regionOfInterestPixels, args.renderScale, par, &srcRoI);
+    Coords::toCanonical(regionOfInterestPixels, args.renderScale, par, &srcRoI);
 
     // intersect with srcRoD
-    OFX::Coords::rectIntersection(srcRoI, srcRod, &srcRoI);
+    Coords::rectIntersection(srcRoI, srcRod, &srcRoI);
     rois.setRegionOfInterest(*_srcClip, srcRoI);
 }
 
@@ -1119,7 +1127,7 @@ DenoiseWaveletPlugin::isIdentity(const IsIdentityArguments &args,
 
     // which plugin parameter values give identity?
 
-    if (processA && _alphaThreshold->getValueAtTime(time) > 0.) {
+    if ( processA && (_alphaThreshold->getValueAtTime(time) > 0.) ) {
         return false;
     }
 
@@ -1133,11 +1141,11 @@ DenoiseWaveletPlugin::isIdentity(const IsIdentityArguments &args,
     double crbbSoftness = _crbbSoftness->getValueAtTime(time);
     double alphaSoftness = _alphaSoftness->getValueAtTime(time);
     double sharpenAmount = _sharpenAmount->getValueAtTime(time);
-    if ( (colorModel == eColorModelRGB || colorModel == eColorModelLinearRGB) &&
-         (!processR || ylrThreshold <= 0. || ylrSoftness == 1.) &&
-         (!processG || cbagThreshold <= 0. || cbagSoftness == 1.) &&
-         (!processR || crbbThreshold <= 0. || crbbSoftness == 1.) &&
-         (!processA || alphaThreshold <= 0. || alphaSoftness == 1.) &&
+    if ( ( (colorModel == eColorModelRGB) || (colorModel == eColorModelLinearRGB) ) &&
+         ( !processR || (ylrThreshold <= 0.) || (ylrSoftness == 1.) ) &&
+         ( !processG || (cbagThreshold <= 0.) || (cbagSoftness == 1.) ) &&
+         ( !processR || (crbbThreshold <= 0.) || (crbbSoftness == 1.) ) &&
+         ( !processA || (alphaThreshold <= 0.) || (alphaSoftness == 1.) ) &&
          (sharpenAmount <= 0.) ) {
         identityClip = _srcClip;
 
@@ -1149,7 +1157,7 @@ DenoiseWaveletPlugin::isIdentity(const IsIdentityArguments &args,
                   ( (ylrSoftness == 1.) &&
                     (cbagSoftness == 1.) &&
                     (crbbSoftness == 1.) ) ) &&
-                (!processA || alphaThreshold <= 0. || alphaSoftness == 1.) &&
+                ( !processA || (alphaThreshold <= 0.) || (alphaSoftness == 1.) ) &&
                 (sharpenAmount <= 0.) ) {
         identityClip = _srcClip;
 
@@ -1161,9 +1169,9 @@ DenoiseWaveletPlugin::isIdentity(const IsIdentityArguments &args,
         bool maskInvert = _maskInvert->getValueAtTime(time);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
 
                 return true;
@@ -1183,7 +1191,7 @@ DenoiseWaveletPlugin::changedClip(const InstanceChangedArgs &args,
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
-         ( args.reason == OFX::eChangeUserEdit) ) {
+         ( args.reason == eChangeUserEdit) ) {
         if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
             _premult->setValue(false);
         } else {
@@ -1204,16 +1212,16 @@ DenoiseWaveletPlugin::changedClip(const InstanceChangedArgs &args,
 }
 
 void
-DenoiseWaveletPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+DenoiseWaveletPlugin::changedParam(const InstanceChangedArgs &args,
                                    const std::string &paramName)
 {
-    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     } else if (paramName == kParamColorModel) {
         updateLabels();
     } else if (paramName == kParamAdaptive) {
         // adaptive denoising does not support tiles
-        setSupportsTiles(!_adaptive->getValueAtTime(args.time));
+        setSupportsTiles( !_adaptive->getValueAtTime(args.time) );
     }
 }
 
@@ -1221,6 +1229,7 @@ void
 DenoiseWaveletPlugin::updateLabels()
 {
     ColorModelEnum colorModel = (ColorModelEnum)_colorModel->getValue();
+
     switch (colorModel) {
     case eColorModelYCbCr: {
         _ylrThreshold->setLabel(kParamYThresholdLabel);
@@ -1253,35 +1262,36 @@ DenoiseWaveletPlugin::updateLabels()
     }
 }
 
-class DenoiseWaveletPluginFactory : public OFX::PluginFactoryHelper<DenoiseWaveletPluginFactory>
+class DenoiseWaveletPluginFactory
+    : public PluginFactoryHelper<DenoiseWaveletPluginFactory>
 {
 public:
 
-    DenoiseWaveletPluginFactory(const std::string& id, unsigned int verMaj, unsigned int verMin)
-    : OFX::PluginFactoryHelper<DenoiseWaveletPluginFactory>(id, verMaj, verMin)
-    , _lut(0)
+    DenoiseWaveletPluginFactory(const std::string& id,
+                                unsigned int verMaj,
+                                unsigned int verMin)
+        : PluginFactoryHelper<DenoiseWaveletPluginFactory>(id, verMaj, verMin)
+        , _lut(0)
     {
     }
 
-    virtual void load()
-    {
-        _lut = OFX::Color::LutManager<Mutex>::Rec709Lut();
-    }
+    virtual void load() OVERRIDE FINAL { _lut = Color::LutManager<Mutex>::Rec709Lut(); ofxsThreadSuiteCheck(); }
 
     virtual void unload()
     {
-        OFX::Color::LutManager<Mutex>::releaseLut(_lut->getName());
+        Color::LutManager<Mutex>::releaseLut( _lut->getName() );
     }
 
-    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
-    virtual void describe(OFX::ImageEffectDescriptor &desc);
-    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
+    virtual void describe(ImageEffectDescriptor &desc);
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
+
 private:
-    const OFX::Color::LutBase* _lut;
+    const Color::LutBase* _lut;
 };
 
 void
-DenoiseWaveletPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+DenoiseWaveletPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
     // basic labels
@@ -1311,14 +1321,14 @@ DenoiseWaveletPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
     //std::cout << "describe! OK\n";
 }
 
 void
-DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                               OFX::ContextEnum context)
+DenoiseWaveletPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                               ContextEnum context)
 {
     //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
@@ -1354,7 +1364,7 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -1364,7 +1374,7 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -1374,7 +1384,7 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -1384,7 +1394,7 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
@@ -1395,7 +1405,7 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // describe plugin params
     {
-        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamColorModel);
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamColorModel);
         param->setLabel(kParamColorModelLabel);
         param->setHint(kParamColorModelHint);
         param->setAnimates(false);
@@ -1407,14 +1417,14 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamColorModelOptionRGB, kParamColorModelOptionRGBHint);
         assert(param->getNOptions() == (int)eColorModelLinearRGB);
         param->appendOption(kParamColorModelOptionLinearRGB, kParamColorModelOptionLinearRGBHint);
-        param->setDefault((int)eColorModelYCbCr);
+        param->setDefault( (int)eColorModelYCbCr );
         if (page) {
             page->addChild(*param);
         }
     }
 
     {
-        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupSettings);
+        GroupParamDescriptor* group = desc.defineGroupParam(kGroupSettings);
         if (group) {
             group->setLabel(kGroupSettingsLabel);
             //group->setHint(kGroupSettingsHint);
@@ -1539,7 +1549,7 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAdaptive);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAdaptive);
         param->setLabel(kParamAdaptiveLabel);
         param->setHint(kParamAdaptiveHint);
         param->setDefault(true);
@@ -1550,7 +1560,7 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     {
-        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupSharpen);
+        GroupParamDescriptor* group = desc.defineGroupParam(kGroupSharpen);
         if (group) {
             group->setLabel(kGroupSharpenLabel);
             //group->setHint(kGroupSettingsHint);
@@ -1593,7 +1603,7 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
 
         {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSharpenLuminance);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSharpenLuminance);
             param->setLabel(kParamSharpenLuminanceLabel);
             param->setHint(kParamSharpenLuminanceHint);
             param->setDefault(true);
@@ -1610,7 +1620,7 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
@@ -1622,9 +1632,9 @@ DenoiseWaveletPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //std::cout << "describeInContext! OK\n";
 } // DenoiseWaveletPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 DenoiseWaveletPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                            OFX::ContextEnum /*context*/)
+                                            ContextEnum /*context*/)
 {
     return new DenoiseWaveletPlugin(handle, _lut);
 }

@@ -1,9 +1,9 @@
-PLUGINOBJECTS = \
-	TestRender.o \
-	TestPosition.o \
-	TestGroups.o \
-	TestOpenGL.o TestOpenGLRenderGL.o  TestOpenGLRenderMesa.o \
-	ofxsTransform3x3.o ofxsShutter.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
+ofxsTransform3x3.o ofxsShutter.o \
+TestRender.o \
+TestPosition.o \
+TestGroups.o \
+TestOpenGL.o TestOpenGLRenderGL.o  TestOpenGLRenderMesa.o \
 
 PLUGINNAME = Test
 
@@ -25,4 +25,4 @@ $(OBJECTPATH)/TestOpenGLRenderGL.o: TestOpenGLRenderGL.cpp TestOpenGLRender.h Te
 
 $(OBJECTPATH)/TestOpenGLRenderMesa.o: TestOpenGLRenderMesa.cpp TestOpenGLRender.h TestOpenGL.h
 	@mkdir -p $(OBJECTPATH)
-	$(CXX) -c -I$(OSMESA_PATH)/include $(CXXFLAGS) $< -o $@
+	$(AM_V_CXX)$(CXX) -c -I$(OSMESA_PATH)/include $(CXXFLAGS) $< -o $@

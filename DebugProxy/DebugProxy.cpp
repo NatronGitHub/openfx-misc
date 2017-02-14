@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
 
 #include <cstring>
 #include <cstdlib>
-#include <sstream>
+#include <sstream> // stringstream
 #include <stdexcept>
 #include <new>
 #include <cassert>
@@ -238,7 +238,7 @@ static std::map<OfxImageEffectHandle, std::string> gContexts;
 ////////////////////////////////////////////////////////////////////////////////
 // the plugin struct
 static const char* gBinaryPath = 0;
-static OFX::Binary *gBinary = 0;
+static Binary *gBinary = 0;
 static std::vector<OfxPlugin> gPlugins;
 static int gPluginsNb = 0;
 static std::vector<OfxPluginEntryPoint*> gPluginsMainEntry;
@@ -322,7 +322,7 @@ struct Loader
 
                 return;
             }
-            gBinary = new OFX::Binary(gBinaryPath);
+            gBinary = new Binary(gBinaryPath);
         }
         if (gBinary) {
             gBinary->load();
@@ -525,19 +525,19 @@ fetchHostDescription(int nth)
         hostDesc.APIVersionMinor = (st == kOfxStatOK) ? v : 0;
     }
     {
-        char *type = 0;
+        const char *type = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxPropType, 0, &type);
         assert(st == kOfxStatOK);
         hostDesc.type = type;
     }
     {
-        char *name = 0;
+        const char *name = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxPropName, 0, &name);
         assert(st == kOfxStatOK);
         hostDesc.hostName = name;
     }
     {
-        char *s = 0;
+        const char *s = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxPropLabel, 0, &s);
         assert(st == kOfxStatOK);
         hostDesc.hostLabel = s;
@@ -552,7 +552,7 @@ fetchHostDescription(int nth)
         hostDesc.versionMicro = (st == kOfxStatOK) ? v : 0;
     }
     {
-        char *s = 0;
+        const char *s = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxPropVersionLabel, 0, &s);
         assert(st == kOfxStatOK);
         hostDesc.versionLabel = s;
@@ -586,7 +586,7 @@ fetchHostDescription(int nth)
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedComponents, &numComponents);
     assert (st == kOfxStatOK);
     for (int i = 0; i < numComponents; ++i) {
-        char *comp = 0;
+        const char *comp = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedComponents, i, &comp);
         assert (st == kOfxStatOK);
         hostDesc._supportedComponents.push_back(comp);
@@ -595,7 +595,7 @@ fetchHostDescription(int nth)
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedContexts, &numContexts);
     assert (st == kOfxStatOK);
     for (int i = 0; i < numContexts; ++i) {
-        char* cont = 0;
+        const char* cont = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedContexts, i, &cont);
         assert (st == kOfxStatOK);
         hostDesc._supportedContexts.push_back(cont);
@@ -604,7 +604,7 @@ fetchHostDescription(int nth)
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedPixelDepths, &numPixelDepths);
     assert (st == kOfxStatOK);
     for (int i = 0; i < numPixelDepths; ++i) {
-        char *depth = 0;
+        const char *depth = NULL;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedPixelDepths, i, &depth);
         assert (st == kOfxStatOK);
         hostDesc._supportedPixelDepths.push_back(depth);
@@ -688,6 +688,7 @@ inline void
 printHostDescription(int nth)
 {
     const ImageEffectHostDescription &hostDesc = gHostDescription[nth];
+
     std::cout << "OFX DebugProxy: host description follows" << std::endl;
     std::cout << "OFX API version " << hostDesc.APIVersionMajor << '.' << hostDesc.APIVersionMinor << std::endl;
     std::cout << "type=" << hostDesc.type << std::endl;
@@ -942,9 +943,9 @@ overlayMain(int nth,
     }
 
     if ( ssr.str().empty() ) {
-        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".i." << action << "->" << OFX::StatStr(st) << std::endl;
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".i." << action << "->" << StatStr(st) << std::endl;
     } else {
-        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".i." << action << "->" << OFX::StatStr(st) << ": " << ssr.str() << std::endl;
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".i." << action << "->" << StatStr(st) << ": " << ssr.str() << std::endl;
     }
 
     return st;
@@ -1020,7 +1021,7 @@ getContext(int nth,
 
     assert(st == kOfxStatOK);
     // get context
-    char *context = 0;
+    const char *context = NULL;
     st = gPropHost[nth]->propGetString(propHandle, kOfxImageEffectPropContext, 0, &context);
     assert(st == kOfxStatOK);
 
@@ -1083,7 +1084,7 @@ pluginMain(int nth,
             //     kOfxPropChangeReason - what triggered the change, which will be one of...
 
             // see why it changed
-            char *changeReason = 0;
+            const char *changeReason = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxPropChangeReason, 0, &changeReason);
 
             ss << "(" << handle << "," << changeReason << ")";
@@ -1096,13 +1097,13 @@ pluginMain(int nth,
             //     kOfxImageEffectPropRenderScale - the render scale currently being applied to any image fetched from a clip (for Image Effect Plugins only)
 
             // fetch the type of the object that changed
-            char *typeChanged = 0;
+            const char *typeChanged = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxPropType, 0, &typeChanged);
             // get the name of the thing that changed
-            char *objChanged = 0;
+            const char *objChanged = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxPropName, 0, &objChanged);
             // see why it changed
-            char *changeReason = 0;
+            const char *changeReason = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxPropChangeReason, 0, &changeReason);
             // get the time
             OfxTime time = 0.;
@@ -1130,7 +1131,7 @@ pluginMain(int nth,
             //     kOfxImageEffectPropContext the context being described.
 
             // get the context from the inArgs handle
-            char *context = 0;
+            const char *context = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropContext, 0, &context);
 
             ss << "(" << handle << "," << context << ")";
@@ -1188,7 +1189,7 @@ pluginMain(int nth,
             OfxTime time = 0;
             gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
             // get the field from the inArgs handle
-            char *field = 0;
+            const char *field = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropFieldToRender, 0, &field);
             // get the render window
             int renderWindow[4] = {0, 0, 0, 0};
@@ -1211,7 +1212,7 @@ pluginMain(int nth,
             OfxTime time = 0;
             gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
             // get the field from the inArgs handle
-            char *field = 0;
+            const char *field = NULL;
             gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropFieldToRender, 0, &field);
             // get the render window
             int renderWindow[4] = {0, 0, 0, 0};
@@ -1479,7 +1480,7 @@ pluginMain(int nth,
                         firstclip = false;
                         bool firstrange = true;
                         ssr << name << ":(";
-                        char* comp;
+                        const char* comp = NULL;
                         for (int i = 0; i < dim; ++i) {
                             gPropHost[nth]->propGetString(outArgs, clipFrameRangePropName.c_str(), i, &comp);
                             if (!firstrange) {
@@ -1491,7 +1492,7 @@ pluginMain(int nth,
                         ssr << ')';
                     }
                 }
-                char* clipName;
+                const char* clipName = NULL;
                 int clipView;
                 double clipTime;
                 gPropHost[nth]->propGetDouble(outArgs, kFnOfxImageEffectPropPassThroughTime, 0, &clipTime);
@@ -1509,7 +1510,7 @@ pluginMain(int nth,
             //    kOfxPropName this to the name of the clip that should be used if the effect is an identity transform, defaults to the empty string
             //    kOfxPropTime the time to use from the indicated source clip as an identity image (allowing time slips to happen), defaults to the value in kOfxPropTime in inArgs
             if (st == kOfxStatOK) {
-                char *name = 0;
+                const char *name = NULL;
                 gPropHost[nth]->propGetString(outArgs, kOfxPropName, 0, &name);
                 OfxTime time = 0;
                 gPropHost[nth]->propGetDouble(outArgs, kOfxPropTime, 0, &time);
@@ -1540,7 +1541,7 @@ pluginMain(int nth,
                 for (std::list<std::string>::const_iterator it = clips.begin(); it != clips.end(); ++it) {
                     const char* name = it->c_str();
                     bool firstpref = true;
-                    char* components = 0;
+                    const char* components = NULL;
                     std::string clipComponentsPropName = std::string("OfxImageClipPropComponents_") + name;
                     pst = gPropHost[nth]->propGetString(outArgs, clipComponentsPropName.c_str(), 0, &components);
                     if (pst == kOfxStatOK) {
@@ -1557,7 +1558,7 @@ pluginMain(int nth,
                         ssr << "components=" << components;
                     }
 
-                    char *depth = 0;
+                    const char *depth = NULL;
                     std::string clipDepthPropName = std::string("OfxImageClipPropDepth_") + name;
                     pst = gPropHost[nth]->propGetString(outArgs, clipDepthPropName.c_str(), 0, &depth);
                     if (pst == kOfxStatOK) {
@@ -1633,9 +1634,9 @@ pluginMain(int nth,
     }
 
     if ( ssr.str().empty() ) {
-        std::cout << "OFX DebugProxy: " << ss.str() << "->" << OFX::StatStr(st) << std::endl;
+        std::cout << "OFX DebugProxy: " << ss.str() << "->" << StatStr(st) << std::endl;
     } else {
-        std::cout << "OFX DebugProxy: " << ss.str() << "->" << OFX::StatStr(st) << ": " << ssr.str() << std::endl;
+        std::cout << "OFX DebugProxy: " << ss.str() << "->" << StatStr(st) << ": " << ssr.str() << std::endl;
     }
 
     return st;
@@ -1727,7 +1728,7 @@ getPropertySetNth(OfxImageEffectHandle imageEffect,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getPropertySet(" << imageEffect << ")->" << OFX::StatStr(st) << ": " << *propHandle << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getPropertySet(" << imageEffect << ")->" << StatStr(st) << ": " << *propHandle << std::endl;
 
     return st;
 }
@@ -1769,7 +1770,7 @@ getParamSetNth(OfxImageEffectHandle imageEffect,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getParamSet(" << imageEffect << ")->" << OFX::StatStr(st) << ": " << *paramSet << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getParamSet(" << imageEffect << ")->" << StatStr(st) << ": " << *paramSet << std::endl;
 
     return st;
 }
@@ -1812,7 +1813,7 @@ clipDefineNth(OfxImageEffectHandle imageEffect,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipDefine(" << imageEffect << ", " << name << ")->" << OFX::StatStr(st) << ": " << *propertySet << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipDefine(" << imageEffect << ", " << name << ")->" << StatStr(st) << ": " << *propertySet << std::endl;
 #ifdef OFX_DEBUG_PROXY_CLIPS
     assert( !gContexts[imageEffect].empty() );
     gClips[nth][gContexts[imageEffect]].push_back(name);
@@ -1860,7 +1861,7 @@ clipGetHandleNth(OfxImageEffectHandle imageEffect,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetHandle(" << imageEffect << ", " << name << ")->" << OFX::StatStr(st) << ": (" << *clip;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetHandle(" << imageEffect << ", " << name << ")->" << StatStr(st) << ": (" << *clip;
     if (propertySet) {
         std::cout << ", " << *propertySet;
     }
@@ -1906,7 +1907,7 @@ clipGetPropertySetNth(OfxImageClipHandle clip,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetPropertySet(" << clip << ")->" << OFX::StatStr(st) << ": " << *propHandle << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetPropertySet(" << clip << ")->" << StatStr(st) << ": " << *propHandle << std::endl;
 
     return st;
 }
@@ -1950,7 +1951,7 @@ clipGetImageNth(OfxImageClipHandle clip,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImage(" << clip << ", " << time << ")->" << OFX::StatStr(st) << ": (";
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImage(" << clip << ", " << time << ")->" << StatStr(st) << ": (";
     if (region) {
         std::cout << "(" << region->x1 << "," << region->y1 << "," << region->x2 << "," << region->y2 << "), ";
     }
@@ -1995,7 +1996,7 @@ clipReleaseImageNth(OfxPropertySetHandle imageHandle)
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipReleaseImage(" << imageHandle << ")->" << OFX::StatStr(st) << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipReleaseImage(" << imageHandle << ")->" << StatStr(st) << std::endl;
 
     return st;
 }
@@ -2038,7 +2039,7 @@ clipGetRegionOfDefinitionNth(OfxImageClipHandle clip,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(" << clip << ", " << time << ")->" << OFX::StatStr(st);
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(" << clip << ", " << time << ")->" << StatStr(st);
     if (bounds) {
         std::cout << ": (" << bounds->x1 << "," << bounds->y1 << "," << bounds->x2 << "," << bounds->y2 << ")";
     }
@@ -2126,7 +2127,7 @@ imageMemoryAllocNth(OfxImageEffectHandle instanceHandle,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryAlloc(" << instanceHandle << ", " << nBytes << ")->" << OFX::StatStr(st) << ": " << *memoryHandle << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryAlloc(" << instanceHandle << ", " << nBytes << ")->" << StatStr(st) << ": " << *memoryHandle << std::endl;
 
     return st;
 }
@@ -2167,7 +2168,7 @@ imageMemoryFreeNth(OfxImageMemoryHandle memoryHandle)
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryFree(" << memoryHandle << ")->" << OFX::StatStr(st) << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryFree(" << memoryHandle << ")->" << StatStr(st) << std::endl;
 
     return st;
 }
@@ -2209,7 +2210,7 @@ imageMemoryLockNth(OfxImageMemoryHandle memoryHandle,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryLock(" << memoryHandle << ")->" << OFX::StatStr(st) << ": " << *returnedPtr << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryLock(" << memoryHandle << ")->" << StatStr(st) << ": " << *returnedPtr << std::endl;
 
     return st;
 }
@@ -2250,7 +2251,7 @@ imageMemoryUnlockNth(OfxImageMemoryHandle memoryHandle)
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryUnlock(" << memoryHandle << ")->" << OFX::StatStr(st) << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryUnlock(" << memoryHandle << ")->" << StatStr(st) << std::endl;
 
     return st;
 }
@@ -2335,7 +2336,7 @@ clipGetImagePlaneV1Nth(OfxImageClipHandle clip,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << plane << ")->" << OFX::StatStr(st) << ": (";
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << plane << ")->" << StatStr(st) << ": (";
     if (region) {
         std::cout << "(" << region->x1 << "," << region->y1 << "," << region->x2 << "," << region->y2 << "), ";
     }
@@ -2389,7 +2390,7 @@ clipGetImagePlaneNth(OfxImageClipHandle clip,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << view << ", " << plane << ")->" << OFX::StatStr(st) << ": (";
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << view << ", " << plane << ")->" << StatStr(st) << ": (";
     if (region) {
         std::cout << "(" << region->x1 << "," << region->y1 << "," << region->x2 << "," << region->y2 << "), ";
     }
@@ -2438,7 +2439,7 @@ fnClipGetRegionOfDefinitionNth(OfxImageClipHandle clip,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(plane suite)(" << clip << ", " << time << ", " << view << ")->" << OFX::StatStr(st);
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(plane suite)(" << clip << ", " << time << ", " << view << ")->" << StatStr(st);
     if (bounds) {
         std::cout << ": (" << bounds->x1 << "," << bounds->y1 << "," << bounds->x2 << "," << bounds->y2 << ")";
     }
@@ -2486,7 +2487,7 @@ getViewNameNth(OfxImageEffectHandle effect,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewName(" << effect << ", " << view << ", " << *viewName << ")->" << OFX::StatStr(st);
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewName(" << effect << ", " << view << ", " << *viewName << ")->" << StatStr(st);
     std::cout << std::endl;
 
     return st;
@@ -2527,7 +2528,7 @@ getViewCountNth(OfxImageEffectHandle effect,
         throw;
     }
 
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewCount(" << effect << ", " << *nViews << ")->" << OFX::StatStr(st);
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewCount(" << effect << ", " << *nViews << ")->" << StatStr(st);
     std::cout << std::endl;
 
     return st;
@@ -2640,4 +2641,3 @@ OfxGetNumberOfPlugins(void)
 
     return gPluginsNb;
 }
-

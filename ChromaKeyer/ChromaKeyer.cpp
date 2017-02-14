@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,19 +30,20 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
-    typedef OFX::MultiThread::Mutex Mutex;
-    typedef OFX::MultiThread::AutoMutex AutoMutex;
+typedef MultiThread::Mutex Mutex;
+typedef MultiThread::AutoMutex AutoMutex;
 }
 #else
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 // prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
 #include "fast_mutex.h"
 namespace {
-    typedef tthread::fast_mutex Mutex;
-    typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+typedef tthread::fast_mutex Mutex;
+typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 }
 #endif
 
@@ -97,7 +98,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamYPbPrColorspaceOptionRec2020 "Rec. 2020"
 #define kParamYPbPrColorspaceOptionRec2020Hint "Use Rec. 2020 (UltraHD/4K footage)."
 
-enum YPbPrColorspaceEnum {
+enum YPbPrColorspaceEnum
+{
     eYPbPrColorspaceCcir601 = 0,
     eYPbPrColorspaceRec709,
     eYPbPrColorspaceRec2020,
@@ -108,7 +110,7 @@ enum YPbPrColorspaceEnum {
 #define kParamLinear "linearProcessing"
 #define kParamLinearLabel "Linear Processing"
 #define kParamLinearHint \
-"Do not delinearize RGB values to compute the key value."
+    "Do not delinearize RGB values to compute the key value."
 
 #define kParamKeyColor "keyColor"
 #define kParamKeyColorLabel "Key Color"
@@ -182,19 +184,19 @@ enum SourceAlphaEnum
     eSourceAlphaNormal,
 };
 
-static OFX::Color::LutManager<Mutex>* gLutManager;
+static Color::LutManager<Mutex>* gLutManager;
 
 
 class ChromaKeyerProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_bgImg;
-    const OFX::Image *_inMaskImg;
-    const OFX::Image *_outMaskImg;
+    const Image *_srcImg;
+    const Image *_bgImg;
+    const Image *_inMaskImg;
+    const Image *_outMaskImg;
     OfxRGBColourD _keyColor;
-    const OFX::Color::Lut* _lut;
+    const Color::Lut* _lut;
     void (*_to_ypbpr)(float r,
                       float g,
                       float b,
@@ -202,11 +204,11 @@ protected:
                       float *pb,
                       float *pr);
     void (*_to_rgb)(float y,
-                      float pb,
-                      float pr,
-                      float *r,
-                      float *g,
-                      float *b);
+                    float pb,
+                    float pr,
+                    float *r,
+                    float *g,
+                    float *b);
 
     bool _linear;
     double _acceptanceAngle;
@@ -221,8 +223,8 @@ protected:
 
 public:
 
-    ChromaKeyerProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    ChromaKeyerProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _bgImg(0)
         , _inMaskImg(0)
@@ -247,10 +249,10 @@ public:
         _keyColor.r = _keyColor.g = _keyColor.b = 0.;
     }
 
-    void setSrcImgs(const OFX::Image *srcImg,
-                    const OFX::Image *bgImg,
-                    const OFX::Image *inMaskImg,
-                    const OFX::Image *outMaskImg)
+    void setSrcImgs(const Image *srcImg,
+                    const Image *bgImg,
+                    const Image *inMaskImg,
+                    const Image *outMaskImg)
     {
         _srcImg = srcImg;
         _bgImg = bgImg;
@@ -280,26 +282,26 @@ public:
             _lut = NULL;
         } else {
             switch (colorspace) {
-                case eYPbPrColorspaceCcir601:
-                case eYPbPrColorspaceRec709:
-                case eYPbPrColorspaceRec2020:
-                    _lut = gLutManager->Rec709Lut();
-                    break;
+            case eYPbPrColorspaceCcir601:
+            case eYPbPrColorspaceRec709:
+            case eYPbPrColorspaceRec2020:
+                _lut = gLutManager->Rec709Lut();
+                break;
             }
         }
         switch (colorspace) {
-            case eYPbPrColorspaceCcir601:
-                _to_ypbpr = OFX::Color::rgb_to_ypbpr601;
-                _to_rgb = OFX::Color::ypbpr_to_rgb601;
-                break;
-            case eYPbPrColorspaceRec709:
-                _to_ypbpr = OFX::Color::rgb_to_ypbpr709;
-                _to_rgb = OFX::Color::ypbpr_to_rgb709;
-                break;
-            case eYPbPrColorspaceRec2020:
-                _to_ypbpr = OFX::Color::rgb_to_ypbpr2020;
-                _to_rgb = OFX::Color::ypbpr_to_rgb2020;
-                break;
+        case eYPbPrColorspaceCcir601:
+            _to_ypbpr = Color::rgb_to_ypbpr601;
+            _to_rgb = Color::ypbpr_to_rgb601;
+            break;
+        case eYPbPrColorspaceRec709:
+            _to_ypbpr = Color::rgb_to_ypbpr709;
+            _to_rgb = Color::ypbpr_to_rgb709;
+            break;
+        case eYPbPrColorspaceRec2020:
+            _to_ypbpr = Color::rgb_to_ypbpr2020;
+            _to_rgb = Color::ypbpr_to_rgb2020;
+            break;
         }
         assert(_to_rgb && _to_ypbpr);
 
@@ -326,7 +328,7 @@ public:
         if (_suppressionAngle < 180.) {
             _tan__suppressionAngle2 = std::tan( (_suppressionAngle / 2) * M_PI / 180 );
         }
-    }
+    } // setValues
 };
 
 
@@ -374,7 +376,7 @@ class ChromaKeyerProcessor
     : public ChromaKeyerProcessorBase
 {
 public:
-    ChromaKeyerProcessor(OFX::ImageEffect &instance)
+    ChromaKeyerProcessor(ImageEffect &instance)
         : ChromaKeyerProcessorBase(instance)
     {
     }
@@ -629,7 +631,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class ChromaKeyerPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -653,8 +655,8 @@ public:
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _bgClip = fetchClip(kClipBg);
@@ -677,30 +679,30 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(ChromaKeyerProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ChromaKeyerProcessorBase &, const RenderArguments &args);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_bgClip;
-    OFX::Clip *_inMaskClip;
-    OFX::Clip *_outMaskClip;
-    OFX::RGBParam* _keyColor;
-    OFX::ChoiceParam* _colorspace;
-    OFX::BooleanParam* _linear;
-    OFX::DoubleParam* _acceptanceAngle;
-    OFX::DoubleParam* _suppressionAngle;
-    OFX::DoubleParam* _keyLift;
-    OFX::DoubleParam* _keyGain;
-    OFX::ChoiceParam* _outputMode;
-    OFX::ChoiceParam* _sourceAlpha;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_bgClip;
+    Clip *_inMaskClip;
+    Clip *_outMaskClip;
+    RGBParam* _keyColor;
+    ChoiceParam* _colorspace;
+    BooleanParam* _linear;
+    DoubleParam* _acceptanceAngle;
+    DoubleParam* _suppressionAngle;
+    DoubleParam* _keyLift;
+    DoubleParam* _keyGain;
+    ChoiceParam* _outputMode;
+    ChoiceParam* _sourceAlpha;
 };
 
 
@@ -713,78 +715,79 @@ private:
 /* set up and run a processor */
 void
 ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
-                                   const OFX::RenderArguments &args)
+                                   const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
-                                        _bgClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
+                                   _bgClip->fetchImage(time) : 0 );
     if ( src.get() ) {
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        //OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        //PixelComponentEnum srcComponents = src->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // ChromaKeyer outputs RGBA but may have RGB input
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
     if ( bg.get() ) {
-        OFX::BitDepthEnum srcBitDepth      = bg->getPixelDepth();
-        //OFX::PixelComponentEnum srcComponents = bg->getPixelComponents();
+        BitDepthEnum srcBitDepth      = bg->getPixelDepth();
+        //PixelComponentEnum srcComponents = bg->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // ChromaKeyer outputs RGBA but may have RGB input
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
         if ( (bg->getRenderScale().x != args.renderScale.x) ||
              ( bg->getRenderScale().y != args.renderScale.y) ||
-             ( ( bg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( bg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( bg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( bg->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
     // auto ptr for the masks.
-    std::auto_ptr<const OFX::Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
-                                            _inMaskClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
+                                       _inMaskClip->fetchImage(time) : 0 );
     if ( inMask.get() ) {
         if ( (inMask->getRenderScale().x != args.renderScale.x) ||
              ( inMask->getRenderScale().y != args.renderScale.y) ||
-             ( ( inMask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( inMask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( inMask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( inMask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const OFX::Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
-                                             _outMaskClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
+                                        _outMaskClip->fetchImage(time) : 0 );
     if ( outMask.get() ) {
         if ( (outMask->getRenderScale().x != args.renderScale.x) ||
              ( outMask->getRenderScale().y != args.renderScale.y) ||
-             ( ( outMask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( outMask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( outMask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( outMask->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
@@ -808,46 +811,46 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
 
 // the overridden render function
 void
-ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
+ChromaKeyerPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
-    if (dstComponents != OFX::ePixelComponentRGBA) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+    if (dstComponents != ePixelComponentRGBA) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host dit not take into account output components");
+        throwSuiteStatusException(kOfxStatErrImageFormat);
 
         return;
     }
 
     switch (dstBitDepth) {
-    //case OFX::eBitDepthUByte: {
+    //case eBitDepthUByte: {
     //    ChromaKeyerProcessor<unsigned char, 4, 255> fred(*this);
     //    setupAndProcess(fred, args);
     //    break;
     //}
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         ChromaKeyerProcessor<unsigned short, 4, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         ChromaKeyerProcessor<float, 4, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 /* Override the clip preferences */
 void
-ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+ChromaKeyerPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
@@ -868,9 +871,9 @@ ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreference
     // note: ChromaKeyer handles correctly inputs with different components: it only uses RGB components from both clips
 }
 
-mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new OFX::Color::LutManager<Mutex>; }, { delete gLutManager; });
+mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
 void
-ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+ChromaKeyerPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -899,13 +902,14 @@ ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                            OFX::ContextEnum /*context*/)
+ChromaKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                            ContextEnum /*context*/)
 {
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->setHint(kClipSourceHint);
-    srcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
-    srcClip->addSupportedComponent( OFX::ePixelComponentRGB );
+    srcClip->addSupportedComponent( ePixelComponentRGBA );
+    srcClip->addSupportedComponent( ePixelComponentRGB );
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(false);
@@ -930,8 +934,8 @@ ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     ClipDescriptor* bgClip = desc.defineClip(kClipBg);
     bgClip->setHint(kClipBgHint);
-    bgClip->addSupportedComponent( OFX::ePixelComponentRGBA );
-    bgClip->addSupportedComponent( OFX::ePixelComponentRGB );
+    bgClip->addSupportedComponent( ePixelComponentRGBA );
+    bgClip->addSupportedComponent( ePixelComponentRGB );
     bgClip->setTemporalClipAccess(false);
     bgClip->setSupportsTiles(kSupportsTiles);
     bgClip->setOptional(true);
@@ -1091,9 +1095,9 @@ ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // ChromaKeyerPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 ChromaKeyerPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                         OFX::ContextEnum /*context*/)
+                                         ContextEnum /*context*/)
 {
     return new ChromaKeyerPlugin(handle);
 }

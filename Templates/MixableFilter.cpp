@@ -84,10 +84,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 using namespace OFX;
 
 class MixableFilterProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
+    const Image *_srcImg;
     bool _premult;
     int _premultChannel;
     double _mix;
@@ -95,9 +95,9 @@ protected:
     // TODO: add plugin parameter values
 
 public:
-    MixableFilterProcessorBase(OFX::ImageEffect &instance,
-                                const OFX::RenderArguments & /*args*/)
-        : OFX::ImageProcessor(instance)
+    MixableFilterProcessorBase(ImageEffect &instance,
+                               const RenderArguments & /*args*/)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _premult(false)
         , _premultChannel(3)
@@ -110,7 +110,7 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
     void setValues(bool premult,
                    int premultChannel,
@@ -139,8 +139,8 @@ class MixableFilterProcessor
     : public MixableFilterProcessorBase
 {
 public:
-    MixableFilterProcessor(OFX::ImageEffect &instance,
-                            const OFX::RenderArguments &args)
+    MixableFilterProcessor(ImageEffect &instance,
+                           const RenderArguments &args)
         : MixableFilterProcessorBase(instance, args)
     {
         //const double time = args.time;
@@ -277,13 +277,13 @@ private:
                 dstPix += nComponents;
             }
         }
-    }
+    } // process
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class MixableFilterPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
 
@@ -304,8 +304,8 @@ public:
         assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
@@ -327,16 +327,16 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template<int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args);
+    void renderForComponents(const RenderArguments &args);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const OFX::RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args);
 
     /* set up and run a processor */
-    void setupAndProcess(MixableFilterProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(MixableFilterProcessorBase &, const RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
@@ -345,15 +345,15 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
+    Clip *_dstClip;
+    Clip *_srcClip;
     BooleanParam* _processR;
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    DoubleParam* _mix;
 };
 
 
@@ -366,40 +366,41 @@ private:
 /* set up and run a processor */
 void
 MixableFilterPlugin::setupAndProcess(MixableFilterProcessorBase &processor,
-                                      const OFX::RenderArguments &args)
+                                     const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -429,32 +430,32 @@ MixableFilterPlugin::setupAndProcess(MixableFilterProcessorBase &processor,
 
 // the overridden render function
 void
-MixableFilterPlugin::render(const OFX::RenderArguments &args)
+MixableFilterPlugin::render(const RenderArguments &args)
 {
     //std::cout << "render!\n";
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
     // do the rendering
     switch (dstComponents) {
-    case OFX::ePixelComponentRGBA:
+    case ePixelComponentRGBA:
         renderForComponents<4>(args);
         break;
-    case OFX::ePixelComponentRGB:
+    case ePixelComponentRGB:
         renderForComponents<3>(args);
         break;
-    case OFX::ePixelComponentXY:
+    case ePixelComponentXY:
         renderForComponents<2>(args);
         break;
-    case OFX::ePixelComponentAlpha:
+    case ePixelComponentAlpha:
         renderForComponents<1>(args);
         break;
     default:
         //std::cout << "components usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
       //std::cout << "render! OK\n";
@@ -462,31 +463,31 @@ MixableFilterPlugin::render(const OFX::RenderArguments &args)
 
 template<int nComponents>
 void
-MixableFilterPlugin::renderForComponents(const OFX::RenderArguments &args)
+MixableFilterPlugin::renderForComponents(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
         renderForBitDepth<unsigned char, nComponents, 255>(args);
         break;
 
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
         renderForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
 
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
         //std::cout << "depth usupported\n";
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 template <class PIX, int nComponents, int maxValue>
 void
-MixableFilterPlugin::renderForBitDepth(const OFX::RenderArguments &args)
+MixableFilterPlugin::renderForBitDepth(const RenderArguments &args)
 {
     MixableFilterProcessor<PIX, nComponents, maxValue> fred(*this, args);
     setupAndProcess(fred, args);
@@ -494,8 +495,8 @@ MixableFilterPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 
 bool
 MixableFilterPlugin::isIdentity(const IsIdentityArguments &args,
-                                 Clip * &identityClip,
-                                 double & /*identityTime*/)
+                                Clip * &identityClip,
+                                double & /*identityTime*/)
 {
     //std::cout << "isIdentity!\n";
     const double time = args.time;
@@ -538,10 +539,10 @@ MixableFilterPlugin::isIdentity(const IsIdentityArguments &args,
 
 void
 MixableFilterPlugin::changedClip(const InstanceChangedArgs &args,
-                                  const std::string &clipName)
+                                 const std::string &clipName)
 {
     //std::cout << "changedClip!\n";
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && _srcClip && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && _srcClip && (args.reason == eChangeUserEdit) ) {
         switch ( _srcClip->getPreMultiplication() ) {
         case eImageOpaque:
             _premult->setValue(false);
@@ -557,9 +558,9 @@ MixableFilterPlugin::changedClip(const InstanceChangedArgs &args,
     //std::cout << "changedClip OK!\n";
 }
 
-mDeclarePluginFactory(MixableFilterPluginFactory, {}, {});
+mDeclarePluginFactory(MixableFilterPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-MixableFilterPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+MixableFilterPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
     // basic labels
@@ -586,14 +587,14 @@ MixableFilterPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
     //std::cout << "describe! OK\n";
 }
 
 void
-MixableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                               OFX::ContextEnum context)
+MixableFilterPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                              ContextEnum context)
 {
     //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
@@ -620,7 +621,7 @@ MixableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -630,7 +631,7 @@ MixableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -640,7 +641,7 @@ MixableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -650,7 +651,7 @@ MixableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
@@ -667,9 +668,9 @@ MixableFilterPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //std::cout << "describeInContext! OK\n";
 } // MixableFilterPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 MixableFilterPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                            OFX::ContextEnum /*context*/)
+                                           ContextEnum /*context*/)
 {
     return new MixableFilterPlugin(handle);
 }

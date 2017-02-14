@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ColorWheelOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a color wheel.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
+    "\n" \
+    "The color wheel occupies the full area, minus a one-pixel black and transparent border\n" \
+    "\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 #define kPluginIdentifier "net.sf.openfx.ColorWheel"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -95,7 +98,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 
 class ColorWheelProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
     double _centerSaturation;
@@ -109,8 +112,8 @@ protected:
 
 public:
     /** @brief no arg ctor */
-    ColorWheelProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    ColorWheelProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _centerSaturation(0)
         , _edgeSaturation(0)
         , _centerValue(0)
@@ -149,7 +152,7 @@ class ColorWheelProcessor
 {
 public:
     // ctor
-    ColorWheelProcessor(OFX::ImageEffect &instance)
+    ColorWheelProcessor(ImageEffect &instance)
         : ColorWheelProcessorBase(instance)
     {
     }
@@ -192,16 +195,16 @@ private:
                 // don't delinearize alpha: it is always linear
                 for (int c = 0; c < 3; ++c) {
                     if (max == 255) {
-                        colorf[c] = OFX::Color::to_func_srgb(colorf[c]);
+                        colorf[c] = Color::to_func_srgb(colorf[c]);
                     } else {
                         assert(max == 65535);
-                        colorf[c] = OFX::Color::to_func_Rec709(colorf[c]);
+                        colorf[c] = Color::to_func_Rec709(colorf[c]);
                     }
                 }
             }
             // clamp and convert to the destination type
             for (int c = 0; c < nComponents; ++c) {
-                colorPix[c] = OFX::Color::floatToInt<max + 1>(colorf[c]);
+                colorPix[c] = Color::floatToInt<max + 1>(colorf[c]);
             }
         }
     }
@@ -209,8 +212,14 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        OfxPointD renderScale = _dstImg->getRenderScale();
+        OfxPointD rs = _dstImg->getRenderScale();
         double par = _dstImg->getPixelAspectRatio();
+        OfxPointD c; // center position in pixel
+
+        Coords::toPixelSub(_center, rs, par, &c);
+        OfxPointD r; // radius in pixel
+        r.x = _radius * rs.x / par;
+        r.y = _radius * rs.y;
 
         // push pixels
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -221,43 +230,102 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                OfxPointI p_pixel = {x, y};
-                OfxPointD p_canonical;
-                OFX::Coords::toCanonical(p_pixel, renderScale, par, &p_canonical);
-                double r2 = ( (p_canonical.x - _center.x) * (p_canonical.x - _center.x) +
-                              (p_canonical.y - _center.y) * (p_canonical.y - _center.y) );
-                if (r2 > _radius * _radius) {
+                double dx = (x - c.x) / r.x;
+                double dy = (y - c.y) / r.y;
+
+                // approximate subpixel rendering of the disc:
+                // - test the pixel corner closer to the center. if it is outside, the pixel is fully outside
+                // - test the pixel corner farther to the center. if it is inside, the pixel is fully outside
+                // - else the pixel is mixed, and its value is (color0*abs(sqrt(dsq_farther)-1)+color1_smoothed*abs(sqrt(dsq_closer)-1))/(sqrt(dsq_farther)+sqrt(dsq_closer))
+                OfxPointD p_closer = {(double)x, (double)y};
+                OfxPointD p_farther = {(double)x, (double)y};
+
+                if (x <= c.x - 0.5) {
+                    p_closer.x += 0.5;
+                    p_farther.x -= 0.5;
+                } else if (x >= c.x + 0.5) {
+                    p_closer.x -= 0.5;
+                    p_farther.x += 0.5;
+                }
+                if (y <= c.y - 0.5) {
+                    p_closer.y += 0.5;
+                    p_farther.y -= 0.5;
+                } else if (y >= c.y + 0.5) {
+                    p_closer.y -= 0.5;
+                    p_farther.y += 0.5;
+                }
+                double dx_closer = (p_closer.x - c.x) / r.x;
+                double dy_closer = (p_closer.y - c.y) / r.y;
+                double dx_farther = (p_farther.x - c.x) / r.x;
+                double dy_farther = (p_farther.y - c.y) / r.y;
+
+                if ( (dx_closer >= 1) || (dy_closer >= 1) ) {
+                    // outside
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = 0;
                     }
                 } else {
-                    // hue in [0..1]
-                    double r1 = std::sqrt(r2);
-                    double hue = r1 > 0. ? OFXS_HUE_CIRCLE * std::acos( std::max( -1., std::min( (p_canonical.x - _center.x) / r1, 1. ) ) ) / (2 * M_PI) : 0.;
-                    assert(hue == hue);
-                    if (p_canonical.y > _center.y) {
-                        hue = OFXS_HUE_CIRCLE - hue;
+                    // maybe inside
+
+                    double dsq = dx * dx + dy * dy;
+                    double dsq_closer = dx_closer * dx_closer + dy_closer * dy_closer;
+                    double dsq_farther = dx_farther * dx_farther + dy_farther * dy_farther;
+                    assert(dsq_closer <= dsq_farther);
+                    if (dsq_closer > dsq_farther) {
+                        // protect against bug
+                        std::swap(dsq_closer, dsq_farther);
                     }
-                    hue += _rotate / 360;
-                    hue = hue - std::floor(hue / OFXS_HUE_CIRCLE) * OFXS_HUE_CIRCLE;
-                    assert(hue >= 0. && hue <= OFXS_HUE_CIRCLE);
-                    double a = r1 / _radius;
-                    double saturation = _centerSaturation + a * (_edgeSaturation - _centerSaturation);
-                    double value = _centerValue + a * (_edgeValue - _centerValue);
-                    float r, g, b;
-                    //r = hue; g = saturation; b = value;
-                    OFX::Color::hsv_to_rgb(hue, saturation, value, &r, &g, &b);
-                    OfxRGBAColourD color = {r, g, b, 1.};
-                    if (_gamma <= 0.) {
-                        color.r = color.r >= 1. ? 1 : 0.;
-                        color.g = color.g >= 1. ? 1 : 0.;
-                        color.b = color.b >= 1. ? 1 : 0.;
-                    } else if (_gamma != 1.) {
-                        color.r = std::pow(color.r, 1. / _gamma);
-                        color.g = std::pow(color.g, 1. / _gamma);
-                        color.b = std::pow(color.b, 1. / _gamma);
+                    if (dsq_closer >= 1) {
+                        // fully outside
+                        for (int c = 0; c < nComponents; ++c) {
+                            dstPix[c] = 0;
+                        }
+                    } else {
+                        // fully inside or mixed pixel (partly inside / partly outside)
+
+                        // hue in [0..1]
+                        double d = std::sqrt(dsq);
+                        double hue = d > 0. ? OFXS_HUE_CIRCLE * std::acos( std::max( -1., std::min( dx / d, 1. ) ) ) / (2 * M_PI) : 0.;
+                        assert(hue == hue);
+                        if (dy > 0) {
+                            hue = OFXS_HUE_CIRCLE - hue;
+                        }
+                        hue += _rotate / 360;
+                        hue = hue - std::floor(hue / OFXS_HUE_CIRCLE) * OFXS_HUE_CIRCLE;
+                        assert(hue >= 0. && hue <= OFXS_HUE_CIRCLE);
+                        double saturation = _centerSaturation + d * (_edgeSaturation - _centerSaturation);
+                        double value = _centerValue + d * (_edgeValue - _centerValue);
+                        float r, g, b;
+                        //r = hue; g = saturation; b = value;
+                        Color::hsv_to_rgb(hue, saturation, value, &r, &g, &b);
+                        OfxRGBAColourD color = {r, g, b, 1.};
+                        if (_gamma <= 0.) {
+                            color.r = color.r >= 1. ? 1 : 0.;
+                            color.g = color.g >= 1. ? 1 : 0.;
+                            color.b = color.b >= 1. ? 1 : 0.;
+                        } else if (_gamma != 1.) {
+                            if (color.r > 0.) {
+                                color.r = std::pow(color.r, 1. / _gamma);
+                            }
+                            if (color.g > 0.) {
+                                color.g = std::pow(color.g, 1. / _gamma);
+                            }
+                            if (color.b > 0.) {
+                                color.b = std::pow(color.b, 1. / _gamma);
+                            }
+                        }
+                        colorToPIX(color, dstPix);
+
+                        if (dsq_farther > 1) {
+                            // mixed pixel, partly inside / partly outside
+                            assert(dsq_closer < 1 && dsq_farther > 1);
+                            // now mix with the outside pix;
+                            float a = ( 1 - std::sqrt(dsq_closer) ) / ( std::sqrt(dsq_farther) - std::sqrt(dsq_closer) );
+                            for (int c = 0; c < nComponents; ++c) {
+                                dstPix[c] *= a;
+                            }
+                        }
                     }
-                    colorToPIX(color, dstPix);
                 }
                 dstPix += nComponents;
             }
@@ -282,10 +350,10 @@ public:
         , _rotate(0)
     {
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentXY ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
+        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentXY ||
+                             _srcClip->getPixelComponents() == ePixelComponentAlpha) );
         _centerSaturation = fetchDoubleParam(kParamCenterSaturation);
         _edgeSaturation = fetchDoubleParam(kParamEdgeSaturation);
         _centerValue = fetchDoubleParam(kParamCenterValue);
@@ -297,16 +365,14 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(ColorWheelProcessorBase &, const OFX::RenderArguments &args);
-
-    //virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
-
+    void setupAndProcess(ColorWheelProcessorBase &, const RenderArguments &args);
 
 private:
     DoubleParam* _centerSaturation;
@@ -329,27 +395,28 @@ private:
 /* set up and run a processor */
 void
 ColorWheelPlugin::setupAndProcess(ColorWheelProcessorBase &processor,
-                                  const OFX::RenderArguments &args)
+                                  const RenderArguments &args)
 {
     const double time = args.time;
+
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(time) );
+    std::auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // set the images
@@ -379,9 +446,11 @@ ColorWheelPlugin::setupAndProcess(ColorWheelProcessorBase &processor,
             rod.y2 = off.y + siz.y;
         }
     }
-    center.x = (rod.x2 - rod.x1) / 2;
-    center.y = (rod.y2 - rod.y1) / 2;
-    radius = std::min( (rod.x2 - rod.x1) / 2, (rod.y2 - rod.y1) / 2 );
+    center.x = (rod.x2 + rod.x1) / 2;
+    center.y = (rod.y2 + rod.y1) / 2;
+    // radius: always leave one black pixel on each side
+    double par = _dstClip->getPixelAspectRatio();
+    radius = std::min( (rod.x2 - rod.x1) / 2 - par / args.renderScale.x, (rod.y2 - rod.y1) / 2 - 1 / args.renderScale.y );
     processor.setValues(centerSaturation, edgeSaturation, centerValue, edgeValue, gamma, rotate, center, radius);
 
     // Call the base class process member, this will call the derived templated process code
@@ -391,66 +460,65 @@ ColorWheelPlugin::setupAndProcess(ColorWheelProcessorBase &processor,
 // the internal render function
 template <int nComponents>
 void
-ColorWheelPlugin::renderInternal(const OFX::RenderArguments &args,
-                                 OFX::BitDepthEnum dstBitDepth)
+ColorWheelPlugin::renderInternal(const RenderArguments &args,
+                                 BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         ColorWheelProcessor<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         ColorWheelProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         ColorWheelProcessor<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-ColorWheelPlugin::render(const OFX::RenderArguments &args)
+ColorWheelPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
 
     checkComponents(dstBitDepth, dstComponents);
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
 
-//void
-//ColorWheelPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
-//{
-//    GeneratorPlugin::getClipPreferences(clipPreferences);
-//    clipPreferences.setOutputPremultiplication(OFX::eImagePreMultiplied);
-//}
-
-
-mDeclarePluginFactory(ColorWheelPluginFactory, {}, {});
 void
-ColorWheelPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+ColorWheelPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    GeneratorPlugin::getClipPreferences(clipPreferences);
+    clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
+}
+
+mDeclarePluginFactory(ColorWheelPluginFactory, {ofxsThreadSuiteCheck();}, {});
+void
+ColorWheelPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginDescription(kPluginDescription);
@@ -486,7 +554,7 @@ ColorWheelPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-ColorWheelPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+ColorWheelPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                            ContextEnum context)
 {
     // there has to be an input clip, even for generators

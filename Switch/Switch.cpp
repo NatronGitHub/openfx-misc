@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "error in one of the FrameRange ranges (a typical error is to use the same frame number as the " \
     "last frame of shot n and the first frame of shot n+1).\n" \
     "This plugin concatenates transforms.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Switch"
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Switch"
 
 #define kPluginIdentifier "net.sf.openfx.switchPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -103,7 +103,7 @@ unsignedToString(unsigned i)
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class SwitchPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -111,26 +111,26 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
-    virtual bool getTransform(const OFX::TransformArguments & args, OFX::Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
+    virtual bool getTransform(const TransformArguments & args, Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
 #endif
 
     /** @brief get the clip preferences */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
 
@@ -154,7 +154,7 @@ private:
         for (i = 0; i < _srcClip.size(); ++i) {
             if ( _srcClip[i] && _srcClip[i]->isConnected() ) {
                 OfxRectD rod = _srcClip[i]->getRegionOfDefinition(time);
-                if ( !OFX::Coords::rectIsEmpty(rod) ) {
+                if ( !Coords::rectIsEmpty(rod) ) {
                     return (int)i;
                 }
             }
@@ -164,10 +164,10 @@ private:
     }
 
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip* _dstClip;
-    std::vector<OFX::Clip *> _srcClip;
-    OFX::IntParam *_which;
-    OFX::BooleanParam* _automatic;
+    Clip* _dstClip;
+    std::vector<Clip *> _srcClip;
+    IntParam *_which;
+    BooleanParam* _automatic;
 };
 
 SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle,
@@ -179,9 +179,9 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle,
     , _automatic(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-    assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
+    assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if ( (getContext() == OFX::eContextFilter) && (i == 0) ) {
+        if ( (getContext() == eContextFilter) && (i == 0) ) {
             _srcClip[i] = fetchClip(kOfxImageEffectSimpleSourceClipName);
         } else {
             _srcClip[i] = fetchClip( unsignedToString(i) );
@@ -197,7 +197,7 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle,
 }
 
 void
-SwitchPlugin::render(const OFX::RenderArguments &args)
+SwitchPlugin::render(const RenderArguments &args)
 {
     // do nothing as this should never be called as isIdentity should always be trapped
     assert(false);
@@ -212,35 +212,35 @@ SwitchPlugin::render(const OFX::RenderArguments &args)
         input = _which->getValueAtTime(time);
         input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
     }
-    OFX::Clip *srcClip = _srcClip[input];
+    Clip *srcClip = _srcClip[input];
     assert( kSupportsMultipleClipPARs   || !srcClip || srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !srcClip || srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src( ( srcClip && srcClip->isConnected() ) ?
-                                         srcClip->fetchImage(time) : 0 );
+    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    std::auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
+                                    srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     copyPixels( *this, args.renderWindow, src.get(), dst.get() );
@@ -248,8 +248,8 @@ SwitchPlugin::render(const OFX::RenderArguments &args)
 
 // overridden is identity
 bool
-SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                         OFX::Clip * &identityClip,
+SwitchPlugin::isIdentity(const IsIdentityArguments &args,
+                         Clip * &identityClip,
                          double & /*identityTime*/)
 {
     const double time = args.time;
@@ -270,8 +270,8 @@ SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-SwitchPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                   OFX::RegionOfInterestSetter &rois)
+SwitchPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                   RegionOfInterestSetter &rois)
 {
     // this should never be called as isIdentity should always be trapped
     assert(false);
@@ -292,7 +292,7 @@ SwitchPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
 }
 
 bool
-SwitchPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+SwitchPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                     OfxRectD &rod)
 {
     const double time = args.time;
@@ -316,8 +316,8 @@ SwitchPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
 #ifdef OFX_EXTENSIONS_NUKE
 // overridden getTransform
 bool
-SwitchPlugin::getTransform(const OFX::TransformArguments &args,
-                           OFX::Clip * &transformClip,
+SwitchPlugin::getTransform(const TransformArguments &args,
+                           Clip * &transformClip,
                            double transformMatrix[9])
 {
     const double time = args.time;
@@ -348,31 +348,31 @@ SwitchPlugin::getTransform(const OFX::TransformArguments &args,
 
 /* Override the clip preferences */
 void
-SwitchPlugin::getClipPreferences(OFX::ClipPreferencesSetter & /*clipPreferences*/)
+SwitchPlugin::getClipPreferences(ClipPreferencesSetter & /*clipPreferences*/)
 {
     updateRange();
     // note: Switch handles correctly inputs with different components
 }
 
 void
-SwitchPlugin::changedClip(const OFX::InstanceChangedArgs & /*args*/,
+SwitchPlugin::changedClip(const InstanceChangedArgs & /*args*/,
                           const std::string & /*clipName*/)
 {
     updateRange();
 }
 
 void
-SwitchPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+SwitchPlugin::changedParam(const InstanceChangedArgs &args,
                            const std::string &paramName)
 {
-    if ( (paramName == kParamAutomatic) && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (paramName == kParamAutomatic) && (args.reason == eChangeUserEdit) ) {
         _which->setEnabled( !_automatic->getValueAtTime(args.time) );
     }
 }
 
-mDeclarePluginFactory(SwitchPluginFactory, {}, {});
+mDeclarePluginFactory(SwitchPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+SwitchPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -417,13 +417,13 @@ SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                       OFX::ContextEnum context)
+SwitchPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                       ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
-                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
+    bool numerousInputs =  (getImageEffectHostDescription()->isNatron &&
+                            getImageEffectHostDescription()->versionMajor >= 2);
     unsigned clipSourceCount = numerousInputs ? kClipSourceCountNumerous : kClipSourceCount;
 
     // Source clip only in the filter context
@@ -514,14 +514,14 @@ SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #endif
 } // SwitchPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 SwitchPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                    OFX::ContextEnum /*context*/)
+                                    ContextEnum /*context*/)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
-                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
+    bool numerousInputs =  (getImageEffectHostDescription()->isNatron &&
+                            getImageEffectHostDescription()->versionMajor >= 2);
 
     return new SwitchPlugin(handle, numerousInputs);
 }

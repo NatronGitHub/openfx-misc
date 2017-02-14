@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
@@ -55,14 +56,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Radial ramp.\n" \
     "The ramp is composited with the source image using the 'over' operator.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Radial"
+    "\n" \
+    "If no source is connected, this effect behaves like a generator. Its region of definition is:\n" \
+    "- The selected format if the Extent parameter is a format.\n" \
+    "- The project output format if Color0 is not black and transparent.\n" \
+    "- The selected extent plus a one-pixel border if Color0 is black and transparent.\n" \
+    "\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Radial"
 
 #define kPluginIdentifier "net.sf.openfx.Radial"
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: antialiased render
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -105,7 +113,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #endif
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
-#define kParamSoftnessHint "Softness of the radial ramp. 0 is a hard edge."
+#define kParamSoftnessHint "Softness of the radial ramp. Draws an anti-aliased disc or ellipse if zero."
 
 #define kParamPLinear "plinear"
 #define kParamPLinearLabel "Perceptually Linear"
@@ -119,7 +127,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
-#define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0.a=0)."
+#define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0=(0,0,0,0))."
 
 
 struct RGBAValues
@@ -145,11 +153,11 @@ rampSmooth(double t)
 }
 
 class RadialProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_maskImg;
+    const Image *_srcImg;
+    const Image *_maskImg;
     bool _doMasking;
     double _mix;
     bool _maskInvert;
@@ -160,8 +168,8 @@ protected:
     RGBAValues _color0, _color1;
 
 public:
-    RadialProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    RadialProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _doMasking(false)
@@ -180,12 +188,12 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v)
+    void setSrcImg(const Image *v)
     {
         _srcImg = v;
     }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert)
     {
         _maskImg = v;
@@ -229,7 +237,7 @@ class RadialProcessor
     : public RadialProcessorBase
 {
 public:
-    RadialProcessor(OFX::ImageEffect &instance)
+    RadialProcessor(ImageEffect &instance)
         : RadialProcessorBase(instance)
     {
     }
@@ -315,6 +323,18 @@ private:
         assert( !processA || (nComponents == 1 || nComponents == 4) );
 
         float tmpPix[4];
+        OfxPointD rs = _dstImg->getRenderScale();
+        double par = _dstImg->getPixelAspectRatio();
+
+        // center of the ellipse
+        OfxPointD c_canonical = { ( _btmLeft.x + (_btmLeft.x + _size.x) ) / 2, ( _btmLeft.y + (_btmLeft.y + _size.y) ) / 2 };
+        // radius of the ellipse
+        OfxPointD r_canonical = { _size.x / 2, _size.y / 2 };
+        OfxPointD c; // center position in pixel
+        Coords::toPixelSub(c_canonical, rs, par, &c);
+        OfxPointD r; // radius in pixel
+        r.x = r_canonical.x * rs.x / par;
+        r.y = r_canonical.y * rs.y;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -325,50 +345,102 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                OfxPointI p_pixel;
-                OfxPointD p;
-                p_pixel.x = x;
-                p_pixel.y = y;
-                OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
-                double dx = (p.x - ( _btmLeft.x + (_btmLeft.x + _size.x) ) / 2) / (_size.x / 2);
-                double dy = (p.y - ( _btmLeft.y + (_btmLeft.y + _size.y) ) / 2) / (_size.y / 2);
 
-                if ( (dx >= 1) || (dy >= 1) ) {
+                // approximate subpixel rendering of the disc:
+                // - test the pixel corner closer to the center. if it is outside, the pixel is fully outside
+                // - test the pixel corner farther to the center. if it is inside, the pixel is fully outside
+                // - else the pixel is mixed, and its value is (color0*abs(sqrt(dsq_farther)-1)+color1_smoothed*abs(sqrt(dsq_closer)-1))/(sqrt(dsq_farther)+sqrt(dsq_closer))
+                OfxPointD p_closer = {(double)x, (double)y};
+                OfxPointD p_farther = {(double)x, (double)y};
+
+                if (x <= c.x - 0.5) {
+                    p_closer.x += 0.5;
+                    p_farther.x -= 0.5;
+                } else if (x >= c.x + 0.5) {
+                    p_closer.x -= 0.5;
+                    p_farther.x += 0.5;
+                }
+                if (y <= c.y - 0.5) {
+                    p_closer.y += 0.5;
+                    p_farther.y -= 0.5;
+                } else if (y >= c.y + 0.5) {
+                    p_closer.y -= 0.5;
+                    p_farther.y += 0.5;
+                }
+                double dx_closer = (p_closer.x - c.x) / r.x;
+                double dy_closer = (p_closer.y - c.y) / r.y;
+                double dx_farther = (p_farther.x - c.x) / r.x;
+                double dy_farther = (p_farther.y - c.y) / r.y;
+
+
+                if ( (dx_closer >= 1) || (dy_closer >= 1) ) {
+                    // outside
                     tmpPix[0] = (float)_color0.r;
                     tmpPix[1] = (float)_color0.g;
                     tmpPix[2] = (float)_color0.b;
                     tmpPix[3] = (float)_color0.a;
                 } else {
-                    double dsq = dx * dx + dy * dy;
+                    // maybe inside
 
-                    if (dsq >= 1) {
+                    //double dsq = dx * dx + dy * dy;
+                    double dsq_closer = dx_closer * dx_closer + dy_closer * dy_closer;
+                    double dsq_farther = dx_farther * dx_farther + dy_farther * dy_farther;
+                    assert(dsq_closer <= dsq_farther);
+                    if (dsq_closer > dsq_farther) {
+                        // protect against bug
+                        std::swap(dsq_closer, dsq_farther);
+                    }
+                    if (dsq_closer >= 1) {
+                        // fully outside
                         tmpPix[0] = (float)_color0.r;
                         tmpPix[1] = (float)_color0.g;
                         tmpPix[2] = (float)_color0.b;
                         tmpPix[3] = (float)_color0.a;
-                    } else if ( (dsq <= 0) || (_softness == 0) ) {
-                        tmpPix[0] = (float)_color1.r;
-                        tmpPix[1] = (float)_color1.g;
-                        tmpPix[2] = (float)_color1.b;
-                        tmpPix[3] = (float)_color1.a;
                     } else {
-                        float t = ( 1.f - (float)std::sqrt(dsq) ) / (float)_softness;
-                        if (t >= 1) {
+                        // always consider the value closest top the center to avoid discontinuities/artifacts
+                        if ( (dsq_closer <= 0) || (_softness == 0) ) {
+                            // solid color
                             tmpPix[0] = (float)_color1.r;
                             tmpPix[1] = (float)_color1.g;
                             tmpPix[2] = (float)_color1.b;
                             tmpPix[3] = (float)_color1.a;
                         } else {
-                            t = (float)rampSmooth(t);
+                            // mixed
+                            float t = ( 1.f - (float)std::sqrt( std::max(dsq_closer, 0.) ) ) / (float)_softness;
+                            if (t >= 1) {
+                                tmpPix[0] = (float)_color1.r;
+                                tmpPix[1] = (float)_color1.g;
+                                tmpPix[2] = (float)_color1.b;
+                                tmpPix[3] = (float)_color1.a;
+                            } else {
+                                t = (float)rampSmooth(t);
 
-                            if (_plinear) {
-                                // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
-                                t = t * t * t;
+                                if (_plinear) {
+                                    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                                    t = t * t * t;
+                                }
+                                tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                                tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                                tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                                tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
                             }
-                            tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
-                            tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
-                            tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
-                            tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                        }
+                        float a;
+                        if (dsq_farther <= 1) {
+                            // fully inside
+                            a = 1.;
+                        } else {
+                            // mixed pixel, partly inside / partly outside, center of pixel is outside
+                            assert(dsq_closer < 1 && dsq_farther > 1);
+                            // now mix with the outside pix;
+                            a = ( 1 - std::sqrt( std::max(dsq_closer, 0.) ) ) / ( std::sqrt( std::max(dsq_farther, 0.) ) - std::sqrt( std::max(dsq_closer, 0.) ) );
+                        }
+                        assert(a >= 0. && a <= 1.);
+                        if (a != 1.) {
+                            tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
+                            tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
+                            tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
+                            tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
                         }
                     }
                 }
@@ -435,13 +507,13 @@ public:
         , _color1(0)
         , _expandRoD(0)
     {
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentXY ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
@@ -463,23 +535,23 @@ public:
 
 private:
     /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /* Override the clip preferences */
-    void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(RadialProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(RadialProcessorBase &, const RenderArguments &args);
 
-    virtual OFX::Clip* getSrcClip() const OVERRIDE FINAL
+    virtual Clip* getSrcClip() const OVERRIDE FINAL
     {
         return _srcClip;
     }
@@ -498,9 +570,9 @@ private:
     RGBAParam* _color0;
     RGBAParam* _color1;
     BooleanParam* _expandRoD;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -512,68 +584,68 @@ private:
 /* set up and run a processor */
 void
 RadialPlugin::setupAndProcess(RadialProcessorBase &processor,
-                              const OFX::RenderArguments &args)
+                              const RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    const double time = args.time;
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    const double time = args.time;
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
                  ( mask->getRenderScale().y != args.renderScale.y) ||
-                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                throwSuiteStatusException(kOfxStatFailed);
             }
         }
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
     if ( src.get() && dst.get() ) {
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -599,23 +671,17 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor,
             size.y = rod.y2 - rod.y1;
         }
     }
-    double softness;
-    _softness->getValueAtTime(args.time, softness);
-    bool plinear;
-    _plinear->getValueAtTime(args.time, plinear);
-
+    double softness = _softness->getValueAtTime(time);
+    bool plinear = _plinear->getValueAtTime(time);
     RGBAValues color0, color1;
-    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
+    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
+    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
 
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
-
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    bool processR = _processR->getValueAtTime(time);
+    bool processG = _processG->getValueAtTime(time);
+    bool processB = _processB->getValueAtTime(time);
+    bool processA = _processA->getValueAtTime(time);
+    double mix = _mix->getValueAtTime(time);
 
     processor.setValues(btmLeft, size,
                         softness, plinear,
@@ -629,56 +695,56 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor,
 // the internal render function
 template <int nComponents>
 void
-RadialPlugin::renderInternal(const OFX::RenderArguments &args,
-                             OFX::BitDepthEnum dstBitDepth)
+RadialPlugin::renderInternal(const RenderArguments &args,
+                             BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         RadialProcessor<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         RadialProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         RadialProcessor<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-RadialPlugin::render(const OFX::RenderArguments &args)
+RadialPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
 
 bool
-RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                         OFX::Clip * &identityClip,
+RadialPlugin::isIdentity(const IsIdentityArguments &args,
+                         Clip * &identityClip,
                          double &identityTime)
 {
     if ( GeneratorPlugin::isIdentity(args, identityClip, identityTime) ) {
@@ -688,9 +754,8 @@ RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     if (!_srcClip) {
         return false;
     }
-
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    const double time = args.time;
+    double mix = _mix->getValueAtTime(time);
 
     if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = _srcClip;
@@ -699,14 +764,10 @@ RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     {
-        bool processR;
-        bool processG;
-        bool processB;
-        bool processA;
-        _processR->getValueAtTime(args.time, processR);
-        _processG->getValueAtTime(args.time, processG);
-        _processB->getValueAtTime(args.time, processB);
-        _processA->getValueAtTime(args.time, processA);
+        bool processR = _processR->getValueAtTime(time);
+        bool processG = _processG->getValueAtTime(time);
+        bool processB = _processB->getValueAtTime(time);
+        bool processA = _processA->getValueAtTime(time);
         if (!processR && !processG && !processB && !processA) {
             identityClip = _srcClip;
 
@@ -715,26 +776,26 @@ RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     RGBAValues color0, color1;
-    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
-    if ( (color0.a == 0.) && (color1.a == 0.) ) {
+    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
+    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
+    if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
+         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         identityClip = _srcClip;
 
         return true;
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
+            if (getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
 
                     return true;
@@ -746,11 +807,9 @@ RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     return false;
 } // RadialPlugin::isIdentity
 
-
-
 /* Override the clip preferences */
 void
-RadialPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+RadialPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     if (_srcClip) {
         // set the premultiplication of _dstClip if alpha is affected and source is Opaque
@@ -768,12 +827,12 @@ RadialPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 }
 
 bool
-RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                     OfxRectD &rod)
 {
-    double mix;
+    const double time = args.time;
+    double mix = _mix->getValueAtTime(time);
 
-    _mix->getValueAtTime(args.time, mix);
     if (mix == 0.) {
         if ( _srcClip && _srcClip->isConnected() ) {
             // nothing to draw: return default region of definition
@@ -786,8 +845,10 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
         }
     }
     RGBAValues color0;
-    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
-    if (color0.a != 0.) {
+    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
+    GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+    if ( (extent != eGeneratorExtentFormat) &&
+         ( (color0.r != 0.) || (color0.g != 0.) || (color0.b != 0.) || (color0.a != 0.) ) ) {
         // something has to be drawn outside of the rectangle
 
         // return default RoD.
@@ -798,8 +859,8 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
         //rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
     }
     RGBAValues color1;
-    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
-    if (color1.a == 0.) {
+    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
+    if ( (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         if ( _srcClip->isConnected() ) {
             // nothing to draw: return default region of definition
             return false;
@@ -810,18 +871,24 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
             return true;
         }
     }
-    bool expandRoD;
-    _expandRoD->getValueAtTime(args.time, expandRoD);
+    bool expandRoD = _expandRoD->getValueAtTime(time);
     if (_srcClip && _srcClip->isConnected() && !expandRoD) {
         return false;
     }
 
     bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
-
+    if ( wasCaught && (extent != eGeneratorExtentFormat) ) {
+        // add one pixel in each direction to ensure border is black and transparent
+        // (non-black+transparent case was treated above)
+        rod.x1 -= 1;
+        rod.y1 -= 1;
+        rod.x2 += 1;
+        rod.y2 += 1;
+    }
     if ( _srcClip && _srcClip->isConnected() ) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
-        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
-        OFX::Coords::rectBoundingBox(rod, srcRoD, &rod);
+        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(time);
+        Coords::rectBoundingBox(rod, srcRoD, &rod);
     } else if (!wasCaught) {
         //The generator is in default mode, if the source clip is connected, take its rod, otherwise take
         //the rod of the project
@@ -836,9 +903,9 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     return true;
 } // RadialPlugin::getRegionOfDefinition
 
-mDeclarePluginFactory(RadialPluginFactory, {}, {});
+mDeclarePluginFactory(RadialPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-RadialPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+RadialPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -875,20 +942,20 @@ RadialPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     generatorDescribe(desc);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
 }
 
-OFX::ImageEffect*
+ImageEffect*
 RadialPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                    OFX::ContextEnum /*context*/)
+                                    ContextEnum /*context*/)
 {
     return new RadialPlugin(handle);
 }
 
 void
-RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                       OFX::ContextEnum context)
+RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                       ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -926,7 +993,7 @@ RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -936,7 +1003,7 @@ RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -946,7 +1013,7 @@ RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -956,7 +1023,7 @@ RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
@@ -979,7 +1046,7 @@ RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
         param->setDigits(2);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1017,7 +1084,7 @@ RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // expandRoD
     {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);

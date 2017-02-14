@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,15 +20,19 @@
  * OFX TestPosition plugin.
  */
 
-#include "ofxsTransform3x3.h"
-#include "ofxsTransformInteract.h"
-
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <iostream>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
+
+#include "ofxsTransform3x3.h"
+#include "ofxsTransformInteract.h"
+#if defined(OFX_EXTENSIONS_NUKE) && defined(TEST_SETTINGS)
+#include "nukeOfxGlobalSettings.h"
+#endif
+#include "ofxsThreadSuite.h"
 
 #define kPluginPositionName "TestPosition"
 #define kPluginPositionGrouping "Other/Test"
@@ -58,12 +62,47 @@ public:
         // NON-GENERIC
         _translate = fetchDouble2DParam(kParamPositionTranslate);
         assert(_translate);
+#if defined(OFX_EXTENSIONS_NUKE) && defined(TEST_SETTINGS)
+        NukeOfxGlobalSettingsSuiteV1* gGlobalSettingsSuite = (NukeOfxGlobalSettingsSuiteV1*)fetchSuite(kNukeOfxGlobalSettingsSuite, 1, true);
+        if (gGlobalSettingsSuite) {
+            // enumerate all settings
+            int settingsCount;
+            OfxStatus stat;
+            stat = gGlobalSettingsSuite->getSettingsCount(handle, &settingsCount);
+            if (stat != kOfxStatOK) {
+                std::cout << "Could not get settings count\n";
+            } else {
+                std::cout << "Found " << settingsCount << " settings:\n";
+                for (int i = 0; i < settingsCount; ++i) {
+                    char* settingsName;
+                    stat = gGlobalSettingsSuite->getSettingsName(handle, i, &settingsName);
+                    throwSuiteStatusException(stat);
+                    std::cout << "Name: " << settingsName << std::endl;
+                    char* strvalue = NULL;
+                    stat = gGlobalSettingsSuite->getSettingStringValue(handle, settingsName, &strvalue);
+                    if (stat == kOfxStatOK && strvalue != NULL) {
+                        std::cout << "Value=" << strvalue << std::endl;
+                        free(strvalue);
+                    } else {
+                        for (int d = 0; d < 4; ++d) {
+                            double value = -1;
+                            stat = gGlobalSettingsSuite->getSettingDoubleValue(handle, settingsName, d, &value);
+                            if (stat == kOfxStatOK) {
+                                std::cout << "Value[" << d << "]=" << value << std::endl;
+                            }
+                        }
+                    }
+                    free(settingsName);
+                }
+            }
+        }
+#endif
     }
 
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
-    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 
     // NON-GENERIC
@@ -90,27 +129,27 @@ TestPositionPlugin::getInverseTransformCanonical(double time,
                                                  int /*view*/,
                                                  double /*amount*/,
                                                  bool invert,
-                                                 OFX::Matrix3x3* invtransform) const
+                                                 Matrix3x3* invtransform) const
 {
     double x, y;
 
     _translate->getValueAtTime(time, x, y);
 
-    invtransform->a = 1.;
-    invtransform->b = 0.;
-    invtransform->c = invert ? x : -x;
-    invtransform->d = 0.;
-    invtransform->e = 1.;
-    invtransform->f = invert ? y : -y;
-    invtransform->g = 0.;
-    invtransform->h = 0.;
-    invtransform->i = 1.;
+    (*invtransform)(0,0) = 1.;
+    (*invtransform)(0,1) = 0.;
+    (*invtransform)(0,2) = invert ? x : -x;
+    (*invtransform)(1,0) = 0.;
+    (*invtransform)(1,1) = 1.;
+    (*invtransform)(1,2) = invert ? y : -y;
+    (*invtransform)(2,0) = 0.;
+    (*invtransform)(2,1) = 0.;
+    (*invtransform)(2,2) = 1.;
 
     return true;
 }
 
 void
-TestPositionPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+TestPositionPlugin::changedParam(const InstanceChangedArgs &args,
                                  const std::string &paramName)
 {
     if (paramName == kParamPositionTranslate) {
@@ -120,9 +159,9 @@ TestPositionPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(TestPositionPluginFactory, {}, {});
+mDeclarePluginFactory(TestPositionPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-TestPositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TestPositionPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginPositionName);
@@ -133,8 +172,8 @@ TestPositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                             OFX::ContextEnum context)
+TestPositionPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                             ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, /*masked=*/ true);
@@ -162,9 +201,9 @@ TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 TestPositionPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                          OFX::ContextEnum /*context*/)
+                                          ContextEnum /*context*/)
 {
     return new TestPositionPlugin(handle);
 }

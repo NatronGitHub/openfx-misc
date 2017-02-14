@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -124,7 +124,7 @@ class CImgPlasmaPlugin
 public:
 
     CImgPlasmaPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgPlasmaParams, true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgPlasmaParams, true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _alpha  = fetchDoubleParam(kParamAlpha);
         _beta  = fetchDoubleParam(kParamBeta);
@@ -151,7 +151,7 @@ public:
                         const CImgPlasmaParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 1 << std::max( 0, params.scale - (int)OFX::Coords::mipmapLevelFromScale(renderScale.x) );
+        int delta_pix = 1 << std::max( 0, params.scale - (int)Coords::mipmapLevelFromScale(renderScale.x) );
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
@@ -159,7 +159,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgPlasmaParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -170,39 +170,39 @@ public:
         // This is the only place where the actual processing takes place
         cimg_library::cimg::srand( (unsigned int)args.time + (unsigned int)params.seed );
 
-        cimg.draw_plasma( (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, std::max( 0, params.scale - (int)OFX::Coords::mipmapLevelFromScale(args.renderScale.x) ) );
+        cimg.draw_plasma( (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, std::max( 0, params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) ) );
         if (params.offset != 0.) {
             cimg += params.offset;
         }
     }
 
-    //virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgPlasmaParams& params) OVERRIDE FINAL
+    //virtual bool isIdentity(const IsIdentityArguments &args, const CImgPlasmaParams& params) OVERRIDE FINAL
     //{
-    //    return (params.scale - (int)OFX::Coords::mipmapLevelFromScale(args.renderScale.x) <= 0);
+    //    return (params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) <= 0);
     //};
 
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
     {
         clipPreferences.setOutputFrameVarying(true);
-        clipPreferences.setOutputHasContinousSamples(true);
+        clipPreferences.setOutputHasContinuousSamples(true);
     }
 
 private:
 
     // params
-    OFX::DoubleParam *_alpha;
-    OFX::DoubleParam *_beta;
-    OFX::IntParam *_scale;
-    OFX::DoubleParam *_offset;
-    OFX::IntParam *_seed;
+    DoubleParam *_alpha;
+    DoubleParam *_beta;
+    IntParam *_scale;
+    DoubleParam *_offset;
+    IntParam *_seed;
 };
 
 
-mDeclarePluginFactory(CImgPlasmaPluginFactory, {}, {});
+mDeclarePluginFactory(CImgPlasmaPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
-CImgPlasmaPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgPlasmaPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -232,22 +232,22 @@ CImgPlasmaPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                           OFX::ContextEnum context)
+CImgPlasmaPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                           ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgPlasmaPlugin::describeInContextBegin(desc, context,
-                                                                              kSupportsRGBA,
-                                                                              kSupportsRGB,
-                                                                              kSupportsXY,
-                                                                              kSupportsAlpha,
-                                                                              kSupportsTiles,
-                                                                              /*processRGB=*/ true,
-                                                                              /*processAlpha*/ false,
-                                                                              /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgPlasmaPlugin::describeInContextBegin(desc, context,
+                                                                         kSupportsRGBA,
+                                                                         kSupportsRGB,
+                                                                         kSupportsXY,
+                                                                         kSupportsAlpha,
+                                                                         kSupportsTiles,
+                                                                         /*processRGB=*/ true,
+                                                                         /*processAlpha*/ false,
+                                                                         /*processIsSecret=*/ false);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlpha);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlpha);
         param->setLabel(kParamAlphaLabel);
         param->setHint(kParamAlphaHint);
         param->setRange(kParamAlphaMin, kParamAlphaMax);
@@ -260,7 +260,7 @@ CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBeta);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBeta);
         param->setLabel(kParamBetaLabel);
         param->setHint(kParamBetaHint);
         param->setRange(kParamBetaMin, kParamBetaMax);
@@ -273,7 +273,7 @@ CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamScale);
+        IntParamDescriptor *param = desc.defineIntParam(kParamScale);
         param->setLabel(kParamScaleLabel);
         param->setHint(kParamScaleHint);
         param->setRange(kParamScaleMin, kParamScaleMax);
@@ -284,7 +284,7 @@ CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOffset);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOffset);
         param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
         param->setRange(-DBL_MAX, DBL_MAX);
@@ -297,19 +297,20 @@ CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
+        IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
         param->setLabel(kParamSeedLabel);
         param->setHint(kParamSeedHint);
         if (page) {
             page->addChild(*param);
         }
     }
+
     CImgPlasmaPlugin::describeInContextEnd(desc, context, page);
 } // CImgPlasmaPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 CImgPlasmaPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new CImgPlasmaPlugin(handle);
 }

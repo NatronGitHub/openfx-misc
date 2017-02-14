@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 #include <cfloat> // DBL_MAX
 #include <climits>
 #include <algorithm>
+#include <limits>
 
 #include "ofxsProcessing.H"
 #include "ofxsRectangleInteract.h"
@@ -31,11 +32,12 @@
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
+typedef MultiThread::Mutex Mutex;
+typedef MultiThread::AutoMutex AutoMutex;
 }
 #else
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
@@ -265,6 +267,11 @@ enum LuminanceMathEnum
 #define kParamMinLumaPixValLabel "Min Luma Pixel Value"
 #define kParamMinLumaPixValHint "RGB value for the pixel with the minimum luma value."
 
+// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+#define kParamDefaultsNormalised "defaultsNormalised"
+
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
+
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
@@ -279,6 +286,19 @@ struct RGBAValues
 
 struct Results
 {
+    Results()
+    : min( std::numeric_limits<double>::infinity() )
+    , max( -std::numeric_limits<double>::infinity() )
+    , mean(0.)
+    , sdev( std::numeric_limits<double>::infinity() )
+    , skewness( std::numeric_limits<double>::infinity() )
+    , kurtosis( std::numeric_limits<double>::infinity() )
+    , maxVal( -std::numeric_limits<double>::infinity() )
+    , minVal( std::numeric_limits<double>::infinity() )
+    {
+        maxPos.x = maxPos.y = minPos.x = minPos.y = 0.;
+    }
+
     RGBAValues min;
     RGBAValues max;
     RGBAValues mean;
@@ -292,15 +312,15 @@ struct Results
 };
 
 class ImageStatisticsProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
     Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     unsigned long _count;
 
 public:
-    ImageStatisticsProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    ImageStatisticsProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _mutex()
         , _count(0)
     {
@@ -356,7 +376,7 @@ protected:
             r = p[0] / (float)maxValue;
             g = p[1] / (float)maxValue;
             b = p[2] / (float)maxValue;
-            OFX::Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
+            Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
             hsvl[0] *= 360 / OFXS_HUE_CIRCLE;
             float min = std::min(std::min(r, g), b);
             float max = std::max(std::max(r, g), b);
@@ -399,7 +419,7 @@ private:
     double _sum[nComponents];
 
 public:
-    ImageMinMaxMeanProcessor(OFX::ImageEffect &instance)
+    ImageMinMaxMeanProcessor(ImageEffect &instance)
         : ImageStatisticsProcessorBase(instance)
     {
         std::fill( _min, _min + nComponents, +std::numeric_limits<double>::infinity() );
@@ -411,7 +431,8 @@ public:
     {
     }
 
-    void setPrevResults(double /* time */, const Results & /*results*/) OVERRIDE FINAL {}
+    void setPrevResults(double /* time */,
+                        const Results & /*results*/) OVERRIDE FINAL {}
 
     void getResults(Results *results) OVERRIDE FINAL
     {
@@ -446,6 +467,7 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double min[nComponents], max[nComponents], sum[nComponents];
+
         std::fill( min, min + nComponents, +std::numeric_limits<double>::infinity() );
         std::fill( max, max + nComponents, -std::numeric_limits<double>::infinity() );
         std::fill(sum, sum + nComponents, 0.);
@@ -491,7 +513,7 @@ private:
     double _sum_p2[nComponents];
 
 public:
-    ImageSDevProcessor(OFX::ImageEffect &instance)
+    ImageSDevProcessor(ImageEffect &instance)
         : ImageStatisticsProcessorBase(instance)
     {
         std::fill(_mean, _mean + nComponents, 0.);
@@ -502,7 +524,8 @@ public:
     {
     }
 
-    void setPrevResults(double /* time */, const Results &results) OVERRIDE FINAL
+    void setPrevResults(double /* time */,
+                        const Results &results) OVERRIDE FINAL
     {
         toComponents<double, nComponents, 1>(results.mean, _mean);
     }
@@ -535,6 +558,7 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p2[nComponents];
+
         std::fill(sum_p2, sum_p2 + nComponents, 0.);
         unsigned long count = 0;
 
@@ -578,7 +602,7 @@ private:
     double _sum_p4[nComponents];
 
 public:
-    ImageSkewnessKurtosisProcessor(OFX::ImageEffect &instance)
+    ImageSkewnessKurtosisProcessor(ImageEffect &instance)
         : ImageStatisticsProcessorBase(instance)
     {
         std::fill(_mean, _mean + nComponents, 0.);
@@ -591,7 +615,8 @@ public:
     {
     }
 
-    void setPrevResults(double /* time */, const Results &results) OVERRIDE FINAL
+    void setPrevResults(double /* time */,
+                        const Results &results) OVERRIDE FINAL
     {
         toComponents<double, nComponents, 1>(results.mean, _mean);
         toComponents<double, nComponents, 1>(results.sdev, _sdev);
@@ -642,6 +667,7 @@ private:
     {
         double sum_p3[nComponents];
         double sum_p4[nComponents];
+
         std::fill(sum_p3, sum_p3 + nComponents, 0.);
         std::fill(sum_p4, sum_p4 + nComponents, 0.);
         unsigned long count = 0;
@@ -693,7 +719,7 @@ private:
     double _sum[nComponentsHSVL];
 
 public:
-    ImageHSVLMinMaxMeanProcessor(OFX::ImageEffect &instance)
+    ImageHSVLMinMaxMeanProcessor(ImageEffect &instance)
         : ImageStatisticsProcessorBase(instance)
     {
         std::fill( _min, _min + nComponentsHSVL, +std::numeric_limits<double>::infinity() );
@@ -705,7 +731,8 @@ public:
     {
     }
 
-    void setPrevResults(double /* time */, const Results & /*results*/) OVERRIDE FINAL {}
+    void setPrevResults(double /* time */,
+                        const Results & /*results*/) OVERRIDE FINAL {}
 
     void getResults(Results *results) OVERRIDE FINAL
     {
@@ -740,6 +767,7 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double min[nComponentsHSVL], max[nComponentsHSVL], sum[nComponentsHSVL];
+
         std::fill( min, min + nComponentsHSVL, +std::numeric_limits<double>::infinity() );
         std::fill( max, max + nComponentsHSVL, -std::numeric_limits<double>::infinity() );
         std::fill(sum, sum + nComponentsHSVL, 0.);
@@ -787,7 +815,7 @@ private:
     double _sum_p2[nComponentsHSVL];
 
 public:
-    ImageHSVLSDevProcessor(OFX::ImageEffect &instance)
+    ImageHSVLSDevProcessor(ImageEffect &instance)
         : ImageStatisticsProcessorBase(instance)
     {
         std::fill(_mean, _mean + nComponentsHSVL, 0.);
@@ -798,7 +826,8 @@ public:
     {
     }
 
-    void setPrevResults(double /* time */, const Results &results) OVERRIDE FINAL
+    void setPrevResults(double /* time */,
+                        const Results &results) OVERRIDE FINAL
     {
         toComponents<double, nComponentsHSVL, 1>(results.mean, _mean);
     }
@@ -831,6 +860,7 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p2[nComponentsHSVL];
+
         std::fill(sum_p2, sum_p2 + nComponentsHSVL, 0.);
         unsigned long count = 0;
 
@@ -876,7 +906,7 @@ private:
     double _sum_p4[nComponentsHSVL];
 
 public:
-    ImageHSVLSkewnessKurtosisProcessor(OFX::ImageEffect &instance)
+    ImageHSVLSkewnessKurtosisProcessor(ImageEffect &instance)
         : ImageStatisticsProcessorBase(instance)
     {
         std::fill(_mean, _mean + nComponentsHSVL, 0.);
@@ -889,7 +919,8 @@ public:
     {
     }
 
-    void setPrevResults(double /* time */, const Results &results) OVERRIDE FINAL
+    void setPrevResults(double /* time */,
+                        const Results &results) OVERRIDE FINAL
     {
         toComponents<double, nComponentsHSVL, 1>(results.mean, _mean);
         toComponents<double, nComponentsHSVL, 1>(results.sdev, _sdev);
@@ -936,6 +967,7 @@ private:
     {
         double sum_p3[nComponentsHSVL];
         double sum_p4[nComponentsHSVL];
+
         std::fill(sum_p3, sum_p3 + nComponentsHSVL, 0.);
         std::fill(sum_p4, sum_p4 + nComponentsHSVL, 0.);
         unsigned long count = 0;
@@ -979,7 +1011,7 @@ private:
 
 template <class PIX, int nComponents, int maxValue>
 class ImageLumaProcessor
-: public ImageStatisticsProcessorBase
+    : public ImageStatisticsProcessorBase
 {
 private:
     OfxPointD _maxPos;
@@ -991,15 +1023,15 @@ private:
     LuminanceMathEnum _luminanceMath;
 
 public:
-    ImageLumaProcessor(OFX::ImageEffect &instance)
-    : ImageStatisticsProcessorBase(instance)
-    , _luminanceMath(eLuminanceMathRec709)
+    ImageLumaProcessor(ImageEffect &instance)
+        : ImageStatisticsProcessorBase(instance)
+        , _luminanceMath(eLuminanceMathRec709)
     {
         _maxPos.x = _maxPos.y = 0.;
-        std::fill(_maxVal, _maxVal + nComponents, -std::numeric_limits<double>::infinity());
+        std::fill( _maxVal, _maxVal + nComponents, -std::numeric_limits<double>::infinity() );
         _maxLuma = -std::numeric_limits<double>::infinity();
         _minPos.x = _minPos.y = 0.;
-        std::fill(_minVal, _minVal + nComponents, +std::numeric_limits<double>::infinity());
+        std::fill( _minVal, _minVal + nComponents, +std::numeric_limits<double>::infinity() );
         _minLuma = +std::numeric_limits<double>::infinity();
     }
 
@@ -1007,8 +1039,11 @@ public:
     {
     }
 
-    void setPrevResults(double time, const Results & /*results*/) OVERRIDE FINAL {
+    void setPrevResults(double time,
+                        const Results & /*results*/) OVERRIDE FINAL
+    {
         ChoiceParam* luminanceMath = _effect.fetchChoiceParam(kParamLuminanceMath);
+
         assert(luminanceMath);
         _luminanceMath = (LuminanceMathEnum)luminanceMath->getValueAtTime(time);
     }
@@ -1031,30 +1066,31 @@ private:
             g = p[1] / (float)maxValue;
             b = p[2] / (float)maxValue;
             switch (_luminanceMath) {
-                case eLuminanceMathRec709:
-                default:
+            case eLuminanceMathRec709:
+            default:
 
-                    return Color::rgb709_to_y(r, g, b);
-                case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
+                return Color::rgb709_to_y(r, g, b);
+            case eLuminanceMathRec2020:     // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
 
-                    return Color::rgb2020_to_y(r, g, b);
-                case eLuminanceMathACESAP0: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+                return Color::rgb2020_to_y(r, g, b);
+            case eLuminanceMathACESAP0:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
 
-                    return Color::rgbACESAP0_to_y(r, g, b);
-                case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
+                return Color::rgbACESAP0_to_y(r, g, b);
+            case eLuminanceMathACESAP1:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
 
-                    return Color::rgbACESAP1_to_y(r, g, b);
-                case eLuminanceMathCcir601:
+                return Color::rgbACESAP1_to_y(r, g, b);
+            case eLuminanceMathCcir601:
 
-                    return 0.2989 * r + 0.5866 * g + 0.1145 * b;
-                case eLuminanceMathAverage:
+                return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+            case eLuminanceMathAverage:
 
-                    return (r + g + b) / 3;
-                case eLuminanceMathMaximum:
+                return (r + g + b) / 3;
+            case eLuminanceMathMaximum:
 
-                    return std::max(std::max(r, g), b);
+                return std::max(std::max(r, g), b);
             }
         }
+
         return 0.;
     }
 
@@ -1124,17 +1160,16 @@ private:
                 dstPix += nComponents;
             }
         }
-        
+
         addResults(maxPos, maxVal, maxLuma, minPos, minVal, minLuma);
     }
 };
 
 
-
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class ImageStatisticsPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -1151,8 +1186,8 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
@@ -1195,32 +1230,54 @@ public:
         _size->setIsSecretAndDisabled(!restrictToRectangle);
         bool doUpdate = _autoUpdate->getValue();
         _interactive->setIsSecretAndDisabled(!restrictToRectangle || !doUpdate);
+
+        // honor kParamDefaultsNormalised
+        if ( paramExists(kParamDefaultsNormalised) ) {
+            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+            // handle these ourselves!
+            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
+            assert(param);
+            bool normalised = param->getValue();
+            if (normalised) {
+                OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
+                OfxPointD p;
+                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                beginEditBlock(kParamDefaultsNormalised);
+                p = _btmLeft->getValue();
+                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
+                p = _size->getValue();
+                _size->setValue(p.x * size.x, p.y * size.y);
+                param->setValue(false);
+                endEditBlock();
+            }
+        }
     }
 
 private:
     /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD & rod) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD & rod) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(ImageStatisticsProcessorBase &processor, const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results);
+    void setupAndProcess(ImageStatisticsProcessorBase &processor, const Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results);
 
     // compute computation window in srcImg
-    bool computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow);
+    bool computeWindow(const Image* srcImg, double time, OfxRectI *analysisWindow);
 
     // update image statistics
-    void update(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
-    void updateHSVL(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
-    void updateLuma(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
+    void update(const Image* srcImg, double time, const OfxRectI& analysisWindow);
+    void updateHSVL(const Image* srcImg, double time, const OfxRectI& analysisWindow);
+    void updateLuma(const Image* srcImg, double time, const OfxRectI& analysisWindow);
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, class PIX, int nComponents, int maxValue>
-    void updateSubComponentsDepth(const OFX::Image* srcImg,
+    void updateSubComponentsDepth(const Image* srcImg,
                                   double time,
                                   const OfxRectI &analysisWindow,
                                   const Results& prevResults,
@@ -1231,51 +1288,51 @@ private:
     }
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, int nComponents>
-    void updateSubComponents(const OFX::Image* srcImg,
+    void updateSubComponents(const Image* srcImg,
                              double time,
                              const OfxRectI &analysisWindow,
                              const Results& prevResults,
                              Results* results)
     {
-        OFX::BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
+        BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
 
         switch (srcBitDepth) {
-        case OFX::eBitDepthUByte: {
+        case eBitDepthUByte: {
             updateSubComponentsDepth<Processor, unsigned char, nComponents, 255>(srcImg, time, analysisWindow, prevResults, results);
             break;
         }
-        case OFX::eBitDepthUShort: {
+        case eBitDepthUShort: {
             updateSubComponentsDepth<Processor, unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, prevResults, results);
             break;
         }
-        case OFX::eBitDepthFloat: {
+        case eBitDepthFloat: {
             updateSubComponentsDepth<Processor, float, nComponents, 1>(srcImg, time, analysisWindow, prevResults, results);
             break;
         }
         default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+            throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
 
     template <template<class PIX, int nComponents, int maxValue> class Processor>
-    void updateSub(const OFX::Image* srcImg,
+    void updateSub(const Image* srcImg,
                    double time,
                    const OfxRectI &analysisWindow,
                    const Results& prevResults,
                    Results* results)
     {
-        OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+        PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
 
-        assert(srcComponents == OFX::ePixelComponentAlpha || srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
-        if (srcComponents == OFX::ePixelComponentAlpha) {
+        assert(srcComponents == ePixelComponentAlpha || srcComponents == ePixelComponentRGB || srcComponents == ePixelComponentRGBA);
+        if (srcComponents == ePixelComponentAlpha) {
             updateSubComponents<Processor, 1>(srcImg, time, analysisWindow, prevResults, results);
-        } else if (srcComponents == OFX::ePixelComponentRGBA) {
+        } else if (srcComponents == ePixelComponentRGBA) {
             updateSubComponents<Processor, 4>(srcImg, time, analysisWindow, prevResults, results);
-        } else if (srcComponents == OFX::ePixelComponentRGB) {
+        } else if (srcComponents == ePixelComponentRGB) {
             updateSubComponents<Processor, 3>(srcImg, time, analysisWindow, prevResults, results);
         } else {
             // coverity[dead_error_line]
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+            throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
 
@@ -1318,40 +1375,40 @@ private:
 
 // the overridden render function
 void
-ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
+ImageStatisticsPlugin::render(const RenderArguments &args)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -1386,8 +1443,8 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-ImageStatisticsPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                            OFX::RegionOfInterestSetter &rois)
+ImageStatisticsPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                            RegionOfInterestSetter &rois)
 {
     bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
 
@@ -1398,29 +1455,29 @@ ImageStatisticsPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArgument
         regionOfInterest.x2 += regionOfInterest.x1;
         regionOfInterest.y2 += regionOfInterest.y1;
         // Union with output RoD, so that render works
-        OFX::Coords::rectBoundingBox(args.regionOfInterest, regionOfInterest, &regionOfInterest);
+        Coords::rectBoundingBox(args.regionOfInterest, regionOfInterest, &regionOfInterest);
         rois.setRegionOfInterest(*_srcClip, regionOfInterest);
     }
 }
 
 bool
-ImageStatisticsPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+ImageStatisticsPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                              OfxRectD & /*rod*/)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     return false;
 }
 
 bool
-ImageStatisticsPlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                                  OFX::Clip * &identityClip,
+ImageStatisticsPlugin::isIdentity(const IsIdentityArguments &args,
+                                  Clip * &identityClip,
                                   double & /*identityTime*/)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     const double time = args.time;
@@ -1436,11 +1493,11 @@ ImageStatisticsPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 }
 
 void
-ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
                                     const std::string &paramName)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     bool doUpdate = false;
@@ -1544,13 +1601,13 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     }
     // RGBA analysis
     if ( (doAnalyzeRGBA || doAnalyzeHSVL || doAnalyzeLuma) && _srcClip && _srcClip->isConnected() ) {
-        std::auto_ptr<OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                       _srcClip->fetchImage(args.time) : 0 );
+        std::auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                  _srcClip->fetchImage(args.time) : 0 );
         if ( src.get() ) {
             if ( (src->getRenderScale().x != args.renderScale.x) ||
                  ( src->getRenderScale().y != args.renderScale.y) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                throwSuiteStatusException(kOfxStatFailed);
             }
             bool intersect = computeWindow(src.get(), args.time, &analysisWindow);
             if (intersect) {
@@ -1585,13 +1642,13 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         int tmin = (int)std::ceil(range.min);
         int tmax = (int)std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
-            std::auto_ptr<OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                           _srcClip->fetchImage(t) : 0 );
+            std::auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                      _srcClip->fetchImage(t) : 0 );
             if ( src.get() ) {
                 if ( (src->getRenderScale().x != args.renderScale.x) ||
                      ( src->getRenderScale().y != args.renderScale.y) ) {
-                    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                    OFX::throwSuiteStatusException(kOfxStatFailed);
+                    setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                    throwSuiteStatusException(kOfxStatFailed);
                 }
                 bool intersect = computeWindow(src.get(), t, &analysisWindow);
                 if (intersect) {
@@ -1623,14 +1680,14 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 /* set up and run a processor */
 void
 ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor,
-                                       const OFX::Image* srcImg,
+                                       const Image* srcImg,
                                        double time,
                                        const OfxRectI &analysisWindow,
                                        const Results &prevResults,
                                        Results *results)
 {
     // set the images
-    processor.setDstImg( const_cast<OFX::Image*>(srcImg) ); // not a bug: we only set dst
+    processor.setDstImg( const_cast<Image*>(srcImg) ); // not a bug: we only set dst
 
     // set the render window
     processor.setRenderWindow(analysisWindow);
@@ -1646,7 +1703,7 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor,
 }
 
 bool
-ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg,
+ImageStatisticsPlugin::computeWindow(const Image* srcImg,
                                      double time,
                                      OfxRectI *analysisWindow)
 {
@@ -1681,12 +1738,12 @@ ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg,
                              srcImg->getPixelAspectRatio(),
                              analysisWindow);
 
-    return OFX::Coords::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
+    return Coords::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
 }
 
 // update image statistics
 void
-ImageStatisticsPlugin::update(const OFX::Image* srcImg,
+ImageStatisticsPlugin::update(const Image* srcImg,
                               double time,
                               const OfxRectI &analysisWindow)
 {
@@ -1715,7 +1772,7 @@ ImageStatisticsPlugin::update(const OFX::Image* srcImg,
 }
 
 void
-ImageStatisticsPlugin::updateHSVL(const OFX::Image* srcImg,
+ImageStatisticsPlugin::updateHSVL(const Image* srcImg,
                                   double time,
                                   const OfxRectI &analysisWindow)
 {
@@ -1742,7 +1799,7 @@ ImageStatisticsPlugin::updateHSVL(const OFX::Image* srcImg,
 }
 
 void
-ImageStatisticsPlugin::updateLuma(const OFX::Image* srcImg,
+ImageStatisticsPlugin::updateLuma(const Image* srcImg,
                                   double time,
                                   const OfxRectI &analysisWindow)
 {
@@ -1766,7 +1823,7 @@ class ImageStatisticsInteract
 public:
 
     ImageStatisticsInteract(OfxInteractHandle handle,
-                            OFX::ImageEffect* effect)
+                            ImageEffect* effect)
         : RectangleInteract(handle, effect)
         , _restrictToRectangle(0)
     {
@@ -1776,8 +1833,8 @@ public:
 
 private:
 
-    // overridden functions from OFX::Interact to do things
-    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
+    // overridden functions from Interact to do things
+    virtual bool draw(const DrawArgs &args) OVERRIDE FINAL
     {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
 
@@ -1788,7 +1845,7 @@ private:
         return false;
     }
 
-    virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL
+    virtual bool penMotion(const PenArgs &args) OVERRIDE FINAL
     {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
 
@@ -1799,7 +1856,7 @@ private:
         return false;
     }
 
-    virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL
+    virtual bool penDown(const PenArgs &args) OVERRIDE FINAL
     {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
 
@@ -1810,7 +1867,7 @@ private:
         return false;
     }
 
-    virtual bool penUp(const OFX::PenArgs &args) OVERRIDE FINAL
+    virtual bool penUp(const PenArgs &args) OVERRIDE FINAL
     {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
 
@@ -1821,12 +1878,12 @@ private:
         return false;
     }
 
-    //virtual bool keyDown(const OFX::KeyArgs &args) OVERRIDE;
-    //virtual bool keyUp(const OFX::KeyArgs & args) OVERRIDE;
+    //virtual bool keyDown(const KeyArgs &args) OVERRIDE;
+    //virtual bool keyUp(const KeyArgs & args) OVERRIDE;
     //virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
 
 
-    OFX::BooleanParam* _restrictToRectangle;
+    BooleanParam* _restrictToRectangle;
 };
 
 class ImageStatisticsOverlayDescriptor
@@ -1834,10 +1891,10 @@ class ImageStatisticsOverlayDescriptor
 {
 };
 
-mDeclarePluginFactory(ImageStatisticsPluginFactory, {}, {});
+mDeclarePluginFactory(ImageStatisticsPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
-ImageStatisticsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+ImageStatisticsPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -1872,16 +1929,16 @@ ImageStatisticsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-OFX::ImageEffect*
+ImageEffect*
 ImageStatisticsPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                             OFX::ContextEnum /*context*/)
+                                             ContextEnum /*context*/)
 {
     return new ImageStatisticsPlugin(handle);
 }
 
 void
-ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                                OFX::ContextEnum /*context*/)
+ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                                ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -1924,7 +1981,11 @@ ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
         param->setLabel(kParamRectangleInteractBtmLeftLabel);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        if ( param->supportsDefaultCoordinateSystem() ) {
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+        } else {
+            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+        }
         param->setDefault(0., 0.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -1943,7 +2004,11 @@ ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
         param->setLabel(kParamRectangleInteractSizeLabel);
         param->setDoubleType(eDoubleTypeXY);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        if ( param->supportsDefaultCoordinateSystem() ) {
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+        } else {
+            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+        }
         param->setDefault(1., 1.);
         param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -2305,7 +2370,7 @@ ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
             if (page) {
                 page->addChild(*group);
             }
-       }
+        }
 
         {
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
@@ -2448,7 +2513,6 @@ ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
             }
         }
     }
-
 } // ImageStatisticsPluginFactory::describeInContext
 
 static ImageStatisticsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);

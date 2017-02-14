@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ImageStatistics.o ofxsLut.o ofxsRectangleInteract.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ImageStatistics.o ofxsLut.o ofxsRectangleInteract.o
 PLUGINNAME = ImageStatistics
 RESOURCES = net.sf.openfx.ImageStatistics.png net.sf.openfx.ImageStatistics.svg
 

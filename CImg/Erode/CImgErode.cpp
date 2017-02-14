@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -143,14 +143,14 @@ public:
             dstRoD->x2 = dstRoD->x2 + delta_pix_x;
             dstRoD->y1 = dstRoD->y1 - delta_pix_y;
             dstRoD->y2 = dstRoD->y2 + delta_pix_y;
+
             return true;
         } else {
             return false;
         }
-
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgErodeParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -170,7 +170,7 @@ public:
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args,
+    virtual bool isIdentity(const IsIdentityArguments &args,
                             const CImgErodeParams& params) OVERRIDE FINAL
     {
         return (std::floor(params.sx * args.renderScale.x) == 0 && std::floor(params.sy * args.renderScale.y) == 0);
@@ -179,15 +179,15 @@ public:
 private:
 
     // params
-    OFX::Int2DParam *_size;
-    OFX::BooleanParam* _expandRod;
+    Int2DParam *_size;
+    BooleanParam* _expandRod;
 };
 
 
-mDeclarePluginFactory(CImgErodePluginFactory, {}, {});
+mDeclarePluginFactory(CImgErodePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
-CImgErodePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgErodePluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -215,27 +215,27 @@ CImgErodePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentRGBA); // Enable alpha by default, so it works OK on masks
+    desc.setChannelSelector(ePixelComponentRGBA); // Enable alpha by default, so it works OK on masks
 #endif
 }
 
 void
-CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                          OFX::ContextEnum context)
+CImgErodePluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                          ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgErodePlugin::describeInContextBegin(desc, context,
-                                                                             kSupportsRGBA,
-                                                                             kSupportsRGB,
-                                                                             kSupportsXY,
-                                                                             kSupportsAlpha,
-                                                                             kSupportsTiles,
-                                                                             /*processRGB=*/ true,
-                                                                             /*processAlpha*/ true, // Enable alpha by default, so it works OK on masks
-                                                                             /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgErodePlugin::describeInContextBegin(desc, context,
+                                                                        kSupportsRGBA,
+                                                                        kSupportsRGB,
+                                                                        kSupportsXY,
+                                                                        kSupportsAlpha,
+                                                                        kSupportsTiles,
+                                                                        /*processRGB=*/ true,
+                                                                        /*processAlpha*/ true,      // Enable alpha by default, so it works OK on masks
+                                                                        /*processIsSecret=*/ false);
 
     {
-        OFX::Int2DParamDescriptor *param = desc.defineInt2DParam(kParamSize);
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamSize);
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(-1000, -1000, 1000, 1000);
@@ -246,7 +246,7 @@ CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
@@ -254,12 +254,13 @@ CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
+
     CImgErodePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect*
+ImageEffect*
 CImgErodePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       OFX::ContextEnum /*context*/)
+                                       ContextEnum /*context*/)
 {
     return new CImgErodePlugin(handle);
 }

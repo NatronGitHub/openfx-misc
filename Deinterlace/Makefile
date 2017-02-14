@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Deinterlace.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Deinterlace.o
 PLUGINNAME = Deinterlace
 RESOURCES = net.sf.openfx.Deinterlace.png net.sf.openfx.Deinterlace.svg
 

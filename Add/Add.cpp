@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -42,10 +43,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "AddOFX"
 #define kPluginGrouping "Color/Math"
 #define kPluginDescription \
-"Add a constant to the selected channels.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Add"
+    "Add a constant to the selected channels.\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Add"
 
 #define STRINGIZE_CPP_NAME_(token) # token
+#define STRINGIZE_CPP_(token) STRINGIZE_CPP_NAME_(token)
 
 #ifdef DEBUG
 #define kPluginDescriptionDebug " with debug"
@@ -72,7 +74,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #endif
 
 #ifdef cimg_use_openmp
-#define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_NAME(_OPENMP)
+#define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_(_OPENMP)
 #else
 #define kPluginDescriptionOpenMP ", without OpenMP"
 #endif
@@ -148,11 +150,11 @@ struct RGBAValues
 };
 
 class AddProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_maskImg;
+    const Image *_srcImg;
+    const Image *_maskImg;
     bool _processR;
     bool _processG;
     bool _processB;
@@ -166,8 +168,8 @@ protected:
 
 public:
 
-    AddProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    AddProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _processR(true)
@@ -183,9 +185,9 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v; }
@@ -218,7 +220,7 @@ class AddProcessor
     : public AddProcessorBase
 {
 public:
-    AddProcessor(OFX::ImageEffect &instance)
+    AddProcessor(ImageEffect &instance)
         : AddProcessorBase(instance)
     {
     }
@@ -357,7 +359,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class AddPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -379,15 +381,23 @@ public:
         , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
+        assert( _dstClip && (!_dstClip->isConnected() ||
+                             _dstClip->getPixelComponents() == ePixelComponentAlpha ||
+#ifdef OFX_EXTENSIONS_NATRON
+                             _dstClip->getPixelComponents() == ePixelComponentXY ||
+#endif
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
+                ( _srcClip && (!_srcClip->isConnected() ||
+                               _srcClip->getPixelComponents() == ePixelComponentAlpha ||
+#ifdef OFX_EXTENSIONS_NATRON
+                               _srcClip->getPixelComponents() == ePixelComponentXY ||
+#endif
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
@@ -409,36 +419,36 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(AddProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(AddProcessorBase &, const RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_maskClip;
-    OFX::BooleanParam* _processR;
-    OFX::BooleanParam* _processG;
-    OFX::BooleanParam* _processB;
-    OFX::BooleanParam* _processA;
-    OFX::RGBAParam *_value;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_maskClip;
+    BooleanParam* _processR;
+    BooleanParam* _processG;
+    BooleanParam* _processB;
+    BooleanParam* _processA;
+    RGBAParam *_value;
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
+    BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -451,37 +461,37 @@ private:
 /* set up and run a processor */
 void
 AddPlugin::setupAndProcess(AddProcessorBase &processor,
-                           const OFX::RenderArguments &args)
+                           const RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     // do we do masking
     if (doMasking) {
         bool maskInvert;
@@ -519,55 +529,55 @@ AddPlugin::setupAndProcess(AddProcessorBase &processor,
 // the internal render function
 template <int nComponents>
 void
-AddPlugin::renderInternal(const OFX::RenderArguments &args,
-                          OFX::BitDepthEnum dstBitDepth)
+AddPlugin::renderInternal(const RenderArguments &args,
+                          BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         AddProcessor<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         AddProcessor<unsigned short, nComponents, 65536> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         AddProcessor<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-AddPlugin::render(const OFX::RenderArguments &args)
+AddPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 #ifdef OFX_EXTENSIONS_NATRON
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
 #else
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentAlpha);
 #endif
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
 #ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
 #endif
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
@@ -611,12 +621,12 @@ AddPlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
+            if (getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
 
                     return true;
@@ -635,7 +645,7 @@ AddPlugin::changedClip(const InstanceChangedArgs &args,
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
-         ( args.reason == OFX::eChangeUserEdit) ) {
+         ( args.reason == eChangeUserEdit) ) {
         if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
             _premult->setValue(false);
         } else {
@@ -655,17 +665,17 @@ AddPlugin::changedClip(const InstanceChangedArgs &args,
 }
 
 void
-AddPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+AddPlugin::changedParam(const InstanceChangedArgs &args,
                         const std::string &paramName)
 {
-    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
 }
 
-mDeclarePluginFactory(AddPluginFactory, {}, {});
+mDeclarePluginFactory(AddPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-AddPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+AddPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -691,13 +701,13 @@ AddPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
 }
 
 void
-AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                    OFX::ContextEnum context)
+AddPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                    ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -730,7 +740,7 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -740,7 +750,7 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -750,7 +760,7 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -760,7 +770,7 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
@@ -786,7 +796,7 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
@@ -797,9 +807,9 @@ AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // AddPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 AddPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                 OFX::ContextEnum /*context*/)
+                                 ContextEnum /*context*/)
 {
     return new AddPlugin(handle);
 }

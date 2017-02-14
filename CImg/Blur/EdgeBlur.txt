@@ -1,0 +1,10 @@
+fr.inria.EdgeBlur
+
+EdgeBlur
+
+Filter
+
+1
+
+
+Blur the image where there are edges in the alpha/matte channel.

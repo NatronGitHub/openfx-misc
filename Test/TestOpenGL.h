@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifndef OFX_USE_MULTITHREAD_MUTEX
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
@@ -44,10 +45,12 @@ class TestOpenGLPlugin
 
 public:
 #if defined(HAVE_OSMESA)
-    enum CPUDriverEnum {
+    enum CPUDriverEnum
+    {
         eCPUDriverSoftPipe = 0,
         eCPUDriverLLVMPipe
     };
+
 #endif
 
 #ifdef OFX_USE_MULTITHREAD_MUTEX

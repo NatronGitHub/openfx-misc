@@ -1,4 +1,4 @@
-PLUGINOBJECTS = GodRays.o ofxsTransform3x3.o ofxsTransformInteract.o ofxsShutter.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ofxsTransform3x3.o ofxsTransformInteract.o ofxsShutter.o GodRays.o
 PLUGINNAME = GodRays
 RESOURCES = net.sf.openfx.GodRays.png net.sf.openfx.GodRays.svg
 

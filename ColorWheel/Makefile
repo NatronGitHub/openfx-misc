@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ColorWheel.o ofxsRectangleInteract.o ofxsGenerator.o ofxsLut.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ColorWheel.o ofxsRectangleInteract.o ofxsGenerator.o ofxsLut.o
 PLUGINNAME = ColorWheel
 RESOURCES = net.sf.openfx.ColorWheel.png net.sf.openfx.ColorWheel.svg
 

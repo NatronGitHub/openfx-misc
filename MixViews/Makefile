@@ -1,4 +1,4 @@
-PLUGINOBJECTS = MixViews.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o MixViews.o
 PLUGINNAME = MixViews
 RESOURCES = net.sf.openfx.mixViewsPlugin.png net.sf.openfx.mixViewsPlugin.svg
 

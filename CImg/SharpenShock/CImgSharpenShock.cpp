@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -158,7 +158,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgSharpenShockParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -268,7 +268,7 @@ public:
         }
     } // render
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgSharpenShockParams& params) OVERRIDE FINAL
     {
         return (params.iterations <= 0 || params.amplitude == 0.);
@@ -277,18 +277,18 @@ public:
 private:
 
     // params
-    OFX::DoubleParam *_amplitude;
-    OFX::DoubleParam *_edge;
-    OFX::DoubleParam *_alpha;
-    OFX::DoubleParam *_sigma;
-    OFX::IntParam *_iterations;
+    DoubleParam *_amplitude;
+    DoubleParam *_edge;
+    DoubleParam *_alpha;
+    DoubleParam *_sigma;
+    IntParam *_iterations;
 };
 
 
-mDeclarePluginFactory(CImgSharpenShockPluginFactory, {}, {});
+mDeclarePluginFactory(CImgSharpenShockPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
-CImgSharpenShockPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgSharpenShockPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -317,11 +317,11 @@ CImgSharpenShockPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                 OFX::ContextEnum context)
+CImgSharpenShockPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                                 ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgSharpenShockPlugin::describeInContextBegin(desc, context,
+    PageParamDescriptor *page = CImgSharpenShockPlugin::describeInContextBegin(desc, context,
                                                                                     kSupportsRGBA,
                                                                                     kSupportsRGB,
                                                                                     kSupportsXY,
@@ -332,7 +332,7 @@ CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
                                                                                     /*processIsSecret=*/ false);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
         param->setLabel(kParamAmplitudeLabel);
         param->setHint(kParamAmplitudeHint);
         param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
@@ -344,7 +344,7 @@ CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeThreshold);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeThreshold);
         param->setLabel(kParamEdgeThresholdLabel);
         param->setHint(kParamEdgeThresholdHint);
         param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
@@ -356,7 +356,7 @@ CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamGradientSmoothness);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamGradientSmoothness);
         param->setLabel(kParamGradientSmoothnessLabel);
         param->setHint(kParamGradientSmoothnessHint);
         param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
@@ -368,7 +368,7 @@ CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTensorSmoothness);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTensorSmoothness);
         param->setLabel(kParamTensorSmoothnessLabel);
         param->setHint(kParamTensorSmoothnessHint);
         param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
@@ -380,7 +380,7 @@ CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
         param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, INT_MAX);
@@ -393,9 +393,9 @@ CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
     CImgSharpenShockPlugin::describeInContextEnd(desc, context, page);
 } // CImgSharpenShockPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 CImgSharpenShockPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                              OFX::ContextEnum /*context*/)
+                                              ContextEnum /*context*/)
 {
     return new CImgSharpenShockPlugin(handle);
 }

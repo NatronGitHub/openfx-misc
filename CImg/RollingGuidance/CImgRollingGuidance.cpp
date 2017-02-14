@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -138,7 +138,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args,
+    virtual void render(const RenderArguments &args,
                         const CImgRollingGuidanceParams& params,
                         int /*x1*/,
                         int /*y1*/,
@@ -172,7 +172,7 @@ public:
         cimg = guide;
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+    virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgRollingGuidanceParams& params) OVERRIDE FINAL
     {
         return (params.iterations <= 0 || params.sigma_s == 0.);
@@ -181,16 +181,16 @@ public:
 private:
 
     // params
-    OFX::DoubleParam *_sigma_s;
-    OFX::DoubleParam *_sigma_r;
-    OFX::IntParam *_iterations;
+    DoubleParam *_sigma_s;
+    DoubleParam *_sigma_r;
+    IntParam *_iterations;
 };
 
 
-mDeclarePluginFactory(CImgRollingGuidancePluginFactory, {}, {});
+mDeclarePluginFactory(CImgRollingGuidancePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
-CImgRollingGuidancePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+CImgRollingGuidancePluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -219,22 +219,22 @@ CImgRollingGuidancePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 }
 
 void
-CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
-                                                    OFX::ContextEnum context)
+CImgRollingGuidancePluginFactory::describeInContext(ImageEffectDescriptor& desc,
+                                                    ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgRollingGuidancePlugin::describeInContextBegin(desc, context,
-                                                                                       kSupportsRGBA,
-                                                                                       kSupportsRGB,
-                                                                                       kSupportsXY,
-                                                                                       kSupportsAlpha,
-                                                                                       kSupportsTiles,
-                                                                                       /*processRGB=*/ true,
-                                                                                       /*processAlpha*/ false,
-                                                                                       /*processIsSecret=*/ false);
+    PageParamDescriptor *page = CImgRollingGuidancePlugin::describeInContextBegin(desc, context,
+                                                                                  kSupportsRGBA,
+                                                                                  kSupportsRGB,
+                                                                                  kSupportsXY,
+                                                                                  kSupportsAlpha,
+                                                                                  kSupportsTiles,
+                                                                                  /*processRGB=*/ true,
+                                                                                  /*processAlpha*/ false,
+                                                                                  /*processIsSecret=*/ false);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
         param->setLabel(kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 1000);
@@ -246,7 +246,7 @@ CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
         }
     }
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
         param->setLabel(kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 10.0);
@@ -258,7 +258,7 @@ CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
         }
     }
     {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
+        IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
         param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, 10);
@@ -268,12 +268,13 @@ CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
             page->addChild(*param);
         }
     }
+
     CImgRollingGuidancePlugin::describeInContextEnd(desc, context, page);
 } // CImgRollingGuidancePluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 CImgRollingGuidancePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                                 OFX::ContextEnum /*context*/)
+                                                 ContextEnum /*context*/)
 {
     return new CImgRollingGuidancePlugin(handle);
 }

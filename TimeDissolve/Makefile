@@ -1,4 +1,4 @@
-PLUGINOBJECTS = TimeDissolve.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o TimeDissolve.o
 PLUGINNAME = TimeDissolve
 #RESOURCES = net.sf.openfx.TimeDissolvePlugin.png net.sf.openfx.TimeDissolvePlugin.svg
 

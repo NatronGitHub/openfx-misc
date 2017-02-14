@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -87,17 +88,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // Base class for the RGBA and the Alpha processor
 // This class performs a translation by an integer number of pixels (x,y)
 class TranslateBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
+    const Image *_srcImg;
     int _translateX;
     int _translateY;
 
 public:
     /** @brief no arg ctor */
-    TranslateBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    TranslateBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _translateX(0)
         , _translateY(0)
@@ -105,7 +106,7 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
     /** @brief set the translation vector */
     void setTranslate(int x,
@@ -119,7 +120,7 @@ class ImageTranslator
 {
 public:
     // ctor
-    ImageTranslator(OFX::ImageEffect &instance)
+    ImageTranslator(ImageEffect &instance)
         : TranslateBase(instance)
     {}
 
@@ -161,7 +162,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class ReConvergePlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -178,15 +179,15 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
-        _dispClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(kClipDisparity);
+        _dispClip = getContext() == eContextFilter ? NULL : fetchClip(kClipDisparity);
         assert( !_dispClip || (_dispClip->getPixelComponents() == ePixelComponentAlpha || _dispClip->getPixelComponents() == ePixelComponentRGB || _dispClip->getPixelComponents() == ePixelComponentRGBA) );
 
-        if (getContext() == OFX::eContextGeneral) {
+        if (getContext() == eContextGeneral) {
             _convergepoint = fetchDouble2DParam(kParamConvergePoint);
             assert(_convergepoint);
         }
@@ -197,25 +198,25 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(TranslateBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(TranslateBase &, const RenderArguments &args);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_dispClip;
-    OFX::Double2DParam *_convergepoint;
-    OFX::IntParam     *_offset;
-    OFX::ChoiceParam  *_convergemode;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_dispClip;
+    Double2DParam *_convergepoint;
+    IntParam     *_offset;
+    ChoiceParam  *_convergemode;
 };
 
 
@@ -229,46 +230,46 @@ private:
 /* set up and run a processor */
 void
 ReConvergePlugin::setupAndProcess(TranslateBase &processor,
-                                  const OFX::RenderArguments &args)
+                                  const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
 
     // make sure bit depths are sane
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -286,7 +287,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
 #pragma message ("TODO")
     (void)offset;
     // set the parameters
-    if ( (getContext() == OFX::eContextGeneral) && _convergepoint && _dispClip ) {
+    if ( (getContext() == eContextGeneral) && _convergepoint && _dispClip ) {
         // fetch the disparity of the tracked point
     }
     //
@@ -305,15 +306,15 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
 
 // override the roi call
 void
-ReConvergePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                       OFX::RegionOfInterestSetter &rois)
+ReConvergePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                       RegionOfInterestSetter &rois)
 {
     // set the ROI of the disp clip to the tracked point position (rounded to the nearest pixel)
-    if ( (getContext() == OFX::eContextGeneral) && _convergepoint && _srcClip && _dispClip ) {
+    if ( (getContext() == eContextGeneral) && _convergepoint && _srcClip && _dispClip ) {
         OfxRectD roi;
         // since getRegionsOfInterest is not view-specific, return a full horizontal band
         roi = _srcClip->getRegionOfDefinition(args.time);
-        if ( OFX::Coords::rectIsEmpty(roi) ) {
+        if ( Coords::rectIsEmpty(roi) ) {
             return;
         }
         roi.y1 = args.regionOfInterest.y1;
@@ -327,54 +328,54 @@ ReConvergePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
 // the internal render function
 template <int nComponents>
 void
-ReConvergePlugin::renderInternal(const OFX::RenderArguments &args,
-                                 OFX::BitDepthEnum dstBitDepth)
+ReConvergePlugin::renderInternal(const RenderArguments &args,
+                                 BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         ImageTranslator<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         ImageTranslator<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         ImageTranslator<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-ReConvergePlugin::render(const OFX::RenderArguments &args)
+ReConvergePlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
 
-mDeclarePluginFactory(ReConvergePluginFactory, {}, {});
+mDeclarePluginFactory(ReConvergePluginFactory, {ofxsThreadSuiteCheck();}, {});
 struct ConvergePointParam
 {
     static const char* name() { return kParamConvergePoint; }
@@ -383,7 +384,7 @@ struct ConvergePointParam
 };
 
 void
-ReConvergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+ReConvergePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -417,8 +418,8 @@ ReConvergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                           OFX::ContextEnum /*context*/)
+ReConvergePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                           ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -508,9 +509,9 @@ ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // ReConvergePluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 ReConvergePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new ReConvergePlugin(handle);
 }

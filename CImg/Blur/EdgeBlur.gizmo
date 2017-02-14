@@ -1,0 +1,96 @@
+#! /Applications/Nuke6.3v4/NukeX6.3v4.app/../Nuke6.3v4.app/Contents/MacOS/Nuke6.3v4 -nx
+version 6.3 v4
+Gizmo {
+ addUserKnob {20 User}
+ addUserKnob {41 size l Size T EdgeDetectCImg1.blurSize}
+ addUserKnob {41 filter l Filter T BlurCImg1.filter}
+ addUserKnob {41 expandRoD l "Expand RoD" T BlurCImg1.expandRoD}
+ addUserKnob {41 edgeMult l "Edge Mult" t "Sharpness of the borders of the blur area." T GammaOFX1.value}
+}
+ Input {
+  inputs 0
+  name Input1
+  xpos -434
+  ypos -76
+ }
+ Dot {
+  name Dot1
+  xpos -400
+  ypos -36
+ }
+set N1ef966a0 [stack 0]
+ OFXeu.cimg.edgedetect_v4 {
+  NatronOfxParamProcessR false
+  NatronOfxParamProcessG false
+  NatronOfxParamProcessB false
+  NatronOfxParamProcessA true
+  filter Gaussian
+  multiChannel Tensor
+  blurSize 3
+  erodeSize 0
+  nms false
+  expandRoD true
+  premult false
+  premultChannel A
+  maskInvert false
+  mix 1
+  premultChanged false
+  MaskChannel -rgba.alpha
+  name EdgeDetectCImg1
+  xpos -279
+  ypos -39
+ }
+ OFXnet.sf.openfx.gammaplugin_v2 {
+  NatronOfxParamProcessR false
+  NatronOfxParamProcessG false
+  NatronOfxParamProcessB false
+  NatronOfxParamProcessA true
+  value 2
+  invert false
+  premult false
+  premultChannel A
+  maskInvert false
+  mix 1
+  premultChanged true
+  MaskChannel -rgba.alpha
+  name GammaOFX1
+  xpos -279
+  ypos 43
+ }
+push $N1ef966a0
+ OFXnet.sf.cimg.cimgblur_v4 {
+  inputs 2
+  NatronOfxParamProcessR true
+  NatronOfxParamProcessG true
+  NatronOfxParamProcessB true
+  NatronOfxParamProcessA true
+  size {{parent.EdgeDetectCImg1.blurSize} {parent.EdgeDetectCImg1.blurSize}}
+  uniform true
+  orderX 0
+  orderY 0
+  boundary Black
+  filter Gaussian
+  expandRoD false
+  alphaThreshold 0
+  premult false
+  premultChannel A
+  maskInvert false
+  mix 1
+  premultChanged false
+  name BlurCImg1
+  xpos -434
+  ypos 47
+ }
+ Output {
+  name Output1
+  xpos -434
+  ypos 116
+ }
+ Viewer {
+  input_process false
+  name Viewer1
+  selected true
+  xpos -234
+  ypos 175
+ }
+end_group

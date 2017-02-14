@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 #include "ofxsCopier.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -37,8 +38,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Enlarges the input image by a given amount of black and transparent pixels."
 #define kPluginIdentifier "net.sf.openfx.AdjustRoDPlugin"
+// History:
+// 1.0 initial version
+// 1.1 add boundary param
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -51,11 +55,31 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamAddPixelsLabel "Add Pixels"
 #define kParamAddPixelsHint "How many pixels to add on each side for both dimensions (width/height)"
 
+#define kParamBoundary "boundary"
+#define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
+#define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Nearest (Neumann) conditions should be used. If the image represents gradients or derivatives, Black (Dirichlet) boundary conditions should be used."
+#define kParamBoundaryOptionDirichlet "Black"
+#define kParamBoundaryOptionDirichletHint "Dirichlet boundary condition: pixel values out of the image domain are zero."
+#define kParamBoundaryOptionNeumann "Nearest"
+#define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain."
+#define kParamBoundaryOptionPeriodic "Periodic"
+#define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
+#define kParamBoundaryDefault eBoundaryDirichlet
+#define kParamBoundaryDefaultLaplacian eBoundaryNeumann
+#define kParamBoundaryDefaultBloom eBoundaryNeumann
+#define kParamBoundaryDefaultEdgeExtend eBoundaryNeumann
+
+enum BoundaryEnum
+{
+    eBoundaryDirichlet = 0,
+    eBoundaryNeumann,
+    //eBoundaryPeriodic,
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class AdjustRoDPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -66,39 +90,42 @@ public:
         , _size(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
+        assert( _dstClip && (!_dstClip->isConnected() ||
+                             _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
         _size = fetchDouble2DParam(kParamAddPixels);
-        assert(_size);
+        _boundary  = fetchChoiceParam(kParamBoundary);
+        assert(_size && _boundary);
     }
 
 private:
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndCopy(OFX::PixelProcessorFilterBase &, const OFX::RenderArguments &args);
+    void setupAndCopy(PixelProcessorFilterBase &, const RenderArguments &args);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Double2DParam* _size;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Double2DParam* _size;
+    ChoiceParam* _boundary;
 };
 
 
@@ -110,35 +137,36 @@ private:
 
 /* set up and run a processor */
 void
-AdjustRoDPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
-                              const OFX::RenderArguments &args)
+AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
+                              const RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    const double time = args.time;
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() && dst.get() ) {
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
     // set the images
     processor.setDstImg( dst.get() );
-    processor.setSrcImg( src.get() );
+    processor.setSrcImg( src.get(), _boundary->getValueAtTime(time) );
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);
@@ -151,14 +179,14 @@ AdjustRoDPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                      OFX::RegionOfInterestSetter &rois)
+AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                      RegionOfInterestSetter &rois)
 {
     if (!_srcClip) {
         return;
     }
     const OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
-    if ( OFX::Coords::rectIsEmpty(srcRod) || OFX::Coords::rectIsEmpty(args.regionOfInterest) ) {
+    if ( Coords::rectIsEmpty(srcRod) || Coords::rectIsEmpty(args.regionOfInterest) ) {
         return;
     }
     double w, h;
@@ -171,21 +199,21 @@ AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     paddedRoD.y2 += h;
 
     // intersect the crop rectangle with args.regionOfInterest
-    OFX::Coords::rectIntersection(paddedRoD, args.regionOfInterest, &paddedRoD);
+    Coords::rectIntersection(paddedRoD, args.regionOfInterest, &paddedRoD);
     // intersect the crop rectangle with srcRoD
-    OFX::Coords::rectIntersection(paddedRoD, srcRod, &paddedRoD);
+    Coords::rectIntersection(paddedRoD, srcRod, &paddedRoD);
     rois.setRegionOfInterest(*_srcClip, paddedRoD);
 }
 
 bool
-AdjustRoDPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+AdjustRoDPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                        OfxRectD &rod)
 {
     if (!_srcClip) {
         return false;
     }
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(args.time);
-    if ( OFX::Coords::rectIsEmpty(srcRod) ) {
+    if ( Coords::rectIsEmpty(srcRod) ) {
         return false;
     }
     double w, h;
@@ -203,55 +231,55 @@ AdjustRoDPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
 // the internal render function
 template <int nComponents>
 void
-AdjustRoDPlugin::renderInternal(const OFX::RenderArguments &args,
-                                OFX::BitDepthEnum dstBitDepth)
+AdjustRoDPlugin::renderInternal(const RenderArguments &args,
+                                BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
-        OFX::PixelCopier<unsigned char, nComponents> fred(*this);
+    case eBitDepthUByte: {
+        PixelCopier<unsigned char, nComponents> fred(*this);
         setupAndCopy(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
-        OFX::PixelCopier<unsigned short, nComponents> fred(*this);
+    case eBitDepthUShort: {
+        PixelCopier<unsigned short, nComponents> fred(*this);
         setupAndCopy(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
-        OFX::PixelCopier<float, nComponents> fred(*this);
+    case eBitDepthFloat: {
+        PixelCopier<float, nComponents> fred(*this);
         setupAndCopy(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-AdjustRoDPlugin::render(const OFX::RenderArguments &args)
+AdjustRoDPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 #ifdef OFX_EXTENSIONS_NATRON
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
 #else
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentAlpha);
 #endif
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
 #ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
 #endif
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
@@ -273,9 +301,9 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 }
 
-mDeclarePluginFactory(AdjustRoDPluginFactory, {}, {});
+mDeclarePluginFactory(AdjustRoDPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-AdjustRoDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+AdjustRoDPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -313,16 +341,16 @@ AdjustRoDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-OFX::ImageEffect*
+ImageEffect*
 AdjustRoDPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       OFX::ContextEnum /*context*/)
+                                       ContextEnum /*context*/)
 {
     return new AdjustRoDPlugin(handle);
 }
 
 void
-AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                          OFX::ContextEnum /*context*/)
+AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                          ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -372,7 +400,23 @@ AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-}
+
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
+        param->setLabel(kParamBoundaryLabel);
+        param->setHint(kParamBoundaryHint);
+        assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
+        param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
+        assert(param->getNOptions() == eBoundaryNeumann && param->getNOptions() == 1);
+        param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
+        //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
+        //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
+        param->setDefault( (int)eBoundaryNeumann ); // aka zero
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+} // AdjustRoDPluginFactory::describeInContext
 
 static AdjustRoDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

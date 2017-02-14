@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifndef OFX_USE_MULTITHREAD_MUTEX
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
@@ -53,10 +54,12 @@ class ShadertoyPlugin
 
 public:
 #if defined(HAVE_OSMESA)
-    enum CPUDriverEnum {
+    enum CPUDriverEnum
+    {
         eCPUDriverSoftPipe = 0,
         eCPUDriverLLVMPipe
     };
+
 #endif
 
     enum UniformTypeEnum
@@ -96,14 +99,17 @@ public:
     };
 
     // a simple variant to represent an extra parameter
-    class ExtraParameter {
-    public:
-        union ExtraParameterValue {
+    class ExtraParameter
+    {
+public:
+        union ExtraParameterValue
+        {
             bool b; // bool
             int i; // int
             double f[4]; // float, vec2, vec3, vec4
         };
-    private:
+
+private:
         UniformTypeEnum _type;
         std::string _name;
         std::string _label;
@@ -114,179 +120,185 @@ public:
         //ExtraParameterValue _displayMin;
         //ExtraParameterValue _displayMax;
 
-    public:
+public:
         ExtraParameter()
-        : _type(eUniformTypeNone)
+            : _type(eUniformTypeNone)
         {
         }
 
-        void
-        init(UniformTypeEnum type, const std::string& name)
+        void init(UniformTypeEnum type,
+                  const std::string& name)
         {
             _type = type;
             _name = name;
             _label = name;
             _hint.clear();
             switch (type) {
-                case eUniformTypeNone:
-                    break;
-                case eUniformTypeBool:
-                    _default.b = false;
-                    break;
-                case eUniformTypeInt:
-                    _default.i = 0;
-                    _min.i = INT_MIN;
-                    _max.i = INT_MAX;
-                    //_displayMin.i = INT_MIN;
-                    //_displayMax.i = INT_MAX;
-                    break;
-                case eUniformTypeVec4:
-                    _default.f[3] = 0;
-                    _min.f[3] = -DBL_MAX;
-                    _max.f[3] = DBL_MAX;
-                    //_displayMin.f[3] = -DBL_MAX;
-                    //_displayMax.f[3] = DBL_MAX;
-                case eUniformTypeVec3:
-                    _default.f[2] = 0;
-                    _min.f[2] = -DBL_MAX;
-                    _max.f[2] = DBL_MAX;
-                    //_displayMin.f[2] = -DBL_MAX;
-                    //_displayMax.f[2] = DBL_MAX;
-                case eUniformTypeVec2:
-                    _default.f[1] = 0;
-                    _min.f[1] = -DBL_MAX;
-                    _max.f[1] = DBL_MAX;
-                    //_displayMin.f[1] = -DBL_MAX;
-                    //_displayMax.f[1] = DBL_MAX;
-                case eUniformTypeFloat:
-                    _default.f[0] = 0;
-                    _min.f[0] = -DBL_MAX;
-                    _max.f[0] = DBL_MAX;
-                    //_displayMin.f[0] = -DBL_MAX;
-                    //_displayMax.f[0] = DBL_MAX;
-                    break;
+            case eUniformTypeNone:
+                break;
+            case eUniformTypeBool:
+                _default.b = false;
+                break;
+            case eUniformTypeInt:
+                _default.i = 0;
+                _min.i = INT_MIN;
+                _max.i = INT_MAX;
+                //_displayMin.i = INT_MIN;
+                //_displayMax.i = INT_MAX;
+                break;
+            case eUniformTypeVec4:
+                _default.f[3] = 0;
+                _min.f[3] = -DBL_MAX;
+                _max.f[3] = DBL_MAX;
+            //_displayMin.f[3] = -DBL_MAX;
+            //_displayMax.f[3] = DBL_MAX;
+            case eUniformTypeVec3:
+                _default.f[2] = 0;
+                _min.f[2] = -DBL_MAX;
+                _max.f[2] = DBL_MAX;
+            //_displayMin.f[2] = -DBL_MAX;
+            //_displayMax.f[2] = DBL_MAX;
+            case eUniformTypeVec2:
+                _default.f[1] = 0;
+                _min.f[1] = -DBL_MAX;
+                _max.f[1] = DBL_MAX;
+            //_displayMin.f[1] = -DBL_MAX;
+            //_displayMax.f[1] = DBL_MAX;
+            case eUniformTypeFloat:
+                _default.f[0] = 0;
+                _min.f[0] = -DBL_MAX;
+                _max.f[0] = DBL_MAX;
+                //_displayMin.f[0] = -DBL_MAX;
+                //_displayMax.f[0] = DBL_MAX;
+                break;
             }
         }
 
-        UniformTypeEnum
-        getType() const
+        UniformTypeEnum getType() const
         {
             return _type;
         }
 
-        const std::string&
-        getName() const
+        const std::string&getName() const
         {
             return _name;
         }
 
-        const std::string&
-        getLabel() const
+        const std::string&getLabel() const
         {
             return _label;
         }
 
-        const std::string&
-        getHint() const
+        const std::string&getHint() const
         {
             return _hint;
         }
 
-        ExtraParameterValue&
-        getDefault()
+        ExtraParameterValue&getDefault()
         {
             return _default;
         }
 
-        const ExtraParameterValue&
-        getDefault() const
+        const ExtraParameterValue&getDefault() const
         {
             return _default;
         }
 
-        ExtraParameterValue&
-        getMin()
+        ExtraParameterValue&getMin()
         {
             return _min;
         }
 
-        const ExtraParameterValue&
-        getMin() const
+        const ExtraParameterValue&getMin() const
         {
             return _min;
         }
 
-        ExtraParameterValue&
-        getMax()
+        ExtraParameterValue&getMax()
         {
             return _max;
         }
 
-        const ExtraParameterValue&
-        getMax() const
+        const ExtraParameterValue&getMax() const
         {
             return _max;
         }
 
-        void
-        setLabel(const std::string& label)
+        void setLabel(const std::string& label)
         {
             _label = label;
         }
 
-        void
-        setHint(const std::string& hint)
+        void setHint(const std::string& hint)
         {
             _hint = hint;
         }
 
-        void
-        set(ExtraParameterValue& val, bool b)
+        void set(ExtraParameterValue& val,
+                 bool b)
         {
             assert(_type == eUniformTypeBool);
             val.b = b;
         }
 
-        void
-        set(ExtraParameterValue& val, int i)
+        void set(ExtraParameterValue& val,
+                 int i)
         {
             assert(_type == eUniformTypeInt);
             val.i = i;
         }
 
-        void
-        set(ExtraParameterValue& val, float f)
+        void set(ExtraParameterValue& val,
+                 float f)
         {
             assert(_type == eUniformTypeFloat);
-            val.f[0] = f;
+            val.f[0] = ftod(f);
         }
 
-        void
-        set(ExtraParameterValue& val, float x, float y)
+        void set(ExtraParameterValue& val,
+                 float x,
+                 float y)
         {
             assert(_type == eUniformTypeVec2);
-            val.f[0] = x;
-            val.f[1] = y;
+            val.f[0] = ftod(x);
+            val.f[1] = ftod(y);
         }
 
-        void
-        set(ExtraParameterValue& val, float r, float g, float b)
+        void set(ExtraParameterValue& val,
+                 float r,
+                 float g,
+                 float b)
         {
             assert(_type == eUniformTypeVec3);
-            val.f[0] = r;
-            val.f[1] = g;
-            val.f[2] = b;
+            val.f[0] = ftod(r);
+            val.f[1] = ftod(g);
+            val.f[2] = ftod(b);
         }
 
-        void
-        set(ExtraParameterValue& val, float r, float g, float b, float a)
+        void set(ExtraParameterValue& val,
+                 float r,
+                 float g,
+                 float b,
+                 float a)
         {
             assert(_type == eUniformTypeVec4);
-            val.f[0] = r;
-            val.f[1] = g;
-            val.f[2] = b;
-            val.f[3] = a;
+            val.f[0] = ftod(r);
+            val.f[1] = ftod(g);
+            val.f[2] = ftod(b);
+            val.f[3] = ftod(a);
         }
+    };
+
+    struct Preset
+    {
+        Preset(const std::string& d, const std::string& f)
+        : description(d)
+        , filename(f)
+        {
+        }
+
+        std::string description;
+        std::string filename;
     };
 
 #ifdef OFX_USE_MULTITHREAD_MUTEX
@@ -308,25 +320,32 @@ public:
 #endif
 
 public:
-    static const char*
-    mapUniformTypeToStr(UniformTypeEnum e)
+    static const char* mapUniformTypeToStr(UniformTypeEnum e)
     {
         switch (e) {
-            case eUniformTypeNone:
-                return NULL;
-            case eUniformTypeBool:
-                return "bool";
-            case eUniformTypeInt:
-                return "int";
-            case eUniformTypeFloat:
-                return "float";
-            case eUniformTypeVec2:
-                return "vec2";
-            case eUniformTypeVec3:
-                return "vec3";
-            case eUniformTypeVec4:
-                return "vec4";
+        case eUniformTypeNone:
+
+            return NULL;
+        case eUniformTypeBool:
+
+            return "bool";
+        case eUniformTypeInt:
+
+            return "int";
+        case eUniformTypeFloat:
+
+            return "float";
+        case eUniformTypeVec2:
+
+            return "vec2";
+        case eUniformTypeVec3:
+
+            return "vec3";
+        case eUniformTypeVec4:
+
+            return "vec4";
         }
+
         return NULL;
     };
 
@@ -370,6 +389,7 @@ private:
     void updateExtra();
     void updateClips();
     void resetParamsValues();
+    static double ftod(float f);
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -384,6 +404,8 @@ private:
     OFX::Int2DParam *_formatSize;
     OFX::DoubleParam *_formatPar;
     OFX::StringParam *_imageShaderFileName;
+    OFX::StringParam *_imageShaderPresetDir;
+    OFX::ChoiceParam *_imageShaderPreset;
     OFX::StringParam *_imageShaderSource;
     OFX::PushButtonParam *_imageShaderCompile;
     OFX::IntParam *_imageShaderTriggerRender;
@@ -392,6 +414,7 @@ private:
     OFX::Double2DParam *_mousePosition;
     OFX::Double2DParam *_mouseClick;
     OFX::BooleanParam *_mousePressed;
+    OFX::RGBAParam *_date;
     OFX::GroupParam *_groupExtra;
     OFX::IntParam *_paramCount;
     std::vector<OFX::GroupParam *> _paramGroup;
@@ -403,13 +426,13 @@ private:
     std::vector<OFX::IntParam *> _paramValueInt;
     std::vector<OFX::DoubleParam *> _paramValueFloat;
     std::vector<OFX::Double2DParam *> _paramValueVec2;
-    std::vector<OFX::Double3DParam *> _paramValueVec3;
+    std::vector<OFX::RGBParam *> _paramValueVec3;
     std::vector<OFX::RGBAParam *> _paramValueVec4;
     std::vector<OFX::BooleanParam *> _paramDefaultBool;
     std::vector<OFX::IntParam *> _paramDefaultInt;
     std::vector<OFX::DoubleParam *> _paramDefaultFloat;
     std::vector<OFX::Double2DParam *> _paramDefaultVec2;
-    std::vector<OFX::Double3DParam *> _paramDefaultVec3;
+    std::vector<OFX::RGBParam *> _paramDefaultVec3;
     std::vector<OFX::RGBAParam *> _paramDefaultVec4;
     std::vector<OFX::IntParam *> _paramMinInt;
     std::vector<OFX::DoubleParam *> _paramMinFloat;
@@ -432,7 +455,6 @@ private:
     std::vector<WrapEnum> _imageShaderInputWrap;
     BBoxEnum _imageShaderBBox;
     bool _imageShaderCompiled;
-
     struct OpenGLContextData
     {
         OpenGLContextData()
@@ -456,6 +478,8 @@ private:
     std::auto_ptr<Mutex> _rendererInfoMutex;
     std::string _rendererInfo;
 
+    std::vector<Preset> _presets;
+    
 #if defined(HAVE_OSMESA)
     // A list of Mesa contexts available for rendering.
     // renderMesa() pops the last element, uses it, then pushes it back.

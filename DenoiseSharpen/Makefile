@@ -1,4 +1,4 @@
-PLUGINOBJECTS = DenoiseSharpen.o ofxsLut.o ofxsRectangleInteract.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o DenoiseSharpen.o ofxsLut.o ofxsRectangleInteract.o
 PLUGINNAME = DenoiseSharpen
 #RESOURCES = net.sf.openfx.DenoiseSharpen.png net.sf.openfx.DenoiseSharpen.svg
 

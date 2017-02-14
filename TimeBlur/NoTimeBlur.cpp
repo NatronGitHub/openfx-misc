@@ -58,7 +58,7 @@ enum RoundingEnum
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class NoTimeBlurPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -69,22 +69,22 @@ public:
         , _rounding(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _rounding = fetchChoiceParam(kParamRounding);
         assert(_rounding);
     }
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::ChoiceParam *_rounding;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    ChoiceParam *_rounding;
 };
 
 
@@ -97,10 +97,10 @@ private:
 
 // the overridden render function
 void
-NoTimeBlurPlugin::render(const OFX::RenderArguments &args)
+NoTimeBlurPlugin::render(const RenderArguments &args)
 {
 #ifdef DEBUG
-    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
+    setPersistentMessage(Message::eMessageError, "", "OFX Host should not render");
     throwSuiteStatusException(kOfxStatFailed);
 #endif
 
@@ -109,18 +109,18 @@ NoTimeBlurPlugin::render(const OFX::RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
     double srcTime = time;
     switch (rounding) {
@@ -136,19 +136,19 @@ NoTimeBlurPlugin::render(const OFX::RenderArguments &args)
     case eRoundingNone:
         break;
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(srcTime) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(srcTime) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     copyPixels( *this, args.renderWindow, src.get(), dst.get() );
@@ -184,7 +184,7 @@ NoTimeBlurPlugin::isIdentity(const IsIdentityArguments &args,
 }
 
 bool
-NoTimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+NoTimeBlurPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
     const double time = args.time;
@@ -210,9 +210,9 @@ NoTimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     return true;
 }
 
-mDeclarePluginFactory(NoTimeBlurPluginFactory, {}, {});
+mDeclarePluginFactory(NoTimeBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-NoTimeBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+NoTimeBlurPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -255,8 +255,8 @@ NoTimeBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-NoTimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                           OFX::ContextEnum /*context*/)
+NoTimeBlurPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                           ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -308,9 +308,9 @@ NoTimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // NoTimeBlurPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 NoTimeBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new NoTimeBlurPlugin(handle);
 }

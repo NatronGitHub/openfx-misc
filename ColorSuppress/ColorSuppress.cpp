@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -228,6 +229,7 @@ protected:
         switch (_luminanceMath) {
         case eLuminanceMathRec709:
         default:
+
             return Color::rgb709_to_y(r, g, b);
 
         case eLuminanceMathRec2020: // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
@@ -540,6 +542,7 @@ ColorSuppressPlugin::setupAndProcess(ColorSuppressProcessorBase &processor,
                                      const RenderArguments &args)
 {
     const double time = args.time;
+
     std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
@@ -797,7 +800,7 @@ ColorSuppressPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(ColorSuppressPluginFactory, {}, {});
+mDeclarePluginFactory(ColorSuppressPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ColorSuppressPluginFactory::describe(ImageEffectDescriptor &desc)
 {

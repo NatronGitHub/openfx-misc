@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Difference.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Difference.o
 PLUGINNAME = Difference
 RESOURCES = net.sf.openfx.DifferencePlugin.png net.sf.openfx.DifferencePlugin.svg
 

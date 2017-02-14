@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,6 +42,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
@@ -64,14 +65,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Draw a rectangle.\n" \
     "The rectangle is composited with the source image using the 'over' operator.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Rectangle"
+    "\n" \
+    "If no source is connected, this effect behaves like a generator. Its region of definition is:\n" \
+    "- The selected format if the Extent parameter is a format.\n" \
+    "- The project output format if Color0 is not black and transparent.\n" \
+    "- The selected extent plus a one-pixel border if Color0 is black and transparent.\n" \
+    "\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Rectangle"
 
 #define kPluginIdentifier "net.sf.openfx.Rectangle"
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: antialiased render & remove blackOutside parameter (the outside color is always color0)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -113,9 +121,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamProcessAHint  "Process alpha component."
 #endif
 
+#define kParamCornerRadius "cornerRadius"
+#define kParamCornerRadiusLabel "Corner Radius"
+#define kParamCornerRadiusHint "If non-zero, this is the radius of the round corners."
+
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
-#define kParamSoftnessHint "Softness of the rectangle edges. 0 is a hard edge."
+#define kParamSoftnessHint "Softness of the rectangle edges. Draws an anti-aliased rectangle if zero"
 
 #define kParamColor0 "color0"
 #define kParamColor0Label "Color 0"
@@ -125,12 +137,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
-#define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0.a=0)."
-
-#define kParamBlackOutside "blackOutside"
-#define kParamBlackOutsideLabel "Black Outside"
-#define kParamBlackOutsideHint "Add a 1 pixel black and transparent border if the plugin is used as a generator."
-
+#define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0=(0,0,0,0))."
 
 struct RGBAValues
 {
@@ -155,11 +162,11 @@ rampSmooth(double t)
 }
 
 class RectangleProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_maskImg;
+    const Image *_srcImg;
+    const Image *_maskImg;
     bool _doMasking;
     double _mix;
     bool _maskInvert;
@@ -168,12 +175,13 @@ protected:
     bool _processB;
     bool _processA;
     OfxPointD _btmLeft, _size;
+    OfxPointD _cornerRadius;
     double _softness;
     RGBAValues _color0, _color1;
 
 public:
-    RectangleProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    RectangleProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _doMasking(false)
@@ -186,17 +194,18 @@ public:
         , _softness(0.)
     {
         _btmLeft.x = _btmLeft.y = _size.x = _size.y = 0.;
+        _cornerRadius.x = _cornerRadius.y = 0.;
         _color0.r = _color0.g = _color0.b = _color0.a = 0.;
         _color1.r = _color1.g = _color1.b = _color1.a = 0.;
     }
 
     /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v)
+    void setSrcImg(const Image *v)
     {
         _srcImg = v;
     }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert)
     {
         _maskImg = v;
@@ -210,6 +219,7 @@ public:
 
     void setValues(const OfxPointD& btmLeft,
                    const OfxPointD& size,
+                   const OfxPointD& cornerRadius,
                    double softness,
                    const RGBAValues& color0,
                    const RGBAValues& color1,
@@ -221,6 +231,7 @@ public:
     {
         _btmLeft = btmLeft;
         _size = size;
+        _cornerRadius = cornerRadius;
         _softness = std::max(0., softness);
         _color0 = color0;
         _color1 = color1;
@@ -238,7 +249,7 @@ class RectangleProcessor
     : public RectangleProcessorBase
 {
 public:
-    RectangleProcessor(OFX::ImageEffect &instance)
+    RectangleProcessor(ImageEffect &instance)
         : RectangleProcessorBase(instance)
     {
     }
@@ -324,6 +335,20 @@ private:
         assert( !processA || (nComponents == 1 || nComponents == 4) );
 
         float tmpPix[4];
+        OfxPointD rs = _dstImg->getRenderScale();
+        double par = _dstImg->getPixelAspectRatio();
+        OfxPointD btmLeft_canonical = { _btmLeft.x, _btmLeft.y };
+        OfxPointD topRight_canonical = { _btmLeft.x + _size.x, _btmLeft.y + _size.y };
+        OfxPointD btmLeft; // btmLeft position in pixel
+        Coords::toPixelSub(btmLeft_canonical, rs, par, &btmLeft);
+        OfxPointD topRight; // topRight position in pixel
+        Coords::toPixelSub(topRight_canonical, rs, par, &topRight);
+        OfxPointD softness; // softness value in pixel
+        softness.x = _softness * rs.x / par;
+        softness.y = _softness * rs.y;
+        OfxPointD r; // cornerRadius value in pixel
+        r.x = _cornerRadius.x * rs.x / par;
+        r.y = _cornerRadius.y * rs.y;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -334,53 +359,210 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                OfxPointI p_pixel;
-                OfxPointD p;
-                p_pixel.x = x;
-                p_pixel.y = y;
-                OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
-                double dx = std::min(p.x - _btmLeft.x, _btmLeft.x + _size.x - p.x);
-                double dy = std::min(p.y - _btmLeft.y, _btmLeft.y + _size.y - p.y);
+                double dx = std::min(x - btmLeft.x, topRight.x - x);
+                double dy = std::min(y - btmLeft.y, topRight.y - y);
 
-                if ( (dx <= 0) || (dy <= 0) ) {
+                if ( (dx <= -0.5) || (dy <= -0.5) ) {
                     // outside of the rectangle
                     tmpPix[0] = (float)_color0.r;
                     tmpPix[1] = (float)_color0.g;
                     tmpPix[2] = (float)_color0.b;
                     tmpPix[3] = (float)_color0.a;
-                } else if ( (_softness == 0) || ( (dx >= _softness) && (dy >= _softness) ) ) {
-                    // inside of the rectangle
-                    tmpPix[0] = (float)_color1.r;
-                    tmpPix[1] = (float)_color1.g;
-                    tmpPix[2] = (float)_color1.b;
-                    tmpPix[3] = (float)_color1.a;
                 } else {
-                    float tx, ty;
-                    if (dx >= _softness) {
-                        tx = 1.f;
+                    float a = 1.; // mix factor with the outside
+                    // test if the center of the pixel is within one of the rounded corners
+                    if ( (r.x > 0) && (r.y > 0) &&
+                         ( ( x < (btmLeft.x + r.x) ) || ( x > (topRight.x - r.x) ) ) &&
+                         ( ( y < (btmLeft.y + r.y) ) || ( y > (topRight.y - r.y) ) ) ) {
+                        // CORNERS
+
+                        // compute the corresponding ellipse center (in pixel coordinates
+                        OfxPointD c; // center position in pixel
+                        c.x = x < (btmLeft.x + r.x) ? (btmLeft.x + r.x) : (topRight.x - r.x);
+                        c.y = y < (btmLeft.y + r.y) ? (btmLeft.y + r.y) : (topRight.y - r.y);
+
+                        // The following is the ellipse drawing code from the Radial plugin
+
+                        // approximate subpixel rendering of the disc:
+                        // - test the pixel corner closer to the center. if it is outside, the pixel is fully outside
+                        // - test the pixel corner farther to the center. if it is inside, the pixel is fully outside
+                        // - else the pixel is mixed, and its value is (color0*abs(sqrt(dsq_farther)-1)+color1_smoothed*abs(sqrt(dsq_closer)-1))/(sqrt(dsq_farther)+sqrt(dsq_closer))
+                        OfxPointD p_closer = {(double)x, (double)y};
+                        OfxPointD p_farther = {(double)x, (double)y};
+
+                        if (x <= c.x - 0.5) {
+                            p_closer.x += 0.5;
+                            p_farther.x -= 0.5;
+                        } else if (x >= c.x + 0.5) {
+                            p_closer.x -= 0.5;
+                            p_farther.x += 0.5;
+                        }
+                        if (y <= c.y - 0.5) {
+                            p_closer.y += 0.5;
+                            p_farther.y -= 0.5;
+                        } else if (y >= c.y + 0.5) {
+                            p_closer.y -= 0.5;
+                            p_farther.y += 0.5;
+                        }
+                        double dx_closer = (p_closer.x - c.x) / r.x;
+                        double dy_closer = (p_closer.y - c.y) / r.y;
+                        double dx_farther = (p_farther.x - c.x) / r.x;
+                        double dy_farther = (p_farther.y - c.y) / r.y;
+
+
+                        if ( (dx_closer >= 1) || (dy_closer >= 1) ) {
+                            // outside
+                            tmpPix[0] = (float)_color0.r;
+                            tmpPix[1] = (float)_color0.g;
+                            tmpPix[2] = (float)_color0.b;
+                            tmpPix[3] = (float)_color0.a;
+                        } else {
+                            // maybe inside
+
+                            //double dsq = dxe * dxe + dye * dye;
+                            double dsq_closer = dx_closer * dx_closer + dy_closer * dy_closer;
+                            double dsq_farther = dx_farther * dx_farther + dy_farther * dy_farther;
+                            assert(dsq_closer <= dsq_farther);
+                            if (dsq_closer > dsq_farther) {
+                                // protect against bug
+                                std::swap(dsq_closer, dsq_farther);
+                            }
+                            if (dsq_closer >= 1) {
+                                // fully outside
+                                tmpPix[0] = (float)_color0.r;
+                                tmpPix[1] = (float)_color0.g;
+                                tmpPix[2] = (float)_color0.b;
+                                tmpPix[3] = (float)_color0.a;
+                            } else {
+                                // always consider the value closest top the center to avoid discontinuities/artifacts
+                                if (_softness == 0) {
+                                    // solid color
+                                    tmpPix[0] = (float)_color1.r;
+                                    tmpPix[1] = (float)_color1.g;
+                                    tmpPix[2] = (float)_color1.b;
+                                    tmpPix[3] = (float)_color1.a;
+                                } else {
+                                    // compute the non-round rect coeff (tx*ty) first.
+                                    float tx, ty;
+                                    if (dx >= softness.x) {
+                                        tx = 1.f;
+                                    } else {
+                                        tx = (float)rampSmooth(dx / softness.x);
+                                    }
+                                    if (dy >= softness.y) {
+                                        ty = 1.f;
+                                    } else {
+                                        ty = (float)rampSmooth(dy / softness.y);
+                                    }
+
+                                    // then the corner coeff.
+                                    double dellipse; // distance to the ellipse along the radius
+                                    // compute the point on the ellipse that goes through the ellipse center and the considered point.
+                                    if (dsq_closer <= 0) {
+                                        dellipse = std::min(r.x, r.y);
+                                    } else {
+                                        double radius = std::sqrt(dsq_closer);
+                                        // distance must be measured at full scale in canonical coords
+                                        double vx = (p_closer.x - c.x) * (1 / radius - 1) * par / rs.x;
+                                        double vy = (p_closer.y - c.y) * (1 / radius - 1) / rs.y;
+                                        dellipse = std::sqrt(vx * vx + vy * vy);
+                                    }
+                                    assert(dellipse >= 0.);
+                                    float t = dellipse / _softness;
+                                    if (t < 1) {
+                                        t = (float)rampSmooth(t);
+                                    }
+
+                                    // take the min of the rectangle softness and the corner softness
+                                    t = std::min(t, tx * ty);
+
+                                    if (t >= 1) {
+                                        tmpPix[0] = (float)_color1.r;
+                                        tmpPix[1] = (float)_color1.g;
+                                        tmpPix[2] = (float)_color1.b;
+                                        tmpPix[3] = (float)_color1.a;
+                                    } else {
+                                        //if (_plinear) {
+                                        //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                                        //    t = t * t * t;
+                                        //}
+                                        tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                                        tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                                        tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                                        tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                    }
+                                }
+
+                                if (dsq_farther <= 1) {
+                                    // fully inside
+                                    a = 1.;
+                                } else {
+                                    // mixed pixel, partly inside / partly outside, center of pixel is outside
+                                    assert(dsq_closer < 1 && dsq_farther > 1);
+                                    // now mix with the outside pix;
+                                    a = ( 1 - std::sqrt( std::max(dsq_closer, 0.) ) ) / ( std::sqrt( std::max(dsq_farther, 0.) ) - std::sqrt( std::max(dsq_closer, 0.) ) );
+                                }
+                            } // if (!fully_outside
+                        } // if (outside vs. maybe inside)
                     } else {
-                        tx = (float)rampSmooth(dx / _softness);
+                        // RECTANGLE
+
+                        // within the rectangle area minus the corners
+
+                        // inside or mixed
+                        // is it a mixed pixel?
+                        if (dx < 0.5) {
+                            a *= dx + 0.5;
+                            dx = 0.5;
+                        }
+                        if (dy < 0.5) {
+                            a *= dy + 0.5;
+                            dy = 0.5;
+                        }
+                        if ( (_softness == 0) || ( (dx >= softness.x) && (dy >= softness.y) ) ) {
+                            // inside of the rectangle
+                            tmpPix[0] = (float)_color1.r;
+                            tmpPix[1] = (float)_color1.g;
+                            tmpPix[2] = (float)_color1.b;
+                            tmpPix[3] = (float)_color1.a;
+                        } else {
+                            float tx, ty;
+                            if (dx >= softness.x) {
+                                tx = 1.f;
+                            } else {
+                                tx = (float)rampSmooth(dx / softness.x);
+                            }
+                            if (dy >= softness.y) {
+                                ty = 1.f;
+                            } else {
+                                ty = (float)rampSmooth(dy / softness.y);
+                            }
+                            float t = tx * ty;
+                            if (t >= 1) {
+                                tmpPix[0] = (float)_color1.r;
+                                tmpPix[1] = (float)_color1.g;
+                                tmpPix[2] = (float)_color1.b;
+                                tmpPix[3] = (float)_color1.a;
+                            } else {
+                                //if (_plinear) {
+                                //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                                //    t = t*t*t;
+                                //}
+                                tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                                tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                                tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                                tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                            }
+                        }
                     }
-                    if (dy >= _softness) {
-                        ty = 1.f;
-                    } else {
-                        ty = (float)rampSmooth(dy / _softness);
-                    }
-                    float t = tx * ty;
-                    if (t >= 1) {
-                        tmpPix[0] = (float)_color1.r;
-                        tmpPix[1] = (float)_color1.g;
-                        tmpPix[2] = (float)_color1.b;
-                        tmpPix[3] = (float)_color1.a;
-                    } else {
-                        //if (_plinear) {
-                        //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
-                        //    t = t*t*t;
-                        //}
-                        tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
-                        tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
-                        tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
-                        tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                    assert(a >= 0. && a <= 1.);
+                    if (a != 1.) {
+                        // mixed pixel (inside/outside)
+                        assert(0 <= a && a <= 1.);
+                        tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
+                        tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
+                        tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
+                        tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
                     }
                 }
                 float a = tmpPix[3];
@@ -449,15 +631,14 @@ public:
         , _color0(0)
         , _color1(0)
         , _expandRoD(0)
-        , _blackOutside(0)
     {
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentXY ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _processR = fetchBooleanParam(kParamProcessR);
@@ -465,12 +646,12 @@ public:
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
+        _cornerRadius = fetchDouble2DParam(kParamCornerRadius);
         _softness = fetchDoubleParam(kParamSoftness);
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
-        _blackOutside = fetchBooleanParam(kParamBlackOutside);
-        assert(_softness && _color0 && _color1 && _expandRoD && _blackOutside);
+        assert(_softness && _color0 && _color1 && _expandRoD);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
@@ -480,23 +661,23 @@ public:
 
 private:
     /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /* Override the clip preferences */
-    void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(RectangleProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(RectangleProcessorBase &, const RenderArguments &args);
 
-    virtual OFX::Clip* getSrcClip() const OVERRIDE FINAL
+    virtual Clip* getSrcClip() const OVERRIDE FINAL
     {
         return _srcClip;
     }
@@ -510,14 +691,14 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
+    Double2DParam* _cornerRadius;
     DoubleParam* _softness;
     RGBAParam* _color0;
     RGBAParam* _color1;
     BooleanParam* _expandRoD;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _blackOutside;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -529,69 +710,69 @@ private:
 /* set up and run a processor */
 void
 RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
-                                 const OFX::RenderArguments &args)
+                                 const RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    const double time = args.time;
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
-    const double time = args.time;
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
                  ( mask->getRenderScale().y != args.renderScale.y) ||
-                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                throwSuiteStatusException(kOfxStatFailed);
             }
         }
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
     if ( src.get() && dst.get() ) {
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -617,23 +798,27 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
             size.y = rod.y2 - rod.y1;
         }
     }
-    double softness;
-    _softness->getValueAtTime(args.time, softness);
-
+    OfxPointD cornerRadius;
+    _cornerRadius->getValueAtTime(time, cornerRadius.x, cornerRadius.y);
+    if (cornerRadius.x > size.x / 2) {
+        cornerRadius.x = size.x / 2;
+    }
+    if (cornerRadius.y > size.y / 2) {
+        cornerRadius.y = size.y / 2;
+    }
+    double softness = _softness->getValueAtTime(time);
     RGBAValues color0, color1;
-    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
+    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
+    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
 
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
-
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    bool processR = _processR->getValueAtTime(time);
+    bool processG = _processG->getValueAtTime(time);
+    bool processB = _processB->getValueAtTime(time);
+    bool processA = _processA->getValueAtTime(time);
+    double mix = _mix->getValueAtTime(time);
 
     processor.setValues(btmLeft, size,
+                        cornerRadius,
                         softness,
                         color0, color1,
                         mix,
@@ -645,57 +830,57 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
 // the internal render function
 template <int nComponents>
 void
-RectanglePlugin::renderInternal(const OFX::RenderArguments &args,
-                                OFX::BitDepthEnum dstBitDepth)
+RectanglePlugin::renderInternal(const RenderArguments &args,
+                                BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         RectangleProcessor<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         RectangleProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         RectangleProcessor<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-RectanglePlugin::render(const OFX::RenderArguments &args)
+RectanglePlugin::render(const RenderArguments &args)
 {
     assert( _dstClip && _dstClip->isConnected() );
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
 
 bool
-RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                            OFX::Clip * &identityClip,
+RectanglePlugin::isIdentity(const IsIdentityArguments &args,
+                            Clip * &identityClip,
                             double &identityTime)
 {
     if ( GeneratorPlugin::isIdentity(args, identityClip, identityTime) ) {
@@ -705,8 +890,8 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     if (!_srcClip) {
         return false;
     }
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    const double time = args.time;
+    double mix = _mix->getValueAtTime(time);
 
     if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = _srcClip;
@@ -715,14 +900,10 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     {
-        bool processR;
-        bool processG;
-        bool processB;
-        bool processA;
-        _processR->getValueAtTime(args.time, processR);
-        _processG->getValueAtTime(args.time, processG);
-        _processB->getValueAtTime(args.time, processB);
-        _processA->getValueAtTime(args.time, processA);
+        bool processR = _processR->getValueAtTime(time);
+        bool processG = _processG->getValueAtTime(time);
+        bool processB = _processB->getValueAtTime(time);
+        bool processA = _processA->getValueAtTime(time);
         if (!processR && !processG && !processB && !processA) {
             identityClip = _srcClip;
 
@@ -731,26 +912,26 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     RGBAValues color0, color1;
-    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
-    if ( (color0.a == 0.) && (color1.a == 0.) ) {
+    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
+    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
+    if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
+         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         identityClip = _srcClip;
 
         return true;
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        bool maskInvert = _maskInvert->getValueAtTime(time);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
+            if (getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
 
                     return true;
@@ -762,10 +943,9 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     return false;
 } // RectanglePlugin::isIdentity
 
-
 /* Override the clip preferences */
 void
-RectanglePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     if (_srcClip) {
         // set the premultiplication of _dstClip if alpha is affected and source is Opaque
@@ -783,7 +963,7 @@ RectanglePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 }
 
 bool
-RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                        OfxRectD &rod)
 {
     const double time = args.time;
@@ -803,7 +983,9 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     }
     RGBAValues color0;
     _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
-    if (color0.a != 0.) {
+    GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+    if ( (extent != eGeneratorExtentFormat) &&
+         ( (color0.r != 0.) || (color0.g != 0.) || (color0.b != 0.) || (color0.a != 0.) ) ) {
         // something has to be drawn outside of the rectangle
 
         // return default RoD.
@@ -815,7 +997,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     }
     RGBAValues color1;
     _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
-    if (color1.a == 0.) {
+    if ( (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         if ( _srcClip && _srcClip->isConnected() ) {
             // nothing to draw: return default region of definition
             return false;
@@ -833,17 +1015,19 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     }
 
     bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
-    bool blackOutside;
-    _blackOutside->getValueAtTime(time, blackOutside);
-    rod.x1 -= (int)blackOutside;
-    rod.y1 -= (int)blackOutside;
-    rod.x2 += (int)blackOutside;
-    rod.y2 += (int)blackOutside;
+    if ( wasCaught && (extent != eGeneratorExtentFormat) ) {
+        // add one pixel in each direction to ensure border is black and transparent
+        // (non-black+transparent case was treated above)
+        rod.x1 -= 1;
+        rod.y1 -= 1;
+        rod.x2 += 1;
+        rod.y2 += 1;
+    }
 
     if ( _srcClip && _srcClip->isConnected() ) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
         const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(time);
-        OFX::Coords::rectBoundingBox(rod, srcRoD, &rod);
+        Coords::rectBoundingBox(rod, srcRoD, &rod);
     } else if (!wasCaught) {
         //The generator is in default mode, if the source clip is connected, take its rod, otherwise take
         //the rod of the project
@@ -858,13 +1042,13 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     return true;
 } // RectanglePlugin::getRegionOfDefinition
 
-mDeclarePluginFactory(RectanglePluginFactory, {}, {});
+mDeclarePluginFactory(RectanglePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+RectanglePluginFactory::describe(ImageEffectDescriptor &desc)
 {
 #ifdef DEBUG_HOSTDESCRIPTION
     {
-        const ImageEffectHostDescription& hostDesc = *OFX::getImageEffectHostDescription();
+        const ImageEffectHostDescription& hostDesc = *getImageEffectHostDescription();
         std::cout << "OFX host description follows" << std::endl;
         std::cout << "OFX API version " << hostDesc.APIVersionMajor << '.' << hostDesc.APIVersionMinor << std::endl;
         std::cout << "hostName=" << hostDesc.hostName << std::endl;
@@ -992,7 +1176,7 @@ RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
         std::cout << "OFX DebugProxy: host description finished" << std::endl;
     }
 #endif // ifdef DEBUG_HOSTDESCRIPTION
-       // basic labels
+    // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -1026,20 +1210,20 @@ RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     generatorDescribe(desc);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
 } // RectanglePluginFactory::describe
 
-OFX::ImageEffect*
+ImageEffect*
 RectanglePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       OFX::ContextEnum /*context*/)
+                                       ContextEnum /*context*/)
 {
     return new RectanglePlugin(handle);
 }
 
 void
-RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                          OFX::ContextEnum context)
+RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                          ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -1077,7 +1261,7 @@ RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -1087,7 +1271,7 @@ RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -1097,7 +1281,7 @@ RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -1107,7 +1291,7 @@ RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
@@ -1120,6 +1304,20 @@ RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentSize, ePixelComponentRGBA, false,  context);
 
+    // corner radius
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamCornerRadius);
+        param->setLabel(kParamCornerRadiusLabel);
+        param->setHint(kParamCornerRadiusHint);
+        param->setDoubleType(eDoubleTypeXY);
+        param->setDefault(0., 0.);
+        param->setRange(0., 0., DBL_MAX, DBL_MAX);
+        param->setDisplayRange(0., 0., 100., 100.);
+        param->setDigits(1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     // softness
     {
@@ -1158,22 +1356,10 @@ RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // expandRoD
     {
-        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // blackOutside
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlackOutside);
-        param->setLabel(kParamBlackOutsideLabel);
-        param->setDefault(true);
-        param->setAnimates(true);
-        param->setHint(kParamBlackOutsideHint);
         if (page) {
             page->addChild(*param);
         }

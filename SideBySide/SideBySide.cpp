@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -63,11 +64,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // Base class for the RGBA and the Alpha processor
 class SideBySideBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg1;
-    const OFX::Image *_srcImg2;
+    const Image *_srcImg1;
+    const Image *_srcImg2;
     bool _vertical;
 
     //Contains the (x1,x2) or (y1,y2) (depending on _vertical) bounds of the first image
@@ -75,8 +76,8 @@ protected:
 
 public:
     /** @brief no arg ctor */
-    SideBySideBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    SideBySideBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg1(0)
         , _srcImg2(0)
         , _vertical(false)
@@ -85,10 +86,10 @@ public:
     }
 
     /** @brief set the left src image */
-    void setSrcImg1(const OFX::Image *v) {_srcImg1 = v; }
+    void setSrcImg1(const Image *v) {_srcImg1 = v; }
 
     /** @brief set the right src image */
-    void setSrcImg2(const OFX::Image *v) {_srcImg2 = v; }
+    void setSrcImg2(const Image *v) {_srcImg2 = v; }
 
     /** @brief set vertical stacking and offset oin the vertical or horizontal direction */
     void setVerticalAndOffset(bool v,
@@ -102,7 +103,7 @@ class ImageSideBySide
 {
 public:
     // ctor
-    ImageSideBySide(OFX::ImageEffect &instance)
+    ImageSideBySide(ImageEffect &instance)
         : SideBySideBase(instance)
     {}
 
@@ -149,7 +150,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class SideBySidePlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -165,8 +166,8 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
@@ -177,30 +178,30 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
 
     /** @brief get the frame/views needed for input clips*/
     virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(SideBySideBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(SideBySideBase &, const RenderArguments &args);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::BooleanParam *vertical_;
-    OFX::ChoiceParam *view1_;
-    OFX::ChoiceParam *view2_;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    BooleanParam *vertical_;
+    ChoiceParam *view1_;
+    ChoiceParam *view2_;
 };
 
 
@@ -214,28 +215,28 @@ private:
 /* set up and run a processor */
 void
 SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
-                                  const OFX::RenderArguments &args)
+                                  const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
 
         return;
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // fetch main input image
@@ -244,44 +245,44 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
     int view2;
     view2_->getValueAtTime(args.time, view2);
     if (!_srcClip) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
 
         return;
     }
-    std::auto_ptr<const OFX::Image> src1( ( _srcClip && _srcClip->isConnected() ) ?
-                                          _srcClip->fetchImagePlane(args.time, view1, kFnOfxImagePlaneColour) : 0 );
-    std::auto_ptr<const OFX::Image> src2( ( _srcClip && _srcClip->isConnected() ) ?
-                                          _srcClip->fetchImagePlane(args.time, view2, kFnOfxImagePlaneColour) : 0 );
+    std::auto_ptr<const Image> src1( ( _srcClip && _srcClip->isConnected() ) ?
+                                     _srcClip->fetchImagePlane(args.time, view1, kFnOfxImagePlaneColour) : 0 );
+    std::auto_ptr<const Image> src2( ( _srcClip && _srcClip->isConnected() ) ?
+                                     _srcClip->fetchImagePlane(args.time, view2, kFnOfxImagePlaneColour) : 0 );
 
     // make sure bit depths are sane
     if ( src1.get() ) {
         if ( (src1->getRenderScale().x != args.renderScale.x) ||
              ( src1->getRenderScale().y != args.renderScale.y) ||
-             ( ( src1->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src1->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src1->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src1->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src1->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src1->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src1->getPixelDepth();
+        PixelComponentEnum srcComponents = src1->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     if ( src2.get() ) {
         if ( (src2->getRenderScale().x != args.renderScale.x) ||
              ( src2->getRenderScale().y != args.renderScale.y) ||
-             ( ( src2->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src2->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src2->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src2->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src2->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src2->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src2->getPixelDepth();
+        PixelComponentEnum srcComponents = src2->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -310,7 +311,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
 
 // override the rod call
 bool
-SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+SideBySidePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
     if (!_srcClip) {
@@ -324,7 +325,7 @@ SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
     rod = _srcClip->getRegionOfDefinition(args.time, view1);
     OfxRectD rightRod = _srcClip->getRegionOfDefinition(args.time, view2);
-    if ( OFX::Coords::rectIsEmpty(rightRod) ) {
+    if ( Coords::rectIsEmpty(rightRod) ) {
         return false;
     }
     if (vertical) {
@@ -339,8 +340,8 @@ SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
 
 // override the roi call
 void
-SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                       OFX::RegionOfInterestSetter &rois)
+SideBySidePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                       RegionOfInterestSetter &rois)
 {
     if (!_srcClip) {
         return;
@@ -349,7 +350,7 @@ SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
 
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
     OfxRectD roi = _srcClip->getRegionOfDefinition(args.time);
-    if ( OFX::Coords::rectIsEmpty(roi) ) {
+    if ( Coords::rectIsEmpty(roi) ) {
         return;
     }
 
@@ -365,7 +366,7 @@ SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
 
 
     // set it on the mask only if we are in an interesting context
-    //if (getContext() != OFX::eContextFilter)
+    //if (getContext() != eContextFilter)
     //  rois.setRegionOfInterest(*_maskClip, roi);
 }
 
@@ -387,70 +388,72 @@ SideBySidePlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args,
 // the internal render function
 template <int nComponents>
 void
-SideBySidePlugin::renderInternal(const OFX::RenderArguments &args,
-                                 OFX::BitDepthEnum dstBitDepth)
+SideBySidePlugin::renderInternal(const RenderArguments &args,
+                                 BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         ImageSideBySide<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         ImageSideBySide<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         ImageSideBySide<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-SideBySidePlugin::render(const OFX::RenderArguments &args)
+SideBySidePlugin::render(const RenderArguments &args)
 {
-    if ( !OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
-        OFX::throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+    if ( !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
+        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     }
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
 
-mDeclarePluginFactory(SideBySidePluginFactory,; , {});
+mDeclarePluginFactory(SideBySidePluginFactory, {ofxsThreadSuiteCheck();}, {});
+#if 0
 void
 SideBySidePluginFactory::load()
 {
     // we can't be used on hosts that don't support the stereoscopic suite
     // returning an error here causes a blank menu entry in Nuke
-    //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    //if (!fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 }
+#endif
 
 void
-SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+SideBySidePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -480,11 +483,11 @@ SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setIsViewAware(true);
 
     //We render the same thing whatever the requested view
-    desc.setIsViewInvariant(OFX::eViewInvarianceAllViewsInvariant);
+    desc.setIsViewInvariant(eViewInvarianceAllViewsInvariant);
 
 
     // returning an error here crashes Nuke
-    //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    //if (!fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //  throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 #ifdef OFX_EXTENSIONS_NATRON
@@ -493,10 +496,10 @@ SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                           OFX::ContextEnum /*context*/)
+SideBySidePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                           ContextEnum /*context*/)
 {
-    if ( !OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
+    if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 
@@ -563,9 +566,9 @@ SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // SideBySidePluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 SideBySidePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        OFX::ContextEnum /*context*/)
+                                        ContextEnum /*context*/)
 {
     return new SideBySidePlugin(handle);
 }

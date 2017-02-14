@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "SaturationOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Modify the color saturation of an image.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Saturation"
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Saturation"
 
 #define kPluginIdentifier "net.sf.openfx.SaturationPlugin"
 // History:
@@ -428,7 +428,7 @@ private:
                 dstPix += nComponents;
             }
         }
-    }
+    } // process
 };
 
 
@@ -537,6 +537,7 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor,
                                   const RenderArguments &args)
 {
     const double time = args.time;
+
     std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
@@ -751,7 +752,7 @@ SaturationPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(SaturationPluginFactory, {}, {});
+mDeclarePluginFactory(SaturationPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 SaturationPluginFactory::describe(ImageEffectDescriptor &desc)
 {

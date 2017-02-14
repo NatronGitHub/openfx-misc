@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #endif
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -39,7 +40,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ClampOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Clamp the values of the selected channels.\n" \
-"See also: http://opticalenquiry.com/nuke/index.php?title=Clamp"
+    "\n" \
+    "A special use case for the Clamp plugin is to generate a binary mask image " \
+    "(i.e. each pixel is either 0 or 1) by thresholding an image. Let us say one wants " \
+    "all input pixels whose value is above or equal to some threshold value to " \
+    "become 1, and all values below this threshold to become 0. Set the \"Minimum\" value " \
+    "to the threshold, set the \"Maximum\" to any value strictly below the threshold " \
+    "(e.g. 0 if the threshold is positive), and " \
+    "check \"Enable MinClampTo\" and \"Enable MaxClampTo\" while keeping the default " \
+    "values for \"MinClampTo\" (0.0) and \"MaxClampTop\" (1.0). The result is a binary " \
+    "mask image. To create a non-binary mask, with softer edges, either blur the output " \
+    "of Clamp, or use the Grade plugin instead, setting the \"Black Point\" and \"White Point\" " \
+    "to values close to the threshold, and checking the \"Clamp Black\" and \"Clamp " \
+    "White\" options.\n" \
+    "\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Clamp"
 #define kPluginIdentifier "net.sf.openfx.Clamp"
 // History:
 // version 1.0: initial version
@@ -132,11 +147,11 @@ struct RGBAValues
 
 // Base class for the RGBA and the Alpha processor
 class ClampBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
-    const OFX::Image *_maskImg;
+    const Image *_srcImg;
+    const Image *_maskImg;
     bool _processR;
     bool _processG;
     bool _processB;
@@ -157,8 +172,8 @@ protected:
 
 public:
     /** @brief no arg ctor */
-    ClampBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    ClampBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _maskImg(0)
         , _processR(true)
@@ -182,9 +197,9 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
-    void setMaskImg(const OFX::Image *v,
+    void setMaskImg(const Image *v,
                     bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v; }
@@ -230,7 +245,7 @@ class ImageClamper
 {
 public:
     // ctor
-    ImageClamper(OFX::ImageEffect &instance)
+    ImageClamper(ImageEffect &instance)
         : ClampBase(instance)
     {
     }
@@ -420,7 +435,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class ClampPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -434,12 +449,12 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
-        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
@@ -471,43 +486,43 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(ClampBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ClampBase &, const RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::Clip *_maskClip;
-    OFX::BooleanParam* _processR;
-    OFX::BooleanParam* _processG;
-    OFX::BooleanParam* _processB;
-    OFX::BooleanParam* _processA;
-    OFX::RGBAParam* _minimum;
-    OFX::BooleanParam* _minimumEnable;
-    OFX::RGBAParam* _maximum;
-    OFX::BooleanParam* _maximumEnable;
-    OFX::RGBAParam* _minClampTo;
-    OFX::BooleanParam* _minClampToEnable;
-    OFX::RGBAParam* _maxClampTo;
-    OFX::BooleanParam* _maxClampToEnable;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskApply;
-    OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_maskClip;
+    BooleanParam* _processR;
+    BooleanParam* _processG;
+    BooleanParam* _processB;
+    BooleanParam* _processA;
+    RGBAParam* _minimum;
+    BooleanParam* _minimumEnable;
+    RGBAParam* _maximum;
+    BooleanParam* _maximumEnable;
+    RGBAParam* _minClampTo;
+    BooleanParam* _minClampToEnable;
+    RGBAParam* _maxClampTo;
+    BooleanParam* _maxClampToEnable;
+    BooleanParam* _premult;
+    ChoiceParam* _premultChannel;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
+    BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -521,61 +536,61 @@ private:
 /* set up and run a processor */
 void
 ClampPlugin::setupAndProcess(ClampBase &processor,
-                             const OFX::RenderArguments &args)
+                             const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(args.time) : 0 );
 
     // make sure bit depths are sane
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
 
         // see if they have the same depths and bytes and all
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
 
     // do we do masking
     if (doMasking) {
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
                  ( mask->getRenderScale().y != args.renderScale.y) ||
-                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                throwSuiteStatusException(kOfxStatFailed);
             }
         }
         bool maskInvert;
@@ -634,49 +649,49 @@ ClampPlugin::setupAndProcess(ClampBase &processor,
 // the internal render function
 template <int nComponents>
 void
-ClampPlugin::renderInternal(const OFX::RenderArguments &args,
-                            OFX::BitDepthEnum dstBitDepth)
+ClampPlugin::renderInternal(const RenderArguments &args,
+                            BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte: {
+    case eBitDepthUByte: {
         ImageClamper<unsigned char, nComponents, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthUShort: {
+    case eBitDepthUShort: {
         ImageClamper<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
-    case OFX::eBitDepthFloat: {
+    case eBitDepthFloat: {
         ImageClamper<float, nComponents, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 void
-ClampPlugin::render(const OFX::RenderArguments &args)
+ClampPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
 }
@@ -722,12 +737,12 @@ ClampPlugin::isIdentity(const IsIdentityArguments &args,
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            if (OFX::getImageEffectHostDescription()->supportsMultiResolution) {
+            if (getImageEffectHostDescription()->supportsMultiResolution) {
                 // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
                 // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     identityClip = _srcClip;
 
                     return true;
@@ -745,7 +760,7 @@ ClampPlugin::changedClip(const InstanceChangedArgs &args,
 {
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
-         ( args.reason == OFX::eChangeUserEdit) ) {
+         ( args.reason == eChangeUserEdit) ) {
         if ( !_premultChanged->getValue() ) {
             if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
                 _premult->setValue(false);
@@ -764,19 +779,19 @@ ClampPlugin::changedClip(const InstanceChangedArgs &args,
             }
         }
         switch ( _srcClip->getPixelComponents() ) {
-        case OFX::ePixelComponentAlpha:
+        case ePixelComponentAlpha:
             _processR->setValue(false);
             _processG->setValue(false);
             _processB->setValue(false);
             _processA->setValue(true);
             break;
-        case OFX::ePixelComponentRGB:
+        case ePixelComponentRGB:
             _processR->setValue(true);
             _processG->setValue(true);
             _processB->setValue(true);
             _processA->setValue(false);
             break;
-        case OFX::ePixelComponentRGBA:
+        case ePixelComponentRGBA:
             _processR->setValue(true);
             _processG->setValue(true);
             _processB->setValue(true);
@@ -789,17 +804,17 @@ ClampPlugin::changedClip(const InstanceChangedArgs &args,
 }
 
 void
-ClampPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+ClampPlugin::changedParam(const InstanceChangedArgs &args,
                           const std::string &paramName)
 {
-    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
+    if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
 }
 
-mDeclarePluginFactory(ClampPluginFactory, {}, {});
+mDeclarePluginFactory(ClampPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-ClampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+ClampPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -828,13 +843,13 @@ ClampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
 }
 
 void
-ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                      OFX::ContextEnum context)
+ClampPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                      ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -869,7 +884,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -879,7 +894,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -889,7 +904,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -899,7 +914,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
@@ -908,7 +923,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMinimum);
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMinimum);
         param->setLabel(kParamMinimumLabel);
         param->setHint(kParamMinimumHint);
         param->setDefault(0., 0., 0., 0.);
@@ -918,7 +933,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMinimumEnable);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMinimumEnable);
         param->setLabel(kParamMinimumEnableLabel);
         param->setHint(kParamMinimumEnableHint);
         param->setDefault(true);
@@ -927,7 +942,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMaximum);
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMaximum);
         param->setLabel(kParamMaximumLabel);
         param->setHint(kParamMaximumHint);
         param->setDefault(1., 1., 1., 1.);
@@ -937,7 +952,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMaximumEnable);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMaximumEnable);
         param->setLabel(kParamMaximumEnableLabel);
         param->setHint(kParamMaximumEnableHint);
         param->setDefault(true);
@@ -946,7 +961,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMinClampTo);
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMinClampTo);
         param->setLabel(kParamMinClampToLabel);
         param->setHint(kParamMinClampToHint);
         param->setDefault(0., 0., 0., 0.);
@@ -956,7 +971,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMinClampToEnable);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMinClampToEnable);
         param->setLabel(kParamMinClampToEnableLabel);
         param->setHint(kParamMinClampToEnableHint);
         param->setDefault(false);
@@ -965,7 +980,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMaxClampTo);
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMaxClampTo);
         param->setLabel(kParamMaxClampToLabel);
         param->setHint(kParamMaxClampToHint);
         param->setDefault(1., 1., 1., 1.);
@@ -975,7 +990,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMaxClampToEnable);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMaxClampToEnable);
         param->setLabel(kParamMaxClampToEnableLabel);
         param->setHint(kParamMaxClampToEnableHint);
         param->setDefault(false);
@@ -988,7 +1003,7 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
@@ -999,9 +1014,9 @@ ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // ClampPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 ClampPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                   OFX::ContextEnum /*context*/)
+                                   ContextEnum /*context*/)
 {
     return new ClampPlugin(handle);
 }

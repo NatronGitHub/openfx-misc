@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,10 +98,10 @@ enum InputChannelEnum
 
 
 class VectorToColorProcessorBase
-    : public OFX::ImageProcessor
+    : public ImageProcessor
 {
 protected:
-    const OFX::Image *_srcImg;
+    const Image *_srcImg;
     InputChannelEnum _xChannel;
     InputChannelEnum _yChannel;
     bool _opposite;
@@ -111,8 +111,8 @@ protected:
 
 public:
 
-    VectorToColorProcessorBase(OFX::ImageEffect &instance)
-        : OFX::ImageProcessor(instance)
+    VectorToColorProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
         , _srcImg(0)
         , _xChannel(eInputChannelR)
         , _yChannel(eInputChannelG)
@@ -123,7 +123,7 @@ public:
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v; }
 
     void setValues(InputChannelEnum xChannel,
                    InputChannelEnum yChannel,
@@ -192,7 +192,7 @@ class VectorToColorProcessor
     : public VectorToColorProcessorBase
 {
 public:
-    VectorToColorProcessor(OFX::ImageEffect &instance)
+    VectorToColorProcessor(ImageEffect &instance)
         : VectorToColorProcessorBase(instance)
     {
     }
@@ -217,7 +217,7 @@ public:
                 if (_opposite) {
                     h += OFXS_HUE_CIRCLE / 2.;
                 }
-                float norm = std::sqrt(vec[0] * vec[0] + vec[1] *  vec[1]);
+                float norm = std::sqrt( std::max( (double)vec[0] * vec[0] + (double)vec[1] * vec[1], 0. ) );
                 if (_modulateV) {
                     v = norm;
                 } else {
@@ -228,7 +228,7 @@ public:
                     dstPix[1] = s;
                     dstPix[2] = v;
                 } else {
-                    OFX::Color::hsv_to_rgb(h, s, v, &dstPix[0], &dstPix[1], &dstPix[2]);
+                    Color::hsv_to_rgb(h, s, v, &dstPix[0], &dstPix[1], &dstPix[2]);
                 }
                 if (nComponents == 4) {
                     dstPix[3] = 1.f;
@@ -245,7 +245,7 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class VectorToColorPlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -256,8 +256,8 @@ public:
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
@@ -272,21 +272,21 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(VectorToColorProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(VectorToColorProcessorBase &, const RenderArguments &args);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-    OFX::ChoiceParam* _xChannel;
-    OFX::ChoiceParam* _yChannel;
-    OFX::BooleanParam* _opposite;
-    OFX::BooleanParam* _inverseY;
-    OFX::BooleanParam* _modulateV;
-    OFX::BooleanParam* _hsvOutput;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    ChoiceParam* _xChannel;
+    ChoiceParam* _yChannel;
+    BooleanParam* _opposite;
+    BooleanParam* _inverseY;
+    BooleanParam* _modulateV;
+    BooleanParam* _hsvOutput;
 };
 
 
@@ -299,40 +299,41 @@ private:
 /* set up and run a processor */
 void
 VectorToColorPlugin::setupAndProcess(VectorToColorProcessorBase &processor,
-                                     const OFX::RenderArguments &args)
+                                     const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -352,42 +353,42 @@ VectorToColorPlugin::setupAndProcess(VectorToColorProcessorBase &processor,
 
 // the overridden render function
 void
-VectorToColorPlugin::render(const OFX::RenderArguments &args)
+VectorToColorPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    assert(dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentRGBA);
+    if (dstComponents == ePixelComponentRGBA) {
         switch (dstBitDepth) {
-        case OFX::eBitDepthFloat: {
+        case eBitDepthFloat: {
             VectorToColorProcessor<float, 4, 1> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+            throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
-        assert(dstComponents == OFX::ePixelComponentRGB);
+        assert(dstComponents == ePixelComponentRGB);
         switch (dstBitDepth) {
-        case OFX::eBitDepthFloat: {
+        case eBitDepthFloat: {
             VectorToColorProcessor<float, 3, 1> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+            throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
 }
 
-mDeclarePluginFactory(VectorToColorPluginFactory, {}, {});
+mDeclarePluginFactory(VectorToColorPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-VectorToColorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+VectorToColorPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -413,7 +414,7 @@ VectorToColorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 static void
 addInputChannelOtions(ChoiceParamDescriptor* outputR,
                       InputChannelEnum def,
-                      OFX::ContextEnum /*context*/)
+                      ContextEnum /*context*/)
 {
     assert(outputR->getNOptions() == eInputChannelR);
     outputR->appendOption(kParamChannelOptionR, kParamChannelOptionRHint);
@@ -427,8 +428,8 @@ addInputChannelOtions(ChoiceParamDescriptor* outputR,
 }
 
 void
-VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                              OFX::ContextEnum context)
+VectorToColorPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+                                              ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -513,9 +514,9 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 } // VectorToColorPluginFactory::describeInContext
 
-OFX::ImageEffect*
+ImageEffect*
 VectorToColorPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                           OFX::ContextEnum /*context*/)
+                                           ContextEnum /*context*/)
 {
     return new VectorToColorPlugin(handle);
 }

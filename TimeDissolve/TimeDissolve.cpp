@@ -1,6 +1,6 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2016 INRIA
+ * Copyright (C) 2013-2017 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 #include <algorithm>
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -42,8 +43,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "TimeDissolveOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Dissolves between two inputs, starting the dissolve at the in frame and ending at the out frame.\n" \
-"You can specify the dissolve curve over time, if the OFX host supports it (else it is a traditional smoothstep).\n" \
-"See also http://opticalenquiry.com/nuke/index.php?title=TimeDissolve"
+    "You can specify the dissolve curve over time, if the OFX host supports it (else it is a traditional smoothstep).\n" \
+    "See also http://opticalenquiry.com/nuke/index.php?title=TimeDissolve"
 
 #define kPluginIdentifier "net.sf.openfx.TimeDissolvePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -76,7 +77,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TimeDissolvePlugin
-    : public OFX::ImageEffect
+    : public ImageEffect
 {
 public:
     /** @brief ctor */
@@ -91,13 +92,13 @@ public:
         , _dissolveCurve(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentXY || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentXY || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
 
         _srcClipA = fetchClip(kClipA);
-        assert( _srcClipA && (!_srcClipA->isConnected() || _srcClipA->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClipA->getPixelComponents() == OFX::ePixelComponentRGB || _srcClipA->getPixelComponents() == OFX::ePixelComponentXY || _srcClipA->getPixelComponents() == OFX::ePixelComponentAlpha) );
+        assert( _srcClipA && (!_srcClipA->isConnected() || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentXY || _srcClipA->getPixelComponents() == ePixelComponentAlpha) );
 
-        _srcClipB = fetchClip(getContext() == OFX::eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB);
-        assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClipB->getPixelComponents() == OFX::ePixelComponentRGB || _srcClipB->getPixelComponents() == OFX::ePixelComponentXY || _srcClipB->getPixelComponents() == OFX::ePixelComponentAlpha) );
+        _srcClipB = fetchClip(getContext() == eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB);
+        assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentXY || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
 
         _dissolveIn = fetchIntParam(kParamIn);
         _dissolveOut = fetchIntParam(kParamOut);
@@ -108,41 +109,41 @@ public:
     }
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    //virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+    //virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ImageBlenderBase &, const RenderArguments &args);
 
 private:
 
     template<int nComponents>
-    void renderForComponents(const OFX::RenderArguments &args);
+    void renderForComponents(const RenderArguments &args);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const OFX::RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args);
 
     double getTransition(double time);
 
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClipA;
-    OFX::Clip *_srcClipB;
-    OFX::IntParam* _dissolveIn;
-    OFX::IntParam* _dissolveOut;
-    OFX::ParametricParam* _dissolveCurve;
+    Clip *_dstClip;
+    Clip *_srcClipA;
+    Clip *_srcClipB;
+    IntParam* _dissolveIn;
+    IntParam* _dissolveOut;
+    ParametricParam* _dissolveCurve;
 };
 
 
@@ -154,16 +155,16 @@ private:
 
 // make sure components are sane
 static void
-checkComponents(const OFX::Image &src,
-                OFX::BitDepthEnum dstBitDepth,
-                OFX::PixelComponentEnum dstComponents)
+checkComponents(const Image &src,
+                BitDepthEnum dstBitDepth,
+                PixelComponentEnum dstComponents)
 {
-    OFX::BitDepthEnum srcBitDepth     = src.getPixelDepth();
-    OFX::PixelComponentEnum srcComponents  = src.getPixelComponents();
+    BitDepthEnum srcBitDepth     = src.getPixelDepth();
+    PixelComponentEnum srcComponents  = src.getPixelComponents();
 
     // see if they have the same depths and bytes and all
     if ( ( srcBitDepth != dstBitDepth) || ( srcComponents != dstComponents) ) {
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 }
 
@@ -199,49 +200,50 @@ TimeDissolvePlugin::getTransition(double time)
 
 /* set up and run a processor */
 void
-TimeDissolvePlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
-                                    const OFX::RenderArguments &args)
+TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
+                                    const RenderArguments &args)
 {
     const double time = args.time;
+
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(time) );
+    std::auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
 
     // get the transition value
     double which = getTransition(time);
 
     if ( (which == 0.) || (which == 1.) ) {
-        std::auto_ptr<const OFX::Image> src( ( which == 0. && _srcClipA && _srcClipA->isConnected() ) ?
-                                             _srcClipA->fetchImage(time) :
-                                             ( which == 1. && _srcClipB && _srcClipB->isConnected() ) ?
-                                             _srcClipB->fetchImage(time) : 0 );
+        std::auto_ptr<const Image> src( ( which == 0. && _srcClipA && _srcClipA->isConnected() ) ?
+                                        _srcClipA->fetchImage(time) :
+                                        ( which == 1. && _srcClipB && _srcClipB->isConnected() ) ?
+                                        _srcClipB->fetchImage(time) : 0 );
         if ( src.get() ) {
             if ( (src->getRenderScale().x != args.renderScale.x) ||
                  ( src->getRenderScale().y != args.renderScale.y) ||
-                 ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
+                 ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                throwSuiteStatusException(kOfxStatFailed);
             }
-            OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-            OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+            BitDepthEnum srcBitDepth      = src->getPixelDepth();
+            PixelComponentEnum srcComponents = src->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+                throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
         copyPixels( *this, args.renderWindow, src.get(), dst.get() );
@@ -250,27 +252,27 @@ TimeDissolvePlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
     }
 
     // fetch the two source images
-    std::auto_ptr<const OFX::Image> fromImg( ( _srcClipA && _srcClipA->isConnected() ) ?
-                                             _srcClipA->fetchImage(time) : 0 );
-    std::auto_ptr<const OFX::Image> toImg( ( _srcClipB && _srcClipB->isConnected() ) ?
-                                           _srcClipB->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> fromImg( ( _srcClipA && _srcClipA->isConnected() ) ?
+                                        _srcClipA->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> toImg( ( _srcClipB && _srcClipB->isConnected() ) ?
+                                      _srcClipB->fetchImage(time) : 0 );
 
     // make sure bit depths are sane
     if ( fromImg.get() ) {
         if ( (fromImg->getRenderScale().x != args.renderScale.x) ||
              ( fromImg->getRenderScale().y != args.renderScale.y) ||
-             ( ( fromImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( fromImg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( fromImg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( fromImg->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if ( toImg.get() ) {
         if ( (toImg->getRenderScale().x != args.renderScale.x) ||
              ( toImg->getRenderScale().y != args.renderScale.y) ||
-             ( ( toImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( toImg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+             ( ( toImg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( toImg->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
         }
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
@@ -292,63 +294,63 @@ TimeDissolvePlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
 
 // the overridden render function
 void
-TimeDissolvePlugin::render(const OFX::RenderArguments &args)
+TimeDissolvePlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || ( _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() && _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() ) );
     assert( kSupportsMultipleClipDepths || ( _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth()       && _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() ) );
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    if (dstComponents == ePixelComponentRGBA) {
         renderForComponents<4>(args);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+    } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
+    } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args);
     }  else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+        assert(dstComponents == ePixelComponentAlpha);
         renderForComponents<1>(args);
     } // switch
 } // render
 
 template<int nComponents>
 void
-TimeDissolvePlugin::renderForComponents(const OFX::RenderArguments &args)
+TimeDissolvePlugin::renderForComponents(const RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
-    case OFX::eBitDepthUByte:
+    case eBitDepthUByte:
         renderForBitDepth<unsigned char, nComponents, 255>(args);
         break;
 
-    case OFX::eBitDepthUShort:
+    case eBitDepthUShort:
         renderForBitDepth<unsigned short, nComponents, 65535>(args);
         break;
 
-    case OFX::eBitDepthFloat:
+    case eBitDepthFloat:
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 template <class PIX, int nComponents, int maxValue>
 void
-TimeDissolvePlugin::renderForBitDepth(const OFX::RenderArguments &args)
+TimeDissolvePlugin::renderForBitDepth(const RenderArguments &args)
 {
-    OFX::ImageBlender<PIX, nComponents> fred(*this);
+    ImageBlender<PIX, nComponents> fred(*this);
 
     setupAndProcess(fred, args);
 }
 
 // overridden is identity
 bool
-TimeDissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                               OFX::Clip * &identityClip,
+TimeDissolvePlugin::isIdentity(const IsIdentityArguments &args,
+                               Clip * &identityClip,
                                double &identityTime)
 {
     const double time = args.time;
@@ -380,8 +382,8 @@ TimeDissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-TimeDissolvePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
-                                         OFX::RegionOfInterestSetter &rois)
+TimeDissolvePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                         RegionOfInterestSetter &rois)
 {
     const double time = args.time;
     double which = getTransition(time);
@@ -395,7 +397,7 @@ TimeDissolvePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
 }
 
 bool
-TimeDissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+TimeDissolvePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                           OfxRectD &rod)
 {
     const double time = args.time;
@@ -419,7 +421,7 @@ TimeDissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
     if (_srcClipA && _srcClipB) {
         OfxRectD fromRoD = _srcClipA->getRegionOfDefinition(time);
         OfxRectD toRoD = _srcClipB->getRegionOfDefinition(time);
-        OFX::Coords::rectBoundingBox(fromRoD, toRoD, &rod);
+        Coords::rectBoundingBox(fromRoD, toRoD, &rod);
 
         return true;
     }
@@ -429,16 +431,15 @@ TimeDissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
 
 /* Override the clip preferences, we need to say we are setting the frame varying flag */
 void
-TimeDissolvePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+TimeDissolvePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     clipPreferences.setOutputFrameVarying(true);
-    clipPreferences.setOutputHasContinousSamples(true);
+    clipPreferences.setOutputHasContinuousSamples(true);
 }
 
-mDeclarePluginFactory(TimeDissolvePluginFactory, {}, {}
-                      );
+mDeclarePluginFactory(TimeDissolvePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
-TimeDissolvePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+TimeDissolvePluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -469,7 +470,7 @@ TimeDissolvePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-TimeDissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+TimeDissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                              ContextEnum context)
 {
     {
@@ -536,12 +537,12 @@ TimeDissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
                                                !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
                                                  8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric
     if (supportsParametricParameter) {
-        OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamCurve);
+        ParametricParamDescriptor* param = desc.defineParametricParam(kParamCurve);
         assert(param);
         param->setLabel(kParamCurveLabel);
         param->setHint(kParamCurveHint);
@@ -573,7 +574,7 @@ ImageEffect*
 TimeDissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
                                           ContextEnum /*context*/)
 {
-    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
                                                !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
                                                  8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric
