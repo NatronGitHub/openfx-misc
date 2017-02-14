@@ -707,7 +707,7 @@ GodRaysPlugin::getInverseTransformCanonical(double time,
 void
 GodRaysPlugin::resetCenter(double time)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     OfxRectD rod = _srcClip->getRegionOfDefinition(time);
@@ -940,10 +940,8 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
             srcTransformMat(2,1) = srcTransform[7];
             srcTransformMat(2,2) = srcTransform[8];
             // invert it
-            double det = srcTransformMat.determinant();
-            if (det != 0.) {
-                Matrix3x3 srcTransformInverse = srcTransformMat.inverse(det);
-
+            Matrix3x3 srcTransformInverse;
+            if ( srcTransformMat.inverse(&srcTransformInverse) ) {
                 for (size_t i = 0; i < invtransformsize; ++i) {
                     invtransform[i] = srcTransformInverse * invtransform[i];
                 }

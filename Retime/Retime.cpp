@@ -345,7 +345,7 @@ void
 RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
                               FramesNeededSetter &frames)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const double time = args.time;
@@ -413,7 +413,7 @@ RetimePlugin::isIdentityInternal(OfxTime time,
                                  Clip* &identityClip,
                                  OfxTime &identityTime)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     double sourceTime;

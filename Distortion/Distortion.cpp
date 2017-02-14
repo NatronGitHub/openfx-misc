@@ -2342,10 +2342,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         srcTransformMat(2,1) = srcTransform[7];
         srcTransformMat(2,2) = srcTransform[8];
         // invert it
-        double det = srcTransformMat.determinant();
-        if (det != 0.) {
-            srcTransformInverse = srcTransformMat.inverse(det);
-        } else {
+        if ( !srcTransformMat.inverse(&srcTransformInverse) ) {
             transformIsIdentity = true; // no transform
         }
     }
@@ -2721,7 +2718,7 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
 {
     const double time = args.time;
 
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
 

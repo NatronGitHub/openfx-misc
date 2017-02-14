@@ -16,6 +16,7 @@ Add.o \
 AdjustRoD.o \
 Anaglyph.o \
 AppendClip.o \
+Card3D.o \
 CheckerBoard.o \
 ChromaKeyer.o \
 Clamp.o \
@@ -241,6 +242,7 @@ $(TOP_SRCDIR)/Add \
 $(TOP_SRCDIR)/AdjustRoD \
 $(TOP_SRCDIR)/Anaglyph \
 $(TOP_SRCDIR)/AppendClip \
+$(TOP_SRCDIR)/Card3D \
 $(TOP_SRCDIR)/CheckerBoard \
 $(TOP_SRCDIR)/ChromaKeyer \
 $(TOP_SRCDIR)/Clamp \
@@ -318,6 +320,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/AdjustRoD \
 -I$(TOP_SRCDIR)/Anaglyph \
 -I$(TOP_SRCDIR)/AppendClip \
+-I$(TOP_SRCDIR)/Card3D \
 -I$(TOP_SRCDIR)/CheckerBoard \
 -I$(TOP_SRCDIR)/ChromaKeyer \
 -I$(TOP_SRCDIR)/Clamp \
