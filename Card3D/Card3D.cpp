@@ -728,9 +728,9 @@ Card3DPlugin::getInverseTransformCanonical(double time,
             return false;
         }
         N(0,0) = 1./w;
-        N(1,1) = -1./w;
-        N(0,2) = (srcFormatCanonical.x1 + srcFormatCanonical.x2) / (2. * w);
-        N(1,2) = (srcFormatCanonical.y1 + srcFormatCanonical.y2) / (2. * w);
+        N(0,2) = -(srcFormatCanonical.x1 + srcFormatCanonical.x2) / (2. * w);
+        N(1,1) = 1./w;
+        N(1,2) = -(srcFormatCanonical.y1 + srcFormatCanonical.y2) / (2. * w);
         N(2,2) = 1.;
     }
 
@@ -738,10 +738,10 @@ Card3DPlugin::getInverseTransformCanonical(double time,
     {
         double w = dstFormatCanonical.x2 - dstFormatCanonical.x1;
         //double h = dstFormatCanonical.y2 - dstFormatCanonical.y1;
-        D(0,0) = w;
-        D(1,1) = -w;
+        D(0,0) = -w;
         D(0,2) = (dstFormatCanonical.x1 + dstFormatCanonical.x2) / 2.;
-        D(1,2) = -(dstFormatCanonical.y1 + dstFormatCanonical.y2) / 2.;
+        D(1,1) = -w;
+        D(1,2) = (dstFormatCanonical.y1 + dstFormatCanonical.y2) / 2.;
         D(2,2) = 1.;
     }
 
