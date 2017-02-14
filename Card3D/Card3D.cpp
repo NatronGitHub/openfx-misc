@@ -657,17 +657,18 @@ Card3DPlugin::getInverseTransformCanonical(double time,
     Matrix4x4 card;
     _card.getMatrix(time, &card);
 
-#warning "TODO: compose matrices"
 
+    // compose matrices
+    Matrix4x4 pos = cam.inverse() * axis * card;
 #warning "TODO: apply camera params"
 
 #warning "TODO: in-lens aperture and focal"
 
 
     Matrix3x3 mat;
-    mat(0,0) = card(0,0); mat(0,1) = card(0,1); mat(0,2) = card(0,3);
-    mat(1,0) = card(1,0); mat(1,1) = card(1,1); mat(1,2) = card(1,3);
-    mat(2,0) = card(2,0); mat(2,1) = card(2,1); mat(2,2) = card(2,3);
+    mat(0,0) = pos(0,0); mat(0,1) = pos(0,1); mat(0,2) = pos(0,3);
+    mat(1,0) = pos(1,0); mat(1,1) = pos(1,1); mat(1,2) = pos(1,3);
+    mat(2,0) = pos(2,0); mat(2,1) = pos(2,1); mat(2,2) = pos(2,3);
 
 
 
