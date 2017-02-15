@@ -454,9 +454,9 @@ using namespace cimg_library;
 #define cimgblur_internal_vanvliet
 #endif
 
-#if cimg_version < 200
+//#if cimg_version < 200 // cimg 2.0.0's box filter breaks TestPIK (check the output of the PIKColor, it should be almost solid green)
 #define cimgblur_internal_boxfilter
-#endif
+//#endif
 
 // Exponentiation by squaring
 // works with positive or negative integer exponents
