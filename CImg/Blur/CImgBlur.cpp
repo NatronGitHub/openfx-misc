@@ -455,6 +455,13 @@ using namespace cimg_library;
 #endif
 
 #if cimg_version < 200
+// cimg pre-2.0.0's box filter broke TestPIK (check the output of the PIKColor, it should be almost solid green)
+// the reason is:
+// - sum in _cimg_blur_box_apply should be double, not Tfloat
+// other possible issues (which do not affect BlurCImg, since T=float in our case):
+// - win shound be CImg<T> not CImg<Tfloat>
+// - next and prev should be T not Tfloat
+// this was fixed in https://github.com/dtschump/CImg/commit/2067bd0765d23afc4c41b706bc57d094a2dce51d
 #define cimgblur_internal_boxfilter
 #endif
 

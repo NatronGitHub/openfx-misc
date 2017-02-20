@@ -29,6 +29,8 @@
 #include "ofxsTransform3x3.h"
 #include "ofxsCoords.h"
 #include "ofxsThreadSuite.h"
+#include "ofxsGenerator.h"
+#include "ofxsFormatResolution.h"
 
 using namespace OFX;
 
@@ -73,6 +75,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamLensInHAperture "lensInHAperture"
 #define kParamLensInHApertureLabel "Lens-In H.Aperture", "The horizontal aperture (or sensor/film back width) of the camera that took the picture on the card. The card is scaled so that at distance 1 (which is the default card Z) it occupies the field of view corresponding to lensInFocal and lensInHAperture."
+
+#define kParamOutputFormat "format"
+#define kParamOutputFormatLabel "Output Format", "Desired format for the output sequence."
+
+// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+#define kParamDefaultsNormalised "defaultsNormalised"
+
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 ////////////////////////////////////////////////////////////////////////////////
 // BEGIN PosMatParm
@@ -986,7 +996,13 @@ public:
         , _card(this, kGroupCard)
         , _lensInFocal(NULL)
         , _lensInHAperture(NULL)
-#warning "TODO: params for output format"
+        , _extent(NULL)
+        , _format(NULL)
+        , _formatSize(NULL)
+        , _formatPar(NULL)
+        , _btmLeft(NULL)
+        , _size(NULL)
+        , _recenter(NULL)
     {
         if (getImageEffectHostDescription()->supportsCamera) {
             _axisCamera = fetchCamera(kCameraAxis);
@@ -1000,7 +1016,13 @@ public:
         }
         _lensInFocal = fetchDoubleParam(kParamLensInFocal);
         _lensInHAperture = fetchDoubleParam(kParamLensInHAperture);
-#warning "TODO: params for output format"
+        _extent = fetchChoiceParam(kParamOutputFormat);
+        _format = fetchChoiceParam(kParamGeneratorFormat);
+        _formatSize = fetchInt2DParam(kParamGeneratorSize);
+        _formatPar= fetchDoubleParam(kParamGeneratorPAR);
+        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
+        _size = fetchDouble2DParam(kParamRectangleInteractSize);
+        _recenter = fetchPushButtonParam(kParamGeneratorCenter);
 
         //_transformAmount = fetchDoubleParam(kParamTransformAmount);
         _interactive = fetchBooleanParam(kParamTransformInteractive);
@@ -1008,12 +1030,29 @@ public:
         _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
 
-        if (_camEnable) {
-            bool enabled = _camEnable->getValue();
-            _camPosMat->setEnabled(enabled);
-            _camProjectionGroup->setEnabled(enabled);
-            _camProjection->setEnabled(enabled);
+        // honor kParamDefaultsNormalised
+        if ( paramExists(kParamDefaultsNormalised) ) {
+            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+            // handle these ourselves!
+            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
+            assert(param);
+            bool normalised = param->getValue();
+            if (normalised) {
+                OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
+                OfxPointD p;
+                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                beginEditBlock(kParamDefaultsNormalised);
+                p = _btmLeft->getValue();
+                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
+                p = _size->getValue();
+                _size->setValue(p.x * size.x, p.y * size.y);
+                param->setValue(false);
+                endEditBlock();
+            }
         }
+
+        updateVisibility();
     }
 
     ~Card3DPlugin()
@@ -1024,6 +1063,8 @@ public:
     }
 
 private:
+    //virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
     virtual bool isIdentity(double time) OVERRIDE FINAL;
     virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, Matrix3x3* invtransform) const OVERRIDE FINAL;
 
@@ -1032,6 +1073,12 @@ private:
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
+    void updateVisibility();
+
+    bool getOutputFormat(double time,
+                         const OfxPointD& renderScale,
+                         OfxRectI *format,
+                         double *par) const;
     // NON-GENERIC
     //DoubleParam* _transformAmount;
     BooleanParam* _interactive;
@@ -1046,12 +1093,136 @@ private:
     PosMatParam _card;
     DoubleParam* _lensInFocal;
     DoubleParam* _lensInHAperture;
-#warning "TODO: params for output format"
+
+    // format params
+    ChoiceParam* _extent;
+    ChoiceParam* _format;
+    Int2DParam* _formatSize;
+    DoubleParam* _formatPar;
+    Double2DParam* _btmLeft;
+    Double2DParam* _size;
+    PushButtonParam *_recenter;
 };
+
+
+// returns true if fixed format (i.e. not the input RoD) and setFormat can be called in getClipPrefs
+bool
+Card3DPlugin::getOutputFormat(double time,
+                              const OfxPointD& renderScale,
+                              OfxRectI *format,
+                              double *par) const
+{
+    GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+
+    switch (extent) {
+        case eGeneratorExtentFormat: {
+            int w, h;
+            _formatSize->getValue(w, h);
+            *par = _formatPar->getValue();
+            format->x1 = format->y1 = 0;
+            format->x2 = std::ceil(w * renderScale.x);
+            format->y2 = std::ceil(h * renderScale.y);
+
+            return true;
+            break;
+        }
+        case eGeneratorExtentSize: {
+            OfxRectD rod;
+            _size->getValue(rod.x2, rod.y2);
+            _btmLeft->getValue(rod.x1, rod.y1);
+            rod.x2 += rod.x1;
+            rod.y2 += rod.y1;
+            *par = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
+            Coords::toPixelNearest(rod, renderScale, *par, format);
+
+            return true;
+            break;
+        }
+        case eGeneratorExtentProject: {
+            OfxRectD rod;
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            rod.x1 = off.x;
+            rod.x2 = off.x + siz.x;
+            rod.y1 = off.y;
+            rod.y2 = off.y + siz.y;
+            *par = getProjectPixelAspectRatio();
+            Coords::toPixelNearest(rod, renderScale, *par, format);
+
+            return true;
+            break;
+        }
+        case eGeneratorExtentDefault:
+        default:
+            assert(false);
+            /*
+            if ( _srcClip && _srcClip->isConnected() ) {
+                format->x1 = format->y1 = format->x2 = format->y2 = 0; // default value
+                _srcClip->getFormat(*format);
+                *par = _srcClip->getPixelAspectRatio();
+                if ( OFX::Coords::rectIsEmpty(*format) ) {
+                    // no format is available, use the RoD instead
+                    const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+                    Coords::toPixelNearest(srcRod, renderScale, *par, format);
+                }
+            } else {
+                // default to Project Size
+                OfxRectD srcRoD;
+                OfxPointD siz = getProjectSize();
+                OfxPointD off = getProjectOffset();
+                srcRoD.x1 = off.x;
+                srcRoD.x2 = off.x + siz.x;
+                srcRoD.y1 = off.y;
+                srcRoD.y2 = off.y + siz.y;
+                *par = getProjectPixelAspectRatio();
+                Coords::toPixelNearest(srcRoD, renderScale, *par, format);
+            }
+             */
+            return false;
+            break;
+    }
+    return false;
+}
+
+#if 0 // getRoD is done by ofxsTransform3x3
+bool
+Card3DPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    const double time = args.time;
+    OfxRectI format = {0, 1, 0, 1};
+    double par = 1.;
+    getOutputFormat(time, args.renderScale, &format, &par);
+    const OfxPointD rs1 = {1., 1.};
+    OFX::Coords::toCanonical(format, rs1, par, &rod);
+
+    return true;
+}
+#endif
+
+void
+Card3DPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    //We have to do this because the processing code does not support varying components for uvClip and srcClip
+    PixelComponentEnum dstPixelComps = _dstClip->getPixelComponents();
+
+    if (_srcClip) {
+        clipPreferences.setClipComponents(*_srcClip, dstPixelComps);
+    }
+    OfxRectI format;
+    double par;
+    OfxPointD renderScale = {1., 1.};
+
+    // we pass 0 as time, since anyway the input RoD is never used, thanks to the test on the return value
+    bool setFormat = getOutputFormat(0, renderScale, &format, &par);
+    if (setFormat) {
+        clipPreferences.setOutputFormat(format);
+        clipPreferences.setPixelAspectRatio(*_dstClip, par);
+    }
+}
 
 // overridden is identity
 bool
-Card3DPlugin::isIdentity(double time)
+Card3DPlugin::isIdentity(double /*time*/)
 {
     // NON-GENERIC
     //double amount = _transformAmount->getValueAtTime(time);
@@ -1117,7 +1288,15 @@ Card3DPlugin::getInverseTransformCanonical(double time,
     Matrix3x3 mat;
     CameraParam::getMatrix(pos, camProjectionMode, camFocal, camHAperture, camWinTranslate[0], camWinTranslate[1], camWinScale[0], camWinScale[1], camWinRoll, &mat);
 
-#warning "TODO: apply in-lens aperture and focal"
+    double lensInFocal = _lensInFocal->getValueAtTime(time);
+    double lensInHAperture = _lensInHAperture->getValueAtTime(time);
+    double a = lensInHAperture / std::max(1e-8, lensInFocal);
+    mat(0,0) *= a;
+    mat(1,0) *= a;
+    mat(2,0) *= a;
+    mat(0,1) *= a;
+    mat(1,1) *= a;
+    mat(2,1) *= a;
 
     // mat is the direct transform, from source coords to output coords.
     // it is normalized for coordinates in (-0.5,0.5)x(-0.5*h/w,0.5*h/w) with y from to to bottom
@@ -1136,9 +1315,13 @@ Card3DPlugin::getInverseTransformCanonical(double time,
             Coords::toCanonical(srcFormat, rs1, par, &srcFormatCanonical);
         }
     }
-#warning "TODO: params for output format"
 
-    OfxRectD dstFormatCanonical = srcFormatCanonical;
+    OfxRectI dstFormat = {0, 1, 0, 1};
+    double dstPar = 1.;
+    const OfxPointD rs1 = {1., 1.};
+    getOutputFormat(time, rs1, &dstFormat, &dstPar);
+    OfxRectD dstFormatCanonical;
+    OFX::Coords::toCanonical(dstFormat, rs1, dstPar, &dstFormatCanonical);
 
     Matrix3x3 N; // normalize source
     {
@@ -1180,6 +1363,27 @@ Card3DPlugin::getInverseTransformCanonical(double time,
 
 
 void
+Card3DPlugin::updateVisibility()
+{
+    if (_camEnable) {
+        bool enabled = _camEnable->getValue();
+        _camPosMat->setEnabled(enabled);
+        _camProjectionGroup->setEnabled(enabled);
+        _camProjection->setEnabled(enabled);
+    }
+    {
+        GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
+        bool hasFormat = (extent == eGeneratorExtentFormat);
+        bool hasSize = (extent == eGeneratorExtentSize);
+
+        _format->setIsSecretAndDisabled(!hasFormat);
+        _size->setIsSecretAndDisabled(!hasSize);
+        _recenter->setIsSecretAndDisabled(!hasSize);
+        _btmLeft->setIsSecretAndDisabled(!hasSize);
+    }
+}
+
+void
 Card3DPlugin::changedParam(const InstanceChangedArgs &args,
                            const std::string &paramName)
 {
@@ -1187,10 +1391,49 @@ Card3DPlugin::changedParam(const InstanceChangedArgs &args,
     if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _srcClipChanged->setValue(true);
     } else if (paramName == kParamCamEnable) {
-        bool enabled = _camEnable->getValueAtTime(time);
-        _camPosMat->setEnabled(enabled);
-        _camProjectionGroup->setEnabled(enabled);
-        _camProjection->setEnabled(enabled);
+        updateVisibility();
+    } else if (paramName == kParamOutputFormat) {
+        updateVisibility();
+    } else if (paramName == kParamGeneratorFormat) {
+        //the host does not handle the format itself, do it ourselves
+        EParamFormat format = (EParamFormat)_format->getValue();
+        int w = 0, h = 0;
+        double par = -1;
+        getFormatResolution(format, &w, &h, &par);
+        assert(par != -1);
+        _formatPar->setValue(par);
+        _formatSize->setValue(w, h);
+    } else if (paramName == kParamGeneratorCenter) {
+        Clip* srcClip = _srcClip;
+        OfxRectD srcRoD;
+        if ( srcClip && srcClip->isConnected() ) {
+            srcRoD = srcClip->getRegionOfDefinition(args.time);
+        } else {
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            srcRoD.x1 = off.x;
+            srcRoD.x2 = off.x + siz.x;
+            srcRoD.y1 = off.y;
+            srcRoD.y2 = off.y + siz.y;
+        }
+        OfxPointD center;
+        center.x = (srcRoD.x2 + srcRoD.x1) / 2.;
+        center.y = (srcRoD.y2 + srcRoD.y1) / 2.;
+
+        OfxRectD rectangle;
+        _size->getValue(rectangle.x2, rectangle.y2);
+        _btmLeft->getValue(rectangle.x1, rectangle.y1);
+        rectangle.x2 += rectangle.x1;
+        rectangle.y2 += rectangle.y1;
+
+        OfxRectD newRectangle;
+        newRectangle.x1 = center.x - (rectangle.x2 - rectangle.x1) / 2.;
+        newRectangle.y1 = center.y - (rectangle.y2 - rectangle.y1) / 2.;
+        newRectangle.x2 = newRectangle.x1 + (rectangle.x2 - rectangle.x1);
+        newRectangle.y2 = newRectangle.y1 + (rectangle.y2 - rectangle.y1);
+
+        _size->setValue(newRectangle.x2 - newRectangle.x1, newRectangle.y2 - newRectangle.y1);
+        _btmLeft->setValue(newRectangle.x1, newRectangle.y1);
     } else {
         if (_axisPosMat) {
             _axisPosMat->changedParam(args, paramName);
@@ -1318,12 +1561,174 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDefault(1.);
         param->setRange(1e-8, DBL_MAX);
         param->setDisplayRange(1e-8, 1.);
+        param->setLayoutHint(eLayoutHintDivider);
         if (page) {
             page->addChild(*param);
         }
     }
 
-#warning "TODO: params for output format"
+    { // Frame format
+        // extent
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputFormat);
+            param->setLabelAndHint(kParamOutputFormatLabel);
+            assert(param->getNOptions() == eGeneratorExtentFormat);
+            param->appendOption(kParamGeneratorExtentOptionFormat, kParamGeneratorExtentOptionFormatHint);
+            assert(param->getNOptions() == eGeneratorExtentSize);
+            param->appendOption(kParamGeneratorExtentOptionSize, kParamGeneratorExtentOptionSizeHint);
+            assert(param->getNOptions() == eGeneratorExtentProject);
+            param->appendOption(kParamGeneratorExtentOptionProject, kParamGeneratorExtentOptionProjectHint);
+            //assert(param->getNOptions() == eGeneratorExtentDefault);
+            //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
+            param->setDefault(eGeneratorExtentProject);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // recenter
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamGeneratorCenter);
+            param->setLabel(kParamGeneratorCenterLabel);
+            param->setHint(kParamGeneratorCenterHint);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // format
+        {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamGeneratorFormat);
+            param->setLabel(kParamGeneratorFormatLabel);
+            assert(param->getNOptions() == eParamFormatPCVideo);
+            param->appendOption(kParamFormatPCVideoLabel);
+            assert(param->getNOptions() == eParamFormatNTSC);
+            param->appendOption(kParamFormatNTSCLabel);
+            assert(param->getNOptions() == eParamFormatPAL);
+            param->appendOption(kParamFormatPALLabel);
+            assert(param->getNOptions() == eParamFormatNTSC169);
+            param->appendOption(kParamFormatNTSC169Label);
+            assert(param->getNOptions() == eParamFormatPAL169);
+            param->appendOption(kParamFormatPAL169Label);
+            assert(param->getNOptions() == eParamFormatHD720);
+            param->appendOption(kParamFormatHD720Label);
+            assert(param->getNOptions() == eParamFormatHD);
+            param->appendOption(kParamFormatHDLabel);
+            assert(param->getNOptions() == eParamFormatUHD4K);
+            param->appendOption(kParamFormatUHD4KLabel);
+            assert(param->getNOptions() == eParamFormat1kSuper35);
+            param->appendOption(kParamFormat1kSuper35Label);
+            assert(param->getNOptions() == eParamFormat1kCinemascope);
+            param->appendOption(kParamFormat1kCinemascopeLabel);
+            assert(param->getNOptions() == eParamFormat2kSuper35);
+            param->appendOption(kParamFormat2kSuper35Label);
+            assert(param->getNOptions() == eParamFormat2kCinemascope);
+            param->appendOption(kParamFormat2kCinemascopeLabel);
+            assert(param->getNOptions() == eParamFormat2kDCP);
+            param->appendOption(kParamFormat2kDCPLabel);
+            assert(param->getNOptions() == eParamFormat4kSuper35);
+            param->appendOption(kParamFormat4kSuper35Label);
+            assert(param->getNOptions() == eParamFormat4kCinemascope);
+            param->appendOption(kParamFormat4kCinemascopeLabel);
+            assert(param->getNOptions() == eParamFormat4kDCP);
+            param->appendOption(kParamFormat4kDCPLabel);
+            assert(param->getNOptions() == eParamFormatSquare256);
+            param->appendOption(kParamFormatSquare256Label);
+            assert(param->getNOptions() == eParamFormatSquare512);
+            param->appendOption(kParamFormatSquare512Label);
+            assert(param->getNOptions() == eParamFormatSquare1k);
+            param->appendOption(kParamFormatSquare1kLabel);
+            assert(param->getNOptions() == eParamFormatSquare2k);
+            param->appendOption(kParamFormatSquare2kLabel);
+            param->setDefault(eParamFormatPCVideo);
+            param->setHint(kParamGeneratorFormatHint);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        {
+            int w = 0, h = 0;
+            double par = -1.;
+            getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
+            assert(par != -1);
+            {
+                Int2DParamDescriptor* param = desc.defineInt2DParam(kParamGeneratorSize);
+                param->setLabel(kParamGeneratorSizeLabel);
+                param->setHint(kParamGeneratorSizeHint);
+                param->setIsSecretAndDisabled(true);
+                param->setDefault(w, h);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            {
+                DoubleParamDescriptor* param = desc.defineDoubleParam(kParamGeneratorPAR);
+                param->setLabel(kParamGeneratorPARLabel);
+                param->setHint(kParamGeneratorPARHint);
+                param->setIsSecretAndDisabled(true);
+                param->setRange(0., DBL_MAX);
+                param->setDisplayRange(0.5, 2.);
+                param->setDefault(par);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+        }
+
+        // btmLeft
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+            param->setLabel(kParamRectangleInteractBtmLeftLabel);
+            param->setDoubleType(eDoubleTypeXYAbsolute);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
+            param->setDefault(0., 0.);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+            param->setIncrement(1.);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            param->setHint("Coordinates of the bottom left corner of the size rectangle.");
+            param->setDigits(0);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // size
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
+            param->setLabel(kParamRectangleInteractSizeLabel);
+            param->setDoubleType(eDoubleTypeXY);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
+            param->setDefault(1., 1.);
+            param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+            param->setIncrement(1.);
+            param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+            param->setHint("Width and height of the size rectangle.");
+            param->setIncrement(1.);
+            param->setDigits(0);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+    }
 
     Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 
