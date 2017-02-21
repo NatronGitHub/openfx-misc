@@ -949,8 +949,9 @@ RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // Unfortunately, we cannot check the output components as was done in
         // https://github.com/devernay/openfx-misc/commit/844a442b5baeef4b1e1a0fd4d5e957707f4465ca
         // since it would call getClipPrefs recursively.
-        // We thus set blindly the output premult. Let the host fix it.
+        // We just set the output components.
         if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
+            clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }
