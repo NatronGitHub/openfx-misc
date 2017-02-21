@@ -948,8 +948,8 @@ RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         bool processA;
         _processA->getValue(processA);
         if ( processA &&
-             ( ( _dstClip->getPixelComponents() == ePixelComponentRGBA) ||
-               ( _dstClip->getPixelComponents() == ePixelComponentAlpha) ) &&
+             ( ( _srcClip->getPixelComponents() == ePixelComponentRGBA) ||
+               ( _srcClip->getPixelComponents() == ePixelComponentAlpha) ) &&
              ( _srcClip->getPreMultiplication() == eImageOpaque) ) {
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
