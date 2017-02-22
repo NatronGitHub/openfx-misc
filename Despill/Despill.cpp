@@ -637,7 +637,6 @@ DespillPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamOutputSpillMapHint);
         param->setDefault(false);
         param->setLayoutHint(eLayoutHintDivider, 0);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
