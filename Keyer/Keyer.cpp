@@ -1200,7 +1200,6 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == (int)eOutputModeComposite);
         param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
         param->setDefault( (int)eOutputModeIntermediate );
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

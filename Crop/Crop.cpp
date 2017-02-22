@@ -902,7 +902,6 @@ CropPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamReformatLabel);
         param->setHint( std::string(kParamReformatHint) + (getImageEffectHostDescription()->isNatron ? kParamReformatHintExtraNatron : "") );
         param->setDefault(kParamReformatDefault);
-        param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
