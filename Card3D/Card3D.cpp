@@ -1537,7 +1537,7 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                     page->addChild(*subgroup);
                 }
 
-                CameraParam::define(desc, page, group, kCameraCam);
+                CameraParam::define(desc, page, subgroup, kCameraCam);
             }
         }
     }

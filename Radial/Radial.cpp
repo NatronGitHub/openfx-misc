@@ -809,12 +809,13 @@ RadialPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     if (_srcClip) {
         // set the premultiplication of _dstClip if alpha is affected and source is Opaque
-        bool processA;
-        _processA->getValue(processA);
-        if ( processA &&
-             ( ( _dstClip->getPixelComponents() == ePixelComponentRGBA) ||
-               ( _dstClip->getPixelComponents() == ePixelComponentAlpha) ) &&
-             ( _srcClip->getPreMultiplication() == eImageOpaque) ) {
+        bool processA = _processA->getValue();
+        // Unfortunately, we cannot check the output components as was done in
+        // https://github.com/devernay/openfx-misc/commit/844a442b5baeef4b1e1a0fd4d5e957707f4465ca
+        // since it would call getClipPrefs recursively.
+        // We just set the output components.
+        if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
+            clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }
