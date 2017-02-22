@@ -1074,7 +1074,6 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamDither);
         param->setLabel(kParamDitherLabel);
         param->setHint(kParamDitherHint);
-        param->setAnimates(false);
         assert(param->getNOptions() == eDitherNone);
         param->appendOption(kParamDitherOptionNone, kParamDitherOptionNoneHint);
         assert(param->getNOptions() == eDitherOrderedBayer2);
@@ -1111,7 +1110,6 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamStaticSeedLabel);
         param->setHint(kParamStaticSeedHint);
         param->setDefault(false);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
