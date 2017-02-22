@@ -542,16 +542,18 @@ public:
         _channelParam[2] = fetchChoiceParam(kParamOutputB);
         _channelParam[3] = fetchChoiceParam(kParamOutputA);
         try {
-            _channelStringParam[0] = fetchStringParam(kParamOutputRChoice);
-            _channelStringParam[1] = fetchStringParam(kParamOutputGChoice);
-            _channelStringParam[2] = fetchStringParam(kParamOutputBChoice);
-            _channelStringParam[3] = fetchStringParam(kParamOutputAChoice);
+            if (paramExists(kParamOutputRChoice)) {
+                _channelStringParam[0] = fetchStringParam(kParamOutputRChoice);
+                _channelStringParam[1] = fetchStringParam(kParamOutputGChoice);
+                _channelStringParam[2] = fetchStringParam(kParamOutputBChoice);
+                _channelStringParam[3] = fetchStringParam(kParamOutputAChoice);
+            }
         } catch (...) {
             _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
         }
 
         _outputComponents = fetchChoiceParam(kParamOutputComponents);
-
+        
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             std::vector<Clip*> abClips(2);
             abClips[0] = _srcClipA;
