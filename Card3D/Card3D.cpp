@@ -20,7 +20,9 @@
  * OFX Transform & DirBlur plugins.
  */
 
-#include <cmath>
+#include <cmath> // tan, atan2
+#include <cstring> // strerror
+#include <cstdio> // fopen, fclose
 #include <iostream>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
@@ -802,7 +804,7 @@ PosMatParam::exportChan()
         if (_type == ePosMatCamera && _projection && _projection->_camVAperture) {
             double vaperture = _projection->_camVAperture->getValueAtTime(t);
             double focal = _projection->_camFocalLength->getValueAtTime(t);
-            l.vfov = 2 * std::atan(0.5 * vaperture / focal) * 180 / M_PI;
+            l.vfov = 2 * std::atan2(0.5 * vaperture, focal) * 180 / M_PI;
             std::fprintf(f, "%d\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n",
                          t, l.tx, l.ty, l.tz, l.rx, l.ry, l.rz, l.vfov);
         } else {
