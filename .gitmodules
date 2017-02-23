@@ -1,7 +1,3 @@
-[submodule "openfx"]
-	path = openfx
-	url = https://github.com/devernay/openfx.git
-	branch = multiplane2
 [submodule "SupportExt"]
 	path = SupportExt
 	url = https://github.com/devernay/openfx-supportext.git

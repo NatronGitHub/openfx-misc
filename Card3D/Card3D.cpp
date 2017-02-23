@@ -31,8 +31,10 @@
 #include "ofxsThreadSuite.h"
 #include "ofxsGenerator.h"
 #include "ofxsFormatResolution.h"
+#include "ofxsFileOpen.h"
 
 using namespace OFX;
+using std::string;
 
 #define kCameraAxis "axis"
 #define kCameraAxisLabel "Axis"
@@ -85,7 +87,415 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 ////////////////////////////////////////////////////////////////////////////////
+// BEGIN CameraParm
+
+// Camera Projection parameters
+
+
+#define kParamCameraProjectionGroup "Projection"
+#define kParamCameraProjectionGroupLabel "Projection"
+
+#define kParamCameraProjectionMode kNukeOfxCameraParamProjectionMode
+#define kParamCameraProjectionModeLabel "Projection"
+#define kParamCameraProjectionModeOptionPerspective "Perspective"
+#define kParamCameraProjectionModeOptionOrthographic "Orthographic"
+#define kParamCameraProjectionModeOptionUV "UV"
+#define kParamCameraProjectionModeOptionSpherical "Spherical"
+enum CameraProjectionModeEnum {
+    eCameraProjectionModePerspective = 0,
+    eCameraProjectionModeOrthographic,
+    eCameraProjectionModeUV,
+    eCameraProjectionModeSpherical,
+};
+#define kParamCameraFocalLength kNukeOfxCameraParamFocalLength
+#define kParamCameraFocalLengthLabel "Focal Length", "The camera focal length, in arbitrary units (usually either millimeters or 35 mm equivalent focal length). haperture and vaperture must be expressed in the same units."
+#define kParamCameraHorizontalAperture kNukeOfxCameraParamHorizontalAperture
+#define kParamCameraHorizontalApertureLabel "Horiz. Aperture", "The camera horizontal aperture (or film back width), in the same units as the focal length. In the case of scanned film, this can be obtained as image_width * scanner_pitch."
+#define kParamCameraVerticalAperture kNukeOfxCameraParamVerticalAperture
+#define kParamCameraVerticalApertureLabel "Vert. Aperture", "The camera vertical aperture (or film back height), in the same units as the focal length. This does not affect the projection (which is computed from haperture and the image aspect ratio), but it is used to compute the focal length from vertical FOV when importing chan files, using the formula: focal = 0.5 * vaperture / tan(vfov/2). It is thus best set as: haperture = vaperture * image_width/image_height. In the case of scanned film, this can be obtained as image_height * scanner_pitch."
+#define kParamCameraNear kNukeOfxCameraParamNear
+#define kParamCameraNearLabel "Near"
+#define kParamCameraFar kNukeOfxCameraParamFar
+#define kParamCameraFarLabel "Far"
+#define kParamCameraWindowTranslate kNukeOfxCameraParamWindowTranslate
+#define kParamCameraWindowTranslateLabel "Window Translate", "The camera window (or film back) is translated by this fraction of the horizontal aperture, without changing the position of the camera center. This can be used to model tilt-shift or perspective-control lens."
+#define kParamCameraWindowScale kNukeOfxCameraParamWindowScale
+#define kParamCameraWindowScaleLabel "Window Scale", "Scale the camera window (or film back)."
+#define kParamCameraWindowRoll kNukeOfxCameraParamWindowRoll
+#define kParamCameraWindowRollLabel "Window Roll", "Rotation (in degrees) of the camera window (or film back) around the z axis."
+#define kParamCameraFocalPoint kNukeOfxCameraParamFocalPoint
+#define kParamCameraFocalPointLabel "Focus Distance", "Focus distance of the camera (used for depth-of-field effects)."
+#define kParamCameraFStop "fstop"
+#define kParamCameraFStopLabel "F-Stop", "F-stop (relative aperture) of the camera (used for depth-of-field effects)."
+
+class CameraParam {
+    friend class PosMatParam;
+
+    std::string _prefix;
+    ChoiceParam* _camProjectionMode;
+    DoubleParam* _camFocalLength;
+    DoubleParam* _camHAperture;
+    DoubleParam* _camVAperture;
+    DoubleParam* _camNear;
+    DoubleParam* _camFar;
+    Double2DParam* _camWinTranslate;
+    Double2DParam* _camWinScale;
+    DoubleParam* _camWinRoll;
+    DoubleParam* _camFocusDistance;
+    DoubleParam* _camFStop;
+    bool _enabled;
+
+public:
+    CameraParam(OFX::ImageEffect* parent, const std::string& prefix)
+    : _prefix(prefix)
+    , _camProjectionMode(NULL)
+    , _camFocalLength(NULL)
+    , _camHAperture(NULL)
+    , _camVAperture(NULL)
+    , _camNear(NULL)
+    , _camFar(NULL)
+    , _camWinTranslate(NULL)
+    , _camWinScale(NULL)
+    , _camWinRoll(NULL)
+    , _camFocusDistance(NULL)
+    , _camFStop(NULL)
+    , _enabled(true)
+    {
+        _camProjectionMode = parent->fetchChoiceParam(prefix + kParamCameraProjectionMode);
+        _camFocalLength = parent->fetchDoubleParam(prefix + kParamCameraFocalLength);
+        _camHAperture = parent->fetchDoubleParam(prefix + kParamCameraHorizontalAperture);
+        if (parent->paramExists(prefix + kParamCameraVerticalAperture)) {
+            _camVAperture = parent->fetchDoubleParam(prefix + kParamCameraVerticalAperture);
+        }
+        if (parent->paramExists(prefix + kParamCameraNear)) {
+            _camNear = parent->fetchDoubleParam(prefix + kParamCameraNear);
+        }
+        if (parent->paramExists(prefix + kParamCameraFar)) {
+            _camFar = parent->fetchDoubleParam(prefix + kParamCameraFar);
+        }
+        _camWinTranslate = parent->fetchDouble2DParam(prefix + kParamCameraWindowTranslate);
+        _camWinScale = parent->fetchDouble2DParam(prefix + kParamCameraWindowScale);
+        _camWinRoll = parent->fetchDoubleParam(prefix + kParamCameraWindowRoll);
+        if (parent->paramExists(prefix + kParamCameraFocalPoint)) {
+            _camFocusDistance = parent->fetchDoubleParam(prefix + kParamCameraFocalPoint);
+        }
+        if (parent->paramExists(prefix + kParamCameraFStop)) {
+            _camFStop = parent->fetchDoubleParam(prefix + kParamCameraFStop);
+        }
+    }
+
+    void getValueAtTime(double time,
+                        CameraProjectionModeEnum& projectionMode,
+                        double& focalLength,
+                        double& hAperture,
+                        double& winTranslateU,
+                        double& winTranslateV,
+                        double& winScaleU,
+                        double& winScaleV,
+                        double& winRoll) const;
+
+    static void getMatrix(const Matrix4x4& pos,
+                          CameraProjectionModeEnum projectionMode,
+                          double focalLength,
+                          double hAperture,
+                          double winTranslateU,
+                          double winTranslateV,
+                          double winScaleU,
+                          double winScaleV,
+                          double winRoll,
+                          Matrix3x3* mat);
+
+    static void define(ImageEffectDescriptor &desc,
+                       PageParamDescriptor *page,
+                       GroupParamDescriptor *group,
+                       const std::string prefix);
+
+    void setEnabled(bool enabled) { _enabled = enabled; update(); }
+    
+private:
+
+    void update()
+    {
+        _camProjectionMode->setEnabled(_enabled);
+        _camFocalLength->setEnabled(_enabled);
+        _camHAperture->setEnabled(_enabled);
+        if (_camVAperture) {
+            _camVAperture->setEnabled(_enabled);
+        }
+        if (_camNear) {
+            _camNear->setEnabled(_enabled);
+        }
+        if (_camFar) {
+            _camFar->setEnabled(_enabled);
+        }
+        _camWinTranslate->setEnabled(_enabled);
+        _camWinScale->setEnabled(_enabled);
+        _camWinRoll->setEnabled(_enabled);
+        if (_camFocusDistance) {
+            _camFocusDistance->setEnabled(_enabled);
+        }
+        if (_camFStop) {
+            _camFStop->setEnabled(_enabled);
+        }
+    }
+};
+
+
+
+void
+CameraParam::define(ImageEffectDescriptor &desc,
+                    PageParamDescriptor *page,
+                    GroupParamDescriptor *group,
+                    const std::string prefix)
+{
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(prefix + kParamCameraProjectionMode);
+        param->setLabel(kParamCameraProjectionModeLabel);
+        assert(param->getNOptions() == eCameraProjectionModePerspective);
+        param->appendOption(kParamCameraProjectionModeOptionPerspective);
+        assert(param->getNOptions() == eCameraProjectionModeOrthographic);
+        param->appendOption(kParamCameraProjectionModeOptionOrthographic);
+        /*
+        assert(param->getNOptions() == eCameraProjectionModeUV);
+        param->appendOption(kParamCameraProjectionModeOptionUV);
+        assert(param->getNOptions() == eCameraProjectionModeSpherical);
+        param->appendOption(kParamCameraProjectionModeOptionSpherical);
+        //*/
+        param->setDefault(eCameraProjectionModePerspective);
+        param->setAnimates(false);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraFocalLength);
+        param->setLabelAndHint(kParamCameraFocalLengthLabel);
+        param->setRange(1e-8, DBL_MAX);
+        param->setDisplayRange(5, 100);
+        param->setDefault(50.);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraHorizontalAperture);
+        param->setLabelAndHint(kParamCameraHorizontalApertureLabel);
+        param->setRange(1e-8, DBL_MAX);
+        param->setDisplayRange(0.1, 50);
+        param->setDefault(24.576);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraVerticalAperture);
+        param->setLabelAndHint(kParamCameraVerticalApertureLabel);
+        param->setRange(1e-8, DBL_MAX);
+        param->setDisplayRange(0.1, 50);
+        param->setDefault(18.672);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    /*
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraNear);
+        param->setLabelAndHint(kParamCameraNearLabel);
+        param->setRange(1e-8, DBL_MAX);
+        param->setDisplayRange(0.1, 10);
+        param->setDefault(0.1);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraFar);
+        param->setLabelAndHint(kParamCameraFarLabel);
+        param->setRange(1e-8, DBL_MAX);
+        param->setDisplayRange(11, 10000);
+        param->setDefault(10000);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    //*/
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(prefix + kParamCameraWindowTranslate);
+        param->setLabelAndHint(kParamCameraWindowTranslateLabel);
+        param->setRange(-1, -1, 1, 1);
+        param->setDisplayRange(-1, -1, 1, 1);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(prefix + kParamCameraWindowScale);
+        param->setLabelAndHint(kParamCameraWindowScaleLabel);
+        param->setRange(1e-8, 1e-8, DBL_MAX, DBL_MAX);
+        param->setDisplayRange(0.1, 0.1, 10, 10);
+        param->setDefault(1, 1);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraWindowRoll);
+        param->setLabelAndHint(kParamCameraWindowRollLabel);
+        param->setRange(-DBL_MAX, DBL_MAX);
+        param->setDisplayRange(-45, 45);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    /*
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraFocalPoint);
+        param->setLabelAndHint(kParamCameraFocalPointLabel);
+        param->setRange(1e-8, DBL_MAX);
+        param->setDisplayRange(0.1, 10);
+        param->setDefault(2);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*subgroup);
+        }
+    }
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraFStop);
+        param->setLabelAndHint(kParamCameraFStopLabel);
+        param->setRange(1e-8, DBL_MAX);
+        param->setDisplayRange(0.1, 30);
+        param->setDefault(16);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    //*/
+}
+
+void
+CameraParam::getValueAtTime(double time,
+                            CameraProjectionModeEnum& projectionMode,
+                            double& focalLength,
+                            double& hAperture,
+                            double& winTranslateU,
+                            double& winTranslateV,
+                            double& winScaleU,
+                            double& winScaleV,
+                            double& winRoll) const
+{
+    projectionMode = (CameraProjectionModeEnum)_camProjectionMode->getValueAtTime(time);
+    focalLength = _camFocalLength->getValueAtTime(time);
+    hAperture = _camHAperture->getValueAtTime(time);
+    _camWinTranslate->getValueAtTime(time, winTranslateU, winTranslateV);
+    _camWinScale->getValueAtTime(time, winScaleU, winScaleV);
+    winRoll = _camWinRoll->getValueAtTime(time);
+}
+
+void
+CameraParam::getMatrix(const Matrix4x4& pos,
+                       const CameraProjectionModeEnum projectionMode,
+                       const double focalLength,
+                       const double hAperture,
+                       const double winTranslateU,
+                       const double winTranslateV,
+                       const double winScaleU,
+                       const double winScaleV,
+                       const double winRoll,
+                       Matrix3x3* mat)
+{
+    // apply camera params
+    double a = hAperture / std::max(1e-8, focalLength);
+    (*mat)(0,0) = pos(0,0); (*mat)(0,1) = pos(0,1); (*mat)(0,2) = pos(0,3);
+    (*mat)(1,0) = pos(1,0); (*mat)(1,1) = pos(1,1); (*mat)(1,2) = pos(1,3);
+    if (projectionMode == eCameraProjectionModePerspective) {
+        // divide by Z
+        (*mat)(2,0) = a * pos(2,0); (*mat)(2,1) = a * pos(2,1); (*mat)(2,2) = a * pos(2,3);
+    } else {
+        // orthographic
+        (*mat)(2,0) = -a * pos(3,0); (*mat)(2,1) = -a * pos(3,1); (*mat)(2,2) = -a * pos(3,3);
+    }
+    // apply winTranslate
+    (*mat)(0,0) += (*mat)(2,0) * winTranslateU / 2.;
+    (*mat)(1,0) += (*mat)(2,0) * winTranslateV / 2.;
+    (*mat)(0,1) += (*mat)(2,1) * winTranslateU / 2.;
+    (*mat)(1,1) += (*mat)(2,1) * winTranslateV / 2.;
+    (*mat)(0,2) += (*mat)(2,2) * winTranslateU / 2.;
+    (*mat)(1,2) += (*mat)(2,2) * winTranslateV / 2.;
+    // apply winScale
+    (*mat)(0,0) /= winScaleU;
+    (*mat)(0,1) /= winScaleU;
+    (*mat)(0,2) /= winScaleU;
+    (*mat)(1,0) /= winScaleV;
+    (*mat)(1,1) /= winScaleV;
+    (*mat)(1,2) /= winScaleV;
+    // apply winRoll
+    if (winRoll != 0.) {
+        double s = std::sin(winRoll * M_PI / 180.);
+        double c = std::cos(winRoll * M_PI / 180.);
+        *mat = Matrix3x3(c, -s, 0,
+                         s, c, 0,
+                         0, 0, 1) * *mat;
+    }
+
+}
+
+// END CameraParm
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
 // BEGIN PosMatParm
+
+enum PosMatTypeEnum {
+    ePosMatAxis = 0,
+    ePosMatCamera,
+    ePosMatCard,
+};
+
+#define kParamPosMatFile "File"
+#define kParamPosMatFileLabel "File", "Import/export data"
+
+#define kParamPosMatImportChan "ImportChan"
+#define kParamPosMatImportChanLabel "Import .chan", "Import a .chan file created using Natron, Nuke or 3D tracking software, such as 3D-Equalizer, Maya, or Boujou. Be careful that the rotation order must be exactly the same when exporting and importing the chan file."
+#define kParamPosMatImportChanReload "ImportChanReload"
+#define kParamPosMatImportChanReloadLabel "Reload", "Reload the .chan file."
+
+#define kParamPosMatExportChan "ExportChan"
+#define kParamPosMatExportChanLabel "Export .chan", "Export a .chan file which can be used in Natron, Nuke or 3D tracking software, such as 3D-Equalizer, Maya, or Boujou. Be careful that the rotation order must be exactly the same when exporting and importing the chan file."
+
+#define kParamPosMatExportChanRewrite "ExportChanRewrite"
+#define kParamPosMatExportChanRewriteLabel "Rewrite", "Rewrite the .chan file."
 
 #define kParamPosMatTransformOrder "XformOrder"
 #define kParamPosMatTransformOrderLabel "Transform Order", "Order in which scale (S), rotation (R) and translation (T) are applied."
@@ -152,7 +562,14 @@ enum PosMatRotationOrderEnum {
 
 
 class PosMatParam {
+    ImageEffect* _effect;
+    Clip* _srcClip;
     std::string _prefix;
+    GroupParam* _fileGroup;
+    StringParam* _importChan;
+    PushButtonParam* _importChanReload;
+    StringParam* _exportChan;
+    PushButtonParam* _exportChanRewrite;
     ChoiceParam* _transformOrder;
     ChoiceParam* _rotationOrder;
     Double3DParam* _translate;
@@ -164,11 +581,21 @@ class PosMatParam {
     GroupParam* _localMatrix;
     BooleanParam* _useMatrix;
     DoubleParam* _matrix[4][4];
+    GroupParam* _projectionGroup;
+    CameraParam* _projection;
     bool _enabled;
+    PosMatTypeEnum _type;
 
 public:
-    PosMatParam(OFX::ImageEffect* parent, const std::string& prefix)
-    : _prefix(prefix)
+    PosMatParam(OFX::ImageEffect* parent, const std::string& prefix, PosMatTypeEnum type)
+    : _effect(parent)
+    , _srcClip(NULL)
+    , _prefix(prefix)
+    , _fileGroup(NULL)
+    , _importChan(NULL)
+    , _importChanReload(NULL)
+    , _exportChan(NULL)
+    , _exportChanRewrite(NULL)
     , _transformOrder(NULL)
     , _rotationOrder(NULL)
     , _translate(NULL)
@@ -179,24 +606,46 @@ public:
     , _pivot(NULL)
     , _localMatrix(NULL)
     , _useMatrix(NULL)
+    , _projectionGroup(NULL)
+    , _projection(NULL)
     , _enabled(true)
+    , _type(type)
     {
-        _transformOrder = parent->fetchChoiceParam(prefix + kParamPosMatTransformOrder);
-        _rotationOrder = parent->fetchChoiceParam(prefix + kParamPosMatRotationOrder);
-        _translate = parent->fetchDouble3DParam(prefix + kParamPosMatTranslate);
-        _rotate = parent->fetchDouble3DParam(prefix + kParamPosMatRotate);
-        _scale = parent->fetchDouble3DParam(prefix + kParamPosMatScale);
-        _uniformScale = parent->fetchDoubleParam(prefix + kParamPosMatUniformScale);
-        _skew = parent->fetchDouble3DParam(prefix + kParamPosMatSkew);
-        _pivot = parent->fetchDouble3DParam(prefix + kParamPosMatPivot);
-        _localMatrix = parent->fetchGroupParam(prefix + kGroupPosMatLocalMatrix);
-        _useMatrix = parent->fetchBooleanParam(prefix + kParamPosMatUseMatrix);
+        _srcClip = _effect->fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _fileGroup = _effect->fetchGroupParam(prefix + kParamPosMatFile);
+        _importChan = _effect->fetchStringParam(prefix + kParamPosMatImportChan);
+        if (_effect->paramExists(prefix + kParamPosMatImportChanReload)) {
+            _importChanReload = _effect->fetchPushButtonParam(prefix + kParamPosMatImportChanReload);
+        }
+        _exportChan = _effect->fetchStringParam(prefix + kParamPosMatExportChan);
+        if (_effect->paramExists(prefix + kParamPosMatExportChanRewrite)) {
+            _exportChanRewrite = _effect->fetchPushButtonParam(prefix + kParamPosMatExportChanRewrite);
+        }
+        _transformOrder = _effect->fetchChoiceParam(prefix + kParamPosMatTransformOrder);
+        _rotationOrder = _effect->fetchChoiceParam(prefix + kParamPosMatRotationOrder);
+        _translate = _effect->fetchDouble3DParam(prefix + kParamPosMatTranslate);
+        _rotate = _effect->fetchDouble3DParam(prefix + kParamPosMatRotate);
+        _scale = _effect->fetchDouble3DParam(prefix + kParamPosMatScale);
+        _uniformScale = _effect->fetchDoubleParam(prefix + kParamPosMatUniformScale);
+        _skew = _effect->fetchDouble3DParam(prefix + kParamPosMatSkew);
+        _pivot = _effect->fetchDouble3DParam(prefix + kParamPosMatPivot);
+        _localMatrix = _effect->fetchGroupParam(prefix + kGroupPosMatLocalMatrix);
+        _useMatrix = _effect->fetchBooleanParam(prefix + kParamPosMatUseMatrix);
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
-                _matrix[i][j] = parent->fetchDoubleParam(prefix + kParamPosMatMatrix + (char)('1' + i) + (char)('1' + j));
+                _matrix[i][j] = _effect->fetchDoubleParam(prefix + kParamPosMatMatrix + (char)('1' + i) + (char)('1' + j));
             }
         }
+        if (_type == ePosMatCamera) {
+            _projectionGroup = _effect->fetchGroupParam(kCameraCam kParamCameraProjectionGroup);
+            _projection = new CameraParam(_effect, kCameraCam);
+        }
         update();
+    }
+
+    virtual ~PosMatParam()
+    {
+        delete _projection;
     }
 
     void changedParam(const InstanceChangedArgs &args, const std::string &paramName);
@@ -207,9 +656,11 @@ public:
                        PageParamDescriptor *page,
                        GroupParamDescriptor *group,
                        const std::string prefix,
-                       bool isCard); //!< affects the default z translation
+                       PosMatTypeEnum type);
 
     void setEnabled(bool enabled) { _enabled = enabled; update(); }
+
+    const CameraParam& getProjection() { assert(_projection); return *_projection; }
 
 private:
 
@@ -217,6 +668,15 @@ private:
     void update()
     {
         bool useMatrix = _useMatrix->getValue();
+        _fileGroup->setEnabled(_enabled && !useMatrix);
+        _importChan->setEnabled(_enabled && !useMatrix);
+        if (_importChanReload) {
+            _importChanReload->setEnabled(_enabled && !useMatrix);
+        }
+        _exportChan->setEnabled(_enabled && !useMatrix);
+        if (_exportChanRewrite) {
+            _exportChanRewrite->setEnabled(_enabled && !useMatrix);
+        }
         _transformOrder->setEnabled(_enabled && !useMatrix);
         _rotationOrder->setEnabled(_enabled && !useMatrix);
         _translate->setEnabled(_enabled && !useMatrix);
@@ -232,19 +692,203 @@ private:
                 _matrix[i][j]->setEnabled(_enabled && useMatrix);
             }
         }
+        if (_projectionGroup) {
+            _projectionGroup->setEnabled(_enabled);
+        }
+        if (_projection) {
+            _projection->setEnabled(_enabled);
+        }
     }
 
+    void importChan();
+
+    void exportChan();
+
+    struct ChanLine {
+        int frame;
+        double tx, ty, tz, rx, ry, rz, vfov;
+
+        ChanLine()
+        : frame(-1)
+        , tx(0)
+        , ty(0)
+        , tz(0)
+        , rx(0)
+        , ry(0)
+        , rz(0)
+        , vfov(0)
+        {
+        }
+    };
 };
 
+void
+PosMatParam::importChan()
+{
+    string filename;
+    _importChan->getValue(filename);
+    FILE* f = fopen_utf8(filename.c_str(), "r");
+    if (!f) {
+        _effect->sendMessage(Message::eMessageError, "", "Cannot read " + filename + ": " + std::strerror(errno), false);
 
+        return;
+    }
+    std::list<ChanLine> lines;
+    char buf[1024];
+
+    while (std::fgets(buf, sizeof buf, f) != NULL) {
+        if (buf[0] != '#') {
+            ChanLine l;
+            bool err = false;
+            if (_type == ePosMatCamera) {
+                int ret = std::sscanf(buf, "%d%lf%lf%lf%lf%lf%lf%lf",
+                                      &l.frame, &l.tx, &l.ty, &l.tz, &l.rx, &l.ry, &l.rz, &l.vfov);
+                if (ret == 8) {
+                    lines.push_back(l);
+                } else {
+                    err = true;
+                }
+            } else {
+                int ret = std::sscanf(buf, "%d%lf%lf%lf%lf%lf%lf",
+                                      &l.frame, &l.tx, &l.ty, &l.tz, &l.rx, &l.ry, &l.rz);
+                if (ret == 7) {
+                    lines.push_back(l);
+                } else {
+                    err = true;
+                }
+            }
+            if (err) {
+                std::fclose(f);
+                _effect->sendMessage(Message::eMessageError, "", "Cannot parse chan line from " + filename + ": " + buf, false);
+
+                return;
+            }
+        }
+    }
+    std::fclose(f);
+    _translate->deleteAllKeys();
+    _rotate->deleteAllKeys();
+    if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
+        _projection->_camFocalLength->deleteAllKeys();
+    }
+    for (std::list<ChanLine>::const_iterator it = lines.begin(); it != lines.end(); ++it) {
+        _translate->setValueAtTime(it->frame, it->tx, it->ty, it->tz);
+        _rotate->setValueAtTime(it->frame, it->rx, it->ry, it->rz);
+        if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
+            double vaperture = _projection->_camVAperture->getValueAtTime(it->frame);
+            double focal = 0.5 * vaperture / std::tan(0.5 * (it->vfov * M_PI / 180));
+
+            _projection->_camFocalLength->setValueAtTime(it->frame, focal);
+        }
+    }
+}
+
+void
+PosMatParam::exportChan()
+{
+    string filename;
+    _importChan->getValue(filename);
+    FILE* f = fopen_utf8(filename.c_str(), "w");
+    if (!f) {
+        _effect->sendMessage(Message::eMessageError, "", "Cannot write " + filename + ": " + std::strerror(errno), false);
+        return;
+    }
+    OfxRangeD r = _srcClip->getFrameRange();
+    for (int t = (int)r.min; t <= (int)r.max; ++t) {
+        ChanLine l;
+        l.frame = t;
+        _translate->getValueAtTime(t, l.tx, l.ty, l.tz);
+        _rotate->getValueAtTime(t, l.rx, l.ry, l.rz);
+        if (_type == ePosMatCamera && _projection && _projection->_camVAperture) {
+            double vaperture = _projection->_camVAperture->getValueAtTime(t);
+            double focal = _projection->_camFocalLength->getValueAtTime(t);
+            l.vfov = 2 * std::atan(0.5 * vaperture / focal) * 180 / M_PI;
+            std::fprintf(f, "%d\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n",
+                         t, l.tx, l.ty, l.tz, l.rx, l.ry, l.rz, l.vfov);
+        } else {
+            std::fprintf(f, "%d\t%g\t%g\t%g\t%g\t%g\t%g\n",
+                         t, l.tx, l.ty, l.tz, l.rx, l.ry, l.rz);
+        }
+    }
+    std::fclose(f);
+}
 
 void
 PosMatParam::define(ImageEffectDescriptor &desc,
                     PageParamDescriptor *page,
                     GroupParamDescriptor *group,
                     const std::string prefix,
-                    bool isCard)
+                    PosMatTypeEnum type)
 {
+    {
+        GroupParamDescriptor* subgroup = desc.defineGroupParam(prefix + kParamPosMatFile);
+        subgroup->setLabelAndHint(kParamPosMatFileLabel);
+        subgroup->setOpen(false);
+        if (group) {
+            subgroup->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*subgroup);
+        }
+        {
+            StringParamDescriptor* param = desc.defineStringParam(prefix + kParamPosMatImportChan);
+            param->setLabelAndHint(kParamPosMatImportChanLabel);
+            param->setStringType(eStringTypeFilePath);
+            param->setFilePathExists(true);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            if (!OFX::getImageEffectHostDescription()->isNatron) { // Natron already has a reload button
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            }
+            if (subgroup) {
+                param->setParent(*subgroup);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+
+        }
+        if (!OFX::getImageEffectHostDescription()->isNatron) { // Natron already has a reload button
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(prefix + kParamPosMatImportChanReload);
+            param->setLabelAndHint(kParamPosMatImportChanReloadLabel);
+            if (subgroup) {
+                param->setParent(*subgroup);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+
+        }
+        {
+            StringParamDescriptor* param = desc.defineStringParam(prefix + kParamPosMatExportChan);
+            param->setLabelAndHint(kParamPosMatExportChanLabel);
+            param->setStringType(eStringTypeFilePath);
+            param->setFilePathExists(false);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            if (!OFX::getImageEffectHostDescription()->isNatron) { // Natron already has a rewrite button
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            }
+            if (subgroup) {
+                param->setParent(*subgroup);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+
+        }
+        if (!OFX::getImageEffectHostDescription()->isNatron) { // Natron already has a rewrite button
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(prefix + kParamPosMatExportChanRewrite);
+            param->setLabelAndHint(kParamPosMatExportChanRewriteLabel);
+            if (subgroup) {
+                param->setParent(*subgroup);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+
+        }
+    }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(prefix + kParamPosMatTransformOrder);
         param->setLabelAndHint(kParamPosMatTransformOrderLabel);
@@ -296,7 +940,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         param->setLabelAndHint(kParamPosMatTranslateLabel);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-10., -10., -10., 10., 10., 10.);
-        param->setDefault(0, 0, isCard ? -1 : 0.);
+        param->setDefault(0, 0, (type == ePosMatCard) ? -1 : 0.);
         if (group) {
             param->setParent(*group);
         }
@@ -410,6 +1054,19 @@ PosMatParam::define(ImageEffectDescriptor &desc,
                 }
             }
         }
+    }
+    if (type == ePosMatCamera) {
+        GroupParamDescriptor* subgroup = desc.defineGroupParam(kCameraCam kParamCameraProjectionGroup);
+        subgroup->setLabel(kCameraCamLabel" "kParamCameraProjectionGroupLabel);
+        subgroup->setOpen(false);
+        if (group) {
+            subgroup->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*subgroup);
+        }
+
+        CameraParam::define(desc, page, subgroup, kCameraCam);
     }
 }
 
@@ -561,7 +1218,13 @@ PosMatParam::changedParam(const InstanceChangedArgs &args,
         return;
     }
     const double t = args.time;
-    if ( paramName == _useMatrix->getName() ) {
+    if (paramName == _importChan->getName() ||
+        (_importChanReload && paramName == _importChanReload->getName()) ) {
+        importChan();
+    } else if (paramName == _exportChan->getName() ||
+               (_exportChanRewrite && paramName == _exportChanRewrite->getName()) ) {
+        exportChan();
+    } else if ( paramName == _useMatrix->getName() ) {
         update();
     } else if (paramName == _transformOrder->getName() ||
                paramName == _rotationOrder->getName() ||
@@ -588,391 +1251,6 @@ PosMatParam::changedParam(const InstanceChangedArgs &args,
 // END PosMatParm
 ////////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////////
-// BEGIN CameraParm
-
-// Camera Projection parameters
-
-
-#define kParamCameraProjectionGroup "Projection"
-#define kParamCameraProjectionGroupLabel "Projection"
-
-#define kParamCameraProjectionMode kNukeOfxCameraParamProjectionMode
-#define kParamCameraProjectionModeLabel "Projection"
-#define kParamCameraProjectionModeOptionPerspective "Perspective"
-#define kParamCameraProjectionModeOptionOrthographic "Orthographic"
-#define kParamCameraProjectionModeOptionUV "UV"
-#define kParamCameraProjectionModeOptionSpherical "Spherical"
-enum CameraProjectionModeEnum {
-    eCameraProjectionModePerspective = 0,
-    eCameraProjectionModeOrthographic,
-    eCameraProjectionModeUV,
-    eCameraProjectionModeSpherical,
-};
-#define kParamCameraFocalLength kNukeOfxCameraParamFocalLength
-#define kParamCameraFocalLengthLabel "Focal Length"
-#define kParamCameraHorizontalAperture kNukeOfxCameraParamHorizontalAperture
-#define kParamCameraHorizontalApertureLabel "Horiz. Aperture"
-#define kParamCameraVerticalAperture kNukeOfxCameraParamVerticalAperture
-#define kParamCameraVerticalApertureLabel "Vert. Aperture"
-#define kParamCameraNear kNukeOfxCameraParamNear
-#define kParamCameraNearLabel "Near"
-#define kParamCameraFar kNukeOfxCameraParamFar
-#define kParamCameraFarLabel "Far"
-#define kParamCameraWindowTranslate kNukeOfxCameraParamWindowTranslate
-#define kParamCameraWindowTranslateLabel "Window Translate"
-#define kParamCameraWindowScale kNukeOfxCameraParamWindowScale
-#define kParamCameraWindowScaleLabel "Window Scale"
-#define kParamCameraWindowRoll kNukeOfxCameraParamWindowRoll
-#define kParamCameraWindowRollLabel "Window Roll"
-#define kParamCameraFocalPoint kNukeOfxCameraParamFocalPoint
-#define kParamCameraFocalPointLabel "Focus Distance"
-#define kParamCameraFStop "fstop"
-#define kParamCameraFStopLabel "F-Stop"
-
-class CameraParam {
-    std::string _prefix;
-    ChoiceParam* _camProjectionMode;
-    DoubleParam* _camFocalLength;
-    DoubleParam* _camHAperture;
-    DoubleParam* _camVAperture;
-    DoubleParam* _camNear;
-    DoubleParam* _camFar;
-    Double2DParam* _camWinTranslate;
-    Double2DParam* _camWinScale;
-    DoubleParam* _camWinRoll;
-    DoubleParam* _camFocusDistance;
-    DoubleParam* _camFStop;
-    bool _enabled;
-
-public:
-    CameraParam(OFX::ImageEffect* parent, const std::string& prefix)
-    : _prefix(prefix)
-    , _camProjectionMode(NULL)
-    , _camFocalLength(NULL)
-    , _camHAperture(NULL)
-    , _camVAperture(NULL)
-    , _camNear(NULL)
-    , _camFar(NULL)
-    , _camWinTranslate(NULL)
-    , _camWinScale(NULL)
-    , _camWinRoll(NULL)
-    , _camFocusDistance(NULL)
-    , _camFStop(NULL)
-    , _enabled(true)
-    {
-        _camProjectionMode = parent->fetchChoiceParam(prefix + kParamCameraProjectionMode);
-        _camFocalLength = parent->fetchDoubleParam(prefix + kParamCameraFocalLength);
-        _camHAperture = parent->fetchDoubleParam(prefix + kParamCameraHorizontalAperture);
-        if (parent->paramExists(prefix + kParamCameraVerticalAperture)) {
-            _camVAperture = parent->fetchDoubleParam(prefix + kParamCameraVerticalAperture);
-        }
-        if (parent->paramExists(prefix + kParamCameraNear)) {
-            _camNear = parent->fetchDoubleParam(prefix + kParamCameraNear);
-        }
-        if (parent->paramExists(prefix + kParamCameraFar)) {
-            _camFar = parent->fetchDoubleParam(prefix + kParamCameraFar);
-        }
-        _camWinTranslate = parent->fetchDouble2DParam(prefix + kParamCameraWindowTranslate);
-        _camWinScale = parent->fetchDouble2DParam(prefix + kParamCameraWindowScale);
-        _camWinRoll = parent->fetchDoubleParam(prefix + kParamCameraWindowRoll);
-        if (parent->paramExists(prefix + kParamCameraFocalPoint)) {
-            _camFocusDistance = parent->fetchDoubleParam(prefix + kParamCameraFocalPoint);
-        }
-        if (parent->paramExists(prefix + kParamCameraFStop)) {
-            _camFStop = parent->fetchDoubleParam(prefix + kParamCameraFStop);
-        }
-    }
-
-    void getValueAtTime(double time,
-                        CameraProjectionModeEnum& projectionMode,
-                        double& focalLength,
-                        double& hAperture,
-                        double& winTranslateU,
-                        double& winTranslateV,
-                        double& winScaleU,
-                        double& winScaleV,
-                        double& winRoll) const;
-
-    static void getMatrix(const Matrix4x4& pos,
-                          CameraProjectionModeEnum projectionMode,
-                          double focalLength,
-                          double hAperture,
-                          double winTranslateU,
-                          double winTranslateV,
-                          double winScaleU,
-                          double winScaleV,
-                          double winRoll,
-                          Matrix3x3* mat);
-
-    static void define(ImageEffectDescriptor &desc,
-                       PageParamDescriptor *page,
-                       GroupParamDescriptor *group,
-                       const std::string prefix);
-
-    void setEnabled(bool enabled) { _enabled = enabled; update(); }
-    
-private:
-
-    void update()
-    {
-        _camProjectionMode->setEnabled(_enabled);
-        _camFocalLength->setEnabled(_enabled);
-        _camHAperture->setEnabled(_enabled);
-        if (_camVAperture) {
-            _camVAperture->setEnabled(_enabled);
-        }
-        if (_camNear) {
-            _camNear->setEnabled(_enabled);
-        }
-        if (_camFar) {
-            _camFar->setEnabled(_enabled);
-        }
-        _camWinTranslate->setEnabled(_enabled);
-        _camWinScale->setEnabled(_enabled);
-        _camWinRoll->setEnabled(_enabled);
-        if (_camFocusDistance) {
-            _camFocusDistance->setEnabled(_enabled);
-        }
-        if (_camFStop) {
-            _camFStop->setEnabled(_enabled);
-        }
-    }
-};
-
-
-
-void
-CameraParam::define(ImageEffectDescriptor &desc,
-                    PageParamDescriptor *page,
-                    GroupParamDescriptor *group,
-                    const std::string prefix)
-{
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(prefix + kParamCameraProjectionMode);
-        param->setLabel(kParamCameraProjectionModeLabel);
-        assert(param->getNOptions() == eCameraProjectionModePerspective);
-        param->appendOption(kParamCameraProjectionModeOptionPerspective);
-        assert(param->getNOptions() == eCameraProjectionModeOrthographic);
-        param->appendOption(kParamCameraProjectionModeOptionOrthographic);
-        /*
-        assert(param->getNOptions() == eCameraProjectionModeUV);
-        param->appendOption(kParamCameraProjectionModeOptionUV);
-        assert(param->getNOptions() == eCameraProjectionModeSpherical);
-        param->appendOption(kParamCameraProjectionModeOptionSpherical);
-        //*/
-        param->setDefault(eCameraProjectionModePerspective);
-        param->setAnimates(false);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraFocalLength);
-        param->setLabel(kParamCameraFocalLengthLabel);
-        param->setRange(1e-8, DBL_MAX);
-        param->setDisplayRange(5, 100);
-        param->setDefault(50.);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraHorizontalAperture);
-        param->setLabel(kParamCameraHorizontalApertureLabel);
-        param->setRange(1e-8, DBL_MAX);
-        param->setDisplayRange(0.1, 50);
-        param->setDefault(24.576);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    /*
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraVerticalAperture);
-        param->setLabel(kParamCameraVerticalApertureLabel);
-        param->setRange(1e-8, DBL_MAX);
-        param->setDisplayRange(0.1, 50);
-        param->setDefault(18.672);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraNear);
-        param->setLabel(kParamCameraNearLabel);
-        param->setRange(1e-8, DBL_MAX);
-        param->setDisplayRange(0.1, 10);
-        param->setDefault(0.1);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraFar);
-        param->setLabel(kParamCameraFarLabel);
-        param->setRange(1e-8, DBL_MAX);
-        param->setDisplayRange(11, 10000);
-        param->setDefault(10000);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    //*/
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(prefix + kParamCameraWindowTranslate);
-        param->setLabel(kParamCameraWindowTranslateLabel);
-        param->setRange(-1, -1, 1, 1);
-        param->setDisplayRange(-1, -1, 1, 1);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(prefix + kParamCameraWindowScale);
-        param->setLabel(kParamCameraWindowScaleLabel);
-        param->setRange(1e-8, 1e-8, DBL_MAX, DBL_MAX);
-        param->setDisplayRange(0.1, 0.1, 10, 10);
-        param->setDefault(1, 1);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraWindowRoll);
-        param->setLabel(kParamCameraWindowRollLabel);
-        param->setRange(-DBL_MAX, DBL_MAX);
-        param->setDisplayRange(-45, 45);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    /*
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraFocalPoint);
-        param->setLabel(kParamCameraFocalPointLabel);
-        param->setRange(1e-8, DBL_MAX);
-        param->setDisplayRange(0.1, 10);
-        param->setDefault(2);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*subgroup);
-        }
-    }
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraFStop);
-        param->setLabel(kParamCameraFStopLabel);
-        param->setRange(1e-8, DBL_MAX);
-        param->setDisplayRange(0.1, 30);
-        param->setDefault(16);
-        if (group) {
-            param->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    //*/
-}
-
-void
-CameraParam::getValueAtTime(double time,
-                            CameraProjectionModeEnum& projectionMode,
-                            double& focalLength,
-                            double& hAperture,
-                            double& winTranslateU,
-                            double& winTranslateV,
-                            double& winScaleU,
-                            double& winScaleV,
-                            double& winRoll) const
-{
-    projectionMode = (CameraProjectionModeEnum)_camProjectionMode->getValueAtTime(time);
-    focalLength = _camFocalLength->getValueAtTime(time);
-    hAperture = _camHAperture->getValueAtTime(time);
-    _camWinTranslate->getValueAtTime(time, winTranslateU, winTranslateV);
-    _camWinScale->getValueAtTime(time, winScaleU, winScaleV);
-    winRoll = _camWinRoll->getValueAtTime(time);
-}
-
-void
-CameraParam::getMatrix(const Matrix4x4& pos,
-                       const CameraProjectionModeEnum projectionMode,
-                       const double focalLength,
-                       const double hAperture,
-                       const double winTranslateU,
-                       const double winTranslateV,
-                       const double winScaleU,
-                       const double winScaleV,
-                       const double winRoll,
-                       Matrix3x3* mat)
-{
-    // apply camera params
-    double a = hAperture / std::max(1e-8, focalLength);
-    (*mat)(0,0) = pos(0,0); (*mat)(0,1) = pos(0,1); (*mat)(0,2) = pos(0,3);
-    (*mat)(1,0) = pos(1,0); (*mat)(1,1) = pos(1,1); (*mat)(1,2) = pos(1,3);
-    if (projectionMode == eCameraProjectionModePerspective) {
-        // divide by Z
-        (*mat)(2,0) = a * pos(2,0); (*mat)(2,1) = a * pos(2,1); (*mat)(2,2) = a * pos(2,3);
-    } else {
-        // orthographic
-        (*mat)(2,0) = -a * pos(3,0); (*mat)(2,1) = -a * pos(3,1); (*mat)(2,2) = -a * pos(3,3);
-    }
-    // apply winTranslate
-    (*mat)(0,0) += (*mat)(2,0) * winTranslateU / 2.;
-    (*mat)(1,0) += (*mat)(2,0) * winTranslateV / 2.;
-    (*mat)(0,1) += (*mat)(2,1) * winTranslateU / 2.;
-    (*mat)(1,1) += (*mat)(2,1) * winTranslateV / 2.;
-    (*mat)(0,2) += (*mat)(2,2) * winTranslateU / 2.;
-    (*mat)(1,2) += (*mat)(2,2) * winTranslateV / 2.;
-    // apply winScale
-    (*mat)(0,0) /= winScaleU;
-    (*mat)(0,1) /= winScaleU;
-    (*mat)(0,2) /= winScaleU;
-    (*mat)(1,0) /= winScaleV;
-    (*mat)(1,1) /= winScaleV;
-    (*mat)(1,2) /= winScaleV;
-    // apply winRoll
-    if (winRoll != 0.) {
-        double s = std::sin(winRoll * M_PI / 180.);
-        double c = std::cos(winRoll * M_PI / 180.);
-        *mat = Matrix3x3(c, -s, 0,
-                         s, c, 0,
-                         0, 0, 1) * *mat;
-    }
-
-}
-
-// END CameraParm
-////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -991,9 +1269,7 @@ public:
         , _axisPosMat(NULL)
         , _camEnable(NULL)
         , _camPosMat(NULL)
-        , _camProjectionGroup(NULL)
-        , _camProjection(NULL)
-        , _card(this, kGroupCard)
+        , _card(this, kGroupCard, ePosMatCard)
         , _lensInFocal(NULL)
         , _lensInHAperture(NULL)
         , _extent(NULL)
@@ -1008,11 +1284,9 @@ public:
             _axisCamera = fetchCamera(kCameraAxis);
             _camCamera = fetchCamera(kCameraCam);
         } else {
-            _axisPosMat = new PosMatParam(this, kCameraAxis);
+            _axisPosMat = new PosMatParam(this, kCameraAxis, ePosMatAxis);
             _camEnable = fetchBooleanParam(kParamCamEnable);
-            _camPosMat = new PosMatParam(this, kCameraCam);
-            _camProjectionGroup = fetchGroupParam(kCameraCam kParamCameraProjectionGroup);
-            _camProjection = new CameraParam(this, kCameraCam);
+            _camPosMat = new PosMatParam(this, kCameraCam, ePosMatCamera);
         }
         _lensInFocal = fetchDoubleParam(kParamLensInFocal);
         _lensInHAperture = fetchDoubleParam(kParamLensInHAperture);
@@ -1059,7 +1333,6 @@ public:
     {
         delete _axisPosMat;
         delete _camPosMat;
-        delete _camProjection;
     }
 
 private:
@@ -1088,8 +1361,6 @@ private:
     PosMatParam* _axisPosMat;
     BooleanParam* _camEnable;
     PosMatParam* _camPosMat;
-    GroupParam* _camProjectionGroup;
-    CameraParam* _camProjection;
     PosMatParam _card;
     DoubleParam* _lensInFocal;
     DoubleParam* _lensInHAperture;
@@ -1107,7 +1378,7 @@ private:
 
 // returns true if fixed format (i.e. not the input RoD) and setFormat can be called in getClipPrefs
 bool
-Card3DPlugin::getOutputFormat(double time,
+Card3DPlugin::getOutputFormat(double /*time*/,
                               const OfxPointD& renderScale,
                               OfxRectI *format,
                               double *par) const
@@ -1271,7 +1542,7 @@ Card3DPlugin::getInverseTransformCanonical(double time,
         }
     } else if (_camEnable->getValueAtTime(time)) {
         _camPosMat->getMatrix(time, &axis);
-        _camProjection->getValueAtTime(time, camProjectionMode, camFocal, camHAperture, camWinTranslate[0], camWinTranslate[1], camWinScale[0], camWinScale[1], camWinRoll);
+        _camPosMat->getProjection().getValueAtTime(time, camProjectionMode, camFocal, camHAperture, camWinTranslate[0], camWinTranslate[1], camWinScale[0], camWinScale[1], camWinRoll);
     }
     Matrix4x4 card;
     _card.getMatrix(time, &card);
@@ -1368,8 +1639,6 @@ Card3DPlugin::updateVisibility()
     if (_camEnable) {
         bool enabled = _camEnable->getValue();
         _camPosMat->setEnabled(enabled);
-        _camProjectionGroup->setEnabled(enabled);
-        _camProjection->setEnabled(enabled);
     }
     {
         GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
@@ -1387,7 +1656,7 @@ void
 Card3DPlugin::changedParam(const InstanceChangedArgs &args,
                            const std::string &paramName)
 {
-    const double time = args.time;
+    //const double time = args.time;
     if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _srcClipChanged->setValue(true);
     } else if (paramName == kParamCamEnable) {
@@ -1501,7 +1770,7 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             if (page) {
                 page->addChild(*group);
             }
-            PosMatParam::define(desc, page, group, kCameraAxis, false);
+            PosMatParam::define(desc, page, group, kCameraAxis, ePosMatAxis);
         }
         {
             GroupParamDescriptor* group = desc.defineGroupParam(kCameraCam);
@@ -1524,25 +1793,11 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 }
             }
 
-            PosMatParam::define(desc, page, group, kCameraCam, false);
-
-            {
-                GroupParamDescriptor* subgroup = desc.defineGroupParam(kCameraCam kParamCameraProjectionGroup);
-                subgroup->setLabel(kCameraCamLabel" "kParamCameraProjectionGroupLabel);
-                subgroup->setOpen(false);
-                if (group) {
-                    subgroup->setParent(*group);
-                }
-                if (page) {
-                    page->addChild(*subgroup);
-                }
-
-                CameraParam::define(desc, page, subgroup, kCameraCam);
-            }
+            PosMatParam::define(desc, page, group, kCameraCam, ePosMatCamera);
         }
     }
 
-    PosMatParam::define(desc, page, /*group=*/NULL, /*prefix=*/kGroupCard, /*isCard=*/true);
+    PosMatParam::define(desc, page, /*group=*/NULL, /*prefix=*/kGroupCard, ePosMatCard);
 
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLensInFocal);
