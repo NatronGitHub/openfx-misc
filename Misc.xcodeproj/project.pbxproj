@@ -562,6 +562,8 @@
 		1E75A08B1A88E2E7005BAA36 /* net.sf.openfx.ImageStatistics.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E75A0831A88E286005BAA36 /* net.sf.openfx.ImageStatistics.svg */; };
 		1E7B38BD1B95DEC200012B76 /* CImgFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E7B38BC1B95DEAB00012B76 /* CImgFilter.cpp */; };
 		1E7B38BF1B95E80E00012B76 /* CImgOperator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E7B38BE1B95E80D00012B76 /* CImgOperator.cpp */; };
+		1E7BCEB91E5EED420016A01E /* ofxsFileOpen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E5EBA0C1D4B6ABE0005A5A8 /* ofxsFileOpen.cpp */; };
+		1E7BCEBA1E5EED480016A01E /* ofxsFileOpen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E5EBA0C1D4B6ABE0005A5A8 /* ofxsFileOpen.cpp */; };
 		1E814C9419C9817A00C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9319C9816E00C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg */; };
 		1E814C9619C9818800C2C668 /* net.sf.openfx.ColorCorrectPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9519C9818200C2C668 /* net.sf.openfx.ColorCorrectPlugin.svg */; };
 		1E814C9819C9819C00C2C668 /* net.sf.openfx.ConstantPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9719C9819400C2C668 /* net.sf.openfx.ConstantPlugin.svg */; };
@@ -7547,6 +7549,7 @@
 				1E2211F51E535F170069EB8D /* ofxsInteract.cpp in Sources */,
 				1E2211F61E535F170069EB8D /* tinythread.cpp in Sources */,
 				1E2211F71E535F170069EB8D /* ofxsLog.cpp in Sources */,
+				1E7BCEB91E5EED420016A01E /* ofxsFileOpen.cpp in Sources */,
 				1E2211F81E535F170069EB8D /* ofxsMultiThread.cpp in Sources */,
 				1E2211F91E535F170069EB8D /* ofxsParams.cpp in Sources */,
 				1E2211FA1E535F170069EB8D /* ofxsProperty.cpp in Sources */,
@@ -8053,6 +8056,7 @@
 				1EB9C085196DD697003C1849 /* NoOp.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
 				1E89B5451D81824D00F61E6B /* PLogLin.cpp in Sources */,
+				1E7BCEBA1E5EED480016A01E /* ofxsFileOpen.cpp in Sources */,
 				1EB0A47C1AA2037700F9C93E /* Position.cpp in Sources */,
 				1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */,
 				AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */,
