@@ -23,6 +23,7 @@
 #include <cmath> // tan, atan2
 #include <cstring> // strerror
 #include <cstdio> // fopen, fclose
+#include <cerrno> // errno
 #include <iostream>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
