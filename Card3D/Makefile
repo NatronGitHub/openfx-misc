@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ofxsTransform3x3.o ofxsShutter.o Card3D.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ofxsTransform3x3.o ofxsShutter.o ofxsFileOpen.o Card3D.o
 PLUGINNAME = Card3D
 #RESOURCES =
 

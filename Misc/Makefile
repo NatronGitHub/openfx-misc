@@ -1,4 +1,5 @@
 PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
+ofxsFileOpen.o \
 ofxsGenerator.o \
 ofxsLut.o \
 ofxsMultiPlane.o \
