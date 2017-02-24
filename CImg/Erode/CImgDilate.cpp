@@ -182,7 +182,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgDilatePluginFactory, {}, {});
+mDeclarePluginFactory(CImgDilatePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgDilatePluginFactory::describe(ImageEffectDescriptor& desc)

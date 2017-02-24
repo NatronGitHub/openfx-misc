@@ -32,6 +32,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 //#define USE_RANDOMGENERATOR // randomGenerator is more than 10 times slower than our pseudo-random hash
 #ifdef USE_RANDOMGENERATOR
@@ -945,7 +946,7 @@ QuantizePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(QuantizePluginFactory, {}, {});
+mDeclarePluginFactory(QuantizePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 QuantizePluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -1073,7 +1074,6 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamDither);
         param->setLabel(kParamDitherLabel);
         param->setHint(kParamDitherHint);
-        param->setAnimates(false);
         assert(param->getNOptions() == eDitherNone);
         param->appendOption(kParamDitherOptionNone, kParamDitherOptionNoneHint);
         assert(param->getNOptions() == eDitherOrderedBayer2);
@@ -1110,7 +1110,6 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamStaticSeedLabel);
         param->setHint(kParamStaticSeedHint);
         param->setDefault(false);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

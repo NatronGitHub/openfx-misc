@@ -29,6 +29,7 @@
 #endif
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsPixelProcessor.h"
@@ -530,7 +531,7 @@ TimeBlurPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 }
 
-mDeclarePluginFactory(TimeBlurPluginFactory, {}, {});
+mDeclarePluginFactory(TimeBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 TimeBlurPluginFactory::describe(ImageEffectDescriptor &desc)
 {

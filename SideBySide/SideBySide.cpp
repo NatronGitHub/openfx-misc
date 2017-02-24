@@ -29,6 +29,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -243,7 +244,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
     view1_->getValueAtTime(args.time, view1);
     int view2;
     view2_->getValueAtTime(args.time, view2);
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         throwSuiteStatusException(kOfxStatFailed);
 
         return;
@@ -313,7 +314,7 @@ bool
 SideBySidePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     bool vertical = vertical_->getValueAtTime(args.time);
@@ -342,7 +343,7 @@ void
 SideBySidePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                        RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     bool vertical = vertical_->getValueAtTime(args.time);
@@ -438,7 +439,8 @@ SideBySidePlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(SideBySidePluginFactory,; , {});
+mDeclarePluginFactory(SideBySidePluginFactory, {ofxsThreadSuiteCheck();}, {});
+#if 0
 void
 SideBySidePluginFactory::load()
 {
@@ -448,6 +450,7 @@ SideBySidePluginFactory::load()
     //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
 }
+#endif
 
 void
 SideBySidePluginFactory::describe(ImageEffectDescriptor &desc)

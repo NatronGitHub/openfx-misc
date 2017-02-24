@@ -33,6 +33,7 @@
 #include "ofxsTransformInteract.h"
 #include "ofxsFormatResolution.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -40,7 +41,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "ReformatOFX"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Convert the image to another format or size\n" \
+#define kPluginDescription "Convert the image to another format or size.\n" \
+    "An image transform is computed that goes from the input region of definition (RoD) to the selected format. The Resize Type parameter adjust the way the transform is computed.\n" \
+    "This plugin concatenates transforms.\n" \
+    "See also: http://opticalenquiry.com/nuke/index.php?title=Reformat"
+
+#define kPluginDescriptionNatron "Convert the image to another format or size.\n" \
+    "An image transform is computed that goes from the input format, regardless of the region of definition (RoD), to the selected format. The Resize Type parameter adjust the way the transform is computed.\n" \
+    "The output format is set by this effect.\n" \
+    "In order to set the output format without transforming the image content, use the NoOp effect.\n" \
     "This plugin concatenates transforms.\n" \
     "See also: http://opticalenquiry.com/nuke/index.php?title=Reformat"
 
@@ -321,9 +330,6 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 bool
 ReformatPlugin::isIdentity(const double time)
 {
-    // must clear persistent message in isIdentity, or render() is not called by Nuke after an error
-    clearPersistentMessage();
-
     if ( _center->getValueAtTime(time) || _flip->getValueAtTime(time) ||
          _flop->getValueAtTime(time)   || _turn->getValueAtTime(time) ) {
         return false;
@@ -541,9 +547,9 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             double ax = (srcRod.x2 - srcRod.x1) / (dstRod.x2 - dstRod.x1);
             double ay = (srcRod.y2 - srcRod.y1) / (dstRod.y2 - dstRod.y1);
             assert(ax == ax && ay == ay);
-            invtransform->a = ax; invtransform->b =  0; invtransform->c = srcRod.x1 - dstRod.x1 * ax;
-            invtransform->d =  0; invtransform->e = ay; invtransform->f = srcRod.y1 - dstRod.y1 * ay;
-            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+            (*invtransform)(0,0) = ax; (*invtransform)(0,1) =  0; (*invtransform)(0,2) = srcRod.x1 - dstRod.x1 * ax;
+            (*invtransform)(1,0) =  0; (*invtransform)(1,1) = ay; (*invtransform)(1,2) = srcRod.y1 - dstRod.y1 * ay;
+            (*invtransform)(2,0) =  0; (*invtransform)(2,1) =  0; (*invtransform)(2,2) = 1.;
         } else {
             // rotation 90 degrees counterclockwise
             // x <- srcRod.x1 + (y - dstRod.y1) * (srcRod.x2 - srcRod.x1) / (dstRod.y2 - dstRod.y1)
@@ -551,9 +557,9 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             double ax = (srcRod.x2 - srcRod.x1) / (dstRod.y2 - dstRod.y1);
             double ay = (srcRod.y2 - srcRod.y1) / (dstRod.x2 - dstRod.x1);
             assert(ax == ax && ay == ay);
-            invtransform->a =  0; invtransform->b = ax; invtransform->c = srcRod.x1 - dstRod.y1 * ax;
-            invtransform->d = -ay; invtransform->e =  0; invtransform->f = srcRod.y1 + dstRod.x2 * ay;
-            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+            (*invtransform)(0,0) =  0; (*invtransform)(0,1) = ax; (*invtransform)(0,2) = srcRod.x1 - dstRod.y1 * ax;
+            (*invtransform)(1,0) = -ay; (*invtransform)(1,1) =  0; (*invtransform)(1,2) = srcRod.y1 + dstRod.x2 * ay;
+            (*invtransform)(2,0) =  0; (*invtransform)(2,1) =  0; (*invtransform)(2,2) = 1.;
         }
     } else { // invert
         if ( (srcRod.x1 == srcRod.x2) ||
@@ -568,9 +574,9 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             double ax = (dstRod.x2 - dstRod.x1) / (srcRod.x2 - srcRod.x1);
             double ay = (dstRod.y2 - dstRod.y1) / (srcRod.y2 - srcRod.y1);
             assert(ax == ax && ay == ay);
-            invtransform->a = ax; invtransform->b =  0; invtransform->c = dstRod.x1 - srcRod.x1 * ax;
-            invtransform->d =  0; invtransform->e = ay; invtransform->f = dstRod.y1 - srcRod.y1 * ay;
-            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+            (*invtransform)(0,0) = ax; (*invtransform)(0,1) =  0; (*invtransform)(0,2) = dstRod.x1 - srcRod.x1 * ax;
+            (*invtransform)(1,0) =  0; (*invtransform)(1,1) = ay; (*invtransform)(1,2) = dstRod.y1 - srcRod.y1 * ay;
+            (*invtransform)(2,0) =  0; (*invtransform)(2,1) =  0; (*invtransform)(2,2) = 1.;
         } else {
             // rotation 90 degrees counterclockwise
             // x <- dstRod.x1 + (srcRod.y2 - y) * (dstRod.x2 - dstRod.x1) / (srcRod.y2 - srcRod.y1)
@@ -578,14 +584,14 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             double ax = (dstRod.x2 - dstRod.x1) / (srcRod.y2 - srcRod.y1);
             double ay = (dstRod.y2 - dstRod.y1) / (srcRod.x2 - srcRod.x1);
             assert(ax == ax && ay == ay);
-            invtransform->a =  0; invtransform->b = -ax; invtransform->c = dstRod.x1 + srcRod.y2 * ax;
-            invtransform->d = ay; invtransform->e =  0; invtransform->f = dstRod.y1 - srcRod.x1 * ay;
-            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+            (*invtransform)(0,0) =  0; (*invtransform)(0,1) = -ax; (*invtransform)(0,2) = dstRod.x1 + srcRod.y2 * ax;
+            (*invtransform)(1,0) = ay; (*invtransform)(1,1) =  0; (*invtransform)(1,2) = dstRod.y1 - srcRod.x1 * ay;
+            (*invtransform)(2,0) =  0; (*invtransform)(2,1) =  0; (*invtransform)(2,2) = 1.;
         }
     }
-    assert(invtransform->a == invtransform->a && invtransform->b == invtransform->b && invtransform->c == invtransform->c &&
-           invtransform->d == invtransform->d && invtransform->e == invtransform->e && invtransform->f == invtransform->f &&
-           invtransform->g == invtransform->g && invtransform->h == invtransform->h && invtransform->i == invtransform->i);
+    assert((*invtransform)(0,0) == (*invtransform)(0,0) && (*invtransform)(0,1) == (*invtransform)(0,1) && (*invtransform)(0,2) == (*invtransform)(0,2) &&
+           (*invtransform)(1,0) == (*invtransform)(1,0) && (*invtransform)(1,1) == (*invtransform)(1,1) && (*invtransform)(1,2) == (*invtransform)(1,2) &&
+           (*invtransform)(2,0) == (*invtransform)(2,0) && (*invtransform)(2,1) == (*invtransform)(2,1) && (*invtransform)(2,2) == (*invtransform)(2,2));
 
     return true;
 } // ReformatPlugin::getInverseTransformCanonical
@@ -645,6 +651,9 @@ void
 ReformatPlugin::changedParam(const InstanceChangedArgs &args,
                              const std::string &paramName)
 {
+    // must clear persistent message, or render() is not called by Nuke
+    clearPersistentMessage();
+
     if (paramName == kParamType) {
         refreshVisibility();
     }
@@ -731,14 +740,14 @@ ReformatPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 #endif
 }
 
-mDeclarePluginFactory(ReformatPluginFactory, {}, {});
+mDeclarePluginFactory(ReformatPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ReformatPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    desc.setPluginDescription(getImageEffectHostDescription()->isNatron ? kPluginDescriptionNatron : kPluginDescription);
     Transform3x3Describe(desc, false);
     desc.setSupportsMultiResolution(true);
     desc.setSupportsMultipleClipPARs(true);
@@ -778,7 +787,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == eReformatTypeScale);
         param->appendOption(kParamTypeOptionScale);
         param->setDefault(0);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -832,7 +840,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamFormatSquare2kLabel);
         param->setDefault(kParamFormatDefault);
         param->setHint(kParamFormatHint);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -845,7 +852,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamFormatBoxSizeHint);
         param->setDefault(200, 200);
         param->setIsSecretAndDisabled(true); // secret Natron-specific param
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -860,7 +866,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDisplayRange(0.5, 2.);
         param->setDefault(1.);
         param->setIsSecretAndDisabled(true); // secret Natron-specific param
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -874,7 +879,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamBoxSizeHint);
         param->setDefault(200, 200);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -885,7 +889,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamBoxFixedLabel);
         param->setHint(kParamBoxFixedHint);
         param->setDefault(false);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -899,7 +902,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setRange(0., 10);
         param->setDisplayRange(0.5, 2.);
         param->setDefault(1.);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -919,7 +921,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setIncrement(0.01);
         param->setUseHostNativeOverlayHandle(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -935,7 +936,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         // https://github.com/MrKepzie/Natron/issues/1204
         param->setDefault(!getImageEffectHostDescription()->isNatron);
         param->setLayoutHint(eLayoutHintDivider);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -960,7 +960,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == eResizeDistort);
         param->appendOption(kParamResizeOptionDistort, kParamResizeOptionDistortHint);
         param->setDefault( (int)eResizeWidth );
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -973,7 +972,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamReformatCenterLabel);
         param->setHint(kParamReformatCenterHint);
         param->setDefault(true);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
@@ -1013,7 +1011,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamTurnLabel);
         param->setHint(kParamTurnHint);
         param->setDefault(false);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         param->getPropertySet().propSetInt(kOfxParamPropLayoutPadWidth, 1, false);
         if (page) {
@@ -1027,7 +1024,6 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamPreserveBoundingBoxLabel);
         param->setHint(kParamPreserveBoundingBoxHint);
         param->setDefault(false);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

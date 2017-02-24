@@ -60,6 +60,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamInteractiveHint \
     "When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
 
+// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+#define kParamDefaultsNormalised "defaultsNormalised"
+
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -78,6 +82,26 @@ public:
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _translate = fetchDouble2DParam(kParamTranslate);
         assert(_translate);
+
+        // honor kParamDefaultsNormalised
+        if ( paramExists(kParamDefaultsNormalised) ) {
+            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+            // handle these ourselves!
+            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
+            assert(param);
+            bool normalised = param->getValue();
+            if (normalised) {
+                OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
+                OfxPointD p;
+                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                //beginEditBlock(kParamDefaultsNormalised);
+                p = _translate->getValue();
+                _translate->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
+                param->setValue(false);
+                //endEditBlock();
+            }
+        }
     }
 
 private:
@@ -174,7 +198,7 @@ bool
 PositionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                       OfxRectD &rod)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     const double time = args.time;
@@ -212,7 +236,7 @@ void
 PositionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                      RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const double time = args.time;
@@ -277,7 +301,7 @@ PositionPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 }
 
-mDeclarePluginFactory(PositionPluginFactory, {}, {});
+mDeclarePluginFactory(PositionPluginFactory, {ofxsThreadSuiteCheck();}, {});
 struct PositionInteractParam
 {
     static const char * name() { return kParamTranslate; }
@@ -369,7 +393,11 @@ PositionPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamTranslateLabel);
         param->setHint(kParamTranslateHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        if ( param->supportsDefaultCoordinateSystem() ) {
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+        } else {
+            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+        }
         param->setDefault(0., 0.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)

@@ -32,6 +32,7 @@
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -1166,7 +1167,7 @@ ColorCorrectPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
+mDeclarePluginFactory(ColorCorrectPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ColorCorrectPluginFactory::describe(ImageEffectDescriptor &desc)
 {

@@ -31,6 +31,7 @@
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -264,10 +265,10 @@ private:
                     if (filter == eFilterImpulse) {
                         ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                     } else {
-                        double Jxx = (H.a * transformed.z - transformed.x * H.g) / (transformed.z * transformed.z);
-                        double Jxy = (H.b * transformed.z - transformed.x * H.h) / (transformed.z * transformed.z);
-                        double Jyx = (H.d * transformed.z - transformed.y * H.g) / (transformed.z * transformed.z);
-                        double Jyy = (H.e * transformed.z - transformed.y * H.h) / (transformed.z * transformed.z);
+                        double Jxx = (H(0,0) * transformed.z - transformed.x * H(2,0)) / (transformed.z * transformed.z);
+                        double Jxy = (H(0,1) * transformed.z - transformed.x * H(2,1)) / (transformed.z * transformed.z);
+                        double Jyx = (H(1,0) * transformed.z - transformed.y * H(2,0)) / (transformed.z * transformed.z);
+                        double Jyy = (H(1,1) * transformed.z - transformed.y * H(2,1)) / (transformed.z * transformed.z);
                         ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(fx, fy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
                     }
                 }
@@ -358,10 +359,10 @@ private:
                             if (filter == eFilterImpulse) {
                                 ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                             } else {
-                                double Jxx = (H.a * transformed.z - transformed.x * H.g) / (transformed.z * transformed.z);
-                                double Jxy = (H.b * transformed.z - transformed.x * H.h) / (transformed.z * transformed.z);
-                                double Jyx = (H.d * transformed.z - transformed.y * H.g) / (transformed.z * transformed.z);
-                                double Jyy = (H.e * transformed.z - transformed.y * H.h) / (transformed.z * transformed.z);
+                                double Jxx = (H(0,0) * transformed.z - transformed.x * H(2,0)) / (transformed.z * transformed.z);
+                                double Jxy = (H(0,1) * transformed.z - transformed.x * H(2,1)) / (transformed.z * transformed.z);
+                                double Jyx = (H(1,0) * transformed.z - transformed.y * H(2,0)) / (transformed.z * transformed.z);
+                                double Jyy = (H(1,1) * transformed.z - transformed.y * H(2,1)) / (transformed.z * transformed.z);
                                 ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(fx, fy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
                             }
                         }
@@ -706,7 +707,7 @@ GodRaysPlugin::getInverseTransformCanonical(double time,
 void
 GodRaysPlugin::resetCenter(double time)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     OfxRectD rod = _srcClip->getRegionOfDefinition(time);
@@ -874,15 +875,15 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         invtransformsizealloc = 1;
         invtransform.resize(invtransformsizealloc);
         invtransformsize = 1;
-        invtransform[0].a = 0.;
-        invtransform[0].b = 0.;
-        invtransform[0].c = 0.;
-        invtransform[0].d = 0.;
-        invtransform[0].e = 0.;
-        invtransform[0].f = 0.;
-        invtransform[0].g = 0.;
-        invtransform[0].h = 0.;
-        invtransform[0].i = 1.;
+        invtransform[0](0,0) = 0.;
+        invtransform[0](0,1) = 0.;
+        invtransform[0](0,2) = 0.;
+        invtransform[0](1,0) = 0.;
+        invtransform[0](1,1) = 0.;
+        invtransform[0](1,2) = 0.;
+        invtransform[0](2,0) = 0.;
+        invtransform[0](2,1) = 0.;
+        invtransform[0](2,2) = 1.;
     } else {
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         PixelComponentEnum dstComponents  = dst->getPixelComponents();
@@ -929,20 +930,18 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
             double srcTransform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
             src->getTransform(srcTransform);
             Matrix3x3 srcTransformMat;
-            srcTransformMat.a = srcTransform[0];
-            srcTransformMat.b = srcTransform[1];
-            srcTransformMat.c = srcTransform[2];
-            srcTransformMat.d = srcTransform[3];
-            srcTransformMat.e = srcTransform[4];
-            srcTransformMat.f = srcTransform[5];
-            srcTransformMat.g = srcTransform[6];
-            srcTransformMat.h = srcTransform[7];
-            srcTransformMat.i = srcTransform[8];
+            srcTransformMat(0,0) = srcTransform[0];
+            srcTransformMat(0,1) = srcTransform[1];
+            srcTransformMat(0,2) = srcTransform[2];
+            srcTransformMat(1,0) = srcTransform[3];
+            srcTransformMat(1,1) = srcTransform[4];
+            srcTransformMat(1,2) = srcTransform[5];
+            srcTransformMat(2,0) = srcTransform[6];
+            srcTransformMat(2,1) = srcTransform[7];
+            srcTransformMat(2,2) = srcTransform[8];
             // invert it
-            double det = srcTransformMat.determinant();
-            if (det != 0.) {
-                Matrix3x3 srcTransformInverse = srcTransformMat.inverse(det);
-
+            Matrix3x3 srcTransformInverse;
+            if ( srcTransformMat.inverse(&srcTransformInverse) ) {
                 for (size_t i = 0; i < invtransformsize; ++i) {
                     invtransform[i] = srcTransformInverse * invtransform[i];
                 }
@@ -1139,7 +1138,7 @@ GodRaysPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(GodRaysPluginFactory, {}, {});
+mDeclarePluginFactory(GodRaysPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 GodRaysPluginFactory::describe(ImageEffectDescriptor &desc)
 {

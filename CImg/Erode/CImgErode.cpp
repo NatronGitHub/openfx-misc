@@ -184,7 +184,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgErodePluginFactory, {}, {});
+mDeclarePluginFactory(CImgErodePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgErodePluginFactory::describe(ImageEffectDescriptor& desc)

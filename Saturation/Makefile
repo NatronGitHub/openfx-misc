@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Saturation.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Saturation.o
 PLUGINNAME = Saturation
 RESOURCES = net.sf.openfx.SaturationPlugin.png net.sf.openfx.SaturationPlugin.svg
 

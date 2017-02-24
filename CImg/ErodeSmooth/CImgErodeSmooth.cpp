@@ -594,7 +594,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgErodeSmoothPluginFactory, {}, {});
+mDeclarePluginFactory(CImgErodeSmoothPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgErodeSmoothPluginFactory::describe(ImageEffectDescriptor& desc)

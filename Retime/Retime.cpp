@@ -35,6 +35,7 @@
 #include <cassert>
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -344,7 +345,7 @@ void
 RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
                               FramesNeededSetter &frames)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const double time = args.time;
@@ -412,7 +413,7 @@ RetimePlugin::isIdentityInternal(OfxTime time,
                                  Clip* &identityClip,
                                  OfxTime &identityTime)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     double sourceTime;
@@ -582,6 +583,7 @@ mDeclarePluginFactory(RetimePluginFactory,; , {});
 void
 RetimePluginFactory::load()
 {
+    ofxsThreadSuiteCheck();
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw Exception::HostInadequate("Need random temporal image access to work");

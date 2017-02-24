@@ -24,6 +24,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -122,7 +123,7 @@ TimeOffsetPlugin::getSourceTime(double t) const
 {
     double sourceTime = t - _time_offset->getValueAtTime(t); // no animation
 
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return sourceTime;
     }
     OfxRangeD range = _srcClip->getFrameRange();
@@ -206,6 +207,7 @@ mDeclarePluginFactory(TimeOffsetPluginFactory,; , {});
 void
 TimeOffsetPluginFactory::load()
 {
+    ofxsThreadSuiteCheck();
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw Exception::HostInadequate("Need random temporal image access to work");

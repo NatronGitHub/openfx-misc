@@ -822,7 +822,7 @@ public:
     }
 };
 
-mDeclarePluginFactory(HueCorrectPluginFactory, {}, {});
+mDeclarePluginFactory(HueCorrectPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 HueCorrectPluginFactory::describe(ImageEffectDescriptor &desc)
@@ -1392,7 +1392,7 @@ HueKeyerPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(HueKeyerPluginFactory, {}, {});
+mDeclarePluginFactory(HueKeyerPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 HueKeyerPluginFactory::describe(ImageEffectDescriptor &desc)
 {

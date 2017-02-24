@@ -30,6 +30,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
@@ -870,7 +871,7 @@ ChromaKeyerPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     // note: ChromaKeyer handles correctly inputs with different components: it only uses RGB components from both clips
 }
 
-mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new Color::LutManager<Mutex>; }, { delete gLutManager; });
+mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
 void
 ChromaKeyerPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -1068,7 +1069,6 @@ ChromaKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == (int)eOutputModeComposite);
         param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
         param->setDefault( (int)eOutputModeComposite );
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

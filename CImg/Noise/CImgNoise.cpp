@@ -183,7 +183,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgNoisePluginFactory, {}, {});
+mDeclarePluginFactory(CImgNoisePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgNoisePluginFactory::describe(ImageEffectDescriptor& desc)

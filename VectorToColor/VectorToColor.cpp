@@ -386,7 +386,7 @@ VectorToColorPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(VectorToColorPluginFactory, {}, {});
+mDeclarePluginFactory(VectorToColorPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 VectorToColorPluginFactory::describe(ImageEffectDescriptor &desc)
 {

@@ -28,6 +28,7 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 #include "ofxsCopier.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -89,7 +90,8 @@ public:
         , _size(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
+        assert( _dstClip && (!_dstClip->isConnected() ||
+                             _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -180,7 +182,7 @@ void
 AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                       RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
@@ -207,7 +209,7 @@ bool
 AdjustRoDPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                        OfxRectD &rod)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(args.time);
@@ -299,7 +301,7 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 }
 
-mDeclarePluginFactory(AdjustRoDPluginFactory, {}, {});
+mDeclarePluginFactory(AdjustRoDPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 AdjustRoDPluginFactory::describe(ImageEffectDescriptor &desc)
 {

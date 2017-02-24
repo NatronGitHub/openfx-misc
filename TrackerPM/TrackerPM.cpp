@@ -29,6 +29,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsTracking.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
@@ -550,7 +551,7 @@ private:
 void
 TrackerPMPlugin::trackRange(const TrackArguments& args)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
 # ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
@@ -705,7 +706,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
                                  const OfxRectD& trackSearchBounds,
                                  const Image* otherImg)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const double par = _srcClip->getPixelAspectRatio();
@@ -926,7 +927,7 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
     }
 } // TrackerPMPlugin::trackInternal
 
-mDeclarePluginFactory(TrackerPMPluginFactory, {}, {});
+mDeclarePluginFactory(TrackerPMPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 TrackerPMPluginFactory::describe(ImageEffectDescriptor &desc)
 {

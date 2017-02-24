@@ -20,18 +20,19 @@
  * OFX TestPosition plugin.
  */
 
-#include "ofxsTransform3x3.h"
-#include "ofxsTransformInteract.h"
-#if defined(OFX_EXTENSIONS_NUKE) && defined(TEST_SETTINGS)
-#include "nukeOfxGlobalSettings.h"
-#endif
-
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <iostream>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
+
+#include "ofxsTransform3x3.h"
+#include "ofxsTransformInteract.h"
+#if defined(OFX_EXTENSIONS_NUKE) && defined(TEST_SETTINGS)
+#include "nukeOfxGlobalSettings.h"
+#endif
+#include "ofxsThreadSuite.h"
 
 #define kPluginPositionName "TestPosition"
 #define kPluginPositionGrouping "Other/Test"
@@ -134,15 +135,15 @@ TestPositionPlugin::getInverseTransformCanonical(double time,
 
     _translate->getValueAtTime(time, x, y);
 
-    invtransform->a = 1.;
-    invtransform->b = 0.;
-    invtransform->c = invert ? x : -x;
-    invtransform->d = 0.;
-    invtransform->e = 1.;
-    invtransform->f = invert ? y : -y;
-    invtransform->g = 0.;
-    invtransform->h = 0.;
-    invtransform->i = 1.;
+    (*invtransform)(0,0) = 1.;
+    (*invtransform)(0,1) = 0.;
+    (*invtransform)(0,2) = invert ? x : -x;
+    (*invtransform)(1,0) = 0.;
+    (*invtransform)(1,1) = 1.;
+    (*invtransform)(1,2) = invert ? y : -y;
+    (*invtransform)(2,0) = 0.;
+    (*invtransform)(2,1) = 0.;
+    (*invtransform)(2,2) = 1.;
 
     return true;
 }
@@ -158,7 +159,7 @@ TestPositionPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(TestPositionPluginFactory, {}, {});
+mDeclarePluginFactory(TestPositionPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 TestPositionPluginFactory::describe(ImageEffectDescriptor &desc)
 {

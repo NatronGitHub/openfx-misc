@@ -27,6 +27,7 @@
 #include <map>
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsPixelProcessor.h"
@@ -157,7 +158,7 @@ public:
     const Image* fetch(double time,
                        bool nofetch = false) const
     {
-        if (!_srcClip) {
+        if (!_srcClip || !_srcClip->isConnected()) {
             return NULL;
         }
         ImagesMap::const_iterator it = _images.find(time);
@@ -299,7 +300,7 @@ void
 SlitScanPlugin::getFramesNeeded(const FramesNeededArguments &args,
                                 FramesNeededSetter &frames)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const double time = args.time;
@@ -876,6 +877,7 @@ mDeclarePluginFactory(SlitScanPluginFactory,; , {});
 void
 SlitScanPluginFactory::load()
 {
+    ofxsThreadSuiteCheck();
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw Exception::HostInadequate("Need random temporal image access to work");

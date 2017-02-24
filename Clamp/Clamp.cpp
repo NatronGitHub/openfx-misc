@@ -25,6 +25,7 @@
 #endif
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -811,7 +812,7 @@ ClampPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(ClampPluginFactory, {}, {});
+mDeclarePluginFactory(ClampPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ClampPluginFactory::describe(ImageEffectDescriptor &desc)
 {

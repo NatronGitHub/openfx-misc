@@ -1,4 +1,4 @@
-PLUGINOBJECTS = TimeOffset.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o TimeOffset.o
 PLUGINNAME = TimeOffset
 RESOURCES = net.sf.openfx.timeOffset.png net.sf.openfx.timeOffset.svg
 

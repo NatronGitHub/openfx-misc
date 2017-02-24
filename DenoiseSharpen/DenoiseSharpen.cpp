@@ -47,6 +47,7 @@
  */
 
 #define kUseMultithread // define to use the multithread suite
+//#define DEBUG_STDOUT // output debugging messages on stdout (for Resolve)
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -55,7 +56,12 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm>
-//#include <iostream>
+#ifdef DEBUG_STDOUT
+#include <iostream>
+#define DBG(x) (x)
+#else
+#define DBG(x) (void)0
+#endif
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -65,7 +71,9 @@
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
 #include "ofxsRectangleInteract.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
+#include "ofxsCopier.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef MultiThread::Mutex Mutex;
@@ -86,6 +94,10 @@ typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 #endif
 
 using namespace OFX;
+#ifdef DEBUG_STDOUT
+using std::cout;
+using std::endl;
+#endif
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
@@ -99,7 +111,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This plugin allows the separate denoising of image channels in multiple color spaces using wavelets, using the BayesShrink algorithm, and can also sharpen the image details.\n" \
     "\n" \
     "Noise levels for each channel may be either set manually, or analyzed from the image data in each wavelet subband using the MAD (median absolute deviation) estimator.\n" \
-    "Noise analysis is based on a Gaussian noise assumption. If there is speckle noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
+    "Noise analysis is based on the assuption that the noise is Gaussian and additive (it is not intensity-dependent). If there is speckle or salt-and-pepper noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
     "The color model specifies the channels and the transforms used. Noise levels have to be re-adjusted or re-analyzed when changing the color model.\n" \
     "\n" \
     "## Basic Usage\n" \
@@ -109,19 +121,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "For most footage, the effect works best by keeping the default Y'CbCr color model. The color models are made to work with Rec.709 data, but DenoiseSharpen will still work if the input is in another colorspace, as long as the input is linear RGB:\n" \
     "\n" \
     "- The Y'CbCr color model uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B' and the the Rec.709 primaries to convert from R'G'B' to Y'CbCr.\n" \
-    "- The L*a*b color model uses the Rec.709 RGB primaries to convert from RGB to L*a*b..\n" \
+    "- The L * a * b color model uses the Rec.709 RGB primaries to convert from RGB to L * a * b.\n" \
     "- The R'G'B' color model uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B'.\n" \
-    "- The RGB color model (linear) makes no assumption about the RGB color space.\n" \
+    "- The RGB color model (linear) makes no assumption about the RGB color space, and works directly on the RGB components, assuming additive noise. If, say, the noise is known to be multiplicative, one can convert the images to Log before denoising, use this option, and convert back to linear after denoising.\n" \
     "- The Alpha channel, if processed, is always considered to be linear.\n" \
     "\n" \
     "The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, \"Lock Noise Analysis\" is checked in order to avoid modifying the essential parameters by mistake.\n" \
     "\n" \
-    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate.\n" \
+    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero..\n" \
     "\n" \
-    "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
+    "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, and noise analysis can only be performed on areas which also contain details, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
     "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it commes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
     "\n" \
-    "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left. You can then reset the Sharpen Amount, unless you actually want to enhance the contrast of your denoised footage.\n" \
+    "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left and only image details remain in the sharpened image. You can then reset the Sharpen Amount to zero, unless you actually want to enhance the contrast of your denoised footage.\n" \
     "\n" \
     "You can also check what was actually removed from the original image by selecting the \"Noise\" Output mode (instead of \"Result\"). If too many image details are visible in the noise, noise parameters may need to be tuned.\n"
 
@@ -181,7 +193,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamOutputMode "outputMode"
 #define kParamOutputModeLabel "Output"
-#define kParamOutputModeHint "Select"
+#define kParamOutputModeHint "Select which image is output when analysis is locked. When analysis is not locked, the effect does nothing (the output is the source image)."
 #define kParamOutputModeOptionResult "Result"
 #define kParamOutputModeOptionResultHint "The result of denoising and sharpening the Source image."
 #define kParamOutputModeOptionNoise "Noise"
@@ -218,8 +230,8 @@ enum ColorModelEnum
 #define kGroupAnalysis "analysis"
 #define kGroupAnalysisLabel "Analysis"
 #define kParamAnalysisLock "analysisLock"
-#define kParamAnalysisLockLabel "Lock Noise Analysis"
-#define kParamAnalysisLockHint "Lock all noise analysis parameters."
+#define kParamAnalysisLockLabel "Lock Analysis and Apply"
+#define kParamAnalysisLockHint "Lock all noise analysis parameters and apply denoising. When the analysis is not locked, the source image is output."
 #define kParamB3 "useB3Spline"
 #define kParamB3Label "B3 Spline Interpolation"
 #define kParamB3Hint "For wavelet decomposition, use a 5x5 filter based on B3 spline interpolation rather than a 3x3 Lagrange linear filter. Noise levels are reset when this setting is changed. The influence of this parameter is minimal, and it should not be changed."
@@ -350,6 +362,9 @@ enum ColorModelEnum
 
 #define kParamPremultChanged "premultChanged"
 
+// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+#define kParamDefaultsNormalised "defaultsNormalised"
+
 #define kLevelMax 4 // 7 // maximum level for denoising
 
 #define kProgressAnalysis // define to enable progress for analysis
@@ -375,6 +390,8 @@ enum ColorModelEnum
 #define progressUpdateRender(x) unused(x)
 #define progressEndRender() ( (void)0 )
 #endif
+
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 // those are the noise levels on HHi subands that correspond to a
 // Gaussian noise, with the dcraw "a trous" wavelets.
@@ -868,6 +885,28 @@ public:
         updateLabels();
         updateSecret();
         analysisLock();
+
+        // honor kParamDefaultsNormalised
+        if ( paramExists(kParamDefaultsNormalised) ) {
+            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+            // handle these ourselves!
+            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
+            assert(param);
+            bool normalised = param->getValue();
+            if (normalised) {
+                OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
+                OfxPointD p;
+                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                beginEditBlock(kParamDefaultsNormalised);
+                p = _btmLeft->getValue();
+                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
+                p = _size->getValue();
+                _size->setValue(p.x * size.x, p.y * size.y);
+                param->setValue(false);
+                endEditBlock();
+            }
+        }
     }
 
 private:
@@ -932,6 +971,8 @@ private:
     {
         bool locked = _analysisLock->getValue();
 
+        // unlock the output mode
+        _outputMode->setEnabled( locked );
         // lock the color model
         _colorModel->setEnabled( !locked );
         _b3->setEnabled( !locked );
@@ -952,6 +993,7 @@ private:
     {
         bool doMasking;
         bool maskInvert;
+        bool analysisLock;
         bool premult;
         int premultChannel;
         double mix;
@@ -970,6 +1012,7 @@ private:
         Params()
             : doMasking(false)
             , maskInvert(false)
+            , analysisLock(false)
             , premult(false)
             , premultChannel(3)
             , mix(1.)
@@ -2178,8 +2221,8 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     omp_set_num_threads( MultiThread::getNumCPUs() );
 #endif
+    DBG(cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n");
 
-    //std::cout << "render!\n";
     progressStartRender(kPluginName " (render)");
 
     // instantiate the render code based on the pixel depth of the dst clip
@@ -2203,13 +2246,13 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
         renderForComponents<1>(args);
         break;
     default:
-        //std::cout << "components usupported\n";
+        DBG(std::cout << "components usupported\n");
         throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
     progressEndRender();
 
-    //std::cout << "render! OK\n";
+    DBG(cout << "render! OK\n");
 }
 
 template<int nComponents>
@@ -2231,7 +2274,7 @@ DenoiseSharpenPlugin::renderForComponents(const RenderArguments &args)
         renderForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-        //std::cout << "depth usupported\n";
+        DBG(cout << "depth usupported\n");
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -2302,11 +2345,25 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
+    clearPersistentMessage();
+
     p.maskInvert = false;
     if (p.doMasking) {
         _maskInvert->getValueAtTime(time, p.maskInvert);
     }
 
+    // fetch parameter values
+    p.analysisLock = _analysisLock->getValueAtTime(time);
+    if ( !p.analysisLock ) {
+        // all we have to do is copy pixels
+        DBG(cout << "render called although analysis not locked and isidentity=true\n");
+        copyPixels(*this,
+                   args.renderWindow,
+                   src.get(),
+                   dst.get());
+        return;
+
+    }
     p.premult = _premult->getValueAtTime(time);
     p.premultChannel = _premultChannel->getValueAtTime(time);
     p.mix = _mix->getValueAtTime(time);
@@ -2316,7 +2373,6 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     p.process[2] = _processB->getValueAtTime(time);
     p.process[3] = _processA->getValueAtTime(time);
 
-    // fetch parameter values
     p.outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     p.colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
     p.b3 = _b3->getValueAtTime(time);
@@ -2393,6 +2449,10 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
     Params p;
 
     setup(args, src, dst, mask, p);
+    if ( !p.analysisLock ) {
+        // we copied pixels to dst already
+        return;
+    }
 
     const OfxRectI& procWindow = args.renderWindow;
 
@@ -2402,7 +2462,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
     unsigned int iheight = p.srcWindow.y2 - p.srcWindow.y1;
     unsigned int isize = iwidth * iheight;
     std::auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * ( nComponents + 2 + ( (p.adaptiveRadius > 0) ? 1 : 0 ) ), this) );
-    float* tmpPixelData = (float*)tmpData->lock();
+    float* tmpPixelData = tmpData.get() ? (float*)tmpData->lock() : NULL;
     float* fimgcolor[3] = { NULL, NULL, NULL };
     float* fimgalpha = NULL;
     float *fimgtmp[3] = { NULL, NULL, NULL };
@@ -2589,7 +2649,7 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &arg
 {
     const double time = args.time;
 
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
@@ -2636,11 +2696,19 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
                                  Clip * &identityClip,
                                  double & /*identityTime*/)
 {
-    //std::cout << "isIdentity!\n";
+    DBG(cout << "isIdentity!\n");
+
     const double time = args.time;
 
     if (kLevelMax - startLevelFromRenderScale(args.renderScale) < 0) {
         // renderScale is too low for denoising
+        identityClip = _srcClip;
+
+        return true;
+    }
+
+    if ( !_analysisLock->getValue() ) {
+        // analysis not locked, always return source image
         identityClip = _srcClip;
 
         return true;
@@ -2740,7 +2808,8 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-    //std::cout << "isIdentity! false\n";
+    DBG(cout << "isIdentity! false\n");
+
     return false;
 } // DenoiseSharpenPlugin::isIdentity
 
@@ -2748,7 +2817,8 @@ void
 DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
                                   const std::string &clipName)
 {
-    //std::cout << "changedClip!\n";
+    DBG(cout << "changedClip!\n");
+
     if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
          _srcClip && _srcClip->isConnected() &&
          !_premultChanged->getValue() &&
@@ -2769,7 +2839,7 @@ DenoiseSharpenPlugin::changedClip(const InstanceChangedArgs &args,
             }
         }
     }
-    //std::cout << "changedClip OK!\n";
+    DBG(cout << "changedClip OK!\n");
 }
 
 void
@@ -2788,11 +2858,13 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
     } else if ( (paramName == kParamColorModel) || (paramName == kParamB3) ) {
         updateLabels();
         if (args.reason == eChangeUserEdit) {
+            beginEditBlock(kParamColorModel);
             for (unsigned int c = 0; c < 4; ++c) {
                 for (unsigned int f = 0; f < 4; ++f) {
                     _noiseLevel[c][f]->setValue(0.);
                 }
             }
+            endEditBlock();
         }
     } else if (paramName == kParamAnalysisLock) {
         analysisLock();
@@ -2808,7 +2880,8 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
 void
 DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 {
-    //std::cout << "analysis!\n";
+    DBG(cout << "analysis!\n");
+
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
 
     progressStartAnalysis(kPluginName " (noise analysis)");
@@ -2843,7 +2916,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
         analyzeNoiseLevelsForComponents<1>(args);
         break;
     default:
-        //std::cout << "components usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "components usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
         break;
     } // switch
@@ -2853,7 +2928,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     _analysisLock->setValue(true);
     endEditBlock();
     progressEndAnalysis();
-    //std::cout << "analysis! OK\n";
+
+    DBG(cout << "analysis! OK\n");
 }
 
 template<int nComponents>
@@ -2875,7 +2951,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForComponents(const InstanceChangedArgs 
         analyzeNoiseLevelsForBitDepth<float, nComponents, 1>(args);
         break;
     default:
-        //std::cout << "depth usupported\n";
+#ifdef DEBUG_STDOUT
+        std::cout << "depth usupported\n";
+#endif
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -2912,6 +2990,11 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
+    if ( !src.get() ) {
+        setPersistentMessage(Message::eMessageError, "", "No Source image to analyze");
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+
     bool maskInvert = doMasking ? _maskInvert->getValueAtTime(time) : false;
     bool premult = _premult->getValueAtTime(time);
     int premultChannel = _premultChannel->getValueAtTime(time);
@@ -2936,6 +3019,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
         setPersistentMessage(Message::eMessageError, "", "The analysis window must be at least 80x80 pixels.");
         throwSuiteStatusException(kOfxStatFailed);
     }
+    clearPersistentMessage();
 
     // temporary buffers: one for each channel plus 2 for processing
     unsigned int iwidth = srcWindow.x2 - srcWindow.x1;
@@ -3087,12 +3171,13 @@ class DenoiseSharpenOverlayDescriptor
 {
 };
 
-mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<Mutex>; }, { delete gLutManager; });
+mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
 
 void
 DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 {
-    //std::cout << "describe!\n";
+    DBG(cout << "describe!\n");
+
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -3124,14 +3209,15 @@ DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
-    //std::cout << "describe! OK\n";
+    DBG(cout << "describe! OK\n");
 }
 
 void
 DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                                ContextEnum context)
 {
-    //std::cout << "describeInContext!\n";
+    DBG(cout << "describeInContext!\n");
+
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -3306,7 +3392,7 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamAnalysisLockLabel);
             param->setHint(kParamAnalysisLockHint);
             param->setDefault(false);
-            param->setEvaluateOnChange(false);
+            param->setEvaluateOnChange(true); // changes the output mode
             param->setAnimates(false);
             if (group) {
                 param->setParent(*group);
@@ -3320,8 +3406,12 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
             param->setLabel(kParamRectangleInteractBtmLeftLabel);
             param->setDoubleType(eDoubleTypeXYAbsolute);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-            param->setDefault(0., 0.);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
+            param->setDefault(0.1, 0.1);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
@@ -3342,8 +3432,12 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
             param->setLabel(kParamRectangleInteractSizeLabel);
             param->setDoubleType(eDoubleTypeXY);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-            param->setDefault(1., 1.);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
+            param->setDefault(0.8, 0.8);
             param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
@@ -3663,7 +3757,21 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    //std::cout << "describeInContext! OK\n";
+
+    // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+    if (!gHostSupportsDefaultCoordinateSystem) {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDefaultsNormalised);
+        param->setDefault(true);
+        param->setEvaluateOnChange(false);
+        param->setIsSecretAndDisabled(true);
+        param->setIsPersistent(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    DBG(cout << "describeInContext! OK\n");
 } // DenoiseSharpenPluginFactory::describeInContext
 
 ImageEffect*

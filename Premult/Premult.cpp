@@ -28,6 +28,7 @@
 #endif
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -559,7 +560,7 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args,
 {
     const double time = args.time;
 
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     if (isPremult) {
@@ -627,7 +628,7 @@ PremultPlugin<isPremult>::changedParam(const InstanceChangedArgs &args,
     if ( (paramName == kParamClipInfo) && _srcClip && (args.reason == eChangeUserEdit) ) {
         std::string msg;
         msg += "Input; ";
-        if (!_srcClip) {
+        if (!_srcClip || !_srcClip->isConnected()) {
             msg += "N/A";
         } else {
             msg += premultString( _srcClip->getPreMultiplication() );
@@ -708,7 +709,7 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs & /*args*/,
      */
 } // >::changedClip
 
-//mDeclarePluginFactory(PremultPluginFactory, {}, {});
+//mDeclarePluginFactory(PremultPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 template<bool isPremult>
 class PremultPluginFactory
@@ -719,11 +720,11 @@ public:
                          unsigned int verMaj,
                          unsigned int verMin) : PluginFactoryHelper<PremultPluginFactory<isPremult> >(id, verMaj, verMin) {}
 
-    virtual void load() {};
-    virtual void unload() {};
-    virtual void describe(ImageEffectDescriptor &desc);
-    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context);
-    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context);
+    virtual void load() OVERRIDE FINAL {ofxsThreadSuiteCheck();}
+    //virtual void unload() OVERRIDE FINAL {};
+    virtual void describe(ImageEffectDescriptor &desc) OVERRIDE FINAL;
+    virtual void describeInContext(ImageEffectDescriptor &desc, ContextEnum context) OVERRIDE FINAL;
+    virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context) OVERRIDE FINAL;
 };
 
 

@@ -2095,7 +2095,7 @@ PIKPlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(PIKPluginFactory, {}, {});
+mDeclarePluginFactory(PIKPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 PIKPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -2871,7 +2871,6 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
         param->setDefault( (int)eOutputModePremultiplied );
         param->setLayoutHint(eLayoutHintDivider);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (group) {
             // coverity[dead_error_line]

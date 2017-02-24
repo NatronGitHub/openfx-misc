@@ -47,6 +47,7 @@
 
 #include "ofxsOGLTextRenderer.h"
 #include "ofxsTransform3x3.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -145,7 +146,7 @@ static const char* const kParamFrom[4] = {
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
-static bool gHostSupportsDefaultCoordinateSystem = true;
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -178,12 +179,8 @@ public:
 
         _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
-    }
 
-    // The following is called after the constructor
-    // (it sets values, which may have an undefined behavior)
-    void init()
-    {
+        // honor kParamDefaultsNormalised
         if ( paramExists(kParamDefaultsNormalised) ) {
             // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
             // handle these ourselves!
@@ -192,15 +189,18 @@ public:
             bool normalised = param->getValue();
             if (normalised) {
                 OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
                 OfxPointD p;
                 // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                beginEditBlock(kParamDefaultsNormalised);
                 for (int i = 0; i < 4; ++i) {
                     p = _to[i]->getValue();
-                    _to[i]->setValue(p.x * size.x, p.y * size.y);
+                    _to[i]->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                     p = _from[i]->getValue();
-                    _from[i]->setValue(p.x * size.x, p.y * size.y);
+                    _from[i]->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                 }
                 param->setValue(false);
+                endEditBlock();
             }
         }
     }
@@ -211,9 +211,9 @@ private:
     {
         Matrix3x3 ret;
 
-        _extraMatrixRow1->getValueAtTime(time, ret.a, ret.b, ret.c);
-        _extraMatrixRow2->getValueAtTime(time, ret.d, ret.e, ret.f);
-        _extraMatrixRow3->getValueAtTime(time, ret.g, ret.h, ret.i);
+        _extraMatrixRow1->getValueAtTime(time, ret(0,0), ret(0,1), ret(0,2));
+        _extraMatrixRow2->getValueAtTime(time, ret(1,0), ret(1,1), ret(1,2));
+        _extraMatrixRow3->getValueAtTime(time, ret(2,0), ret(2,1), ret(2,2));
 
         return ret;
     }
@@ -977,9 +977,9 @@ defineCornerPinToDouble2DParam(ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXYAbsolute);
         // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
         if ( param->supportsDefaultCoordinateSystem() ) {
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
         } else {
-            gHostSupportsDefaultCoordinateSystem = false; // no multithread here
+            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
         }
         param->setDefault(x, y);
         param->setDimensionLabels("x", "y");
@@ -1026,9 +1026,9 @@ defineCornerPinFromsDouble2DParam(ImageEffectDescriptor &desc,
     param->setDoubleType(eDoubleTypeXYAbsolute);
     // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
     if ( param->supportsDefaultCoordinateSystem() ) {
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
     } else {
-        gHostSupportsDefaultCoordinateSystem = false; // no multithread here
+        gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
     }
     param->setDefault(x, y);
     param->setDimensionLabels("x", "y");
@@ -1251,7 +1251,7 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
     }
 } // CornerPinPluginDescribeInContext
 
-mDeclarePluginFactory(CornerPinPluginFactory, {}, {});
+mDeclarePluginFactory(CornerPinPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 CornerPinPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -1291,14 +1291,10 @@ ImageEffect*
 CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    CornerPinPlugin* p = new CornerPinPlugin(handle, false);
-
-    p->init();
-
-    return p;
+    return new CornerPinPlugin(handle, false);
 }
 
-mDeclarePluginFactory(CornerPinMaskedPluginFactory, {}, {});
+mDeclarePluginFactory(CornerPinMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 CornerPinMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -1338,11 +1334,7 @@ ImageEffect*
 CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
                                              ContextEnum /*context*/)
 {
-    CornerPinPlugin* p = new CornerPinPlugin(handle, true);
-
-    p->init();
-
-    return p;
+    return new CornerPinPlugin(handle, true);
 }
 
 static CornerPinPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);

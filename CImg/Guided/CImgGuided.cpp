@@ -177,7 +177,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgGuidedPluginFactory, {}, {});
+mDeclarePluginFactory(CImgGuidedPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 void
 CImgGuidedPluginFactory::describe(ImageEffectDescriptor& desc)

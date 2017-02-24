@@ -45,6 +45,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "NoOpOFX"
 #define kPluginGrouping "Other"
 #define kPluginDescription "Copies the input to the ouput.\n" \
+    "This effect does not modify the actual content of the image, but can be used to modify the metadata associated with the clip (premultiplication, field order, format, pixel aspect ratio, frame rate).\n" \
     "This plugin concatenates transforms."
 #define kPluginIdentifier "net.sf.openfx.NoOpPlugin"
 
@@ -106,6 +107,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputFrameRateLabel "Output Frame Rate"
 #define kParamOutputFrameRateHint "Frame rate of the output clip."
 
+// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+#define kParamDefaultsNormalised "defaultsNormalised"
+
+static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -175,6 +180,30 @@ public:
         }
 
         updateVisibility();
+
+#ifdef OFX_EXTENSIONS_NATRON
+        // honor kParamDefaultsNormalised
+        if ( paramExists(kParamDefaultsNormalised) ) {
+            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
+            // handle these ourselves!
+            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
+            assert(param);
+            bool normalised = param->getValue();
+            if (normalised) {
+                OfxPointD size = getProjectExtent();
+                OfxPointD origin = getProjectOffset();
+                OfxPointD p;
+                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
+                beginEditBlock(kParamDefaultsNormalised);
+                p = _btmLeft->getValue();
+                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
+                p = _size->getValue();
+                _size->setValue(p.x * size.x, p.y * size.y);
+                param->setValue(false);
+                endEditBlock();
+            }
+        }
+#endif
     }
 
 private:
@@ -270,7 +299,7 @@ void
 NoOpPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                  RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     if (!_setPixelAspectRatio) {
@@ -299,7 +328,7 @@ bool
 NoOpPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                   OfxRectD &rod)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     if (!_setPixelAspectRatio) {
@@ -828,7 +857,7 @@ NoOpPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 } // NoOpPlugin::getClipPreferences
 
-mDeclarePluginFactory(NoOpPluginFactory, {}, {});
+mDeclarePluginFactory(NoOpPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 NoOpPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -930,7 +959,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamSetPremultLabel);
         param->setHint(kParamSetPremultHint);
         param->setDefault(false);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -949,7 +977,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == eImageUnPreMultiplied);
         param->appendOption( premultString(eImageUnPreMultiplied) );
         param->setDefault(eImagePreMultiplied); // images should be premultiplied in a compositing context
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -964,7 +991,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamSetFieldOrderLabel);
             param->setHint(kParamSetFieldOrderHint);
             param->setDefault(false);
-            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -989,7 +1015,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             assert(param->getNOptions() == eFieldDoubled);
             param->appendOption( fieldOrderString(eFieldDoubled) );
             param->setDefault(eFieldNone);
-            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1005,7 +1030,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamSetFormatLabel);
             param->setHint(kParamSetFormatHint);
             param->setDefault(false);
-            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1026,7 +1050,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
             param->setDefault(eGeneratorExtentFormat);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
-            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1090,7 +1113,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamFormatSquare2kLabel);
             param->setDefault(eParamFormatPCVideo);
             param->setHint(kParamGeneratorFormatHint);
-            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1132,7 +1154,11 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
             param->setLabel(kParamRectangleInteractBtmLeftLabel);
             param->setDoubleType(eDoubleTypeXYAbsolute);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
             param->setDefault(0., 0.);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -1150,7 +1176,11 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
             param->setLabel(kParamRectangleInteractSizeLabel);
             param->setDoubleType(eDoubleTypeXY);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            if ( param->supportsDefaultCoordinateSystem() ) {
+                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
+            } else {
+                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
+            }
             param->setDefault(1., 1.);
             param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -1173,7 +1203,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamSetPixelAspectRatioLabel);
             param->setHint(kParamSetPixelAspectRatioHint);
             param->setDefault(false);
-            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1185,7 +1214,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamOutputPixelAspectRatioLabel);
             param->setHint(kParamOutputPixelAspectRatioHint);
             param->setDefault(1.);
-            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1200,7 +1228,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamSetFrameRateLabel);
             param->setHint(kParamSetFrameRateHint);
             param->setDefault(false);
-            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1213,7 +1240,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamOutputFrameRateLabel);
             param->setHint(kParamOutputFrameRateHint);
             param->setDefault(24.);
-            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);

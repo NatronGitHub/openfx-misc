@@ -1,5 +1,5 @@
 # (ofxsLut required for ChromaBlur)
-PLUGINOBJECTS = \
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
 ofxsLut.o \
 CImgBilateral.o \
 CImgBlur.o \
@@ -139,7 +139,9 @@ CXXFLAGS += \
 # commit 02ec481605f4dd68dec9d8c5b7b4bd763ad31cac is CImg 1.7.7
 # commit 572c12d82b2f59ece21be8f52645c38f1dd407e6 is CImg 1.7.8
 # commit 6cf2f433edd9ef07a9c865282c3fd84cc4e9b327 is CImg 1.7.9
-CIMGVERSION=6cf2f433edd9ef07a9c865282c3fd84cc4e9b327
+# commit 0728d3e6833de1dfe16734fdef416b5051d4df7e is CImg pre-2.0.0 with nb_iter argument to boxfilter
+# commit 2067bd0765d23afc4c41b706bc57d094a2dce51d is CImg pre-2.0.0 with precision fix to boxfilter
+CIMGVERSION=2067bd0765d23afc4c41b706bc57d094a2dce51d
 
 CImg.h:
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h

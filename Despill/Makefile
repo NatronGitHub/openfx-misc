@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Despill.o
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Despill.o
 PLUGINNAME = Despill
 RESOURCES = net.sf.openfx.Despill.png net.sf.openfx.Despill.svg
 

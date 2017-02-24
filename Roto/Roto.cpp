@@ -28,6 +28,7 @@
 #include "ofxsCoords.h"
 #include "ofxsMerging.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -524,7 +525,7 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
                        Clip * &identityClip,
                        double & /*identityTime*/)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
     const double time = args.time;
@@ -569,7 +570,7 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
 void
 RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     PreMultiplicationEnum srcPremult = _srcClip->getPreMultiplication();
@@ -581,7 +582,7 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(RotoPluginFactory, {}, {});
+mDeclarePluginFactory(RotoPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 RotoPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -706,7 +707,6 @@ RotoPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

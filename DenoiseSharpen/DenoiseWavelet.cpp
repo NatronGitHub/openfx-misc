@@ -1054,7 +1054,7 @@ void
 DenoiseWaveletPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                            RegionOfInterestSetter &rois)
 {
-    if (!_srcClip) {
+    if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
     const OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
@@ -1275,10 +1275,7 @@ public:
     {
     }
 
-    virtual void load()
-    {
-        _lut = Color::LutManager<Mutex>::Rec709Lut();
-    }
+    virtual void load() OVERRIDE FINAL { _lut = Color::LutManager<Mutex>::Rec709Lut(); ofxsThreadSuiteCheck(); }
 
     virtual void unload()
     {

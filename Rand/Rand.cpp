@@ -25,6 +25,7 @@
 #include <cfloat> // DBL_MAX
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -387,7 +388,7 @@ RandPlugin::render(const RenderArguments &args)
     }
 } // RandPlugin::render
 
-mDeclarePluginFactory(RandPluginFactory, {}, {});
+mDeclarePluginFactory(RandPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 RandPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -498,7 +499,6 @@ RandPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamStaticSeedLabel);
         param->setHint(kParamStaticSeedHint);
         param->setDefault(false);
-        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

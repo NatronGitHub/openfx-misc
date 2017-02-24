@@ -35,6 +35,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -519,7 +520,7 @@ CheckerBoardPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(CheckerBoardPluginFactory, {}, {});
+mDeclarePluginFactory(CheckerBoardPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 CheckerBoardPluginFactory::describe(ImageEffectDescriptor &desc)
 {

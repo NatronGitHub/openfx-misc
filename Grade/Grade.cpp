@@ -32,6 +32,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -810,7 +811,7 @@ GradePlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(GradePluginFactory, {}, {});
+mDeclarePluginFactory(GradePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 GradePluginFactory::describe(ImageEffectDescriptor &desc)
 {

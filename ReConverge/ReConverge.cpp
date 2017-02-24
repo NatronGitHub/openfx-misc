@@ -36,6 +36,7 @@
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -374,7 +375,7 @@ ReConvergePlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(ReConvergePluginFactory, {}, {});
+mDeclarePluginFactory(ReConvergePluginFactory, {ofxsThreadSuiteCheck();}, {});
 struct ConvergePointParam
 {
     static const char* name() { return kParamConvergePoint; }

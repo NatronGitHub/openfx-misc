@@ -370,7 +370,7 @@ SwitchPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(SwitchPluginFactory, {}, {});
+mDeclarePluginFactory(SwitchPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 SwitchPluginFactory::describe(ImageEffectDescriptor &desc)
 {

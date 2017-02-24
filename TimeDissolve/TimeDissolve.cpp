@@ -24,6 +24,7 @@
 #include <algorithm>
 
 #include "ofxsImageEffect.h"
+#include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
@@ -436,8 +437,7 @@ TimeDissolvePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     clipPreferences.setOutputHasContinuousSamples(true);
 }
 
-mDeclarePluginFactory(TimeDissolvePluginFactory, {}, {}
-                      );
+mDeclarePluginFactory(TimeDissolvePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 TimeDissolvePluginFactory::describe(ImageEffectDescriptor &desc)
 {

@@ -32,6 +32,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsThreadSuite.h"
 
 using namespace OFX;
 
@@ -663,7 +664,7 @@ GammaPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(GammaPluginFactory, {}, {});
+mDeclarePluginFactory(GammaPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 GammaPluginFactory::describe(ImageEffectDescriptor &desc)
 {

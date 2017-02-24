@@ -6,6 +6,7 @@ Add \
 AdjustRoD \
 Anaglyph \
 AppendClip \
+Card3D \
 CheckerBoard \
 ChromaKeyer \
 Clamp \
