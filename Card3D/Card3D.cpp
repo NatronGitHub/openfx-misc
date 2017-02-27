@@ -730,6 +730,10 @@ PosMatParam::importChan()
 {
     string filename;
     _importChan->getValue(filename);
+    if ( filename.empty() ) {
+        // no filename, do nothing
+        return;
+    }
     FILE* f = fopen_utf8(filename.c_str(), "r");
     if (!f) {
         _effect->sendMessage(Message::eMessageError, "", "Cannot read " + filename + ": " + std::strerror(errno), false);
@@ -769,6 +773,7 @@ PosMatParam::importChan()
         }
     }
     std::fclose(f);
+    _effect->beginEditBlock(kParamPosMatImportChan);
     _translate->deleteAllKeys();
     _rotate->deleteAllKeys();
     if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
@@ -784,6 +789,7 @@ PosMatParam::importChan()
             _projection->_camFocalLength->setValueAtTime(it->frame, focal);
         }
     }
+    _effect->endEditBlock();
 }
 
 void
@@ -791,6 +797,10 @@ PosMatParam::exportChan()
 {
     string filename;
     _importChan->getValue(filename);
+    if ( filename.empty() ) {
+        // no filename, do nothing
+        return;
+    }
     FILE* f = fopen_utf8(filename.c_str(), "w");
     if (!f) {
         _effect->sendMessage(Message::eMessageError, "", "Cannot write " + filename + ": " + std::strerror(errno), false);
@@ -1221,11 +1231,13 @@ PosMatParam::changedParam(const InstanceChangedArgs &args,
         return;
     }
     const double t = args.time;
-    if (paramName == _importChan->getName() ||
-        (_importChanReload && paramName == _importChanReload->getName()) ) {
+    if ( args.reason == eChangeUserEdit &&
+        (paramName == _importChan->getName() ||
+          (_importChanReload && paramName == _importChanReload->getName()) ) ) {
         importChan();
-    } else if (paramName == _exportChan->getName() ||
-               (_exportChanRewrite && paramName == _exportChanRewrite->getName()) ) {
+    } else if ( args.reason == eChangeUserEdit &&
+                (paramName == _exportChan->getName() ||
+                 (_exportChanRewrite && paramName == _exportChanRewrite->getName()) ) ) {
         exportChan();
     } else if ( paramName == _useMatrix->getName() ) {
         update();
