@@ -529,6 +529,42 @@ private:
     double _sqy;
 };
 
+class DistortionModelPanoTools
+: public DistortionModelUndistort
+{
+public:
+    DistortionModelPanoTools(const OfxRectI& format,
+                             const OfxPointD& renderScale,
+                             double par,
+                             double a,
+                             double b,
+                             double c,
+                             double d,
+                             double e,
+                             double g,
+                             double t);
+
+    virtual ~DistortionModelPanoTools() {};
+
+private:
+    // function used to undistort a point or distort an image
+    // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
+    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL;
+
+    OfxPointD _rs;
+    double _par;
+    double _f;
+    double _xSrcCenter;
+    double _ySrcCenter;
+    double _a;
+    double _b;
+    double _c;
+    double _d;
+    double _e;
+    double _g;
+    double _t;
+};
+
 OFXS_NAMESPACE_OFX_EXIT
 
 #endif // DistortionModels_h

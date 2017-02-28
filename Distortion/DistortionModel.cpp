@@ -667,6 +667,95 @@ DistortionModel3DEAnamorphic4::undistort_dn(double xd, double yd, double* xu, do
     *yu = y;
 }
 
+// see:
+// http://wiki.panotools.org/Lens_correction_model
+// http://hugin.sourceforge.net/docs/manual/Lens_correction_model.html
+DistortionModelPanoTools::DistortionModelPanoTools(const OfxRectI& format,
+                                                   const OfxPointD& renderScale,
+                                                   double par,
+                                                   double a,
+                                                   double b,
+                                                   double c,
+                                                   double d,
+                                                   double e,
+                                                   double g,
+                                                   double t)
+: _rs(renderScale)
+, _par(par)
+, _a(a)
+, _b(b)
+, _c(c)
+, _d(d)
+, _e(e)
+, _g(g)
+, _t(t)
+{
+    // Normalized means here that the largest circle that completely fits into an image is said to have radius=1.0 . (In other words, radius=1.0 is half the smaller side of the image.)
+    double fx = format.x2 - format.x1;
+    double fy = format.y2 - format.y1;
+    _f = std::min(fx, fy)  / 2.;
+    _xSrcCenter = (format.x1 + format.x2) / 2.;
+    _ySrcCenter = (format.y1 + format.y2) / 2.;
+    _g /= fy;
+    _t /= fx;
+}
+
+
+static inline void
+undistort_panotools(double xd,
+                    double yd,            // distorted position in normalized coordinates ([-1..1] on the smallest image dimension, (0,0 at image center))
+                    double a,
+                    double b,            // radial distortion
+                    double c,
+                    double *xu,
+                    double *yu)             // distorted position in normalized coordinates
+
+{
+    double x = xd;
+    double y = yd;
+    double x2 = x * x, y2 = y * y;
+    double r2 = x2 + y2;
+    double d = 1 - (a + b + c);
+    double r = std::sqrt(r2);
+    double scale = (a * r2 + c) * r + b * r2 + d;
+    *xu = x * scale;
+    *yu = y * scale;
+}
+
+
+// function used to undistort a point or distort an image
+// (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
+
+void
+DistortionModelPanoTools::undistort(double xd, double yd, double* xu, double *yu) const
+{
+    // see http://wiki.panotools.org/Lens_correction_model#Lens_or_image_shift_d_.26_e_parameters for _d and _e
+    double xdn = _par * (xd - _xSrcCenter) / _f; // panotools don't shift back to center
+    double ydn = (yd - _ySrcCenter) / _f;
+    double sx, sy;
+    undistort_panotools(xdn, ydn,
+                        _a, _b, _c,
+                        &sx, &sy);
+    sx /= _par;
+    sx *= _f;
+    sy *= _f;
+#if 0
+    double sx0 = sx, sy0 = sy;
+    sx += _xSrcCenter + _d * _rs.x - _g * _rs.x * sy0;
+    sy += _ySrcCenter - _e * _rs.y - _t * _rs.y * sx0; // y is reversed
+#else
+    sx += _d * _rs.x;
+    sy -= _e * _rs.y; // y is reversed
+    double sx0 = sx, sy0 = sy;
+    sx += _xSrcCenter - _g * _rs.x * sy0;
+    sy += _ySrcCenter - _t * _rs.y * sx0; // y is reversed
+#endif
+
+    *xu = sx;
+    *yu = sy;
+}
+
+
 #if 0
 // see https://github.com/Itseez/opencv/blob/master/modules/imgproc/src/undistort.cpp
 static inline void
