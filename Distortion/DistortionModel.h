@@ -65,6 +65,26 @@ private:
     virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE = 0;
 };
 
+// a distortion model class where ony the distort function is given, and undistort is solved by Newton
+class DistortionModelDistort
+: public DistortionModel
+{
+protected:
+    DistortionModelDistort() {};
+
+    virtual ~DistortionModelDistort() {};
+
+private:
+    // function used to distort a point or undistort an image
+    virtual void distort(const double xu,
+                         const double yu,
+                         double* xd,
+                         double *yd) const OVERRIDE = 0;
+
+    // function used to undistort a point or distort an image
+    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL;
+};
+
 class DistortionModelNuke
 : public DistortionModelUndistort
 {
@@ -530,7 +550,7 @@ private:
 };
 
 class DistortionModelPanoTools
-: public DistortionModelUndistort
+: public DistortionModelDistort
 {
 public:
     DistortionModelPanoTools(const OfxRectI& format,
@@ -547,9 +567,9 @@ public:
     virtual ~DistortionModelPanoTools() {};
 
 private:
-    // function used to undistort a point or distort an image
     // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
-    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL;
+    // function used to distort a point or undistort an image
+    virtual void distort(double xu, double yu, double* xd, double *yd) const OVERRIDE FINAL;
 
     OfxPointD _rs;
     double _par;

@@ -94,6 +94,72 @@ DistortionModelUndistort::distort(const double xu,
     *yd = y;
 }
 
+void
+DistortionModelDistort::undistort(const double xd,
+                                  const double yd,
+                                  double* xu,
+                                  double *yu) const
+{
+    // build initial guess
+    double x = xd;
+    double y = yd;
+
+    // always converges in a couple of iterations
+    for (int iter= 0; iter< 10; iter++) {
+        // calculate the function gradient at the current guess
+
+        // TODO: analytic derivatives
+        double x00, y00, x10, y10, x01, y01;
+        distort(x, y, &x00, &y00);
+        distort(x + EPSJAC, y, &x10, &y10);
+        distort(x, y + EPSJAC, &x01, &y01);
+
+        // perform newton iteration
+        x00 -= xd;
+        y00 -= yd;
+        x10 -= xd;
+        y10 -= yd;
+        x01 -= xd;
+        y01 -= yd;
+
+        x10 -= x00;
+        y10 -= y00;
+        x01 -= x00;
+        y01 -= y00;
+
+        // approximate using finite differences
+        const double dx = std::sqrt(x10 * x10 + y10 * y10) / EPSJAC;
+        const double dy = std::sqrt(x01 * x01 + y01 * y01) / EPSJAC;
+
+        if (dx < DBL_EPSILON || dy < DBL_EPSILON) { // was dx == 0. || dy == 0.
+            break;
+        }
+
+        // make a step towards the root
+        const double x1 = x - x00 / dx;
+        const double y1 = y - y00 / dy;
+
+        x -= x1;
+        y -= y1;
+
+        const double dist= x * x + y * y;
+
+        x = x1;
+        y = y1;
+
+        //printf("%d : %g,%g: dist= %g\n",iter,x,y,dist);
+
+        // converged?
+        if (dist < EPSCONV) {
+            break;
+        }
+    }
+    
+    // default
+    *xu = x;
+    *yu = y;
+}
+
 DistortionModelNuke::DistortionModelNuke(const OfxRectI& format,
                                          double par,
                                          double k1,
@@ -702,38 +768,38 @@ DistortionModelPanoTools::DistortionModelPanoTools(const OfxRectI& format,
 
 
 static inline void
-undistort_panotools(double xd,
-                    double yd,            // distorted position in normalized coordinates ([-1..1] on the smallest image dimension, (0,0 at image center))
-                    double a,
-                    double b,            // radial distortion
-                    double c,
-                    double *xu,
-                    double *yu)             // distorted position in normalized coordinates
+distort_panotools(double xu,
+                  double yu,            // distorted position in normalized coordinates ([-1..1] on the smallest image dimension, (0,0 at image center))
+                  double a,
+                  double b,            // radial distortion
+                  double c,
+                  double *xd,
+                  double *yd)             // distorted position in normalized coordinates
 
 {
-    double x = xd;
-    double y = yd;
+    double x = xu;
+    double y = yu;
     double x2 = x * x, y2 = y * y;
     double r2 = x2 + y2;
     double d = 1 - (a + b + c);
     double r = std::sqrt(r2);
     double scale = (a * r2 + c) * r + b * r2 + d;
-    *xu = x * scale;
-    *yu = y * scale;
+    *xd = x * scale;
+    *yd = y * scale;
 }
 
 
-// function used to undistort a point or distort an image
+// function used to distort a point or undistort an image
 // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
 
 void
-DistortionModelPanoTools::undistort(double xd, double yd, double* xu, double *yu) const
+DistortionModelPanoTools::distort(double xu, double yu, double* xd, double *yd) const
 {
     // see http://wiki.panotools.org/Lens_correction_model#Lens_or_image_shift_d_.26_e_parameters for _d and _e
-    double xdn = _par * (xd - _xSrcCenter) / _f; // panotools don't shift back to center
-    double ydn = (yd - _ySrcCenter) / _f;
+    double xun = _par * (xu - _xSrcCenter) / _f; // panotools don't shift back to center
+    double yun = (yu - _ySrcCenter) / _f;
     double sx, sy;
-    undistort_panotools(xdn, ydn,
+    distort_panotools(xun, yun,
                         _a, _b, _c,
                         &sx, &sy);
     sx /= _par;
@@ -751,8 +817,8 @@ DistortionModelPanoTools::undistort(double xd, double yd, double* xu, double *yu
     sy += _ySrcCenter - _t * _rs.y * sx0; // y is reversed
 #endif
 
-    *xu = sx;
-    *yu = sy;
+    *xd = sx;
+    *yd = sy;
 }
 
 
