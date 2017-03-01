@@ -358,6 +358,7 @@ CameraParam::define(ImageEffectDescriptor &desc,
         param->setRange(1e-8, 1e-8, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.1, 0.1, 10, 10);
         param->setDefault(1, 1);
+        param->setDoubleType(eDoubleTypeScale);
         if (group) {
             param->setParent(*group);
         }
@@ -370,6 +371,7 @@ CameraParam::define(ImageEffectDescriptor &desc,
         param->setLabelAndHint(kParamCameraWindowRollLabel);
         param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-45, 45);
+        param->setDoubleType(eDoubleTypeAngle);
         if (group) {
             param->setParent(*group);
         }
@@ -967,6 +969,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., -180., -180., 180., 180., 180.);
         param->setDefault(0., 0., 0.);
+        param->setDoubleType(eDoubleTypeAngle);
         if (group) {
             param->setParent(*group);
         }
@@ -980,6 +983,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.01, 0.01, 0.01, 10., 10., 10.);
         param->setDefault(1., 1., 1.);
+        param->setDoubleType(eDoubleTypeScale);
         if (group) {
             param->setParent(*group);
         }
@@ -993,6 +997,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.01, 10.);
         param->setDefault(1.);
+        param->setDoubleType(eDoubleTypeScale);
         if (group) {
             param->setParent(*group);
         }
