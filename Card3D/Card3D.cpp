@@ -442,14 +442,15 @@ CameraParam::getMatrix(const Matrix4x4& pos,
 {
     // apply camera params
     double a = hAperture / std::max(1e-8, focalLength);
-    (*mat)(0,0) = pos(0,0); (*mat)(0,1) = pos(0,1); (*mat)(0,2) = pos(0,3);
-    (*mat)(1,0) = pos(1,0); (*mat)(1,1) = pos(1,1); (*mat)(1,2) = pos(1,3);
+#warning // make sure the standard camera matrix gives z > 0 in orthographic and projective cases
+    (*mat)(0,0) = -pos(0,0); (*mat)(0,1) = -pos(0,1); (*mat)(0,2) = -pos(0,3);
+    (*mat)(1,0) = -pos(1,0); (*mat)(1,1) = -pos(1,1); (*mat)(1,2) = -pos(1,3);
     if (projectionMode == eCameraProjectionModePerspective) {
         // divide by Z
-        (*mat)(2,0) = a * pos(2,0); (*mat)(2,1) = a * pos(2,1); (*mat)(2,2) = a * pos(2,3);
+        (*mat)(2,0) = -a * pos(2,0); (*mat)(2,1) = -a * pos(2,1); (*mat)(2,2) = -a * pos(2,3);
     } else {
         // orthographic
-        (*mat)(2,0) = -a * pos(3,0); (*mat)(2,1) = -a * pos(3,1); (*mat)(2,2) = -a * pos(3,3);
+        (*mat)(2,0) = a * pos(3,0); (*mat)(2,1) = a * pos(3,1); (*mat)(2,2) = a * pos(3,3);
     }
     // apply winTranslate
     (*mat)(0,0) += (*mat)(2,0) * winTranslateU / 2.;
@@ -1561,8 +1562,10 @@ Card3DPlugin::getInverseTransformCanonical(double time,
             _camCamera->getParameter(kNukeOfxCameraParamWindowRoll, time, view, &camWinRoll, 1);
         }
     } else if (_camEnable->getValueAtTime(time)) {
-        _camPosMat->getMatrix(time, &axis);
+        _camPosMat->getMatrix(time, &cam);
         _camPosMat->getProjection().getValueAtTime(time, camProjectionMode, camFocal, camHAperture, camWinTranslate[0], camWinTranslate[1], camWinScale[0], camWinScale[1], camWinRoll);
+    } else {
+        cam(0,0) = cam(1,1) = cam(2,2) = cam(3,3) = 1.;
     }
     Matrix4x4 card;
     _card.getMatrix(time, &card);
