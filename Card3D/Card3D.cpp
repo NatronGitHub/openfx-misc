@@ -358,6 +358,7 @@ CameraParam::define(ImageEffectDescriptor &desc,
         param->setRange(1e-8, 1e-8, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.1, 0.1, 10, 10);
         param->setDefault(1, 1);
+        param->setDoubleType(eDoubleTypeScale);
         if (group) {
             param->setParent(*group);
         }
@@ -370,6 +371,7 @@ CameraParam::define(ImageEffectDescriptor &desc,
         param->setLabelAndHint(kParamCameraWindowRollLabel);
         param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-45, 45);
+        param->setDoubleType(eDoubleTypeAngle);
         if (group) {
             param->setParent(*group);
         }
@@ -440,14 +442,15 @@ CameraParam::getMatrix(const Matrix4x4& pos,
 {
     // apply camera params
     double a = hAperture / std::max(1e-8, focalLength);
-    (*mat)(0,0) = pos(0,0); (*mat)(0,1) = pos(0,1); (*mat)(0,2) = pos(0,3);
-    (*mat)(1,0) = pos(1,0); (*mat)(1,1) = pos(1,1); (*mat)(1,2) = pos(1,3);
+#warning // make sure the standard camera matrix gives z > 0 in orthographic and projective cases
+    (*mat)(0,0) = -pos(0,0); (*mat)(0,1) = -pos(0,1); (*mat)(0,2) = -pos(0,3);
+    (*mat)(1,0) = -pos(1,0); (*mat)(1,1) = -pos(1,1); (*mat)(1,2) = -pos(1,3);
     if (projectionMode == eCameraProjectionModePerspective) {
         // divide by Z
-        (*mat)(2,0) = a * pos(2,0); (*mat)(2,1) = a * pos(2,1); (*mat)(2,2) = a * pos(2,3);
+        (*mat)(2,0) = -a * pos(2,0); (*mat)(2,1) = -a * pos(2,1); (*mat)(2,2) = -a * pos(2,3);
     } else {
         // orthographic
-        (*mat)(2,0) = -a * pos(3,0); (*mat)(2,1) = -a * pos(3,1); (*mat)(2,2) = -a * pos(3,3);
+        (*mat)(2,0) = a * pos(3,0); (*mat)(2,1) = a * pos(3,1); (*mat)(2,2) = a * pos(3,3);
     }
     // apply winTranslate
     (*mat)(0,0) += (*mat)(2,0) * winTranslateU / 2.;
@@ -730,6 +733,10 @@ PosMatParam::importChan()
 {
     string filename;
     _importChan->getValue(filename);
+    if ( filename.empty() ) {
+        // no filename, do nothing
+        return;
+    }
     FILE* f = fopen_utf8(filename.c_str(), "r");
     if (!f) {
         _effect->sendMessage(Message::eMessageError, "", "Cannot read " + filename + ": " + std::strerror(errno), false);
@@ -769,6 +776,7 @@ PosMatParam::importChan()
         }
     }
     std::fclose(f);
+    _effect->beginEditBlock(kParamPosMatImportChan);
     _translate->deleteAllKeys();
     _rotate->deleteAllKeys();
     if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
@@ -784,6 +792,7 @@ PosMatParam::importChan()
             _projection->_camFocalLength->setValueAtTime(it->frame, focal);
         }
     }
+    _effect->endEditBlock();
 }
 
 void
@@ -791,6 +800,10 @@ PosMatParam::exportChan()
 {
     string filename;
     _importChan->getValue(filename);
+    if ( filename.empty() ) {
+        // no filename, do nothing
+        return;
+    }
     FILE* f = fopen_utf8(filename.c_str(), "w");
     if (!f) {
         _effect->sendMessage(Message::eMessageError, "", "Cannot write " + filename + ": " + std::strerror(errno), false);
@@ -957,6 +970,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., -180., -180., 180., 180., 180.);
         param->setDefault(0., 0., 0.);
+        param->setDoubleType(eDoubleTypeAngle);
         if (group) {
             param->setParent(*group);
         }
@@ -970,6 +984,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.01, 0.01, 0.01, 10., 10., 10.);
         param->setDefault(1., 1., 1.);
+        param->setDoubleType(eDoubleTypeScale);
         if (group) {
             param->setParent(*group);
         }
@@ -983,6 +998,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.01, 10.);
         param->setDefault(1.);
+        param->setDoubleType(eDoubleTypeScale);
         if (group) {
             param->setParent(*group);
         }
@@ -1221,11 +1237,13 @@ PosMatParam::changedParam(const InstanceChangedArgs &args,
         return;
     }
     const double t = args.time;
-    if (paramName == _importChan->getName() ||
-        (_importChanReload && paramName == _importChanReload->getName()) ) {
+    if ( args.reason == eChangeUserEdit &&
+        (paramName == _importChan->getName() ||
+          (_importChanReload && paramName == _importChanReload->getName()) ) ) {
         importChan();
-    } else if (paramName == _exportChan->getName() ||
-               (_exportChanRewrite && paramName == _exportChanRewrite->getName()) ) {
+    } else if ( args.reason == eChangeUserEdit &&
+                (paramName == _exportChan->getName() ||
+                 (_exportChanRewrite && paramName == _exportChanRewrite->getName()) ) ) {
         exportChan();
     } else if ( paramName == _useMatrix->getName() ) {
         update();
@@ -1544,8 +1562,10 @@ Card3DPlugin::getInverseTransformCanonical(double time,
             _camCamera->getParameter(kNukeOfxCameraParamWindowRoll, time, view, &camWinRoll, 1);
         }
     } else if (_camEnable->getValueAtTime(time)) {
-        _camPosMat->getMatrix(time, &axis);
+        _camPosMat->getMatrix(time, &cam);
         _camPosMat->getProjection().getValueAtTime(time, camProjectionMode, camFocal, camHAperture, camWinTranslate[0], camWinTranslate[1], camWinScale[0], camWinScale[1], camWinRoll);
+    } else {
+        cam(0,0) = cam(1,1) = cam(2,2) = cam(3,3) = 1.;
     }
     Matrix4x4 card;
     _card.getMatrix(time, &card);

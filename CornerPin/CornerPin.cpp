@@ -252,7 +252,7 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
                                               bool invert,
                                               Matrix3x3* invtransform) const
 {
-    // in this new version, both from and to are enableds/disabled at the same time
+    // in this new version, both from and to are enabled/disabled at the same time
     bool enable[4];
     Point3D p[2][4];
     int f = invert ? 0 : 1;
@@ -311,6 +311,12 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
     if (!success) {
         ///cannot compute the homography when 3 points are aligned
         return false;
+    }
+
+    // make sure that p[0][0].xy transforms to a positive z. (before composing with the extra matrix)
+    Point3D p0(p[0][0].x, p[0][0].y, 1.);
+    if ( (homo3x3 * p0).z < 0.) {
+        homo3x3 *= -1;
     }
 
     Matrix3x3 extraMat = getExtraMatrix(time);

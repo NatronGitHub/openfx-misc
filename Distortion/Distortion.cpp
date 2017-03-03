@@ -148,53 +148,41 @@ enum DistortionPluginEnum
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define kParamProcessR kNatronOfxParamProcessR
-#define kParamProcessRLabel kNatronOfxParamProcessRLabel
-#define kParamProcessRHint kNatronOfxParamProcessRHint
+#define kParamProcessRLabel kNatronOfxParamProcessRLabel, kNatronOfxParamProcessRHint
 #define kParamProcessG kNatronOfxParamProcessG
-#define kParamProcessGLabel kNatronOfxParamProcessGLabel
-#define kParamProcessGHint kNatronOfxParamProcessGHint
+#define kParamProcessGLabel kNatronOfxParamProcessGLabel, kNatronOfxParamProcessGHint
 #define kParamProcessB kNatronOfxParamProcessB
-#define kParamProcessBLabel kNatronOfxParamProcessBLabel
-#define kParamProcessBHint kNatronOfxParamProcessBHint
+#define kParamProcessBLabel kNatronOfxParamProcessBLabel, kNatronOfxParamProcessBHint
 #define kParamProcessA kNatronOfxParamProcessA
-#define kParamProcessALabel kNatronOfxParamProcessALabel
-#define kParamProcessAHint kNatronOfxParamProcessAHint
+#define kParamProcessALabel kNatronOfxParamProcessALabel, kNatronOfxParamProcessAHint
 #else
 #define kParamProcessR      "processR"
-#define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Process red component."
+#define kParamProcessRLabel "R", "Process red component."
 #define kParamProcessG      "processG"
-#define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Process green component."
+#define kParamProcessGLabel "G", "Process green component."
 #define kParamProcessB      "processB"
-#define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Process blue component."
+#define kParamProcessBLabel "B", "Process blue component."
 #define kParamProcessA      "processA"
-#define kParamProcessALabel "A"
-#define kParamProcessAHint  "Process alpha component."
+#define kParamProcessALabel "A", "Process alpha component."
 #endif
 
 #define kParamChannelU "channelU"
-#define kParamChannelULabel "U Channel"
-#define kParamChannelUHint "Input U channel from UV."
+#define kParamChannelULabel "U Channel", "Input U channel from UV."
 
 #define kParamChannelUChoice kParamChannelU "Choice"
 
 #define kParamChannelV "channelV"
-#define kParamChannelVLabel "V Channel"
-#define kParamChannelVHint "Input V channel from UV."
+#define kParamChannelVLabel "V Channel", "Input V channel from UV."
 
 #define kParamChannelVChoice kParamChannelV "Choice"
 
 #define kParamChannelA "channelA"
-#define kParamChannelALabel "Alpha Channel"
-#define kParamChannelAHint "Input Alpha channel from UV. The Output alpha is set to this value. If \"Unpremult UV\" is checked, the UV values are divided by alpha."
+#define kParamChannelALabel "Alpha Channel", "Input Alpha channel from UV. The Output alpha is set to this value. If \"Unpremult UV\" is checked, the UV values are divided by alpha."
 
 #define kParamChannelAChoice kParamChannelA "Choice"
 
 #define kParamChannelUnpremultUV "unpremultUV"
-#define kParamChannelUnpremultUVLabel "Unpremult UV"
-#define kParamChannelUnpremultUVHint "Unpremult UV by Alpha from UV. Check if UV values look small for small values of Alpha (3D software sometimes write premultiplied UV values)."
+#define kParamChannelUnpremultUVLabel "Unpremult UV", "Unpremult UV by Alpha from UV. Check if UV values look small for small values of Alpha (3D software sometimes write premultiplied UV values)."
 
 #define kParamPremultChanged "premultChanged"
 
@@ -212,19 +200,14 @@ enum InputChannelEnum
 };
 
 #define kParamWrapU "wrapU"
-#define kParamWrapULabel "U Wrap Mode"
-#define kParamWrapUHint "Wrap mode for U coordinate."
+#define kParamWrapULabel "U Wrap Mode", "Wrap mode for U coordinate."
 
 #define kParamWrapV "wrapV"
-#define kParamWrapVLabel "V Wrap Mode"
-#define kParamWrapVHint "Wrap mode for V coordinate."
+#define kParamWrapVLabel "V Wrap Mode", "Wrap mode for V coordinate."
 
-#define kParamWrapOptionClamp "Clamp"
-#define kParamWrapOptionClampHint "Texture edges are black (if blackOutside is checked) or stretched indefinitely."
-#define kParamWrapOptionRepeat "Repeat"
-#define kParamWrapOptionRepeatHint "Texture is repeated."
-#define kParamWrapOptionMirror "Mirror"
-#define kParamWrapOptionMirrorHint "Texture is mirrored alternatively."
+#define kParamWrapOptionClamp "Clamp", "Texture edges are black (if blackOutside is checked) or stretched indefinitely."
+#define kParamWrapOptionRepeat "Repeat", "Texture is repeated."
+#define kParamWrapOptionMirror "Mirror", "Texture is mirrored alternatively."
 
 enum WrapEnum
 {
@@ -235,34 +218,24 @@ enum WrapEnum
 
 
 #define kParamUVOffset "uvOffset"
-#define kParamUVOffsetLabel "UV Offset"
-#define kParamUVOffsetHint "Offset to apply to the U and V channel (useful if these were stored in a file that cannot handle negative numbers)"
+#define kParamUVOffsetLabel "UV Offset", "Offset to apply to the U and V channel (useful if these were stored in a file that cannot handle negative numbers)"
 
 #define kParamUVScale "uvScale"
-#define kParamUVScaleLabel "UV Scale"
-#define kParamUVScaleHint "Scale factor to apply to the U and V channel (useful if these were stored in a file that can only store integer values)"
+#define kParamUVScaleLabel "UV Scale", "Scale factor to apply to the U and V channel (useful if these were stored in a file that can only store integer values)"
 
 #define kParamFormat kParamGeneratorExtent
-#define kParamFormatLabel "Format"
-#define kParamFormatHint "Reference format for lens distortion."
+#define kParamFormatLabel "Format", "Reference format for lens distortion."
 
 #define kParamDistortionModel "model"
-#define kParamDistortionModelLabel "Model"
-#define kParamDistortionModelHint "Choice of the distortion model, i.e. the function that goes from distorted to undistorted image coordinates."
-#define kParamDistortionModelOptionNuke "Nuke"
-#define kParamDistortionModelOptionNukeHint "The model used in Nuke's LensDistortion plugin."
-#define kParamDistortionModelOptionPFBarrel "PFBarrel"
-#define kParamDistortionModelOptionPFBarrelHint "The PFBarrel model used in PFTrack by PixelFarm."
-#define kParamDistortionModelOption3DEClassic "3DE Classic"
-#define kParamDistortionModelOption3DEClassicHint "Degree-2 anamorphic and degree-4 radial mixed model, used in 3DEqualizer by Science-D-Visions. Works, but it is recommended to use 3DE4 Radial Standard Degree 4 or 3DE4 Anamorphic Standard Degree 4 instead."
-#define kParamDistortionModelOption3DEAnamorphic6 "3DE4 Anamorphic Degree 6"
-#define kParamDistortionModelOption3DEAnamorphic6Hint "Degree-6 anamorphic model, used in 3DEqualizer by Science-D-Visions."
-#define kParamDistortionModelOption3DEFishEye8 "3DE4 Radial Fisheye Degree 8"
-#define kParamDistortionModelOption3DEFishEye8Hint "Radial lens distortion model with equisolid-angle fisheye projection, used in 3DEqualizer by Science-D-Visions."
-#define kParamDistortionModelOption3DEStandard "3DE4 Radial Standard Degree 4"
-#define kParamDistortionModelOption3DEStandardHint "Radial lens distortion model, a.k.a. radial decentered cylindric degree 4, which compensates for decentered lenses (and beam splitter artefacts in stereo rigs), used in 3DEqualizer by Science-D-Visions."
-#define kParamDistortionModelOption3DEAnamorphic4 "3DE4 Anamorphic Standard Degree 4"
-#define kParamDistortionModelOption3DEAnamorphic4Hint "Degree-4 anamorphic model with anamorphic lens rotation, which handles 'human-touched' mounted anamorphic lenses, used in 3DEqualizer by Science-D-Visions."
+#define kParamDistortionModelLabel "Model", "Choice of the distortion model, i.e. the function that goes from distorted to undistorted image coordinates."
+#define kParamDistortionModelOptionNuke "Nuke", "The model used in Nuke's LensDistortion plugin."
+#define kParamDistortionModelOptionPFBarrel "PFBarrel", "The PFBarrel model used in PFTrack by PixelFarm."
+#define kParamDistortionModelOption3DEClassic "3DE Classic", "Degree-2 anamorphic and degree-4 radial mixed model, used in 3DEqualizer by Science-D-Visions. Works, but it is recommended to use 3DE4 Radial Standard Degree 4 or 3DE4 Anamorphic Standard Degree 4 instead."
+#define kParamDistortionModelOption3DEAnamorphic6 "3DE4 Anamorphic Degree 6", "Degree-6 anamorphic model, used in 3DEqualizer by Science-D-Visions."
+#define kParamDistortionModelOption3DEFishEye8 "3DE4 Radial Fisheye Degree 8", "Radial lens distortion model with equisolid-angle fisheye projection, used in 3DEqualizer by Science-D-Visions."
+#define kParamDistortionModelOption3DEStandard "3DE4 Radial Standard Degree 4", "Radial lens distortion model, a.k.a. radial decentered cylindric degree 4, which compensates for decentered lenses (and beam splitter artefacts in stereo rigs), used in 3DEqualizer by Science-D-Visions."
+#define kParamDistortionModelOption3DEAnamorphic4 "3DE4 Anamorphic Standard Degree 4", "Degree-4 anamorphic model with anamorphic lens rotation, which handles 'human-touched' mounted anamorphic lenses, used in 3DEqualizer by Science-D-Visions."
+#define kParamDistortionModelOptionPanoTools "PanoTools", "The model used in PanoTools, PTGui, PTAssembler, Hugin. See http://wiki.panotools.org/Lens_correction_model"
 
 /*
    Possible distortion models:
@@ -298,16 +271,14 @@ enum DistortionModelEnum
     eDistortionModel3DEFishEye8,
     eDistortionModel3DEStandard,
     eDistortionModel3DEAnamorphic4,
+    eDistortionModelPanoTools,
 };
 
 
 #define kParamDistortionDirection "direction"
-#define kParamDistortionDirectionLabel "Direction"
-#define kParamDistortionDirectionHint "Should the output corrspond to applying or to removing distortion."
-#define kParamDistortionDirectionOptionDistort "Distort"
-#define kParamDistortionDirectionOptionDistortHint "The output corresponds to applying distortion."
-#define kParamDistortionDirectionOptionUndistort "Undistort"
-#define kParamDistortionDirectionOptionUndistortHint "The output corresponds to removing distortion."
+#define kParamDistortionDirectionLabel "Direction", "Should the output corrspond to applying or to removing distortion."
+#define kParamDistortionDirectionOptionDistort "Distort", "The output corresponds to applying distortion."
+#define kParamDistortionDirectionOptionUndistort "Undistort", "The output corresponds to removing distortion."
 
 enum DirectionEnum {
     eDirectionDistort,
@@ -315,12 +286,9 @@ enum DirectionEnum {
 };
 
 #define kParamDistortionOutputMode "outputMode"
-#define kParamDistortionOutputModeLabel "Output Mode"
-#define kParamDistortionOutputModeHint "Choice of the output, which may be either a distorted/undistorted image, or a distortion/undistortion STMap."
-#define kParamDistortionOutputModeOptionImage "Image"
-#define kParamDistortionOutputModeOptionImageHint "The output is the distorted/undistorted Source."
-#define kParamDistortionOutputModeOptionSTMap "STMap"
-#define kParamDistortionOutputModeOptionSTMapHint "The output is a distortion/undistortion STMap. It is recommended to insert a FrameHold node at the Source input so that the STMap is computed only once if the parameters are not animated."
+#define kParamDistortionOutputModeLabel "Output Mode", "Choice of the output, which may be either a distorted/undistorted image, or a distortion/undistortion STMap."
+#define kParamDistortionOutputModeOptionImage "Image", "The output is the distorted/undistorted Source."
+#define kParamDistortionOutputModeOptionSTMap "STMap", "The output is a distortion/undistortion STMap. It is recommended to insert a FrameHold node at the Source input so that the STMap is computed only once if the parameters are not animated."
 
 enum OutputModeEnum {
     eOutputModeImage,
@@ -328,201 +296,203 @@ enum OutputModeEnum {
 };
 
 #define kParamK1 "k1"
-#define kParamK1Label "K1"
-#define kParamK1Hint "First radial distortion coefficient (coefficient for r^2)."
+#define kParamK1Label "K1", "Nuke: First radial distortion coefficient (coefficient for r^2)."
 
 #define kParamK2 "k2"
-#define kParamK2Label "K2"
-#define kParamK2Hint "Second radial distortion coefficient (coefficient for r^4)."
+#define kParamK2Label "K2", "Nuke: Second radial distortion coefficient (coefficient for r^4)."
 
 #if 0
 #define kParamK3 "k3"
-#define kParamK3Label "K3"
-#define kParamK3Hint "Third radial distortion coefficient (coefficient for r^6)."
+#define kParamK3Label "K3", "Nuke: Third radial distortion coefficient (coefficient for r^6)."
 
 #define kParamP1 "p1"
-#define kParamP1Label "P1"
-#define kParamP1Hint "First tangential distortion coefficient."
+#define kParamP1Label "P1", "Nuke: First tangential distortion coefficient."
 
 #define kParamP2 "p2"
-#define kParamP2Label "P2"
-#define kParamP2Hint "Second tangential distortion coefficient."
+#define kParamP2Label "P2", "Nuke: Second tangential distortion coefficient."
 #endif
 
 #define kParamCenter "center"
-#define kParamCenterLabel "Center"
-#define kParamCenterHint "Offset of the distortion center from the image center."
+#define kParamCenterLabel "Center", "Nuke: Offset of the distortion center from the image center."
 
 #define kParamSqueeze "anamorphicSqueeze"
-#define kParamSqueezeLabel "Squeeze"
-#define kParamSqueezeHint "Anamorphic squeeze (only for anamorphic lens)."
+#define kParamSqueezeLabel "Squeeze", "Nuke: Anamorphic squeeze (only for anamorphic lens)."
 
 #define kParamAsymmetric "asymmetricDistortion"
-#define kParamAsymmetricLabel "Asymmetric"
-#define kParamAsymmetricHint "Asymmetric distortion (only for anamorphic lens)."
+#define kParamAsymmetricLabel "Asymmetric", "Nuke: Asymmetric distortion (only for anamorphic lens)."
 
 #define kParamPFFile "pfFile"
-#define kParamPFFileLabel "File"
-#define kParamPFFileHint "The location of the PFBarrel .pfb file to use. Keyframes are set if present in the file."
+#define kParamPFFileLabel "File", "The location of the PFBarrel .pfb file to use. Keyframes are set if present in the file."
 
 #define kParamPFFileReload "pfReload"
-#define kParamPFFileReloadLabel "Reload"
-#define kParamPFFileReloadHint "Click to reread the PFBarrel file"
+#define kParamPFFileReloadLabel "Reload", "Click to reload the PFBarrel file"
 
 #define kParamPFC3 "pfC3"
-#define kParamPFC3Label "C3"
-#define kParamPFC3Hint "Low order radial distortion coefficient."
+#define kParamPFC3Label "C3", "PFBarrel: Low order radial distortion coefficient."
 
 #define kParamPFC5 "pfC5"
-#define kParamPFC5Label "C5"
-#define kParamPFC5Hint "Low order radial distortion coefficient."
+#define kParamPFC5Label "C5", "PFBarrel: Low order radial distortion coefficient."
 
 #define kParamPFSqueeze "pfSqueeze"
-#define kParamPFSqueezeLabel "Squeeze"
-#define kParamPFSqueezeHint "Anamorphic squeeze (only for anamorphic lens)."
+#define kParamPFSqueezeLabel "Squeeze", "PFBarrel: Anamorphic squeeze (only for anamorphic lens)."
 
 #define kParamPFP "pfP"
-#define kParamPFPLabel "Center"
-#define kParamPFPHint "The distortion center of the lens (specified as a factor rather than a pixel value)"
+#define kParamPFPLabel "Center", "PFBarrel: The distortion center of the lens (specified as a factor rather than a pixel value)"
 
 // 3D Equalizer 4
 
 //Double_knob(callback,&_xa_fov_unit,DD::Image::IRange(0.0,1.0),"field_of_view_xa_unit","fov left [unit coord]");
 #define kParam3DE4_xa_fov_unit "tde4_field_of_view_xa_unit"
-#define kParam3DE4_xa_fov_unitLabel "fov left [unit coord]"
+#define kParam3DE4_xa_fov_unitLabel "fov left [unit coord]", "3DE4: Field of view."
 
 //Double_knob(callback,&_ya_fov_unit,DD::Image::IRange(0.0,1.0),"field_of_view_ya_unit","fov bottom [unit coord]");
 #define kParam3DE4_ya_fov_unit "tde4_field_of_view_ya_unit"
-#define kParam3DE4_ya_fov_unitLabel "fov bottom [unit coord]"
+#define kParam3DE4_ya_fov_unitLabel "fov bottom [unit coord]", "3DE4: Field of view."
 
 //Double_knob(callback,&_xb_fov_unit,DD::Image::IRange(0.0,1.0),"field_of_view_xb_unit","fov right [unit coord]");
 #define kParam3DE4_xb_fov_unit "tde4_field_of_view_xb_unit"
-#define kParam3DE4_xb_fov_unitLabel "fov right [unit coord]"
+#define kParam3DE4_xb_fov_unitLabel "fov right [unit coord]", "3DE4: Field of view."
 
 //Double_knob(callback,&_yb_fov_unit,DD::Image::IRange(0.0,1.0),"field_of_view_yb_unit","fov top [unit coord]");
 #define kParam3DE4_yb_fov_unit "tde4_field_of_view_yb_unit"
-#define kParam3DE4_yb_fov_unitLabel "fov top [unit coord]"
+#define kParam3DE4_yb_fov_unitLabel "fov top [unit coord]", "3DE4: Field of view."
 
 // First the seven built-in parameters, in this order.
 
 //fl_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(0.5,50.0),"tde4_focal_length_cm","tde4 focal length [cm]");
 #define kParam3DE4_focal_length_cm "tde4_focal_length_cm"
-#define kParam3DE4_focal_length_cmLabel "tde4 focal length [cm]"
+#define kParam3DE4_focal_length_cmLabel "tde4 focal length [cm]", "3DE4: Focal length."
 
 //fd_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(10.0,1000.0),"tde4_custom_focus_distance_cm","tde4 focus distance [cm]");
 #define kParam3DE4_custom_focus_distance_cm "tde4_custom_focus_distance_cm"
-#define kParam3DE4_custom_focus_distance_cmLabel "tde4 focus distance [cm]"
+#define kParam3DE4_custom_focus_distance_cmLabel "tde4 focus distance [cm]", "3DE4: Focus distance."
 
 //w_fb_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(.1,10.0),"tde4_filmback_width_cm","tde4 filmback width [cm]");
 #define kParam3DE4_filmback_width_cm "tde4_filmback_width_cm"
-#define kParam3DE4_filmback_width_cmLabel "tde4 filmback width [cm]"
+#define kParam3DE4_filmback_width_cmLabel "tde4 filmback width [cm]", "3DE4: Filmback width."
 
 //h_fb_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(.1,10.0),"tde4_filmback_height_cm","tde4 filmback height [cm]");
 #define kParam3DE4_filmback_height_cm "tde4_filmback_height_cm"
-#define kParam3DE4_filmback_height_cmLabel "tde4 filmback height [cm]"
+#define kParam3DE4_filmback_height_cmLabel "tde4 filmback height [cm]", "3DE4: Filmback height."
 
 //x_lco_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(-5.0,5.0),"tde4_lens_center_offset_x_cm","tde4 lens center offset x [cm]");
 #define kParam3DE4_lens_center_offset_x_cm "tde4_lens_center_offset_x_cm"
-#define kParam3DE4_lens_center_offset_x_cmLabel "tde4 lens center offset x [cm]"
+#define kParam3DE4_lens_center_offset_x_cmLabel "tde4 lens center offset x [cm]", "3DE4: Lens center horizontal offset."
 
 //y_lco_cm: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(-5.0,5.0),"tde4_lens_center_offset_y_cm","tde4 lens center offset y [cm]");
 #define kParam3DE4_lens_center_offset_y_cm "tde4_lens_center_offset_y_cm"
-#define kParam3DE4_lens_center_offset_y_cmLabel "tde4 lens center offset y [cm]"
+#define kParam3DE4_lens_center_offset_y_cmLabel "tde4 lens center offset y [cm]", "3DE4: Lens center vertical offset."
 
 //pa: Double_knob(callback,&_values_double[i_par_double++],DD::Image::IRange(0.25,4.0),"tde4_pixel_aspect","tde4 pixel aspect");
 #define kParam3DE4_pixel_aspect "tde4_pixel_aspect"
-#define kParam3DE4_pixel_aspectLabel "tde4 pixel aspect"
+#define kParam3DE4_pixel_aspectLabel "tde4 pixel aspect", "3DE4: Pixel aspect ratio."
 
 
 // 3DE_Classic_LD_Model
 //"Distortion", -0.5 .. 0.5
 #define kParam3DEDistortion "tde4_Distortion"
-#define kParam3DEDistortionLabel "Distortion"
+#define kParam3DEDistortionLabel "Distortion", "3DE Classic: Distortion."
 //"Anamorphic Squeeze", 0.25 ... 4.
 #define kParam3DEAnamorphicSqueeze "tde4_Anamorphic_Squeeze"
-#define kParam3DEAnamorphicSqueezeLabel "Anamorphic Squeeze"
+#define kParam3DEAnamorphicSqueezeLabel "Anamorphic Squeeze", "3DE Classic: Anamorphic Squeeze."
 
 //"Curvature X", -0.5 .. 0.5
 #define kParam3DECurvatureX "tde4_Curvature_X"
-#define kParam3DECurvatureXLabel "Curvature X"
+#define kParam3DECurvatureXLabel "Curvature X", "3DE Classic: Curvature X."
 
 //"Curvature Y", -0.5 .. 0.5
 #define kParam3DECurvatureY "tde4_Curvature_Y"
-#define kParam3DECurvatureYLabel "Curvature Y"
+#define kParam3DECurvatureYLabel "Curvature Y", "3DE Classic: Curvature Y."
 
 //"Quartic Distortion" -0.5 .. 0.5
 #define kParam3DEQuarticDistortion "tde4_Quartic_Distortion"
-#define kParam3DEQuarticDistortionLabel "Quartic Distortion"
+#define kParam3DEQuarticDistortionLabel "Quartic Distortion", "3DE Classic: Quartic Distortion."
 
 // 3DE4_Radial_Standard_Degree_4
 #define kParam3DEDistortionDegree2 "tde4_Distortion_Degree_2"
-#define kParam3DEDistortionDegree2Label "Distortion - Degree 2"
+#define kParam3DEDistortionDegree2Label "Distortion - Degree 2", "3DE Standard and Fisheye: Distortion."
 #define kParam3DEUDegree2 "tde4_U_Degree_2"
-#define kParam3DEUDegree2Label "U - Degree 2"
+#define kParam3DEUDegree2Label "U - Degree 2", "3DE Standard: U - Degree 2."
 #define kParam3DEVDegree2 "tde4_V_Degree_2"
-#define kParam3DEVDegree2Label "V - Degree 2"
+#define kParam3DEVDegree2Label "V - Degree 2", "3DE Standard: V - Degree 2."
 #define kParam3DEQuarticDistortionDegree4 "tde4_Quartic_Distortion_Degree_4"
-#define kParam3DEQuarticDistortionDegree4Label "Quartic Distortion - Degree 4"
+#define kParam3DEQuarticDistortionDegree4Label "Quartic Distortion - Degree 4", "3DE Standard and Fisheye: Quartic Distortion - Degree 4."
 #define kParam3DEUDegree4 "tde4_U_Degree_4"
-#define kParam3DEUDegree4Label "U - Degree 4"
+#define kParam3DEUDegree4Label "U - Degree 4", "3DE Standard: U - Degree 4."
 #define kParam3DEVDegree4 "tde4_V_Degree_4"
-#define kParam3DEVDegree4Label "V - Degree 4"
+#define kParam3DEVDegree4Label "V - Degree 4", "3DE Standard: V - Degree 4."
 #define kParam3DEPhiCylindricDirection "tde4_Phi_Cylindric_Direction"
-#define kParam3DEPhiCylindricDirectionLabel "Phi - Cylindric Direction"
+#define kParam3DEPhiCylindricDirectionLabel "Phi - Cylindric Direction", "3DE Standard: Phi - Cylindric Direction."
 #define kParam3DEBCylindricBending "tde4_B_Cylindric_Bending"
-#define kParam3DEBCylindricBendingLabel "B - Cylindric Bending"
+#define kParam3DEBCylindricBendingLabel "B - Cylindric Bending", "3DE Standard: B - Cylindric Bending."
 
 // 3DE4_Anamorphic_Standard_Degree_4
 #define kParam3DECx02Degree2 "tde4_Cx02_Degree_2"
-#define kParam3DECx02Degree2Label "Cx02 - Degree 2"
+#define kParam3DECx02Degree2Label "Cx02 - Degree 2", "3DE Anamorphic 4 and 6: Cx02 - Degree 2."
 #define kParam3DECy02Degree2 "tde4_Cy02_Degree_2"
-#define kParam3DECy02Degree2Label "Cy02 - Degree 2"
+#define kParam3DECy02Degree2Label "Cy02 - Degree 2", "3DE Anamorphic 4 and 6: Cy02 - Degree 2."
 #define kParam3DECx22Degree2 "tde4_Cx22_Degree_2"
-#define kParam3DECx22Degree2Label "Cx22 - Degree 2"
+#define kParam3DECx22Degree2Label "Cx22 - Degree 2", "3DE Anamorphic 4 and 6: Cx22 - Degree 2."
 #define kParam3DECy22Degree2 "tde4_Cy22_Degree_2"
-#define kParam3DECy22Degree2Label "Cy22 - Degree 2"
+#define kParam3DECy22Degree2Label "Cy22 - Degree 2", "3DE Anamorphic 4 and 6: Cy22 - Degree 2."
 #define kParam3DECx04Degree4 "tde4_Cx04_Degree_4"
-#define kParam3DECx04Degree4Label "Cx04 - Degree 4"
+#define kParam3DECx04Degree4Label "Cx04 - Degree 4", "3DE Anamorphic 4 and 6: Cx04 - Degree 4."
 #define kParam3DECy04Degree4 "tde4_Cy04_Degree_4"
-#define kParam3DECy04Degree4Label "Cy04 - Degree 4"
+#define kParam3DECy04Degree4Label "Cy04 - Degree 4", "3DE Anamorphic 4 and 6: Cy04 - Degree 4."
 #define kParam3DECx24Degree4 "tde4_Cx24_Degree_4"
-#define kParam3DECx24Degree4Label "Cx24 - Degree 4"
+#define kParam3DECx24Degree4Label "Cx24 - Degree 4", "3DE Anamorphic 4 and 6: Cx24 - Degree 4."
 #define kParam3DECy24Degree4 "tde4_Cy24_Degree_4"
-#define kParam3DECy24Degree4Label "Cy24 - Degree 4"
+#define kParam3DECy24Degree4Label "Cy24 - Degree 4", "3DE Anamorphic 4 and 6: Cy24 - Degree 4."
 #define kParam3DECx44Degree4 "tde4_Cx44_Degree_4"
-#define kParam3DECx44Degree4Label "Cx44 - Degree 4"
+#define kParam3DECx44Degree4Label "Cx44 - Degree 4", "3DE Anamorphic 4 and 6: Cx44 - Degree 4."
 #define kParam3DECy44Degree4 "tde4_Cy44_Degree_4"
-#define kParam3DECy44Degree4Label "Cy44 - Degree 4"
+#define kParam3DECy44Degree4Label "Cy44 - Degree 4", "3DE Anamorphic 4 and 6: Cy44 - Degree 4."
 #define kParam3DELensRotation "tde4_Lens_Rotation"
-#define kParam3DELensRotationLabel "Lens Rotation 4"
+#define kParam3DELensRotationLabel "Lens Rotation 4", "3DE Anamorphic 4: Lens Rotation 4."
 #define kParam3DESqueezeX "tde4_Squeeze_X"
-#define kParam3DESqueezeXLabel "Squeeze-X"
+#define kParam3DESqueezeXLabel "Squeeze-X", "3DE Anamorphic 4: Squeeze-X."
 #define kParam3DESqueezeY "tde4_Squeeze_Y"
-#define kParam3DESqueezeYLabel "Squeeze-Y"
+#define kParam3DESqueezeYLabel "Squeeze-Y", "3DE Anamorphic 4: Squeeze-Y."
 
 // 3DE4_Anamorphic_Degree_6
 #define kParam3DECx06Degree6 "tde4_Cx06_Degree_6"
-#define kParam3DECx06Degree6Label "Cx06 - Degree 6"
+#define kParam3DECx06Degree6Label "Cx06 - Degree 6", "3DE Anamorphic 6: Cx06 - Degree 6."
 #define kParam3DECy06Degree6 "tde4_Cy06_Degree_6"
-#define kParam3DECy06Degree6Label "Cy06 - Degree 6"
+#define kParam3DECy06Degree6Label "Cy06 - Degree 6", "3DE Anamorphic 6: Cy06 - Degree 6."
 #define kParam3DECx26Degree6 "tde4_Cx26_Degree_6"
-#define kParam3DECx26Degree6Label "Cx26 - Degree 6"
+#define kParam3DECx26Degree6Label "Cx26 - Degree 6", "3DE Anamorphic 6: Cx26 - Degree 6."
 #define kParam3DECy26Degree6 "tde4_Cy26_Degree_6"
-#define kParam3DECy26Degree6Label "Cy26 - Degree 6"
+#define kParam3DECy26Degree6Label "Cy26 - Degree 6", "3DE Anamorphic 6: Cy26 - Degree 6."
 #define kParam3DECx46Degree6 "tde4_Cx46_Degree_6"
-#define kParam3DECx46Degree6Label "Cx46 - Degree 6"
+#define kParam3DECx46Degree6Label "Cx46 - Degree 6", "3DE Anamorphic 6: Cx46 - Degree 6."
 #define kParam3DECy46Degree6 "tde4_Cy46_Degree_6"
-#define kParam3DECy46Degree6Label "Cy46 - Degree 6"
+#define kParam3DECy46Degree6Label "Cy46 - Degree 6", "3DE Anamorphic 6: Cy46 - Degree 6."
 #define kParam3DECx66Degree6 "tde4_Cx66_Degree_6"
-#define kParam3DECx66Degree6Label "Cx66 - Degree 6"
+#define kParam3DECx66Degree6Label "Cx66 - Degree 6", "3DE Anamorphic 6: Cx66 - Degree 6."
 #define kParam3DECy66Degree6 "tde4_Cy66_Degree_6"
-#define kParam3DECy66Degree6Label "Cy66 - Degree 6"
+#define kParam3DECy66Degree6Label "Cy66 - Degree 6", "3DE Anamorphic 6: Cy66 - Degree 6."
 
 // 3DE4_Radial_Fisheye_Degree_8
 #define kParam3DEDegree6 "tde4_Degree_6"
-#define kParam3DEDegree6Label "Degree 6"
+#define kParam3DEDegree6Label "Degree 6", "3DE Fisheye: Degree 6."
 #define kParam3DEDegree8 "tde4_Degree_8"
-#define kParam3DEDegree8Label "Degree 8"
+#define kParam3DEDegree8Label "Degree 8", "3DE Fisheye: Degree 8."
+
+// PanoTools
+#define kParamPanoToolsA "pt_a"
+#define kParamPanoToolsALabel "a", "PanoTools: Radial lens distortion 3rd degree coefficient a."
+#define kParamPanoToolsB "pt_b"
+#define kParamPanoToolsBLabel "b", "PanoTools: Radial lens distortion 2nd degree coefficient b."
+#define kParamPanoToolsC "pt_c"
+#define kParamPanoToolsCLabel "c", "PanoTools: Radial lens distortion 1st degree coefficient c."
+#define kParamPanoToolsD "pt_d"
+#define kParamPanoToolsDLabel "d", "PanoTools: Horizontal lens shift (in pixels)."
+#define kParamPanoToolsE "pt_e"
+#define kParamPanoToolsELabel "e", "PanoTools: Vertical lens shift (in pixels)."
+#define kParamPanoToolsG "pt_g"
+#define kParamPanoToolsGLabel "g", "PanoTools: Vertical lens shear (in pixels). Use to remove slight misalignment of the line scanner relative to the film transport."
+#define kParamPanoToolsT "pt_t"
+#define kParamPanoToolsTLabel "t", "PanoTools: Horizontal lens shear (in pixels)."
 
 
 
@@ -1391,6 +1361,16 @@ public:
             // 3DEFishEye8
             _c6 = fetchDoubleParam(kParam3DEDegree6);
             _c8 = fetchDoubleParam(kParam3DEDegree8);
+
+            // PanoTools
+            _pta = fetchDoubleParam(kParamPanoToolsA);
+            _ptb = fetchDoubleParam(kParamPanoToolsB);
+            _ptc = fetchDoubleParam(kParamPanoToolsC);
+            _ptd = fetchDoubleParam(kParamPanoToolsD);
+            _pte = fetchDoubleParam(kParamPanoToolsE);
+            _ptg = fetchDoubleParam(kParamPanoToolsG);
+            _ptt = fetchDoubleParam(kParamPanoToolsT);
+            assert(_pta && _ptb && _ptc && _ptd && _pte && _ptg && _ptt);
         }
         _filter = fetchChoiceParam(kParamFilterType);
         _clamp = fetchBooleanParam(kParamFilterClamp);
@@ -1566,6 +1546,15 @@ private:
     // 3DEFishEye8 model
     DoubleParam* _c6;
     DoubleParam* _c8;
+
+    // PanoTools model
+    DoubleParam* _pta;
+    DoubleParam* _ptb;
+    DoubleParam* _ptc;
+    DoubleParam* _ptd;
+    DoubleParam* _pte;
+    DoubleParam* _ptg;
+    DoubleParam* _ptt;
 
     ChoiceParam* _filter;
     BooleanParam* _clamp;
@@ -2018,6 +2007,27 @@ DistortionPlugin::getDistortionModel(const OfxRectI& format, const OfxPointD& re
                                                  sqy);
         break;
     }
+    case eDistortionModelPanoTools: {
+        double par = 1.;
+        if (_srcClip) {
+            par = _srcClip->getPixelAspectRatio();
+        }
+        double a = _pta->getValueAtTime(time);
+        double b = _ptb->getValueAtTime(time);
+        double c = _ptc->getValueAtTime(time);
+        double d = _ptd->getValueAtTime(time);
+        double e = _pte->getValueAtTime(time);
+        double g = _ptg->getValueAtTime(time);
+        double t = _ptt->getValueAtTime(time);
+        return new DistortionModelPanoTools(format,
+                                            renderScale,
+                                            par,
+                                            a, b, c,
+                                            d, e,
+                                            g, t);
+        break;
+    }
+
     }
     assert(false);
 }
@@ -2083,6 +2093,11 @@ DistortionPlugin::getLensDistortionFormat(double time,
                     // no format is available, use the RoD instead
                     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
                     Coords::toPixelNearest(srcRod, renderScale, *par, format);
+                } else {
+                    format->x1 = std::floor(format->x1 * renderScale.x + 0.5);
+                    format->y1 = std::floor(format->y1 * renderScale.x + 0.5);
+                    format->x2 = std::floor(format->x2 * renderScale.x + 0.5);
+                    format->y2 = std::floor(format->y2 * renderScale.x + 0.5);
                 }
             } else {
                 // default to Project Size
@@ -2656,6 +2671,17 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
                          (phi == 0.) && (sqx == 0.) && (sqy == 0.) );
             break;
         }
+        case eDistortionModelPanoTools: {
+            double a = _pta->getValueAtTime(time);
+            double b = _ptb->getValueAtTime(time);
+            double c = _ptc->getValueAtTime(time);
+            double d = _ptd->getValueAtTime(time);
+            double e = _pte->getValueAtTime(time);
+            double g = _ptg->getValueAtTime(time);
+            double t = _ptt->getValueAtTime(time);
+            identity = (a == 0.) && (b == 0.) && (c == 0.) && (d == 0.) && (e == 0.) && (g == 0.) && (t == 0.);
+            break;
+        }
         } // switch (distortionModel) {
 
         if (identity) {
@@ -3078,6 +3104,14 @@ DistortionPlugin::updateVisibility()
 
         _c6->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEFishEye8);
         _c8->setIsSecretAndDisabled(distortionModel != eDistortionModel3DEFishEye8);
+
+        _pta->setIsSecretAndDisabled(distortionModel != eDistortionModelPanoTools);
+        _ptb->setIsSecretAndDisabled(distortionModel != eDistortionModelPanoTools);
+        _ptc->setIsSecretAndDisabled(distortionModel != eDistortionModelPanoTools);
+        _ptd->setIsSecretAndDisabled(distortionModel != eDistortionModelPanoTools);
+        _pte->setIsSecretAndDisabled(distortionModel != eDistortionModelPanoTools);
+        _ptg->setIsSecretAndDisabled(distortionModel != eDistortionModelPanoTools);
+        _ptt->setIsSecretAndDisabled(distortionModel != eDistortionModelPanoTools);
     }
 }
 
@@ -3278,11 +3312,11 @@ addWrapOptions(ChoiceParamDescriptor* channel,
                WrapEnum def)
 {
     assert(channel->getNOptions() == eWrapClamp);
-    channel->appendOption(kParamWrapOptionClamp, kParamWrapOptionClampHint);
+    channel->appendOption(kParamWrapOptionClamp);
     assert(channel->getNOptions() == eWrapRepeat);
-    channel->appendOption(kParamWrapOptionRepeat, kParamWrapOptionRepeatHint);
+    channel->appendOption(kParamWrapOptionRepeat);
     assert(channel->getNOptions() == eWrapMirror);
-    channel->appendOption(kParamWrapOptionMirror, kParamWrapOptionMirrorHint);
+    channel->appendOption(kParamWrapOptionMirror);
     channel->setDefault(def);
 }
 
@@ -3370,8 +3404,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabel(kParamProcessRLabel);
-        param->setHint(kParamProcessRHint);
+        param->setLabelAndHint(kParamProcessRLabel);
         param->setDefault(true);
 #ifdef OFX_EXTENSIONS_NUKE
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -3382,8 +3415,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabel(kParamProcessGLabel);
-        param->setHint(kParamProcessGHint);
+        param->setLabelAndHint(kParamProcessGLabel);
         param->setDefault(true);
 #ifdef OFX_EXTENSIONS_NUKE
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -3394,8 +3426,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabel(kParamProcessBLabel);
-        param->setHint(kParamProcessBHint);
+        param->setLabelAndHint(kParamProcessBLabel);
         param->setDefault(true);
 #ifdef OFX_EXTENSIONS_NUKE
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -3406,8 +3437,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabel(kParamProcessALabel);
-        param->setHint(kParamProcessAHint);
+        param->setLabelAndHint(kParamProcessALabel);
         param->setDefault(true);
         if (page) {
             page->addChild(*param);
@@ -3421,25 +3451,24 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
 
         if (gIsMultiPlaneV2) {
             {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
+                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel);
 #ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
                 param->setDefault(eInputChannelR);
             }
             {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
+                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel);
                 param->setDefault(eInputChannelG);
             }
             {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelA, kParamChannelALabel, kParamChannelAHint);
+                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelA, kParamChannelALabel);
                 param->setDefault(eInputChannelA);
             }
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelU);
-                param->setLabel(kParamChannelULabel);
-                param->setHint(kParamChannelUHint);
+                param->setLabelAndHint(kParamChannelULabel);
 #ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
@@ -3451,8 +3480,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             }
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelV);
-                param->setLabel(kParamChannelVLabel);
-                param->setHint(kParamChannelVHint);
+                param->setLabelAndHint(kParamChannelVLabel);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
                 param->setDefault(eInputChannelG);
                 if (page) {
@@ -3461,8 +3489,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             }
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelA);
-                param->setLabel(kParamChannelALabel);
-                param->setHint(kParamChannelAHint);
+                param->setLabelAndHint(kParamChannelALabel);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
                 param->setDefault(eInputChannelA);
                 if (page) {
@@ -3472,8 +3499,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamChannelUnpremultUV);
-            param->setLabel(kParamChannelUnpremultUVLabel);
-            param->setHint(kParamChannelUnpremultUVHint);
+            param->setLabelAndHint(kParamChannelUnpremultUVLabel);
             param->setDefault(false);
             if (page) {
                 page->addChild(*param);
@@ -3481,8 +3507,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVOffset);
-            param->setLabel(kParamUVOffsetLabel);
-            param->setHint(kParamUVOffsetHint);
+            param->setLabelAndHint(kParamUVOffsetLabel);
             param->setDefault(0., 0.);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 1., 1.);
@@ -3494,8 +3519,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVScale);
-            param->setLabel(kParamUVScaleLabel);
-            param->setHint(kParamUVScaleHint);
+            param->setLabelAndHint(kParamUVScaleLabel);
             param->setDoubleType(eDoubleTypeScale);
             param->setDefault(1., 1.);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
@@ -3510,8 +3534,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         if (plugin == eDistortionPluginSTMap) {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapU);
-                param->setLabel(kParamWrapULabel);
-                param->setHint(kParamWrapUHint);
+                param->setLabelAndHint(kParamWrapULabel);
 #ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
@@ -3522,8 +3545,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             }
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapV);
-                param->setLabel(kParamWrapVLabel);
-                param->setHint(kParamWrapVHint);
+                param->setLabelAndHint(kParamWrapVLabel);
                 addWrapOptions(param, eWrapClamp);
                 if (page) {
                     page->addChild(*param);
@@ -3537,8 +3559,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             // extent
             {
                 ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
-                param->setLabel(kParamFormatLabel);
-                param->setHint(kParamFormatHint);
+                param->setLabelAndHint(kParamFormatLabel);
                 assert(param->getNOptions() == eGeneratorExtentFormat);
                 param->appendOption(kParamGeneratorExtentOptionFormat, kParamGeneratorExtentOptionFormatHint);
                 assert(param->getNOptions() == eGeneratorExtentSize);
@@ -3625,8 +3646,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 assert(par != -1);
                 {
                     Int2DParamDescriptor* param = desc.defineInt2DParam(kParamGeneratorSize);
-                    param->setLabel(kParamGeneratorSizeLabel);
-                    param->setHint(kParamGeneratorSizeHint);
+                    param->setLabelAndHint(kParamGeneratorSizeLabel, kParamGeneratorSizeHint);
                     param->setIsSecretAndDisabled(true);
                     param->setDefault(w, h);
                     if (page) {
@@ -3636,8 +3656,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
 
                 {
                     DoubleParamDescriptor* param = desc.defineDoubleParam(kParamGeneratorPAR);
-                    param->setLabel(kParamGeneratorPARLabel);
-                    param->setHint(kParamGeneratorPARHint);
+                    param->setLabelAndHint(kParamGeneratorPARLabel, kParamGeneratorPARHint);
                     param->setIsSecretAndDisabled(true);
                     param->setRange(0., DBL_MAX);
                     param->setDisplayRange(0.5, 2.);
@@ -3651,7 +3670,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             // btmLeft
             {
                 Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-                param->setLabel(kParamRectangleInteractBtmLeftLabel);
+                param->setLabelAndHint(kParamRectangleInteractBtmLeftLabel, "Coordinates of the bottom left corner of the size rectangle.");
                 param->setDoubleType(eDoubleTypeXYAbsolute);
                 if ( param->supportsDefaultCoordinateSystem() ) {
                     param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
@@ -3663,7 +3682,6 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
                 param->setIncrement(1.);
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                param->setHint("Coordinates of the bottom left corner of the size rectangle.");
                 param->setDigits(0);
                 if (page) {
                     page->addChild(*param);
@@ -3673,7 +3691,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             // size
             {
                 Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
-                param->setLabel(kParamRectangleInteractSizeLabel);
+                param->setLabelAndHint(kParamRectangleInteractSizeLabel, "Width and height of the size rectangle.");
                 param->setDoubleType(eDoubleTypeXY);
                 if ( param->supportsDefaultCoordinateSystem() ) {
                     param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
@@ -3685,7 +3703,6 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
                 param->setIncrement(1.);
                 param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
-                param->setHint("Width and height of the size rectangle.");
                 param->setIncrement(1.);
                 param->setDigits(0);
                 if (page) {
@@ -3697,34 +3714,34 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
 
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionModel);
-            param->setLabel(kParamDistortionModelLabel);
-            param->setHint(kParamDistortionModelHint);
+            param->setLabelAndHint(kParamDistortionModelLabel);
             assert(param->getNOptions() == eDistortionModelNuke);
-            param->appendOption(kParamDistortionModelOptionNuke, kParamDistortionModelOptionNukeHint);
+            param->appendOption(kParamDistortionModelOptionNuke);
             assert(param->getNOptions() == eDistortionModelPFBarrel);
-            param->appendOption(kParamDistortionModelOptionPFBarrel, kParamDistortionModelOptionPFBarrelHint);
+            param->appendOption(kParamDistortionModelOptionPFBarrel);
             assert(param->getNOptions() == eDistortionModel3DEClassic);
-            param->appendOption(kParamDistortionModelOption3DEClassic, kParamDistortionModelOption3DEClassicHint);
+            param->appendOption(kParamDistortionModelOption3DEClassic);
             assert(param->getNOptions() == eDistortionModel3DEAnamorphic6);
-            param->appendOption(kParamDistortionModelOption3DEAnamorphic6, kParamDistortionModelOption3DEAnamorphic6Hint);
+            param->appendOption(kParamDistortionModelOption3DEAnamorphic6);
             assert(param->getNOptions() == eDistortionModel3DEFishEye8);
-            param->appendOption(kParamDistortionModelOption3DEFishEye8, kParamDistortionModelOption3DEFishEye8Hint);
+            param->appendOption(kParamDistortionModelOption3DEFishEye8);
             assert(param->getNOptions() == eDistortionModel3DEStandard);
-            param->appendOption(kParamDistortionModelOption3DEStandard, kParamDistortionModelOption3DEStandardHint);
+            param->appendOption(kParamDistortionModelOption3DEStandard);
             assert(param->getNOptions() == eDistortionModel3DEAnamorphic4);
-            param->appendOption(kParamDistortionModelOption3DEAnamorphic4, kParamDistortionModelOption3DEAnamorphic4Hint);
+            param->appendOption(kParamDistortionModelOption3DEAnamorphic4);
+            assert(param->getNOptions() == eDistortionModelPanoTools);
+            param->appendOption(kParamDistortionModelOptionPanoTools);
             if (page) {
                 page->addChild(*param);
             }
         }
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionDirection);
-            param->setLabel(kParamDistortionDirectionLabel);
-            param->setHint(kParamDistortionDirectionHint);
+            param->setLabelAndHint(kParamDistortionDirectionLabel);
             assert(param->getNOptions() == eDirectionDistort);
-            param->appendOption(kParamDistortionDirectionOptionDistort, kParamDistortionDirectionOptionDistortHint);
+            param->appendOption(kParamDistortionDirectionOptionDistort);
             assert(param->getNOptions() == eDirectionUndistort);
-            param->appendOption(kParamDistortionDirectionOptionUndistort, kParamDistortionDirectionOptionUndistortHint);
+            param->appendOption(kParamDistortionDirectionOptionUndistort);
             param->setDefault((int)eDirectionDistort); // same default as in Nuke, and also the most straightforward (non-iterative) transform for most models
             if (page) {
                 page->addChild(*param);
@@ -3732,12 +3749,11 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionOutputMode);
-            param->setLabel(kParamDistortionOutputModeLabel);
-            param->setHint(kParamDistortionOutputModeHint);
+            param->setLabelAndHint(kParamDistortionOutputModeLabel);
             assert(param->getNOptions() == eOutputModeImage);
-            param->appendOption(kParamDistortionOutputModeOptionImage, kParamDistortionOutputModeOptionImageHint);
+            param->appendOption(kParamDistortionOutputModeOptionImage);
             assert(param->getNOptions() == eOutputModeSTMap);
-            param->appendOption(kParamDistortionOutputModeOptionSTMap, kParamDistortionOutputModeOptionSTMapHint);
+            param->appendOption(kParamDistortionOutputModeOptionSTMap);
             if (page) {
                 page->addChild(*param);
             }
@@ -3746,8 +3762,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         // Nuke
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK1);
-            param->setLabel(kParamK1Label);
-            param->setHint(kParamK1Hint);
+            param->setLabelAndHint(kParamK1Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.3, 0.3);
             if (page) {
@@ -3756,8 +3771,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK2);
-            param->setLabel(kParamK2Label);
-            param->setHint(kParamK2Hint);
+            param->setLabelAndHint(kParamK2Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
             if (page) {
@@ -3766,8 +3780,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamCenter);
-            param->setLabel(kParamCenterLabel);
-            param->setHint(kParamCenterHint);
+            param->setLabelAndHint(kParamCenterLabel);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setUseHostNativeOverlayHandle(false);
             param->setDisplayRange(-1, -1, 1, 1);
@@ -3777,8 +3790,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSqueeze);
-            param->setLabel(kParamSqueezeLabel);
-            param->setHint(kParamSqueezeHint);
+            param->setLabelAndHint(kParamSqueezeLabel);
             param->setDefault(1.);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
@@ -3788,8 +3800,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamAsymmetric);
-            param->setLabel(kParamAsymmetricLabel);
-            param->setHint(kParamAsymmetricHint);
+            param->setLabelAndHint(kParamAsymmetricLabel);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, -0.5, 0.5, 0.5);
             param->setUseHostNativeOverlayHandle(false);
@@ -3802,8 +3813,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         // PFBarrel
         {
             StringParamDescriptor *param = desc.defineStringParam(kParamPFFile);
-            param->setLabel(kParamPFFileLabel);
-            param->setHint(kParamPFFileHint);
+            param->setLabelAndHint(kParamPFFileLabel);
             param->setStringType(eStringTypeFilePath);
             param->setFilePathExists(true);
 #ifdef OFX_EXTENSIONS_NUKE
@@ -3818,16 +3828,14 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         if (!getImageEffectHostDescription()->isNatron) {
             // Natron has its own reload button
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamPFFileReload);
-            param->setLabel(kParamPFFileReloadLabel);
-            param->setHint(kParamPFFileReloadHint);
+            param->setLabelAndHint(kParamPFFileReloadLabel);
             if (page) {
                 page->addChild(*param);
             }
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPFC3);
-            param->setLabel(kParamPFC3Label);
-            param->setHint(kParamPFC3Hint);
+            param->setLabelAndHint(kParamPFC3Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             if (page) {
@@ -3836,8 +3844,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPFC5);
-            param->setLabel(kParamPFC5Label);
-            param->setHint(kParamPFC5Hint);
+            param->setLabelAndHint(kParamPFC5Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             if (page) {
@@ -3846,8 +3853,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamPFP);
-            param->setLabel(kParamPFPLabel);
-            param->setHint(kParamPFPHint);
+            param->setLabelAndHint(kParamPFPLabel);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 1., 1.);
             param->setDefault(0.5, 0.5);
@@ -3859,8 +3865,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPFSqueeze);
-            param->setLabel(kParamPFSqueezeLabel);
-            param->setHint(kParamPFSqueezeHint);
+            param->setLabelAndHint(kParamPFSqueezeLabel);
             param->setRange(0.0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.1, 3.);
             param->setDefault(1.);
@@ -3874,8 +3879,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         // fov parameters
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_xa_fov_unit);
-            param->setLabel(kParam3DE4_xa_fov_unitLabel);
-            //param->setHint(kParam3DE4_xa_fov_unitHint);
+            param->setLabelAndHint(kParam3DE4_xa_fov_unitLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
             param->setDefault(0.);
@@ -3885,8 +3889,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_ya_fov_unit);
-            param->setLabel(kParam3DE4_ya_fov_unitLabel);
-            //param->setHint(kParam3DE4_ya_fov_unitHint);
+            param->setLabelAndHint(kParam3DE4_ya_fov_unitLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
             param->setDefault(0.);
@@ -3896,8 +3899,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_xb_fov_unit);
-            param->setLabel(kParam3DE4_xb_fov_unitLabel);
-            //param->setHint(kParam3DE4_xb_fov_unitHint);
+            param->setLabelAndHint(kParam3DE4_xb_fov_unitLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
             param->setDefault(1.);
@@ -3907,8 +3909,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_yb_fov_unit);
-            param->setLabel(kParam3DE4_yb_fov_unitLabel);
-            //param->setHint(kParam3DE4_yb_fov_unitHint);
+            param->setLabelAndHint(kParam3DE4_yb_fov_unitLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
             param->setDefault(1.);
@@ -3919,8 +3920,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         // seven builtin parameters
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_focal_length_cm);
-            param->setLabel(kParam3DE4_focal_length_cmLabel);
-            //param->setHint(kParam3DE4_focal_length_cmHint);
+            param->setLabelAndHint(kParam3DE4_focal_length_cmLabel);
             param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.5, 50.);
             param->setDefault(1.);
@@ -3930,8 +3930,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_custom_focus_distance_cm);
-            param->setLabel(kParam3DE4_custom_focus_distance_cmLabel);
-            //param->setHint(kParam3DE4_custom_focus_distance_cmHint);
+            param->setLabelAndHint(kParam3DE4_custom_focus_distance_cmLabel);
             param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(10, 1000.);
             param->setDefault(100.);
@@ -3941,8 +3940,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_filmback_width_cm);
-            param->setLabel(kParam3DE4_filmback_width_cmLabel);
-            //param->setHint(kParam3DE4_filmback_width_cmHint);
+            param->setLabelAndHint(kParam3DE4_filmback_width_cmLabel);
             param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.1, 10.);
             param->setDefault(0.8);
@@ -3952,8 +3950,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_filmback_height_cm);
-            param->setLabel(kParam3DE4_filmback_height_cmLabel);
-            //param->setHint(kParam3DE4_filmback_height_cmHint);
+            param->setLabelAndHint(kParam3DE4_filmback_height_cmLabel);
             param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.1, 10.);
             param->setDefault(0.6);
@@ -3963,8 +3960,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_lens_center_offset_x_cm);
-            param->setLabel(kParam3DE4_lens_center_offset_x_cmLabel);
-            //param->setHint(kParam3DE4_lens_center_offset_x_cmHint);
+            param->setLabelAndHint(kParam3DE4_lens_center_offset_x_cmLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-5., 5.);
             param->setDefault(0.);
@@ -3974,8 +3970,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_lens_center_offset_y_cm);
-            param->setLabel(kParam3DE4_lens_center_offset_y_cmLabel);
-            //param->setHint(kParam3DE4_lens_center_offset_y_cmHint);
+            param->setLabelAndHint(kParam3DE4_lens_center_offset_y_cmLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-5., 5.);
             param->setDefault(0.);
@@ -3985,8 +3980,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DE4_pixel_aspect);
-            param->setLabel(kParam3DE4_pixel_aspectLabel);
-            //param->setHint(kParam3DE4_pixel_aspectHint);
+            param->setLabelAndHint(kParam3DE4_pixel_aspectLabel);
             param->setRange(0., DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.25, 4.);
             param->setDefault(1.);
@@ -3997,8 +3991,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         // 3DE Classic model
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEDistortion);
-            param->setLabel(kParam3DEDistortionLabel);
-            //param->setHint(kParam3DEDistortionHint);
+            param->setLabelAndHint(kParam3DEDistortionLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4008,8 +4001,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEAnamorphicSqueeze);
-            param->setLabel(kParam3DEAnamorphicSqueezeLabel);
-            //param->setHint(kParam3DEAnamorphicSqueezeHint);
+            param->setLabelAndHint(kParam3DEAnamorphicSqueezeLabel);
             param->setRange(0., DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.25, 4.);
             param->setDefault(1.);
@@ -4019,8 +4011,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECurvatureX);
-            param->setLabel(kParam3DECurvatureXLabel);
-            //param->setHint(kParam3DECurvatureXHint);
+            param->setLabelAndHint(kParam3DECurvatureXLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4030,8 +4021,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECurvatureY);
-            param->setLabel(kParam3DECurvatureYLabel);
-            //param->setHint(kParam3DECurvatureYHint);
+            param->setLabelAndHint(kParam3DECurvatureYLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4041,8 +4031,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEQuarticDistortion);
-            param->setLabel(kParam3DEQuarticDistortionLabel);
-            //param->setHint(kParam3DEQuarticDistortionHint);
+            param->setLabelAndHint(kParam3DEQuarticDistortionLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4053,8 +4042,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         // 3DE Radial Standard Degree 4
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEDistortionDegree2);
-            param->setLabel(kParam3DEDistortionDegree2Label);
-            //param->setHint(kParam3DEDistortionDegree2Hint);
+            param->setLabelAndHint(kParam3DEDistortionDegree2Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4064,8 +4052,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEUDegree2);
-            param->setLabel(kParam3DEUDegree2Label);
-            //param->setHint(kParam3DEUDegree2Hint);
+            param->setLabelAndHint(kParam3DEUDegree2Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4075,8 +4062,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEVDegree2);
-            param->setLabel(kParam3DEVDegree2Label);
-            //param->setHint(kParam3DEVDegree2Hint);
+            param->setLabelAndHint(kParam3DEVDegree2Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4086,8 +4072,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEQuarticDistortionDegree4);
-            param->setLabel(kParam3DEQuarticDistortionDegree4Label);
-            //param->setHint(kParam3DEQuarticDistortionDegree4Hint);
+            param->setLabelAndHint(kParam3DEQuarticDistortionDegree4Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4097,8 +4082,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEUDegree4);
-            param->setLabel(kParam3DEUDegree4Label);
-            //param->setHint(kParam3DEUDegree4Hint);
+            param->setLabelAndHint(kParam3DEUDegree4Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4108,8 +4092,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEVDegree4);
-            param->setLabel(kParam3DEVDegree4Label);
-            //param->setHint(kParam3DEVDegree4Hint);
+            param->setLabelAndHint(kParam3DEVDegree4Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4119,8 +4102,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEPhiCylindricDirection);
-            param->setLabel(kParam3DEPhiCylindricDirectionLabel);
-            //param->setHint(kParam3DEPhiCylindricDirectionHint);
+            param->setLabelAndHint(kParam3DEPhiCylindricDirectionLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-90., 90.);
             param->setDefault(0.);
@@ -4130,8 +4112,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEBCylindricBending);
-            param->setLabel(kParam3DEBCylindricBendingLabel);
-            //param->setHint(kParam3DEBCylindricBendingHint);
+            param->setLabelAndHint(kParam3DEBCylindricBendingLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
             param->setDefault(0.);
@@ -4142,8 +4123,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         // 3DE4_Anamorphic_Standard_Degree_4 and 3DE4_Anamorphic_Degree_6
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx02Degree2);
-            param->setLabel(kParam3DECx02Degree2Label);
-            //param->setHint(kParam3DECx02Degree2Hint);
+            param->setLabelAndHint(kParam3DECx02Degree2Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4153,8 +4133,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy02Degree2);
-            param->setLabel(kParam3DECy02Degree2Label);
-            //param->setHint(kParam3DECy02Degree2Hint);
+            param->setLabelAndHint(kParam3DECy02Degree2Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4164,8 +4143,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx22Degree2);
-            param->setLabel(kParam3DECx22Degree2Label);
-            //param->setHint(kParam3DECx22Degree2Hint);
+            param->setLabelAndHint(kParam3DECx22Degree2Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4175,8 +4153,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy22Degree2);
-            param->setLabel(kParam3DECy22Degree2Label);
-            //param->setHint(kParam3DECy22Degree2Hint);
+            param->setLabelAndHint(kParam3DECy22Degree2Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4186,8 +4163,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx04Degree4);
-            param->setLabel(kParam3DECx04Degree4Label);
-            //param->setHint(kParam3DECx04Degree4Hint);
+            param->setLabelAndHint(kParam3DECx04Degree4Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4197,8 +4173,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy04Degree4);
-            param->setLabel(kParam3DECy04Degree4Label);
-            //param->setHint(kParam3DECy04Degree4Hint);
+            param->setLabelAndHint(kParam3DECy04Degree4Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4208,8 +4183,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx24Degree4);
-            param->setLabel(kParam3DECx24Degree4Label);
-            //param->setHint(kParam3DECx24Degree4Hint);
+            param->setLabelAndHint(kParam3DECx24Degree4Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4219,8 +4193,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy24Degree4);
-            param->setLabel(kParam3DECy24Degree4Label);
-            //param->setHint(kParam3DECy24Degree4Hint);
+            param->setLabelAndHint(kParam3DECy24Degree4Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4230,8 +4203,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx44Degree4);
-            param->setLabel(kParam3DECx44Degree4Label);
-            //param->setHint(kParam3DECx44Degree4Hint);
+            param->setLabelAndHint(kParam3DECx44Degree4Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4241,8 +4213,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy44Degree4);
-            param->setLabel(kParam3DECy44Degree4Label);
-            //param->setHint(kParam3DECy44Degree4Hint);
+            param->setLabelAndHint(kParam3DECy44Degree4Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4252,8 +4223,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx06Degree6);
-            param->setLabel(kParam3DECx06Degree6Label);
-            //param->setHint(kParam3DECx06Degree6Hint);
+            param->setLabelAndHint(kParam3DECx06Degree6Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4263,8 +4233,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy06Degree6);
-            param->setLabel(kParam3DECy06Degree6Label);
-            //param->setHint(kParam3DECy06Degree6Hint);
+            param->setLabelAndHint(kParam3DECy06Degree6Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4274,8 +4243,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx26Degree6);
-            param->setLabel(kParam3DECx26Degree6Label);
-            //param->setHint(kParam3DECx26Degree6Hint);
+            param->setLabelAndHint(kParam3DECx26Degree6Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4285,8 +4253,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy26Degree6);
-            param->setLabel(kParam3DECy26Degree6Label);
-            //param->setHint(kParam3DECy26Degree6Hint);
+            param->setLabelAndHint(kParam3DECy26Degree6Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4296,8 +4263,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx46Degree6);
-            param->setLabel(kParam3DECx46Degree6Label);
-            //param->setHint(kParam3DECx46Degree6Hint);
+            param->setLabelAndHint(kParam3DECx46Degree6Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4307,8 +4273,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy46Degree6);
-            param->setLabel(kParam3DECy46Degree6Label);
-            //param->setHint(kParam3DECy46Degree6Hint);
+            param->setLabelAndHint(kParam3DECy46Degree6Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4318,8 +4283,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECx66Degree6);
-            param->setLabel(kParam3DECx66Degree6Label);
-            //param->setHint(kParam3DECx66Degree6Hint);
+            param->setLabelAndHint(kParam3DECx66Degree6Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4329,8 +4293,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DECy66Degree6);
-            param->setLabel(kParam3DECy66Degree6Label);
-            //param->setHint(kParam3DECy66Degree6Hint);
+            param->setLabelAndHint(kParam3DECy66Degree6Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4340,8 +4303,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DELensRotation);
-            param->setLabel(kParam3DELensRotationLabel);
-            //param->setHint(kParam3DELensRotationHint);
+            param->setLabelAndHint(kParam3DELensRotationLabel);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-2., 2.);
             param->setDefault(0.);
@@ -4351,8 +4313,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DESqueezeX);
-            param->setLabel(kParam3DESqueezeXLabel);
-            //param->setHint(kParam3DESqueezeXHint);
+            param->setLabelAndHint(kParam3DESqueezeXLabel);
             param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.9, 1.1);
             param->setDefault(1.);
@@ -4362,8 +4323,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DESqueezeY);
-            param->setLabel(kParam3DESqueezeYLabel);
-            //param->setHint(kParam3DESqueezeYHint);
+            param->setLabelAndHint(kParam3DESqueezeYLabel);
             param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0.9, 1.1);
             param->setDefault(1.);
@@ -4374,8 +4334,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         // 3DEFishEye8
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEDegree6);
-            param->setLabel(kParam3DEDegree6Label);
-            //param->setHint(kParam3DEDegree6Hint);
+            param->setLabelAndHint(kParam3DEDegree6Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4385,8 +4344,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParam3DEDegree8);
-            param->setLabel(kParam3DEDegree8Label);
-            //param->setHint(kParam3DEDegree8Hint);
+            param->setLabelAndHint(kParam3DEDegree8Label);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, 0.5);
             param->setDefault(0.);
@@ -4394,6 +4352,72 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 page->addChild(*param);
             }
         }
+
+        // PanoTools
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPanoToolsA);
+            param->setLabelAndHint(kParamPanoToolsALabel);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.2, 0.2);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPanoToolsB);
+            param->setLabelAndHint(kParamPanoToolsBLabel);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.2, 0.2);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPanoToolsC);
+            param->setLabelAndHint(kParamPanoToolsCLabel);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-0.2, 0.2);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPanoToolsD);
+            param->setLabelAndHint(kParamPanoToolsDLabel);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-1000., 1000.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPanoToolsE);
+            param->setLabelAndHint(kParamPanoToolsELabel);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-1000., 1000.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPanoToolsG);
+            param->setLabelAndHint(kParamPanoToolsGLabel);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-1000., 1000.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamPanoToolsT);
+            param->setLabelAndHint(kParamPanoToolsTLabel);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-1000., 1000.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
     }
 
     ofxsFilterDescribeParamsInterpolate2D( desc, page, (plugin == eDistortionPluginSTMap) );
