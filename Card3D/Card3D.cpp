@@ -110,6 +110,50 @@ enum CameraProjectionModeEnum {
     eCameraProjectionModeUV,
     eCameraProjectionModeSpherical,
 };
+/* other camera projections from nona http://hugin.sourceforge.net/docs/nona/nona.txt
+see also http://wiki.panotools.org/Projections http://wiki.panotools.org/Fisheye
+#                  0 - rectilinear (for printing and viewing) [R = f.tan(theta)] http://wiki.panotools.org/Rectilinear_Projection
+#                  1 - Cylindrical (for Printing and QTVR) http://wiki.panotools.org/Cylindrical_Projection
+#                  2 - Equirectangular ( for Spherical panos), default http://wiki.panotools.org/Equirectangular_Projection
+#                  3 - full-frame fisheye [R = f.theta], e.g. Peleng 8mm f/3.5 Fisheye 
+#                  4 - Stereographic [R = 2f.tan(theta/2)], e.g. Samyang 8 mm f/3.5
+#                  5 - Mercator http://wiki.panotools.org/Projections#Mercator_projection
+#                  6 - Transverse Mercator
+#                  7 - Sinusoidal http://wiki.panotools.org/Projections#Sinusoidal_projection
+#                  8 - Lambert Cylindrical Equal Area
+#                  9 - Lambert Equal Area Azimuthal
+#                 10 - Albers Equal Area Conic
+#                 11 - Miller Cylindrical http://wiki.panotools.org/Projections#Miller_projection
+#                 12 - Panini (obsolete non-Panini projection)
+#                 13 - Architectural (Miller above the horizon, Lambert Equal Area below
+#                 14 - Orthographic [R = f.sin(theta)], e.g. Yasuhara - MADOKA 180 circle fisheye lens 
+#                 15 - Equisolid (equal-area fisheye) [R=2f.sin(theta/2)], e. g. Sigma 8mm f/4.0 AF EX, Olympus 8mm F2.8, Nikon 6mm F2.8, Nikon 8mm F2.8 (also convex mirror) 
+#                 16 - Equirectangular Panini (standard Panini, covered by Panini General)
+#                 17 - Biplane
+#                 18 - Triplane
+#                 19 - Panini General http://wiki.panotools.org/The_General_Panini_Projection has 3 parameters:  http://wiki.panotools.org/The_General_Panini_Projection#Parameters
+#                 20 - Thoby Projection [R = k1.f.sin(k2.theta) k1=1.47 k2=0.713], e.g. AF DX Fisheye-Nikkor 10.5mm f/2.8G ED 
+#                 21 - Hammer-Aitoff Projection
+
+lens may be:
+#                  0 - rectilinear (normal lenses)
+#                  1 - Panoramic (Scanning cameras like Noblex)
+#                  2 - Circular fisheye
+#                  3 - full-frame fisheye
+#                  4 - PSphere, equirectangular
+#                  8 - orthographic fisheye
+#                 10 - stereographic fisheye
+#                 21 - Equisolid fisheye
+#                 20 - Fisheye Thoby (Nikkor 10.5)
+
+lens supported by videostitch studio:
+    2 - Equirectangular
+    4 - Stereographic
+    0 - Rectilinear
+    ??? Circular fisheye
+    3 - Full-frame fisheye
+
+ */
 #define kParamCameraFocalLength kNukeOfxCameraParamFocalLength
 #define kParamCameraFocalLengthLabel "Focal Length", "The camera focal length, in arbitrary units (usually either millimeters or 35 mm equivalent focal length). haperture and vaperture must be expressed in the same units."
 #define kParamCameraHorizontalAperture kNukeOfxCameraParamHorizontalAperture
