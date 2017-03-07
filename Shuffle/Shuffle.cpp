@@ -597,7 +597,7 @@ private:
 
     bool isIdentityInternal(double time, Clip*& identityClip);
 
-    void enableComponents();
+    void updateInputChannelsVisibility(const MultiPlane::ImagePlaneDesc& plane);
 
 
     /* internal render function */
@@ -611,22 +611,31 @@ private:
     void setupAndProcess(ShufflerBase &, const RenderArguments &args);
     void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const RenderArguments &args);
 
-    void getDstPixelComps(PixelComponentEnum* originalDstPixelComps, PixelComponentEnum* dstPixelComps);
+    MultiPlane::ImagePlaneDesc getPlaneFromOutputComponents() const;
 
-    void updateVisibility(PixelComponentEnum originalOutputComponents, PixelComponentEnum outputComponentsWithCreateAlpha);
+    MultiPlane::ImagePlaneDesc getDstPixelComps();
+
+    void updateOutputParamsVisibility(const MultiPlane::ImagePlaneDesc& plane);
 
     // This is called by Natron 3 in clipChanged on the outputClip: it replaces getClipPreferences since the results
     // of getClipPreferences are cached and thus it is not always called.
-    void onMetadataChanged();
+    // @param dstPlaneOut [out] If non null, will be set to the plane written to in output
+    void onMetadataChanged(MultiPlane::ImagePlaneDesc* dstPlaneOut);
 
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClipA;
     Clip *_srcClipB;
+
+    // The output plane selected by the user
     ChoiceParam *_outputLayer;
     ChoiceParam *_outputBitDepth;
+
+    // The input plane for each channel
     ChoiceParam* _channelParam[4];
     StringParam* _channelStringParam[4];
+
+    // Components type when the output layer is the color plane (Alpha - RGB - RGBA)
     ChoiceParam *_outputComponents;
     ChoiceParam *_outputPremult;
 };
@@ -679,6 +688,14 @@ struct IdentityChoiceData
     Clip* clip;
     MultiPlane::ImagePlaneDesc plane;
     int index;
+
+    IdentityChoiceData()
+    : clip(0)
+    , plane()
+    , index(-1)
+    {
+
+    }
 };
 
 bool
@@ -723,9 +740,7 @@ ShufflePlugin::isIdentityInternal(double time,
 
         int expectedIndex = -1;
         for (int i = 0; i < 4; ++i) {
-            OFX::Clip* clip = 0;
-            int channelIndex = -1;
-            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_channelParam[i]->getName(), &clip, &data[i].plane, &channelIndex);
+            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_channelParam[i]->getName(), &data[i].clip, &data[i].plane, &data[i].index);
 
             if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
                 //We might have an index in the param different from the actual components if getClipPreferences was not called so far
@@ -738,7 +753,7 @@ ShufflePlugin::isIdentityInternal(double time,
                 } else {
 
                     //In this case if the A choice is visible, the user either checked "Create alpha" or he/she set it explicitly to 0 or 1
-                    if (channelIndex == 3 && !_channelParam[3]->getIsSecret()) {
+                    if (data[i].index == 3 && !_channelParam[3]->getIsSecret()) {
                         return false;
                     } else {
                         ///Do not do the checks below
@@ -754,7 +769,9 @@ ShufflePlugin::isIdentityInternal(double time,
             }
             expectedIndex = data[i].index + 1;
         }
-        if (data[0].plane != dstPlane) {
+
+        // 2 planes might not be equal but be the color plane (e.g RGB and RGBA)
+        if (data[0].plane != dstPlane && data[0].plane.isColorPlane() != dstPlane.isColorPlane()) {
             return false;
         }
         identityClip = data[0].clip;
@@ -1199,26 +1216,31 @@ ShufflePlugin::render(const RenderArguments &args)
     }
 } // ShufflePlugin::render
 
-void
-ShufflePlugin::getDstPixelComps(PixelComponentEnum* originalDstPixelComps,
-                                PixelComponentEnum* dstPixelComps)
+MultiPlane::ImagePlaneDesc
+ShufflePlugin::getPlaneFromOutputComponents() const
+{
+    PixelComponentEnum comps = gOutputComponentsMap[_outputComponents->getValue()];
+    switch (comps) {
+        case OFX::ePixelComponentRGB:
+            return MultiPlane::ImagePlaneDesc::getRGBComponents();
+        case OFX::ePixelComponentAlpha:
+            return MultiPlane::ImagePlaneDesc::getAlphaComponents();
+        case OFX::ePixelComponentRGBA:
+            return MultiPlane::ImagePlaneDesc::getRGBAComponents();
+        default:
+            return MultiPlane::ImagePlaneDesc::getNoneComponents();
+    }
+
+}
+
+MultiPlane::ImagePlaneDesc
+ShufflePlugin::getDstPixelComps()
 {
 
 
-
-   // if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
-
-        // If non multi-planar, map the user selected components to the host supported components.
-        *dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
-        *originalDstPixelComps = *dstPixelComps;
-#if 0
-    }
-    else {
-
-
-
-
-        // Fetch the plane
+    if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
+        return getPlaneFromOutputComponents();
+    } else {
         MultiPlane::ImagePlaneDesc dstPlane;
         {
             OFX::Clip* clip = 0;
@@ -1226,75 +1248,65 @@ ShufflePlugin::getDstPixelComps(PixelComponentEnum* originalDstPixelComps,
             MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_outputLayer->getName(), &clip, &dstPlane, &channelIndex);
             if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
                 throwSuiteStatusException(kOfxStatFailed);
-                return;
             }
         }
-
-        // Convert the plane to OpenFX components
-        std::string ofxComponentsStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(dstPlane);
-        *dstPixelComps = mapStrToPixelComponentEnum(ofxComponentsStr);
-        *originalDstPixelComps = *dstPixelComps;
-
-
-        if (*dstPixelComps == ePixelComponentCustom) {
-            // If components are custom, map them to the color plane using the number of components
-            MultiPlane::ImagePlaneDesc colorPlaneComps = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(dstPlane.getNumComponents());
-            ofxComponentsStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(colorPlaneComps);
-            *dstPixelComps = mapStrToPixelComponentEnum(ofxComponentsStr);
-        } else if ( (*dstPixelComps == ePixelComponentAlpha) ||
-                    ( *dstPixelComps == ePixelComponentRGB) ||
-                    ( *dstPixelComps == ePixelComponentRGBA) ) {
+        if (dstPlane.isColorPlane()) {
             // If color plane, select the value chosen by the user from the output components choice
-            // this should be the same test as is updateVisibility()
-            *dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
+            return getPlaneFromOutputComponents();
+        } else {
+            return dstPlane;
         }
     }
-#endif
 } // getDstPixelComps
 
 void
-ShufflePlugin::onMetadataChanged()
+ShufflePlugin::onMetadataChanged(MultiPlane::ImagePlaneDesc* dstPlaneOut)
 {
-    PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
-    PixelComponentEnum dstPixelComps = ePixelComponentNone;
-
-    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
-
+    MultiPlane::ImagePlaneDesc dstPlane = getDstPixelComps();
     // Enable components
-    enableComponents();
-
-    updateVisibility(originalDstPixelComps, dstPixelComps);
+    updateInputChannelsVisibility(dstPlane);
+    updateOutputParamsVisibility(dstPlane);
+    if (dstPlaneOut) {
+        *dstPlaneOut = dstPlane;
+    }
 }
 
 void
-ShufflePlugin::updateVisibility(PixelComponentEnum originalDstPixelComps, PixelComponentEnum dstPixelComps)
+ShufflePlugin::updateOutputParamsVisibility(const MultiPlane::ImagePlaneDesc& plane)
 {
 
+
     if (gIsMultiPlanarV2 || gIsMultiPlanarV1) {
-        bool secret = true;
-        if ( (originalDstPixelComps == ePixelComponentAlpha) ||
-             ( originalDstPixelComps == ePixelComponentRGB) ||
-             ( originalDstPixelComps == ePixelComponentRGBA) ) {
-            //If color plane, select the value chosen by the user from the output components choice
+        bool secret;
+        if (plane.isColorPlane()) {
+            // If color plane, select the value chosen by the user from the output components choice
             secret = false;
+        } else {
+            secret = true;
         }
         _outputComponents->setIsSecretAndDisabled(secret);
     }
     // Premult is only needed for RGBA
-    _outputPremult->setIsSecretAndDisabled( !(dstPixelComps == ePixelComponentRGBA) );
+    _outputPremult->setIsSecretAndDisabled(plane != MultiPlane::ImagePlaneDesc::getRGBAComponents());
 }
 
 /* Override the clip preferences */
 void
 ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    PixelComponentEnum originalDstPixelComps = ePixelComponentNone;
-    PixelComponentEnum dstPixelComps = ePixelComponentNone;
 
+    // Refresh channel selectors in the base class
     MultiPlaneEffect::getClipPreferences(clipPreferences);
 
-    getDstPixelComps(&originalDstPixelComps, &dstPixelComps);
+    // Update visibility of parameters depending on the output plane and components type
+    MultiPlane::ImagePlaneDesc dstPlane;
+    onMetadataChanged(&dstPlane);
 
+    // Get clip preferences expects a hard coded components string but here we may have any kind of plane.
+    // To respect OpenFX, we map our plane number of components to the components of the corresponding color plane
+    // e.g: if our plane is Toto.XYZ and has 3 channels, it becomes RGB
+    MultiPlane::ImagePlaneDesc colorPlaneMapped = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(dstPlane.getNumComponents());
+    PixelComponentEnum dstPixelComps = mapStrToPixelComponentEnum(MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(colorPlaneMapped));
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
 
 
@@ -1543,103 +1555,47 @@ ShufflePlugin::changedClip(const InstanceChangedArgs & args,
     }
 
     MultiPlaneEffect::changedClip(args, clipName);
-    onMetadataChanged();
-
+    onMetadataChanged(NULL /*dstPlaneOut*/);
 
 }
 
 void
-ShufflePlugin::enableComponents()
+ShufflePlugin::updateInputChannelsVisibility(const MultiPlane::ImagePlaneDesc& plane)
 {
-    if (!gIsMultiPlanarV1 && !gIsMultiPlanarV2) {
-        switch (gOutputComponentsMap[_outputComponents->getValue()]) {
-        case ePixelComponentRGBA:
-            for (int i = 0; i < 4; ++i) {
-                _channelParam[i]->setEnabled(true);
-            }
-            break;
-        case ePixelComponentRGB:
-            _channelParam[0]->setEnabled(true);
-            _channelParam[1]->setEnabled(true);
-            _channelParam[2]->setEnabled(true);
-            _channelParam[3]->setEnabled(false);
-            break;
-        case ePixelComponentAlpha:
-            _channelParam[0]->setEnabled(false);
-            _channelParam[1]->setEnabled(false);
-            _channelParam[2]->setEnabled(false);
-            _channelParam[3]->setEnabled(true);
-            break;
-#ifdef OFX_EXTENSIONS_NUKE
-        case ePixelComponentMotionVectors:
-        case ePixelComponentStereoDisparity:
-            _channelParam[0]->setEnabled(true);
-            _channelParam[1]->setEnabled(true);
-            _channelParam[2]->setEnabled(false);
-            _channelParam[3]->setEnabled(false);
-            break;
-#endif
-#ifdef OFX_EXTENSIONS_NATRON
-        case ePixelComponentXY:
-            _channelParam[0]->setEnabled(true);
-            _channelParam[1]->setEnabled(true);
-            _channelParam[2]->setEnabled(false);
-            _channelParam[3]->setEnabled(false);
-            break;
-#endif
-        default:
-            assert(0);
-            break;
-        }
-    } else { // if (!gIsMultiPlanar) {
-        // Fetch the plane
-        MultiPlane::ImagePlaneDesc dstPlane;
-        {
-            OFX::Clip* clip = 0;
-            int channelIndex = -1;
-            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_outputLayer->getName(), &clip, &dstPlane, &channelIndex);
-            if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
-                return;
-            }
-        }
-
-        const std::vector<std::string>& compNames = dstPlane.getChannels();
-
-
-
-        if (compNames.size() == 1) {
-            _channelParam[0]->setIsSecretAndDisabled(true);
-            _channelParam[1]->setIsSecretAndDisabled(true);
-            _channelParam[2]->setIsSecretAndDisabled(true);
-            _channelParam[3]->setIsSecretAndDisabled(false);
-            _channelParam[3]->setLabel(compNames[0]);
-        } else if (compNames.size() == 2) {
-            _channelParam[0]->setIsSecretAndDisabled(false);
-            _channelParam[0]->setLabel(compNames[0]);
-            _channelParam[1]->setIsSecretAndDisabled(false);
-            _channelParam[1]->setLabel(compNames[1]);
-            _channelParam[2]->setIsSecretAndDisabled(true);
-            _channelParam[3]->setIsSecretAndDisabled(true);
-        } else if (compNames.size() == 3) {
-            _channelParam[0]->setIsSecretAndDisabled(false);
-            _channelParam[0]->setLabel(compNames[0]);
-            _channelParam[1]->setLabel(compNames[1]);
-            _channelParam[1]->setIsSecretAndDisabled(false);
-            _channelParam[2]->setIsSecretAndDisabled(false);
-            _channelParam[2]->setLabel(compNames[2]);
-            _channelParam[3]->setIsSecretAndDisabled(true);
-        } else if (compNames.size() == 4) {
-            _channelParam[0]->setLabel(compNames[0]);
-            _channelParam[0]->setIsSecretAndDisabled(false);
-            _channelParam[1]->setLabel(compNames[1]);
-            _channelParam[1]->setIsSecretAndDisabled(false);
-            _channelParam[2]->setIsSecretAndDisabled(false);
-            _channelParam[2]->setLabel(compNames[2]);
-            _channelParam[3]->setIsSecretAndDisabled(false);
-            _channelParam[3]->setLabel(compNames[3]);
-        }
+    const std::vector<std::string>& compNames = plane.getChannels();
+    if (compNames.size() == 1) {
+        _channelParam[0]->setIsSecretAndDisabled(true);
+        _channelParam[1]->setIsSecretAndDisabled(true);
+        _channelParam[2]->setIsSecretAndDisabled(true);
+        _channelParam[3]->setIsSecretAndDisabled(false);
+        _channelParam[3]->setLabel(compNames[0]);
+    } else if (compNames.size() == 2) {
+        _channelParam[0]->setIsSecretAndDisabled(false);
+        _channelParam[0]->setLabel(compNames[0]);
+        _channelParam[1]->setIsSecretAndDisabled(false);
+        _channelParam[1]->setLabel(compNames[1]);
+        _channelParam[2]->setIsSecretAndDisabled(true);
+        _channelParam[3]->setIsSecretAndDisabled(true);
+    } else if (compNames.size() == 3) {
+        _channelParam[0]->setIsSecretAndDisabled(false);
+        _channelParam[0]->setLabel(compNames[0]);
+        _channelParam[1]->setLabel(compNames[1]);
+        _channelParam[1]->setIsSecretAndDisabled(false);
+        _channelParam[2]->setIsSecretAndDisabled(false);
+        _channelParam[2]->setLabel(compNames[2]);
+        _channelParam[3]->setIsSecretAndDisabled(true);
+    } else if (compNames.size() == 4) {
+        _channelParam[0]->setLabel(compNames[0]);
+        _channelParam[0]->setIsSecretAndDisabled(false);
+        _channelParam[1]->setLabel(compNames[1]);
+        _channelParam[1]->setIsSecretAndDisabled(false);
+        _channelParam[2]->setIsSecretAndDisabled(false);
+        _channelParam[2]->setLabel(compNames[2]);
+        _channelParam[3]->setIsSecretAndDisabled(false);
+        _channelParam[3]->setLabel(compNames[3]);
     }
-} // ShufflePlugin::enableComponents
+
+} // ShufflePlugin::updateInputChannelsVisibility
 
 mDeclarePluginFactory(ShufflePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
