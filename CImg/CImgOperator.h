@@ -122,7 +122,7 @@ CImgOperatorPluginHelper<Params>::getClipPreferences(OFX::ClipPreferencesSetter 
 {
     //The render function expects all clips to have the same components, but they describe that they
     //can support everything, so guide the host into providing us something good for the render action
-    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    OFX::PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
     clipPreferences.setClipComponents(*_srcAClip, outputComps);
     clipPreferences.setClipComponents(*_srcBClip, outputComps);

@@ -1495,7 +1495,7 @@ void
 Card3DPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     //We have to do this because the processing code does not support varying components for uvClip and srcClip
-    PixelComponentEnum dstPixelComps = _dstClip->getPixelComponents();
+    PixelComponentEnum dstPixelComps = getDefaultOutputClipComponents();
 
     if (_srcClip) {
         clipPreferences.setClipComponents(*_srcClip, dstPixelComps);

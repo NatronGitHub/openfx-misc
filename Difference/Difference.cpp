@@ -333,7 +333,7 @@ DifferencePlugin::render(const RenderArguments &args)
 void
 DifferencePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
     clipPreferences.setClipComponents(*_srcClipA, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);

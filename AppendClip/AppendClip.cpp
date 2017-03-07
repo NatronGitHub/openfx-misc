@@ -814,7 +814,7 @@ AppendClipPlugin::getFramesNeeded(const FramesNeededArguments &args,
 void
 AppendClipPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         clipPreferences.setClipComponents(*_srcClip[i], outputComps);

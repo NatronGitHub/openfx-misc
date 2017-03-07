@@ -142,7 +142,7 @@ JoinViewsPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args,
 void
 JoinViewsPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
     clipPreferences.setClipComponents(*_srcLeftClip, outputComps);
     clipPreferences.setClipComponents(*_srcRightClip, outputComps);

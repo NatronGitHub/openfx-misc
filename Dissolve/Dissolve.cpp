@@ -470,7 +470,7 @@ void
 DissolvePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     updateRange();
-    PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    PixelComponentEnum outputComps = getDefaultOutputClipComponents();
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         clipPreferences.setClipComponents(*_srcClip[i], outputComps);
     }
