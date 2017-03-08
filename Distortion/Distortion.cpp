@@ -2221,7 +2221,15 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                             throwSuiteStatusException(kOfxStatErrImageFormat);
                         }
                     }
+                    // If the channel is unavailabe in the image, fill with 0 (1 for Alpha)
+                    // This may happen if the user selected  the hard-coded Alpha channel and the input is RGB
+                    if (p.channelIndex >= p.img->getPixelComponentCount()) {
+                        p.img = 0;
+                        p.fillZero = p.channelIndex != 3;
+                    }
                 }
+
+
                 //}
                 planeChannels.push_back(p);
             }
