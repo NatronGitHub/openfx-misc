@@ -23,6 +23,7 @@
 #include <cmath> // tan, atan2
 #include <cstring> // strerror
 #include <cstdio> // fopen, fclose
+#include <cstdlib> // atoi, atof
 #include <cerrno> // errno
 #include <iostream>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
@@ -536,13 +537,22 @@ enum PosMatTypeEnum {
 #define kParamPosMatFile "File"
 #define kParamPosMatFileLabel "File", "Import/export data"
 
-#define kParamPosMatImportChan "ImportChan"
-#define kParamPosMatImportChanLabel "Import .chan", "Import a .chan file created using Natron, Nuke or 3D tracking software, such as 3D-Equalizer, Maya, or Boujou. Be careful that the rotation order must be exactly the same when exporting and importing the chan file."
-#define kParamPosMatImportChanReload "ImportChanReload"
-#define kParamPosMatImportChanReloadLabel "Reload", "Reload the .chan file."
+#define kParamPosMatImportFile "ImportFile"
+#define kParamPosMatImportFileLabel "Import", "Import a chan file created using 3D tracking software, or a txt file created using Boujou."
+#define kParamPosMatImportFileReload "ImportFileReload"
+#define kParamPosMatImportFileReloadLabel "Reload", "Reload the file."
+
+#define kParamPosMatImportFormat "ImportFormat"
+#define kParamPosMatImportFormatLabel "Import Format", "The format of the file to import."
+#define kParamPosMatImportFormatOptionChan "chan", "Chan format, each line is FRAME TX TY TZ RX RY RZ VFOV. Can be created using Natron, Nuke, 3D-Equalizer, Maya and other 3D tracking software. Be careful that the rotation order must be exactly the same when exporting and importing the chan file."
+#define kParamPosMatImportFormatOptionBoujou "Boujou", "Boujour text export. Each camera line is R(0,0) R(0,1) R(0,2) R(1,0) R(1,1) R(1,2) R(2,0) R(2,1) R(2,2) Tx Ty Tz F(mm)."
+enum ImportFormatEnum {
+    eImportFormatChan = 0,
+    eImportFormatBoujou,
+};
 
 #define kParamPosMatExportChan "ExportChan"
-#define kParamPosMatExportChanLabel "Export .chan", "Export a .chan file which can be used in Natron, Nuke or 3D tracking software, such as 3D-Equalizer, Maya, or Boujou. Be careful that the rotation order must be exactly the same when exporting and importing the chan file."
+#define kParamPosMatExportChanLabel "Export", "Export a .chan file which can be used in Natron, Nuke or 3D tracking software, such as 3D-Equalizer, Maya, or Boujou. Be careful that the rotation order must be exactly the same when exporting and importing the chan file."
 
 #define kParamPosMatExportChanRewrite "ExportChanRewrite"
 #define kParamPosMatExportChanRewriteLabel "Rewrite", "Rewrite the .chan file."
@@ -616,8 +626,9 @@ class PosMatParam {
     Clip* _srcClip;
     std::string _prefix;
     GroupParam* _fileGroup;
-    StringParam* _importChan;
-    PushButtonParam* _importChanReload;
+    StringParam* _importFile;
+    PushButtonParam* _importFileReload;
+    ChoiceParam* _importFormat;
     StringParam* _exportChan;
     PushButtonParam* _exportChanRewrite;
     ChoiceParam* _transformOrder;
@@ -642,8 +653,9 @@ public:
     , _srcClip(NULL)
     , _prefix(prefix)
     , _fileGroup(NULL)
-    , _importChan(NULL)
-    , _importChanReload(NULL)
+    , _importFile(NULL)
+    , _importFileReload(NULL)
+    , _importFormat(NULL)
     , _exportChan(NULL)
     , _exportChanRewrite(NULL)
     , _transformOrder(NULL)
@@ -663,10 +675,11 @@ public:
     {
         _srcClip = _effect->fetchClip(kOfxImageEffectSimpleSourceClipName);
         _fileGroup = _effect->fetchGroupParam(prefix + kParamPosMatFile);
-        _importChan = _effect->fetchStringParam(prefix + kParamPosMatImportChan);
-        if (_effect->paramExists(prefix + kParamPosMatImportChanReload)) {
-            _importChanReload = _effect->fetchPushButtonParam(prefix + kParamPosMatImportChanReload);
+        _importFile = _effect->fetchStringParam(prefix + kParamPosMatImportFile);
+        if (_effect->paramExists(prefix + kParamPosMatImportFileReload)) {
+            _importFileReload = _effect->fetchPushButtonParam(prefix + kParamPosMatImportFileReload);
         }
+        _importFormat = _effect->fetchChoiceParam(prefix + kParamPosMatImportFormat);
         _exportChan = _effect->fetchStringParam(prefix + kParamPosMatExportChan);
         if (_effect->paramExists(prefix + kParamPosMatExportChanRewrite)) {
             _exportChanRewrite = _effect->fetchPushButtonParam(prefix + kParamPosMatExportChanRewrite);
@@ -719,9 +732,9 @@ private:
     {
         bool useMatrix = _useMatrix->getValue();
         _fileGroup->setEnabled(_enabled && !useMatrix);
-        _importChan->setEnabled(_enabled && !useMatrix);
-        if (_importChanReload) {
-            _importChanReload->setEnabled(_enabled && !useMatrix);
+        _importFile->setEnabled(_enabled && !useMatrix);
+        if (_importFileReload) {
+            _importFileReload->setEnabled(_enabled && !useMatrix);
         }
         _exportChan->setEnabled(_enabled && !useMatrix);
         if (_exportChanRewrite) {
@@ -752,6 +765,8 @@ private:
 
     void importChan();
 
+    void importBoujou();
+
     void exportChan();
 
     struct ChanLine {
@@ -776,7 +791,7 @@ void
 PosMatParam::importChan()
 {
     string filename;
-    _importChan->getValue(filename);
+    _importFile->getValue(filename);
     if ( filename.empty() ) {
         // no filename, do nothing
         return;
@@ -820,7 +835,7 @@ PosMatParam::importChan()
         }
     }
     std::fclose(f);
-    _effect->beginEditBlock(kParamPosMatImportChan);
+    _effect->beginEditBlock(kParamPosMatImportFile);
     _translate->deleteAllKeys();
     _rotate->deleteAllKeys();
     if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
@@ -840,10 +855,151 @@ PosMatParam::importChan()
 }
 
 void
+PosMatParam::importBoujou()
+{
+    string filename;
+    _importFile->getValue(filename);
+    if ( filename.empty() ) {
+        // no filename, do nothing
+        return;
+    }
+    FILE* f = fopen_utf8(filename.c_str(), "r");
+    if (!f) {
+        _effect->sendMessage(Message::eMessageError, "", "Cannot read " + filename + ": " + std::strerror(errno), false);
+
+        return;
+    }
+    bool foundOffset = false;
+    int offsetFrame;
+    bool foundStart = false;
+    int startFrame;
+    double haperture = 0;
+    double vaperture = 0;
+    std::list<ChanLine> lines;
+    char buf[1024];
+
+    while (std::fgets(buf, sizeof buf, f) != NULL) {
+        std::stringstream ss(buf); // Insert the string into a stream
+
+        std::vector<string> line; // Create vector to hold our words
+
+        // split using whitespace
+        while (ss >> buf) {
+            line.push_back(buf);
+        }
+        // # boujou export: text
+        // # Copyright (c) 2009, Vicon Motion Systems
+        // # boujou Version: 5.0.0 47534
+        // # Creation date : Thu Mar 17 17:30:38 2011
+        // # The image sequence file name was C:/Users/Nate's/Videos/final.mp4
+        // # boujou frame 0 is image sequence file 1000
+        // # boujou frame 100 is image sequence file 1100
+        // # One boujou frame for every image sequence frame
+        // # Exporting camera data for boujou frames 65 to 100
+        // # First boujou frame indexed to animation frame 1
+        //
+        //
+        // #The Camera (One line per time frame)
+        // #Image Size 1920 1080
+        // #Filmback Size 14.7574 8.3007
+        // #Line Format: Camera Rotation Matrix (9 numbers - 1st row, 2nd row, 3rd row) Camera Translation (3 numbers) Focal Length (mm)
+        // #rotation applied before translation
+        // #R(0,0) R(0,1) R(0,2) R(1,0) R(1,1) R(1,2) R(2,0) R(2,1) R(2,2) TxTy Tz F(mm)
+        // ...
+        //
+        // #3D Scene Points
+        // #x y z
+        // ...
+        // #End of boujou export file
+
+        if (!foundOffset) {
+            // # Exporting camera data for boujou frames 65 to 100
+            if (line[0] == "#" && line.size() == 10 && line[1] == "Exporting" && line[line.size() - 2] == "to") {
+                offsetFrame = std::atoi(line[line.size() - 3].c_str());
+                foundOffset = true;
+           }
+        }
+        if (!foundStart) {
+            // # First boujou frame indexed to animation frame 1
+            if (line[0] == "#" && line.size() == 9 && line[1] == "First" && line[2] == "boujou" && line[3] == "frame") {
+                startFrame = std::atoi(line[line.size() - 1].c_str()) + offsetFrame;
+                foundStart = true;
+            }
+        }
+
+        // #Filmback Size 14.7574 8.3007
+        if (line[0] == "#Filmback" && line.size() == 4) {
+            haperture = std::atof(line[2].c_str());
+            vaperture = std::atof(line[3].c_str());
+        }
+
+        if (foundOffset && foundStart && buf[0] != '#' && line.size() == 13) {
+            ChanLine l;
+            //bool err = false;
+            l.frame = startFrame;
+            l.vfov = std::atof(line[12].c_str());
+            l.tx = std::atof(line[9].c_str());
+            l.ty = std::atof(line[10].c_str());
+            l.tz = std::atof(line[11].c_str());
+            double rot00 = std::atof(line[0].c_str());
+            double rot01 = std::atof(line[1].c_str());
+            double rot02 = std::atof(line[2].c_str());
+            double rot10 = std::atof(line[3].c_str());
+            //double rot11 = std::atof(line[4].c_str());
+            //double rot12 = std::atof(line[5].c_str());
+            double rot20 = std::atof(line[6].c_str());
+            double rot21 = std::atof(line[7].c_str());
+            double rot22 = std::atof(line[8].c_str());
+            if (rot00 == 0 && rot10 == 0) {
+                l.rx = std::atan2(-rot01, -rot02) * 180. / M_PI;
+                l.ry = 90.;
+                l.rz = 0.;
+            } else {
+                l.rx = std::atan2(rot21, -rot22) * 180. / M_PI;
+                l.ry = -std::asin(rot20) * 180. / M_PI;
+                l.rz = std::atan2(rot10,rot00) * 180. / M_PI;
+            }
+            lines.push_back(l);
+            ++startFrame;
+        }
+    }
+    std::fclose(f);
+    _effect->beginEditBlock(kParamPosMatImportFile);
+    _translate->deleteAllKeys();
+    _rotate->deleteAllKeys();
+    if (_type == ePosMatCamera && _projection) {
+        if (_projection->_camFocalLength) {
+            _projection->_camFocalLength->deleteAllKeys();
+        }
+        if (_projection->_camHAperture && haperture != 0.) {
+            _projection->_camHAperture->deleteAllKeys();
+            _projection->_camHAperture->setValue(haperture);
+        }
+        if (_projection->_camVAperture && vaperture != 0.) {
+            _projection->_camVAperture->deleteAllKeys();
+            _projection->_camVAperture->setValue(vaperture);
+        }
+    }
+    for (std::list<ChanLine>::const_iterator it = lines.begin(); it != lines.end(); ++it) {
+        _translate->setValueAtTime(it->frame, it->tx, it->ty, it->tz);
+        _rotate->setValueAtTime(it->frame, it->rx, it->ry, it->rz);
+        if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
+            // it-vfov contains focal in Boujou
+            double focal = it->vfov;
+            //double vaperture = _projection->_camVAperture->getValueAtTime(it->frame);
+            //double focal = 0.5 * vaperture / std::tan(0.5 * (it->vfov * M_PI / 180));
+
+            _projection->_camFocalLength->setValueAtTime(it->frame, focal);
+        }
+    }
+    _effect->endEditBlock();
+}
+
+void
 PosMatParam::exportChan()
 {
     string filename;
-    _importChan->getValue(filename);
+    _importFile->getValue(filename);
     if ( filename.empty() ) {
         // no filename, do nothing
         return;
@@ -891,8 +1047,22 @@ PosMatParam::define(ImageEffectDescriptor &desc,
             page->addChild(*subgroup);
         }
         {
-            StringParamDescriptor* param = desc.defineStringParam(prefix + kParamPosMatImportChan);
-            param->setLabelAndHint(kParamPosMatImportChanLabel);
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(prefix + kParamPosMatImportFormat);
+            param->setLabelAndHint(kParamPosMatImportFormatLabel);
+            assert(param->getNOptions() == eImportFormatChan);
+            param->appendOption(kParamPosMatImportFormatOptionChan);
+            assert(param->getNOptions() == eImportFormatBoujou);
+            param->appendOption(kParamPosMatImportFormatOptionBoujou);
+            if (subgroup) {
+                param->setParent(*subgroup);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            StringParamDescriptor* param = desc.defineStringParam(prefix + kParamPosMatImportFile);
+            param->setLabelAndHint(kParamPosMatImportFileLabel);
             param->setStringType(eStringTypeFilePath);
             param->setFilePathExists(true);
             param->setAnimates(false);
@@ -909,8 +1079,8 @@ PosMatParam::define(ImageEffectDescriptor &desc,
 
         }
         if (!OFX::getImageEffectHostDescription()->isNatron) { // Natron already has a reload button
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(prefix + kParamPosMatImportChanReload);
-            param->setLabelAndHint(kParamPosMatImportChanReloadLabel);
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(prefix + kParamPosMatImportFileReload);
+            param->setLabelAndHint(kParamPosMatImportFileReloadLabel);
             if (subgroup) {
                 param->setParent(*subgroup);
             }
@@ -1282,9 +1452,17 @@ PosMatParam::changedParam(const InstanceChangedArgs &args,
     }
     const double t = args.time;
     if ( args.reason == eChangeUserEdit &&
-        (paramName == _importChan->getName() ||
-          (_importChanReload && paramName == _importChanReload->getName()) ) ) {
-        importChan();
+        (paramName == _importFile->getName() ||
+          (_importFileReload && paramName == _importFileReload->getName()) ) ) {
+        ImportFormatEnum format = (ImportFormatEnum)_importFormat->getValue();
+        switch (format) {
+        case eImportFormatChan:
+            importChan();
+            break;
+        case eImportFormatBoujou:
+            importBoujou();
+            break;
+        }
     } else if ( args.reason == eChangeUserEdit &&
                 (paramName == _exportChan->getName() ||
                  (_exportChanRewrite && paramName == _exportChanRewrite->getName()) ) ) {

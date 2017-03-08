@@ -43,7 +43,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription "Adjusts the saturation, constrast, gamma, gain and offset of an image.\n" \
     "The ranges of the shadows, midtones and highlights are controlled by the curves " \
     "in the \"Ranges\" tab.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=ColorCorrect"
+    "The Contrast adjustment works using the formula: Output = (Input/0.18)^Contrast*0.18.\n" \
+    "\n" \
+    "See also:\n" \
+    "- http://opticalenquiry.com/nuke/index.php?title=ColorCorrect\n" \
+    "- https://compositormathematic.wordpress.com/2013/07/06/gamma-contrast/"
 
 #define kPluginIdentifier "net.sf.openfx.ColorCorrectPlugin"
 // History:
@@ -272,77 +276,90 @@ struct RGBAPixel
 private:
     void applySaturation(const ColorControlValues &c)
     {
-        if (processR) {
+        if (processR && c.r != 1.) {
             r = (1.f - c.r) * l + c.r * r;
         }
-        if (processG) {
+        if (processG && c.g != 1.) {
             g = (1.f - c.g) * l + c.g * g;
         }
-        if (processB) {
+        if (processB && c.b != 1.) {
             b = (1.f - c.b) * l + c.b * b;
         }
     }
 
     void applyContrast(const ColorControlValues &c)
     {
-        if (processR) {
-            r = (r - 0.5f) * c.r  + 0.5f;
+        // See https://compositormathematic.wordpress.com/2013/07/06/gamma-contrast/
+        // 0.18 is the value that a (maybe) correctly exposed grey card is in sRGB
+        // colour space. A grey card is a piece of card who’s surface is specially
+        // designed to reflect 18% of the light that hits it. It’s used in
+        // photography alongside a light meter to judge the correct exposure of a
+        // scene. The argument is that for some reason 18% is the value of middle
+        // grey, and all fingers seem to point to a photographer named Ansel
+        // Adams who somehow convinced the people at Kodak of this. You can read
+        // about it here: http://bythom.com/graycards.htm. People in the know say
+        // that this value of 18% is about 1/2 a stop wrong, and it should be more
+        // like 12%. It would also seem that the people making grey cards aren’t
+        // talking to the people making light meters.
+
+        if (processR && (r > 0) && c.r != 1.) {
+            r = std::pow(r / 0.18, c.r) * 0.18;
         }
-        if (processG) {
-            g = (g - 0.5f) * c.g  + 0.5f;
+        if (processG && (g > 0) && c.g != 1.) {
+            g = std::pow(g / 0.18, c.g) * 0.18;
         }
-        if (processB) {
-            b = (b - 0.5f) * c.b  + 0.5f;
+        if (processB && (b > 0) && c.b != 1.) {
+            b = std::pow(b / 0.18, c.b) * 0.18;
         }
-        if (processA) {
-            a = (a - 0.5f) * c.a  + 0.5f;
+        if (processA && (a > 0) && c.a != 1.) {
+            a = std::pow(a / 0.18, c.a) * 0.18;
         }
     }
 
     void applyGain(const ColorControlValues &c)
     {
-        if (processR) {
+        if (processR && c.r != 1.) {
             r = r * c.r;
         }
-        if (processG) {
+        if (processG && c.g != 1.) {
             g = g * c.g;
         }
-        if (processB) {
+        if (processB && c.b != 1.) {
             b = b * c.b;
         }
-        if (processA) {
+        if (processA && c.a != 1.) {
             a = a * c.a;
         }
     }
 
     void applyGamma(const ColorControlValues &c)
     {
-        if ( processR && (r > 0) ) {
+        if ( processR && (r > 0) && c.r != 1. ) {
             r = std::pow(r, 1. / c.r);
         }
-        if ( processG && (g > 0) ) {
+        if ( processG && (g > 0) && c.g != 1. ) {
             g = std::pow(g, 1. / c.g);
         }
-        if ( processB && (b > 0) ) {
+        if ( processB && (b > 0) && c.b != 1. ) {
             b = std::pow(b, 1. / c.b);
         }
-        if ( processA && (a > 0) ) {
+        if ( processA && (a > 0) && c.a != 1. ) {
             a = std::pow(a, 1. / c.a);
         }
     }
 
     void applyOffset(const ColorControlValues &c)
     {
-        if (processR) {
+        if (processR && c.r != 0.) {
             r = r + c.r;
         }
-        if (processG) {
+        if (processG && c.g != 0.) {
             g = g + c.g;
         }
-        if (processB) {
+        if (processB && c.b != 0.) {
             b = b + c.b;
         }
-        if (processA) {
+        if (processA && c.a != 0.) {
             a = a + c.a;
         }
     }
