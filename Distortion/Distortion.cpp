@@ -2981,8 +2981,6 @@ DistortionPlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
     assert(gIsMultiPlaneV2);
 
     PixelComponentEnum dstPx = _dstClip->getPixelComponents();
-    clipComponents.addClipComponents(*_dstClip, dstPx);
-    clipComponents.addClipComponents(*_srcClip, dstPx);
 
     if (_uvClip) {
         std::map<Clip*, std::set<std::string> > clipMap;
@@ -3003,7 +3001,7 @@ DistortionPlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
             std::set<std::string>& clipPlanes = clipMap[clip];
             std::pair<std::set<std::string>::iterator, bool> ret = clipPlanes.insert(ofxPlaneStr);
             if (ret.second) {
-                clipComponents.addClipComponents(*clip, ofxPlaneStr);
+                clipComponents.addClipPlane(*clip, ofxPlaneStr);
             }
 
         }
