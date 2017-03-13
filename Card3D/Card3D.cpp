@@ -854,6 +854,24 @@ PosMatParam::importChan()
     _effect->endEditBlock();
 }
 
+static std::string
+trim(std::string const & str)
+{
+    const std::string whitespace = " \t\f\v\n\r";
+    std::size_t first = str.find_first_not_of(whitespace);
+
+    // If there is no non-whitespace character, both first and last will be std::string::npos (-1)
+    // There is no point in checking both, since if either doesn't work, the
+    // other won't work, either.
+    if (first == std::string::npos) {
+        return "";
+    }
+
+    std::size_t last  = str.find_last_not_of(whitespace);
+
+    return str.substr(first, last - first + 1);
+}
+
 // importBoujou.
 //
 // Credits:
@@ -889,10 +907,10 @@ PosMatParam::importBoujou()
 
     while (std::fgets(buf, sizeof buf, f) != NULL) {
         if (i == 1) {
+            const string b( trim(buf) );
             const string h("# boujou export: text");
-            int c = h.compare(0, h.size() - 1, buf);
-            if (c != 0) {
-                _effect->sendMessage(Message::eMessageError, "", "ERROR: incorrect file header on first line, expected '" + h + "', got '" + buf + "'", false);
+            if (b != h) {
+                _effect->sendMessage(Message::eMessageError, "", "Boujou import error: incorrect file header on first line, expected '" + h + "', got '" + b + "'", false);
 
                 std::fclose(f);
                 return;
