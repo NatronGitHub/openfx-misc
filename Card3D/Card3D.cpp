@@ -787,6 +787,24 @@ private:
     };
 };
 
+static std::string
+trim(std::string const & str)
+{
+    const std::string whitespace = " \t\f\v\n\r";
+    std::size_t first = str.find_first_not_of(whitespace);
+
+    // If there is no non-whitespace character, both first and last will be std::string::npos (-1)
+    // There is no point in checking both, since if either doesn't work, the
+    // other won't work, either.
+    if (first == std::string::npos) {
+        return "";
+    }
+
+    std::size_t last  = str.find_last_not_of(whitespace);
+
+    return str.substr(first, last - first + 1);
+}
+
 void
 PosMatParam::importChan()
 {
@@ -806,11 +824,13 @@ PosMatParam::importChan()
     char buf[1024];
 
     while (std::fgets(buf, sizeof buf, f) != NULL) {
-        if (buf[0] != '#') {
+        const string bufstr( trim(buf) );
+        if (bufstr.size() > 0 && bufstr[0] != '#') {
+            const char* b = bufstr.c_str();
             ChanLine l;
             bool err = false;
             if (_type == ePosMatCamera) {
-                int ret = std::sscanf(buf, "%d%lf%lf%lf%lf%lf%lf%lf",
+                int ret = std::sscanf(b, "%d%lf%lf%lf%lf%lf%lf%lf",
                                       &l.frame, &l.tx, &l.ty, &l.tz, &l.rx, &l.ry, &l.rz, &l.vfov);
                 if (ret == 8) {
                     lines.push_back(l);
@@ -818,7 +838,7 @@ PosMatParam::importChan()
                     err = true;
                 }
             } else {
-                int ret = std::sscanf(buf, "%d%lf%lf%lf%lf%lf%lf",
+                int ret = std::sscanf(b, "%d%lf%lf%lf%lf%lf%lf",
                                       &l.frame, &l.tx, &l.ty, &l.tz, &l.rx, &l.ry, &l.rz);
                 if (ret == 7) {
                     lines.push_back(l);
@@ -828,7 +848,7 @@ PosMatParam::importChan()
             }
             if (err) {
                 std::fclose(f);
-                _effect->sendMessage(Message::eMessageError, "", "Cannot parse chan line from " + filename + ": " + buf, false);
+                _effect->sendMessage(Message::eMessageError, "", "Chan import error: Cannot parse line from " + filename + ": '" + bufstr + "'", false);
 
                 return;
             }
@@ -852,24 +872,6 @@ PosMatParam::importChan()
         }
     }
     _effect->endEditBlock();
-}
-
-static std::string
-trim(std::string const & str)
-{
-    const std::string whitespace = " \t\f\v\n\r";
-    std::size_t first = str.find_first_not_of(whitespace);
-
-    // If there is no non-whitespace character, both first and last will be std::string::npos (-1)
-    // There is no point in checking both, since if either doesn't work, the
-    // other won't work, either.
-    if (first == std::string::npos) {
-        return "";
-    }
-
-    std::size_t last  = str.find_last_not_of(whitespace);
-
-    return str.substr(first, last - first + 1);
 }
 
 // importBoujou.
