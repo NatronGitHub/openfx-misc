@@ -71,6 +71,7 @@ TimeDissolve \
 TimeOffset \
 TrackerPM \
 Transform \
+UVTool \
 VectorToColor
 
 ifeq ($(CONFIG),debug)
