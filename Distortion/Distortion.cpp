@@ -714,7 +714,7 @@ protected:
     bool _processA;
     bool _transformIsIdentity;
     Matrix3x3 _srcTransformInverse;
-    OfxRectI _format;
+    OfxRectD _format;
     std::vector<InputPlaneChannel> _planeChannels;
     bool _unpremultUV;
     double _uOffset;
@@ -778,7 +778,7 @@ public:
                    bool processA,
                    bool transformIsIdentity,
                    const Matrix3x3 &srcTransformInverse,
-                   const OfxRectI& format,
+                   const OfxRectD& format,
                    const std::vector<InputPlaneChannel>& planeChannels,
                    bool unpremultUV,
                    double uOffset,
@@ -1432,9 +1432,9 @@ private:
 
     void updateVisibility();
 
-    DistortionModel* getDistortionModel(const OfxRectI& format, const OfxPointD& renderScale, double time);
+    DistortionModel* getDistortionModel(const OfxRectD& format, const OfxPointD& renderScale, double time);
 
-    bool getLensDistortionFormat(double time, const OfxPointD& renderScale, OfxRectI *format, double *par);
+    bool getLensDistortionFormat(double time, const OfxPointD& renderScale, OfxRectD *format, double *par);
 
 private:
     int _majorVersion;
@@ -1576,14 +1576,20 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         buildChannelMenus();
     }
     if (_plugin == eDistortionPluginLensDistortion) {
-        OfxRectI format;
+        OfxRectD format;
         double par;
-        OfxPointD renderScale = {1., 1.};
+        OfxPointD rs1 = {1., 1.};
 
         // we pass 0 as time, since anyway the input RoD is never used, thanks to the test on the return value
-        bool setFormat = getLensDistortionFormat(0, renderScale, &format, &par);
+        bool setFormat = getLensDistortionFormat(0, rs1, &format, &par);
         if (setFormat) {
-            clipPreferences.setOutputFormat(format);
+            OfxRectI formatI;
+            // round to nearest
+            formatI.x1 = std::floor(format.x1 + 0.5);
+            formatI.y1 = std::floor(format.y1 + 0.5);
+            formatI.x2 = std::floor(format.x2 + 0.5);
+            formatI.y2 = std::floor(format.y2 + 0.5);
+            clipPreferences.setOutputFormat(formatI);
             clipPreferences.setPixelAspectRatio(*_dstClip, par);
         }
     } else if ( _plugin == eDistortionPluginSTMap && _uvClip && _uvClip->isConnected() ) {
@@ -1697,8 +1703,9 @@ getChannelIndex(InputChannelEnum e,
 // 1,1 when calling from getRoD
 // rs when calling fro getRoI
 // rs when calling fro render
+// format is in pixels (but may be non-integer)
 DistortionModel*
-DistortionPlugin::getDistortionModel(const OfxRectI& format, const OfxPointD& renderScale, double time)
+DistortionPlugin::getDistortionModel(const OfxRectD& format, const OfxPointD& renderScale, double time)
 {
     if (_plugin != eDistortionPluginLensDistortion) {
         return NULL;
@@ -2033,7 +2040,7 @@ DistortionPlugin::getDistortionModel(const OfxRectI& format, const OfxPointD& re
 bool
 DistortionPlugin::getLensDistortionFormat(double time,
                                           const OfxPointD& renderScale,
-                                          OfxRectI *format,
+                                          OfxRectD *format,
                                           double *par)
 {
     assert(_plugin == eDistortionPluginLensDistortion);
@@ -2046,8 +2053,8 @@ DistortionPlugin::getLensDistortionFormat(double time,
             _formatSize->getValue(w, h);
             *par = _formatPar->getValue();
             format->x1 = format->y1 = 0;
-            format->x2 = std::ceil(w * renderScale.x);
-            format->y2 = std::ceil(h * renderScale.y);
+            format->x2 = w * renderScale.x;
+            format->y2 = h * renderScale.y;
 
             return true;
             break;
@@ -2059,7 +2066,11 @@ DistortionPlugin::getLensDistortionFormat(double time,
             rod.x2 += rod.x1;
             rod.y2 += rod.y1;
             *par = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
-            Coords::toPixelNearest(rod, renderScale, *par, format);
+            // Coords::toPixelNearest(rod, renderScale, *par, format);
+            format->x1 = rod.x1 * renderScale.x / *par;
+            format->y1 = rod.y1 * renderScale.y;
+            format->x2 = rod.x2 * renderScale.x / *par;
+            format->y2 = rod.y2 * renderScale.y;
 
             return true;
             break;
@@ -2073,40 +2084,53 @@ DistortionPlugin::getLensDistortionFormat(double time,
             rod.y1 = off.y;
             rod.y2 = off.y + siz.y;
             *par = getProjectPixelAspectRatio();
-            Coords::toPixelNearest(rod, renderScale, *par, format);
+            // Coords::toPixelNearest(rod, renderScale, *par, format);
+            format->x1 = rod.x1 * renderScale.x / *par;
+            format->y1 = rod.y1 * renderScale.y;
+            format->x2 = rod.x2 * renderScale.x / *par;
+            format->y2 = rod.y2 * renderScale.y;
 
             return true;
             break;
         }
         case eGeneratorExtentDefault:
             if ( _srcClip && _srcClip->isConnected() ) {
-                format->x1 = format->y1 = format->x2 = format->y2 = 0; // default value
+                OfxRectI formatI;
+                formatI.x1 = formatI.y1 = formatI.x2 = formatI.y2 = 0; // default value
                 if (_majorVersion >= 3) {
                     // before version 3, LensDistortion was only using RoD
-                    _srcClip->getFormat(*format);
+                    _srcClip->getFormat(formatI);
                 }
                 *par = _srcClip->getPixelAspectRatio();
-                if ( OFX::Coords::rectIsEmpty(*format) ) {
+                if ( OFX::Coords::rectIsEmpty(formatI) ) {
                     // no format is available, use the RoD instead
                     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
-                    Coords::toPixelNearest(srcRod, renderScale, *par, format);
+                    // Coords::toPixelNearest(srcRod, renderScale, *par, format);
+                    format->x1 = srcRod.x1 * renderScale.x / *par;
+                    format->y1 = srcRod.y1 * renderScale.y;
+                    format->x2 = srcRod.x2 * renderScale.x / *par;
+                    format->y2 = srcRod.y2 * renderScale.y;
                 } else {
-                    format->x1 = std::floor(format->x1 * renderScale.x + 0.5);
-                    format->y1 = std::floor(format->y1 * renderScale.x + 0.5);
-                    format->x2 = std::floor(format->x2 * renderScale.x + 0.5);
-                    format->y2 = std::floor(format->y2 * renderScale.x + 0.5);
+                    format->x1 = formatI.x1 * renderScale.x;
+                    format->y1 = formatI.y1 * renderScale.y;
+                    format->x2 = formatI.x2 * renderScale.x;
+                    format->y2 = formatI.y2 * renderScale.y;
                 }
             } else {
                 // default to Project Size
-                OfxRectD srcRoD;
+                OfxRectD srcRod;
                 OfxPointD siz = getProjectSize();
                 OfxPointD off = getProjectOffset();
-                srcRoD.x1 = off.x;
-                srcRoD.x2 = off.x + siz.x;
-                srcRoD.y1 = off.y;
-                srcRoD.y2 = off.y + siz.y;
+                srcRod.x1 = off.x;
+                srcRod.x2 = off.x + siz.x;
+                srcRod.y1 = off.y;
+                srcRod.y2 = off.y + siz.y;
                 *par = getProjectPixelAspectRatio();
-                Coords::toPixelNearest(srcRoD, renderScale, *par, format);
+                // Coords::toPixelNearest(srcRod, renderScale, *par, format);
+                format->x1 = srcRod.x1 * renderScale.x / *par;
+                format->y1 = srcRod.y1 * renderScale.y;
+                format->x2 = srcRod.x2 * renderScale.x / *par;
+                format->y2 = srcRod.y2 * renderScale.y;
             }
 
             return false;
@@ -2364,13 +2388,29 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         uScale *= args.renderScale.x;
         vScale *= args.renderScale.y;
     }
-    OfxRectI format = {0, 0, 1, 1};
+    OfxRectD format = {0, 0, 1, 1};
     if (_plugin == eDistortionPluginLensDistortion) {
         double par = 1.;
         getLensDistortionFormat(time, args.renderScale, &format, &par);
     } else if (_srcClip && _srcClip->isConnected()) {
-        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
-        Coords::toPixelNearest(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &format);
+        OfxRectI formatI;
+        formatI.x1 = formatI.y1 = formatI.x2 = formatI.y2 = 0; // default value
+        _srcClip->getFormat(formatI);
+        double par = _srcClip->getPixelAspectRatio();
+        if ( OFX::Coords::rectIsEmpty(formatI) ) {
+            // no format is available, use the RoD instead
+            const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+            // Coords::toPixelNearest(srcRod, renderScale, *par, format);
+            format.x1 = srcRod.x1 * args.renderScale.x / par;
+            format.y1 = srcRod.y1 * args.renderScale.y;
+            format.x2 = srcRod.x2 * args.renderScale.x / par;
+            format.y2 = srcRod.y2 * args.renderScale.y;
+        } else {
+            format.x1 = formatI.x1 * args.renderScale.x;
+            format.y1 = formatI.y1 * args.renderScale.y;
+            format.x2 = formatI.x2 * args.renderScale.x;
+            format.y2 = formatI.y2 * args.renderScale.y;
+        }
     }
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
@@ -2746,7 +2786,7 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     }
 
     if (_plugin == eDistortionPluginLensDistortion) {
-        OfxRectI format = {0, 1, 0, 1};
+        OfxRectD format = {0, 1, 0, 1};
         double par = 1.;
         getLensDistortionFormat(time, args.renderScale, &format, &par);
 
@@ -2866,7 +2906,7 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         if (_majorVersion < 3) {
              return false; // use source RoD
         }
-        OfxRectI format = {0, 1, 0, 1};
+        OfxRectD format = {0, 1, 0, 1};
         double par = 1.;
         getLensDistortionFormat(time, args.renderScale, &format, &par);
 
@@ -2876,31 +2916,29 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         OfxRectD rodPixel = { std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
         assert( OFX::Coords::rectIsEmpty(rodPixel) );
 
-        OfxRectD srcRod;
+        OfxRectD srcRodPixel;
         if (_srcClip && _srcClip->isConnected()) {
             OfxRectD rod = _srcClip->getRegionOfDefinition(time);
             double srcPar = _srcClip->getPixelAspectRatio();
-            OfxRectI srcRodPixel;
-            OFX::Coords::toPixelEnclosing(rod, args.renderScale, srcPar, &srcRodPixel);
-            srcRod.x1 = srcRodPixel.x1;
-            srcRod.y1 = srcRodPixel.y1;
-            srcRod.x2 = srcRodPixel.x2;
-            srcRod.y2 = srcRodPixel.y2;
+            srcRodPixel.x1 = rod.x1 * args.renderScale.x / srcPar;
+            srcRodPixel.y1 = rod.y1 * args.renderScale.y;
+            srcRodPixel.x2 = rod.x2 * args.renderScale.x / srcPar;
+            srcRodPixel.y2 = rod.y2 * args.renderScale.y;
         } else {
-            srcRod.x1 = format.x1;
-            srcRod.y1 = format.y1;
-            srcRod.x2 = format.x2;
-            srcRod.y2 = format.y2;
+            srcRodPixel.x1 = format.x1;
+            srcRodPixel.y1 = format.y1;
+            srcRodPixel.x2 = format.x2;
+            srcRodPixel.y2 = format.y2;
         }
         const int step = 10;
-        const double w= (srcRod.x2 - srcRod.x1);
-        const double h= (srcRod.y2 - srcRod.y1);
+        const double w= (srcRodPixel.x2 - srcRodPixel.x1);
+        const double h= (srcRodPixel.y2 - srcRodPixel.y1);
         const double xstep = w / step;
         const double ystep= h / step;
         for (int i = 0; i <= step; ++i) {
             for (int j = 0; j < 2; ++j) {
-                double x = srcRod.x1 + xstep * i;
-                double y = srcRod.y1 + h * j;
+                double x = srcRodPixel.x1 + xstep * i;
+                double y = srcRodPixel.y1 + h * j;
                 double xo, yo;
                 if (direction == eDirectionDistort) {
                     distortionModel->distort(x, y, &xo, &yo);
@@ -2915,8 +2953,8 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         }
         for (int i = 0; i < 2; ++i) {
             for (int j = 1; j < step; ++j) {
-                double x = srcRod.x1 + w * i;
-                double y = srcRod.y1 + ystep * j;
+                double x = srcRodPixel.x1 + w * i;
+                double y = srcRodPixel.y1 + ystep * j;
                 double xo, yo;
                 if (direction == eDirectionDistort) {
                     distortionModel->distort(x, y, &xo, &yo);
