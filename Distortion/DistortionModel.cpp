@@ -160,7 +160,7 @@ DistortionModelDistort::undistort(const double xd,
     *yu = y;
 }
 
-DistortionModelNuke::DistortionModelNuke(const OfxRectI& format,
+DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
                                          double par,
                                          double k1,
                                          double k2,
@@ -247,7 +247,7 @@ DistortionModelNuke::undistort(double xd, double yd, double* xu, double *yu) con
 
 
 
-DistortionModelPFBarrel::DistortionModelPFBarrel(const OfxRectI& format,
+DistortionModelPFBarrel::DistortionModelPFBarrel(const OfxRectD& format,
                                                  const OfxPointD& renderScale,
                                                  double c3,
                                                  double c5,
@@ -323,7 +323,7 @@ DistortionModelPFBarrel::undistort(double xd, double yd, double* xu, double *yu)
 
 
 /// this base class handles the 4 fov parameters & the seven built-in parameters
-DistortionModel3DEBase::DistortionModel3DEBase(const OfxRectI& format,
+DistortionModel3DEBase::DistortionModel3DEBase(const OfxRectD& format,
                                                const OfxPointD& renderScale,
                                                double xa_fov_unit,
                                                double ya_fov_unit,
@@ -361,7 +361,7 @@ DistortionModel3DEBase::DistortionModel3DEBase(const OfxRectI& format,
 
 
 /// this class handles the Degree-2 anamorphic and degree-4 radial mixed model
-DistortionModel3DEClassic::DistortionModel3DEClassic(const OfxRectI& format,
+DistortionModel3DEClassic::DistortionModel3DEClassic(const OfxRectD& format,
                                                      const OfxPointD& renderScale,
                                                      double xa_fov_unit,
                                                      double ya_fov_unit,
@@ -414,7 +414,7 @@ DistortionModel3DEClassic::undistort_dn(double xd, double yd, double* xu, double
 
 
 // Degree-6 anamorphic model
-DistortionModel3DEAnamorphic6::DistortionModel3DEAnamorphic6(const OfxRectI& format,
+DistortionModel3DEAnamorphic6::DistortionModel3DEAnamorphic6(const OfxRectD& format,
                                                              const OfxPointD& renderScale,
                                                              double xa_fov_unit,
                                                              double ya_fov_unit,
@@ -500,7 +500,7 @@ DistortionModel3DEAnamorphic6::undistort_dn(double xd, double yd, double* xu, do
 }
 
 // radial lens distortion model with equisolid-angle fisheye projection
-DistortionModel3DEFishEye8::DistortionModel3DEFishEye8(const OfxRectI& format,
+DistortionModel3DEFishEye8::DistortionModel3DEFishEye8(const OfxRectD& format,
                                                        const OfxPointD& renderScale,
                                                        double xa_fov_unit,
                                                        double ya_fov_unit,
@@ -571,7 +571,7 @@ DistortionModel3DEFishEye8::esa2plain(double x_esa_dn, double y_esa_dn, double *
 }
 
 /// this class handles the radial distortion with decentering and optional compensation for beam-splitter artefacts model
-DistortionModel3DEStandard::DistortionModel3DEStandard(const OfxRectI& format,
+DistortionModel3DEStandard::DistortionModel3DEStandard(const OfxRectD& format,
                                                        const OfxPointD& renderScale,
                                                        double xa_fov_unit,
                                                        double ya_fov_unit,
@@ -636,7 +636,7 @@ DistortionModel3DEStandard::undistort_dn(double xd, double yd, double* xu, doubl
 }
 
 // Degree-4 anamorphic model with anamorphic lens rotation
-DistortionModel3DEAnamorphic4::DistortionModel3DEAnamorphic4(const OfxRectI& format,
+DistortionModel3DEAnamorphic4::DistortionModel3DEAnamorphic4(const OfxRectD& format,
                                                              const OfxPointD& renderScale,
                                                              double xa_fov_unit,
                                                              double ya_fov_unit,
@@ -736,7 +736,7 @@ DistortionModel3DEAnamorphic4::undistort_dn(double xd, double yd, double* xu, do
 // see:
 // http://wiki.panotools.org/Lens_correction_model
 // http://hugin.sourceforge.net/docs/manual/Lens_correction_model.html
-DistortionModelPanoTools::DistortionModelPanoTools(const OfxRectI& format,
+DistortionModelPanoTools::DistortionModelPanoTools(const OfxRectD& format,
                                                    const OfxPointD& renderScale,
                                                    double par,
                                                    double a,

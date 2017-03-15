@@ -545,7 +545,7 @@ enum PosMatTypeEnum {
 #define kParamPosMatImportFormat "ImportFormat"
 #define kParamPosMatImportFormatLabel "Import Format", "The format of the file to import."
 #define kParamPosMatImportFormatOptionChan "chan", "Chan format, each line is FRAME TX TY TZ RX RY RZ VFOV. Can be created using Natron, Nuke, 3D-Equalizer, Maya and other 3D tracking software. Be careful that the rotation order must be exactly the same when exporting and importing the chan file."
-#define kParamPosMatImportFormatOptionBoujou "Boujou", "Boujour text export. Each camera line is R(0,0) R(0,1) R(0,2) R(1,0) R(1,1) R(1,2) R(2,0) R(2,1) R(2,2) Tx Ty Tz F(mm)."
+#define kParamPosMatImportFormatOptionBoujou "Boujou", "Boujou text export. In Boujou, after finishing the track and solving, go to Export > Export Camera Solve (Or press F12) > choose where to save the data and give it a name, click he drop down Export Type and make sure it will save as a .txt, then click Save. Each camera line is R(0,0) R(0,1) R(0,2) R(1,0) R(1,1) R(1,2) R(2,0) R(2,1) R(2,2) Tx Ty Tz F(mm)."
 enum ImportFormatEnum {
     eImportFormatChan = 0,
     eImportFormatBoujou,
@@ -787,6 +787,24 @@ private:
     };
 };
 
+static std::string
+trim(std::string const & str)
+{
+    const std::string whitespace = " \t\f\v\n\r";
+    std::size_t first = str.find_first_not_of(whitespace);
+
+    // If there is no non-whitespace character, both first and last will be std::string::npos (-1)
+    // There is no point in checking both, since if either doesn't work, the
+    // other won't work, either.
+    if (first == std::string::npos) {
+        return "";
+    }
+
+    std::size_t last  = str.find_last_not_of(whitespace);
+
+    return str.substr(first, last - first + 1);
+}
+
 void
 PosMatParam::importChan()
 {
@@ -806,11 +824,13 @@ PosMatParam::importChan()
     char buf[1024];
 
     while (std::fgets(buf, sizeof buf, f) != NULL) {
-        if (buf[0] != '#') {
+        const string bufstr( trim(buf) );
+        if (bufstr.size() > 0 && bufstr[0] != '#') {
+            const char* b = bufstr.c_str();
             ChanLine l;
             bool err = false;
             if (_type == ePosMatCamera) {
-                int ret = std::sscanf(buf, "%d%lf%lf%lf%lf%lf%lf%lf",
+                int ret = std::sscanf(b, "%d%lf%lf%lf%lf%lf%lf%lf",
                                       &l.frame, &l.tx, &l.ty, &l.tz, &l.rx, &l.ry, &l.rz, &l.vfov);
                 if (ret == 8) {
                     lines.push_back(l);
@@ -818,7 +838,7 @@ PosMatParam::importChan()
                     err = true;
                 }
             } else {
-                int ret = std::sscanf(buf, "%d%lf%lf%lf%lf%lf%lf",
+                int ret = std::sscanf(b, "%d%lf%lf%lf%lf%lf%lf",
                                       &l.frame, &l.tx, &l.ty, &l.tz, &l.rx, &l.ry, &l.rz);
                 if (ret == 7) {
                     lines.push_back(l);
@@ -828,7 +848,7 @@ PosMatParam::importChan()
             }
             if (err) {
                 std::fclose(f);
-                _effect->sendMessage(Message::eMessageError, "", "Cannot parse chan line from " + filename + ": " + buf, false);
+                _effect->sendMessage(Message::eMessageError, "", "Chan import error: Cannot parse line from " + filename + ": '" + bufstr + "'", false);
 
                 return;
             }
@@ -854,6 +874,14 @@ PosMatParam::importChan()
     _effect->endEditBlock();
 }
 
+// importBoujou.
+//
+// Credits:
+// - Ivan Busquets' importBoujou.py
+// http://www.nukepedia.com/python/import/export/importboujou
+// - Blenders' import_boujou.py
+// https://wiki.blender.org/index.php/Extensions:2.4/Py/Scripts/Manual/Import/Boujou
+// https://sourceforge.net/projects/boujouimport/
 void
 PosMatParam::importBoujou()
 {
@@ -877,8 +905,20 @@ PosMatParam::importBoujou()
     double vaperture = 0;
     std::list<ChanLine> lines;
     char buf[1024];
+    int i = 1; // line number
 
     while (std::fgets(buf, sizeof buf, f) != NULL) {
+        if (i == 1) {
+            const string b( trim(buf) );
+            const string h("# boujou export: text");
+            if (b != h) {
+                _effect->sendMessage(Message::eMessageError, "", "Boujou import error: incorrect file header on first line, expected '" + h + "', got '" + b + "'", false);
+
+                std::fclose(f);
+                return;
+            }
+        }
+
         std::stringstream ss(buf); // Insert the string into a stream
 
         std::vector<string> line; // Create vector to hold our words
@@ -886,6 +926,10 @@ PosMatParam::importBoujou()
         // split using whitespace
         while (ss >> buf) {
             line.push_back(buf);
+        }
+
+        if (line.size() == 0) {
+            continue;
         }
         // # boujou export: text
         // # Copyright (c) 2009, Vicon Motion Systems
@@ -914,26 +958,26 @@ PosMatParam::importBoujou()
 
         if (!foundOffset) {
             // # Exporting camera data for boujou frames 65 to 100
-            if (line[0] == "#" && line.size() == 10 && line[1] == "Exporting" && line[line.size() - 2] == "to") {
+            if (line.size() == 10 && line[0] == "#" && line[1] == "Exporting" && line[line.size() - 2] == "to") {
                 offsetFrame = std::atoi(line[line.size() - 3].c_str());
                 foundOffset = true;
            }
         }
         if (!foundStart) {
             // # First boujou frame indexed to animation frame 1
-            if (line[0] == "#" && line.size() == 9 && line[1] == "First" && line[2] == "boujou" && line[3] == "frame") {
+            if (line.size() == 9 && line[0] == "#" && line[1] == "First" && line[2] == "boujou" && line[3] == "frame") {
                 startFrame = std::atoi(line[line.size() - 1].c_str()) + offsetFrame;
                 foundStart = true;
             }
         }
 
         // #Filmback Size 14.7574 8.3007
-        if (line[0] == "#Filmback" && line.size() == 4) {
+        if (line.size() == 4 && line[0] == "#Filmback") {
             haperture = std::atof(line[2].c_str());
             vaperture = std::atof(line[3].c_str());
         }
 
-        if (foundOffset && foundStart && buf[0] != '#' && line.size() == 13) {
+        if (foundOffset && foundStart && line.size() == 13 && buf[0] != '#') {
             ChanLine l;
             //bool err = false;
             l.frame = startFrame;
@@ -962,6 +1006,7 @@ PosMatParam::importBoujou()
             lines.push_back(l);
             ++startFrame;
         }
+        ++i;
     }
     std::fclose(f);
     _effect->beginEditBlock(kParamPosMatImportFile);
