@@ -880,7 +880,7 @@ CropPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    generatorDescribeInContext(page, desc, /*unused*/ *dstClip, eGeneratorExtentSize, /*unused*/ ePixelComponentRGBA, /*useOutputComponentsAndDepth=*/ false, context);
+    generatorDescribeInContext(page, desc, /*unused*/ *dstClip, eGeneratorExtentSize, /*unused*/ ePixelComponentRGBA, /*useOutputComponentsAndDepth=*/ false, context, /*reformat=*/ false);
 
     // softness
     {

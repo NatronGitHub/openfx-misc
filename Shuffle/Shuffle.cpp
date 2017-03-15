@@ -655,7 +655,7 @@ ShufflePlugin::getClipComponents(const ClipComponentsArguments& args,
         if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
             return;
         }
-        clipComponents.addClipComponents(*_dstClip, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
+        clipComponents.addClipPlane(*_dstClip, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
     }
 
     clipComponents.setPassThroughClip(_srcClipA, args.time, args.view);
@@ -677,7 +677,7 @@ ShufflePlugin::getClipComponents(const ClipComponentsArguments& args,
         std::string ofxComponentsStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane);
         std::pair<std::set<std::string>::iterator, bool> ret = availablePlanes.insert(ofxComponentsStr);
         if (ret.second) {
-            clipComponents.addClipComponents(*clip, ofxComponentsStr);
+            clipComponents.addClipPlane(*clip, ofxComponentsStr);
         }
 
     }

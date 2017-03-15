@@ -89,7 +89,7 @@ class DistortionModelNuke
 : public DistortionModelUndistort
 {
 public:
-    DistortionModelNuke(const OfxRectI& format,
+    DistortionModelNuke(const OfxRectD& format,
                         double par,
                         double k1,
                         double k2,
@@ -125,7 +125,7 @@ class DistortionModelPFBarrel
 : public DistortionModelUndistort
 {
 public:
-    DistortionModelPFBarrel(const OfxRectI& format,
+    DistortionModelPFBarrel(const OfxRectD& format,
                             const OfxPointD& renderScale,
                             double c3,
                             double c5,
@@ -160,7 +160,7 @@ class DistortionModel3DEBase
 : public DistortionModelUndistort
 {
 protected:
-    DistortionModel3DEBase(const OfxRectI& format,
+    DistortionModel3DEBase(const OfxRectD& format,
                            const OfxPointD& renderScale,
                            double xa_fov_unit,
                            double ya_fov_unit,
@@ -302,7 +302,7 @@ private:
 
 protected:
 
-    OfxRectI _format;
+    OfxRectD _format;
     OfxPointD _rs;
         double _w;
         double _h;
@@ -327,7 +327,7 @@ class DistortionModel3DEClassic
 : public DistortionModel3DEBase
 {
 public:
-    DistortionModel3DEClassic(const OfxRectI& format,
+    DistortionModel3DEClassic(const OfxRectD& format,
                               const OfxPointD& renderScale,
                               double xa_fov_unit,
                               double ya_fov_unit,
@@ -375,7 +375,7 @@ class DistortionModel3DEAnamorphic6
 : public DistortionModel3DEBase
 {
 public:
-    DistortionModel3DEAnamorphic6(const OfxRectI& format,
+    DistortionModel3DEAnamorphic6(const OfxRectD& format,
                                   const OfxPointD& renderScale,
                                   double xa_fov_unit,
                                   double ya_fov_unit,
@@ -423,7 +423,7 @@ class DistortionModel3DEFishEye8
 : public DistortionModel3DEBase
 {
 public:
-    DistortionModel3DEFishEye8(const OfxRectI& format,
+    DistortionModel3DEFishEye8(const OfxRectD& format,
                                   const OfxPointD& renderScale,
                                   double xa_fov_unit,
                                   double ya_fov_unit,
@@ -462,7 +462,7 @@ class DistortionModel3DEStandard
 : public DistortionModel3DEBase
 {
 public:
-    DistortionModel3DEStandard(const OfxRectI& format,
+    DistortionModel3DEStandard(const OfxRectD& format,
                                const OfxPointD& renderScale,
                                double xa_fov_unit,
                                double ya_fov_unit,
@@ -507,7 +507,7 @@ class DistortionModel3DEAnamorphic4
 : public DistortionModel3DEBase
 {
 public:
-    DistortionModel3DEAnamorphic4(const OfxRectI& format,
+    DistortionModel3DEAnamorphic4(const OfxRectD& format,
                                   const OfxPointD& renderScale,
                                   double xa_fov_unit,
                                   double ya_fov_unit,
@@ -553,7 +553,7 @@ class DistortionModelPanoTools
 : public DistortionModelDistort
 {
 public:
-    DistortionModelPanoTools(const OfxRectI& format,
+    DistortionModelPanoTools(const OfxRectD& format,
                              const OfxPointD& renderScale,
                              double par,
                              double a,
