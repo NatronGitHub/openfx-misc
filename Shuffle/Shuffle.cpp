@@ -742,8 +742,7 @@ ShufflePlugin::isIdentityInternal(double time,
         for (int i = 0; i < 4; ++i) {
             MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_channelParam[i]->getName(), &data[i].clip, &data[i].plane, &data[i].index);
 
-            if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
-                //We might have an index in the param different from the actual components if getClipPreferences was not called so far
+            if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane) {
                 return false;
             }
             if (!data[i].plane.isColorPlane()) {
