@@ -1010,7 +1010,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
 
 
         p.img = 0;
-        if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant0 || (MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane && plane.getNumComponents() == 0)) {
+        if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant0 || (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane && plane.getNumComponents() == 0)) {
             p.fillZero = true;
         } else if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1) {
             p.fillZero = false;
