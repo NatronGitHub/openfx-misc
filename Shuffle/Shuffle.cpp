@@ -1305,7 +1305,7 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     // To respect OpenFX, we map our plane number of components to the components of the corresponding color plane
     // e.g: if our plane is Toto.XYZ and has 3 channels, it becomes RGB
     MultiPlane::ImagePlaneDesc colorPlaneMapped = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(dstPlane.getNumComponents());
-    PixelComponentEnum dstPixelComps = mapStrToPixelComponentEnum(MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(colorPlaneMapped));
+    PixelComponentEnum dstPixelComps = mapStrToPixelComponentEnum(MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(colorPlaneMapped));
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
 
 
