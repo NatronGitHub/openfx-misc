@@ -145,7 +145,7 @@ using namespace cimg_library;
  **/
 static
 CImg<T>&
-noise(CImg<T>&img, const double sigma, const unsigned int noise_type, uint32_t seed, int x1, int y1)
+noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned int seed, int x1, int y1)
 {
     if (img.is_empty()) {
         return img;

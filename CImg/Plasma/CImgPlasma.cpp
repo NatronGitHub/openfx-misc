@@ -135,7 +135,7 @@ using namespace cimg_library;
  \note Use the mid-point algorithm to render.
  **/
 CImg<T>&
-draw_plasma(CImg<T>&img, const float alpha/*=1*/, const float beta/*=0*/, const unsigned int scale/*=8*/, uint32_t seed, int x_1, int y_1)
+draw_plasma(CImg<T>&img, const float alpha/*=1*/, const float beta/*=0*/, const unsigned int scale/*=8*/, unsigned int seed, int x_1, int y_1)
 {
     if (img.is_empty()) {
         return img;
