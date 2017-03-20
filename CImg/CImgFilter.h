@@ -128,12 +128,18 @@
 inline void gImageEffectAbort();
 #endif
 
+
+#ifdef cimg_version
+#error "CImg.h was included before this file"
+#endif
+
 CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
 CLANG_DIAG_ON(shorten-64-to-32)
 #define cimg_library cimg_library_suffixed // so that namespace is private, but code requires no change
 
 typedef float cimgpix_t;
+typedef float cimgpixfloat_t;
 
 #define CIMG_ABORTABLE // use abortable versions of CImg functions
 
@@ -1119,5 +1125,81 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::isIdentity(const OFX::IsIdenti
 
     return false;
 } // >::isIdentity
+
+// functions for a reproductible random number generator (used in CImgNoise.cpp and CImgPlasma.cpp)
+inline unsigned int
+cimg_hash(unsigned int a)
+{
+    a = (a ^ 61) ^ (a >> 16);
+    a = a + (a << 3);
+    a = a ^ (a >> 4);
+    a = a * 0x27d4eb2d;
+    a = a ^ (a >> 15);
+
+    return a;
+}
+
+// returns a value from 0 to 0x100000000ULL excluded
+inline unsigned int
+cimg_irand(unsigned int seed, int x, int y, int nComponents)
+{
+    return cimg_hash(cimg_hash(cimg_hash(seed ^ x) ^ y) ^ nComponents);
+}
+
+inline double
+cimg_rand(unsigned int seed, int x, int y, int nComponents, const double val_min, const double val_max)
+{
+    const double val = cimg_irand(seed, x, y, nComponents) / ( (double)0x100000000ULL );
+    return val_min + (val_max - val_min)*val;
+}
+
+//! Return a random variable uniformely distributed between [0,val_max].
+/**
+ **/
+inline double
+cimg_rand(unsigned int seed, int x, int y, int nComponents, const double val_max = 1.)
+{
+    return cimg_rand(seed, x, y, nComponents, 0, val_max);
+}
+
+//! Return a random variable following a gaussian distribution and a standard deviation of 1.
+/**
+ **/
+inline double
+cimg_grand(unsigned int seed, int x, int y, int nComponents)
+{
+    double x1, w;
+    unsigned int s = seed;
+    do {
+        unsigned int r1 = cimg_irand(s, x, y, nComponents);
+        unsigned int r2 = cimg_irand(r1, x, y, nComponents);
+        s = r2;
+
+        const double x2 =  2 * (double) r2 / ( (double)0x100000000ULL ) - 1.;
+        x1 =  2 * (double) r1 / ( (double)0x100000000ULL ) - 1.;
+        w = x1*x1 + x2*x2;
+    } while (w<=0 || w>=1.0);
+    return x1*std::sqrt((-2*std::log(w))/w);
+}
+
+//! Return a random variable following a Poisson distribution of parameter z.
+/**
+ **/
+inline unsigned int
+cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
+{
+    if (z<=1.0e-10) {
+        return 0;
+    }
+    if (z>100) {
+        return (unsigned int)((std::sqrt(z) * cimg_grand(seed, x, y, nComponents)) + z);
+    }
+    unsigned int k = 0;
+    const double y1 = std::exp(-z);
+    for (double s = 1.0; s >= y1; ++k) {
+        s *= cimg_rand(seed+1, x, y, nComponents);
+    }
+    return k - 1;
+}
 
 #endif // ifndef Misc_CImgFilter_h
