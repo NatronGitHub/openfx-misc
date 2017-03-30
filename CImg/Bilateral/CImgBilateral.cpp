@@ -165,12 +165,16 @@ public:
         if (params.sigma_s == 0.) {
             return;
         }
+#pragma message WARN("CImg: check if sigma_r is still clamped to 0.1 in blur_bilateral newer versions of CImg")
+        // because blur_bilateral() clamps sigma_r to 0.1 (as of 30/03/2017), we multiply the guide and the sigma_r by 256
+        cimg *= 256;
         for (int i = 0; i < params.iterations; ++i) {
             if ( abort() ) {
                 return;
             }
-            cimg.blur_bilateral(cimg, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
+            cimg.blur_bilateral(cimg, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r * 256);
         }
+        cimg /= 256;
     }
 
     virtual bool isIdentity(const IsIdentityArguments & /*args*/,
@@ -238,15 +242,18 @@ public:
             return;
         }
 
+#pragma message WARN("CImg: check if sigma_r is still clamped to 0.1 in blur_bilateral newer versions of CImg")
+        // because blur_bilateral() clamps sigma_r to 0.1 (as of 30/03/2017), we multiply the guide and the sigma_r by 256
+        cimg_library::CImg<cimgpix_t> guide = srcB * 256;
         for (int i = 0; i < params.iterations; ++i) {
             if ( abort() ) {
                 return;
             }
 
             if (i == 0) {
-                dst = srcA.get_blur_bilateral(srcB, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
+                dst = srcA.get_blur_bilateral(guide, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r * 256);
             } else {
-                dst.blur_bilateral(srcB, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
+                dst.blur_bilateral(guide, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r * 256);
             }
         }
     }
