@@ -162,7 +162,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if (params.sigma_s == 0.) {
+        if (params.sigma_s <= 0. || params.sigma_r <= 0.) {
             return;
         }
 #pragma message WARN("CImg: check if sigma_r is still clamped to 0.1 in blur_bilateral newer versions of CImg")
@@ -180,7 +180,7 @@ public:
     virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgBilateralParams& params) OVERRIDE FINAL
     {
-        return (params.sigma_s == 0.);
+        return (params.sigma_s <= 0. || params.sigma_r <= 0.);
     };
 
 private:
@@ -238,7 +238,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if ( (params.iterations <= 0) || (params.sigma_s <= 0.) ) {
+        if ( (params.iterations <= 0) || (params.sigma_s <= 0.) || (params.sigma_r <= 0.)) {
             return;
         }
 
@@ -261,7 +261,7 @@ public:
     virtual int isIdentity(const IsIdentityArguments & /*args*/,
                            const CImgBilateralParams& params) OVERRIDE FINAL
     {
-        return (params.sigma_s == 0.);
+        return (params.iterations <= 0) || (params.sigma_s <= 0.) || (params.sigma_r <= 0.);
     };
 
 private:

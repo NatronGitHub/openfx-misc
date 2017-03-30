@@ -165,7 +165,7 @@ public:
     virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgGuidedParams& params) OVERRIDE FINAL
     {
-        return (params.radius == 0);
+        return (params.iterations <= 0) || (params.radius == 0);
     };
 
 private:
