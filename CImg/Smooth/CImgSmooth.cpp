@@ -245,7 +245,7 @@ public:
     virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgSmoothParams& params) OVERRIDE FINAL
     {
-        return (params.amplitude <= 0. || params.dl < 0.);
+        return (params.iterations <= 0) || (params.amplitude <= 0.) || (params.dl < 0.);
     };
     virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) OVERRIDE FINAL
