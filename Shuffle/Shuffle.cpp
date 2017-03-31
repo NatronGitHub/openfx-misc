@@ -1247,7 +1247,7 @@ ShufflePlugin::getDstPixelComps()
             int channelIndex = -1;
             MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_outputLayer->getName(), &clip, &dstPlane, &channelIndex);
             if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
-                throwSuiteStatusException(kOfxStatFailed);
+                return MultiPlane::ImagePlaneDesc::getNoneComponents();
             }
         }
         if (dstPlane.isColorPlane()) {
