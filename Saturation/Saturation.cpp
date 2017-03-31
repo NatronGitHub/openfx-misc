@@ -497,7 +497,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(SaturationProcessorBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
@@ -667,7 +667,8 @@ SaturationPlugin::render(const RenderArguments &args)
 bool
 SaturationPlugin::isIdentity(const IsIdentityArguments &args,
                              Clip * &identityClip,
-                             double & /*identityTime*/)
+                             double & /*identityTime*/
+                             , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     double mix = _mix->getValueAtTime(time);

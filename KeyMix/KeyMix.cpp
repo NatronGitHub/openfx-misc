@@ -280,7 +280,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(KeyMixProcessorBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
@@ -506,7 +506,8 @@ KeyMixPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 bool
 KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
                          Clip * &identityClip,
-                         double & /*identityTime*/)
+                         double & /*identityTime*/
+                         , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     double mix;

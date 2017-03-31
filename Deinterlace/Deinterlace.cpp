@@ -155,7 +155,7 @@ private:
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
@@ -665,7 +665,8 @@ DeinterlacePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args
 bool
 DeinterlacePlugin::isIdentity(const IsIdentityArguments &args,
                               Clip * & /*identityClip*/,
-                              double & /*identityTime*/)
+                              double & /*identityTime*/
+, int& /*view*/, std::string& /*plane*/)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         throwSuiteStatusException(kOfxStatFailed);

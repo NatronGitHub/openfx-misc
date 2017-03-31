@@ -267,7 +267,7 @@ private:
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) OVERRIDE FINAL
@@ -353,7 +353,8 @@ SlitScanPlugin::getFramesNeededRange(const double time,
 bool
 SlitScanPlugin::isIdentity(const IsIdentityArguments &args,
                            Clip * &identityClip,
-                           double &identityTime)
+                           double &identityTime
+                           , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     double retimeGain = _retimeGain->getValueAtTime(time);

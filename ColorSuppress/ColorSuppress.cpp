@@ -500,7 +500,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(ColorSuppressProcessorBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
@@ -676,7 +676,8 @@ ColorSuppressPlugin::render(const RenderArguments &args)
 bool
 ColorSuppressPlugin::isIdentity(const IsIdentityArguments &args,
                                 Clip * &identityClip,
-                                double & /*identityTime*/)
+                                double & /*identityTime*/
+                                , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     double mix;

@@ -112,7 +112,7 @@ public:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     // override the roi call
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
@@ -351,7 +351,8 @@ TimeDissolvePlugin::renderForBitDepth(const RenderArguments &args)
 bool
 TimeDissolvePlugin::isIdentity(const IsIdentityArguments &args,
                                Clip * &identityClip,
-                               double &identityTime)
+                               double &identityTime
+                               , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     // get the transition value

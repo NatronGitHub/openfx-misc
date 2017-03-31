@@ -213,7 +213,7 @@ private:
 
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -416,7 +416,8 @@ NoOpPlugin::render(const RenderArguments &args)
 bool
 NoOpPlugin::isIdentity(const IsIdentityArguments &args,
                        Clip * &identityClip,
-                       double & /*identityTime*/)
+                       double & /*identityTime*/
+                       , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     bool forceCopy;

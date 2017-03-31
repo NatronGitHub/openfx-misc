@@ -77,7 +77,7 @@ public:
 private:
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
@@ -157,7 +157,8 @@ NoTimeBlurPlugin::render(const RenderArguments &args)
 bool
 NoTimeBlurPlugin::isIdentity(const IsIdentityArguments &args,
                              Clip * &identityClip,
-                             double &identityTime)
+                             double &identityTime
+                             , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);

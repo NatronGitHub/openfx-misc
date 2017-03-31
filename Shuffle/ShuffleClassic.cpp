@@ -484,7 +484,7 @@ private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
@@ -524,7 +524,8 @@ private:
 bool
 ShufflePlugin::isIdentity(const IsIdentityArguments &args,
                           Clip * &identityClip,
-                          double & /*identityTime*/)
+                          double & /*identityTime*/
+                          , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     PixelComponentEnum srcAComponents = _srcClipA ? _srcClipA->getPixelComponents() : ePixelComponentNone;

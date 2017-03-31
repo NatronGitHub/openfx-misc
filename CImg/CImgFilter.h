@@ -345,7 +345,7 @@ public:
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip* &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip* &identityClip, double &identityTime, int& /*view*/, std::string& /*plane*/) OVERRIDE FINAL;
 
     // the following functions can be overridden/implemented by the plugin
     virtual void getValuesAtTime(double time, Params& params) = 0;
@@ -1065,7 +1065,8 @@ template <class Params, bool sourceIsOptional>
 bool
 CImgFilterPluginHelper<Params, sourceIsOptional>::isIdentity(const OFX::IsIdentityArguments &args,
                                                              OFX::Clip * &identityClip,
-                                                             double & /*identityTime*/)
+                                                             double & /*identityTime*/
+                                                             , int& /*view*/, std::string& /*plane*/)
 {
     if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);

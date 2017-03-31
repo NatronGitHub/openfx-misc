@@ -578,7 +578,7 @@ private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
     virtual void getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
 
@@ -782,7 +782,8 @@ ShufflePlugin::isIdentityInternal(double time,
 bool
 ShufflePlugin::isIdentity(const IsIdentityArguments &args,
                           Clip * &identityClip,
-                          double & /*identityTime*/)
+                          double & /*identityTime*/
+                          , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
 

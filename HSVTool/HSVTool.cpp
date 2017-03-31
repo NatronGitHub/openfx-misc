@@ -1103,7 +1103,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(HSVToolProcessorBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
@@ -1362,7 +1362,8 @@ HSVToolPlugin::render(const RenderArguments &args)
 bool
 HSVToolPlugin::isIdentity(const IsIdentityArguments &args,
                           Clip * &identityClip,
-                          double & /*identityTime*/)
+                          double & /*identityTime*/
+                          , int& /*view*/, std::string& /*plane*/)
 {
     if (!_srcClip || !_srcClip->isConnected()) {
         return false;

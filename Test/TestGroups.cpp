@@ -142,7 +142,7 @@ public:
 
 private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
@@ -224,7 +224,8 @@ TestGroupsPlugin::render(const RenderArguments &args)
 bool
 TestGroupsPlugin::isIdentity(const IsIdentityArguments &args,
                              Clip * &identityClip,
-                             double & /*identityTime*/)
+                             double & /*identityTime*/
+                             , int& /*view*/, std::string& /*plane*/)
 {
     if (!_srcClip || !_srcClip->isConnected()) {
         return false;
