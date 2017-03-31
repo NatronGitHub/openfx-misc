@@ -166,10 +166,8 @@ public:
             if ( abort() ) {
                 return;
             }
-#pragma message WARN("CImg: check if sigma_r is still clamped to 0.1 in blur_bilateral newer versions of CImg")
-            // because blur_bilateral() clamps sigma_r to 0.1 (as of 30/03/2017), we multiply the guide and the sigma_r by 256
             // filter the original image using the updated guide
-            guide = cimg.get_blur_bilateral(guide * 256, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r * 256);
+            guide = cimg.get_blur_bilateral(guide, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
         }
         cimg = guide;
     }
