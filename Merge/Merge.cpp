@@ -523,12 +523,19 @@ private:
                 }
 
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
-                for (int c = 0; c < nComponents; ++c) {
-                    if (!_outputChannels[c]) {
-                        dstPix[c] = srcPixB ? srcPixB[c] : 0;
+                if (nComponents == 1) {
+                    if (!_outputChannels[3]) {
+                        dstPix[0] = srcPixB ? srcPixB[0] : 0;
+                    }
+
+                } else {
+                    for (int c = 0; c < nComponents; ++c) {
+                        if (!_outputChannels[c]) {
+                            dstPix[c] = srcPixB ? srcPixB[c] : 0;
+                        }
                     }
                 }
-
+                
                 dstPix += nComponents;
             }
         }
