@@ -442,6 +442,10 @@ private:
                         } else {
                             a = 0.;
                         }
+                        // Premult all A pixels by the roto mask
+                        for (int c = 0; c < nComponents; ++c) {
+                            tmpA[c] *= a;
+                        }
                     }
                     if (!_rotoMaskImgB) {
                         if (nComponents == 4) {
@@ -450,6 +454,11 @@ private:
                             b = tmpB[0];
                         } else {
                             b = (_bChannels[3] && srcPixB) ? 1. : 0.;
+                        }
+                    } else {
+                        // Premult all B pixels by the roto mask
+                        for (int c = 0; c < nComponents; ++c) {
+                            tmpB[c] *= b;
                         }
                     }
 
@@ -501,6 +510,10 @@ private:
                                 a = *rotoMaskPix;
                             } else {
                                 a = 0.;
+                            }
+                            // Premult all A pixels by the roto mask
+                            for (int c = 0; c < nComponents; ++c) {
+                                tmpA[c] *= a;
                             }
                         }
 
