@@ -442,9 +442,12 @@ private:
                         } else {
                             a = 0.;
                         }
-                        // Premult all A pixels by the roto mask
-                        for (int c = 0; c < nComponents; ++c) {
-                            tmpA[c] *= a;
+                        // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
+                        if (_srcImgA != _rotoMaskImgA) {
+                            // Premult all A pixels by the roto mask
+                            for (int c = 0; c < nComponents; ++c) {
+                                tmpA[c] *= a;
+                            }
                         }
                     }
                     if (!_rotoMaskImgB) {
@@ -456,9 +459,12 @@ private:
                             b = (_bChannels[3] && srcPixB) ? 1. : 0.;
                         }
                     } else {
-                        // Premult all B pixels by the roto mask
-                        for (int c = 0; c < nComponents; ++c) {
-                            tmpB[c] *= b;
+                        // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
+                        if (_srcImgB != _rotoMaskImgB) {
+                            // Premult all B pixels by the roto mask
+                            for (int c = 0; c < nComponents; ++c) {
+                                tmpB[c] *= b;
+                            }
                         }
                     }
 
@@ -511,9 +517,12 @@ private:
                             } else {
                                 a = 0.;
                             }
-                            // Premult all A pixels by the roto mask
-                            for (int c = 0; c < nComponents; ++c) {
-                                tmpA[c] *= a;
+                            // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
+                            if (_optionalRotoMaskAImages[i] != _srcImgA) {
+                                // Premult all A pixels by the roto mask
+                                for (int c = 0; c < nComponents; ++c) {
+                                    tmpA[c] *= a;
+                                }
                             }
                         }
 
