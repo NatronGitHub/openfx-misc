@@ -496,7 +496,7 @@ private:
 
                         // work in float: clamping is done when mixing
                         float a;
-                        if (!_optionalRotoMaskAImages[i]) {
+                        if (i >= _optionalRotoMaskAImages.size() || !_optionalRotoMaskAImages[i]) {
                             if (nComponents == 4) {
                                 a = tmpA[3];
                             } else if (nComponents == 1) {
