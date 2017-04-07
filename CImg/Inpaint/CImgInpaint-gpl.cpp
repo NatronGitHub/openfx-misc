@@ -186,7 +186,7 @@ public:
                         const CImgInpaintParams& params,
                         int /*x1*/,
                         int /*y1*/,
-                        const cimg_library::CImg<cimgpix_t>& mask,
+                        cimg_library::CImg<cimgpix_t>& mask,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {
@@ -195,6 +195,10 @@ public:
         // This is the only place where the actual processing takes place
         if ( (params.patch_size <= 0) || (params.lookup_size <= 0.) || cimg.is_empty() ) {
             return;
+        }
+        // binarize the mask (because inpaint casts it to an int)
+        cimg_for(mask, ptrd, cimgpix_t) {
+            *ptrd = (*ptrd > 0);
         }
         cimg.inpaint_patch(mask,
                            (int)std::ceil(params.patch_size * args.renderScale.x),

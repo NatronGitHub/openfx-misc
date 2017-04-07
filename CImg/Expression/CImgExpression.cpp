@@ -474,7 +474,7 @@ public:
                         const CImgExpressionParams& params,
                         int /*x1*/,
                         int /*y1*/,
-                        const cimg_library::CImg<cimgpix_t>& /*mask*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

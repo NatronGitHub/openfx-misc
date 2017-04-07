@@ -387,7 +387,7 @@ public:
                         const Params& params,
                         int x1, //!< origin of the image tile
                         int y1, //!< origin of the image tile
-                        const cimg_library::CImg<cimgpix_t>& mask,
+                        cimg_library::CImg<cimgpix_t>& mask, //!< in: if the filter uses the mask, a single-channel mask (can be modified by the render func without any side-effect), else an empty image.
                         cimg_library::CImg<cimgpix_t>& cimg, //!< in/out: image
                         int alphaChannel //!< alpha channel in cimg, or -1 if there is no alpha channel
                         ) = 0;
