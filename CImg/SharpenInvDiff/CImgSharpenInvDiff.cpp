@@ -97,7 +97,7 @@ class CImgSharpenInvDiffPlugin
 public:
 
     CImgSharpenInvDiffPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgSharpenInvDiffParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgSharpenInvDiffParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _iterations = fetchIntParam(kParamIterations);
@@ -130,6 +130,7 @@ public:
                         const CImgSharpenInvDiffParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        const cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

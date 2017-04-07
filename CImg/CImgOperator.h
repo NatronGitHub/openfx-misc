@@ -35,11 +35,13 @@ public:
     CImgOperatorPluginHelperBase(OfxImageEffectHandle handle,
                                  const char* srcAClipName, //!< should be either kOfxImageEffectSimpleSourceClipName or "A" if you want this to be the default output when plugin is disabled
                                  const char* srcBClipName,
+                                 bool usesMask, // true if the mask parameter to render should be a single-channel image containing the mask
                                  bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                  bool supportsTiles,
                                  bool supportsMultiResolution,
                                  bool supportsRenderScale,
-                                 bool defaultUnpremult /*= true*/);
+                                 bool defaultUnpremult /*= true*/,
+                                 bool defaultProcessAlphaOnRGBA/* = false*/);
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     static OFX::PageParamDescriptor* describeInContextBegin(OFX::ImageEffectDescriptor &desc,
@@ -76,12 +78,14 @@ public:
     CImgOperatorPluginHelper(OfxImageEffectHandle handle,
                              const char* srcAClipName, //!< should be either kOfxImageEffectSimpleSourceClipName or "A" if you want this to be the default output when plugin is disabled
                              const char* srcBClipName,
+                             bool usesMask, // true if the mask parameter to render should be a single-channel image containing the mask
+                             bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                              bool supportsTiles,
                              bool supportsMultiResolution,
                              bool supportsRenderScale,
-                             bool defaultUnpremult = true,
-                             bool defaultProcessAlphaOnRGBA = false)
-        : CImgOperatorPluginHelperBase(handle, srcAClipName, srcBClipName, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA)
+                             bool defaultUnpremult/* = true*/,
+                             bool defaultProcessAlphaOnRGBA/* = false*/)
+        : CImgOperatorPluginHelperBase(handle, srcAClipName, srcBClipName, usesMask, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA)
     {}
 
     // override the roi call

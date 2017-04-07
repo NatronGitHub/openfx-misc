@@ -99,7 +99,7 @@ class CImgDilatePlugin
 public:
 
     CImgDilatePlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgDilateParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgDilateParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _size  = fetchInt2DParam(kParamSize);
         _expandRod = fetchBooleanParam(kParamExpandRoD);
@@ -153,6 +153,7 @@ public:
                         const CImgDilateParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        const cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {
