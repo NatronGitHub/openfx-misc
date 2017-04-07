@@ -115,10 +115,10 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect,
                         const OfxPointD& /*renderScale*/,
-                        const CImgSharpenInvDiffParams& /*params*/,
+                        const CImgSharpenInvDiffParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 24; // overlap is 24 in gmicol
+        int delta_pix = 24 * params.iterations; // overlap is 24 in gmicol
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;

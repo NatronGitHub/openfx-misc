@@ -205,7 +205,7 @@ public:
                         const CImgSmoothParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil( (params.amplitude + params.alpha + params.sigma) * renderScale.x );
+        int delta_pix = (int)std::ceil( (params.amplitude + params.alpha + params.sigma) * renderScale.x * params.iterations );
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
