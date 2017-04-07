@@ -591,23 +591,24 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
 
-
-        // shrink the processWindow at much as possible
-        // top
-        while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y2 - 1, maskInvert) ) {
-            --processWindow.y2;
-        }
-        // bottom
-        while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y1, maskInvert) ) {
-            ++processWindow.y1;
-        }
-        // left
-        while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x1, processWindow.y1, processWindow.y2, maskInvert) ) {
-            ++processWindow.x1;
-        }
-        // right
-        while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x2 - 1, processWindow.y1, processWindow.y2, maskInvert) ) {
-            --processWindow.x2;
+        if (_supportsTiles) {
+            // shrink the processWindow at much as possible
+            // top
+            while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y2 - 1, maskInvert) ) {
+                --processWindow.y2;
+            }
+            // bottom
+            while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y1, maskInvert) ) {
+                ++processWindow.y1;
+            }
+            // left
+            while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x1, processWindow.y1, processWindow.y2, maskInvert) ) {
+                ++processWindow.x1;
+            }
+            // right
+            while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x2 - 1, processWindow.y1, processWindow.y2, maskInvert) ) {
+                --processWindow.x2;
+            }
         }
     }
 
