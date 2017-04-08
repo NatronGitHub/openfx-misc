@@ -11,6 +11,7 @@ CImgErodeSmooth.o \
 CImgExpression.o \
 CImgGuided.o \
 CImgHistEQ.o \
+CImgInpaint-gpl.o \
 CImgMedian.o \
 CImgNoise.o \
 CImgPlasma.o \
@@ -83,6 +84,7 @@ ErodeSmooth \
 Expression \
 Guided \
 HistEQ \
+Inpaint \
 Median \
 Noise \
 Plasma \
@@ -107,6 +109,7 @@ CXXFLAGS += \
 -IExpression \
 -IGuided \
 -IHistEQ \
+-IInpaint \
 -IMedian \
 -INoise \
 -IPlasma \
@@ -144,9 +147,15 @@ CXXFLAGS += \
 # commit 63a4356e9e93ff3cd407e1ae1264a616ea4ba0f2 is CImg pre-2.0.0 with the clamping on sigma_r fixed in blur_bilateral
 CIMGVERSION=63a4356e9e93ff3cd407e1ae1264a616ea4ba0f2
 
-CImg.h:
+CImg.h: Inpaint/inpaint.h
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
 #	patch -p0 -d. < CImg-1.7.1-omp.patch
+
+Inpaint/inpaint.h:
+	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/inpaint.h
+
+nlmeans.h:
+	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/nlmeans.h
 
 #git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 
@@ -171,6 +180,8 @@ $(OBJECTPATH)/CImgFilter.o: CImgOperator.cpp CImgOperator.h CImgFilter.h CImg.h
 $(OBJECTPATH)/CImgGuided.o: CImgGuided.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgInpaint.o: CImgHistEQ.cpp CImgFilter.h CImg.h Inpaint/inpaint.h
 
 $(OBJECTPATH)/CImgMedian.o: CImgMedian.cpp CImgFilter.h CImg.h
 

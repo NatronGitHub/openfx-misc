@@ -104,7 +104,7 @@ class CImgEqualizePlugin
 public:
 
     CImgEqualizePlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgEqualizeParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgEqualizeParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _nb_levels  = fetchIntParam(kParamNbLevels);
         _min_value  = fetchDoubleParam(kParamMin);
@@ -139,6 +139,7 @@ public:
                         const CImgEqualizeParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

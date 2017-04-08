@@ -61,6 +61,7 @@ pthread_once_t tls::gImageEffect_once = PTHREAD_ONCE_INIT;
 #endif
 
 CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle handle,
+                                                       bool usesMask, // true if the mask parameter to render should be a single-channel image containing the mask
                                                        bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                                        bool supportsTiles,
                                                        bool supportsMultiResolution,
@@ -80,6 +81,7 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     , _mix(0)
     , _maskApply(0)
     , _maskInvert(0)
+    , _usesMask(usesMask)
     , _supportsComponentRemapping(supportsComponentRemapping)
     , _supportsTiles(getImageEffectHostDescription()->supportsTiles && supportsTiles)
     , _supportsMultiResolution(getImageEffectHostDescription()->supportsMultiResolution && supportsMultiResolution)

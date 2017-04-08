@@ -120,6 +120,7 @@ grouping).
 * ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
 * GMICExpr: Quickly generate or process image from mathematical formula evaluated for each pixel.
 * GodRays: Average an image over a range of transforms, or create crepuscular rays.
+* InpaintCImg: Inpaint the areas indicated by the Mask input using patch-based inpainting.
 * Shadertoy: Apply a [Shadertoy](http://www.shadertoy.com) fragment shaders (multipass shaders are not supported).
 * SharpenCImg: Sharpen the input stream by enhancing its Laplacian.
 * SharpenInvDiffCImg: Sharpen selected images by inverse diffusion.

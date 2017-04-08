@@ -48,7 +48,8 @@ public:
     enum CPUDriverEnum
     {
         eCPUDriverSoftPipe = 0,
-        eCPUDriverLLVMPipe
+        eCPUDriverLLVMPipe,
+        eCPUDriverSWR,
     };
 
 #endif

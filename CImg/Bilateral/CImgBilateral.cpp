@@ -122,7 +122,7 @@ class CImgBilateralPlugin
 public:
 
     CImgBilateralPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgBilateralParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgBilateralParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -145,7 +145,7 @@ public:
                         const CImgBilateralParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x );
+        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x * params.iterations);
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
@@ -157,6 +157,7 @@ public:
                         const CImgBilateralParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {
@@ -193,7 +194,7 @@ class CImgBilateralGuidedPlugin
 public:
 
     CImgBilateralGuidedPlugin(OfxImageEffectHandle handle)
-        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -216,7 +217,7 @@ public:
                         const CImgBilateralParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x );
+        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x * params.iterations);
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;

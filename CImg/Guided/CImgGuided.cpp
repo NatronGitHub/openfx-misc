@@ -109,7 +109,7 @@ class CImgGuidedPlugin
 public:
 
     CImgGuidedPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgGuidedParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgGuidedParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _radius  = fetchIntParam(kParamRadius);
         _epsilon  = fetchDoubleParam(kParamEpsilon);
@@ -132,7 +132,7 @@ public:
                         const CImgGuidedParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil(params.radius * renderScale.x);
+        int delta_pix = (int)std::ceil(params.radius * renderScale.x * params.iterations);
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
@@ -144,6 +144,7 @@ public:
                         const CImgGuidedParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

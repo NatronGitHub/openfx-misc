@@ -166,7 +166,7 @@ class CImgSmoothPlugin
 public:
 
     CImgSmoothPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgSmoothParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgSmoothParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _sharpness  = fetchDoubleParam(kParamSharpness);
@@ -205,7 +205,7 @@ public:
                         const CImgSmoothParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil( (params.amplitude + params.alpha + params.sigma) * renderScale.x );
+        int delta_pix = (int)std::ceil( (params.amplitude + params.alpha + params.sigma) * renderScale.x * params.iterations );
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
@@ -217,6 +217,7 @@ public:
                         const CImgSmoothParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

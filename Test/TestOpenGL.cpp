@@ -111,9 +111,10 @@ using namespace OFX;
 #ifdef HAVE_OSMESA
 #define kParamCPUDriver "cpuDriver"
 #define kParamCPUDriverLabel "CPU Driver"
-#define kParamCPUDriverHint "Driver for CPU rendering. May be \"softpipe\" (slower, has GL_EXT_texture_filter_anisotropic GL_ARB_texture_query_lod GL_ARB_pipeline_statistics_query) or \"llvmpipe\" (faster, has GL_ARB_buffer_storage GL_EXT_polygon_offset_clamp)."
+#define kParamCPUDriverHint "Driver for CPU rendering. May be \"softpipe\" (slower, has GL_EXT_texture_filter_anisotropic GL_ARB_texture_query_lod GL_ARB_pipeline_statistics_query), \"llvmpipe\" (faster, has GL_ARB_buffer_storage GL_EXT_polygon_offset_clamp) or \"swr\" (OpenSWR, not always available)."
 #define kParamCPUDriverOptionSoftPipe "softpipe"
 #define kParamCPUDriverOptionLLVMPipe "llvmpipe"
+#define kParamCPUDriverOptionSWR "swr"
 #define kParamCPUDriverDefault TestOpenGLPlugin::eCPUDriverLLVMPipe
 #endif
 
@@ -586,6 +587,8 @@ TestOpenGLPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamCPUDriverOptionSoftPipe);
         assert(param->getNOptions() == TestOpenGLPlugin::eCPUDriverLLVMPipe);
         param->appendOption(kParamCPUDriverOptionLLVMPipe);
+        assert(param->getNOptions() == TestOpenGLPlugin::eCPUDriverSWR);
+        param->appendOption(kParamCPUDriverOptionSWR);
         param->setDefault(kParamCPUDriverDefault);
         param->setAnimates(false);
         if (page) {
