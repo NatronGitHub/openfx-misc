@@ -181,7 +181,7 @@ $(OBJECTPATH)/CImgGuided.o: CImgGuided.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgInpaint.o: CImgHistEQ.cpp CImgFilter.h CImg.h Inpaint/inpaint.h
+$(OBJECTPATH)/CImgInpaint-gpl.o: CImgInpaint-gpl.cpp CImgFilter.h CImg.h Inpaint/inpaint.h
 
 $(OBJECTPATH)/CImgMedian.o: CImgMedian.cpp CImgFilter.h CImg.h
 
