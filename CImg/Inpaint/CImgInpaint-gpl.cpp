@@ -45,7 +45,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "InpaintCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-    "Inpaint the areas indicated by the Mask input using patch-based inpainting.\n" \
+    "Inpaint (a.k.a. content-aware fill) the areas indicated by the Mask input using patch-based inpainting.\n" \
+    "Be aware that this filter may produce different results on each frame of a video, even if there is little change in the video content. To inpaint areas with lots of details, it may be better to inpaint on a single frame and paste the inpainted area on other frames (if a transform is also required to match the other frames, it may be computed by tracking).\n" \
+    "\n" \
     "A tutorial on using this filter can be found at http://blog.patdavid.net/2014/02/getting-around-in-gimp-gmic-inpainting.html\n" \
     "The algorithm is described in the two following publications:\n" \
     "\"A Smarter Examplar-based Inpainting Algorithm using Local and Global Heuristics " \

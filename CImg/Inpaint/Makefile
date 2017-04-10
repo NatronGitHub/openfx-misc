@@ -1,5 +1,5 @@
 PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
-CImgInpaint.o \
+CImgInpaint-gpl.o \
 CImgFilter.o \
 
 # no ofxsInteract.o
@@ -12,7 +12,7 @@ ofxsPropertyValidation.o \
 ofxsImageEffect.o \
 ofxsParams.o 
 
-PLUGINNAME = CImgSmooth
+PLUGINNAME = CImgInpaint
 
 # ls *png *.svg|sort |sed -e 's!$! \\!'
 RESOURCES = \
@@ -25,9 +25,9 @@ include $(TOP_SRCDIR)/Makefile.master
 VPATH += $(TOP_SRCDIR)/CImg
 CXXFLAGS += -I$(TOP_SRCDIR)/CImg
 
-$(OBJECTPATH)/CImgSmooth.o: CImgSmooth.cpp ../CImg.h inpaint.h
+$(OBJECTPATH)/CImgInpant-gpl.o: CImgInpaint-gpl.cpp CImg.h inpaint.h
 
-../CImg.h:
+CImg.h:
 	cd .. && $(MAKE) CImg.h
 
 inpaint.h:

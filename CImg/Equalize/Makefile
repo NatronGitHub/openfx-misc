@@ -25,4 +25,7 @@ include $(TOP_SRCDIR)/Makefile.master
 VPATH += $(TOP_SRCDIR)/CImg
 CXXFLAGS += -I$(TOP_SRCDIR)/CImg
 
-$(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp ../CImg.h
+$(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp  CImg.h
+
+CImg.h:
+	cd .. && $(MAKE) $@
