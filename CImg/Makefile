@@ -145,7 +145,8 @@ CXXFLAGS += \
 # commit 0728d3e6833de1dfe16734fdef416b5051d4df7e is CImg pre-2.0.0 with nb_iter argument to boxfilter
 # commit 2067bd0765d23afc4c41b706bc57d094a2dce51d is CImg pre-2.0.0 with precision fix to boxfilter
 # commit 63a4356e9e93ff3cd407e1ae1264a616ea4ba0f2 is CImg pre-2.0.0 with the clamping on sigma_r fixed in blur_bilateral
-CIMGVERSION=63a4356e9e93ff3cd407e1ae1264a616ea4ba0f2
+# commit 7c83bdad65ab7447220b54851a5a1035976777fa is CImg pre-2.0.0 with a fix to compile inpaint.h
+CIMGVERSION=7c83bdad65ab7447220b54851a5a1035976777fa
 
 CImg.h: Inpaint/inpaint.h
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
@@ -181,7 +182,7 @@ $(OBJECTPATH)/CImgGuided.o: CImgGuided.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgInpaint.o: CImgHistEQ.cpp CImgFilter.h CImg.h Inpaint/inpaint.h
+$(OBJECTPATH)/CImgInpaint-gpl.o: CImgInpaint-gpl.cpp CImgFilter.h CImg.h Inpaint/inpaint.h
 
 $(OBJECTPATH)/CImgMedian.o: CImgMedian.cpp CImgFilter.h CImg.h
 

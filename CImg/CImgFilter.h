@@ -138,6 +138,7 @@ inline void gImageEffectAbort();
 #ifdef PLUGIN_PACK_GPL2
 
 // include the inpaint and nlmeans cimg plugins
+#if 0 // not necessary since CImg cimmit 7c83bdad65ab7447220b54851a5a1035976777fa
 namespace cimg_library_openfx_misc {
     namespace cimg {
         //! Return the maximum between two values.
@@ -152,7 +153,7 @@ namespace cimg_library_openfx_misc {
         }
     }
 }
-
+#endif
 #define cimg_plugin "Inpaint/inpaint.h"
 //#define cimg_plugin1 "nlmeans.h"
 #endif
