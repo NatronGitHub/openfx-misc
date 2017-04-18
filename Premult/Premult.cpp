@@ -125,24 +125,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamClipInfoLabel "Clip Info..."
 #define kParamClipInfoHint "Display information about the inputs"
 
-#define kParamOutputChannels "outputPlane"
-#define kParamOutputChannelsLabel "Output Plane"
-#define kParamOutputChannelsHint "The plane that will be written to in output"
+#define kParamInputPlane "inputPlane"
+#define kParamInputPlaneLabel "Plane"
+#define kParamInputPlaneHint "The plane channels to premult"
 
 #define kParamPremultChanged "premultChanged" // left for backward compatibility
 
 static bool gIsMultiplanar = false;
 
 // TODO: sRGB conversions for short and byte types
-
-enum InputChannelEnum
-{
-    eInputChannelNone = 0,
-    eInputChannelR,
-    eInputChannelG,
-    eInputChannelB,
-    eInputChannelA,
-};
 
 
 // Base class for the RGBA and the Alpha processor
@@ -151,55 +142,45 @@ class PremultBase
 {
 protected:
     const Image *_srcImg;
+    int _srcNComps;
+    const Image* _premultChanImg;
+    int _premultChanIndex;
+    bool _premultWith1IfNoImage;
     bool _processR;
     bool _processG;
     bool _processB;
     bool _processA;
-    int _p;
 
 public:
     /** @brief no arg ctor */
     PremultBase(ImageEffect &instance)
         : ImageProcessor(instance)
         , _srcImg(0)
+        , _srcNComps(0)
+        , _premultChanImg(0)
+        , _premultChanIndex(0)
+        , _premultWith1IfNoImage(false)
         , _processR(true)
         , _processG(true)
         , _processB(true)
         , _processA(false)
-        , _p(3)
     {
     }
 
     /** @brief set the src image */
-    void setSrcImg(const Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) {_srcImg = v;  _srcNComps = v ? v->getPixelComponentCount() : 0; }
+
+    void setPremultChannelImg(const Image* v, int chanIndex, bool premultWith1IfNoImage) { _premultChanIndex = chanIndex; _premultChanImg = v; _premultWith1IfNoImage = premultWith1IfNoImage; }
 
     void setValues(bool processR,
                    bool processG,
                    bool processB,
-                   bool processA,
-                   InputChannelEnum premultChannel)
+                   bool processA)
     {
         _processR = processR;
         _processG = processG;
         _processB = processB;
         _processA = processA;
-        switch (premultChannel) {
-        case eInputChannelNone:
-            _p = -1;
-            break;
-        case eInputChannelR:
-            _p = 0;
-            break;
-        case eInputChannelG:
-            _p = 1;
-            break;
-        case eInputChannelB:
-            _p = 2;
-            break;
-        case eInputChannelA:
-            _p = 3;
-            break;
-        }
     }
 };
 
@@ -320,27 +301,29 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *premultPix = (const PIX *)  (_premultChanImg ? _premultChanImg->getPixelAddress(x, y) : 0);
 
                 // do we have a source image to scale up
                 if (srcPix) {
-                    if ( (_p >= 0) && (processR || processG || processB || processA) ) {
-                        PIX alpha = srcPix[_p];
+                    if ( (_premultChanIndex >= 0 || !_premultWith1IfNoImage) && (processR || processG || processB || processA) ) {
+                        PIX alpha = premultPix ? premultPix[_premultChanIndex] : 0.;
                         for (int c = 0; c < nComponents; c++) {
+                            PIX srcPixVal = c < _srcNComps ? srcPix[c] : 0;
                             if (isPremult) {
-                                dstPix[c] = doc[c] ? ( ( (float)srcPix[c] * alpha ) / maxValue ) : srcPix[c];
+                                dstPix[c] = doc[c] ? ( ( (float)srcPixVal * alpha ) / maxValue ) : srcPixVal;
                             } else {
                                 PIX val;
                                 if ( !doc[c] || ( alpha <= (PIX)(FLT_EPSILON * maxValue) ) ) {
-                                    val = srcPix[c];
+                                    val = srcPixVal;
                                 } else {
-                                    val = ClampNonFloat<PIX, maxValue>( ( (float)srcPix[c] * maxValue ) / alpha );
+                                    val = ClampNonFloat<PIX, maxValue>( ( (float)srcPixVal * maxValue ) / alpha );
                                 }
                                 dstPix[c] = val;
                             }
                         }
                     } else {
                         for (int c = 0; c < nComponents; c++) {
-                            dstPix[c] = srcPix[c];
+                            dstPix[c] = c < _srcNComps ? srcPix[c] : 0;
                         }
                     }
                 } else {
@@ -374,7 +357,7 @@ public:
         , _processB(0)
         , _processA(0)
         , _premult(0)
-        , _outputPlane(0)
+        , _inputPlane(0)
         //, _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -393,7 +376,7 @@ public:
         assert(_processR && _processG && _processB && _processA);
         _premult = fetchChoiceParam(kParamPremultChannel);
         assert(_premult);
-        _outputPlane = fetchChoiceParam(kParamOutputChannels);
+        _inputPlane = fetchChoiceParam(kParamInputPlane);
         //_premultChanged = fetchBooleanParam(kParamPremultChanged);
         //assert(_premultChanged);
 
@@ -407,7 +390,7 @@ public:
             {
                 FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForOutputPlane();
                 args.dependsClips.push_back(_dstClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, args);
+                fetchDynamicMultiplaneChoiceParameter(kParamInputPlane, args);
             }
             onAllParametersFetched();
         }
@@ -418,11 +401,13 @@ private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(PremultBase &, const RenderArguments &args);
+    void setupAndProcess(PremultBase &, const RenderArguments &args, const Image* srcImage, Image* dstImage);
 
-    Image* fetchOutputImage(const RenderArguments &args);
+    void fetchSourceAndOutputImage(const RenderArguments &args, const Image** srcImage, Image** dstImage);
 
-    const Image* fetchInputImage(const RenderArguments &args);
+    const Image* fetchPremultChannelImage(const RenderArguments &args, int *channelIndex, bool *fillWith1IfNoImage);
+
+    virtual void getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE;
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -442,7 +427,7 @@ private:
     BooleanParam* _processB;
     BooleanParam* _processA;
     ChoiceParam* _premult;
-    ChoiceParam* _outputPlane;
+    ChoiceParam* _inputPlane;
     //BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
@@ -454,54 +439,80 @@ private:
 // basic plugin render function, just a skelington to instantiate templates from
 
 
-
 template<bool isPremult>
-Image*
-PremultPlugin<isPremult>::fetchOutputImage(const RenderArguments &args)
+void
+PremultPlugin<isPremult>::fetchSourceAndOutputImage(const RenderArguments &args, const Image** srcImage, Image** dstImage)
 {
-    Image* dstImage = 0;
+    *dstImage = 0;
+    *srcImage = 0;
     if (!gIsMultiplanar) {
-        dstImage = _dstClip->fetchImage(args.time);
+        *dstImage = _dstClip->fetchImage(args.time);
+        *srcImage = (_srcClip && _srcClip->isConnected()) ? _srcClip->fetchImage(args.time) : 0;
     } else {
-        MultiPlane::ImagePlaneDesc dstPlane;
+        MultiPlane::ImagePlaneDesc plane;
         {
             OFX::Clip* clip = 0;
             int channelIndex = -1;
-            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_outputPlane->getName(), &clip, &dstPlane, &channelIndex);
-            if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
-                throwSuiteStatusException(kOfxStatFailed);
-            }
-        }
-
-
-        dstImage = _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(dstPlane).c_str() );
-    }
-    return dstImage;
-}
-
-template<bool isPremult>
-const Image*
-PremultPlugin<isPremult>::fetchInputImage(const RenderArguments &args)
-{
-    const Image* srcImage = 0;
-    if (_srcClip && _srcClip->isConnected()) {
-        if (!gIsMultiplanar) {
-            srcImage = _srcClip->fetchImage(args.time);
-        } else {
-            MultiPlane::ImagePlaneDesc srcPlane;
-
-            OFX::Clip* clip = 0;
-            int channelIndex = -1;
-            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &srcPlane, &channelIndex);
+            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_inputPlane->getName(), &clip, &plane, &channelIndex);
             if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
                 setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
                 throwSuiteStatusException(kOfxStatFailed);
+            } else if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedAllPlanes) {
+                assert(!args.planes.front().empty());
+                const std::string& ofxPlaneToRender = args.planes.front();
+                if (ofxPlaneToRender == kFnOfxImagePlaneColour) {
+                    plane = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(_dstClip->getPixelComponentCount());
+                } else {
+                    plane = MultiPlane::ImagePlaneDesc::mapOFXPlaneStringToPlane(args.planes.front());
+                }
             }
+        }
 
-            srcImage = _srcClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(srcPlane).c_str() );
+        *dstImage = _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane).c_str() );
+        if (_srcClip && _srcClip->isConnected()) {
+            *srcImage = _srcClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane).c_str() );
+        }
+    }
+}
+
+
+template<bool isPremult>
+const Image*
+PremultPlugin<isPremult>::fetchPremultChannelImage(const RenderArguments &args, int *channelIndex, bool *fillWith1IfNoImage)
+{
+    *channelIndex = -1;
+    *fillWith1IfNoImage = false;
+    const Image* srcImage = 0;
+    if (_srcClip && _srcClip->isConnected()) {
+        if (gIsMultiplanar) {
+            MultiPlane::ImagePlaneDesc srcPlane;
+
+            OFX::Clip* clip = 0;
+            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &srcPlane, channelIndex);
+            if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
+                setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
+                throwSuiteStatusException(kOfxStatFailed);
+            } else if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1) {
+                *fillWith1IfNoImage = true;
+            } else if (stat == MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane) {
+                srcImage = _srcClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(srcPlane).c_str() );
+            }
+            if (!srcImage || *channelIndex < 0 || *channelIndex >= srcImage->getPixelComponentCount() ) {
+                return NULL;
+            }
         }
     }
     return srcImage;
+}
+
+template<bool isPremult>
+void
+PremultPlugin<isPremult>::getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents)
+{
+    MultiPlaneEffect::getClipComponents(args, clipComponents);
+
+    // Specify the pass-through clip
+    clipComponents.setPassThroughClip(_srcClip, args.time, args.view);
 }
 
 
@@ -509,18 +520,15 @@ PremultPlugin<isPremult>::fetchInputImage(const RenderArguments &args)
 template<bool isPremult>
 void
 PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
-                                          const RenderArguments &args)
+                                          const RenderArguments &args,
+                                          const Image* src, Image* dst)
 {
     // get a dst image
-    std::auto_ptr<Image> dst(fetchOutputImage(args));
-    if ( !dst.get() ) {
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-    const double time = args.time;
+
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-         ( dstComponents != _dstClip->getPixelComponents() ) ) {
+         (!gIsMultiplanar && dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -533,10 +541,19 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
 
     // fetch main input image
 
-    std::auto_ptr<const Image> src(fetchInputImage(args));
-    
+    int premultChannelIndex;
+    bool premultWith1IfNoImage = false;
+
+    // When non multiplanar, the premult channel image is the same as the source image, so it will be NULL so we don't have 2
+    // auto-ptr pointing to it.
+    const Image* premultChannelImage = 0;
+    premultChannelImage = fetchPremultChannelImage(args, &premultChannelIndex, &premultWith1IfNoImage);
+    std::auto_ptr<const Image> premultChanImg(premultChannelImage);
+
+
+
     // make sure bit depths are sane
-    if ( src.get() ) {
+    if ( src ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
              ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
@@ -547,7 +564,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
         PixelComponentEnum srcComponents = src->getPixelComponents();
 
         // see if they have the same depths and bytes and all
-        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+        if ( (srcBitDepth != dstBitDepth) || (!gIsMultiplanar && srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -557,13 +574,14 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
     _processG->getValueAtTime(args.time, processG);
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
-    InputChannelEnum premult = (InputChannelEnum)_premult->getValueAtTime(time);
-    processor.setValues(processR, processG, processB, processA, premult);
+
+
+    processor.setValues(processR, processG, processB, processA);
 
     // set the images
-    processor.setDstImg( dst.get() );
-    processor.setSrcImg( src.get() );
-
+    processor.setDstImg( dst );
+    processor.setSrcImg( src );
+    processor.setPremultChannelImg(!gIsMultiplanar ? src : premultChanImg.get(), premultChannelIndex, premultWith1IfNoImage);
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
@@ -584,7 +602,11 @@ PremultPlugin<isPremult>::render(const RenderArguments &args)
     // do the rendering
     if ( !_srcClip || !_srcClip->isConnected() ) {
         // get a dst image
-        std::auto_ptr<Image> dst(fetchOutputImage(args));
+        const Image* srcImage;
+        Image* dstImage;
+        fetchSourceAndOutputImage(args, &srcImage, &dstImage);
+        assert(!srcImage);
+        std::auto_ptr<Image> dst(dstImage);
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
@@ -593,10 +615,14 @@ PremultPlugin<isPremult>::render(const RenderArguments &args)
     } else if (_srcClip->getPreMultiplication() == eImageOpaque) {
         // Opaque images can have alpha set to anything, but it should always be considered 1
 
+        const Image* srcImage;
+        Image* dstImage;
+        fetchSourceAndOutputImage(args, &srcImage, &dstImage);
+
         // fetch main input image
-        std::auto_ptr<const Image> src(fetchInputImage(args));
+        std::auto_ptr<const Image> src(srcImage);
         // get a dst image
-        std::auto_ptr<Image> dst(fetchOutputImage(args));
+        std::auto_ptr<Image> dst(dstImage);
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
@@ -607,27 +633,89 @@ PremultPlugin<isPremult>::render(const RenderArguments &args)
 
         copyPixelsOpaque( *this, args.renderWindow, src.get(), dst.get() );
     } else {
+
+        const Image* srcImage;
+        Image* dstImage;
+        fetchSourceAndOutputImage(args, &srcImage, &dstImage);
+
+        std::auto_ptr<Image> dst(dstImage);
+        std::auto_ptr<const Image> src(srcImage);
+
+        if ( !dst.get() ) {
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+
+        int dstNComps = dst->getPixelComponentCount();
+
+
+        std::auto_ptr<PremultBase> proc;
         switch (dstBitDepth) {
         case eBitDepthUByte: {
-            ImagePremulter<unsigned char, 4, 255, isPremult> fred(*this);
-            setupAndProcess(fred, args);
+            switch (dstNComps) {
+                case 1:
+                    proc.reset(new ImagePremulter<unsigned char, 1, 255, isPremult>(*this));
+                    break;
+                case 2:
+                    proc.reset(new ImagePremulter<unsigned char, 2, 255, isPremult>(*this));
+                    break;
+                case 3:
+                    proc.reset(new ImagePremulter<unsigned char, 3, 255, isPremult>(*this));
+                    break;
+                case 4:
+                    proc.reset(new ImagePremulter<unsigned char, 4, 255, isPremult>(*this));
+                    break;
+                default:
+                    break;
+            }
             break;
         }
 
         case eBitDepthUShort: {
-            ImagePremulter<unsigned short, 4, 65535, isPremult> fred(*this);
-            setupAndProcess(fred, args);
+            switch (dstNComps) {
+                case 1:
+                    proc.reset(new ImagePremulter<unsigned short, 1, 65535, isPremult>(*this));
+                    break;
+                case 2:
+                    proc.reset(new ImagePremulter<unsigned short, 2, 65535, isPremult>(*this));
+                    break;
+                case 3:
+                    proc.reset(new ImagePremulter<unsigned short, 3, 65535, isPremult>(*this));
+                    break;
+                case 4:
+                    proc.reset(new ImagePremulter<unsigned short, 4, 65535, isPremult>(*this));
+                    break;
+                default:
+                    break;
+            }
             break;
         }
 
         case eBitDepthFloat: {
-            ImagePremulter<float, 4, 1, isPremult> fred(*this);
-            setupAndProcess(fred, args);
+            switch (dstNComps) {
+                case 1:
+                    proc.reset(new ImagePremulter<float, 1, 1, isPremult>(*this));
+                    break;
+                case 2:
+                    proc.reset(new ImagePremulter<float, 2, 1, isPremult>(*this));
+                    break;
+                case 3:
+                    proc.reset(new ImagePremulter<float, 3, 1, isPremult>(*this));
+                    break;
+                case 4:
+                    proc.reset(new ImagePremulter<float, 4, 1, isPremult>(*this));
+                    break;
+                default:
+                    break;
+            }
             break;
         }
         default:
+            break;
+        }
+        if (!proc.get()) {
             throwSuiteStatusException(kOfxStatErrUnsupported);
         }
+        setupAndProcess(*proc, args, src.get(), dst.get());
     }
 } // >::render
 
@@ -638,8 +726,6 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args,
                                      double & /*identityTime*/
                                      , int& /*view*/, std::string& /*plane*/)
 {
-    const double time = args.time;
-
     if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
@@ -659,9 +745,12 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args,
     _processG->getValueAtTime(args.time, processG);
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
-    InputChannelEnum premult = (InputChannelEnum)_premult->getValueAtTime(time);
 
-    if ( (premult == eInputChannelNone) || (!processR && !processG && !processB && !processA) ) {
+    MultiPlane::ImagePlaneDesc premultPlane;
+    OFX::Clip* clip = 0;
+    int premultChanIndex;
+    MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &premultPlane, &premultChanIndex);
+    if ( (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1) || (!processR && !processG && !processB && !processA) ) {
         // no processing: identity
         identityClip = _srcClip;
 
@@ -683,6 +772,10 @@ PremultPlugin<isPremult>::getClipPreferences(ClipPreferencesSetter &clipPreferen
 
     // Refresh the plane channels selectors
     MultiPlaneEffect::getClipPreferences(clipPreferences);
+
+    // Both input clip and output clip work on the same plane.
+    clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
+    clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
 }
 
 static std::string
@@ -852,6 +945,7 @@ PremultPluginFactory<isPremult>::describe(ImageEffectDescriptor &desc)
     gIsMultiplanar = false;
 #else
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
+    desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelPassThroughNonRenderedPlanes);
     gIsMultiplanar = getImageEffectHostDescription()->supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2);
     desc.setIsMultiPlanar(gIsMultiplanar);
 #endif
@@ -925,36 +1019,24 @@ PremultPluginFactory<isPremult>::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-#if 0
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamPremultChannel);
-        param->setLabel(kParamPremultChannelLabel);
-        param->setHint(kParamPremultChannelHint);
-        assert(param->getNOptions() == eInputChannelNone);
-        param->appendOption(kParamPremultOptionNone, kParamPremultOptionNoneHint);
-        assert(param->getNOptions() == eInputChannelR);
-        param->appendOption(kParamPremultOptionR, kParamPremultOptionRHint);
-        assert(param->getNOptions() == eInputChannelG);
-        param->appendOption(kParamPremultOptionG, kParamPremultOptionGHint);
-        assert(param->getNOptions() == eInputChannelB);
-        param->appendOption(kParamPremultOptionB, kParamPremultOptionBHint);
-        assert(param->getNOptions() == eInputChannelA);
-        param->appendOption(kParamPremultOptionA, kParamPremultOptionAHint);
-        param->setDefault( (int)eInputChannelA );
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-#endif
+
+
     if (gIsMultiplanar) {
-        std::vector<std::string> clips(1);
-        clips[0] = kOfxImageEffectSimpleSourceClipName;
-        ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clips, kParamPremultChannel, kParamPremultChannelLabel, kParamPremultChannelHint);
-        param->setDefault(3);
 
-        MultiPlane::Factory::describeInContextAddPlaneChoice(desc, page, kParamOutputChannels, kParamOutputChannelsLabel, kParamOutputChannelsHint);
-
+        ChoiceParamDescriptor* planeParam = MultiPlane::Factory::describeInContextAddPlaneChoice(desc, page, kParamInputPlane, kParamInputPlaneLabel, kParamInputPlaneHint);
+        planeParam->setLayoutHint(eLayoutHintNoNewLine);
     }
+
+    std::vector<std::string> clips(1);
+    clips[0] = kOfxImageEffectSimpleSourceClipName;
+    ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clips, kParamPremultChannel, kParamPremultChannelLabel, kParamPremultChannelHint);
+    param->setDefault(3);
+
+    if (gIsMultiplanar) {
+        MultiPlane::Factory::describeInContextAddAllPlanesOutputCheckbox(desc, page);
+    }
+
+
 
     {
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
