@@ -30,6 +30,7 @@
 #include "ofxsImageEffect.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
+#include "ofxsMultiPlane.h"
 
 #include "ofxsProcessing.H"
 #include "ofxsCopier.h"
@@ -39,6 +40,7 @@
 #endif
 
 using namespace OFX;
+using namespace MultiPlane;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
@@ -123,7 +125,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamClipInfoLabel "Clip Info..."
 #define kParamClipInfoHint "Display information about the inputs"
 
+#define kParamOutputChannels "outputPlane"
+#define kParamOutputChannelsLabel "Output Plane"
+#define kParamOutputChannelsHint "The plane that will be written to in output"
+
 #define kParamPremultChanged "premultChanged" // left for backward compatibility
+
+static bool gIsMultiplanar = false;
 
 // TODO: sRGB conversions for short and byte types
 
@@ -353,12 +361,12 @@ private:
 /** @brief The plugin that does our work */
 template<bool isPremult>
 class PremultPlugin
-    : public ImageEffect
+    : public MultiPlaneEffect
 {
 public:
     /** @brief ctor */
     PremultPlugin(OfxImageEffectHandle handle)
-        : ImageEffect(handle)
+        : MultiPlaneEffect(handle)
         , _dstClip(0)
         , _srcClip(0)
         , _processR(0)
@@ -366,6 +374,7 @@ public:
         , _processB(0)
         , _processA(0)
         , _premult(0)
+        , _outputPlane(0)
         //, _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -384,8 +393,24 @@ public:
         assert(_processR && _processG && _processB && _processA);
         _premult = fetchChoiceParam(kParamPremultChannel);
         assert(_premult);
+        _outputPlane = fetchChoiceParam(kParamOutputChannels);
         //_premultChanged = fetchBooleanParam(kParamPremultChanged);
         //assert(_premultChanged);
+
+        if (gIsMultiplanar) {
+
+            {
+                FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                args.dependsClips.push_back(_srcClip);
+                fetchDynamicMultiplaneChoiceParameter(kParamPremultChannel, args);
+            }
+            {
+                FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForOutputPlane();
+                args.dependsClips.push_back(_dstClip);
+                fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, args);
+            }
+            onAllParametersFetched();
+        }
     }
 
 private:
@@ -413,6 +438,7 @@ private:
     BooleanParam* _processB;
     BooleanParam* _processA;
     ChoiceParam* _premult;
+    ChoiceParam* _outputPlane;
     //BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
@@ -431,8 +457,25 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
                                           const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    Image* dstImage = 0;
+    if (!gIsMultiplanar) {
+        dstImage = _dstClip->fetchImage(args.time);
+    } else {
+        MultiPlane::ImagePlaneDesc dstPlane;
+        {
+            OFX::Clip* clip = 0;
+            int channelIndex = -1;
+            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_outputPlane->getName(), &clip, &dstPlane, &channelIndex);
+            if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
+                throwSuiteStatusException(kOfxStatFailed);
+                return;
+            }
+        }
 
+
+        dstImage = _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(dstPlane).c_str() );
+    }
+    std::auto_ptr<Image> dst(dstImage);
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -452,9 +495,27 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
     }
 
     // fetch main input image
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                    _srcClip->fetchImage(args.time) : 0 );
+    const Image* srcImage = 0;
+    if (_srcClip && _srcClip->isConnected()) {
+        if (!gIsMultiplanar) {
+            srcImage = _srcClip->fetchImage(args.time);
+        } else {
+            MultiPlane::ImagePlaneDesc srcPlane;
 
+            OFX::Clip* clip = 0;
+            int channelIndex = -1;
+            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &srcPlane, &channelIndex);
+            if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
+                setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
+                throwSuiteStatusException(kOfxStatFailed);
+                return;
+            }
+
+            srcImage = _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(srcPlane).c_str() );
+        }
+    }
+    std::auto_ptr<const Image> src(srcImage);
+    
     // make sure bit depths are sane
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -601,6 +662,9 @@ PremultPlugin<isPremult>::getClipPreferences(ClipPreferencesSetter &clipPreferen
     // Whatever the input is or the processed channels are, set the output premiltiplication.
     // This allows setting the output premult without changing the image data.
     clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
+
+    // Refresh the plane channels selectors
+    MultiPlaneEffect::getClipPreferences(clipPreferences);
 }
 
 static std::string
@@ -645,13 +709,15 @@ PremultPlugin<isPremult>::changedParam(const InstanceChangedArgs &args,
         sendMessage(Message::eMessageMessage, "", msg);
         //} else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         //    _premultChanged->setValue(true);
+    } else {
+        MultiPlaneEffect::changedParam(args, paramName);
     }
 }
 
 template<bool isPremult>
 void
-PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs & /*args*/,
-                                      const std::string & /*clipName*/)
+PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs & args,
+                                      const std::string & clipName)
 {
     // It is very dangerous to set this from the input premult, which is sometimes wrong.
     // If the user wants to premult/unpremul, the default should always be to premult/unpremult
@@ -708,6 +774,7 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs & /*args*/,
         }
        }
      */
+    MultiPlaneEffect::changedClip(args, clipName);
 } // >::changedClip
 
 //mDeclarePluginFactory(PremultPluginFactory, {ofxsThreadSuiteCheck();}, {});
@@ -763,8 +830,12 @@ PremultPluginFactory<isPremult>::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-#ifdef OFX_EXTENSIONS_NATRON
+#ifndef OFX_EXTENSIONS_NATRON
+    gIsMultiplanar = false;
+#else
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
+    gIsMultiplanar = getImageEffectHostDescription()->supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2);
+    desc.setIsMultiPlanar(gIsMultiplanar);
 #endif
 }
 
@@ -836,6 +907,7 @@ PremultPluginFactory<isPremult>::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+#if 0
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamPremultChannel);
         param->setLabel(kParamPremultChannelLabel);
@@ -854,6 +926,16 @@ PremultPluginFactory<isPremult>::describeInContext(ImageEffectDescriptor &desc,
         if (page) {
             page->addChild(*param);
         }
+    }
+#endif
+    if (gIsMultiplanar) {
+        std::vector<std::string> clips(1);
+        clips[0] = kOfxImageEffectSimpleSourceClipName;
+        ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clips, kParamPremultChannel, kParamPremultChannelLabel, kParamPremultChannelHint);
+        param->setDefault(3);
+
+        MultiPlane::Factory::describeInContextAddPlaneChoice(desc, page, kParamOutputChannels, kParamOutputChannelsLabel, kParamOutputChannelsHint);
+
     }
 
     {

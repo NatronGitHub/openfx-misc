@@ -1249,9 +1249,23 @@ public:
             _uvChannels[1] = fetchChoiceParam(kParamChannelV);
             _uvChannels[2] = fetchChoiceParam(kParamChannelA);
             if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelU, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, _uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelV, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, _uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelA, true/*splitPlanesIntoChannels*/, false /*addNoneOption*/,false /*isOutput*/, /*hideIfClipDisconnected*/ false, _uvClip);
+
+                {
+                    FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                    args.dependsClips.push_back(_uvClip);
+                    fetchDynamicMultiplaneChoiceParameter(kParamChannelU, args);
+                }
+                {
+                    FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                    args.dependsClips.push_back(_uvClip);
+                    fetchDynamicMultiplaneChoiceParameter(kParamChannelV, args);
+                }
+                {
+                    FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                    args.dependsClips.push_back(_uvClip);
+                    fetchDynamicMultiplaneChoiceParameter(kParamChannelA, args);
+                }
+        
                 onAllParametersFetched();
             }
             _unpremultUV = fetchBooleanParam(kParamChannelUnpremultUV);
@@ -3014,34 +3028,14 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
 #ifdef OFX_EXTENSIONS_NUKE
 void
-DistortionPlugin::getClipComponents(const ClipComponentsArguments& /*args*/,
+DistortionPlugin::getClipComponents(const ClipComponentsArguments& args,
                                     ClipComponentsSetter& clipComponents)
 {
     assert(gIsMultiPlaneV2);
 
     if (_uvClip) {
-        std::map<Clip*, std::set<std::string> > clipMap;
-        for (int i = 0; i < 2; ++i) {
-            MultiPlane::ImagePlaneDesc plane;
-            int channelIndex;
-            Clip* clip = 0;
-            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_uvChannels[i]->getName(), &clip, &plane, &channelIndex);
-            if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed ||
-                stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant0 ||
-                stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1) {
-                continue;
-            }
-            assert(clip);
-
-            std::string ofxPlaneStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane);
-
-            std::set<std::string>& clipPlanes = clipMap[clip];
-            std::pair<std::set<std::string>::iterator, bool> ret = clipPlanes.insert(ofxPlaneStr);
-            if (ret.second) {
-                clipComponents.addClipPlane(*clip, ofxPlaneStr);
-            }
-
-        }
+        MultiPlaneEffect::getClipComponents(args, clipComponents);
+        clipComponents.setPassThroughClip(_srcClip, args.time, args.view);
     }
 } // getClipComponents
 

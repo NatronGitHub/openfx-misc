@@ -553,16 +553,36 @@ public:
         }
 
         _outputComponents = fetchChoiceParam(kParamOutputComponents);
-        
+
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             std::vector<Clip*> abClips(2);
             abClips[0] = _srcClipA;
             abClips[1] = _srcClipB;
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputR, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false,abClips);
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputG, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, abClips);
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputB, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, abClips);
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputA, true /*splitPlanesIntoChannels*/, false/*addNoneOption*/, false /*isOutput*/, /*hideIfClipDisconnected*/ false, abClips);
-            fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, false /*splitPlanesIntoChannels*/, false/*addNoneOption*/, true /*isOutput*/, /*hideIfClipDisconnected*/ false, _dstClip);
+            {
+                FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                args.dependsClips = abClips;
+                fetchDynamicMultiplaneChoiceParameter(kParamOutputR, args);
+            }
+            {
+                FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                args.dependsClips = abClips;
+                fetchDynamicMultiplaneChoiceParameter(kParamOutputG, args);
+            }
+            {
+                FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                args.dependsClips = abClips;
+                fetchDynamicMultiplaneChoiceParameter(kParamOutputB, args);
+            }
+            {
+                FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                args.dependsClips = abClips;
+                fetchDynamicMultiplaneChoiceParameter(kParamOutputA, args);
+            }
+            {
+                FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForOutputPlane();
+                args.dependsClips.push_back(_dstClip);
+                fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, args);
+            }
             onAllParametersFetched();
         }
 
@@ -645,42 +665,8 @@ ShufflePlugin::getClipComponents(const ClipComponentsArguments& args,
                                  ClipComponentsSetter& clipComponents)
 {
     assert(gIsMultiPlanarV2 || gIsMultiPlanarV1);
-
-
-    {
-        MultiPlane::ImagePlaneDesc plane;
-        OFX::Clip* clip = 0;
-        int channelIndex = -1;
-        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_outputLayer->getName(), &clip, &plane, &channelIndex);
-        if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
-            return;
-        }
-        clipComponents.addClipPlane(*_dstClip, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane));
-    }
-
+    MultiPlaneEffect::getClipComponents(args, clipComponents);
     clipComponents.setPassThroughClip(_srcClipA, args.time, args.view);
-
-    std::map<Clip*, std::set<std::string> > clipMap;
-    for (int i = 0; i < 4; ++i) {
-        MultiPlane::ImagePlaneDesc plane;
-        OFX::Clip* clip = 0;
-        int channelIndex = -1;
-        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_channelParam[i]->getName(), &clip, &plane, &channelIndex);
-
-        if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane) {
-            continue;
-        }
-        assert(clip);
-
-        std::set<std::string>& availablePlanes = clipMap[clip];
-
-        std::string ofxComponentsStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane);
-        std::pair<std::set<std::string>::iterator, bool> ret = availablePlanes.insert(ofxComponentsStr);
-        if (ret.second) {
-            clipComponents.addClipPlane(*clip, ofxComponentsStr);
-        }
-
-    }
 }
 
 struct IdentityChoiceData
