@@ -20,10 +20,18 @@
  * OFX Shadertoy plugin.
  *
  * References:
- * https://www.shadertoy.com (v0.8.7 https://www.shadertoy.com/changelog)
+ * https://www.shadertoy.com (v0.8.8 https://www.shadertoy.com/changelog)
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
  *
  * TODO:
+ * - upgrade to Shaderttoy 0.9.1:
+ *   - support WebGL 2.0 / OpenGL ES 3.0
+ *     (https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf
+ *      and pages 4 and 5 of
+ *      https://www.khronos.org/files/opengles3-quick-reference-card.pdf )
+ *      GLSL 3.30 https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.3.30.pdf
+ *      Note that this probably means we have to switch to an OpenGL Core profile,
+ *      so the host must give us an OpenGL Core context.
  * - add multipass support (using tabs for UI as in shadertoys)
  * - synthclipse-compatible comments http://synthclipse.sourceforge.net/user_guide/fragx/commands.html
  * - use .stoy for the presets shaders, and add the default shadertoy uniforms at the beginning, as in http://synthclipse.sourceforge.net/user_guide/shadertoy.html
@@ -70,13 +78,13 @@ using std::string;
 #define kPluginDescription \
     "Apply a Shadertoy fragment shader. See http://www.shadertoy.com\n" \
     "\n" \
-    "This plugin implements Shadertoy 0.8.7, but multipass shaders and sound are not supported.\n" \
+    "This plugin implements Shadertoy 0.8.8, but multipass shaders and sound are not supported.\n" \
     "\n" \
-    "This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
-    "For the complete specification please have a look at GLSL ES specification " \
-    "http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf " \
-    "or pages 3 and 4 of the OpenGL ES 2.0 quick reference card " \
-    "https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf\n" \
+    "Shadertoy 0.8.8 uses WebGL 1.0 (a.k.a. GLSL ES 1.0 from GLES 2.0), based on GLSL 1.20.\n" \
+    "\n" \
+    "Note that the more recent Shadertoy 0.9.1 uses WebGL 2.0 (a.k.a. GLSL ES 3.0 from GLES 3.0), based on GLSL 3.3.\n" \
+    "\n" \
+    "This help only covers the parts of GLSL ES that are relevant for Shadertoy. For the complete specification please have a look at GLSL ES 1.0 specification https://www.khronos.org/registry/OpenGL/specs/es/2.0/GLSL_ES_Specification_1.00.pdf or pages 3 and 4 of the OpenGL ES 2.0 quick reference card https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf\n" \
     "A Shadertoy/GLSL tutorial can be found at https://www.shadertoy.com/view/Md23DV\n" \
     "\n" \
     "Image shaders\n" \
@@ -269,9 +277,13 @@ using std::string;
 #define kPluginDescriptionMarkdown \
     "Apply a [Shadertoy](http://www.shadertoy.com) fragment shader.\n" \
     "\n" \
-    "This plugin implements [Shadertoy 0.8.7](https://www.shadertoy.com/changelog), but multipass shaders and sound are not supported.\n" \
+    "This plugin implements [Shadertoy 0.8.8](https://www.shadertoy.com/changelog), but multipass shaders and sound are not supported.\n" \
     "\n" \
-    "This help only covers the parts of GLSL ES that are relevant for Shadertoy. For the complete specification please have a look at [GLSL ES specification](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf)  or pages 3 and 4 of the [OpenGL ES 2.0 quick reference card](https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf).\n" \
+    "[Shadertoy 0.8.8](https://www.shadertoy.com/changelog) uses WebGL 1.0 (a.k.a. [GLSL ES 1.0](https://www.khronos.org/registry/OpenGL/specs/es/2.0/GLSL_ES_Specification_1.00.pdf) from GLES 2.0), based on [GLSL 1.20](https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.1.20.pdf)\n" \
+    "\n" \
+    "Note that the more recent [Shadertoy 0.9.1](https://www.shadertoy.com/changelog) uses WebGL 2.0 (a.k.a. [GLSL ES 3.0](https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf) from GLES 3.0), based on [GLSL 3.3](https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.3.30.pdf)\n" \
+    "\n" \
+    "This help only covers the parts of GLSL ES that are relevant for Shadertoy. For the complete specification please have a look at [GLSL ES 1.0 specification](https://www.khronos.org/registry/OpenGL/specs/es/2.0/GLSL_ES_Specification_1.00.pdf) or pages 3 and 4 of the [OpenGL ES 2.0 quick reference card](https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf).\n" \
     "See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).\n" \
     "\n" \
     "### Image shaders\n" \
