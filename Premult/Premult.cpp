@@ -420,6 +420,10 @@ private:
     /* set up and run a processor */
     void setupAndProcess(PremultBase &, const RenderArguments &args);
 
+    Image* fetchOutputImage(const RenderArguments &args);
+
+    const Image* fetchInputImage(const RenderArguments &args);
+
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
@@ -450,13 +454,11 @@ private:
 // basic plugin render function, just a skelington to instantiate templates from
 
 
-/* set up and run a processor */
+
 template<bool isPremult>
-void
-PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
-                                          const RenderArguments &args)
+Image*
+PremultPlugin<isPremult>::fetchOutputImage(const RenderArguments &args)
 {
-    // get a dst image
     Image* dstImage = 0;
     if (!gIsMultiplanar) {
         dstImage = _dstClip->fetchImage(args.time);
@@ -468,14 +470,49 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
             MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_outputPlane->getName(), &clip, &dstPlane, &channelIndex);
             if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
                 throwSuiteStatusException(kOfxStatFailed);
-                return;
             }
         }
 
 
         dstImage = _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(dstPlane).c_str() );
     }
-    std::auto_ptr<Image> dst(dstImage);
+    return dstImage;
+}
+
+template<bool isPremult>
+const Image*
+PremultPlugin<isPremult>::fetchInputImage(const RenderArguments &args)
+{
+    const Image* srcImage = 0;
+    if (_srcClip && _srcClip->isConnected()) {
+        if (!gIsMultiplanar) {
+            srcImage = _srcClip->fetchImage(args.time);
+        } else {
+            MultiPlane::ImagePlaneDesc srcPlane;
+
+            OFX::Clip* clip = 0;
+            int channelIndex = -1;
+            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &srcPlane, &channelIndex);
+            if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
+                setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
+                throwSuiteStatusException(kOfxStatFailed);
+            }
+
+            srcImage = _srcClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(srcPlane).c_str() );
+        }
+    }
+    return srcImage;
+}
+
+
+/* set up and run a processor */
+template<bool isPremult>
+void
+PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
+                                          const RenderArguments &args)
+{
+    // get a dst image
+    std::auto_ptr<Image> dst(fetchOutputImage(args));
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -495,26 +532,8 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
     }
 
     // fetch main input image
-    const Image* srcImage = 0;
-    if (_srcClip && _srcClip->isConnected()) {
-        if (!gIsMultiplanar) {
-            srcImage = _srcClip->fetchImage(args.time);
-        } else {
-            MultiPlane::ImagePlaneDesc srcPlane;
 
-            OFX::Clip* clip = 0;
-            int channelIndex = -1;
-            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &srcPlane, &channelIndex);
-            if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
-                setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
-                throwSuiteStatusException(kOfxStatFailed);
-                return;
-            }
-
-            srcImage = _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(srcPlane).c_str() );
-        }
-    }
-    std::auto_ptr<const Image> src(srcImage);
+    std::auto_ptr<const Image> src(fetchInputImage(args));
     
     // make sure bit depths are sane
     if ( src.get() ) {
@@ -565,7 +584,7 @@ PremultPlugin<isPremult>::render(const RenderArguments &args)
     // do the rendering
     if ( !_srcClip || !_srcClip->isConnected() ) {
         // get a dst image
-        std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+        std::auto_ptr<Image> dst(fetchOutputImage(args));
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
@@ -575,10 +594,9 @@ PremultPlugin<isPremult>::render(const RenderArguments &args)
         // Opaque images can have alpha set to anything, but it should always be considered 1
 
         // fetch main input image
-        std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                        _srcClip->fetchImage(args.time) : 0 );
+        std::auto_ptr<const Image> src(fetchInputImage(args));
         // get a dst image
-        std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+        std::auto_ptr<Image> dst(fetchOutputImage(args));
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
