@@ -518,7 +518,7 @@ private:
                                 a = 0.;
                             }
                             // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
-                            if (_optionalRotoMaskAImages[i] != _srcImgA) {
+                            if (_optionalRotoMaskAImages[i] != _optionalAImages[i]) {
                                 // Premult all A pixels by the roto mask
                                 for (int c = 0; c < nComponents; ++c) {
                                     tmpA[c] *= a;
