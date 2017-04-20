@@ -944,6 +944,7 @@ ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamOutputModeOptionAlpha);
         assert(param->getNOptions() == eOutputModeAlphaImage);
         param->appendOption(kParamOutputModeOptionImageAndAlpha);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

@@ -1292,6 +1292,7 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

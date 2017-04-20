@@ -2871,6 +2871,7 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
         param->setDefault( (int)eOutputModePremultiplied );
         param->setLayoutHint(eLayoutHintDivider);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (group) {
             // coverity[dead_error_line]

@@ -2252,6 +2252,7 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == (int)eOutputAlphaAll);
         param->appendOption(kParamOutputAlphaOptionAll, kParamOutputAlphaOptionAllHint);
         param->setDefault( (int)eOutputAlphaHue );
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

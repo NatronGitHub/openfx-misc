@@ -3614,6 +3614,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
                 param->setDefault(eGeneratorExtentDefault);
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                param->setAnimates(false);
                 desc.addClipPreferencesSlaveParam(*param);
                 if (page) {
                     page->addChild(*param);
@@ -3677,6 +3678,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 param->appendOption(kParamFormatSquare2kLabel);
                 param->setDefault(eParamFormatPCVideo);
                 param->setHint(kParamGeneratorFormatHint);
+                param->setAnimates(false);
                 desc.addClipPreferencesSlaveParam(*param);
                 if (page) {
                     page->addChild(*param);
