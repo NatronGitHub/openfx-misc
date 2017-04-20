@@ -960,6 +960,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamSetPremultLabel);
         param->setHint(kParamSetPremultHint);
         param->setDefault(false);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -978,6 +979,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == eImageUnPreMultiplied);
         param->appendOption( premultString(eImageUnPreMultiplied) );
         param->setDefault(eImagePreMultiplied); // images should be premultiplied in a compositing context
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -992,6 +994,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamSetFieldOrderLabel);
             param->setHint(kParamSetFieldOrderHint);
             param->setDefault(false);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1016,6 +1019,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             assert(param->getNOptions() == eFieldDoubled);
             param->appendOption( fieldOrderString(eFieldDoubled) );
             param->setDefault(eFieldNone);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1031,6 +1035,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamSetFormatLabel);
             param->setHint(kParamSetFormatHint);
             param->setDefault(false);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1051,6 +1056,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
             param->setDefault(eGeneratorExtentFormat);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1114,6 +1120,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamFormatSquare2kLabel);
             param->setDefault(eParamFormatPCVideo);
             param->setHint(kParamGeneratorFormatHint);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1204,6 +1211,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamSetPixelAspectRatioLabel);
             param->setHint(kParamSetPixelAspectRatioHint);
             param->setDefault(false);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1215,6 +1223,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamOutputPixelAspectRatioLabel);
             param->setHint(kParamOutputPixelAspectRatioHint);
             param->setDefault(1.);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1229,6 +1238,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamSetFrameRateLabel);
             param->setHint(kParamSetFrameRateHint);
             param->setDefault(false);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -1241,6 +1251,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamOutputFrameRateLabel);
             param->setHint(kParamOutputFrameRateHint);
             param->setDefault(24.);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);

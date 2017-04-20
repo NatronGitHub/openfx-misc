@@ -2127,6 +2127,7 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
             param->setDefault(eGeneratorExtentProject);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -2190,6 +2191,7 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamFormatSquare2kLabel);
             param->setDefault(eParamFormatPCVideo);
             param->setHint(kParamGeneratorFormatHint);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);

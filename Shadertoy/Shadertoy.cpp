@@ -2796,6 +2796,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamFormatSquare2kLabel);
             param->setDefault(eParamFormatPCVideo);
             param->setHint(kParamFormatHint);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
