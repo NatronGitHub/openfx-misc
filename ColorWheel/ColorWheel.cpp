@@ -430,7 +430,7 @@ ColorWheelPlugin::setupAndProcess(ColorWheelProcessorBase &processor,
     OfxPointD center = {0., 0.};
     double radius = 1.;
     OfxRectD rod = {0., 0., 0., 0.};
-    if ( !getRegionOfDefinition(rod) ) {
+    if ( !getRegionOfDefinition(time, rod) ) {
         if ( _srcClip && _srcClip->isConnected() ) {
             rod = _srcClip->getRegionOfDefinition(time);
         } else {
