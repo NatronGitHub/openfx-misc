@@ -655,7 +655,7 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor,
     OfxPointD btmLeft, size;
     {
         OfxRectD rod;
-        bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
+        bool wasCaught = GeneratorPlugin::getRegionOfDefinition(time, rod);
         if (!wasCaught) {
             //Overlay in default mode, use the project rod
             size = getProjectSize();
@@ -873,7 +873,7 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         return false;
     }
 
-    bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
+    bool wasCaught = GeneratorPlugin::getRegionOfDefinition(time, rod);
     if ( wasCaught && (extent != eGeneratorExtentFormat) ) {
         // add one pixel in each direction to ensure border is black and transparent
         // (non-black+transparent case was treated above)

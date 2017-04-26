@@ -448,7 +448,7 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor,
     double centerlineWidth;
     _centerlineWidth->getValueAtTime(time, centerlineWidth);
     OfxRectD rod = {0, 0, 0, 0};
-    if ( !getRegionOfDefinition(rod) ) {
+    if ( !getRegionOfDefinition(time, rod) ) {
         OfxPointD siz = getProjectSize();
         OfxPointD off = getProjectOffset();
         rod.x1 = off.x;
