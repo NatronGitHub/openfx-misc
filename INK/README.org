@@ -1,0 +1,24 @@
+* About INK
+
+INK is a proportionate colour difference keyer for processing blue or green screen video. It will remove the background screen colour for you (performing both the matte generation and the despill), so then you can superimpose the video over a different background. It's easy to use, even if you have never used a keyer before.
+
+INK is a general purpose keyer, producing a good result across a wide variety of materials and lighting conditions.
+
+/Some of INK's more advanced controls don't work yet. Those controls are marked with an asterisk ‘*’. They are listed in the source file for INK as a TODO list. If you want to contribute by completing any of these you are very welcome./
+
+* How To Install INK
+
+Put INK.ofx.bundle in your OFX plugin path. On OS X this is usually:
+#+BEGIN_SRC
+/Library/OFX/Plugins
+#+END_SRC
+If that folder doesn't exist, you can create it. Or, if you prefer, use the environment variable:
+#+BEGIN_SRC
+OFX_PLUGIN_PATH
+#+END_SRC
+
+* INK is Free Software
+INK is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.  You may obtain the source code from [[http://casanico.com][casanico.com]].
+
+INK is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of merchantability or fitness for a particular purpose.  See the [[http://www.gnu.org/licenses/gpl-3.0.html][GNU General Public License]] for more details.
+ 
