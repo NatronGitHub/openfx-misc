@@ -458,15 +458,7 @@ private:
                         } else {
                             b = (_bChannels[3] && srcPixB) ? 1. : 0.;
                         }
-                    } else {
-                        // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
-                        if (_srcImgB != _rotoMaskImgB) {
-                            // Premult all B pixels by the roto mask
-                            for (int c = 0; c < nComponents; ++c) {
-                                tmpB[c] *= b;
-                            }
-                        }
-                    }
+                    } 
 
                     mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpB, b, tmpPix);
                 } else {
@@ -829,6 +821,10 @@ MergePlugin::getClipComponents(const ClipComponentsArguments& args,
         }
     }
 
+    if (_maskClip && _maskClip->isConnected()) {
+        addRotoMaskIfAvailableOnClip(_maskClip, clipComponents);
+    }
+
 } // getClipComponents
 
 #endif
@@ -961,7 +957,17 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+
+    const Image* maskImage = 0;
+    if (doMasking) {
+        if (_pluginType == eMergePluginRoto) {
+            maskImage = _maskClip->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+        } else {
+            maskImage = _maskClip->fetchImage(time);
+        }
+    }
+
+    std::auto_ptr<const Image> mask(maskImage);
 
     // do we do masking
     if (doMasking) {
