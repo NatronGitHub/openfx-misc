@@ -523,6 +523,7 @@ public:
         , _channelParam()
         , _outputComponents(0)
     {
+        _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (1 <= _dstClip->getPixelComponentCount() && _dstClip->getPixelComponentCount() <= 4) );
         _srcClipA = fetchClip(context == eContextGeneral ? kClipA : kOfxImageEffectSimpleSourceClipName);
@@ -549,7 +550,7 @@ public:
                 _channelStringParam[3] = fetchStringParam(kParamOutputAChoice);
             }
         } catch (...) {
-            _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
+
         }
 
         _outputComponents = fetchChoiceParam(kParamOutputComponents);
@@ -580,7 +581,7 @@ public:
             }
             {
                 FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForOutputPlane();
-                args.dependsClips.push_back(_dstClip);
+                args.dependsClips.push_back(_srcClipA);
                 fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, args);
             }
             onAllParametersFetched();
@@ -600,7 +601,7 @@ private:
     /* override is identity */
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-    virtual void getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual OfxStatus getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -622,14 +623,14 @@ private:
 
     /* internal render function */
     template <class DSTPIX, int nComponentsDst>
-    void renderInternalForDstBitDepth(const RenderArguments &args, BitDepthEnum srcBitDepth);
+    void renderInternalForDstBitDepth(const RenderArguments &args, BitDepthEnum srcBitDepth, const MultiPlane::ImagePlaneDesc &dstPlane);
 
     template <int nComponentsDst>
-    void renderInternal(const RenderArguments &args, BitDepthEnum srcBitDepth, BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, BitDepthEnum srcBitDepth, BitDepthEnum dstBitDepth, const MultiPlane::ImagePlaneDesc &dstPlane);
 
     /* set up and run a processor */
     void setupAndProcess(ShufflerBase &, const RenderArguments &args);
-    void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const RenderArguments &args);
+    void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const RenderArguments &args, const MultiPlane::ImagePlaneDesc &dstPlane);
 
     MultiPlane::ImagePlaneDesc getPlaneFromOutputComponents() const;
 
@@ -660,13 +661,14 @@ private:
     ChoiceParam *_outputPremult;
 };
 
-void
+OfxStatus
 ShufflePlugin::getClipComponents(const ClipComponentsArguments& args,
                                  ClipComponentsSetter& clipComponents)
 {
     assert(gIsMultiPlanarV2 || gIsMultiPlanarV1);
-    MultiPlaneEffect::getClipComponents(args, clipComponents);
+    OfxStatus stat = MultiPlaneEffect::getClipComponents(args, clipComponents);
     clipComponents.setPassThroughClip(_srcClipA, args.time, args.view);
+    return stat;
 }
 
 struct IdentityChoiceData
@@ -945,33 +947,20 @@ public:
 
 void
 ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
-                                         const RenderArguments &args)
+                                         const RenderArguments &args,
+                                         const MultiPlane::ImagePlaneDesc &dstPlane)
 {
     const double time = args.time;
-
-    MultiPlane::ImagePlaneDesc dstPlane;
-    {
-        OFX::Clip* clip = 0;
-        int channelIndex = -1;
-        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_outputLayer->getName(), &clip, &dstPlane, &channelIndex);
-        if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
-            throwSuiteStatusException(kOfxStatFailed);
-            return;
-        }
-    }
-
-
     std::auto_ptr<Image> dst( _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(dstPlane).c_str() ) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    int nDstComponents = dst->getPixelComponentCount();
-    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-         ( nDstComponents != _dstClip->getPixelComponentCount() ) ) {
+    if (dstBitDepth != _dstClip->getPixelDepth() || dstPlane.getNumComponents() != dst->getPixelComponentCount()) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+    
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
          ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
@@ -984,11 +973,11 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
     BitDepthEnum srcBitDepth = eBitDepthNone;
     std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
     std::vector<InputPlaneChannel> planes;
-    for (int i = 0; i < nDstComponents; ++i) {
+    for (int i = 0; i < dstPlane.getNumComponents(); ++i) {
         InputPlaneChannel p;
         Clip* clip = 0;
         MultiPlane::ImagePlaneDesc plane;
-        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(nDstComponents == 1 ? _channelParam[3]->getName() : _channelParam[i]->getName(), &clip, &plane, &p.channelIndex);
+        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(dstPlane.getNumComponents() == 1 ? _channelParam[3]->getName() : _channelParam[i]->getName(), &clip, &plane, &p.channelIndex);
         if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
             setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
             throwSuiteStatusException(kOfxStatFailed);
@@ -1043,7 +1032,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
         outputBitDepth = gOutputBitDepthMap[_outputBitDepth->getValueAtTime(time)];
     }
 
-    processor.setValues(nDstComponents, outputBitDepth, planes);
+    processor.setValues(dstPlane.getNumComponents(), outputBitDepth, planes);
 
     processor.setDstImg( dst.get() );
     processor.setRenderWindow(args.renderWindow);
@@ -1054,7 +1043,8 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
 template <class DSTPIX, int nComponentsDst>
 void
 ShufflePlugin::renderInternalForDstBitDepth(const RenderArguments &args,
-                                            BitDepthEnum srcBitDepth)
+                                            BitDepthEnum srcBitDepth,
+                                            const MultiPlane::ImagePlaneDesc &dstPlane)
 {
     if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
         switch (srcBitDepth) {
@@ -1080,17 +1070,17 @@ ShufflePlugin::renderInternalForDstBitDepth(const RenderArguments &args,
         switch (srcBitDepth) {
         case eBitDepthUByte: {
             MultiPlaneShuffler<unsigned char, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcessMultiPlane(fred, args);
+            setupAndProcessMultiPlane(fred, args, dstPlane);
             break;
         }
         case eBitDepthUShort: {
             MultiPlaneShuffler<unsigned short, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcessMultiPlane(fred, args);
+            setupAndProcessMultiPlane(fred, args, dstPlane);
             break;
         }
         case eBitDepthFloat: {
             MultiPlaneShuffler<float, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcessMultiPlane(fred, args);
+            setupAndProcessMultiPlane(fred, args, dstPlane);
             break;
         }
         default:
@@ -1104,17 +1094,18 @@ template <int nComponentsDst>
 void
 ShufflePlugin::renderInternal(const RenderArguments &args,
                               BitDepthEnum srcBitDepth,
-                              BitDepthEnum dstBitDepth)
+                              BitDepthEnum dstBitDepth,
+                              const MultiPlane::ImagePlaneDesc &dstPlane)
 {
     switch (dstBitDepth) {
     case eBitDepthUByte:
-        renderInternalForDstBitDepth<unsigned char, nComponentsDst>(args, srcBitDepth);
+        renderInternalForDstBitDepth<unsigned char, nComponentsDst>(args, srcBitDepth, dstPlane);
         break;
     case eBitDepthUShort:
-        renderInternalForDstBitDepth<unsigned short, nComponentsDst>(args, srcBitDepth);
+        renderInternalForDstBitDepth<unsigned short, nComponentsDst>(args, srcBitDepth, dstPlane);
         break;
     case eBitDepthFloat:
-        renderInternalForDstBitDepth<float, nComponentsDst>(args, srcBitDepth);
+        renderInternalForDstBitDepth<float, nComponentsDst>(args, srcBitDepth, dstPlane);
         break;
     default:
         throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -1149,8 +1140,26 @@ ShufflePlugin::render(const RenderArguments &args)
         assert(dstBitDepth == outputBitDepth);
     }
 #endif
-    int dstComponentCount  = _dstClip->getPixelComponentCount();
-    assert(1 <= dstComponentCount && dstComponentCount <= 4);
+
+
+    MultiPlane::ImagePlaneDesc dstPlane;
+    if (!gIsMultiPlanarV1 && !gIsMultiPlanarV2) {
+        int dstComponentCount = _dstClip->getPixelComponentCount();
+        dstPlane = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(dstComponentCount);
+    } else {
+
+        OFX::Clip* clip = 0;
+        int channelIndex = -1;
+        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_outputLayer->getName(), &clip, &dstPlane, &channelIndex);
+        if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
+            throwSuiteStatusException(kOfxStatFailed);
+            return;
+        }
+
+    }
+    assert(1 <= dstPlane.getNumComponents() && dstPlane.getNumComponents() <= 4);
+
+
 
     assert( kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
@@ -1186,18 +1195,18 @@ ShufflePlugin::render(const RenderArguments &args)
         }
     }
 
-    switch (dstComponentCount) {
+    switch (dstPlane.getNumComponents()) {
     case 4:
-        renderInternal<4>(args, srcBitDepth, dstBitDepth);
+        renderInternal<4>(args, srcBitDepth, dstBitDepth, dstPlane);
         break;
     case 3:
-        renderInternal<3>(args, srcBitDepth, dstBitDepth);
+        renderInternal<3>(args, srcBitDepth, dstBitDepth, dstPlane);
         break;
     case 2:
-        renderInternal<2>(args, srcBitDepth, dstBitDepth);
+        renderInternal<2>(args, srcBitDepth, dstBitDepth, dstPlane);
         break;
     case 1:
-        renderInternal<1>(args, srcBitDepth, dstBitDepth);
+        renderInternal<1>(args, srcBitDepth, dstBitDepth, dstPlane);
         break;
     }
 } // ShufflePlugin::render
@@ -1288,13 +1297,17 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     MultiPlane::ImagePlaneDesc dstPlane;
     onMetadataChanged(&dstPlane);
 
-    // Get clip preferences expects a hard coded components string but here we may have any kind of plane.
-    // To respect OpenFX, we map our plane number of components to the components of the corresponding color plane
-    // e.g: if our plane is Toto.XYZ and has 3 channels, it becomes RGB
-    MultiPlane::ImagePlaneDesc colorPlaneMapped = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(dstPlane.getNumComponents());
-    PixelComponentEnum dstPixelComps = mapStrToPixelComponentEnum(MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(colorPlaneMapped));
+    PixelComponentEnum dstPixelComps;
+    if (dstPlane.isColorPlane()) {
+        // If the output plane is the color plane, set the pixel components to one of the OpenFX defaults selected by the user
+        dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
+    } else {
+        // A custom plane is selected, set the color plane number of components to the number of components of the custom plane
+        //MultiPlane::ImagePlaneDesc colorPlaneMapped = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(dstPlane.getNumComponents());
+        //dstPixelComps = mapStrToPixelComponentEnum(MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(colorPlaneMapped));
+        dstPixelComps = _srcClipA->getUnmappedPixelComponents();
+    }
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
-
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         // set the bitDepth of _dstClip

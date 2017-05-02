@@ -407,7 +407,7 @@ private:
 
     const Image* fetchPremultChannelImage(const RenderArguments &args, int *channelIndex, bool *fillWith1IfNoImage);
 
-    virtual void getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE;
+    virtual OfxStatus getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE;
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -506,13 +506,14 @@ PremultPlugin<isPremult>::fetchPremultChannelImage(const RenderArguments &args, 
 }
 
 template<bool isPremult>
-void
+OfxStatus
 PremultPlugin<isPremult>::getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents)
 {
-    MultiPlaneEffect::getClipComponents(args, clipComponents);
+    OfxStatus stat = MultiPlaneEffect::getClipComponents(args, clipComponents);
 
     // Specify the pass-through clip
     clipComponents.setPassThroughClip(_srcClip, args.time, args.view);
+    return stat;
 }
 
 

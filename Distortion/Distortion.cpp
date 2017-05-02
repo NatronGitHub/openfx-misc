@@ -1425,7 +1425,7 @@ private:
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 #ifdef OFX_EXTENSIONS_NUKE
-    virtual void getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual OfxStatus getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
 #endif
 
     /* Override the render */
@@ -3027,16 +3027,18 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 }
 
 #ifdef OFX_EXTENSIONS_NUKE
-void
+OfxStatus
 DistortionPlugin::getClipComponents(const ClipComponentsArguments& args,
                                     ClipComponentsSetter& clipComponents)
 {
     assert(gIsMultiPlaneV2);
 
+    OfxStatus stat;
     if (_uvClip) {
-        MultiPlaneEffect::getClipComponents(args, clipComponents);
+        stat = MultiPlaneEffect::getClipComponents(args, clipComponents);
         clipComponents.setPassThroughClip(_srcClip, args.time, args.view);
     }
+    return stat;
 } // getClipComponents
 
 #endif

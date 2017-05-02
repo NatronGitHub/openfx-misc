@@ -636,7 +636,7 @@ private:
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 #ifdef OFX_EXTENSIONS_NUKE
-    virtual void getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual OfxStatus getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
 #endif
 
     /* Override the render */
@@ -762,7 +762,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 static void addRotoMaskIfAvailableOnClip(Clip* clip, ClipComponentsSetter& clipComponents)
 {
     std::vector<std::string> availablePlanes;
-    clip->getComponentsPresent(&availablePlanes);
+    clip->getPlanesPresent(&availablePlanes);
     for (std::size_t i = 0; i < availablePlanes.size(); ++i) {
         MultiPlane::ImagePlaneDesc plane;
         if (availablePlanes[i] == kOfxMultiplaneColorPlaneID) {
@@ -777,7 +777,7 @@ static void addRotoMaskIfAvailableOnClip(Clip* clip, ClipComponentsSetter& clipC
     }
 }
 
-void
+OfxStatus
 MergePlugin::getClipComponents(const ClipComponentsArguments& args,
                                     ClipComponentsSetter& clipComponents)
 {
@@ -824,6 +824,7 @@ MergePlugin::getClipComponents(const ClipComponentsArguments& args,
     if (_maskClip && _maskClip->isConnected()) {
         addRotoMaskIfAvailableOnClip(_maskClip, clipComponents);
     }
+    return kOfxStatOK;
 
 } // getClipComponents
 
