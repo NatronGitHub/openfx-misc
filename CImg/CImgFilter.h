@@ -257,7 +257,8 @@ public:
                                      bool hasUnpremult = true);
 
     // utility functions
-    static bool isEmpty(const OfxRectI& r)
+    template <typename Rect>
+    static bool isEmpty(const Rect& r)
     {
         return r.x1 >= r.x2 || r.y1 >= r.y2;
     }
