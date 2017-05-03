@@ -389,7 +389,7 @@ public:
             }
             {
                 FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForOutputPlane();
-                args.dependsClips.push_back(_dstClip);
+                args.dependsClips.push_back(_srcClip);
                 fetchDynamicMultiplaneChoiceParameter(kParamInputPlane, args);
             }
             onAllParametersFetched();
