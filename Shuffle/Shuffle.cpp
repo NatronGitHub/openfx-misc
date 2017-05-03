@@ -472,36 +472,45 @@ private:
     {
         assert(_inputPlanes.size() == nComponentsDst);
         // now compute the transformed image, component by component
+
+        int srcChannels[nComponentsDst];
         for (int c = 0; c < nComponentsDst; ++c) {
             const Image* srcImg = _inputPlanes[c].img;
-            int srcComp = _inputPlanes[c].channelIndex;
+            srcChannels[c] = _inputPlanes[c].channelIndex;
             if (!srcImg) {
-                srcComp = _inputPlanes[c].fillZero ? 0 : 1;
+                srcChannels[c] = _inputPlanes[c].fillZero ? 0 : 1;
             }
-            assert( !srcImg || ( srcComp >= 0 && srcComp < srcImg->getPixelComponentCount() ) );
+            assert( !srcImg || ( srcChannels[c] >= 0 && srcChannels[c] < srcImg->getPixelComponentCount() ) );
 
-            for (int y = procWindow.y1; y < procWindow.y2; y++) {
-                if ( _effect.abort() ) {
-                    break;
-                }
+        }
 
-                PIXDST *dstPix = (PIXDST *) _dstImg->getPixelAddress(procWindow.x1, y);
+        for (int y = procWindow.y1; y < procWindow.y2; y++) {
+            if ( _effect.abort() ) {
+                break;
+            }
 
-                for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                    PIXSRC *srcPix = (PIXSRC *)  (srcImg ? srcImg->getPixelAddress(x, y) : 0);
+            PIXDST *dstPix = (PIXDST *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            for (int x = procWindow.x1; x < procWindow.x2; x++) {
+
+                for (int c = 0; c < nComponentsDst; ++c) {
                     // if there is a srcImg but we are outside of its RoD, it should be considered black and transparent
-                    if (!srcImg) {
+                    PIXSRC *srcPix = (PIXSRC *)  (_inputPlanes[c].img ? _inputPlanes[c].img->getPixelAddress(x, y) : 0);
+
+                    if (!srcPix) {
                         // Use constant value depending on fillZero
-                        dstPix[c] = convertPixelDepth<float, PIXDST>(srcComp);
+                        dstPix[c] = convertPixelDepth<float, PIXDST>(srcChannels[c]);
                     } else {
-                        dstPix[c] = convertPixelDepth<PIXSRC, PIXDST>(srcPix ? srcPix[srcComp] : 0);
+                        dstPix[c] = convertPixelDepth<PIXSRC, PIXDST>(srcPix ? srcPix[srcChannels[c]] : 0);
                     }
 
-                    dstPix += nComponentsDst;
                 }
+                dstPix += nComponentsDst;
+
             }
         }
     }
+    
 };
 
 
@@ -1313,6 +1322,8 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     onMetadataChanged(&dstPlane);
 
     PixelComponentEnum dstPixelComps;
+    PixelComponentEnum srcAComps = _srcClipA->getUnmappedPixelComponents();
+    PixelComponentEnum srcBComps = _srcClipB->getUnmappedPixelComponents();
     if (dstPlane.isColorPlane()) {
         // If the output plane is the color plane, set the pixel components to one of the OpenFX defaults selected by the user
         dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
@@ -1320,11 +1331,11 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // A custom plane is selected, set the color plane number of components to the number of components of the custom plane
         //MultiPlane::ImagePlaneDesc colorPlaneMapped = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(dstPlane.getNumComponents());
         //dstPixelComps = mapStrToPixelComponentEnum(MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(colorPlaneMapped));
-        dstPixelComps = _srcClipA->getUnmappedPixelComponents();
+        dstPixelComps = srcAComps;
     }
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
-    clipPreferences.setClipComponents(*_srcClipA, dstPixelComps);
-    clipPreferences.setClipComponents(*_srcClipB, dstPixelComps);
+    clipPreferences.setClipComponents(*_srcClipA, srcAComps);
+    clipPreferences.setClipComponents(*_srcClipB, srcBComps);
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         // set the bitDepth of _dstClip
