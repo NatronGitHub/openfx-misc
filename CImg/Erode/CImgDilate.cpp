@@ -77,7 +77,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsAlpha true
 
 #define kParamSize "size"
-#define kParamSizeLabel "size"
+#define kParamSizeLabel "Size"
 #define kParamSizeHint "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0)."
 #define kParamSizeDefault 1
 
