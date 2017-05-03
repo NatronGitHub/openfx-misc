@@ -1236,7 +1236,7 @@ void
 MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PixelComponentEnum outputComps = getDefaultOutputClipComponents();
-
+    clipPreferences.setClipComponents(*_dstClip, outputComps);
     clipPreferences.setClipComponents(*_srcClipA, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
     for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
