@@ -623,14 +623,14 @@ private:
 
     /* internal render function */
     template <class DSTPIX, int nComponentsDst>
-    void renderInternalForDstBitDepth(const RenderArguments &args, BitDepthEnum srcBitDepth, const MultiPlane::ImagePlaneDesc &dstPlane);
+    void renderInternalForDstBitDepth(const RenderArguments &args, BitDepthEnum srcBitDepth, const MultiPlane::ImagePlaneDesc &dstPlane, Image* dstImage);
 
     template <int nComponentsDst>
-    void renderInternal(const RenderArguments &args, BitDepthEnum srcBitDepth, BitDepthEnum dstBitDepth, const MultiPlane::ImagePlaneDesc &dstPlane);
+    void renderInternal(const RenderArguments &args, BitDepthEnum srcBitDepth, BitDepthEnum dstBitDepth, const MultiPlane::ImagePlaneDesc &dstPlane, Image* dstImage);
 
     /* set up and run a processor */
-    void setupAndProcess(ShufflerBase &, const RenderArguments &args);
-    void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const RenderArguments &args, const MultiPlane::ImagePlaneDesc &dstPlane);
+    void setupAndProcess(ShufflerBase &, const RenderArguments &args, Image* dstImage);
+    void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const RenderArguments &args, const MultiPlane::ImagePlaneDesc &dstPlane, Image* dstImage);
 
     MultiPlane::ImagePlaneDesc getPlaneFromOutputComponents() const;
 
@@ -808,21 +808,13 @@ ShufflePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 /* set up and run a processor */
 void
 ShufflePlugin::setupAndProcess(ShufflerBase &processor,
-                               const RenderArguments &args)
+                               const RenderArguments &args,
+                               Image* dst)
 {
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
-    if ( !dst.get() ) {
-        throwSuiteStatusException(kOfxStatFailed);
-    }
     const double time = args.time;
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-         ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
          ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
@@ -915,7 +907,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
 
     processor.setValues(outputComponents, outputComponentCount, outputBitDepth, channelMap);
 
-    processor.setDstImg( dst.get() );
+    processor.setDstImg(dst);
     processor.setRenderWindow(args.renderWindow);
 
     processor.process();
@@ -948,18 +940,10 @@ public:
 void
 ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
                                          const RenderArguments &args,
-                                         const MultiPlane::ImagePlaneDesc &dstPlane)
+                                         const MultiPlane::ImagePlaneDesc &dstPlane,
+                                         Image* dst)
 {
     const double time = args.time;
-    std::auto_ptr<Image> dst( _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(dstPlane).c_str() ) );
-    if ( !dst.get() ) {
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    if (dstBitDepth != _dstClip->getPixelDepth() || dstPlane.getNumComponents() != dst->getPixelComponentCount()) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
     
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
          ( dst->getRenderScale().y != args.renderScale.y) ||
@@ -973,7 +957,8 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
     BitDepthEnum srcBitDepth = eBitDepthNone;
     std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
     std::vector<InputPlaneChannel> planes;
-    for (int i = 0; i < dstPlane.getNumComponents(); ++i) {
+    int dstNComps = dst->getPixelComponentCount();
+    for (int i = 0; i < dstNComps; ++i) {
         InputPlaneChannel p;
         Clip* clip = 0;
         MultiPlane::ImagePlaneDesc plane;
@@ -1032,9 +1017,9 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
         outputBitDepth = gOutputBitDepthMap[_outputBitDepth->getValueAtTime(time)];
     }
 
-    processor.setValues(dstPlane.getNumComponents(), outputBitDepth, planes);
+    processor.setValues(dstNComps, outputBitDepth, planes);
 
-    processor.setDstImg( dst.get() );
+    processor.setDstImg(dst);
     processor.setRenderWindow(args.renderWindow);
 
     processor.process();
@@ -1044,23 +1029,24 @@ template <class DSTPIX, int nComponentsDst>
 void
 ShufflePlugin::renderInternalForDstBitDepth(const RenderArguments &args,
                                             BitDepthEnum srcBitDepth,
-                                            const MultiPlane::ImagePlaneDesc &dstPlane)
+                                            const MultiPlane::ImagePlaneDesc &dstPlane,
+                                            Image* dstImage)
 {
     if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
         switch (srcBitDepth) {
         case eBitDepthUByte: {
             Shuffler<unsigned char, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcess(fred, args);
+            setupAndProcess(fred, args, dstImage);
             break;
         }
         case eBitDepthUShort: {
             Shuffler<unsigned short, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcess(fred, args);
+            setupAndProcess(fred, args, dstImage);
             break;
         }
         case eBitDepthFloat: {
             Shuffler<float, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcess(fred, args);
+            setupAndProcess(fred, args, dstImage);
             break;
         }
         default:
@@ -1070,17 +1056,17 @@ ShufflePlugin::renderInternalForDstBitDepth(const RenderArguments &args,
         switch (srcBitDepth) {
         case eBitDepthUByte: {
             MultiPlaneShuffler<unsigned char, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcessMultiPlane(fred, args, dstPlane);
+            setupAndProcessMultiPlane(fred, args, dstPlane, dstImage);
             break;
         }
         case eBitDepthUShort: {
             MultiPlaneShuffler<unsigned short, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcessMultiPlane(fred, args, dstPlane);
+            setupAndProcessMultiPlane(fred, args, dstPlane, dstImage);
             break;
         }
         case eBitDepthFloat: {
             MultiPlaneShuffler<float, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcessMultiPlane(fred, args, dstPlane);
+            setupAndProcessMultiPlane(fred, args, dstPlane, dstImage);
             break;
         }
         default:
@@ -1095,17 +1081,17 @@ void
 ShufflePlugin::renderInternal(const RenderArguments &args,
                               BitDepthEnum srcBitDepth,
                               BitDepthEnum dstBitDepth,
-                              const MultiPlane::ImagePlaneDesc &dstPlane)
+                              const MultiPlane::ImagePlaneDesc &dstPlane, Image* dstImage)
 {
     switch (dstBitDepth) {
     case eBitDepthUByte:
-        renderInternalForDstBitDepth<unsigned char, nComponentsDst>(args, srcBitDepth, dstPlane);
+        renderInternalForDstBitDepth<unsigned char, nComponentsDst>(args, srcBitDepth, dstPlane, dstImage);
         break;
     case eBitDepthUShort:
-        renderInternalForDstBitDepth<unsigned short, nComponentsDst>(args, srcBitDepth, dstPlane);
+        renderInternalForDstBitDepth<unsigned short, nComponentsDst>(args, srcBitDepth, dstPlane, dstImage);
         break;
     case eBitDepthFloat:
-        renderInternalForDstBitDepth<float, nComponentsDst>(args, srcBitDepth, dstPlane);
+        renderInternalForDstBitDepth<float, nComponentsDst>(args, srcBitDepth, dstPlane, dstImage);
         break;
     default:
         throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -1195,18 +1181,47 @@ ShufflePlugin::render(const RenderArguments &args)
         }
     }
 
-    switch (dstPlane.getNumComponents()) {
+    std::auto_ptr<Image> dst;
+    if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
+        dst.reset( _dstClip->fetchImage(args.time) );
+
+        if ( !dst.get() ) {
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
+        if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+            ( dstComponents != _dstClip->getPixelComponents() ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+
+    } else {
+        dst.reset( _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(dstPlane).c_str() ) );
+        if ( !dst.get() ) {
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+
+        // In multiplane mode, we cannot expect the image plane to match the clip components
+        if (dstBitDepth != _dstClip->getPixelDepth()) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+
+    int dstComponentCount = dst->getPixelComponentCount();
+    switch (dstComponentCount) {
     case 4:
-        renderInternal<4>(args, srcBitDepth, dstBitDepth, dstPlane);
+        renderInternal<4>(args, srcBitDepth, dstBitDepth, dstPlane, dst.get());
         break;
     case 3:
-        renderInternal<3>(args, srcBitDepth, dstBitDepth, dstPlane);
+        renderInternal<3>(args, srcBitDepth, dstBitDepth, dstPlane, dst.get());
         break;
     case 2:
-        renderInternal<2>(args, srcBitDepth, dstBitDepth, dstPlane);
+        renderInternal<2>(args, srcBitDepth, dstBitDepth, dstPlane, dst.get());
         break;
     case 1:
-        renderInternal<1>(args, srcBitDepth, dstBitDepth, dstPlane);
+        renderInternal<1>(args, srcBitDepth, dstBitDepth, dstPlane, dst.get());
         break;
     }
 } // ShufflePlugin::render
@@ -1308,6 +1323,8 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         dstPixelComps = _srcClipA->getUnmappedPixelComponents();
     }
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
+    clipPreferences.setClipComponents(*_srcClipA, dstPixelComps);
+    clipPreferences.setClipComponents(*_srcClipB, dstPixelComps);
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         // set the bitDepth of _dstClip
