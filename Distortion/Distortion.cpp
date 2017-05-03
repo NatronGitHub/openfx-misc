@@ -3033,7 +3033,7 @@ DistortionPlugin::getClipComponents(const ClipComponentsArguments& args,
 {
     assert(gIsMultiPlaneV2);
 
-    OfxStatus stat;
+    OfxStatus stat = kOfxStatReplyDefault;
     if (_uvClip) {
         stat = MultiPlaneEffect::getClipComponents(args, clipComponents);
         clipComponents.setPassThroughClip(_srcClip, args.time, args.view);
