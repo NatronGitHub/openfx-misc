@@ -1,0 +1,62 @@
+--- Inpaint/inpaint.h	2017-05-03 18:44:48.000000000 +0200
++++ Inpaint/inpaint-abortable.h	2017-05-03 18:44:01.000000000 +0200
+@@ -103,6 +103,7 @@
+   // Find (dilated by 2) bounding box for the inpainting mask.
+   unsigned int xm0 = _width, ym0 = _height, xm1 = 0, ym1 = 0;
+   bool is_mask_found = false;
++  cimg_pragma_openmp(parallel for collapse(2) cimg_openmp_if(mask.width()>=256 && mask.height()>=16))
+   cimg_forXY(mask,x,y) if (mask(x,y)) {
+     is_mask_found = true;
+     if (x<(int)xm0) xm0 = (unsigned int)x;
+@@ -121,6 +122,7 @@
+   // Construct normalized version of the mask.
+   CImg<ucharT> nmask(dx,dy);
+   unsigned char *ptrM = nmask.data();
++  cimg_pragma_openmp(parallel for collapse(2) cimg_openmp_if(xm1 - xm0 >=256 && ym1 - ym0>=16))
+   cimg_for_inXY(mask,xm0,ym0,xm1,ym1,x,y) *(ptrM++) = mask(x,y)?0:1;
+   xm0 = ym0 = 0; xm1 = dx - 1; ym1 = dy - 1;
+ 
+@@ -140,6 +142,7 @@
+   unsigned int target_index = 0;
+ 
+   while (true) {
++    cimg_abort_test();
+ 
+     // Extract mask border points and compute priorities to find target point.
+     unsigned int nb_border_points = 0;
+@@ -416,6 +419,7 @@
+     // Generate blending scales.
+     CImg<T> result = _inpaint_patch_crop(ox,oy,ox + dx - 1,oy + dy - 1,0);
+     for (unsigned int blend_iter = 1; blend_iter<=blend_scales; ++blend_iter) {
++      cimg_abort_test();
+       const unsigned int
+         _blend_width = blend_iter*blend_size/blend_scales,
+         blend_width = _blend_width?_blend_width + 1 - (_blend_width%2):0;
+@@ -454,19 +458,25 @@
+       }
+ 
+       if (is_blend_outer) {
++        cimg_pragma_openmp(parallel for collapse(2) cimg_openmp_if(blended.width()>=256 && blended.height()>=16))
+         cimg_forXY(blended,x,y) if (blend_map(x,y)==blend_iter) {
+           const float cum = cumul(x,y);
+           if (cum>0) cimg_forC(*this,c) result(x,y,c) = (T)(blended(x,y,c)/cum);
+         }
+-      } else { cimg_forXY(blended,x,y) if (mask(x + ox,y + oy) && blend_map(x,y)==blend_iter) {
++      } else {
++        cimg_pragma_openmp(parallel for collapse(2) cimg_openmp_if(blended.width()>=256 && blended.height()>=16))
++        cimg_forXY(blended,x,y) if (mask(x + ox,y + oy) && blend_map(x,y)==blend_iter) {
+           const float cum = cumul(x,y);
+           if (cum>0) cimg_forC(*this,c) result(x,y,c) = (T)(blended(x,y,c)/cum);
+         }
+       }
+     }
+     if (is_blend_outer) draw_image(ox,oy,result);
+-    else cimg_forXY(result,x,y) if (mask(x + ox,y + oy))
++    else {
++      cimg_pragma_openmp(parallel for collapse(2) cimg_openmp_if(result.width()>=256 && result.height()>=16))
++      cimg_forXY(result,x,y) if (mask(x + ox,y + oy))
+            cimg_forC(*this,c) (*this)(x + ox,y + oy,c) = (T)result(x,y,c);
++    }
+   }
+   return *this;
+ }
