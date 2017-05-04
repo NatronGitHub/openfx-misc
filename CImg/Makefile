@@ -5,6 +5,7 @@ CImgBilateral.o \
 CImgBlur.o \
 CImgDenoise.o \
 CImgDilate.o \
+CImgDistance.o \
 CImgEqualize.o \
 CImgErode.o \
 CImgErodeSmooth.o \
@@ -78,6 +79,7 @@ VPATH += \
 Bilateral \
 Blur \
 Denoise \
+Distance \
 Equalize \
 Erode \
 ErodeSmooth \
@@ -103,6 +105,7 @@ CXXFLAGS += \
 -IBilateral \
 -IBlur \
 -IDenoise \
+-IDistance \
 -IEqualize \
 -IErode \
 -IErodeSmooth \
@@ -165,6 +168,8 @@ $(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImgOperator.h CImgFilter.h CIm
 $(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgDistance.o: CImgDistance.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp CImgFilter.h CImg.h
 

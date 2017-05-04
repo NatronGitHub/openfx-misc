@@ -38,6 +38,8 @@
 
 using namespace OFX;
 
+using std::min; using std::max; using std::floor; using std::ceil; using std::sqrt;
+
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName          "DistanceCImg"
@@ -75,22 +77,24 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamMetric "metric"
 #define kParamMetricLabel "Metric"
 #define kParamMetricHint "Type of metric."
-#define kParamMetricOptionChebyshev "Chebyshev"
-#define kParamMetricOptionManhattan "Manhattan"
-#define kParamMetricOptionEuclidean "Euclidean"
-#define kParamMetricOptionSquaredEuclidean "Squared Euclidean"
+#define kParamMetricOptionChebyshev "Chebyshev", "max(abs(x-xborder),abs(y-yborder))"
+#define kParamMetricOptionManhattan "Manhattan", "abs(x-xborder) + abs(y-yborder)"
+#define kParamMetricOptionEuclidean "Euclidean", "sqrt(sqr(x-xborder) + sqr(y-yborder))"
+#define kParamMetricOptionSquaredEuclidean "Squared Euclidean", "sqr(x-xborder) + sqr(y-yborder)"
+#define kParamMetricOptionSpherical "Spherical", "Compute the Euclidean distance, and draw a sphere at each point. Gives a round shape rather than a conical shape to the distance function."
 enum MetricEnum {
     eMetricChebyshev = 0,
     eMetricManhattan,
     eMetricEuclidean,
     eMetricSquaredEuclidean,
+    eMetricSpherical,
 };
 #define kParamMetricDefault eMetricEuclidean
 
 /// Distance plugin
 struct CImgDistanceParams
 {
-    int metric;
+    MetricEnum metric;
 };
 
 class CImgDistancePlugin
@@ -99,7 +103,7 @@ class CImgDistancePlugin
 public:
 
     CImgDistancePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgDistanceParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+    : CImgFilterPluginHelper<CImgDistanceParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ false)
     {
         _metric  = fetchChoiceParam(kParamMetric);
         assert(_metric);
@@ -108,7 +112,7 @@ public:
     virtual void getValuesAtTime(double time,
                                  CImgDistanceParams& params) OVERRIDE FINAL
     {
-        _metric->getValueAtTime(time, params.metric);
+        params.metric = (MetricEnum)_metric->getValueAtTime(time);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -142,7 +146,7 @@ public:
         // - of the format, if it is defined
         // - else use the cimg dimension, since this plugin does not support ties anyway
 
-        double maxdim = std::max( cimg.width(), cimg.height() );
+        double maxdim = max( cimg.width(), cimg.height() );
 #ifdef OFX_EXTENSIONS_NATRON
         OfxRectI srcFormat;
         _srcClip->getFormat(srcFormat);
@@ -152,12 +156,61 @@ public:
         srcFormatD.y1 = srcFormat.y1 * args.renderScale.y;
         srcFormatD.y2 = srcFormat.y2 * args.renderScale.y;
         if ( !isEmpty(srcFormatD) ) {
-            maxdim = std::max( srcFormatD.x2 - srcFormatD.x1, srcFormatD.y2 - srcFormatD.y1 );
+            maxdim = max( srcFormatD.x2 - srcFormatD.x1, srcFormatD.y2 - srcFormatD.y1 );
         }
 #endif
-        cimg.distance(0, params.metric);
+        int m = (params.metric == eMetricSpherical) ? (int)eMetricEuclidean : (int)params.metric;
+        cimg.distance(0, m);
 
-        if (params.metric == 3) {
+        if (params.metric == eMetricSpherical) {
+            bool finished = false;
+            cimg_library::CImg<cimgpix_t> distance(cimg, /*is_shared=*/false);
+
+            while (!finished) {
+                cimg_abort_test();
+                int max_x = 0, max_y = 0, max_z = 0, max_c = 0;
+                cimgpix_t dmax = distance(0,0,0,0);
+                cimg_forXYZC(cimg, x, y, z, c) {
+                    if (distance(x,y,z,c) > dmax) {
+                        dmax = distance(x,y,z,c);
+                        max_x = x;
+                        max_y = y;
+                        max_z = z;
+                        max_c = c;
+                    }
+                }//image loop
+                //printf("dmax=%g\n", dmax);
+                if (dmax <= 0) {
+                    // no more sphere to draw
+                    finished = true;
+                } else {
+                    distance(max_x, max_y, max_z, max_c) = 0;
+                    // draw a Z-sphere in the zmap and prune points in
+                    // the cimg corresponding to occluded spheres
+                    cimgpix_t r = dmax;
+                    int xmin = (int)floor(max((cimgpix_t)0, max_x - dmax));
+                    int xmax = (int)ceil(min((cimgpix_t)cimg.width(), max_x + dmax));
+                    int ymin = (int)floor(max((cimgpix_t)0, max_y - dmax));
+                    int ymax = (int)ceil(min((cimgpix_t)cimg.height(), max_y + dmax));
+                    // loop on all pixels in the bounding box
+                    cimg_for_inXY(cimg, xmin, ymin, xmax, ymax, x, y) {
+                        cimgpix_t r2 = (x - max_x)*(x - max_x) + (y - max_y)*(y - max_y);
+                        if (r2 < r * r) {
+                            // draw the Z-sphere point
+                            cimgpix_t z = sqrt(r*r - r2);
+                            if (cimg(x,y, max_z, max_c) < z) {
+                                cimg(x,y, max_z, max_c) = z;
+                            }
+                            // prune points below the Z-cone
+                            if (distance(x, y, max_z, max_c) > 0 && distance(x, y, max_z, max_c) < (r - sqrt(r2))) {
+                                distance(x, y, max_z, max_c) = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (params.metric == eMetricSquaredEuclidean) {
             cimg /= maxdim * maxdim/* * args.renderScale.x*/;
         } else {
             cimg /= maxdim/* * args.renderScale.x*/;
@@ -229,6 +282,8 @@ CImgDistancePluginFactory::describeInContext(ImageEffectDescriptor& desc,
         param->appendOption(kParamMetricOptionEuclidean);
         assert(param->getNOptions() == eMetricSquaredEuclidean);
         param->appendOption(kParamMetricOptionSquaredEuclidean);
+        assert(param->getNOptions() == eMetricSpherical);
+        param->appendOption(kParamMetricOptionSpherical);
         param->setDefault(kParamMetricDefault);
         if (page) {
             page->addChild(*param);
