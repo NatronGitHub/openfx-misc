@@ -159,17 +159,22 @@ public:
             maxdim = max( srcFormatD.x2 - srcFormatD.x1, srcFormatD.y2 - srcFormatD.y1 );
         }
 #endif
-        int m = (params.metric == eMetricSpherical) ? (int)eMetricEuclidean : (int)params.metric;
+        int m = (params.metric == eMetricSpherical) ? (int)eMetricSquaredEuclidean : (int)params.metric;
         cimg.distance(0, m);
 
         if (params.metric == eMetricSpherical) {
             bool finished = false;
             cimg_library::CImg<cimgpix_t> distance(cimg, /*is_shared=*/false);
 
+            // TODO: perform a MAT (medial axis transform) first to reduce the number of points.
+            //  E. Remy and E. Thiel. Exact Medial Axis with Euclidean Distance. Image and Vision Computing, 23(2):167-175, 2005.
+            // see http://pageperso.lif.univ-mrs.fr/~edouard.thiel/IVC2004/
+
             while (!finished) {
                 cimg_abort_test();
                 int max_x = 0, max_y = 0, max_z = 0, max_c = 0;
                 cimgpix_t dmax = distance(0,0,0,0);
+                // TODO: if we start from the MAT, we can process each sphere center sequentially: no need to extract the maximum to get the next center (this is only useful to prune points that are within the Z-cone). The main loop would thus be on the non-zero MAT pixels.
                 cimg_forXYZC(cimg, x, y, z, c) {
                     if (distance(x,y,z,c) > dmax) {
                         dmax = distance(x,y,z,c);
@@ -187,28 +192,31 @@ public:
                     distance(max_x, max_y, max_z, max_c) = 0;
                     // draw a Z-sphere in the zmap and prune points in
                     // the cimg corresponding to occluded spheres
-                    cimgpix_t r = dmax;
-                    int xmin = (int)floor(max((cimgpix_t)0, max_x - dmax));
-                    int xmax = (int)ceil(min((cimgpix_t)cimg.width(), max_x + dmax));
-                    int ymin = (int)floor(max((cimgpix_t)0, max_y - dmax));
-                    int ymax = (int)ceil(min((cimgpix_t)cimg.height(), max_y + dmax));
+                    cimgpix_t r2 = dmax;
+                    cimgpix_t r = sqrt(r2);
+                    int xmin = (int)floor(max((cimgpix_t)0, max_x - r));
+                    int xmax = (int)ceil(min((cimgpix_t)cimg.width(), max_x + r));
+                    int ymin = (int)floor(max((cimgpix_t)0, max_y - r));
+                    int ymax = (int)ceil(min((cimgpix_t)cimg.height(), max_y + r));
                     // loop on all pixels in the bounding box
                     cimg_for_inXY(cimg, xmin, ymin, xmax, ymax, x, y) {
-                        cimgpix_t r2 = (x - max_x)*(x - max_x) + (y - max_y)*(y - max_y);
-                        if (r2 < r * r) {
+                        cimgpix_t pr2 = (x - max_x)*(x - max_x) + (y - max_y)*(y - max_y);
+                        if (pr2 < r2) {
                             // draw the Z-sphere point
-                            cimgpix_t z = sqrt(r*r - r2);
+                            cimgpix_t z = r2 - pr2;
                             if (cimg(x,y, max_z, max_c) < z) {
                                 cimg(x,y, max_z, max_c) = z;
                             }
-                            // prune points below the Z-cone
-                            if (distance(x, y, max_z, max_c) > 0 && distance(x, y, max_z, max_c) < (r - sqrt(r2))) {
+                            // prune points below the Z-cone (should not be necessary if we do the MAT first)
+                            if (distance(x, y, max_z, max_c) > 0 && distance(x, y, max_z, max_c) < /*(r - sqrt(pr2))^2=*/(r2 + pr2 - 2 * r * sqrt(pr2)) ) {
                                 distance(x, y, max_z, max_c) = 0;
                             }
                         }
                     }
                 }
             }
+            // now compute the square root
+            cimg.sqrt();
         }
         if (params.metric == eMetricSquaredEuclidean) {
             cimg /= maxdim * maxdim/* * args.renderScale.x*/;
