@@ -5,6 +5,7 @@ CImgBilateral.o \
 CImgBlur.o \
 CImgDenoise.o \
 CImgDilate.o \
+CImgDistance.o \
 CImgEqualize.o \
 CImgErode.o \
 CImgErodeSmooth.o \
@@ -44,8 +45,14 @@ Blur/net.sf.cimg.CImgChromaBlur.png \
 Blur/net.sf.cimg.CImgChromaBlur.svg \
 Blur/net.sf.cimg.CImgBloom.png \
 Blur/net.sf.cimg.CImgBloom.svg \
+Blur/eu.cimg.EdgeDetect.png \
+Blur/eu.cimg.EdgeDetect.svg \
+Blur/eu.cimg.EdgeExtend.png \
+Blur/eu.cimg.EdgeExtend.svg \
 Blur/net.sf.cimg.CImgLaplacian.png \
 Blur/net.sf.cimg.CImgLaplacian.svg \
+Blur/net.sf.cimg.CImgSharpen.png \
+Blur/net.sf.cimg.CImgSharpen.svg \
 Denoise/net.sf.cimg.CImgDenoise.png \
 Denoise/net.sf.cimg.CImgDenoise.svg \
 Equalize/net.sf.cimg.CImgEqualize.png \
@@ -78,6 +85,7 @@ VPATH += \
 Bilateral \
 Blur \
 Denoise \
+Distance \
 Equalize \
 Erode \
 ErodeSmooth \
@@ -103,6 +111,7 @@ CXXFLAGS += \
 -IBilateral \
 -IBlur \
 -IDenoise \
+-IDistance \
 -IEqualize \
 -IErode \
 -IErodeSmooth \
@@ -166,6 +175,8 @@ $(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImgOperator.h CImgFilter.h CIm
 $(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgDistance.o: CImgDistance.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp CImgFilter.h CImg.h
 

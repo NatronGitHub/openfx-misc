@@ -1222,7 +1222,7 @@ public:
                unsigned int iheight,
                bool b3,
                int sc) // 1 << lev
-        : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
+        : ProcessRowsColsBase<true>(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
     {
     }
 
@@ -1264,7 +1264,7 @@ public:
                     bool b3,
                     int sc, // 1 << lev
                     double* sumsq)
-        : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
+        : ProcessRowsColsBase<false>(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
         , _sumsq(sumsq)
     {
     }
@@ -1318,7 +1318,7 @@ public:
                unsigned int iheight,
                bool b3,
                int sc) // 1 << lev
-        : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
+        : ProcessRowsColsBase<false>(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
     {
     }
 
