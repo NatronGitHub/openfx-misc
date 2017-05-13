@@ -49,6 +49,8 @@ Blur/eu.cimg.EdgeDetect.png \
 Blur/eu.cimg.EdgeDetect.svg \
 Blur/eu.cimg.EdgeExtend.png \
 Blur/eu.cimg.EdgeExtend.svg \
+Blur/fr.inria.EdgeBlur.png \
+Blur/fr.inria.EdgeBlur.svg \
 Blur/net.sf.cimg.CImgLaplacian.png \
 Blur/net.sf.cimg.CImgLaplacian.svg \
 Blur/net.sf.cimg.CImgSharpen.png \

@@ -5,8 +5,8 @@ PLUGINNAME = Shadertoy
 
 RESOURCES = \
 presets \
-$(TOP_SRCDIR)/Shadertoy/net.sf.openfx.Shadertoy.png \
-$(TOP_SRCDIR)/Shadertoy/net.sf.openfx.Shadertoy.svg
+net.sf.openfx.Shadertoy.png \
+net.sf.openfx.Shadertoy.svg \
 
 OSMESA_PATH ?= /opt/osmesa
 LLVM_PATH ?= /opt/llvm
