@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;">
+    <g transform="matrix(1,0,0,1,-1410,-1526)">
+        <g id="Edge-Extend" transform="matrix(1,0,0,1,-986.5,1525.5)">
+            <rect x="2396" y="0" width="128" height="128" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="2396" y="0" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g id="net.2e.sf.2e.cimg.2e.CImgDilate" transform="matrix(1,0,0,1,2396,0.0002)">
+                    <path d="M126.174,62.614L83,37.682L83,53L66.629,53C65.237,34 59.961,16 51.588,0L0,0L0,128L50.252,128C59.438,112 65.211,93 66.645,73L83,73L83,87.541L126.174,62.614Z" style="fill:rgb(230,230,230);fill-rule:nonzero;"/>
+                </g>
+                <g transform="matrix(0.682639,0,0,0.682639,2365.12,12.8394)">
+                    <path d="M109.934,15.519C109.934,15.519 65.87,65.307 65.202,89.301C64.512,114.075 76.803,122.948 95.365,122.645C110.797,122.393 124.219,113.629 123.781,91.61C123.542,79.619 113.683,65.063 107.336,55.869C92.794,34.802 109.934,15.519 109.934,15.519" style="fill:rgb(128,128,128);fill-rule:nonzero;"/>
+                </g>
+                <g transform="matrix(0.682639,0,0,0.682639,2365.12,12.8394)">
+                    <path d="M112.578,77.102C114.829,82.406 114.912,87.436 112.764,88.337C110.615,89.239 107.047,85.668 104.796,80.364C102.545,75.06 102.462,70.03 104.611,69.129C106.76,68.227 110.327,71.798 112.578,77.102" style="fill:rgb(230,230,230);fill-rule:nonzero;"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

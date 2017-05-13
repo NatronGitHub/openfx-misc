@@ -45,8 +45,14 @@ Blur/net.sf.cimg.CImgChromaBlur.png \
 Blur/net.sf.cimg.CImgChromaBlur.svg \
 Blur/net.sf.cimg.CImgBloom.png \
 Blur/net.sf.cimg.CImgBloom.svg \
+Blur/eu.cimg.EdgeDetect.png \
+Blur/eu.cimg.EdgeDetect.svg \
+Blur/eu.cimg.EdgeExtend.png \
+Blur/eu.cimg.EdgeExtend.svg \
 Blur/net.sf.cimg.CImgLaplacian.png \
 Blur/net.sf.cimg.CImgLaplacian.svg \
+Blur/net.sf.cimg.CImgSharpen.png \
+Blur/net.sf.cimg.CImgSharpen.svg \
 Denoise/net.sf.cimg.CImgDenoise.png \
 Denoise/net.sf.cimg.CImgDenoise.svg \
 Equalize/net.sf.cimg.CImgEqualize.png \
