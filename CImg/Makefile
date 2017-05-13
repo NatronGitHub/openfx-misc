@@ -69,6 +69,8 @@ Guided/net.sf.cimg.CImgGuided.png \
 Guided/net.sf.cimg.CImgGuided.svg \
 HistEQ/net.sf.cimg.CImgHistEQ.png \
 HistEQ/net.sf.cimg.CImgHistEQ.svg \
+Inpaint/eu.cimg.Inpaint.png \
+Inpaint/eu.cimg.Inpaint.svg \
 Noise/net.sf.cimg.CImgNoise.png \
 Noise/net.sf.cimg.CImgNoise.svg \
 Plasma/net.sf.cimg.CImgPlasma.png \
