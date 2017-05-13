@@ -160,8 +160,8 @@ $(TOP_SRCDIR)/Grade/net.sf.openfx.GradePlugin.png \
 $(TOP_SRCDIR)/Grade/net.sf.openfx.GradePlugin.svg \
 $(TOP_SRCDIR)/HueCorrect/net.sf.openfx.HueCorrect.png \
 $(TOP_SRCDIR)/HueCorrect/net.sf.openfx.HueCorrect.svg \
-$(TOP_SRCDIR)/HueKeyer/net.sf.openfx.HueKeyer.png \
-$(TOP_SRCDIR)/HueKeyer/net.sf.openfx.HueKeyer.svg \
+$(TOP_SRCDIR)/HueCorrect/net.sf.openfx.HueKeyer.png \
+$(TOP_SRCDIR)/HueCorrect/net.sf.openfx.HueKeyer.svg \
 $(TOP_SRCDIR)/HSVTool/net.sf.openfx.HSVToolPlugin.png \
 $(TOP_SRCDIR)/HSVTool/net.sf.openfx.HSVToolPlugin.svg \
 $(TOP_SRCDIR)/ImageStatistics/net.sf.openfx.ImageStatistics.png \
