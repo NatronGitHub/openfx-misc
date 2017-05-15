@@ -209,8 +209,6 @@
 		1E2678AD1DAE96E50047D737 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E2678AE1DAE96E50047D737 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E2678B01DAE96E50047D737 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1E2678B21DAE96E50047D737 /* net.sf.openfx.ColorLookupPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A89819C6EE8400E6E3AE /* net.sf.openfx.ColorLookupPlugin.png */; };
-		1E2678B31DAE96E50047D737 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CAE19C9829C00C2C668 /* net.sf.openfx.ColorLookupPlugin.svg */; };
 		1E2678B91DAE97120047D737 /* HueCorrect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2678A11DAE95F50047D737 /* HueCorrect.cpp */; };
 		1E2678BA1DAE971A0047D737 /* HueCorrect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2678A11DAE95F50047D737 /* HueCorrect.cpp */; };
 		1E2868C81B8324F700B18774 /* TestOpenGLRenderGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2868C71B8324F700B18774 /* TestOpenGLRenderGL.cpp */; };
@@ -1121,6 +1119,14 @@
 		1EE0A7A51D68B82C00B69526 /* DenoiseSharpen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE0A78C1D68A5FE00B69526 /* DenoiseSharpen.cpp */; };
 		1EE1F7811A506181002BE24B /* CImgSharpenInvDiff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */; };
 		1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */; };
+		1EE3F3171EC9996500B61988 /* net.sf.openfx.Shadertoy.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C091E1EC73E7700F319C7 /* net.sf.openfx.Shadertoy.png */; };
+		1EE3F3181EC9996500B61988 /* net.sf.openfx.Shadertoy.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C091F1EC73E7700F319C7 /* net.sf.openfx.Shadertoy.svg */; };
+		1EE3F31B1EC999B800B61988 /* eu.cimg.Inpaint.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE3F3191EC999B100B61988 /* eu.cimg.Inpaint.png */; };
+		1EE3F31C1EC999BB00B61988 /* eu.cimg.Inpaint.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE3F31A1EC999B100B61988 /* eu.cimg.Inpaint.svg */; };
+		1EE3F31D1EC999F100B61988 /* net.sf.openfx.HueCorrect.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09161EC73E4E00F319C7 /* net.sf.openfx.HueCorrect.png */; };
+		1EE3F31E1EC999F300B61988 /* net.sf.openfx.HueCorrect.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09171EC73E4E00F319C7 /* net.sf.openfx.HueCorrect.svg */; };
+		1EE3F31F1EC999F500B61988 /* net.sf.openfx.HueKeyer.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09181EC73E4E00F319C7 /* net.sf.openfx.HueKeyer.png */; };
+		1EE3F3201EC999F700B61988 /* net.sf.openfx.HueKeyer.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09191EC73E4E00F319C7 /* net.sf.openfx.HueKeyer.svg */; };
 		1EE4A87019C6EC7300E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */; };
 		1EE4A87319C6EC9000E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87119C6EC8500E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png */; };
 		1EE4A87619C6ECE800E6E3AE /* net.sf.openfx.ConstantPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87419C6ECDA00E6E3AE /* net.sf.openfx.ConstantPlugin.png */; };
@@ -1511,8 +1517,6 @@
 		AC5C091B1EC73E6600F319C7 /* net.sf.openfx.HueCorrect.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09171EC73E4E00F319C7 /* net.sf.openfx.HueCorrect.svg */; };
 		AC5C091C1EC73E6600F319C7 /* net.sf.openfx.HueKeyer.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09181EC73E4E00F319C7 /* net.sf.openfx.HueKeyer.png */; };
 		AC5C091D1EC73E6600F319C7 /* net.sf.openfx.HueKeyer.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09191EC73E4E00F319C7 /* net.sf.openfx.HueKeyer.svg */; };
-		AC5C09201EC73E9500F319C7 /* net.sf.openfx.Shadertoy.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C091E1EC73E7700F319C7 /* net.sf.openfx.Shadertoy.png */; };
-		AC5C09211EC73E9500F319C7 /* net.sf.openfx.Shadertoy.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C091F1EC73E7700F319C7 /* net.sf.openfx.Shadertoy.svg */; };
 		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
 		AC6486DC1A41A57B0088844F /* net.sf.openfx.anaglyphPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486CF1A41A4960088844F /* net.sf.openfx.anaglyphPlugin.png */; };
 		AC6486DE1A41A5B10088844F /* net.sf.openfx.joinViewsPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D31A41A4D00088844F /* net.sf.openfx.joinViewsPlugin.png */; };
@@ -2129,8 +2133,10 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1E2678B21DAE96E50047D737 /* net.sf.openfx.ColorLookupPlugin.png in CopyFiles */,
-				1E2678B31DAE96E50047D737 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */,
+				1EE3F31D1EC999F100B61988 /* net.sf.openfx.HueCorrect.png in CopyFiles */,
+				1EE3F31E1EC999F300B61988 /* net.sf.openfx.HueCorrect.svg in CopyFiles */,
+				1EE3F31F1EC999F500B61988 /* net.sf.openfx.HueKeyer.png in CopyFiles */,
+				1EE3F3201EC999F700B61988 /* net.sf.openfx.HueKeyer.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2445,8 +2451,6 @@
 				1E738B871DF41E30000F582E /* warp.frag.glsl in CopyFiles */,
 				1E738B881DF41E30000F582E /* watercaustic.frag.glsl in CopyFiles */,
 				1E738B891DF41E30000F582E /* worleynoisewaters.frag.glsl in CopyFiles */,
-				AC5C09201EC73E9500F319C7 /* net.sf.openfx.Shadertoy.png in CopyFiles */,
-				AC5C09211EC73E9500F319C7 /* net.sf.openfx.Shadertoy.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2658,6 +2662,17 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EE3F3161EC9995400B61988 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1EE3F3171EC9996500B61988 /* net.sf.openfx.Shadertoy.png in CopyFiles */,
+				1EE3F3181EC9996500B61988 /* net.sf.openfx.Shadertoy.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3119,6 +3134,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1EE3F31B1EC999B800B61988 /* eu.cimg.Inpaint.png in CopyFiles */,
+				1EE3F31C1EC999BB00B61988 /* eu.cimg.Inpaint.svg in CopyFiles */,
 				AC5C09101EC73E2A00F319C7 /* eu.cimg.EdgeDetect.png in CopyFiles */,
 				AC5C09111EC73E2A00F319C7 /* eu.cimg.EdgeDetect.svg in CopyFiles */,
 				AC5C09121EC73E2A00F319C7 /* eu.cimg.EdgeExtend.png in CopyFiles */,
@@ -3746,6 +3763,8 @@
 		1EE0A7A01D68A60F00B69526 /* DenoiseSharpen.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DenoiseSharpen.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenInvDiff.cpp; path = SharpenInvDiff/CImgSharpenInvDiff.cpp; sourceTree = "<group>"; };
 		1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenShock.cpp; path = SharpenShock/CImgSharpenShock.cpp; sourceTree = "<group>"; };
+		1EE3F3191EC999B100B61988 /* eu.cimg.Inpaint.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = eu.cimg.Inpaint.png; path = Inpaint/eu.cimg.Inpaint.png; sourceTree = "<group>"; };
+		1EE3F31A1EC999B100B61988 /* eu.cimg.Inpaint.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = eu.cimg.Inpaint.svg; path = Inpaint/eu.cimg.Inpaint.svg; sourceTree = "<group>"; };
 		1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ChromaKeyerPlugin.png; sourceTree = "<group>"; };
 		1EE4A87119C6EC8500E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ColorCorrectPlugin.png; sourceTree = "<group>"; };
 		1EE4A87419C6ECDA00E6E3AE /* net.sf.openfx.ConstantPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ConstantPlugin.png; sourceTree = "<group>"; };
@@ -4729,6 +4748,8 @@
 				AC5C09051EC73DF500F319C7 /* eu.cimg.EdgeDetect.svg */,
 				AC5C09061EC73DF500F319C7 /* eu.cimg.EdgeExtend.png */,
 				AC5C09071EC73DF500F319C7 /* eu.cimg.EdgeExtend.svg */,
+				1EE3F3191EC999B100B61988 /* eu.cimg.Inpaint.png */,
+				1EE3F31A1EC999B100B61988 /* eu.cimg.Inpaint.svg */,
 				AC5C09081EC73DF500F319C7 /* net.sf.cimg.CImgSharpen.png */,
 				AC5C09091EC73DF500F319C7 /* net.sf.cimg.CImgSharpen.svg */,
 				1ED94FF51BC39B15008680C0 /* net.sf.cimg.CImgEqualize.svg */,
@@ -7083,6 +7104,7 @@
 				1EDFE9D51CB792D1001E68FA /* Sources */,
 				1EDFE9E61CB792D1001E68FA /* Frameworks */,
 				1E738B661DF41E0F000F582E /* CopyFiles */,
+				1EE3F3161EC9995400B61988 /* CopyFiles */,
 			);
 			buildRules = (
 			);
