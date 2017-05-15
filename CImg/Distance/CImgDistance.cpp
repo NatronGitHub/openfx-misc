@@ -37,6 +37,7 @@
 #include "CImgFilter.h"
 
 using namespace OFX;
+using namespace cimg_library;
 
 using std::min; using std::max; using std::floor; using std::ceil; using std::sqrt;
 
@@ -154,8 +155,8 @@ public:
                         const CImgDistanceParams& params,
                         int /*x1*/,
                         int /*y1*/,
-                        cimg_library::CImg<cimgpix_t>& /*mask*/,
-                        cimg_library::CImg<cimgpix_t>& cimg,
+                        CImg<cimgpix_t>& /*mask*/,
+                        CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {
         // PROCESSING.
@@ -184,7 +185,7 @@ public:
         int m = (int)params.metric;
 #endif
         int niter = 1;
-        cimg_library::CImg<cimgpix_t> cimg_save;
+        CImg<cimgpix_t> cimg_save;
 
         if (params.signedDistance) {
             // to compute the signed distance, first compute the distance A to zero-valued pixels, then B to non-zero
@@ -204,7 +205,7 @@ public:
 #ifdef EXPERIMENTAL
             if (params.metric == eMetricSpherical) {
                 bool finished = false;
-                cimg_library::CImg<cimgpix_t> distance(cimg, /*is_shared=*/false);
+                CImg<cimgpix_t> distance(cimg, /*is_shared=*/false);
 
                 // TODO: perform a MAT (medial axis transform) first to reduce the number of points.
                 //  E. Remy and E. Thiel. Exact Medial Axis with Euclidean Distance. Image and Vision Computing, 23(2):167-175, 2005.
