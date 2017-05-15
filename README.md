@@ -97,6 +97,7 @@ grouping).
 * PLogLinOFX: Convert between linear and log representations using the Josh Pines log conversion.
 * Quantize: Reduce the number of color levels with posterization or dithering.
 * SaturationOFX: Modify the color saturation of an image.
+* Threshold: Threshold the selected channels to bring them within the 0-1 range.
 * Transform/RGBToHSV and HSVToRGB: Convert to/from HSV color representation.
 * Transform/RGBToHSL and HSLToRGB: Convert to/from HSL color representation. 
 * Transform/RGBToHSI and HSIToRGB: Convert to/from HSI color representation. 
@@ -114,6 +115,7 @@ grouping).
 * DenoiseSharpen: Denoise and/or sharpen images using wavelet-based algorithms.
 * DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann (a.k.a. nearest) boundary conditions.
 * DirBlurOFX: Directional blur.
+* Distance: Compute the distance from each pixel to the closest zero-valued pixel.
 * EdgeDetectCImg: Perform edge detection by computing the image gradient magnitude.
 * EdgeExtend: Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte.
 * ErodeBlurCImg: Erode or dilate a mask by smoothing.

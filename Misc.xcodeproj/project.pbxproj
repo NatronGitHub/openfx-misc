@@ -1127,6 +1127,21 @@
 		1EE3F31E1EC999F300B61988 /* net.sf.openfx.HueCorrect.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09171EC73E4E00F319C7 /* net.sf.openfx.HueCorrect.svg */; };
 		1EE3F31F1EC999F500B61988 /* net.sf.openfx.HueKeyer.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09181EC73E4E00F319C7 /* net.sf.openfx.HueKeyer.png */; };
 		1EE3F3201EC999F700B61988 /* net.sf.openfx.HueKeyer.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC5C09191EC73E4E00F319C7 /* net.sf.openfx.HueKeyer.svg */; };
+		1EE3F3AB1EC9C3CB00B61988 /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
+		1EE3F3AD1EC9C3CB00B61988 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EE3F3AE1EC9C3CB00B61988 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EE3F3AF1EC9C3CB00B61988 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EE3F3B01EC9C3CB00B61988 /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
+		1EE3F3B11EC9C3CB00B61988 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EE3F3B21EC9C3CB00B61988 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EE3F3B31EC9C3CB00B61988 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EE3F3B41EC9C3CB00B61988 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EE3F3B51EC9C3CB00B61988 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EE3F3B71EC9C3CB00B61988 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EE3F3B91EC9C3CB00B61988 /* net.sf.openfx.AddPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56A31AA4AF2400E57882 /* net.sf.openfx.AddPlugin.png */; };
+		1EE3F3BF1EC9C3DD00B61988 /* Threshold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE3F3A81EC9C3B700B61988 /* Threshold.cpp */; };
+		1EE3F3C01EC9C40000B61988 /* Threshold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE3F3A81EC9C3B700B61988 /* Threshold.cpp */; };
+		1EE3F3C11EC9C53900B61988 /* CImgDistance.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED61EF41EB8D7150059A800 /* CImgDistance.cpp */; };
 		1EE4A87019C6EC7300E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */; };
 		1EE4A87319C6EC9000E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87119C6EC8500E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png */; };
 		1EE4A87619C6ECE800E6E3AE /* net.sf.openfx.ConstantPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87419C6ECDA00E6E3AE /* net.sf.openfx.ConstantPlugin.png */; };
@@ -2676,6 +2691,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EE3F3B81EC9C3CB00B61988 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1EE3F3B91EC9C3CB00B61988 /* net.sf.openfx.AddPlugin.png in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EE4A86F19C6EC6700E6E3AE /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -3765,6 +3790,10 @@
 		1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenShock.cpp; path = SharpenShock/CImgSharpenShock.cpp; sourceTree = "<group>"; };
 		1EE3F3191EC999B100B61988 /* eu.cimg.Inpaint.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = eu.cimg.Inpaint.png; path = Inpaint/eu.cimg.Inpaint.png; sourceTree = "<group>"; };
 		1EE3F31A1EC999B100B61988 /* eu.cimg.Inpaint.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = eu.cimg.Inpaint.svg; path = Inpaint/eu.cimg.Inpaint.svg; sourceTree = "<group>"; };
+		1EE3F3A61EC9C3B700B61988 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EE3F3A71EC9C3B700B61988 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EE3F3A81EC9C3B700B61988 /* Threshold.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Threshold.cpp; sourceTree = "<group>"; };
+		1EE3F3BD1EC9C3CB00B61988 /* Threshold.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Threshold.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ChromaKeyerPlugin.png; sourceTree = "<group>"; };
 		1EE4A87119C6EC8500E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ColorCorrectPlugin.png; sourceTree = "<group>"; };
 		1EE4A87419C6ECDA00E6E3AE /* net.sf.openfx.ConstantPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ConstantPlugin.png; sourceTree = "<group>"; };
@@ -4460,6 +4489,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EE3F3B61EC9C3CB00B61988 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EE3F3B71EC9C3CB00B61988 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EE72BFF1B524A6D001B0245 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -5007,6 +5044,7 @@
 				1EBEC6001D928E9E00127BC7 /* KeyMix.ofx.bundle */,
 				1E2678B71DAE96E50047D737 /* HueCorrect.ofx.bundle */,
 				1E2212091E535F170069EB8D /* Card3D.ofx.bundle */,
+				1EE3F3BD1EC9C3CB00B61988 /* Threshold.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -5097,6 +5135,7 @@
 				1EBB4B731B2C9EEE0042DBE0 /* SlitScan */,
 				1E3AC8D818B6211800F228A6 /* Switch */,
 				1EBAEFCA199A81790037B3E6 /* Test */,
+				1EE3F3A51EC9C39B00B61988 /* Threshold */,
 				1EE72BEB1B52499B001B0245 /* TimeBlur */,
 				1EAD4F441C8C789E00462A1A /* TimeBuffer */,
 				1E6E6FF41BD4F20F00B5A00F /* TimeDissolve */,
@@ -5822,6 +5861,16 @@
 				1EE0A78B1D68A5FE00B69526 /* DenoiseWavelet.cpp */,
 			);
 			path = DenoiseSharpen;
+			sourceTree = "<group>";
+		};
+		1EE3F3A51EC9C39B00B61988 /* Threshold */ = {
+			isa = PBXGroup;
+			children = (
+				1EE3F3A81EC9C3B700B61988 /* Threshold.cpp */,
+				1EE3F3A61EC9C3B700B61988 /* Info.plist */,
+				1EE3F3A71EC9C3B700B61988 /* Makefile */,
+			);
+			path = Threshold;
 			sourceTree = "<group>";
 		};
 		1EE72BEB1B52499B001B0245 /* TimeBlur */ = {
@@ -7132,6 +7181,23 @@
 			productReference = 1EE0A7A01D68A60F00B69526 /* DenoiseSharpen.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1EE3F3A91EC9C3CB00B61988 /* Threshold.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EE3F3BA1EC9C3CB00B61988 /* Build configuration list for PBXNativeTarget "Threshold.ofx" */;
+			buildPhases = (
+				1EE3F3AA1EC9C3CB00B61988 /* Sources */,
+				1EE3F3B61EC9C3CB00B61988 /* Frameworks */,
+				1EE3F3B81EC9C3CB00B61988 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Threshold.ofx;
+			productName = basic.ofx;
+			productReference = 1EE3F3BD1EC9C3CB00B61988 /* Threshold.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1EE72BF31B524A6D001B0245 /* TimeBlur.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1EE72C041B524A6D001B0245 /* Build configuration list for PBXNativeTarget "TimeBlur.ofx" */;
@@ -7495,6 +7561,7 @@
 				1EBB4B791B2CA01B0042DBE0 /* SlitScan.ofx */,
 				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
 				1EBAEFD0199A81DB0037B3E6 /* Test.ofx */,
+				1EE3F3A91EC9C3CB00B61988 /* Threshold.ofx */,
 				1EE72BF31B524A6D001B0245 /* TimeBlur.ofx */,
 				1EAD4F2F1C8C785100462A1A /* TimeBuffer.ofx */,
 				1E6E6FFB1BD4F26700B5A00F /* TimeDissolve.ofx */,
@@ -7621,6 +7688,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E22120B1E535F490069EB8D /* Card3D.cpp in Sources */,
+				1EE3F3C11EC9C53900B61988 /* CImgDistance.cpp in Sources */,
 				1E2211F21E535F170069EB8D /* ofxsTransform3x3.cpp in Sources */,
 				1E2211F31E535F170069EB8D /* ofxsCore.cpp in Sources */,
 				1E2211F41E535F170069EB8D /* ofxsImageEffect.cpp in Sources */,
@@ -8141,6 +8209,7 @@
 				1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */,
 				AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */,
 				1ED4AEAC1973DD4800EE64C8 /* Rand.cpp in Sources */,
+				1EE3F3C01EC9C40000B61988 /* Threshold.cpp in Sources */,
 				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
 				1E0072F71A40421100E77042 /* Rectangle.cpp in Sources */,
 				1EC6BC9F1E13CC0300C68CE7 /* DistortionModel.cpp in Sources */,
@@ -8769,6 +8838,24 @@
 				1EE0A7951D68A60F00B69526 /* ofxsParams.cpp in Sources */,
 				1EE0A7961D68A60F00B69526 /* ofxsProperty.cpp in Sources */,
 				1EE0A7971D68A60F00B69526 /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EE3F3AA1EC9C3CB00B61988 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EE3F3AB1EC9C3CB00B61988 /* tinythread.cpp in Sources */,
+				1EE3F3BF1EC9C3DD00B61988 /* Threshold.cpp in Sources */,
+				1EE3F3AD1EC9C3CB00B61988 /* ofxsCore.cpp in Sources */,
+				1EE3F3AE1EC9C3CB00B61988 /* ofxsImageEffect.cpp in Sources */,
+				1EE3F3AF1EC9C3CB00B61988 /* ofxsInteract.cpp in Sources */,
+				1EE3F3B01EC9C3CB00B61988 /* ofxsThreadSuite.cpp in Sources */,
+				1EE3F3B11EC9C3CB00B61988 /* ofxsLog.cpp in Sources */,
+				1EE3F3B21EC9C3CB00B61988 /* ofxsMultiThread.cpp in Sources */,
+				1EE3F3B31EC9C3CB00B61988 /* ofxsParams.cpp in Sources */,
+				1EE3F3B41EC9C3CB00B61988 /* ofxsProperty.cpp in Sources */,
+				1EE3F3B51EC9C3CB00B61988 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -11134,6 +11221,28 @@
 			};
 			name = Release;
 		};
+		1EE3F3BB1EC9C3CB00B61988 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Threshold/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EE3F3BC1EC9C3CB00B61988 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Threshold/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		1EE72C051B524A6D001B0245 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -12061,6 +12170,15 @@
 			buildConfigurations = (
 				1EE0A79E1D68A60F00B69526 /* Debug */,
 				1EE0A79F1D68A60F00B69526 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EE3F3BA1EC9C3CB00B61988 /* Build configuration list for PBXNativeTarget "Threshold.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EE3F3BB1EC9C3CB00B61988 /* Debug */,
+				1EE3F3BC1EC9C3CB00B61988 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
