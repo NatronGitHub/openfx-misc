@@ -193,7 +193,10 @@ public:
             // copy image to compute the non-zero part afterwards part
             cimg_save.assign(cimg, /*is_shared=*/false);
             cimg.swap(cimg_save);
-            cimg_pragma_openmp(parallel for cimg_openmp_if(cimg.size()>=8192))
+#ifdef cimg_use_openmp
+            unsigned long size = cimg.size();
+#endif
+            cimg_pragma_openmp(parallel for cimg_openmp_if(size>=8192))
             // compute the negative part first
             cimg_rof(cimg,ptrd,cimgpix_t) *ptrd = (*ptrd == 0);
         }
