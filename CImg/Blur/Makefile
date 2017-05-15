@@ -17,6 +17,8 @@ PLUGINNAME = CImgBlur
 
 # ls *png *.svg|sort |sed -e 's!$! \\!'
 RESOURCES = \
+fr.inria.EdgeBlur.png \
+fr.inria.EdgeBlur.svg \
 net.sf.cimg.CImgBlur.png \
 net.sf.cimg.CImgBlur.svg \
 net.sf.cimg.CImgBloom.png \
