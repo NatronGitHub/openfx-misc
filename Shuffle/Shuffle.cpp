@@ -639,7 +639,7 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(ShufflerBase &, const RenderArguments &args, Image* dstImage);
-    void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const RenderArguments &args, const MultiPlane::ImagePlaneDesc &dstPlane, Image* dstImage);
+    void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const RenderArguments &args, Image* dstImage);
 
     MultiPlane::ImagePlaneDesc getPlaneFromOutputComponents() const;
 
@@ -949,7 +949,6 @@ public:
 void
 ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
                                          const RenderArguments &args,
-                                         const MultiPlane::ImagePlaneDesc &dstPlane,
                                          Image* dst)
 {
     const double time = args.time;
@@ -971,7 +970,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
         InputPlaneChannel p;
         Clip* clip = 0;
         MultiPlane::ImagePlaneDesc plane;
-        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(dstPlane.getNumComponents() == 1 ? _channelParam[3]->getName() : _channelParam[i]->getName(), &clip, &plane, &p.channelIndex);
+        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(dstNComps == 1 ? _channelParam[3]->getName() : _channelParam[i]->getName(), &clip, &plane, &p.channelIndex);
         if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
             setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
             throwSuiteStatusException(kOfxStatFailed);
@@ -1038,7 +1037,7 @@ template <class DSTPIX, int nComponentsDst>
 void
 ShufflePlugin::renderInternalForDstBitDepth(const RenderArguments &args,
                                             BitDepthEnum srcBitDepth,
-                                            const MultiPlane::ImagePlaneDesc &dstPlane,
+                                            const MultiPlane::ImagePlaneDesc &/*dstPlane*/,
                                             Image* dstImage)
 {
     if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
@@ -1065,17 +1064,17 @@ ShufflePlugin::renderInternalForDstBitDepth(const RenderArguments &args,
         switch (srcBitDepth) {
         case eBitDepthUByte: {
             MultiPlaneShuffler<unsigned char, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcessMultiPlane(fred, args, dstPlane, dstImage);
+            setupAndProcessMultiPlane(fred, args, dstImage);
             break;
         }
         case eBitDepthUShort: {
             MultiPlaneShuffler<unsigned short, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcessMultiPlane(fred, args, dstPlane, dstImage);
+            setupAndProcessMultiPlane(fred, args, dstImage);
             break;
         }
         case eBitDepthFloat: {
             MultiPlaneShuffler<float, DSTPIX, nComponentsDst> fred(*this);
-            setupAndProcessMultiPlane(fred, args, dstPlane, dstImage);
+            setupAndProcessMultiPlane(fred, args, dstImage);
             break;
         }
         default:
