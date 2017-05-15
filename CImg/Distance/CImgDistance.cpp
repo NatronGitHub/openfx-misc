@@ -49,7 +49,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "DistanceCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Compute Euclidean distance function to pixels that have a value of zero. The distance is normalized with respect to the largest image dimension, so that it is always between 0 and 1.\n" \
+"Compute at each pixel the distance to pixels that have a value of zero.\n" \
+"The distance is normalized with respect to the largest image dimension, so that it is between 0 and 1.\n" \
+"Optionally, a signed distance to the frontier between zero and nonzero values can be computed.\n" \
+"The distance transform can then be thresholded using the Threshold effect, or transformed using the ColorLookup effect, in order to generate a mask for another effect.\n" \
+"See alse https://en.wikipedia.org/wiki/Distance_transform\n" \
 "Uses the 'distance' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
