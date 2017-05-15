@@ -42,6 +42,10 @@ using std::min; using std::max; using std::floor; using std::ceil; using std::sq
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
+#ifdef DEBUG
+#define EXPERIMENTAL // turn on experimental not-for-everyone code
+#endif
+
 #define kPluginName          "DistanceCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -80,21 +84,30 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamMetricOptionChebyshev "Chebyshev", "max(abs(x-xborder),abs(y-yborder))"
 #define kParamMetricOptionManhattan "Manhattan", "abs(x-xborder) + abs(y-yborder)"
 #define kParamMetricOptionEuclidean "Euclidean", "sqrt(sqr(x-xborder) + sqr(y-yborder))"
-#define kParamMetricOptionSquaredEuclidean "Squared Euclidean", "sqr(x-xborder) + sqr(y-yborder)"
-#define kParamMetricOptionSpherical "Spherical", "Compute the Euclidean distance, and draw a sphere at each point. Gives a round shape rather than a conical shape to the distance function."
+//#define kParamMetricOptionSquaredEuclidean "Squared Euclidean", "sqr(x-xborder) + sqr(y-yborder)"
+#ifdef EXPERIMENTAL
+#define kParamMetricOptionSpherical "Spherical", "Compute the Euclidean distance, and draw a 2.5D sphere at each point with the distance as radius. Gives a round shape rather than a conical shape to the distance function."
+#endif
 enum MetricEnum {
     eMetricChebyshev = 0,
     eMetricManhattan,
     eMetricEuclidean,
-    eMetricSquaredEuclidean,
+//    eMetricSquaredEuclidean,
+#ifdef EXPERIMENTAL
     eMetricSpherical,
+#endif
 };
 #define kParamMetricDefault eMetricEuclidean
+
+#define kParamSigned "signed"
+#define kParamSignedLabel "Signed Distance"
+#define kParamSignedHint "Instead of computing the distance to pixels with a value of zero, compute the signed distance to the contour between zero and non-zero pixels. On output, non-zero-valued pixels have a positive signed distance, zero-valued pixels have a negative signed distance."
 
 /// Distance plugin
 struct CImgDistanceParams
 {
     MetricEnum metric;
+    bool signedDistance;
 };
 
 class CImgDistancePlugin
@@ -106,13 +119,15 @@ public:
     : CImgFilterPluginHelper<CImgDistanceParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ false)
     {
         _metric  = fetchChoiceParam(kParamMetric);
-        assert(_metric);
+        _signed  = fetchBooleanParam(kParamSigned);
+        assert(_metric && _signed);
     }
 
     virtual void getValuesAtTime(double time,
                                  CImgDistanceParams& params) OVERRIDE FINAL
     {
         params.metric = (MetricEnum)_metric->getValueAtTime(time);
+        params.signedDistance = _signed->getValueAtTime(time);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -159,76 +174,118 @@ public:
             maxdim = max( srcFormatD.x2 - srcFormatD.x1, srcFormatD.y2 - srcFormatD.y1 );
         }
 #endif
-        int m = (params.metric == eMetricSpherical) ? (int)eMetricSquaredEuclidean : (int)params.metric;
-        cimg.distance(0, m);
+#ifdef EXPERIMENTAL
+        int m = (params.metric == eMetricSpherical) ? /*(int)eMetricSquaredEuclidean*/3 : (int)params.metric;
+#else
+        int m = (int)params.metric;
+#endif
+        int niter = 1;
+        cimg_library::CImg<cimgpix_t> cimg_save;
 
-        if (params.metric == eMetricSpherical) {
-            bool finished = false;
-            cimg_library::CImg<cimgpix_t> distance(cimg, /*is_shared=*/false);
+        if (params.signedDistance) {
+            // to compute the signed distance, first compute the distance A to zero-valued pixels, then B to non-zero
+            // valued pixels, then the result is A - 0.5 - (B - 0.5)
+            niter = 2;
+            // copy image to compute the non-zero part afterwards part
+            cimg_save.assign(cimg, /*is_shared=*/false);
+            cimg.swap(cimg_save);
+            cimg_pragma_openmp(parallel for cimg_openmp_if(cimg.size()>=8192))
+            // compute the negative part first
+            cimg_rof(cimg,ptrd,cimgpix_t) *ptrd = (*ptrd == 0);
+        }
 
-            // TODO: perform a MAT (medial axis transform) first to reduce the number of points.
-            //  E. Remy and E. Thiel. Exact Medial Axis with Euclidean Distance. Image and Vision Computing, 23(2):167-175, 2005.
-            // see http://pageperso.lif.univ-mrs.fr/~edouard.thiel/IVC2004/
+        for (int i = 0; i < niter; ++i) {
+            cimg.distance(0, m);
 
-            while (!finished) {
-                cimg_abort_test();
-                int max_x = 0, max_y = 0, max_z = 0, max_c = 0;
-                cimgpix_t dmax = distance(0,0,0,0);
-                // TODO: if we start from the MAT, we can process each sphere center sequentially: no need to extract the maximum to get the next center (this is only useful to prune points that are within the Z-cone). The main loop would thus be on the non-zero MAT pixels.
-                cimg_forXYZC(cimg, x, y, z, c) {
-                    if (distance(x,y,z,c) > dmax) {
-                        dmax = distance(x,y,z,c);
-                        max_x = x;
-                        max_y = y;
-                        max_z = z;
-                        max_c = c;
-                    }
-                }//image loop
-                //printf("dmax=%g\n", dmax);
-                if (dmax <= 0) {
-                    // no more sphere to draw
-                    finished = true;
-                } else {
-                    distance(max_x, max_y, max_z, max_c) = 0;
-                    // draw a Z-sphere in the zmap and prune points in
-                    // the cimg corresponding to occluded spheres
-                    cimgpix_t r2 = dmax;
-                    cimgpix_t r = sqrt(r2);
-                    int xmin = (int)floor(max((cimgpix_t)0, max_x - r));
-                    int xmax = (int)ceil(min((cimgpix_t)cimg.width(), max_x + r));
-                    int ymin = (int)floor(max((cimgpix_t)0, max_y - r));
-                    int ymax = (int)ceil(min((cimgpix_t)cimg.height(), max_y + r));
-                    // loop on all pixels in the bounding box
-                    cimg_for_inXY(cimg, xmin, ymin, xmax, ymax, x, y) {
-                        cimgpix_t pr2 = (x - max_x)*(x - max_x) + (y - max_y)*(y - max_y);
-                        if (pr2 < r2) {
-                            // draw the Z-sphere point
-                            cimgpix_t z = r2 - pr2;
-                            if (cimg(x,y, max_z, max_c) < z) {
-                                cimg(x,y, max_z, max_c) = z;
-                            }
-                            // prune points below the Z-cone (should not be necessary if we do the MAT first)
-                            if (distance(x, y, max_z, max_c) > 0 && distance(x, y, max_z, max_c) < /*(r - sqrt(pr2))^2=*/(r2 + pr2 - 2 * r * sqrt(pr2)) ) {
-                                distance(x, y, max_z, max_c) = 0;
+#ifdef EXPERIMENTAL
+            if (params.metric == eMetricSpherical) {
+                bool finished = false;
+                cimg_library::CImg<cimgpix_t> distance(cimg, /*is_shared=*/false);
+
+                // TODO: perform a MAT (medial axis transform) first to reduce the number of points.
+                //  E. Remy and E. Thiel. Exact Medial Axis with Euclidean Distance. Image and Vision Computing, 23(2):167-175, 2005.
+                // see http://pageperso.lif.univ-mrs.fr/~edouard.thiel/IVC2004/
+
+                while (!finished) {
+                    cimg_abort_test();
+                    int max_x = 0, max_y = 0, max_z = 0, max_c = 0;
+                    cimgpix_t dmax = distance(0,0,0,0);
+                    // TODO: if we start from the MAT, we can process each sphere center sequentially: no need to extract the maximum to get the next center (this is only useful to prune points that are within the Z-cone). The main loop would thus be on the non-zero MAT pixels.
+                    cimg_forXYZC(cimg, x, y, z, c) {
+                        if (distance(x,y,z,c) > dmax) {
+                            dmax = distance(x,y,z,c);
+                            max_x = x;
+                            max_y = y;
+                            max_z = z;
+                            max_c = c;
+                        }
+                    }//image loop
+                    //printf("dmax=%g\n", dmax);
+                    if (dmax <= 0) {
+                        // no more sphere to draw
+                        finished = true;
+                    } else {
+                        distance(max_x, max_y, max_z, max_c) = 0;
+                        // draw a Z-sphere in the zmap and prune points in
+                        // the cimg corresponding to occluded spheres
+                        cimgpix_t r2 = dmax;
+                        cimgpix_t r = sqrt(r2);
+                        int xmin = (int)floor(max((cimgpix_t)0, max_x - r));
+                        int xmax = (int)ceil(min((cimgpix_t)cimg.width(), max_x + r));
+                        int ymin = (int)floor(max((cimgpix_t)0, max_y - r));
+                        int ymax = (int)ceil(min((cimgpix_t)cimg.height(), max_y + r));
+                        // loop on all pixels in the bounding box
+                        cimg_for_inXY(cimg, xmin, ymin, xmax, ymax, x, y) {
+                            cimgpix_t pr2 = (x - max_x)*(x - max_x) + (y - max_y)*(y - max_y);
+                            if (pr2 < r2) {
+                                // draw the Z-sphere point
+                                cimgpix_t z = r2 - pr2;
+                                if (cimg(x,y, max_z, max_c) < z) {
+                                    cimg(x,y, max_z, max_c) = z;
+                                }
+                                // prune points below the Z-cone (should not be necessary if we do the MAT first)
+                                if (distance(x, y, max_z, max_c) > 0 && distance(x, y, max_z, max_c) < /*(r - sqrt(pr2))^2=*/(r2 + pr2 - 2 * r * sqrt(pr2)) ) {
+                                    distance(x, y, max_z, max_c) = 0;
+                                }
                             }
                         }
                     }
                 }
+                // now compute the square root
+                cimg.sqrt();
             }
-            // now compute the square root
-            cimg.sqrt();
+#endif
+            if (params.signedDistance) {
+                if (i == 0) {
+                    cimg.swap(cimg_save);
+                    // now cimg_save contains the negative part
+                }
+                if (i == 1) {
+                    // now cimg_save contains the negative part
+                    // now cimg contains the positive part
+                    cimgpix_t *ptrd = cimg.data();
+                    for (const cimgpix_t *ptrs = cimg_save.data(), *ptrs_end = ptrs + cimg_save.size();
+                         ptrs < ptrs_end;
+                         ++ptrd, ++ptrs) {
+                        *ptrd = *ptrd > 0 ? (*ptrd - 0.5) : (0.5 - *ptrs);
+
+                    }
+
+                }
+            }
         }
-        if (params.metric == eMetricSquaredEuclidean) {
-            cimg /= maxdim * maxdim/* * args.renderScale.x*/;
-        } else {
-            cimg /= maxdim/* * args.renderScale.x*/;
-        }
+        //if (params.metric == eMetricSquaredEuclidean) {
+        //    cimg /= maxdim * maxdim/* * args.renderScale.x*/;
+        //} else {
+        cimg /= maxdim/* * args.renderScale.x*/;
+        //}
     }
 
 private:
 
     // params
     ChoiceParam *_metric;
+    BooleanParam *_signed;
 };
 
 
@@ -274,7 +331,7 @@ CImgDistancePluginFactory::describeInContext(ImageEffectDescriptor& desc,
                                                                          kSupportsXY,
                                                                          kSupportsAlpha,
                                                                          kSupportsTiles,
-                                                                         /*processRGB=*/ true,
+                                                                         /*processRGB=*/ false,
                                                                          /*processAlpha*/ true,      // Enable alpha by default, so it works OK on masks
                                                                          /*processIsSecret=*/ false);
 
@@ -288,14 +345,21 @@ CImgDistancePluginFactory::describeInContext(ImageEffectDescriptor& desc,
         param->appendOption(kParamMetricOptionManhattan);
         assert(param->getNOptions() == eMetricEuclidean);
         param->appendOption(kParamMetricOptionEuclidean);
-        assert(param->getNOptions() == eMetricSquaredEuclidean);
-        param->appendOption(kParamMetricOptionSquaredEuclidean);
+        //assert(param->getNOptions() == eMetricSquaredEuclidean);
+        //param->appendOption(kParamMetricOptionSquaredEuclidean);
+#ifdef EXPERIMENTAL
         assert(param->getNOptions() == eMetricSpherical);
         param->appendOption(kParamMetricOptionSpherical);
+#endif
         param->setDefault(kParamMetricDefault);
         if (page) {
             page->addChild(*param);
         }
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSigned);
+        param->setLabel(kParamSignedLabel);
+        param->setHint(kParamSignedHint);
     }
 
     CImgDistancePlugin::describeInContextEnd(desc, context, page);
