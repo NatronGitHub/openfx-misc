@@ -1552,7 +1552,7 @@ ShufflePlugin::changedParam(const InstanceChangedArgs &args,
         }
         msg += "\n";
         sendMessage(Message::eMessageMessage, "", msg);
-    } else if (paramName == _channelParam[0]->getName()) {
+    } else if (paramName == _channelParam[0]->getName() && (args.reason == eChangeUserEdit)) {
 #ifdef OFX_EXTENSIONS_NATRON
         setChannelsFromRed(args.time);
 #endif
