@@ -2413,18 +2413,27 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
 
     if ( (p.colorModel == eColorModelRGB) || (p.colorModel == eColorModelLinearRGB) ) {
         for (int c = 0; c < 3; ++c) {
-            p.process[c] = p.process[c] && ( (p.noiseLevel[c] > 0 && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0. );
+            p.process[c] = p.process[c] && ( ((p.noiseLevel[c][0] > 0 ||
+                                               p.noiseLevel[c][1] > 0 ||
+                                               p.noiseLevel[c][2] > 0 ||
+                                               p.noiseLevel[c][3] > 0) && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0. );
         }
     } else {
         bool processcolor = false;
         for (int c = 0; c < 3; ++c) {
-            processcolor = processcolor || ( (p.noiseLevel[c] > 0 && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0. );
+            processcolor = processcolor || ( ((p.noiseLevel[c][0] > 0 ||
+                                               p.noiseLevel[c][1] > 0 ||
+                                               p.noiseLevel[c][2] > 0 ||
+                                               p.noiseLevel[c][3] > 0) && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0. );
         }
         for (int c = 0; c < 3; ++c) {
             p.process[c] = p.process[c] && processcolor;
         }
     }
-    p.process[3] = p.process[3] && ( (p.noiseLevel[3] > 0 && p.denoise_amount[3] > 0.) || p.sharpen_amount[3] > 0. );
+    p.process[3] = p.process[3] && ( ((p.noiseLevel[3][0] > 0 ||
+                                       p.noiseLevel[3][1] > 0 ||
+                                       p.noiseLevel[3][2] > 0 ||
+                                       p.noiseLevel[3][3] > 0) && p.denoise_amount[3] > 0.) || p.sharpen_amount[3] > 0. );
 
     // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
     int maxLev = std::max( 0, kLevelMax - startLevelFromRenderScale(args.renderScale) );
