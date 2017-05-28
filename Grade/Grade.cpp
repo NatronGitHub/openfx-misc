@@ -492,7 +492,7 @@ public:
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
