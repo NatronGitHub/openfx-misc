@@ -542,7 +542,7 @@ ThresholdPluginFactory::describe(ImageEffectDescriptor &desc)
 
 void
 ThresholdPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                    ContextEnum context)
+                                          ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
