@@ -1315,6 +1315,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
+
     OfxRectI maskRoD;
     bool maskRoDValid = false;
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
@@ -1331,6 +1332,13 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
                 return true;
             }
         }
+    }
+
+    MergingFunctionEnum blendingOperator = (MergingFunctionEnum)_operation->getValueAtTime(args.time);
+    if (blendingOperator != eMergeOver) {
+        // For most operators, we cannot be identity on regions where the A RoD does not intersect the render window.
+        // E.g: multiply should produce black and transparant in B regions that do not intersect A 
+        return false;
     }
 
     // The region of effect is only the set of the intersections between the A inputs and the mask.
