@@ -2481,6 +2481,11 @@ DistortionPlugin::renderInternalForBitDepth(const RenderArguments &args)
         setupAndProcess(fred, args);
         break;
     }
+    case eFilterBox: {
+        DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterBox, false> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
     case eFilterBilinear: {
         DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterBilinear, false> fred(*this);
         setupAndProcess(fred, args);

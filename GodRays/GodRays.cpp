@@ -1035,6 +1035,11 @@ GodRaysPlugin::renderInternalForBitDepth(const RenderArguments &args)
         setupAndProcess(fred, args);
         break;
     }
+    case eFilterBox: {
+        GodRaysProcessor<PIX, nComponents, maxValue, eFilterBox, false> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
     case eFilterBilinear: {
         GodRaysProcessor<PIX, nComponents, maxValue, eFilterBilinear, false> fred(*this);
         setupAndProcess(fred, args);
