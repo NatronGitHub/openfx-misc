@@ -1253,7 +1253,7 @@ cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
     for (double s = 1.0; s >= y1; ++k) {
         s *= cimg_rand(seed+1, x, y, nComponents);
     }
-    return k - 1;
+    return k > 0 ? k - 1 : 0;
 }
 
 #endif // ifndef Misc_CImgFilter_h

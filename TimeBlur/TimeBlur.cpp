@@ -488,7 +488,7 @@ TimeBlurPlugin::getFramesNeeded(const FramesNeededArguments &args,
     frames.setFramesNeeded(*_srcClip, range);
 #else
     // return the exact list of frames rather than a frame range , so that they can be pre-rendered by the host.
-    double interval = divisions > 1 ? (range.max - range.min) / divisions : 1.;
+    double interval = (range.max - range.min) / divisions;
     for (int i = 1; i < divisions; ++i) {
         double t = range.min + i * interval;
         OfxRangeD r = {t, t};

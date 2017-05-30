@@ -898,7 +898,7 @@ PosMatParam::importBoujou()
         return;
     }
     bool foundOffset = false;
-    int offsetFrame;
+    int offsetFrame = 1;
     bool foundStart = false;
     int startFrame;
     double haperture = 0;
@@ -1293,15 +1293,16 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         GroupParamDescriptor* subgroup = desc.defineGroupParam(prefix + kGroupPosMatLocalMatrix);
-        subgroup->setLabel(kGroupPosMatLocalMatrixLabel);
-        subgroup->setOpen(false);
-        if (group) {
-            subgroup->setParent(*group);
+        if (subgroup) {
+            subgroup->setLabel(kGroupPosMatLocalMatrixLabel);
+            subgroup->setOpen(false);
+            if (group) {
+                subgroup->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*subgroup);
+            }
         }
-        if (page) {
-            page->addChild(*subgroup);
-        }
-
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(prefix + kParamPosMatUseMatrix);
             param->setLabelAndHint(kParamPosMatUseMatrixLabel);
@@ -1335,13 +1336,15 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     if (type == ePosMatCamera) {
         GroupParamDescriptor* subgroup = desc.defineGroupParam(kCameraCam kParamCameraProjectionGroup);
-        subgroup->setLabel(kCameraCamLabel" "kParamCameraProjectionGroupLabel);
-        subgroup->setOpen(false);
-        if (group) {
-            subgroup->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*subgroup);
+        if (subgroup) {
+            subgroup->setLabel(kCameraCamLabel" "kParamCameraProjectionGroupLabel);
+            subgroup->setOpen(false);
+            if (group) {
+                subgroup->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*subgroup);
+            }
         }
 
         CameraParam::define(desc, page, subgroup, kCameraCam);
