@@ -55,7 +55,7 @@
 #endif
 #include <cmath>
 #include <cfloat> // DBL_MAX
-#include <algorithm>
+#include <algorithm> // max
 #ifdef DEBUG_STDOUT
 #include <iostream>
 #define DBG(x) (x)
@@ -2219,7 +2219,7 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
 #ifdef _OPENMP
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
-    omp_set_num_threads( MultiThread::getNumCPUs() );
+    omp_set_num_threads( std::max(1u, MultiThread::getNumCPUs() ) );
 #endif
     DBG(cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n");
 
@@ -2905,7 +2905,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 #ifdef _OPENMP
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
-    omp_set_num_threads( MultiThread::getNumCPUs() );
+    omp_set_num_threads( std::max(1u, MultiThread::getNumCPUs() ) );
 #endif
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );

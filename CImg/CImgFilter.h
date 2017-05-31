@@ -29,7 +29,7 @@
 
 #include <cassert>
 #include <memory>
-#include <algorithm>
+#include <algorithm> // max
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
@@ -764,7 +764,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     {
         unsigned int ncpus = OFX::MultiThread::getNumCPUs();
-        omp_set_num_threads(ncpus);
+        omp_set_num_threads( std::max(1u, ncpus) );
         //printf("ncpus=%u\n", ncpus);
     }
 #endif
@@ -1254,7 +1254,7 @@ cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
     for (double s = 1.0; s >= y1; ++k) {
         s *= cimg_rand(seed+1, x, y, nComponents);
     }
-    return k - 1;
+    return k > 0 ? k - 1 : 0;
 }
 
 #endif // ifndef Misc_CImgFilter_h
