@@ -764,7 +764,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     {
         unsigned int ncpus = OFX::MultiThread::getNumCPUs();
-        omp_set_num_threads( std::max(1, ncpus) );
+        omp_set_num_threads( std::max(1u, ncpus) );
         //printf("ncpus=%u\n", ncpus);
     }
 #endif
