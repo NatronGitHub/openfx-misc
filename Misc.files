@@ -33,6 +33,7 @@ ColorSuppress/ColorSuppress.cpp
 ColorTransform/ColorTransform.cpp
 ColorWheel/ColorWheel.cpp
 Constant/Constant.cpp
+ContactSheet/ContactSheet.cpp
 CopyRectangle/CopyRectangle.cpp
 CornerPin/CornerPin.cpp
 Crop/Crop.cpp

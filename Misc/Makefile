@@ -30,6 +30,7 @@ ColorSuppress.o \
 ColorTransform.o \
 ColorWheel.o \
 Constant.o \
+ContactSheet.o \
 CopyRectangle.o \
 CornerPin.o \
 Crop.o \
@@ -260,6 +261,7 @@ $(TOP_SRCDIR)/ColorSuppress \
 $(TOP_SRCDIR)/ColorTransform \
 $(TOP_SRCDIR)/ColorWheel \
 $(TOP_SRCDIR)/Constant \
+$(TOP_SRCDIR)/ContactSheet \
 $(TOP_SRCDIR)/CopyRectangle \
 $(TOP_SRCDIR)/CornerPin \
 $(TOP_SRCDIR)/Crop \
@@ -337,6 +339,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/ColorTransform \
 -I$(TOP_SRCDIR)/ColorWheel \
 -I$(TOP_SRCDIR)/Constant \
+-I$(TOP_SRCDIR)/ContactSheet \
 -I$(TOP_SRCDIR)/CopyRectangle \
 -I$(TOP_SRCDIR)/CornerPin \
 -I$(TOP_SRCDIR)/Crop \

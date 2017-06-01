@@ -149,6 +149,7 @@ grouping).
 
 ### Merge
 
+* ContactSheetOFX: Make a contact sheet from several inputs or frames.
 * CopyRectangleOFX: Copies a rectangle from the input A to the input B in output.
 * DissolveOFX: Weighted average of two inputs.
 * KeyMixOFX: Copies A to B only where Mask is non-zero.
