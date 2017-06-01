@@ -32,6 +32,7 @@
 #include "ofxNatron.h"
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
+#include "ofxsFilter.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -44,7 +45,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ContactSheetOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
-    "Make a contact sheet from inputs."
+    "Make a contact sheet from several inputs or frames."
 #define kPluginIdentifier "net.sf.openfx.ContactSheetOFX"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -66,6 +67,65 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRowsColumsHint \
     "How many rows and columns in the grid where the input images or frames are arranged."
 
+#define kParamGap "gap"
+#define kParamGapLabel "Gap"
+#define kParamGapHint \
+"Gap in pixels around each input or frame."
+
+#define kParamCenter "center"
+#define kParamCenterLabel "Center"
+#define kParamCenterHint \
+"Center each input/frame within its cell."
+
+#define kParamRowOrder "rowOrder"
+#define kParamRowOrderLabel "Row Order"
+#define kParamRowOrderHint \
+"How image rows are populated."
+#define kParamRowOrderOptionTopBottom "TopBottom", "From top to bottom row."
+#define kParamRowOrderOptionBottomTop "BottomTop", "From bottom to top row."
+enum RowOrderEnum {
+    eRowOrderTopBottom = 0,
+    eRowOrderBottomTop,
+};
+
+#define kParamColumnOrder "colOrder"
+#define kParamColumnOrderLabel "Column Order"
+#define kParamColumnOrderHint \
+"How image columns are populated."
+#define kParamColumnOrderOptionLeftRight "LeftRight", "From left to right column."
+#define kParamColumnOrderOptionRightLeft "RightLeft", "From right to left column."
+enum ColumnOrderEnum {
+    eColumnOrderLeftRight = 0,
+    eColumnOrderRightLeft,
+};
+
+#define kParamFrameRange "frameRange"
+#define kParamFrameRangeLabel "Frame Range"
+#define kParamFrameRangeHint \
+"Frames that are taken from each input. For example, if there are 4 inputs, 'frameRange' is 0-1, and 'absolute' is not checked, the current frame and the next frame is taken from each input, and the contact sheet will contain 8 frames in total."
+
+#define kParamFrameRangeAbsolute "frameRangeAbsolute"
+#define kParamFrameRangeAbsoluteLabel "Absolute"
+#define kParamFrameRangeAbsoluteHint \
+"If checked, the 'frameRange' parameter contains absolute frame numbers."
+
+#ifdef SELECTION
+#define kParamSelection "selection"
+#define kParamSelectionLabel "Enable Selection"
+#define kParamSelectionHint \
+"If checked, the mouse can be used to select an input or frame, and 'selectionInput' and 'selectionFrame' are set to the selected frame. At at least one keyframe to 'selectionInput' and 'selectionFrame' to enable time-varying selection."
+
+#define kParamSelectionInput "selectionInput"
+#define kParamSelectionInputLabel "Selection Input"
+#define kParamSelectionInputHint \
+"The selected input. Can be used as the 'which' parameter of a Switch effect. At at least one keyframe to this parameter to enable time-varying selection."
+
+#define kParamSelectionFrame "selectionFrame"
+#define kParamSelectionFrameLabel "Selection Frame"
+#define kParamSelectionFrameHint \
+"The selected frame (if frameRangeAbsolute is checked, this is an absolute frame number). Can be used as the 'firstFrame' parameter of a FrameHold effect. At at least one keyframe to this parameter to enable time-varying selection."
+#endif
+
 #define kClipSourceCount 16
 #define kClipSourceCountNumerous 128
 
@@ -83,45 +143,6 @@ unsignedToString(unsigned i)
 
     return nb;
 }
-
-#if 0
-// code grabbed from http://stackoverflow.com/questions/9570895/image-downscaling-algorithm
-
-int thumbwidth = 15;
-int thumbheight = 15;
-double xscale = (thumbwidth+0.0) / width;
-double yscale = (thumbheight+0.0) / height;
-double threshold = 0.5 / (xscale * yscale);
-double yend = 0.0;
-for (int f = 0; f < thumbheight; f++) // y on output
-{
-    double ystart = yend;
-    yend = (f + 1) / yscale;
-    if (yend >= height) yend = height - 0.000001;
-    double xend = 0.0;
-    for (int g = 0; g < thumbwidth; g++) // x on output
-    {
-        double xstart = xend;
-        xend = (g + 1) / xscale;
-        if (xend >= width) xend = width - 0.000001;
-        double sum = 0.0;
-        for (int y = (int)ystart; y <= (int)yend; ++y)
-        {
-            double yportion = 1.0;
-            if (y == (int)ystart) yportion -= ystart - y;
-            if (y == (int)yend) yportion -= y+1 - yend;
-            for (int x = (int)xstart; x <= (int)xend; ++x)
-            {
-                double xportion = 1.0;
-                if (x == (int)xstart) xportion -= xstart - x;
-                if (x == (int)xend) xportion -= x+1 - xend;
-                sum += picture4[y][x] * yportion * xportion;
-            }
-        }
-        picture3[f][g] = (sum > threshold) ? 1 : 0;
-    }
-}
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -146,22 +167,47 @@ private:
     /** @brief get the clip preferences */
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
 private:
 
+    void updateGUI();
+
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip* _dstClip;
-    std::vector<OFX::Clip *> _srcClip;
-    OFX::Int2DParam *_resolution;
-    OFX::Int2DParam* _rowsColumns;
+    Clip* _dstClip;
+    std::vector<Clip *> _srcClip;
+    Int2DParam *_resolution;
+    Int2DParam* _rowsColumns;
+    IntParam* _gap;
+    BooleanParam* _center;
+    ChoiceParam* _rowOrder;
+    ChoiceParam* _colOrder;
+    Int2DParam* _frameRange;
+    BooleanParam* _frameRangeAbsolute;
+    BooleanParam* _selection;
+    IntParam* _selectionInput;
+    IntParam* _selectionFrame;
+
 };
 
 ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
                            bool numerousInputs)
     : ImageEffect(handle)
-    , _dstClip(0)
+    , _dstClip(NULL)
     , _srcClip(numerousInputs ? kClipSourceCountNumerous : kClipSourceCount)
-    , _resolution(0)
-    , _rowsColumns(0)
+    , _resolution(NULL)
+    , _rowsColumns(NULL)
+    , _gap(NULL)
+    , _center(NULL)
+    , _rowOrder(NULL)
+    , _colOrder(NULL)
+    , _frameRange(NULL)
+    , _frameRangeAbsolute(NULL)
+    , _selection(NULL)
+    , _selectionInput(NULL)
+    , _selectionFrame(NULL)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
@@ -176,57 +222,204 @@ ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
     _resolution  = fetchInt2DParam(kParamResolution);
     _rowsColumns = fetchInt2DParam(kParamRowsColums);
     assert(_resolution && _rowsColumns);
+    _gap = fetchIntParam(kParamGap);
+    _center = fetchBooleanParam(kParamCenter);
+    _rowOrder = fetchChoiceParam(kParamRowOrder);
+    _colOrder = fetchChoiceParam(kParamColumnOrder);
+    _frameRange = fetchInt2DParam(kParamFrameRange);
+    _frameRangeAbsolute = fetchBooleanParam(kParamFrameRangeAbsolute);
+#ifdef SELECTION
+    _selection = fetchBooleanParam(kParamSelection);
+    _selectionInput = fetchIntParam(kParamSelectionInput);
+    _selectionFrame = fetchIntParam(kParamSelectionFrame);
+#endif
+
+    updateGUI();
+}
+
+static void
+fitRod(const OfxRectD& srcFormatCanonical,
+       const OfxRectD& cellRoD,
+       int gap,
+       bool center,
+       double* f,
+       OfxRectD* imageRoD)
+{
+    double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
+    double sh = srcFormatCanonical.y2 - srcFormatCanonical.y1;
+    OfxRectD cRoD = { cellRoD.x1 + gap / 2, cellRoD.y1 + gap/2, cellRoD.x2 - (gap + 1) / 2, cellRoD.y2 - (gap + 1) / 2};
+    double cw = std::max(1., cRoD.x2 - cRoD.x1);
+    double ch = std::max(1., cRoD.y2 - cRoD.y1);
+    bool fitwidth = sw * ch > sh * cw;
+    *f = fitwidth ? (cw/sw) : (ch / sh);
+    if (center) {
+        imageRoD->x1 = cRoD.x1 + (cw - *f * sw) / 2;
+        imageRoD->x2 = cRoD.x2 - (cw - *f * sw) / 2;
+        imageRoD->y1 = cRoD.y1 + (ch - *f * sh) / 2;
+        imageRoD->y2 = cRoD.y2 - (ch - *f * sh) / 2;
+    } else {
+        imageRoD->x1 = cRoD.x1;
+        imageRoD->x2 = cRoD.x1 + *f * sw;
+        imageRoD->y1 = cRoD.y1;
+        imageRoD->y2 = cRoD.y1 + *f * sh;
+    }
 }
 
 void
 ContactSheetPlugin::render(const OFX::RenderArguments &args)
 {
-    // do nothing as this should never be called as isIdentity should always be trapped
-    assert(false);
-
     const double time = args.time;
 
-    // copy input to output
-    int input = 0;
-    if ( _automatic->getValueAtTime(time) ) {
-        input = getInputAutomatic(time);
-    } else {
-        input = _which->getValueAtTime(time);
-        input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
-    }
-    OFX::Clip *srcClip = _srcClip[input];
-    assert( kSupportsMultipleClipPARs   || !srcClip || srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !srcClip || srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        throwSuiteStatusException(kOfxStatFailed);
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        ( dst->getRenderScale().y != args.renderScale.y) ||
+        ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src( ( srcClip && srcClip->isConnected() ) ?
-                                         srcClip->fetchImage(time) : 0 );
-    if ( src.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
-        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-        }
+    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    const OfxRectI& dstBounds = dst->getBounds();
+    const size_t depth = dst->getPixelComponentCount();
+    assert(dst->getPixelDepth() == eBitDepthFloat);
+    float* b = (float*)dst->getPixelData();
+    const size_t bwidth = dstBounds.x2 - dstBounds.x1;
+    const size_t bheight = dstBounds.y2 - dstBounds.y1;
+    const size_t bxstride = dst->getPixelComponentCount();
+    const size_t bystride = bwidth * bxstride;
+    // clear the renderWindow
+    fillBlack( *this, args.renderWindow, dst.get() );
+
+    int first, last;
+    _frameRange->getValueAtTime(time, first, last);
+    if (first > last) {
+        std::swap(first, last);
     }
-    copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+    int count = last - first + 1;
+    OfxRectD rod;
+    {
+        int w, h;
+        _resolution->getValue(w, h);
+        double par = _dstClip->getPixelAspectRatio();
+        OfxPointD rs1 = {1., 1.};
+        OfxRectI rodpixel = {0, 0, w, h};
+        Coords::toCanonical(rodpixel, rs1, par, &rod);
+    }
+    bool topbottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
+    bool leftright = (_colOrder->getValueAtTime(time) == eColumnOrderLeftRight);
+    int gap = _gap->getValueAtTime(time);
+    bool center = _center->getValueAtTime(time);
+    bool absolute = _frameRangeAbsolute->getValueAtTime(time); // render only
+    double dstPar = _dstClip->getPixelAspectRatio();
+    OfxRectD renderWindowCanonical;
+    Coords::toCanonical(args.renderWindow, args.renderScale, dstPar, &renderWindowCanonical);
+
+    // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
+    int rows, columns;
+    _rowsColumns->getValueAtTime(time, rows, columns);
+    int framesLeft = rows * columns;
+    int i = 0;
+    while (framesLeft > 0 && i < (int)_srcClip.size()) {
+        Clip *srcClip = _srcClip[i];
+        assert( kSupportsMultipleClipPARs   || !srcClip || srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+        assert( kSupportsMultipleClipDepths || !srcClip || srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+
+        int clipCount = std::min(framesLeft, count); // number of frames from this clip
+        OfxRectD srcFormatCanonical;
+        {
+            OfxRectI srcFormat;
+            _srcClip[i]->getFormat(srcFormat);
+            double srcPar = _srcClip[i]->getPixelAspectRatio();
+            if ( OFX::Coords::rectIsEmpty(srcFormat) ) {
+                // no format is available, use the RoD instead
+                srcFormatCanonical = _srcClip[i]->getRegionOfDefinition(time);
+            } else {
+                const OfxPointD rs1 = {1., 1.};
+                Coords::toCanonical(srcFormat, rs1, srcPar, &srcFormatCanonical);
+            }
+        }
+
+        for (int frame = 0; frame < clipCount; ++frame) {
+            int cell = count * i + frame; // cell number
+            int r = cell / columns;
+            int c = cell % columns;
+            if (r > rows) {
+                continue;
+            }
+            if (topbottom) {
+                r = rows - 1 - r;
+            }
+            if (!leftright) {
+                c = columns - 1 - c;
+            }
+            // now compute the four corners of the cell in the rod
+            OfxRectD cellRoD = {
+                rod.x1 + c * (rod.x2 - rod.x1) / columns,
+                rod.y1 + r * (rod.y2 - rod.y1) / rows,
+                rod.x1 + (c + 1) * (rod.x2 - rod.x1) / columns,
+                rod.y1 + (r + 1) * (rod.y2 - rod.y1) / rows
+            };
+
+            // and the four corners of the image area in the dest rod
+            double f = 1;
+            OfxRectD imageRoD = {0., 0., 0., 0.};
+            fitRod(srcFormatCanonical, cellRoD, gap, center, &f, &imageRoD);
+
+            //- intersect with the render window
+            OfxRectD imageRoDClipped;
+            if (Coords::rectIntersection(renderWindowCanonical, imageRoD, &imageRoDClipped)) {
+
+                //render:
+                //- get the the src Image
+                double srcTime = absolute ? (first + frame) : (time + first + frame);
+                std::auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
+                                               srcClip->fetchImage(srcTime) : 0 );
+                if ( src.get() ) {
+                    if ( (src->getRenderScale().x != args.renderScale.x) ||
+                        ( src->getRenderScale().y != args.renderScale.y) ||
+                        ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+                        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                        throwSuiteStatusException(kOfxStatFailed);
+                    }
+                    BitDepthEnum srcBitDepth      = src->getPixelDepth();
+                    PixelComponentEnum srcComponents = src->getPixelComponents();
+                    if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+                        throwSuiteStatusException(kOfxStatErrImageFormat);
+                    }
+
+                    //- draw it at the right place
+                    const OfxRectI& srcBounds = src->getBounds();
+                    assert(src->getPixelDepth() == eBitDepthFloat);
+                    const float* a = (const float*)src->getPixelData();
+                    const size_t awidth = srcBounds.x2 - srcBounds.x1;
+                    const size_t aheight = srcBounds.y2 - srcBounds.y1;
+                    const size_t axstride = src->getPixelComponentCount();
+                    const size_t aystride = awidth * axstride;
+                    const OfxRectD from = {0., 0., (double)awidth, (double)aheight};
+                    OfxRectI to;
+                    Coords::toPixelEnclosing(imageRoD, args.renderScale, dstPar, &to);
+                    to.x1 -= dstBounds.x1;
+                    to.y1 -= dstBounds.y1;
+                    to.x2 -= dstBounds.x1;
+                    to.y2 -= dstBounds.y1;
+
+                    ofxsFilterResize2d(a, awidth, aheight, axstride, aystride, depth,
+                                       from, /*zeroOutside=*/false,
+                                       b, bwidth, bheight, bxstride, bystride,
+                                       to);
+                }
+            }
+        }
+
+        framesLeft -= clipCount;
+        ++i;
+    }
 }
+
 
 // override the roi call
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
@@ -236,15 +429,100 @@ ContactSheetPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
                                    OFX::RegionOfInterestSetter &rois)
 {
     const double time = args.time;
-    // ask for all the inputs that are in the output image
-    // TODO1: optimize so that only the inputs visible in args.roi are asked for.
-    // TODO2: optimize even more to ask for partial inputs
+
+    int first, last;
+    _frameRange->getValueAtTime(time, first, last);
+    if (first > last) {
+        std::swap(first, last);
+    }
+    int count = last - first + 1;
+    OfxRectD rod;
+    {
+        int w, h;
+        _resolution->getValue(w, h);
+        double par = _dstClip->getPixelAspectRatio();
+        OfxPointD rs1 = {1., 1.};
+        OfxRectI rodpixel = {0, 0, w, h};
+        Coords::toCanonical(rodpixel, rs1, par, &rod);
+    }
+    bool topbottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
+    bool leftright = (_colOrder->getValueAtTime(time) == eColumnOrderLeftRight);
+    int gap = _gap->getValueAtTime(time);
+    bool center = _center->getValueAtTime(time);
+
+    // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
     int rows, columns;
-    _rowsColums->getValueAtTime(time, rows, columns);
-    for (unsigned i = 0; i < std::min(_srcClip.size(), rows * columns); ++i) {
-        if (i != (unsigned)input) {
-            rois.setRegionOfInterest(*_srcClip[i], _srcClip[i]->getRegionOfDefinition() );
+    _rowsColumns->getValueAtTime(time, rows, columns);
+    int framesLeft = rows * columns;
+    int i = 0;
+    while (framesLeft > 0 && i < (int)_srcClip.size()) {
+        int clipCount = std::min(framesLeft, count); // number of frames from this clip
+        OfxRectD srcFormatCanonical;
+        {
+            OfxRectI srcFormat;
+            _srcClip[i]->getFormat(srcFormat);
+            double srcPar = _srcClip[i]->getPixelAspectRatio();
+            if ( OFX::Coords::rectIsEmpty(srcFormat) ) {
+                // no format is available, use the RoD instead
+                srcFormatCanonical = _srcClip[i]->getRegionOfDefinition(time);
+            } else {
+                const OfxPointD rs1 = {1., 1.};
+                Coords::toCanonical(srcFormat, rs1, srcPar, &srcFormatCanonical);
+            }
         }
+
+        OfxRectD srcRoI = {0., 0., 0., 0.}; // getRegionsOfInterest only
+        for (int frame = 0; frame < clipCount; ++frame) {
+            int cell = count * i + frame; // cell number
+            int r = cell / columns;
+            int c = cell % columns;
+            if (r > rows) {
+                continue;
+            }
+            if (topbottom) {
+                r = rows - 1 - r;
+            }
+            if (!leftright) {
+                c = columns - 1 - c;
+            }
+            // now compute the four corners of the cell in the rod
+            OfxRectD cellRoD = {
+                rod.x1 + c * (rod.x2 - rod.x1) / columns,
+                rod.y1 + r * (rod.y2 - rod.y1) / rows,
+                rod.x1 + (c + 1) * (rod.x2 - rod.x1) / columns,
+                rod.y1 + (r + 1) * (rod.y2 - rod.y1) / rows
+            };
+
+            // and the four corners of the image area in the dest rod
+            double f = 1;
+            OfxRectD imageRoD = {0., 0., 0., 0.};
+            fitRod(srcFormatCanonical, cellRoD, gap, center, &f, &imageRoD);
+
+            //- intersect with the render window
+            OfxRectD imageRoDClipped;
+            if (Coords::rectIntersection(args.regionOfInterest, imageRoD, &imageRoDClipped)) {
+                //getRegionsOfInterest:
+
+                //- transform back to the srcClip canonical coordinates
+                OfxRectD frameRoi = {
+                    srcFormatCanonical.x1 + (imageRoDClipped.x1 - imageRoD.x1) / f,
+                    srcFormatCanonical.y1 + (imageRoDClipped.y1 - imageRoD.y1) / f,
+                    srcFormatCanonical.x2 + (imageRoDClipped.x2 - imageRoD.x2) / f,
+                    srcFormatCanonical.y2 + (imageRoDClipped.y2 - imageRoD.y2) / f
+                };
+
+                //- expand the srcClip rod accordingly
+                Coords::rectBoundingBox(srcRoI, frameRoi, &srcRoI);
+                
+                //render:
+                //- get the the src Image
+                //- draw it at the right place
+           }
+        }
+        rois.setRegionOfInterest(*_srcClip[i], srcRoI);
+
+        framesLeft -= clipCount;
+        ++i;
     }
 }
 
@@ -253,21 +531,14 @@ ContactSheetPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
                                     OfxRectD &rod)
 {
     const double time = args.time;
-    int input;
+    int w, h;
+    _resolution->getValue(w, h);
+    double par = _dstClip->getPixelAspectRatio();
+    OfxPointD rs1 = {1., 1.};
+    OfxRectI rodpixel = {0, 0, w, h};
+    Coords::toCanonical(rodpixel, rs1, par, &rod);
 
-    if ( _automatic->getValueAtTime(time) ) {
-        input = getInputAutomatic(time);
-    } else {
-        input = _which->getValueAtTime(time);
-        input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
-    }
-    if ( _srcClip[input] && _srcClip[input]->isConnected() ) {
-        rod = _srcClip[input]->getRegionOfDefinition(args.time);
-
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
 
@@ -276,45 +547,97 @@ ContactSheetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
                                   OFX::FramesNeededSetter &frames)
 {
     const double time = args.time;
-    int firstFrame;
 
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
-    int clip0, clip1;
-    double t0, t1;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, &clip1, &t1, NULL, NULL);
-    for (unsigned i = 0; i < _srcClip.size(); ++i) {
+    int first, last;
+    _frameRange->getValueAtTime(time, first, last);
+    if (first > last) {
+        std::swap(first, last);
+    }
+    int count = last - first + 1;
+    bool absolute = _frameRangeAbsolute->getValueAtTime(time);
+    if (!absolute) {
+        first += time;
+        last += time;
+    }
+
+    // now, for each clip, compute the required frame range
+    int rows, columns;
+    _rowsColumns->getValueAtTime(time, rows, columns);
+    int framesLeft = rows * columns;
+    int i = 0;
+    while (framesLeft > 0 && i < (int)_srcClip.size()) {
+        int clipCount = std::min(framesLeft, count); // number of frames from this clip
         OfxRangeD range;
-        if (i == (unsigned)clip0) {
-            range.min = t0;
-            range.max = t0;
-        } else if (i == (unsigned)clip1) {
-            range.min = t1;
-            range.max = t1;
-        } else {
-            // empty range
-            range.min = firstFrame;
-            range.max = firstFrame - 1;
-        }
+        range.min = first;
+        range.max = first + clipCount;
         frames.setFramesNeeded(*_srcClip[i], range);
+
+        framesLeft -= clipCount;
+        ++i;
     }
 }
 
+
 /* Override the clip preferences */
 void
-ContactSheetPlugin::getClipPreferences(OFX::ClipPreferencesSetter & /*clipPreferences*/)
+ContactSheetPlugin::getClipPreferences(OFX::ClipPreferencesSetter & clipPreferences)
 {
+    updateGUI();
+
     // all inputs and outputs should have the same components
     OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
 
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         clipPreferences.setClipComponents(*_srcClip[i], outputComps);
     }
+
+    OfxRectI format = {0, 0, 0, 0};
+    _resolution->getValue(format.x2, format.y2);
+    clipPreferences.setOutputFormat(format);
+    //clipPreferences.setPixelAspectRatio(*_dstClip, par);
+}
+
+void
+ContactSheetPlugin::changedClip(const InstanceChangedArgs & /*args*/,
+                          const std::string & /*clipName*/)
+{
+    updateGUI();
+}
+
+void
+ContactSheetPlugin::changedParam(const InstanceChangedArgs &/*args*/,
+                           const std::string &paramName)
+{
+    if (paramName == kParamFrameRange) {
+        updateGUI();
+    }
+#ifdef SELECTION
+    if (paramName == kParamSelection) {
+        updateGUI();
+    }
+#endif
+}
+
+void
+ContactSheetPlugin::updateGUI()
+{
+    int maxconnected = 1;
+
+    for (unsigned i = 2; i < _srcClip.size(); ++i) {
+        if ( _srcClip[i] && _srcClip[i]->isConnected() ) {
+            maxconnected = i;
+        }
+    }
+    _selectionInput->setDisplayRange(0, maxconnected);
+
+    int min = 0, max = 0;
+    _frameRange->getValue(min, max);
+    _selectionFrame->setDisplayRange(min, max);
+
+    bool selectionEnabled = false;
+    _selection->getValue(selectionEnabled);
+    _selectionFrame->setEnabled(selectionEnabled);
+    _selectionInput->setEnabled(selectionEnabled);
 }
 
 mDeclarePluginFactory(ContactSheetPluginFactory, {}, {});
@@ -331,12 +654,12 @@ ContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
-    desc.addSupportedBitDepth(eBitDepthNone);
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthHalf);
+    //desc.addSupportedBitDepth(eBitDepthNone);
+    //desc.addSupportedBitDepth(eBitDepthUByte);
+    //desc.addSupportedBitDepth(eBitDepthUShort);
+    //desc.addSupportedBitDepth(eBitDepthHalf);
     desc.addSupportedBitDepth(eBitDepthFloat);
-    desc.addSupportedBitDepth(eBitDepthCustom);
+    //desc.addSupportedBitDepth(eBitDepthCustom);
 #ifdef OFX_EXTENSIONS_VEGAS
     desc.addSupportedBitDepth(eBitDepthUByteBGRA);
     desc.addSupportedBitDepth(eBitDepthUShortBGRA);
@@ -348,14 +671,14 @@ ContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setHostFrameThreading(false);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setSupportsTiles(kSupportsTiles);
-    desc.setTemporalClipAccess(false);
+    desc.setTemporalClipAccess(true);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
 #ifdef OFX_EXTENSIONS_NUKE
     // Enable transform by the host.
     // It is only possible for transforms which can be represented as a 3x3 matrix.
-    desc.setCanTransform(true);
+    desc.setCanTransform(false);
 #endif
     desc.setRenderThreadSafety(kRenderThreadSafety);
 #ifdef OFX_EXTENSIONS_NATRON
@@ -365,7 +688,7 @@ ContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void
 ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                       OFX::ContextEnum context)
+                                             OFX::ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
@@ -404,7 +727,7 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->setIsMask(false);
     }
 
-    if (numerousInputs) {
+    //if (numerousInputs) {
         for (unsigned i = 2; i < clipSourceCount; ++i) {
             ClipDescriptor *srcClip = desc.defineClip( unsignedToString(i) );
             srcClip->setOptional(true);
@@ -416,7 +739,7 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip->setSupportsTiles(kSupportsTiles);
             srcClip->setIsMask(false);
         }
-    }
+    //}
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -429,35 +752,158 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // which
+    // resolution
     {
-        IntParamDescriptor *param = desc.defineIntParam(kParamWhich);
-        param->setLabel(kParamWhichLabel);
-        param->setHint(kParamWhichHint);
-        param->setDefault(0);
-        param->setRange(0, clipSourceCount - 1);
-        param->setDisplayRange(0, clipSourceCount - 1);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    // automatic
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutomatic);
-        param->setLabel(kParamAutomaticLabel);
-        param->setHint(kParamAutomaticHint);
-        param->setDefault(false);
-        param->setAnimates(true);
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamResolution);
+        param->setLabel(kParamResolutionLabel);
+        param->setHint(kParamResolutionHint);
+        param->setDefault(3072, 2048);
+        param->setRange(1, 1, INT_MAX, INT_MAX);
+        param->setDisplayRange(256, 256, 4096, 4096);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
     }
 
-#ifdef OFX_EXTENSIONS_NUKE
-    // Enable transform by the host.
-    // It is only possible for transforms which can be represented as a 3x3 matrix.
-    desc.setCanTransform(true);
+    // rowsColumns
+    {
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamRowsColums);
+        param->setLabel(kParamRowsColumsLabel);
+        param->setHint(kParamRowsColumsHint);
+        param->setDefault(3, 4);
+        param->setRange(1, 1, INT_MAX, INT_MAX);
+        param->setDisplayRange(1, 1, 32, 32);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // gap
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamGap);
+        param->setLabel(kParamGapLabel);
+        param->setHint(kParamGapHint);
+        param->setDefault(0);
+        param->setRange(0, INT_MAX);
+        param->setDisplayRange(0, 100);
+        param->setAnimates(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // center
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCenter);
+        param->setLabel(kParamCenterLabel);
+        param->setHint(kParamCenterHint);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // rowOrder
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamRowOrder);
+        param->setLabel(kParamRowOrderLabel);
+        param->setHint(kParamRowOrderHint);
+        param->setAnimates(false);
+        assert(param->getNOptions() == (int)eRowOrderTopBottom);
+        param->appendOption(kParamRowOrderOptionTopBottom);
+        assert(param->getNOptions() == (int)eRowOrderBottomTop);
+        param->appendOption(kParamRowOrderOptionBottomTop);
+        param->setDefault((int)eRowOrderBottomTop);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // colOrder
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColumnOrder);
+        param->setLabel(kParamColumnOrderLabel);
+        param->setHint(kParamColumnOrderHint);
+        param->setAnimates(false);
+        assert(param->getNOptions() == (int)eColumnOrderLeftRight);
+        param->appendOption(kParamColumnOrderOptionLeftRight);
+        assert(param->getNOptions() == (int)eColumnOrderRightLeft);
+        param->appendOption(kParamColumnOrderOptionRightLeft);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // frameRange
+    {
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamFrameRange);
+        param->setLabel(kParamFrameRangeLabel);
+        param->setHint(kParamFrameRangeHint);
+        param->setDefault(0, 0);
+        param->setRange(-INT_MIN, -INT_MIN, INT_MAX, INT_MAX);
+        param->setDisplayRange(-10, -10, 10, 10);
+        param->setAnimates(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // frameRangeAbsolute
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFrameRangeAbsolute);
+        param->setLabel(kParamFrameRangeAbsoluteLabel);
+        param->setHint(kParamFrameRangeAbsoluteHint);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+#ifdef SELECTION
+    // selection
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSelection);
+        param->setLabel(kParamSelectionLabel);
+        param->setHint(kParamSelectionHint);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // selectionInput
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamSelectionInput);
+        param->setLabel(kParamSelectionInputLabel);
+        param->setHint(kParamSelectionInputHint);
+        param->setDefault(0);
+        param->setRange(0, clipSourceCount - 1);
+        param->setDisplayRange(0, clipSourceCount - 1);
+        param->setAnimates(true);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // selectionFrame
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamSelectionFrame);
+        param->setLabel(kParamSelectionFrameLabel);
+        param->setHint(kParamSelectionFrameHint);
+        param->setDefault(0);
+        param->setRange(-INT_MAX, INT_MAX);
+        param->setDisplayRange(-10, 10);
+        param->setAnimates(true);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 #endif
 } // ContactSheetPluginFactory::describeInContext
 

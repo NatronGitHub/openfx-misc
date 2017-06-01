@@ -19,6 +19,7 @@ ColorSuppress \
 ColorTransform \
 ColorWheel \
 Constant \
+ContactSheet \
 CopyRectangle \
 CornerPin \
 Crop \
