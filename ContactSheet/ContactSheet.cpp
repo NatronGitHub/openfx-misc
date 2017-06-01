@@ -23,10 +23,18 @@
 
 #include <string>
 #include <algorithm>
+#include <cmath>
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
+
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
+
 
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
@@ -38,7 +46,10 @@
 #include "nuke/fnOfxExtensions.h"
 #endif
 
+#define SELECTION
+
 using namespace OFX;
+
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
@@ -128,6 +139,7 @@ enum ColumnOrderEnum {
 
 #define kClipSourceCount 16
 #define kClipSourceCountNumerous 128
+
 
 static
 std::string
@@ -347,7 +359,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
             int cell = count * i + frame; // cell number
             int r = cell / columns;
             int c = cell % columns;
-            if (r > rows) {
+            if (r >= rows) {
                 continue;
             }
             if (topbottom) {
@@ -532,7 +544,7 @@ ContactSheetPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments
 {
     const double time = args.time;
     int w, h;
-    _resolution->getValue(w, h);
+    _resolution->getValueAtTime(time, w, h);
     double par = _dstClip->getPixelAspectRatio();
     OfxPointD rs1 = {1., 1.};
     OfxRectI rodpixel = {0, 0, w, h};
@@ -640,7 +652,226 @@ ContactSheetPlugin::updateGUI()
     _selectionInput->setEnabled(selectionEnabled);
 }
 
+//////////// INTERACT
+
+#ifdef SELECTION
+
+class ContactSheetInteract : public OverlayInteract {
+
+public:
+    ContactSheetInteract(OfxInteractHandle handle, ImageEffect* effect)
+    : OverlayInteract(handle)
+    , _dstClip(NULL)
+    , _resolution(NULL)
+    , _rowsColumns(NULL)
+    , _gap(NULL)
+    , _center(NULL)
+    , _rowOrder(NULL)
+    , _colOrder(NULL)
+    , _frameRange(NULL)
+    , _frameRangeAbsolute(NULL)
+    , _selection(NULL)
+    , _selectionInput(NULL)
+    , _selectionFrame(NULL)
+    {
+        _dstClip = effect->fetchClip(kOfxImageEffectOutputClipName);
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
+        _resolution  = effect->fetchInt2DParam(kParamResolution);
+        _rowsColumns = effect->fetchInt2DParam(kParamRowsColums);
+        assert(_resolution && _rowsColumns);
+        _gap = effect->fetchIntParam(kParamGap);
+        _center = effect->fetchBooleanParam(kParamCenter);
+        _rowOrder = effect->fetchChoiceParam(kParamRowOrder);
+        _colOrder = effect->fetchChoiceParam(kParamColumnOrder);
+        _frameRange = effect->fetchInt2DParam(kParamFrameRange);
+        _frameRangeAbsolute = effect->fetchBooleanParam(kParamFrameRangeAbsolute);
+        _selection = effect->fetchBooleanParam(kParamSelection);
+        _selectionInput = effect->fetchIntParam(kParamSelectionInput);
+        _selectionFrame = effect->fetchIntParam(kParamSelectionFrame);
+    }
+
+private:
+    // overridden functions from OFX::Interact to do things
+    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL;
+    virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL;
+
+private:
+    Clip* _dstClip;
+    Int2DParam *_resolution;
+    Int2DParam* _rowsColumns;
+    IntParam* _gap;
+    BooleanParam* _center;
+    ChoiceParam* _rowOrder;
+    ChoiceParam* _colOrder;
+    Int2DParam* _frameRange;
+    BooleanParam* _frameRangeAbsolute;
+    BooleanParam* _selection;
+    IntParam* _selectionInput;
+    IntParam* _selectionFrame;
+
+};
+
+// draw the interact
+bool
+ContactSheetInteract::draw(const OFX::DrawArgs &args)
+{
+    const double time = args.time;
+
+    if ( !_selection->getValueAtTime(time) ) {
+        return false;
+    }
+
+    OfxRectD rod = _dstClip->getRegionOfDefinition(time);
+
+    int first, last;
+    _frameRange->getValueAtTime(time, first, last);
+    if (first > last) {
+        std::swap(first, last);
+    }
+    int count = last - first + 1;
+    bool topbottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
+    bool leftright = (_colOrder->getValueAtTime(time) == eColumnOrderLeftRight);
+
+    int rows, columns;
+    _rowsColumns->getValueAtTime(time, rows, columns);
+
+    int selectionInput = _selectionInput->getValueAtTime(time);
+    int selectionFrame = _selectionFrame->getValueAtTime(time);
+
+    int c = selectionInput * count + (selectionFrame - first);
+    int r = c / columns;
+    if (r >= rows) {
+        return false;
+    }
+    c = c % columns;
+    if (topbottom) {
+        r = rows - 1 - r;
+    }
+    if (!leftright) {
+        c = columns - 1 - c;
+    }
+    double cellw = (rod.x2 - rod.x1) / columns;
+    double cellh = (rod.y2 - rod.y1) / rows;
+
+    OfxRGBColourD color = { 0.8, 0.8, 0.8 };
+    getSuggestedColour(color);
+    const OfxPointD& pscale = args.pixelScale;
+    GLdouble projection[16];
+    glGetDoublev( GL_PROJECTION_MATRIX, projection);
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    OfxPointD shadow; // how much to translate GL_PROJECTION to get exactly one pixel on screen
+    shadow.x = 2. / (projection[0] * viewport[2]);
+    shadow.y = 2. / (projection[5] * viewport[3]);
+
+    //glPushAttrib(GL_ALL_ATTRIB_BITS); // caller is responsible for protecting attribs
+    glDisable(GL_LINE_STIPPLE);
+    glEnable(GL_LINE_SMOOTH);
+    glDisable(GL_POINT_SMOOTH);
+    glEnable(GL_BLEND);
+    glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
+    glLineWidth(3.f);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    double x1 = rod.x1 + cellw * c;
+    double x2 = rod.x1 + cellw * (c + 1);
+    double y1 = rod.y1 + cellh * r;
+    double y2 = rod.y1 + cellh * (r + 1);
+
+    // Draw everything twice
+    // l = 0: shadow
+    // l = 1: drawing
+    for (int l = 0; l < 2; ++l) {
+        // shadow (uses GL_PROJECTION)
+        glMatrixMode(GL_PROJECTION);
+        int direction = (l == 0) ? 1 : -1;
+        // translate (1,-1) pixels
+        glTranslated(direction * shadow.x, -direction * shadow.y, 0);
+        glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+
+        glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
+
+        glBegin(GL_LINE_LOOP);
+        glVertex2d(x1, y1);
+        glVertex2d(x1, y2);
+        glVertex2d(x2, y2);
+        glVertex2d(x2, y1);
+        glEnd();
+    }
+    //glPopAttrib();
+    
+    return true;
+}
+
+
+bool 
+ContactSheetInteract::penDown(const OFX::PenArgs &args)
+{
+    const double time = args.time;
+
+    if ( !_selection->getValueAtTime(time) ) {
+        return false;
+    }
+
+    OfxRectD rod = _dstClip->getRegionOfDefinition(time);
+
+    double x = args.penPosition.x;
+    double y = args.penPosition.y;
+
+    if (x < rod.x1 || x >= rod.x2 || y < rod.y1 || y >= rod.y2) {
+        return false;
+    }
+    int first, last;
+
+    int rows, columns;
+    _rowsColumns->getValueAtTime(time, rows, columns);
+
+    double cellw = (rod.x2 - rod.x1) / columns;
+    double cellh = (rod.y2 - rod.y1) / rows;
+
+    int c = std::floor((x - rod.x1) / cellw);
+    if (c < 0 || columns <= c) {
+        return false;
+    }
+    int r = std::floor((y - rod.y1) / cellh);
+    if (r < 0 || rows <= r) {
+        return false;
+    }
+    bool topbottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
+    bool leftright = (_colOrder->getValueAtTime(time) == eColumnOrderLeftRight);
+    if (topbottom) {
+        r = rows - 1 - r;
+    }
+    if (!leftright) {
+        c = columns - 1 - c;
+    }
+    _frameRange->getValueAtTime(time, first, last);
+    if (first > last) {
+        std::swap(first, last);
+    }
+    int count = last - first + 1;
+
+    c = c + r * columns;
+
+    int selectionFrame = c % count;
+    int selectionInput = c / count;
+
+    _selectionFrame->setValue(selectionFrame);
+    _selectionInput->setValue(selectionInput);
+
+    return true;
+}
+
+#endif // SELECTION
+
+//////////// FACTORY
+
 mDeclarePluginFactory(ContactSheetPluginFactory, {}, {});
+
+#ifdef SELECTION
+class ContactSheetOverlayDescriptor : public DefaultEffectOverlayDescriptor<ContactSheetOverlayDescriptor, ContactSheetInteract> {};
+#endif
+
 void
 ContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -683,6 +914,10 @@ ContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
+#endif
+
+#ifdef SELECTION
+    desc.setOverlayInteractDescriptor( new ContactSheetOverlayDescriptor);
 #endif
 }
 

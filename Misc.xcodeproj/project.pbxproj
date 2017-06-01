@@ -829,6 +829,7 @@
 		1EB00C6D1EDEF686006CA180 /* net.sf.openfx.CheckerBoardPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E75A0811A88E260005BAA36 /* net.sf.openfx.CheckerBoardPlugin.svg */; };
 		1EB00C771EDEF90E006CA180 /* ContactSheet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB00C741EDEF75D006CA180 /* ContactSheet.cpp */; };
 		1EB00C781EDEF91D006CA180 /* ContactSheet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB00C741EDEF75D006CA180 /* ContactSheet.cpp */; };
+		1EB00C791EE0418D006CA180 /* ContactSheet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB00C741EDEF75D006CA180 /* ContactSheet.cpp */; };
 		1EB0A4401AA1EDB100F9C93E /* TestPosition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */; };
 		1EB0A4431AA1F03C00F9C93E /* TestGroups.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */; };
 		1EB0A4441AA2002700F9C93E /* ofxsTransform3x3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F57198A51840095C8AA /* ofxsTransform3x3.cpp */; };
@@ -7969,6 +7970,7 @@
 				1E3E3CBF17995D5C005F2132 /* ofxsImageEffect.cpp in Sources */,
 				1E3E3CC017995D5C005F2132 /* ofxsInteract.cpp in Sources */,
 				1EF77B9F1E4B6405005C4845 /* ofxsThreadSuite.cpp in Sources */,
+				1EB00C791EE0418D006CA180 /* ContactSheet.cpp in Sources */,
 				1E3E3CC117995D5C005F2132 /* ofxsLog.cpp in Sources */,
 				1E3E3CC217995D5C005F2132 /* ofxsMultiThread.cpp in Sources */,
 				1E3E3CC317995D5C005F2132 /* ofxsParams.cpp in Sources */,
