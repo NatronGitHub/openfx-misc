@@ -601,6 +601,20 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
                 name = name.substr(first_underline + 1, second_underline - (first_underline + 1));
             }
         }
+        std::string prefix("uk.co.thefoundry.OfxImagePlane");
+        if (!name.compare(0, prefix.size(), prefix)) {
+            name = name.substr(prefix.size());
+            if (name == "Colour") {
+                name = "Color"; // US English
+            }
+        }
+
+        /** @brief string to indicate a 2D right stereo disparity image plane be fetched.
+         
+         Passed to FnOfxImageEffectPlaneSuiteV1::clipGetImagePlane \e plane argument.
+         */
+#define kFnOfxImagePlaneStereoDisparityRight "uk.co.thefoundry.OfxImagePlaneStereoDisparityRight"
+
         int r = layer / columns;
         int c = layer % columns;
         if (r >= rows) {
