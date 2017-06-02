@@ -54,6 +54,7 @@ Invert.o \
 JoinViews.o \
 Keyer.o \
 KeyMix.o \
+LayerContactSheet.o \
 Log2Lin.o \
 MatteMonitor.o \
 Merge.o \
@@ -284,6 +285,7 @@ $(TOP_SRCDIR)/Invert \
 $(TOP_SRCDIR)/JoinViews \
 $(TOP_SRCDIR)/Keyer \
 $(TOP_SRCDIR)/KeyMix \
+$(TOP_SRCDIR)/LayerContactSheet \
 $(TOP_SRCDIR)/Log2Lin \
 $(TOP_SRCDIR)/MatteMonitor \
 $(TOP_SRCDIR)/Merge \
@@ -363,6 +365,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Keyer \
 -I$(TOP_SRCDIR)/KeyMix \
 -I$(TOP_SRCDIR)/Log2Lin \
+-I$(TOP_SRCDIR)/LayerContactSheet \
 -I$(TOP_SRCDIR)/MatteMonitor \
 -I$(TOP_SRCDIR)/Merge \
 -I$(TOP_SRCDIR)/Mirror \

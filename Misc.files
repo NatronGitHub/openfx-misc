@@ -54,6 +54,7 @@ ImageStatistics/ImageStatistics.cpp
 Invert/Invert.cpp
 JoinViews/JoinViews.cpp
 Keyer/Keyer.cpp
+LayerContactSheet/LayerContactSheet.cpp
 MatteMonitor/MatteMonitor.cpp
 Merge/Merge.cpp
 Mirror/Mirror.cpp

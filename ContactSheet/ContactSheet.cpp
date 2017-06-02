@@ -294,9 +294,8 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    //PixelComponentEnum dstComponents  = dst->getPixelComponents();
     const OfxRectI& dstBounds = dst->getBounds();
-    const size_t depth = dst->getPixelComponentCount();
     assert(dst->getPixelDepth() == eBitDepthFloat);
     float* b = (float*)dst->getPixelData();
     const size_t bwidth = dstBounds.x2 - dstBounds.x1;
@@ -398,8 +397,8 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
                         throwSuiteStatusException(kOfxStatFailed);
                     }
                     BitDepthEnum srcBitDepth      = src->getPixelDepth();
-                    PixelComponentEnum srcComponents = src->getPixelComponents();
-                    if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+                    //PixelComponentEnum srcComponents = src->getPixelComponents();
+                    if ( (srcBitDepth != dstBitDepth) /*|| (srcComponents != dstComponents)*/ ) {
                         throwSuiteStatusException(kOfxStatErrImageFormat);
                     }
 
@@ -411,6 +410,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
                     const size_t aheight = srcBounds.y2 - srcBounds.y1;
                     const size_t axstride = src->getPixelComponentCount();
                     const size_t aystride = awidth * axstride;
+                    const size_t depth = std::min(axstride, bxstride);
                     const OfxRectD from = {0., 0., (double)awidth, (double)aheight};
                     OfxRectI to;
                     Coords::toPixelEnclosing(imageRoD, args.renderScale, dstPar, &to);
@@ -596,13 +596,6 @@ ContactSheetPlugin::getClipPreferences(OFX::ClipPreferencesSetter & clipPreferen
 {
     updateGUI();
 
-    // all inputs and outputs should have the same components
-    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
-
-    for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        clipPreferences.setClipComponents(*_srcClip[i], outputComps);
-    }
-
     OfxRectI format = {0, 0, 0, 0};
     _resolution->getValue(format.x2, format.y2);
     clipPreferences.setOutputFormat(format);
@@ -675,7 +668,7 @@ public:
     , _selectionFrame(NULL)
     {
         _dstClip = effect->fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
         _resolution  = effect->fetchInt2DParam(kParamResolution);
         _rowsColumns = effect->fetchInt2DParam(kParamRowsColums);
         assert(_resolution && _rowsColumns);
@@ -755,7 +748,7 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
 
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
-    const OfxPointD& pscale = args.pixelScale;
+    //const OfxPointD& pscale = args.pixelScale;
     GLdouble projection[16];
     glGetDoublev( GL_PROJECTION_MATRIX, projection);
     GLint viewport[4];
@@ -892,9 +885,9 @@ ContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthFloat);
     //desc.addSupportedBitDepth(eBitDepthCustom);
 #ifdef OFX_EXTENSIONS_VEGAS
-    desc.addSupportedBitDepth(eBitDepthUByteBGRA);
-    desc.addSupportedBitDepth(eBitDepthUShortBGRA);
-    desc.addSupportedBitDepth(eBitDepthFloatBGRA);
+    //desc.addSupportedBitDepth(eBitDepthUByteBGRA);
+    //desc.addSupportedBitDepth(eBitDepthUShortBGRA);
+    //desc.addSupportedBitDepth(eBitDepthFloatBGRA);
 #endif
 
     // set a few flags
@@ -941,7 +934,9 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip = desc.defineClip("0");
             srcClip->setOptional(true);
         }
-        srcClip->addSupportedComponent(ePixelComponentNone);
+#ifdef OFX_EXTENSIONS_NATRON
+        srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
@@ -953,7 +948,9 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         ClipDescriptor *srcClip;
         srcClip = desc.defineClip("1");
         srcClip->setOptional(true);
-        srcClip->addSupportedComponent(ePixelComponentNone);
+#ifdef OFX_EXTENSIONS_NATRON
+        srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
@@ -966,7 +963,9 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         for (unsigned i = 2; i < clipSourceCount; ++i) {
             ClipDescriptor *srcClip = desc.defineClip( unsignedToString(i) );
             srcClip->setOptional(true);
-            srcClip->addSupportedComponent(ePixelComponentNone);
+#ifdef OFX_EXTENSIONS_NATRON
+            srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
             srcClip->addSupportedComponent(ePixelComponentRGB);
             srcClip->addSupportedComponent(ePixelComponentRGBA);
             srcClip->addSupportedComponent(ePixelComponentAlpha);
@@ -978,10 +977,7 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentNone);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in

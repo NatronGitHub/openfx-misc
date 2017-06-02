@@ -153,6 +153,7 @@ grouping).
 * CopyRectangleOFX: Copies a rectangle from the input A to the input B in output.
 * DissolveOFX: Weighted average of two inputs.
 * KeyMixOFX: Copies A to B only where Mask is non-zero.
+* LayerContactSheetOFX: Make a contact sheet from layers.
 * MergeOFX: Pixel-by-pixel merge operation between the two inputs.
 * PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by alpha (or another channel).
 * SwitchOFX: Lets you switch between any number of inputs.
