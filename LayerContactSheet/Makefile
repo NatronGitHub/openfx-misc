@@ -1,4 +1,4 @@
-PLUGINOBJECTS = LayerContactSheet.o
+PLUGINOBJECTS = LayerContactSheet.o ofxsOGLTextRenderer.o ofxsOGLFontData.o
 PLUGINNAME = LayerContactSheet
 #RESOURCES = net.sf.openfx.switchPlugin.png net.sf.openfx.switchPlugin.svg
 
