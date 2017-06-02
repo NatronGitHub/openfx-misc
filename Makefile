@@ -42,6 +42,7 @@ Invert \
 JoinViews \
 Keyer \
 KeyMix \
+LayerContactSheet \
 Log2Lin \
 MatteMonitor \
 Merge \
