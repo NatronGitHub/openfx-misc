@@ -894,25 +894,43 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     std::auto_ptr<const Image> srcB( ( !renderRotoMask && _srcClipB && _srcClipB->isConnected() ) ?
                                     _srcClipB->fetchImage(time) : 0 );
     OptionalImagesHolder_RAII srcAs;
-      for (std::size_t i = 0; i < ( renderRotoMask ? 1 : _srcClipAs.size() ); ++i) {
-            const Image* srcA = ( _srcClipAs[i] && _srcClipAs[i]->isConnected() ) ?
-                                  _srcClipAs[i]->fetchImage(time) : 0;
-            if (srcA) {
-                srcAs.images.push_back(srcA);
-
-                if ( (srcA->getRenderScale().x != args.renderScale.x) ||
-                    ( srcA->getRenderScale().y != args.renderScale.y) ||
-                    ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
-                    setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                    throwSuiteStatusException(kOfxStatFailed);
+    for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
+        if ( _srcClipAs[i] && _srcClipAs[i]->isConnected() ) {
+            if (renderRotoMask) {
+#ifdef OFX_EXTENSIONS_NUKE
+                const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+                if (rotoMaskA) {
+                    srcAs.rotoMaskImg.push_back(rotoMaskA);
                 }
-                BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
-                PixelComponentEnum srcComponents = srcA->getPixelComponents();
-                if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-                    throwSuiteStatusException(kOfxStatErrImageFormat);
+#endif
+            } else {
+                const Image* srcA = _srcClipAs[i]->fetchImage(time);
+                if (srcA) {
+                    srcAs.images.push_back(srcA);
+
+                    if ( (srcA->getRenderScale().x != args.renderScale.x) ||
+                        ( srcA->getRenderScale().y != args.renderScale.y) ||
+                        ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
+                        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                        throwSuiteStatusException(kOfxStatFailed);
+                    }
+                    BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
+                    PixelComponentEnum srcComponents = srcA->getPixelComponents();
+                    if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+                        throwSuiteStatusException(kOfxStatErrImageFormat);
+                    }
+#ifdef OFX_EXTENSIONS_NUKE
+                    if (_pluginType == eMergePluginRoto) {
+                        const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+                        // always push the rotoMask, even if NULL, so that indexes in srcAs.images and srcAs.rotoMaskImg correspond
+                        srcAs.rotoMaskImg.push_back(rotoMaskA);
+
+                    }
+#endif
                 }
             }
         }
+    }
 
     if ( srcB.get() ) {
         if ( (srcB->getRenderScale().x != args.renderScale.x) ||
@@ -957,15 +975,6 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     if (_pluginType == eMergePluginRoto) {
 #ifdef OFX_EXTENSIONS_NUKE
         rotoMaskImgB = _srcClipB->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
-
-        for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
-            const Image* srcA = ( _srcClipAs[i] && _srcClipAs[i]->isConnected() ) ?
-                                  _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str()) : 0;
-#pragma message WARN("CHECKME: if there is an image on this clip but no rotomask, the indexes will not correspond?")
-            if (srcA) {
-                srcAs.rotoMaskImg.push_back(srcA);
-            }
-        }
 #endif
     }
 
