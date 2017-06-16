@@ -817,6 +817,7 @@ RadialPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // We just set the output components.
         if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
             clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+            clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }
