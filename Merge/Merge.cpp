@@ -299,7 +299,6 @@ class MergeProcessorBase
 {
 protected:
     std::vector<const Image*> _srcImgAs;
-    const Image *_srcImgA;
     const Image *_srcImgB;
     const Image* _rotoMaskImgB;
     const Image *_maskImg;
