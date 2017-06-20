@@ -1047,13 +1047,13 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamGeneratorExtentLabel);
             param->setHint(kParamGeneratorExtentHint);
             assert(param->getNOptions() == eGeneratorExtentFormat);
-            param->appendOption(kParamGeneratorExtentOptionFormat, kParamGeneratorExtentOptionFormatHint);
+            param->appendOption(kParamGeneratorExtentOptionFormat);
             assert(param->getNOptions() == eGeneratorExtentSize);
-            param->appendOption(kParamGeneratorExtentOptionSize, kParamGeneratorExtentOptionSizeHint);
+            param->appendOption(kParamGeneratorExtentOptionSize);
             assert(param->getNOptions() == eGeneratorExtentProject);
-            param->appendOption(kParamGeneratorExtentOptionProject, kParamGeneratorExtentOptionProjectHint);
+            param->appendOption(kParamGeneratorExtentOptionProject);
             //assert(param->getNOptions() == eGeneratorExtentDefault);
-            //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
+            //param->appendOption(kParamGeneratorExtentOptionDefault);
             param->setDefault(eGeneratorExtentFormat);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
             param->setAnimates(false);

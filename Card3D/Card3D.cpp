@@ -2121,13 +2121,13 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputFormat);
             param->setLabelAndHint(kParamOutputFormatLabel);
             assert(param->getNOptions() == eGeneratorExtentFormat);
-            param->appendOption(kParamGeneratorExtentOptionFormat, kParamGeneratorExtentOptionFormatHint);
+            param->appendOption(kParamGeneratorExtentOptionFormat);
             assert(param->getNOptions() == eGeneratorExtentSize);
-            param->appendOption(kParamGeneratorExtentOptionSize, kParamGeneratorExtentOptionSizeHint);
+            param->appendOption(kParamGeneratorExtentOptionSize);
             assert(param->getNOptions() == eGeneratorExtentProject);
-            param->appendOption(kParamGeneratorExtentOptionProject, kParamGeneratorExtentOptionProjectHint);
+            param->appendOption(kParamGeneratorExtentOptionProject);
             //assert(param->getNOptions() == eGeneratorExtentDefault);
-            //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
+            //param->appendOption(kParamGeneratorExtentOptionDefault);
             param->setDefault(eGeneratorExtentProject);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
             param->setAnimates(false);

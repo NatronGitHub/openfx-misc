@@ -929,10 +929,10 @@ ColorTransformPluginFactory<transform>::describeInContext(ImageEffectDescriptor 
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamPremultChannel);
             param->setLabel(kParamPremultChannelLabel);
             param->setHint(kParamPremultChannelHint);
-            param->appendOption(kParamPremultChannelR, kParamPremultChannelRHint);
-            param->appendOption(kParamPremultChannelG, kParamPremultChannelGHint);
-            param->appendOption(kParamPremultChannelB, kParamPremultChannelBHint);
-            param->appendOption(kParamPremultChannelA, kParamPremultChannelAHint);
+            param->appendOption(kParamPremultChannelR);
+            param->appendOption(kParamPremultChannelG);
+            param->appendOption(kParamPremultChannelB);
+            param->appendOption(kParamPremultChannelA);
             param->setDefault(3); // alpha
             param->setIsSecretAndDisabled(true); // not yet implemented
             if (page) {
