@@ -121,11 +121,13 @@ enum TypeEnum
 #define Tfloat cimgpixfloat_t
 using namespace cimg_library;
 
-// DIfferences with the original cimg_library::CImg::noise:
+//! Add random noise to pixel values.
+// Differences with the original cimg_library::CImg::noise:
 // - static function
 // - replaced *this with img
+// - replaced all cimg_rof loops with cimg_forXYC, in order to get reproductible results
 // - replaced cimg::grand with cimg_grand, etc.
-
+// - add cimg_pragma_openmp(...)
 /**
  \param sigma Amplitude of the random additive noise. If \p sigma<0, it stands for a percentage of the
  global value range.
@@ -166,6 +168,7 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
     }
     switch (noise_type) {
         case 0 : { // Gaussian noise
+            cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img, x, y, c) {
                 Tfloat val = (Tfloat)(img(x,y,0,c) + nsigma * cimg_grand(seed, x + x1, y + y1, c));
                 if (val > vmax) {
@@ -177,6 +180,7 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
             }
         } break;
         case 1 : { // Uniform noise
+            cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img, x, y, c) {
                 Tfloat val = (Tfloat)(img(x,y,0,c) + nsigma * cimg_rand(seed, x + x1, y + y1, c, -1,1));
                 if (val > vmax) {
@@ -195,6 +199,7 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
                 m = 0;
                 M = cimg::type<T>::is_float()?(Tfloat)1:(Tfloat)cimg::type<T>::max();
             }
+            cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img, x, y, c) {
                 if (cimg_rand(seed, x + x1, y1 + img.height() - y, c, 100) < nsigma) {
                     img(x,y,0,c) = (T)(cimg_rand(seed, x + x1, y + y1, c)<0.5?M:m);
@@ -202,12 +207,14 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
             }
         } break;
         case 3 : { // Poisson Noise
+            cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img,x,y,c) {
                 img(x,y,0,c) = (T)cimg_prand(seed, x + x1, y + y1, c, img(x,y,0,c));
             }
         } break;
         case 4 : { // Rice noise
             const Tfloat sqrt2 = (Tfloat)std::sqrt(2.0);
+            cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img, x, y, c) {
                 const Tfloat
                 val0 = (Tfloat)img(x,y)/sqrt2,
