@@ -1074,7 +1074,7 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFrameRangeLabel);
         param->setHint(kParamFrameRangeHint);
         param->setDefault(0, 0);
-        param->setRange(-INT_MIN, -INT_MIN, INT_MAX, INT_MAX);
+        param->setRange(INT_MIN, INT_MIN, INT_MAX, INT_MAX);
         param->setDisplayRange(-10, -10, 10, 10);
         param->setAnimates(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -1127,7 +1127,7 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamSelectionFrameLabel);
         param->setHint(kParamSelectionFrameHint);
         param->setDefault(0);
-        param->setRange(-INT_MAX, INT_MAX);
+        param->setRange(INT_MIN, INT_MAX);
         param->setDisplayRange(-10, 10);
         param->setAnimates(true);
         param->setEvaluateOnChange(false);
