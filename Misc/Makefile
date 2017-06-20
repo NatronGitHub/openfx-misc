@@ -80,6 +80,7 @@ Saturation.o \
 Shuffle.o \
 SideBySide.o \
 SlitScan.o \
+SpriteSheet.o \
 Switch.o \
 TestRender.o \
 TimeBlur.o \
@@ -311,6 +312,7 @@ $(TOP_SRCDIR)/Saturation \
 $(TOP_SRCDIR)/Shuffle \
 $(TOP_SRCDIR)/SideBySide \
 $(TOP_SRCDIR)/SlitScan \
+$(TOP_SRCDIR)/SpriteSheet \
 $(TOP_SRCDIR)/Switch \
 $(TOP_SRCDIR)/Test \
 $(TOP_SRCDIR)/TimeBlur \
@@ -390,6 +392,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Shuffle \
 -I$(TOP_SRCDIR)/SideBySide \
 -I$(TOP_SRCDIR)/SlitScan \
+-I$(TOP_SRCDIR)/SpriteSheet \
 -I$(TOP_SRCDIR)/Switch \
 -I$(TOP_SRCDIR)/Test \
 -I$(TOP_SRCDIR)/TimeBlur \

@@ -547,8 +547,8 @@ CropPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         // used to render the region args.regionOfInterest
         roi.x1 += cropRect.x1;
         roi.y1 += cropRect.y1;
-        roi.x2 += cropRect.x2;
-        roi.y2 += cropRect.y2;
+        roi.x2 += cropRect.x1;
+        roi.y2 += cropRect.y1;
     }
 
     // intersect the crop rectangle with args.regionOfInterest
