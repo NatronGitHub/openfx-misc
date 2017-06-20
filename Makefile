@@ -67,6 +67,7 @@ Saturation \
 Shuffle \
 SideBySide \
 SlitScan \
+SpriteSheet \
 Switch \
 TimeBlur \
 TimeDissolve \

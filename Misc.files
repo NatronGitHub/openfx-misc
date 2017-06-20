@@ -117,6 +117,7 @@ Saturation/Saturation.cpp
 Shuffle/Shuffle.cpp
 SideBySide/SideBySide.cpp
 SlitScan/SlitScan.cpp
+SpriteSheet/SpriteSheet.cpp
 SupportExt/ofxsCopier.h
 SupportExt/ofxsFilter.h
 SupportExt/ofxsFormatResolution.h

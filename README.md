@@ -170,6 +170,7 @@ grouping).
 * MirrorOFX: Flip or flop the image.
 * PositionOFX: Translate image by an integer number of pixels.
 * Reformat: Convert image to a different image format and size.
+* SpriteSheet: Use an image as a sprite sheet.
 * STMapOFX: Move pixels around an image, based on a UVmap.
 * TrackerPM: Point tracker based on pattern matching using an exhaustive search within an image region.
 * TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D image.
