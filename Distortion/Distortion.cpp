@@ -1214,6 +1214,13 @@ public:
         , _cy66(NULL)
         , _c6(NULL)
         , _c8(NULL)
+        , _pta(NULL)
+        , _ptb(NULL)
+        , _ptc(NULL)
+        , _ptd(NULL)
+        , _pte(NULL)
+        , _ptg(NULL)
+        , _ptt(NULL)
         , _filter(NULL)
         , _clamp(NULL)
         , _blackOutside(NULL)
@@ -1374,7 +1381,7 @@ public:
         _blackOutside = fetchBooleanParam(kParamFilterBlackOutside);
         assert(_filter && _clamp && _blackOutside);
         _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
@@ -2453,6 +2460,11 @@ DistortionPlugin::renderInternalForBitDepth(const RenderArguments &args)
     switch (filter) {
     case eFilterImpulse: {
         DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterImpulse, false> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eFilterBox: {
+        DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterBox, false> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
@@ -3605,15 +3617,16 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
                 param->setLabelAndHint(kParamFormatLabel);
                 assert(param->getNOptions() == eGeneratorExtentFormat);
-                param->appendOption(kParamGeneratorExtentOptionFormat, kParamGeneratorExtentOptionFormatHint);
+                param->appendOption(kParamGeneratorExtentOptionFormat);
                 assert(param->getNOptions() == eGeneratorExtentSize);
-                param->appendOption(kParamGeneratorExtentOptionSize, kParamGeneratorExtentOptionSizeHint);
+                param->appendOption(kParamGeneratorExtentOptionSize);
                 assert(param->getNOptions() == eGeneratorExtentProject);
-                param->appendOption(kParamGeneratorExtentOptionProject, kParamGeneratorExtentOptionProjectHint);
+                param->appendOption(kParamGeneratorExtentOptionProject);
                 assert(param->getNOptions() == eGeneratorExtentDefault);
-                param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
+                param->appendOption(kParamGeneratorExtentOptionDefault);
                 param->setDefault(eGeneratorExtentDefault);
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                param->setAnimates(false);
                 desc.addClipPreferencesSlaveParam(*param);
                 if (page) {
                     page->addChild(*param);
@@ -3677,6 +3690,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 param->appendOption(kParamFormatSquare2kLabel);
                 param->setDefault(eParamFormatPCVideo);
                 param->setHint(kParamGeneratorFormatHint);
+                param->setAnimates(false);
                 desc.addClipPreferencesSlaveParam(*param);
                 if (page) {
                     page->addChild(*param);

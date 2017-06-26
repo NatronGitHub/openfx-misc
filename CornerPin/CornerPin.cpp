@@ -61,6 +61,30 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The resulting transform is a translation if 1 point is enabled, a " \
     "similarity if 2 are enabled, an affine transform if 3 are enabled, " \
     "and a homography if they are all enabled.\n" \
+    "\n" \
+    "An effect where an image transitions from a full-frame image to an image " \
+    "placed on a billboard or a screen, or a crash zoom effect, can be obtained " \
+    "by combining the Transform and CornerPin effects and using the Amount " \
+    "parameter on both effects.\n" \
+    "Apply a CornerPin followed by a Transform effect (the order is important) " \
+    "and visualize the output superimposed on " \
+    "the target image. While leaving the value of the Amount parameter at 1, " \
+    "tune the Transform parameters (including Scale and Skew) so that the " \
+    "transformed image is as close as possible to the desired target location.\n" \
+    "Then, adjust the 'to' points of the CornerPin effect (which " \
+    "should be affected by the Transform) so that the warped image perfectly matches the " \
+    "desired target location. Link the Amount parameter of the Transform and " \
+    "CornerPin effects.\n" \
+    "Finally, by animating the Amount parameter of both effects from 0 to 1, " \
+    "the image goes progressively, and with minimal deformations, from " \
+    "full-frame to the target location, creating the desired effect (motion " \
+    "blur can be added on the Transform node, too).\n" \
+    "Note that if only the CornerPin effect is used instead of combining " \
+    "CornerPin and Transform, the position of the CornerPin points is linearly " \
+    "interpolated between their 'from' position and their 'to' position, which " \
+    "may result in unrealistic image motion, where the image shrinks and " \
+    "expands, especially when the image rotates.\n" \
+    "\n" \
     "This plugin concatenates transforms.\n" \
     "See also: http://opticalenquiry.com/nuke/index.php?title=CornerPin"
 
@@ -126,7 +150,7 @@ static const char* const kParamFrom[4] = {
 
 #define kParamTransformAmount "transformAmount"
 #define kParamTransformAmountLabel "Amount"
-#define kParamTransformAmountHint "Amount of transform to apply (excluding the extra matrix, which is always applied). 0 means the transform is identity, 1 means to apply the full transform."
+#define kParamTransformAmountHint "Amount of transform to apply (excluding the extra matrix, which is always applied). 0 means the transform is identity, 1 means to apply the full transform. Intermediate transforms are computed by linear interpolation between the 'from' and the 'to' points. See the plugin description on how to use the amount parameter for a crash zoom effect."
 
 #define kGroupExtraMatrix "transformMatrix"
 #define kGroupExtraMatrixLabel "Extra Matrix"

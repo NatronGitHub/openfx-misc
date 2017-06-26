@@ -630,7 +630,7 @@ public:
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
@@ -1074,6 +1074,7 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamDither);
         param->setLabel(kParamDitherLabel);
         param->setHint(kParamDitherHint);
+        param->setAnimates(false);
         assert(param->getNOptions() == eDitherNone);
         param->appendOption(kParamDitherOptionNone, kParamDitherOptionNoneHint);
         assert(param->getNOptions() == eDitherOrderedBayer2);
@@ -1110,6 +1111,7 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamStaticSeedLabel);
         param->setHint(kParamStaticSeedHint);
         param->setDefault(false);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

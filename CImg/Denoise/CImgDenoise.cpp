@@ -126,7 +126,7 @@ class CImgDenoisePlugin
 public:
 
     CImgDenoisePlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgDenoiseParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgDenoiseParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -167,6 +167,7 @@ public:
                         const CImgDenoiseParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

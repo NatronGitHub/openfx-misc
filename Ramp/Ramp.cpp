@@ -414,7 +414,7 @@ public:
         assert(_point0 && _point1 && _color0 && _color1 && _type && _interactive);
 
         _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
@@ -838,6 +838,7 @@ RampPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

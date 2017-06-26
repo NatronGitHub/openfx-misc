@@ -123,7 +123,7 @@ class CImgSharpenShockPlugin
 public:
 
     CImgSharpenShockPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgSharpenShockParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgSharpenShockParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _edge  = fetchDoubleParam(kParamEdgeThreshold);
@@ -147,10 +147,10 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect,
                         const OfxPointD& /*renderScale*/,
-                        const CImgSharpenShockParams& /*params*/,
+                        const CImgSharpenShockParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 24; // overlap is 24 in gmicol
+        int delta_pix = 24 * params.iterations; // overlap is 24 in gmicol
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
@@ -162,6 +162,7 @@ public:
                         const CImgSharpenShockParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

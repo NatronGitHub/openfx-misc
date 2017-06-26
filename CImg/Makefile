@@ -5,12 +5,14 @@ CImgBilateral.o \
 CImgBlur.o \
 CImgDenoise.o \
 CImgDilate.o \
+CImgDistance.o \
 CImgEqualize.o \
 CImgErode.o \
 CImgErodeSmooth.o \
 CImgExpression.o \
 CImgGuided.o \
 CImgHistEQ.o \
+CImgInpaint-gpl.o \
 CImgMedian.o \
 CImgNoise.o \
 CImgPlasma.o \
@@ -43,8 +45,16 @@ Blur/net.sf.cimg.CImgChromaBlur.png \
 Blur/net.sf.cimg.CImgChromaBlur.svg \
 Blur/net.sf.cimg.CImgBloom.png \
 Blur/net.sf.cimg.CImgBloom.svg \
+Blur/eu.cimg.EdgeDetect.png \
+Blur/eu.cimg.EdgeDetect.svg \
+Blur/eu.cimg.EdgeExtend.png \
+Blur/eu.cimg.EdgeExtend.svg \
+Blur/fr.inria.EdgeBlur.png \
+Blur/fr.inria.EdgeBlur.svg \
 Blur/net.sf.cimg.CImgLaplacian.png \
 Blur/net.sf.cimg.CImgLaplacian.svg \
+Blur/net.sf.cimg.CImgSharpen.png \
+Blur/net.sf.cimg.CImgSharpen.svg \
 Denoise/net.sf.cimg.CImgDenoise.png \
 Denoise/net.sf.cimg.CImgDenoise.svg \
 Equalize/net.sf.cimg.CImgEqualize.png \
@@ -61,6 +71,8 @@ Guided/net.sf.cimg.CImgGuided.png \
 Guided/net.sf.cimg.CImgGuided.svg \
 HistEQ/net.sf.cimg.CImgHistEQ.png \
 HistEQ/net.sf.cimg.CImgHistEQ.svg \
+Inpaint/eu.cimg.Inpaint.png \
+Inpaint/eu.cimg.Inpaint.svg \
 Noise/net.sf.cimg.CImgNoise.png \
 Noise/net.sf.cimg.CImgNoise.svg \
 Plasma/net.sf.cimg.CImgPlasma.png \
@@ -77,12 +89,14 @@ VPATH += \
 Bilateral \
 Blur \
 Denoise \
+Distance \
 Equalize \
 Erode \
 ErodeSmooth \
 Expression \
 Guided \
 HistEQ \
+Inpaint \
 Median \
 Noise \
 Plasma \
@@ -101,12 +115,14 @@ CXXFLAGS += \
 -IBilateral \
 -IBlur \
 -IDenoise \
+-IDistance \
 -IEqualize \
 -IErode \
 -IErodeSmooth \
 -IExpression \
 -IGuided \
 -IHistEQ \
+-IInpaint \
 -IMedian \
 -INoise \
 -IPlasma \
@@ -141,11 +157,20 @@ CXXFLAGS += \
 # commit 6cf2f433edd9ef07a9c865282c3fd84cc4e9b327 is CImg 1.7.9
 # commit 0728d3e6833de1dfe16734fdef416b5051d4df7e is CImg pre-2.0.0 with nb_iter argument to boxfilter
 # commit 2067bd0765d23afc4c41b706bc57d094a2dce51d is CImg pre-2.0.0 with precision fix to boxfilter
-CIMGVERSION=2067bd0765d23afc4c41b706bc57d094a2dce51d
+# commit 63a4356e9e93ff3cd407e1ae1264a616ea4ba0f2 is CImg pre-2.0.0 with the clamping on sigma_r fixed in blur_bilateral
+# commit 7c83bdad65ab7447220b54851a5a1035976777fa is CImg pre-2.0.0 with a fix to compile inpaint.h
+# commit 79fce46b2b1b54bc44276dccca040139f62835d7 is CImg 2.0.0
+CIMGVERSION=79fce46b2b1b54bc44276dccca040139f62835d7
 
-CImg.h:
+CImg.h: Inpaint/inpaint.h
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
 #	patch -p0 -d. < CImg-1.7.1-omp.patch
+
+Inpaint/inpaint.h:
+	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/inpaint.h
+
+nlmeans.h:
+	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/nlmeans.h
 
 #git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 
@@ -154,6 +179,8 @@ $(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImgOperator.h CImgFilter.h CIm
 $(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgDistance.o: CImgDistance.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp CImgFilter.h CImg.h
 
@@ -170,6 +197,8 @@ $(OBJECTPATH)/CImgFilter.o: CImgOperator.cpp CImgOperator.h CImgFilter.h CImg.h
 $(OBJECTPATH)/CImgGuided.o: CImgGuided.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgInpaint-gpl.o: CImgInpaint-gpl.cpp CImgFilter.h CImg.h Inpaint/inpaint.h
 
 $(OBJECTPATH)/CImgMedian.o: CImgMedian.cpp CImgFilter.h CImg.h
 

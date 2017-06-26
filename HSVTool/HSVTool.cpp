@@ -1059,7 +1059,7 @@ public:
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
@@ -2252,6 +2252,7 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == (int)eOutputAlphaAll);
         param->appendOption(kParamOutputAlphaOptionAll, kParamOutputAlphaOptionAllHint);
         param->setDefault( (int)eOutputAlphaHue );
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

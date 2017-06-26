@@ -55,7 +55,7 @@
 #endif
 #include <cmath>
 #include <cfloat> // DBL_MAX
-#include <algorithm>
+#include <algorithm> // max
 #ifdef DEBUG_STDOUT
 #include <iostream>
 #define DBG(x) (x)
@@ -820,7 +820,7 @@ public:
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
@@ -1222,7 +1222,7 @@ public:
                unsigned int iheight,
                bool b3,
                int sc) // 1 << lev
-        : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
+        : ProcessRowsColsBase<true>(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
     {
     }
 
@@ -1264,7 +1264,7 @@ public:
                     bool b3,
                     int sc, // 1 << lev
                     double* sumsq)
-        : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
+        : ProcessRowsColsBase<false>(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
         , _sumsq(sumsq)
     {
     }
@@ -1318,7 +1318,7 @@ public:
                unsigned int iheight,
                bool b3,
                int sc) // 1 << lev
-        : ProcessRowsColsBase(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
+        : ProcessRowsColsBase<false>(instance, fimg_hpass, fimg_lpass, iwidth, iheight, b3, sc)
     {
     }
 
@@ -2219,7 +2219,7 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
 #ifdef _OPENMP
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
-    omp_set_num_threads( MultiThread::getNumCPUs() );
+    omp_set_num_threads( std::max(1u, MultiThread::getNumCPUs() ) );
 #endif
     DBG(cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n");
 
@@ -2413,18 +2413,27 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
 
     if ( (p.colorModel == eColorModelRGB) || (p.colorModel == eColorModelLinearRGB) ) {
         for (int c = 0; c < 3; ++c) {
-            p.process[c] = p.process[c] && ( (p.noiseLevel[c] > 0 && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0. );
+            p.process[c] = p.process[c] && ( ((p.noiseLevel[c][0] > 0 ||
+                                               p.noiseLevel[c][1] > 0 ||
+                                               p.noiseLevel[c][2] > 0 ||
+                                               p.noiseLevel[c][3] > 0) && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0. );
         }
     } else {
         bool processcolor = false;
         for (int c = 0; c < 3; ++c) {
-            processcolor = processcolor || ( (p.noiseLevel[c] > 0 && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0. );
+            processcolor = processcolor || ( ((p.noiseLevel[c][0] > 0 ||
+                                               p.noiseLevel[c][1] > 0 ||
+                                               p.noiseLevel[c][2] > 0 ||
+                                               p.noiseLevel[c][3] > 0) && p.denoise_amount[c] > 0.) || p.sharpen_amount[c] > 0. );
         }
         for (int c = 0; c < 3; ++c) {
             p.process[c] = p.process[c] && processcolor;
         }
     }
-    p.process[3] = p.process[3] && ( (p.noiseLevel[3] > 0 && p.denoise_amount[3] > 0.) || p.sharpen_amount[3] > 0. );
+    p.process[3] = p.process[3] && ( ((p.noiseLevel[3][0] > 0 ||
+                                       p.noiseLevel[3][1] > 0 ||
+                                       p.noiseLevel[3][2] > 0 ||
+                                       p.noiseLevel[3][3] > 0) && p.denoise_amount[3] > 0.) || p.sharpen_amount[3] > 0. );
 
     // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
     int maxLev = std::max( 0, kLevelMax - startLevelFromRenderScale(args.renderScale) );
@@ -2895,7 +2904,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 #ifdef _OPENMP
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
-    omp_set_num_threads( MultiThread::getNumCPUs() );
+    omp_set_num_threads( std::max(1u, MultiThread::getNumCPUs() ) );
 #endif
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );

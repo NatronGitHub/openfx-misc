@@ -45,8 +45,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping      "Draw"
 #define kPluginDescription \
     "Draw a random plasma texture (using the mid-point algorithm).\n" \
-    "Note that each render scale gives a different noise, but the image rendered at full scale always has the same noise at a given time. Noise can be modulated using the 'seed' parameter.\n" \
-    "Uses the 'draw_plasma' function from the CImg library.\n" \
+    "\n" \
+    "Uses the 'draw_plasma' function from the CImg library, modified so that noise is reproductible at each render..\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
     "It can be used in commercial applications (see http://cimg.eu)."
@@ -104,9 +104,104 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOffsetGeneratorDefault 0.5
 
 #define kParamSeed "seed"
-#define kParamSeedLabel "Random Seed"
-#define kParamSeedHint "Random seed used to generate the image. Time value is added to this seed, to get a time-varying effect."
+#define kParamSeedLabel "Seed"
+#define kParamSeedHint "Random seed: change this if you want different instances to have different noise."
 
+#define kParamStaticSeed "staticSeed"
+#define kParamStaticSeedLabel "Static Seed"
+#define kParamStaticSeedHint "When enabled, the dither pattern remains the same for every frame producing a constant noise effect."
+
+#define cimg_noise_internal
+
+#ifdef cimg_noise_internal
+
+// the following is cimg_library::CImg::draw_plasma(), but with a fixed seed and pseudo-random function
+//! Add random noise to pixel values.
+
+#define T cimgpix_t
+#define Tfloat cimgpixfloat_t
+using namespace cimg_library;
+
+// DIfferences with the original cimg_library::CImg::noise:
+// - static function
+// - replaced *this with img
+// - replaced cimg::rand with cimg_rand, etc.
+
+//! Draw a random plasma texture.
+/**
+ \param alpha Alpha-parameter.
+ \param beta Beta-parameter.
+ \param scale Scale-parameter.
+ \note Use the mid-point algorithm to render.
+ **/
+CImg<T>&
+draw_plasma(CImg<T>&img, const float alpha/*=1*/, const float beta/*=0*/, const unsigned int scale/*=8*/, unsigned int seed, int x_1, int y_1)
+{
+    if (img.is_empty()) {
+        return img;
+    }
+    const int w = img.width();
+    const int h = img.height();
+    const Tfloat m = (Tfloat)cimg::type<T>::min();
+    const Tfloat M = (Tfloat)cimg::type<T>::max();
+    cimg_forZC(img,z,c) {
+        CImg<T> ref = img.get_shared_slice(z,c);
+        for (int delta = 1<<std::min(scale,31U); delta>1; delta>>=1) {
+            const int delta2 = delta>>1;
+            const float r = alpha*delta + beta;
+
+            // Square step.
+            for (int y0 = 0; y0<h; y0+=delta)
+                for (int x0 = 0; x0<w; x0+=delta) {
+                    const int x1 = (x0 + delta)%w;
+                    const int y1 = (y0 + delta)%h;
+                    const int xc = (x0 + delta2)%w;
+                    const int yc = (y0 + delta2)%h;
+                    const Tfloat val = (Tfloat)(0.25f*(ref(x0,y0) + ref(x0,y1) + ref(x0,y1) + ref(x1,y1)) +
+                                                r*cimg_rand(seed, xc + x_1, yc + y_1, c,-1,1));
+                    ref(xc,yc) = (T)(val<m?m:val>M?M:val);
+                }
+
+            // Diamond steps.
+            for (int y = -delta2; y<h; y+=delta)
+                for (int x0=0; x0<w; x0+=delta) {
+                    const int y0 = cimg::mod(y,h);
+                    const int x1 = (x0 + delta)%w;
+                    const int y1 = (y + delta)%h;
+                    const int xc = (x0 + delta2)%w;
+                    const int yc = (y + delta2)%h;
+                    const Tfloat val = (Tfloat)(0.25f*(ref(xc,y0) + ref(x0,yc) + ref(xc,y1) + ref(x1,yc)) +
+                                                r*cimg_rand(seed, xc + x_1, yc + y_1, c,-1,1));
+                    ref(xc,yc) = (T)(val<m?m:val>M?M:val);
+                }
+            for (int y0 = 0; y0<h; y0+=delta)
+                for (int x = -delta2; x<w; x+=delta) {
+                    const int x0 = cimg::mod(x,w);
+                    const int x1 = (x + delta)%w;
+                    const int y1 = (y0 + delta)%h;
+                    const int xc = (x + delta2)%w;
+                    const int yc = (y0 + delta2)%h;
+                    const Tfloat val = (Tfloat)(0.25f*(ref(xc,y0) + ref(x0,yc) + ref(xc,y1) + ref(x1,yc)) +
+                                                r*cimg_rand(seed, xc + x_1, yc + y_1, c,-1,1));
+                    ref(xc,yc) = (T)(val<m?m:val>M?M:val);
+                }
+            for (int y = -delta2; y<h; y+=delta)
+                for (int x = -delta2; x<w; x+=delta) {
+                    const int x0 = cimg::mod(x,w);
+                    const int y0 = cimg::mod(y,h);
+                    const int x1 = (x + delta)%w;
+                    const int y1 = (y + delta)%h;
+                    const int xc = (x + delta2)%w;
+                    const int yc = (y + delta2)%h;
+                    const Tfloat val = (Tfloat)(0.25f*(ref(xc,y0) + ref(x0,yc) + ref(xc,y1) + ref(x1,yc)) +
+                                                r*cimg_rand(seed, xc + x_1, yc + y_1, c,-1,1));
+                    ref(xc,yc) = (T)(val<m?m:val>M?M:val);
+                }
+        }
+    }
+    return img;
+}
+#endif
 
 /// Plasma plugin
 struct CImgPlasmaParams
@@ -116,6 +211,7 @@ struct CImgPlasmaParams
     int scale;
     double offset;
     int seed;
+    bool staticSeed;
 };
 
 class CImgPlasmaPlugin
@@ -124,13 +220,15 @@ class CImgPlasmaPlugin
 public:
 
     CImgPlasmaPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgPlasmaParams, true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgPlasmaParams, true>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _alpha  = fetchDoubleParam(kParamAlpha);
         _beta  = fetchDoubleParam(kParamBeta);
         _scale = fetchIntParam(kParamScale);
         _offset = fetchDoubleParam(kParamOffset);
-        _seed = fetchIntParam(kParamSeed);
+        _seed   = fetchIntParam(kParamSeed);
+        _staticSeed = fetchBooleanParam(kParamStaticSeed);
+        assert(_seed && _staticSeed);
         assert(_alpha && _beta && _scale);
     }
 
@@ -142,6 +240,7 @@ public:
         _scale->getValueAtTime(time, params.scale);
         _offset->getValueAtTime(time, params.offset);
         _seed->getValueAtTime(time, params.seed);
+        _staticSeed->getValueAtTime(time, params.staticSeed);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -161,16 +260,28 @@ public:
 
     virtual void render(const RenderArguments &args,
                         const CImgPlasmaParams& params,
-                        int /*x1*/,
-                        int /*y1*/,
+                        int x1,
+                        int y1,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
+#ifdef cimg_noise_internal
+        unsigned int seed = cimg_hash(params.seed);
+        if (!params.staticSeed) {
+            float time_f = args.time;
+
+            // set the seed based on the current time, and double it we get difference seeds on different fields
+            seed = cimg_hash( *( (unsigned int*)&time_f ) ^ seed );
+        }
+        draw_plasma(cimg, (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, std::max( 0, params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) ), seed, x1, y1);
+#else
         cimg_library::cimg::srand( (unsigned int)args.time + (unsigned int)params.seed );
 
         cimg.draw_plasma( (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, std::max( 0, params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) ) );
+#endif
         if (params.offset != 0.) {
             cimg += params.offset;
         }
@@ -184,8 +295,11 @@ public:
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
     {
-        clipPreferences.setOutputFrameVarying(true);
-        clipPreferences.setOutputHasContinuousSamples(true);
+        bool staticSeed = _staticSeed->getValue();
+        if (!staticSeed) {
+            clipPreferences.setOutputFrameVarying(true);
+            clipPreferences.setOutputHasContinuousSamples(true);
+        }
     }
 
 private:
@@ -196,6 +310,7 @@ private:
     IntParam *_scale;
     DoubleParam *_offset;
     IntParam *_seed;
+    BooleanParam* _staticSeed;
 };
 
 
@@ -296,10 +411,24 @@ CImgPlasmaPluginFactory::describeInContext(ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
+    // seed
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
         param->setLabel(kParamSeedLabel);
         param->setHint(kParamSeedHint);
+        param->setDefault(2000);
+        param->setAnimates(true); // can animate
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamStaticSeed);
+        param->setLabel(kParamStaticSeedLabel);
+        param->setHint(kParamStaticSeedHint);
+        param->setDefault(true);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }

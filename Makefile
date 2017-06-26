@@ -19,6 +19,7 @@ ColorSuppress \
 ColorTransform \
 ColorWheel \
 Constant \
+ContactSheet \
 CopyRectangle \
 CornerPin \
 Crop \
@@ -41,6 +42,7 @@ Invert \
 JoinViews \
 Keyer \
 KeyMix \
+LayerContactSheet \
 Log2Lin \
 MatteMonitor \
 Merge \
@@ -65,6 +67,7 @@ Saturation \
 Shuffle \
 SideBySide \
 SlitScan \
+SpriteSheet \
 Switch \
 TimeBlur \
 TimeDissolve \

@@ -97,7 +97,7 @@ class CImgSharpenInvDiffPlugin
 public:
 
     CImgSharpenInvDiffPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgSharpenInvDiffParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgSharpenInvDiffParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _iterations = fetchIntParam(kParamIterations);
@@ -115,10 +115,10 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect,
                         const OfxPointD& /*renderScale*/,
-                        const CImgSharpenInvDiffParams& /*params*/,
+                        const CImgSharpenInvDiffParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 24; // overlap is 24 in gmicol
+        int delta_pix = 24 * params.iterations; // overlap is 24 in gmicol
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
@@ -130,6 +130,7 @@ public:
                         const CImgSharpenInvDiffParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

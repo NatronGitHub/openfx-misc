@@ -338,7 +338,7 @@ class CImgErodeSmoothPlugin
 public:
 
     CImgErodeSmoothPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgErodeSmoothParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgErodeSmoothParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
         , _range(0)
         , _size(0)
         , _uniform(0)
@@ -479,6 +479,7 @@ public:
                         const CImgErodeSmoothParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

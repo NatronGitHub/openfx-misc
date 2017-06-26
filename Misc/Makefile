@@ -30,6 +30,7 @@ ColorSuppress.o \
 ColorTransform.o \
 ColorWheel.o \
 Constant.o \
+ContactSheet.o \
 CopyRectangle.o \
 CornerPin.o \
 Crop.o \
@@ -53,6 +54,7 @@ Invert.o \
 JoinViews.o \
 Keyer.o \
 KeyMix.o \
+LayerContactSheet.o \
 Log2Lin.o \
 MatteMonitor.o \
 Merge.o \
@@ -78,6 +80,7 @@ Saturation.o \
 Shuffle.o \
 SideBySide.o \
 SlitScan.o \
+SpriteSheet.o \
 Switch.o \
 TestRender.o \
 TimeBlur.o \
@@ -159,6 +162,10 @@ $(TOP_SRCDIR)/GodRays/net.sf.openfx.GodRays.png \
 $(TOP_SRCDIR)/GodRays/net.sf.openfx.GodRays.svg \
 $(TOP_SRCDIR)/Grade/net.sf.openfx.GradePlugin.png \
 $(TOP_SRCDIR)/Grade/net.sf.openfx.GradePlugin.svg \
+$(TOP_SRCDIR)/HueCorrect/net.sf.openfx.HueCorrect.png \
+$(TOP_SRCDIR)/HueCorrect/net.sf.openfx.HueCorrect.svg \
+$(TOP_SRCDIR)/HueCorrect/net.sf.openfx.HueKeyer.png \
+$(TOP_SRCDIR)/HueCorrect/net.sf.openfx.HueKeyer.svg \
 $(TOP_SRCDIR)/HSVTool/net.sf.openfx.HSVToolPlugin.png \
 $(TOP_SRCDIR)/HSVTool/net.sf.openfx.HSVToolPlugin.svg \
 $(TOP_SRCDIR)/ImageStatistics/net.sf.openfx.ImageStatistics.png \
@@ -257,6 +264,7 @@ $(TOP_SRCDIR)/ColorSuppress \
 $(TOP_SRCDIR)/ColorTransform \
 $(TOP_SRCDIR)/ColorWheel \
 $(TOP_SRCDIR)/Constant \
+$(TOP_SRCDIR)/ContactSheet \
 $(TOP_SRCDIR)/CopyRectangle \
 $(TOP_SRCDIR)/CornerPin \
 $(TOP_SRCDIR)/Crop \
@@ -279,6 +287,7 @@ $(TOP_SRCDIR)/Invert \
 $(TOP_SRCDIR)/JoinViews \
 $(TOP_SRCDIR)/Keyer \
 $(TOP_SRCDIR)/KeyMix \
+$(TOP_SRCDIR)/LayerContactSheet \
 $(TOP_SRCDIR)/Log2Lin \
 $(TOP_SRCDIR)/MatteMonitor \
 $(TOP_SRCDIR)/Merge \
@@ -304,6 +313,7 @@ $(TOP_SRCDIR)/Saturation \
 $(TOP_SRCDIR)/Shuffle \
 $(TOP_SRCDIR)/SideBySide \
 $(TOP_SRCDIR)/SlitScan \
+$(TOP_SRCDIR)/SpriteSheet \
 $(TOP_SRCDIR)/Switch \
 $(TOP_SRCDIR)/Test \
 $(TOP_SRCDIR)/TimeBlur \
@@ -335,6 +345,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/ColorTransform \
 -I$(TOP_SRCDIR)/ColorWheel \
 -I$(TOP_SRCDIR)/Constant \
+-I$(TOP_SRCDIR)/ContactSheet \
 -I$(TOP_SRCDIR)/CopyRectangle \
 -I$(TOP_SRCDIR)/CornerPin \
 -I$(TOP_SRCDIR)/Crop \
@@ -358,6 +369,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Keyer \
 -I$(TOP_SRCDIR)/KeyMix \
 -I$(TOP_SRCDIR)/Log2Lin \
+-I$(TOP_SRCDIR)/LayerContactSheet \
 -I$(TOP_SRCDIR)/MatteMonitor \
 -I$(TOP_SRCDIR)/Merge \
 -I$(TOP_SRCDIR)/Mirror \
@@ -382,6 +394,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Shuffle \
 -I$(TOP_SRCDIR)/SideBySide \
 -I$(TOP_SRCDIR)/SlitScan \
+-I$(TOP_SRCDIR)/SpriteSheet \
 -I$(TOP_SRCDIR)/Switch \
 -I$(TOP_SRCDIR)/Test \
 -I$(TOP_SRCDIR)/TimeBlur \

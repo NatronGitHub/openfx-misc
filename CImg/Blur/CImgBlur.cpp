@@ -1163,7 +1163,7 @@ public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle,
                    BlurPluginEnum blurPlugin = eBlurPluginBlur)
-        : CImgFilterPluginHelper<CImgBlurParams, false>(handle,
+        : CImgFilterPluginHelper<CImgBlurParams, false>(handle, /*usesMask=*/false,
                                                         blurPlugin == eBlurPluginChromaBlur ? false : kSupportsComponentRemapping,
                                                         kSupportsTiles,
                                                         kSupportsMultiResolution,
@@ -1701,6 +1701,7 @@ public:
                         const CImgBlurParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int alphaChannel) OVERRIDE FINAL
     {

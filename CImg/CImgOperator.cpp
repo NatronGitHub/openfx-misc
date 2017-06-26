@@ -23,12 +23,14 @@ using namespace OFX;
 CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle handle,
                                                            const char* srcAClipName, //!< should be either kOfxImageEffectSimpleSourceClipName or "A" if you want this to be the default output when plugin is disabled
                                                            const char* srcBClipName,
+                                                           bool usesMask, // true if the mask parameter to render should be a single-channel image containing the mask
                                                            bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                                            bool supportsTiles,
                                                            bool supportsMultiResolution,
                                                            bool supportsRenderScale,
-                                                           bool defaultUnpremult)
-    : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, false)
+                                                           bool defaultUnpremult,
+                                                           bool defaultProcessAlphaOnRGBA)
+    : CImgFilterPluginHelperBase(handle, usesMask, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA)
     , _srcAClip(0)
     , _srcBClip(0)
     , _srcAClipName(srcAClipName)

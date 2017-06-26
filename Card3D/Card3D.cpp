@@ -898,7 +898,7 @@ PosMatParam::importBoujou()
         return;
     }
     bool foundOffset = false;
-    int offsetFrame;
+    int offsetFrame = 1;
     bool foundStart = false;
     int startFrame;
     double haperture = 0;
@@ -1293,15 +1293,16 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         GroupParamDescriptor* subgroup = desc.defineGroupParam(prefix + kGroupPosMatLocalMatrix);
-        subgroup->setLabel(kGroupPosMatLocalMatrixLabel);
-        subgroup->setOpen(false);
-        if (group) {
-            subgroup->setParent(*group);
+        if (subgroup) {
+            subgroup->setLabel(kGroupPosMatLocalMatrixLabel);
+            subgroup->setOpen(false);
+            if (group) {
+                subgroup->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*subgroup);
+            }
         }
-        if (page) {
-            page->addChild(*subgroup);
-        }
-
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(prefix + kParamPosMatUseMatrix);
             param->setLabelAndHint(kParamPosMatUseMatrixLabel);
@@ -1335,13 +1336,15 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     if (type == ePosMatCamera) {
         GroupParamDescriptor* subgroup = desc.defineGroupParam(kCameraCam kParamCameraProjectionGroup);
-        subgroup->setLabel(kCameraCamLabel" "kParamCameraProjectionGroupLabel);
-        subgroup->setOpen(false);
-        if (group) {
-            subgroup->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*subgroup);
+        if (subgroup) {
+            subgroup->setLabel(kCameraCamLabel" "kParamCameraProjectionGroupLabel);
+            subgroup->setOpen(false);
+            if (group) {
+                subgroup->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*subgroup);
+            }
         }
 
         CameraParam::define(desc, page, subgroup, kCameraCam);
@@ -2118,15 +2121,16 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputFormat);
             param->setLabelAndHint(kParamOutputFormatLabel);
             assert(param->getNOptions() == eGeneratorExtentFormat);
-            param->appendOption(kParamGeneratorExtentOptionFormat, kParamGeneratorExtentOptionFormatHint);
+            param->appendOption(kParamGeneratorExtentOptionFormat);
             assert(param->getNOptions() == eGeneratorExtentSize);
-            param->appendOption(kParamGeneratorExtentOptionSize, kParamGeneratorExtentOptionSizeHint);
+            param->appendOption(kParamGeneratorExtentOptionSize);
             assert(param->getNOptions() == eGeneratorExtentProject);
-            param->appendOption(kParamGeneratorExtentOptionProject, kParamGeneratorExtentOptionProjectHint);
+            param->appendOption(kParamGeneratorExtentOptionProject);
             //assert(param->getNOptions() == eGeneratorExtentDefault);
-            //param->appendOption(kParamGeneratorExtentOptionDefault, kParamGeneratorExtentOptionDefaultHint);
+            //param->appendOption(kParamGeneratorExtentOptionDefault);
             param->setDefault(eGeneratorExtentProject);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);
@@ -2190,6 +2194,7 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamFormatSquare2kLabel);
             param->setDefault(eParamFormatPCVideo);
             param->setHint(kParamGeneratorFormatHint);
+            param->setAnimates(false);
             desc.addClipPreferencesSlaveParam(*param);
             if (page) {
                 page->addChild(*param);

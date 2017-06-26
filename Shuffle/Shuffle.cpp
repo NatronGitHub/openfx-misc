@@ -1944,6 +1944,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->appendOption(kParamOutputComponentsOptionAlpha);
         }
         param->setDefault(0);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -1954,6 +1955,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputPremultiplication);
         param->setLabel(kParamOutputPremultiplicationLabel);
         param->setHint(kParamOutputPremultiplicationHint);
+        param->setAnimates(false);
         assert(param->getNOptions() == eImageOpaque);
         param->appendOption("Opaque");
         assert(param->getNOptions() == eImagePreMultiplied);
@@ -1994,6 +1996,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         // Disable it for now (in the future, there may be colorspace conversion options)
         param->setIsSecretAndDisabled(true); // always secret
 #endif
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

@@ -674,14 +674,14 @@ GodRaysPlugin::getInverseTransformCanonical(double time,
     if (amount != 1.) {
         translate.x *= amount;
         translate.y *= amount;
-        if (scale.x <= 0.) {
+        if (scale.x <= 0. || amount <= 0.) {
             // linear interpolation
             scale.x = 1. + (scale.x - 1.) * amount;
         } else {
             // geometric interpolation
             scale.x = std::pow(scale.x, amount);
         }
-        if (scale.y <= 0) {
+        if (scale.y <= 0 || amount <= 0.) {
             // linear interpolation
             scale.y = 1. + (scale.y - 1.) * amount;
         } else {
@@ -1032,6 +1032,11 @@ GodRaysPlugin::renderInternalForBitDepth(const RenderArguments &args)
     switch (filter) {
     case eFilterImpulse: {
         GodRaysProcessor<PIX, nComponents, maxValue, eFilterImpulse, false> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eFilterBox: {
+        GodRaysProcessor<PIX, nComponents, maxValue, eFilterBox, false> fred(*this);
         setupAndProcess(fred, args);
         break;
     }

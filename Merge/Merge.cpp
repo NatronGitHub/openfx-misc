@@ -281,11 +281,10 @@ class MergeProcessorBase
     : public ImageProcessor
 {
 protected:
-    const Image *_srcImgA;
+    std::vector<const Image*> _srcImgAs;
     const Image *_srcImgB;
     const Image *_maskImg;
     const Image *_rotoMaskImg;
-    std::vector<const Image*> _optionalAImages;
     bool _doMasking;
     bool _alphaMasking;
     double _mix;
@@ -298,7 +297,7 @@ public:
 
     MergeProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImgA(0)
+        , _srcImgAs()
         , _srcImgB(0)
         , _maskImg(0)
         , _rotoMaskImg(0)
@@ -312,13 +311,11 @@ public:
     {
     }
 
-    void setSrcImg(const Image *A,
-                   const Image *B,
-                   const std::vector<const Image*>& optionalAImages)
+    void setSrcImg(const std::vector<const Image*>& As,
+                   const Image *B)
     {
-        _srcImgA = A;
+        _srcImgAs = As;
         _srcImgB = B;
-        _optionalAImages = optionalAImages;
     }
 
     void setMaskImg(const Image *v,
@@ -372,106 +369,117 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                const PIX *srcPixA = (const PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
-                const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
-
-
-                if (srcPixA || srcPixB) {
-                    for (std::size_t c = 0; c < nComponents; ++c) {
-#                     ifdef DEBUG
-                        // check for NaN
-                        assert(!srcPixA || srcPixA[c] == srcPixA[c]);
-                        assert(!srcPixB || srcPixB[c] == srcPixB[c]);
-#                     endif
-                        // all images are supposed to be black and transparent outside o
-                        tmpA[c] = (_aChannels[c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
-                        tmpB[c] = (_bChannels[c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
-#                     ifdef DEBUG
-                        // check for NaN
-                        assert(tmpA[c] == tmpA[c]);
-                        assert(tmpB[c] == tmpB[c]);
-#                     endif
+                if (_srcImgAs.size() == 0) {
+                    const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
+                    for (int c = 0; c < nComponents; ++c) {
+                        dstPix[c] = (_outputChannels[nComponents > 1 ? c : 3] && srcPixB) ? srcPixB[c] : 0;
                     }
-                    if (nComponents != 4) {
-                        // set alpha (1 inside, 0 outside)
-                        tmpA[3] = (_aChannels[3] && srcPixA) ? 1. : 0.;
-                        tmpB[3] = (_bChannels[3] && srcPixB) ? 1. : 0.;
-                    }
-                    // work in float: clamping is done when mixing
-                    float a;
-                    if (_rotoMaskImg) {
-                        const PIX *rotoMaskPix = (const PIX *)_rotoMaskImg->getPixelAddress(x, y);
-                        if (rotoMaskPix) {
-                            a = *rotoMaskPix;
-                        } else {
-                            a = 0.;
-                        }
-                    } else {
-                        a = tmpA[3];
-                    }
-                    float b = tmpB[3];
-                    mergePixel<f, float, 4, 1>(_alphaMasking, tmpA, a, tmpB, b, tmpPix);
                 } else {
-                    // everything is black and transparent
-                    for (int c = 0; c < 4; ++c) {
-                        tmpPix[c] = 0;
-                    }
-                }
+                    // process the first connected A input first
 
-#             ifdef DEBUG
-                // check for NaN
-                for (int c = 0; c < 4; ++c) {
-                    assert(tmpPix[c] == tmpPix[c]);
-                }
-#             endif
+                    std::size_t i = 0;
+                    const PIX *srcPixA = (const PIX *)  (_srcImgAs[i] ? _srcImgAs[i]->getPixelAddress(x, y) : 0);
+                    const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
 
-                for (std::size_t i = 0; i < _optionalAImages.size(); ++i) {
-                    srcPixA = (const PIX *)  (_optionalAImages[i] ? _optionalAImages[i]->getPixelAddress(x, y) : 0);
-
-                    if (srcPixA) {
+                    if (srcPixA || srcPixB) {
                         for (std::size_t c = 0; c < nComponents; ++c) {
 #                     ifdef DEBUG
                             // check for NaN
-                            assert(srcPixA[c] == srcPixA[c]);
+                            assert(!srcPixA || srcPixA[c] == srcPixA[c]);
+                            assert(!srcPixB || srcPixB[c] == srcPixB[c]);
 #                     endif
                             // all images are supposed to be black and transparent outside o
-                            tmpA[c] = _aChannels[c] ? ( (float)srcPixA[c] / maxValue ) : 0.f;
-#                         ifdef DEBUG
+                            tmpA[c] = (_aChannels[c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
+                            tmpB[c] = (_bChannels[c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
+#                     ifdef DEBUG
                             // check for NaN
                             assert(tmpA[c] == tmpA[c]);
-#                         endif
+                            assert(tmpB[c] == tmpB[c]);
+#                     endif
                         }
                         if (nComponents != 4) {
                             // set alpha (1 inside, 0 outside)
-                            assert(srcPixA);
-                            tmpA[3] = _aChannels[3] ? 1. : 0.;
+                            tmpA[3] = (_aChannels[3] && srcPixA) ? 1. : 0.;
+                            tmpB[3] = (_bChannels[3] && srcPixB) ? 1. : 0.;
                         }
-
                         // work in float: clamping is done when mixing
-                        float a = tmpA[3];
-                        float b = tmpPix[3];
-                        mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
+                        float a;
+                        if (_rotoMaskImg) {
+                            const PIX *rotoMaskPix = (const PIX *)_rotoMaskImg->getPixelAddress(x, y);
+                            if (rotoMaskPix) {
+                                a = *rotoMaskPix;
+                            } else {
+                                a = 0.;
+                            }
+                        } else {
+                            a = tmpA[3];
+                        }
+                        float b = tmpB[3];
+                        mergePixel<f, float, 4, 1>(_alphaMasking, tmpA, a, tmpB, b, tmpPix);
+                    } else {
+                        // everything is black and transparent
+                        for (int c = 0; c < 4; ++c) {
+                            tmpPix[c] = 0;
+                        }
+                    }
+
+#             ifdef DEBUG
+                    // check for NaN
+                    for (int c = 0; c < 4; ++c) {
+                        assert(tmpPix[c] == tmpPix[c]);
+                    }
+#             endif
+
+                    for (std::size_t i = 1; i < _srcImgAs.size(); ++i) {
+                        // process the other connected A inputs
+
+                        srcPixA = (const PIX *)  (_srcImgAs[i] ? _srcImgAs[i]->getPixelAddress(x, y) : 0);
+
+                        if (srcPixA) {
+                            for (std::size_t c = 0; c < nComponents; ++c) {
+#                     ifdef DEBUG
+                                // check for NaN
+                                assert(srcPixA[c] == srcPixA[c]);
+#                     endif
+                                // all images are supposed to be black and transparent outside o
+                                tmpA[c] = _aChannels[c] ? ( (float)srcPixA[c] / maxValue ) : 0.f;
+#                         ifdef DEBUG
+                                // check for NaN
+                                assert(tmpA[c] == tmpA[c]);
+#                         endif
+                            }
+                            if (nComponents != 4) {
+                                // set alpha (1 inside, 0 outside)
+                                assert(srcPixA);
+                                tmpA[3] = _aChannels[3] ? 1. : 0.;
+                            }
+
+                            // work in float: clamping is done when mixing
+                            float a = tmpA[3];
+                            float b = tmpPix[3];
+                            mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
 
 #                     ifdef DEBUG
-                        // check for NaN
-                        for (int c = 0; c < 4; ++c) {
-                            assert(tmpPix[c] == tmpPix[c]);
-                        }
+                            // check for NaN
+                            for (int c = 0; c < 4; ++c) {
+                                assert(tmpPix[c] == tmpPix[c]);
+                            }
 #                     endif
+                        }
                     }
-                }
 
-                // tmpPix has 4 components, but we only need the first nComponents
+                    // tmpPix has 4 components, but we only need the first nComponents
 
-                // denormalize
-                for (int c = 0; c < nComponents; ++c) {
-                    tmpPix[c] *= maxValue;
-                }
+                    // denormalize
+                    for (int c = 0; c < nComponents; ++c) {
+                        tmpPix[c] *= maxValue;
+                    }
 
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
-                for (int c = 0; c < nComponents; ++c) {
-                    if (!_outputChannels[c]) {
-                        dstPix[c] = srcPixB ? srcPixB[c] : 0;
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+                    for (int c = 0; c < nComponents; ++c) {
+                        if (!_outputChannels[nComponents > 1 ? c : 3]) {
+                            dstPix[c] = srcPixB ? srcPixB[c] : 0;
+                        }
                     }
                 }
 
@@ -495,25 +503,24 @@ public:
         : ImageEffect(handle)
         , _plugin(plugin)
         , _dstClip(0)
-        , _srcClipA(0)
+        , _srcClipAs()
         , _srcClipB(0)
         , _maskClip(0)
         , _rotoMaskClip(0)
-        , _optionalASrcClips(0)
         , _aChannelAChanged(0)
         , _bChannelAChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClipA = fetchClip(kClipA);
-        assert( _srcClipA && (!_srcClipA->isConnected() || _srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentXY || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
+        _srcClipAs.push_back( fetchClip(kClipA) );
+        assert( _srcClipAs[0] && (!_srcClipAs[0]->isConnected() || _srcClipAs[0]->getPixelComponents() == ePixelComponentXY || _srcClipAs[0]->getPixelComponents() == ePixelComponentRGB || _srcClipAs[0]->getPixelComponents() == ePixelComponentRGBA || _srcClipAs[0]->getPixelComponents() == ePixelComponentAlpha) );
 
         if (numerousInputs) {
-            _optionalASrcClips.resize(kMaximumAInputs - 1);
+            _srcClipAs.resize(kMaximumAInputs);
             for (int i = 2; i <= kMaximumAInputs; ++i) {
                 Clip* clip = fetchClip( std::string(kClipA) + unsignedToString(i) );
                 assert( clip && (!clip->isConnected() || clip->getPixelComponents() == ePixelComponentRGB || clip->getPixelComponents() == ePixelComponentRGBA || clip->getPixelComponents() == ePixelComponentAlpha) );
-                _optionalASrcClips[i - 2] = clip;
+                _srcClipAs[i - 1] = clip;
             }
         }
 
@@ -532,7 +539,7 @@ public:
         _alphaMasking = fetchBooleanParam(kParamAlphaMasking);
         assert(_operation && _operationString && _bbox && _alphaMasking);
         _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
@@ -585,11 +592,10 @@ private:
     MergePluginEnum _plugin;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
-    Clip *_srcClipA;
+    std::vector<Clip *> _srcClipAs;
     Clip *_srcClipB;
     Clip *_maskClip;
     Clip *_rotoMaskClip;
-    std::vector<Clip *> _optionalASrcClips;
     ChoiceParam *_operation;
     StringParam *_operationString;
     ChoiceParam *_bbox;
@@ -631,12 +637,9 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         if ( _srcClipB->isConnected() ) {
             rods.push_back( _srcClipB->getRegionOfDefinition(time) );
         }
-        if ( _srcClipA->isConnected() ) {
-            rods.push_back( _srcClipA->getRegionOfDefinition(time) );
-        }
-        for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
-            if ( _optionalASrcClips[i]->isConnected() ) {
-                rods.push_back( _optionalASrcClips[i]->getRegionOfDefinition(time) );
+        for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
+            if ( _srcClipAs[i]->isConnected() ) {
+                rods.push_back( _srcClipAs[i]->getRegionOfDefinition(time) );
             }
         }
         if ( !rods.size() ) {
@@ -661,8 +664,8 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         return true;
     }
     case eBBoxA: {     //A
-        if ( _srcClipA->isConnected() ) {
-            rod = _srcClipA->getRegionOfDefinition(time);
+        if ( _srcClipAs.size() > 0 && _srcClipAs[0] && _srcClipAs[0]->isConnected() ) {
+            rod = _srcClipAs[0]->getRegionOfDefinition(time);
 
             return true;
         }
@@ -733,44 +736,26 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
-                                     _srcClipA->fetchImage(time) : 0 );
     std::auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(time) : 0 );
-    OptionalImagesHolder_RAII optionalImages;
-    for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
-        const Image* optImg = ( _optionalASrcClips[i] && _optionalASrcClips[i]->isConnected() ) ?
-                              _optionalASrcClips[i]->fetchImage(time) : 0;
-        if (optImg) {
-            optionalImages.images.push_back(optImg);
-        }
+    OptionalImagesHolder_RAII srcAs;
+    for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
+        const Image* srcA = ( _srcClipAs[i] && _srcClipAs[i]->isConnected() ) ?
+                              _srcClipAs[i]->fetchImage(time) : 0;
+        if (srcA) {
+            srcAs.images.push_back(srcA);
 
-        if (optImg) {
-            if ( (optImg->getRenderScale().x != args.renderScale.x) ||
-                 ( optImg->getRenderScale().y != args.renderScale.y) ||
-                 ( ( optImg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( optImg->getField() != args.fieldToRender) ) ) {
+            if ( (srcA->getRenderScale().x != args.renderScale.x) ||
+                 ( srcA->getRenderScale().y != args.renderScale.y) ||
+                 ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 throwSuiteStatusException(kOfxStatFailed);
             }
-            BitDepthEnum srcBitDepth      = optImg->getPixelDepth();
-            PixelComponentEnum srcComponents = optImg->getPixelComponents();
+            BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
+            PixelComponentEnum srcComponents = srcA->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
-        }
-    }
-
-    if ( srcA.get() ) {
-        if ( (srcA->getRenderScale().x != args.renderScale.x) ||
-             ( srcA->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
-        BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
-        PixelComponentEnum srcComponents = srcA->getPixelComponents();
-        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -818,7 +803,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     }
     processor.setValues(alphaMasking, mix, aChannels, bChannels, outputChannels);
     processor.setDstImg( dst.get() );
-    processor.setSrcImg(srcA.get(), srcB.get(), optionalImages.images);
+    processor.setSrcImg( srcAs.images, srcB.get() );
     processor.setRenderWindow(args.renderWindow);
 
     processor.process();
@@ -992,8 +977,8 @@ MergePlugin::render(const RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || _srcClipAs[0]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || _srcClipAs[0]->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
     if (dstComponents == ePixelComponentRGBA) {
@@ -1013,10 +998,9 @@ MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
-    clipPreferences.setClipComponents(*_srcClipA, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
-    for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
-        clipPreferences.setClipComponents(*_optionalASrcClips[i], outputComps);
+    for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
+        clipPreferences.setClipComponents(*_srcClipAs[i], outputComps);
     }
 }
 
@@ -1050,9 +1034,9 @@ MergePlugin::changedClip(const InstanceChangedArgs &args,
         if ( (unmappedComps == ePixelComponentRGBA) || (unmappedComps == ePixelComponentAlpha) ) {
             _bChannels[3]->setValue(true);
         }
-    } else if ( _aChannelAChanged && !_aChannelAChanged->getValue() && (clipName == kClipA) && _srcClipA && _srcClipA->isConnected() && ( args.reason == eChangeUserEdit) ) {
+    } else if ( _aChannelAChanged && !_aChannelAChanged->getValue() && (clipName == kClipA) && _srcClipAs[0] && _srcClipAs[0]->isConnected() && ( args.reason == eChangeUserEdit) ) {
         // Note: we do not care about clips A2, A3, ...
-        PixelComponentEnum unmappedComps = _srcClipA->getUnmappedPixelComponents();
+        PixelComponentEnum unmappedComps = _srcClipAs[0]->getUnmappedPixelComponents();
         // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
         // If before the clip preferences pass the input is RGB then don't consider the alpha channel for the clip B and use 0 instead.
         if (unmappedComps == ePixelComponentRGB) {
@@ -1108,23 +1092,28 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
+    MergingFunctionEnum blendingOperator = (MergingFunctionEnum)_operation->getValueAtTime(args.time);
+    if ( !isIdentityForBOnly(blendingOperator) ) {
+        // For most operators, we cannot be identity on regions where the A RoD does not intersect the render window.
+        // E.g: multiply should produce black and transparent in B regions that do not intersect A
+        return false;
+    }
+
     // The region of effect is only the set of the intersections between the A inputs and the mask.
     // If at least one of these regions intersects the renderwindow, the effect is not identity.
 
-    std::vector<Clip *> aClips = _optionalASrcClips;
-    aClips.push_back(_srcClipA);
-    for (std::size_t i = 0; i < aClips.size(); ++i) {
-        if ( !aClips[i]->isConnected() ) {
+    for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
+        if ( !_srcClipAs[i]->isConnected() ) {
             continue;
         }
-        OfxRectD srcARoD = aClips[i]->getRegionOfDefinition(time);
+        OfxRectD srcARoD = _srcClipAs[i]->getRegionOfDefinition(time);
         if ( Coords::rectIsEmpty(srcARoD) ) {
             // RoD is empty
             continue;
         }
 
         OfxRectI srcARoDPixel;
-        Coords::toPixelEnclosing(srcARoD, args.renderScale, aClips[i]->getPixelAspectRatio(), &srcARoDPixel);
+        Coords::toPixelEnclosing(srcARoD, args.renderScale, _srcClipAs[i]->getPixelAspectRatio(), &srcARoDPixel);
         bool srcARoDValid = true;
         if (maskRoDValid) {
             // mask the srcARoD with the mask RoD. The result may be empty

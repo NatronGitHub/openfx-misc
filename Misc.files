@@ -33,6 +33,7 @@ ColorSuppress/ColorSuppress.cpp
 ColorTransform/ColorTransform.cpp
 ColorWheel/ColorWheel.cpp
 Constant/Constant.cpp
+ContactSheet/ContactSheet.cpp
 CopyRectangle/CopyRectangle.cpp
 CornerPin/CornerPin.cpp
 Crop/Crop.cpp
@@ -53,6 +54,7 @@ ImageStatistics/ImageStatistics.cpp
 Invert/Invert.cpp
 JoinViews/JoinViews.cpp
 Keyer/Keyer.cpp
+LayerContactSheet/LayerContactSheet.cpp
 MatteMonitor/MatteMonitor.cpp
 Merge/Merge.cpp
 Mirror/Mirror.cpp
@@ -115,6 +117,7 @@ Saturation/Saturation.cpp
 Shuffle/Shuffle.cpp
 SideBySide/SideBySide.cpp
 SlitScan/SlitScan.cpp
+SpriteSheet/SpriteSheet.cpp
 SupportExt/ofxsCopier.h
 SupportExt/ofxsFilter.h
 SupportExt/ofxsFormatResolution.h

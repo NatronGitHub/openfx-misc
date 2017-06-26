@@ -524,7 +524,7 @@ public:
         assert(_softness && _plinear && _color0 && _color1 && _expandRoD);
 
         _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
@@ -655,7 +655,7 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor,
     OfxPointD btmLeft, size;
     {
         OfxRectD rod;
-        bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
+        bool wasCaught = GeneratorPlugin::getRegionOfDefinition(time, rod);
         if (!wasCaught) {
             //Overlay in default mode, use the project rod
             size = getProjectSize();
@@ -816,6 +816,7 @@ RadialPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // We just set the output components.
         if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
             clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+            clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }
@@ -873,7 +874,7 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         return false;
     }
 
-    bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
+    bool wasCaught = GeneratorPlugin::getRegionOfDefinition(time, rod);
     if ( wasCaught && (extent != eGeneratorExtentFormat) ) {
         // add one pixel in each direction to ensure border is black and transparent
         // (non-black+transparent case was treated above)
@@ -1024,6 +1025,7 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

@@ -77,7 +77,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsAlpha true
 
 #define kParamSize "size"
-#define kParamSizeLabel "size"
+#define kParamSizeLabel "Size"
 #define kParamSizeHint "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0)."
 #define kParamSizeDefault 1
 
@@ -99,7 +99,7 @@ class CImgDilatePlugin
 public:
 
     CImgDilatePlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgDilateParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgDilateParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _size  = fetchInt2DParam(kParamSize);
         _expandRod = fetchBooleanParam(kParamExpandRoD);
@@ -153,6 +153,7 @@ public:
                         const CImgDilateParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {

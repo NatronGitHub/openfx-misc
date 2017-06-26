@@ -122,7 +122,7 @@ class CImgBilateralPlugin
 public:
 
     CImgBilateralPlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgBilateralParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+        : CImgFilterPluginHelper<CImgBilateralParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -145,7 +145,7 @@ public:
                         const CImgBilateralParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x );
+        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x * params.iterations);
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
@@ -157,12 +157,13 @@ public:
                         const CImgBilateralParams& params,
                         int /*x1*/,
                         int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if (params.sigma_s == 0.) {
+        if (params.sigma_s <= 0. || params.sigma_r <= 0.) {
             return;
         }
         for (int i = 0; i < params.iterations; ++i) {
@@ -176,7 +177,7 @@ public:
     virtual bool isIdentity(const IsIdentityArguments & /*args*/,
                             const CImgBilateralParams& params) OVERRIDE FINAL
     {
-        return (params.sigma_s == 0.);
+        return (params.sigma_s <= 0. || params.sigma_r <= 0.);
     };
 
 private:
@@ -193,7 +194,7 @@ class CImgBilateralGuidedPlugin
 public:
 
     CImgBilateralGuidedPlugin(OfxImageEffectHandle handle)
-        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -216,7 +217,7 @@ public:
                         const CImgBilateralParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x );
+        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x * params.iterations);
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
@@ -234,7 +235,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if ( (params.iterations <= 0) || (params.sigma_s <= 0.) ) {
+        if ( (params.iterations <= 0) || (params.sigma_s <= 0.) || (params.sigma_r <= 0.)) {
             return;
         }
 
@@ -254,7 +255,7 @@ public:
     virtual int isIdentity(const IsIdentityArguments & /*args*/,
                            const CImgBilateralParams& params) OVERRIDE FINAL
     {
-        return (params.sigma_s == 0.);
+        return (params.iterations <= 0) || (params.sigma_s <= 0.) || (params.sigma_r <= 0.);
     };
 
 private:

@@ -299,7 +299,7 @@ public:
         _brightness = fetchDoubleParam(kParamBrightness);
 
         _mix = fetchDoubleParam(kParamMix);
-        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
@@ -637,6 +637,7 @@ DespillPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamOutputSpillMapHint);
         param->setDefault(false);
         param->setLayoutHint(eLayoutHintDivider, 0);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

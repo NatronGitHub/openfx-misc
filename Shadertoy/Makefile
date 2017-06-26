@@ -4,7 +4,9 @@ PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
 PLUGINNAME = Shadertoy
 
 RESOURCES = \
-presets
+presets \
+net.sf.openfx.Shadertoy.png \
+net.sf.openfx.Shadertoy.svg \
 
 OSMESA_PATH ?= /opt/osmesa
 LLVM_PATH ?= /opt/llvm

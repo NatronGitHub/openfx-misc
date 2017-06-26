@@ -97,6 +97,7 @@ grouping).
 * PLogLinOFX: Convert between linear and log representations using the Josh Pines log conversion.
 * Quantize: Reduce the number of color levels with posterization or dithering.
 * SaturationOFX: Modify the color saturation of an image.
+* Threshold: Threshold the selected channels to bring them within the 0-1 range.
 * Transform/RGBToHSV and HSVToRGB: Convert to/from HSV color representation.
 * Transform/RGBToHSL and HSLToRGB: Convert to/from HSL color representation. 
 * Transform/RGBToHSI and HSIToRGB: Convert to/from HSI color representation. 
@@ -114,12 +115,14 @@ grouping).
 * DenoiseSharpen: Denoise and/or sharpen images using wavelet-based algorithms.
 * DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann (a.k.a. nearest) boundary conditions.
 * DirBlurOFX: Directional blur.
+* Distance: Compute the distance from each pixel to the closest zero-valued pixel.
 * EdgeDetectCImg: Perform edge detection by computing the image gradient magnitude.
 * EdgeExtend: Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte.
 * ErodeBlurCImg: Erode or dilate a mask by smoothing.
 * ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
 * GMICExpr: Quickly generate or process image from mathematical formula evaluated for each pixel.
 * GodRays: Average an image over a range of transforms, or create crepuscular rays.
+* InpaintCImg: Inpaint the areas indicated by the Mask input using patch-based inpainting.
 * Shadertoy: Apply a [Shadertoy](http://www.shadertoy.com) fragment shaders (multipass shaders are not supported).
 * SharpenCImg: Sharpen the input stream by enhancing its Laplacian.
 * SharpenInvDiffCImg: Sharpen selected images by inverse diffusion.
@@ -146,9 +149,11 @@ grouping).
 
 ### Merge
 
+* ContactSheetOFX: Make a contact sheet from several inputs or frames.
 * CopyRectangleOFX: Copies a rectangle from the input A to the input B in output.
 * DissolveOFX: Weighted average of two inputs.
 * KeyMixOFX: Copies A to B only where Mask is non-zero.
+* LayerContactSheetOFX: Make a contact sheet from layers.
 * MergeOFX: Pixel-by-pixel merge operation between the two inputs.
 * PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by alpha (or another channel).
 * SwitchOFX: Lets you switch between any number of inputs.
@@ -165,6 +170,7 @@ grouping).
 * MirrorOFX: Flip or flop the image.
 * PositionOFX: Translate image by an integer number of pixels.
 * Reformat: Convert image to a different image format and size.
+* SpriteSheet: Use an image as a sprite sheet.
 * STMapOFX: Move pixels around an image, based on a UVmap.
 * TrackerPM: Point tracker based on pattern matching using an exhaustive search within an image region.
 * TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D image.

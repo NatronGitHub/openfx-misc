@@ -25,9 +25,11 @@
 #ifndef Misc_CImgFilter_h
 #define Misc_CImgFilter_h
 
+#define PLUGIN_PACK_GPL2 // include GPL2 plugins by default
+
 #include <cassert>
 #include <memory>
-#include <algorithm>
+#include <algorithm> // max
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
@@ -128,12 +130,41 @@
 inline void gImageEffectAbort();
 #endif
 
+
+#ifdef cimg_version
+#error "CImg.h was included before this file"
+#endif
+
+#ifdef PLUGIN_PACK_GPL2
+
+// include the inpaint and nlmeans cimg plugins
+#if 0 // not necessary since CImg cimmit 7c83bdad65ab7447220b54851a5a1035976777fa
+namespace cimg_library_openfx_misc {
+    namespace cimg {
+        //! Return the maximum between two values.
+        template<typename t>
+        inline t max(const t& a, const t& b) {
+            return std::max(a,b);
+        }
+        //! Return the minimum between two values.
+        template<typename t>
+        inline t min(const t& a, const t& b) {
+            return std::min(a,b);
+        }
+    }
+}
+#endif
+#define cimg_plugin "Inpaint/inpaint.h"
+//#define cimg_plugin1 "nlmeans.h"
+#endif
+
 CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
 CLANG_DIAG_ON(shorten-64-to-32)
 #define cimg_library cimg_library_suffixed // so that namespace is private, but code requires no change
 
 typedef float cimgpix_t;
+typedef float cimgpixfloat_t;
 
 #define CIMG_ABORTABLE // use abortable versions of CImg functions
 
@@ -198,6 +229,7 @@ class CImgFilterPluginHelperBase
 public:
 
     CImgFilterPluginHelperBase(OfxImageEffectHandle handle,
+                               bool usesMask, // true if the mask parameter to render should be a single-channel image containing the mask
                                bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                bool supportsTiles,
                                bool supportsMultiResolution,
@@ -225,7 +257,8 @@ public:
                                      bool hasUnpremult = true);
 
     // utility functions
-    static bool isEmpty(const OfxRectI& r)
+    template <typename Rect>
+    static bool isEmpty(const Rect& r)
     {
         return r.x1 >= r.x2 || r.y1 >= r.y2;
     }
@@ -309,6 +342,7 @@ protected:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    bool _usesMask; // true if the mask parameter to render() should be a single-channel mask of the same size as the image
     bool _supportsComponentRemapping; // true if the number and order of components of the image passed to render() has no importance
     bool _supportsTiles;
     bool _supportsMultiResolution;
@@ -324,12 +358,13 @@ class CImgFilterPluginHelper
 public:
 
     CImgFilterPluginHelper(OfxImageEffectHandle handle,
+                           bool usesMask, // true if the mask parameter to render should be a single-channel image containing the mask
                            bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                            bool supportsTiles,
                            bool supportsMultiResolution,
                            bool supportsRenderScale,
                            bool defaultUnpremult /* = true*/)
-        : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, /*isFilter=*/ true)
+        : CImgFilterPluginHelperBase(handle, usesMask, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, /*isFilter=*/ true)
     {
     }
 
@@ -354,6 +389,7 @@ public:
                         const Params& params,
                         int x1, //!< origin of the image tile
                         int y1, //!< origin of the image tile
+                        cimg_library::CImg<cimgpix_t>& mask, //!< in: if the filter uses the mask, a single-channel mask (can be modified by the render func without any side-effect), else an empty image.
                         cimg_library::CImg<cimgpix_t>& cimg, //!< in/out: image
                         int alphaChannel //!< alpha channel in cimg, or -1 if there is no alpha channel
                         ) = 0;
@@ -585,23 +621,24 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
 
-
-        // shrink the processWindow at much as possible
-        // top
-        while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y2 - 1, maskInvert) ) {
-            --processWindow.y2;
-        }
-        // bottom
-        while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y1, maskInvert) ) {
-            ++processWindow.y1;
-        }
-        // left
-        while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x1, processWindow.y1, processWindow.y2, maskInvert) ) {
-            ++processWindow.x1;
-        }
-        // right
-        while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x2 - 1, processWindow.y1, processWindow.y2, maskInvert) ) {
-            --processWindow.x2;
+        if (_supportsTiles) {
+            // shrink the processWindow at much as possible
+            // top
+            while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y2 - 1, maskInvert) ) {
+                --processWindow.y2;
+            }
+            // bottom
+            while ( processWindow.y2 > processWindow.y1 && maskLineIsZero(mask.get(), processWindow.x1, processWindow.x2, processWindow.y1, maskInvert) ) {
+                ++processWindow.y1;
+            }
+            // left
+            while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x1, processWindow.y1, processWindow.y2, maskInvert) ) {
+                ++processWindow.x1;
+            }
+            // right
+            while ( processWindow.x2 > processWindow.x1 && maskColumnIsZero(mask.get(), processWindow.x2 - 1, processWindow.y1, processWindow.y2, maskInvert) ) {
+                --processWindow.x2;
+            }
         }
     }
 
@@ -727,7 +764,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     {
         unsigned int ncpus = OFX::MultiThread::getNumCPUs();
-        omp_set_num_threads(ncpus);
+        omp_set_num_threads( std::max(1u, ncpus) );
         //printf("ncpus=%u\n", ncpus);
     }
 #endif
@@ -858,6 +895,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     if (cimgSize) { // may be zero if no channel is processed
         std::auto_ptr<OFX::ImageMemory> cimgData( new OFX::ImageMemory(cimgSize, this) );
         cimgpix_t *cimgPixelData = (cimgpix_t*)cimgData->lock();
+        cimg_library::CImg<cimgpix_t> maskcimg;
         cimg_library::CImg<cimgpix_t> cimg(cimgPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
 
         if (tmpSize > 0) {
@@ -875,6 +913,28 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             return;
         }
 
+        assert(sizeof(cimgpix_t) == 4); // the following only works for float pix
+        if (_usesMask) {
+            maskcimg.assign(cimgWidth, cimgHeight, 1, 1);
+            if (!mask.get()) {
+                maskcimg.fill(1.);
+            } else {
+                copyPixels(*this,
+                           srcRoI,
+                           mask.get(),
+                           maskcimg.data(),
+                           srcRoI,
+                           OFX::ePixelComponentAlpha,
+                           1,
+                           OFX::eBitDepthFloat,
+                           cimgWidth * sizeof(float));
+                if(maskInvert) {
+                    maskcimg *= -1;
+                    maskcimg += 1;
+                }
+            }
+        }
+
         //////////////////////////////////////////////////////////////////////////////////////////
         // 3- process the cimg
         printRectI("render srcRoI", srcRoI);
@@ -887,7 +947,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         *_ptr = this;
 #  endif
         try {
-            render(args, params, srcRoI.x1, srcRoI.y1, cimg, alphaChannel);
+            render(args, params, srcRoI.x1, srcRoI.y1, maskcimg, cimg, alphaChannel);
         } catch (cimg_library::CImgAbortException) {
 #  if defined(HAVE_THREAD_LOCAL)
             tls::gImageEffect = 0;
@@ -904,7 +964,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         *_ptr = 0;
 #  endif
 #else
-        render(args, params, srcRoI.x1, srcRoI.y1, cimg, alphaChannel);
+        render(args, params, srcRoI.x1, srcRoI.y1, maskcimg, cimg, alphaChannel);
 #endif
         // check that the dimensions didn't change
         assert(cimg.width() == cimgWidth && cimg.height() == cimgHeight && cimg.depth() == 1 && cimg.spectrum() == cimgSpectrum);
@@ -1119,5 +1179,81 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::isIdentity(const OFX::IsIdenti
 
     return false;
 } // >::isIdentity
+
+// functions for a reproductible random number generator (used in CImgNoise.cpp and CImgPlasma.cpp)
+inline unsigned int
+cimg_hash(unsigned int a)
+{
+    a = (a ^ 61) ^ (a >> 16);
+    a = a + (a << 3);
+    a = a ^ (a >> 4);
+    a = a * 0x27d4eb2d;
+    a = a ^ (a >> 15);
+
+    return a;
+}
+
+// returns a value from 0 to 0x100000000ULL excluded
+inline unsigned int
+cimg_irand(unsigned int seed, int x, int y, int nComponents)
+{
+    return cimg_hash(cimg_hash(cimg_hash(seed ^ x) ^ y) ^ nComponents);
+}
+
+inline double
+cimg_rand(unsigned int seed, int x, int y, int nComponents, const double val_min, const double val_max)
+{
+    const double val = cimg_irand(seed, x, y, nComponents) / ( (double)0x100000000ULL );
+    return val_min + (val_max - val_min)*val;
+}
+
+//! Return a random variable uniformely distributed between [0,val_max].
+/**
+ **/
+inline double
+cimg_rand(unsigned int seed, int x, int y, int nComponents, const double val_max = 1.)
+{
+    return cimg_rand(seed, x, y, nComponents, 0, val_max);
+}
+
+//! Return a random variable following a gaussian distribution and a standard deviation of 1.
+/**
+ **/
+inline double
+cimg_grand(unsigned int seed, int x, int y, int nComponents)
+{
+    double x1, w;
+    unsigned int s = seed;
+    do {
+        unsigned int r1 = cimg_irand(s, x, y, nComponents);
+        unsigned int r2 = cimg_irand(r1, x, y, nComponents);
+        s = r2;
+
+        const double x2 =  2 * (double) r2 / ( (double)0x100000000ULL ) - 1.;
+        x1 =  2 * (double) r1 / ( (double)0x100000000ULL ) - 1.;
+        w = x1*x1 + x2*x2;
+    } while (w<=0 || w>=1.0);
+    return x1*std::sqrt((-2*std::log(w))/w);
+}
+
+//! Return a random variable following a Poisson distribution of parameter z.
+/**
+ **/
+inline unsigned int
+cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
+{
+    if (z<=1.0e-10) {
+        return 0;
+    }
+    if (z>100) {
+        return (unsigned int)((std::sqrt(z) * cimg_grand(seed, x, y, nComponents)) + z);
+    }
+    unsigned int k = 0;
+    const double y1 = std::exp(-z);
+    for (double s = 1.0; s >= y1; ++k) {
+        s *= cimg_rand(seed+1, x, y, nComponents);
+    }
+    return k > 0 ? k - 1 : 0;
+}
 
 #endif // ifndef Misc_CImgFilter_h
