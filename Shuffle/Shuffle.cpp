@@ -497,10 +497,12 @@ private:
                     // if there is a srcImg but we are outside of its RoD, it should be considered black and transparent
                     PIXSRC *srcPix = (PIXSRC *)  (_inputPlanes[c].img ? _inputPlanes[c].img->getPixelAddress(x, y) : 0);
 
-                    if (!srcPix) {
+                    if (!_inputPlanes[c].img) {
+                        // No input image: this is a constant value.
                         // Use constant value depending on fillZero
                         dstPix[c] = convertPixelDepth<float, PIXDST>(srcChannels[c]);
                     } else {
+                        // Be black and transparent if we are outside of _inputPlanes[c].img's RoD
                         dstPix[c] = convertPixelDepth<PIXSRC, PIXDST>(srcPix ? srcPix[srcChannels[c]] : 0);
                     }
 
