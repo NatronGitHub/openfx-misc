@@ -164,6 +164,7 @@ CIMGVERSION=79fce46b2b1b54bc44276dccca040139f62835d7
 
 CImg.h: Inpaint/inpaint.h
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
+	patch -p0 -d. < CImg-2.0.0-anisotropic.patch
 #	patch -p0 -d. < CImg-1.7.1-omp.patch
 
 Inpaint/inpaint.h:
