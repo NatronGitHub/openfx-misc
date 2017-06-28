@@ -106,7 +106,7 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                const PIX *srcPix = (const PIX*)_srcImg->getPixelAddress(x + _cropRectPixel.x1, y + _cropRectPixel.y1);
+                const PIX *srcPix = _srcImg ? (const PIX*)_srcImg->getPixelAddress(x + _cropRectPixel.x1, y + _cropRectPixel.y1) : 0;
                 if (srcPix) {
                     // inside of the rectangle
                     for (int k = 0; k < nComponents; ++k) {
