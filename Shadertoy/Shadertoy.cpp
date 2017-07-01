@@ -2226,6 +2226,7 @@ defineDoubleSub(ImageEffectDescriptor &desc,
     param->setRange(-DBL_MAX, DBL_MAX);
     param->setDisplayRange(-DBL_MAX, DBL_MAX);
     param->setDefault(defaultValue);
+    param->setDoubleType(eDoubleTypePlain);
     param->setEvaluateOnChange(isExtraParam);
     param->setAnimates(isExtraParam);
     if (page) {
@@ -2265,6 +2266,7 @@ defineDouble2DSub(ImageEffectDescriptor &desc,
     param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
     param->setDisplayRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
     param->setDefault(defaultValue, defaultValue);
+    param->setDoubleType(eDoubleTypePlain);
     param->setEvaluateOnChange(isExtraParam);
     param->setAnimates(isExtraParam);
     if (page) {
