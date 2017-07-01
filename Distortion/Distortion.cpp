@@ -3565,6 +3565,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVOffset);
             param->setLabelAndHint(kParamUVOffsetLabel);
             param->setDefault(0., 0.);
+            param->setDoubleType(eDoubleTypePlain);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 1., 1.);
             param->setDimensionLabels("U", "V");
@@ -3841,6 +3842,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             param->setLabelAndHint(kParamCenterLabel);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setUseHostNativeOverlayHandle(false);
+            param->setDoubleType(eDoubleTypePlain);
             param->setDisplayRange(-1, -1, 1, 1);
             if (page) {
                 page->addChild(*param);
@@ -3860,6 +3862,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamAsymmetric);
             param->setLabelAndHint(kParamAsymmetricLabel);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDoubleType(eDoubleTypePlain);
             param->setDisplayRange(-0.5, -0.5, 0.5, 0.5);
             param->setUseHostNativeOverlayHandle(false);
             if (page) {

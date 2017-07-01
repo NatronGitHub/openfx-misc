@@ -390,6 +390,7 @@ CameraParam::define(ImageEffectDescriptor &desc,
         param->setLabelAndHint(kParamCameraWindowTranslateLabel);
         param->setRange(-1, -1, 1, 1);
         param->setDisplayRange(-1, -1, 1, 1);
+        param->setDoubleType(eDoubleTypePlain);
         if (group) {
             param->setParent(*group);
         }

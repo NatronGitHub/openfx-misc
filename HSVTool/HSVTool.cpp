@@ -2087,6 +2087,7 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setHint(kParamSaturationRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
+            param->setDoubleType(eDoubleTypePlain);
             param->setRange(0., 0., 1., 1.);
             param->setDisplayRange(0., 0., 1, 1);
             param->setUseHostNativeOverlayHandle(false);
@@ -2157,6 +2158,7 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setHint(kParamBrightnessRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
+            param->setDoubleType(eDoubleTypePlain);
             param->setRange(0., 0., DBL_MAX, DBL_MAX);
             param->setDisplayRange(0., 0., 1, 1);
             param->setUseHostNativeOverlayHandle(false);
