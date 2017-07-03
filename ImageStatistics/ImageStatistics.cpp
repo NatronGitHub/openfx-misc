@@ -1256,7 +1256,7 @@ public:
 
 private:
     /* override is identity */
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
 
     /* Override the render */
@@ -1474,7 +1474,8 @@ ImageStatisticsPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &
 bool
 ImageStatisticsPlugin::isIdentity(const IsIdentityArguments &args,
                                   Clip * &identityClip,
-                                  double & /*identityTime*/)
+                                  double & /*identityTime*/
+                                  , int& /*view*/, std::string& /*plane*/)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         throwSuiteStatusException(kOfxStatFailed);

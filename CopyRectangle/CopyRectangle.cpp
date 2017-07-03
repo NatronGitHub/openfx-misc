@@ -310,7 +310,7 @@ private:
 
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     template <int nComponents>
@@ -532,7 +532,8 @@ CopyRectanglePlugin::renderInternal(const RenderArguments &args,
 bool
 CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args,
                                 Clip * &identityClip,
-                                double & /*identityTime*/)
+                                double & /*identityTime*/
+                                , int& /*view*/, std::string& /*plane*/)
 {
     double mix;
 

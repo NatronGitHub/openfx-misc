@@ -210,7 +210,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(TimeBlurProcessorBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
@@ -422,7 +422,8 @@ TimeBlurPlugin::renderForBitDepth(const RenderArguments &args)
 bool
 TimeBlurPlugin::isIdentity(const IsIdentityArguments &args,
                            Clip * &identityClip,
-                           double &identityTime)
+                           double &identityTime
+                           , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
 

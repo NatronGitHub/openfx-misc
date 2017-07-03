@@ -692,7 +692,9 @@ void PFBarrelCommon::FileReader::dump(void)
 
 
 
-static bool gIsMultiPlane;
+static bool gIsMultiPlaneV1;
+static bool gIsMultiPlaneV2;
+
 struct InputPlaneChannel
 {
     Image* img;
@@ -1253,10 +1255,25 @@ public:
             _uvChannels[0] = fetchChoiceParam(kParamChannelU);
             _uvChannels[1] = fetchChoiceParam(kParamChannelV);
             _uvChannels[2] = fetchChoiceParam(kParamChannelA);
-            if (gIsMultiPlane) {
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelU, _uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelV, _uvClip);
-                fetchDynamicMultiplaneChoiceParameter(kParamChannelA, _uvClip);
+            if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
+
+                {
+                    FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                    args.dependsClips.push_back(_uvClip);
+                    fetchDynamicMultiplaneChoiceParameter(kParamChannelU, args);
+                }
+                {
+                    FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                    args.dependsClips.push_back(_uvClip);
+                    fetchDynamicMultiplaneChoiceParameter(kParamChannelV, args);
+                }
+                {
+                    FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                    args.dependsClips.push_back(_uvClip);
+                    fetchDynamicMultiplaneChoiceParameter(kParamChannelA, args);
+                }
+        
+                onAllParametersFetched();
             }
             _unpremultUV = fetchBooleanParam(kParamChannelUnpremultUV);
             _uvOffset = fetchDouble2DParam(kParamUVOffset);
@@ -1415,7 +1432,7 @@ private:
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 #ifdef OFX_EXTENSIONS_NUKE
-    virtual void getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual OfxStatus getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
 #endif
 
     /* Override the render */
@@ -1431,7 +1448,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(DistortionProcessorBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a param has just had its value changed */
@@ -1579,8 +1596,8 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     if (_srcClip) {
         clipPreferences.setClipComponents(*_srcClip, dstPixelComps);
     }
-    if (gIsMultiPlane && _uvClip) {
-        buildChannelMenus();
+    if (gIsMultiPlaneV2 && _uvClip) {
+        MultiPlaneEffect::getClipPreferences(clipPreferences);
     }
     if (_plugin == eDistortionPluginLensDistortion) {
         OfxRectD format;
@@ -2194,41 +2211,41 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     std::vector<InputPlaneChannel> planeChannels;
 
     if (_uvClip) {
-        if (gIsMultiPlane) {
+        if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
             BitDepthEnum srcBitDepth = eBitDepthNone;
             std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
-            bool isCreatingAlpha;
             for (int i = 0; i < 3; ++i) {
                 InputPlaneChannel p;
                 p.channelIndex = i;
                 p.fillZero = false;
                 //if (_uvClip) {
                 Clip* clip = 0;
-                std::string plane, ofxComp;
-                bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &plane, &ofxComp, &p.channelIndex, &isCreatingAlpha);
-                if (!ok) {
+                MultiPlane::ImagePlaneDesc plane;
+                MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_uvChannels[i]->getName(), &clip, &plane, &p.channelIndex);
+                if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
                     setPersistentMessage(Message::eMessageError, "", "Cannot find requested channels in input");
                     throwSuiteStatusException(kOfxStatFailed);
                 }
 
                 p.img = 0;
-                if (ofxComp == kMultiPlaneParamOutputOption0) {
+                if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant0 ||
+                    (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane && plane.getNumComponents() == 0)) {
                     p.fillZero = true;
-                } else if (ofxComp == kMultiPlaneParamOutputOption1) {
+                } else if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1) {
                     p.fillZero = false;
                 } else {
                     std::map<std::string, Image*>& clipPlanes = fetchedPlanes[clip];
-                    std::map<std::string, Image*>::iterator foundPlane = clipPlanes.find(plane);
+                    std::map<std::string, Image*>::iterator foundPlane = clipPlanes.find(plane.getPlaneID());
                     if ( foundPlane != clipPlanes.end() ) {
                         p.img = foundPlane->second;
                     } else {
 #ifdef OFX_EXTENSIONS_NUKE
-                        p.img = clip->fetchImagePlane( time, args.renderView, plane.c_str() );
+                        p.img = clip->fetchImagePlane( time, args.renderView, plane.getPlaneID().c_str() );
 #else
                         p.img = ( clip && clip->isConnected() ) ? clip->fetchImage(time) : 0;
 #endif
                         if (p.img) {
-                            clipPlanes.insert( std::make_pair(plane, p.img) );
+                            clipPlanes.insert( std::make_pair(plane.getPlaneID(), p.img) );
                             imagesHolder.appendImage(p.img);
                         }
                     }
@@ -2249,7 +2266,15 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                             throwSuiteStatusException(kOfxStatErrImageFormat);
                         }
                     }
+                    // If the channel is unavailabe in the image, fill with 0 (1 for Alpha)
+                    // This may happen if the user selected  the hard-coded Alpha channel and the input is RGB
+                    if (p.channelIndex >= p.img->getPixelComponentCount()) {
+                        p.img = 0;
+                        p.fillZero = p.channelIndex != 3;
+                    }
                 }
+
+
                 //}
                 planeChannels.push_back(p);
             }
@@ -2620,7 +2645,8 @@ DistortionPlugin::render(const RenderArguments &args)
 bool
 DistortionPlugin::isIdentity(const IsIdentityArguments &args,
                              Clip * &identityClip,
-                             double & /*identityTime*/)
+                             double & /*identityTime*/
+                             , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
 
@@ -3013,52 +3039,18 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 }
 
 #ifdef OFX_EXTENSIONS_NUKE
-void
+OfxStatus
 DistortionPlugin::getClipComponents(const ClipComponentsArguments& args,
                                     ClipComponentsSetter& clipComponents)
 {
-    assert(gIsMultiPlane);
+    assert(gIsMultiPlaneV2);
 
-    const double time = args.time;
-
-    /*std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
-       std::string ofxPlane,ofxComp;
-       getPlaneNeededInOutput(outputComponents, _outputLayer, &ofxPlane, &ofxComp);
-       clipComponents.addClipComponents(*_dstClip, ofxComp);*/
-    PixelComponentEnum dstPx = _dstClip->getPixelComponents();
-    clipComponents.addClipComponents(*_dstClip, dstPx);
-    clipComponents.addClipComponents(*_srcClip, dstPx);
-
+    OfxStatus stat = kOfxStatReplyDefault;
     if (_uvClip) {
-        std::map<Clip*, std::set<std::string> > clipMap;
-        bool isCreatingAlpha;
-        for (int i = 0; i < 2; ++i) {
-            std::string ofxComp, ofxPlane;
-            int channelIndex;
-            Clip* clip = 0;
-            bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &ofxPlane, &ofxComp, &channelIndex, &isCreatingAlpha);
-            if (!ok) {
-                continue;
-            }
-            if ( (ofxComp == kMultiPlaneParamOutputOption0) || (ofxComp == kMultiPlaneParamOutputOption1) ) {
-                continue;
-            }
-            assert(clip);
-
-            std::map<Clip*, std::set<std::string> >::iterator foundClip = clipMap.find(clip);
-            if ( foundClip == clipMap.end() ) {
-                std::set<std::string> s;
-                s.insert(ofxComp);
-                clipMap.insert( std::make_pair(clip, s) );
-                clipComponents.addClipComponents(*clip, ofxComp);
-            } else {
-                std::pair<std::set<std::string>::iterator, bool> ret = foundClip->second.insert(ofxComp);
-                if (ret.second) {
-                    clipComponents.addClipComponents(*clip, ofxComp);
-                }
-            }
-        }
+        stat = MultiPlaneEffect::getClipComponents(args, clipComponents);
+        clipComponents.setPassThroughClip(_srcClip, args.time, args.view);
     }
+    return stat;
 } // getClipComponents
 
 #endif
@@ -3254,10 +3246,8 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
     }
     if (_plugin == eDistortionPluginIDistort ||
         _plugin == eDistortionPluginSTMap) {
-        if (gIsMultiPlane) {
-            if ( handleChangedParamForAllDynamicChoices(paramName, args.reason) ) {
-                return;
-            }
+        if (gIsMultiPlaneV2) {
+            MultiPlaneEffect::changedParam(args, paramName);
         }
     }
 }
@@ -3344,11 +3334,14 @@ DistortionPluginFactory<plugin, majorVersion>::describe(ImageEffectDescriptor &d
 #endif
 
 
-    gIsMultiPlane = false;
-
+    gIsMultiPlaneV1 = false;
+    gIsMultiPlaneV2 = false;
+#if defined(OFX_EXTENSIONS_NUKE)
+    gIsMultiPlaneV1 = getImageEffectHostDescription()->isMultiPlanar;
+#endif
 #if defined(OFX_EXTENSIONS_NUKE) && defined(OFX_EXTENSIONS_NATRON)
-    gIsMultiPlane = getImageEffectHostDescription()->supportsDynamicChoices && getImageEffectHostDescription()->isMultiPlanar;
-    if (gIsMultiPlane) {
+    gIsMultiPlaneV2 = getImageEffectHostDescription()->supportsDynamicChoices && gIsMultiPlaneV1;
+    if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
         // This enables fetching different planes from the input.
         // Generally the user will read a multi-layered EXR file in the Reader node and then use the shuffle
         // to redirect the plane's channels into RGBA color plane.
@@ -3384,7 +3377,9 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                                                    ContextEnum context)
 {
 #ifdef OFX_EXTENSIONS_NUKE
-    if ( gIsMultiPlane && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
+    if ( gIsMultiPlaneV2 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
+        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
+    } else if (gIsMultiPlaneV1 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 #endif
@@ -3505,20 +3500,20 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         std::vector<std::string> clipsForChannels(1);
         clipsForChannels[0] = kClipUV;
 
-        if (gIsMultiPlane) {
+        if (gIsMultiPlaneV2) {
             {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel);
+                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel);
 #ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
                 param->setDefault(eInputChannelR);
             }
             {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel);
+                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel);
                 param->setDefault(eInputChannelG);
             }
             {
-                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelA, kParamChannelALabel);
+                ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelA, kParamChannelALabel);
                 param->setDefault(eInputChannelA);
             }
         } else {
@@ -3528,7 +3523,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
 #ifdef OFX_EXTENSIONS_NUKE
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
 #endif
-                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
                 param->setDefault(eInputChannelR);
                 if (page) {
                     page->addChild(*param);
@@ -3537,7 +3532,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelV);
                 param->setLabelAndHint(kParamChannelVLabel);
-                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
                 param->setDefault(eInputChannelG);
                 if (page) {
                     page->addChild(*param);
@@ -3546,7 +3541,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelA);
                 param->setLabelAndHint(kParamChannelALabel);
-                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+                MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
                 param->setDefault(eInputChannelA);
                 if (page) {
                     page->addChild(*param);
@@ -3650,45 +3645,45 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamGeneratorFormat);
                 param->setLabel(kParamGeneratorFormatLabel);
                 assert(param->getNOptions() == eParamFormatPCVideo);
-                param->appendOption(kParamFormatPCVideoLabel);
+                param->appendOption(kParamFormatPCVideoLabel, "", kParamFormatPCVideo);
                 assert(param->getNOptions() == eParamFormatNTSC);
-                param->appendOption(kParamFormatNTSCLabel);
+                param->appendOption(kParamFormatNTSCLabel, "", kParamFormatNTSC);
                 assert(param->getNOptions() == eParamFormatPAL);
-                param->appendOption(kParamFormatPALLabel);
+                param->appendOption(kParamFormatPALLabel, "", kParamFormatPAL);
                 assert(param->getNOptions() == eParamFormatNTSC169);
-                param->appendOption(kParamFormatNTSC169Label);
+                param->appendOption(kParamFormatNTSC169Label, "", kParamFormatNTSC169);
                 assert(param->getNOptions() == eParamFormatPAL169);
-                param->appendOption(kParamFormatPAL169Label);
+                param->appendOption(kParamFormatPAL169Label, "", kParamFormatPAL169);
                 assert(param->getNOptions() == eParamFormatHD720);
-                param->appendOption(kParamFormatHD720Label);
+                param->appendOption(kParamFormatHD720Label, "", kParamFormatHD720);
                 assert(param->getNOptions() == eParamFormatHD);
-                param->appendOption(kParamFormatHDLabel);
+                param->appendOption(kParamFormatHDLabel, "", kParamFormatHD);
                 assert(param->getNOptions() == eParamFormatUHD4K);
-                param->appendOption(kParamFormatUHD4KLabel);
+                param->appendOption(kParamFormatUHD4KLabel, "", kParamFormatUHD4K);
                 assert(param->getNOptions() == eParamFormat1kSuper35);
-                param->appendOption(kParamFormat1kSuper35Label);
+                param->appendOption(kParamFormat1kSuper35Label, "", kParamFormat1kSuper35);
                 assert(param->getNOptions() == eParamFormat1kCinemascope);
-                param->appendOption(kParamFormat1kCinemascopeLabel);
+                param->appendOption(kParamFormat1kCinemascopeLabel, "", kParamFormat1kCinemascope);
                 assert(param->getNOptions() == eParamFormat2kSuper35);
-                param->appendOption(kParamFormat2kSuper35Label);
+                param->appendOption(kParamFormat2kSuper35Label, "", kParamFormat2kSuper35);
                 assert(param->getNOptions() == eParamFormat2kCinemascope);
-                param->appendOption(kParamFormat2kCinemascopeLabel);
+                param->appendOption(kParamFormat2kCinemascopeLabel, "", kParamFormat2kCinemascope);
                 assert(param->getNOptions() == eParamFormat2kDCP);
-                param->appendOption(kParamFormat2kDCPLabel);
+                param->appendOption(kParamFormat2kDCPLabel, "", kParamFormat2kDCP);
                 assert(param->getNOptions() == eParamFormat4kSuper35);
-                param->appendOption(kParamFormat4kSuper35Label);
+                param->appendOption(kParamFormat4kSuper35Label, "", kParamFormat4kSuper35);
                 assert(param->getNOptions() == eParamFormat4kCinemascope);
-                param->appendOption(kParamFormat4kCinemascopeLabel);
+                param->appendOption(kParamFormat4kCinemascopeLabel, "", kParamFormat4kCinemascope);
                 assert(param->getNOptions() == eParamFormat4kDCP);
-                param->appendOption(kParamFormat4kDCPLabel);
+                param->appendOption(kParamFormat4kDCPLabel, "", kParamFormat4kDCP);
                 assert(param->getNOptions() == eParamFormatSquare256);
-                param->appendOption(kParamFormatSquare256Label);
+                param->appendOption(kParamFormatSquare256Label, "", kParamFormatSquare256);
                 assert(param->getNOptions() == eParamFormatSquare512);
-                param->appendOption(kParamFormatSquare512Label);
+                param->appendOption(kParamFormatSquare512Label, "", kParamFormatSquare512);
                 assert(param->getNOptions() == eParamFormatSquare1k);
-                param->appendOption(kParamFormatSquare1kLabel);
+                param->appendOption(kParamFormatSquare1kLabel, "", kParamFormatSquare1k);
                 assert(param->getNOptions() == eParamFormatSquare2k);
-                param->appendOption(kParamFormatSquare2kLabel);
+                param->appendOption(kParamFormatSquare2kLabel, "", kParamFormatSquare2k);
                 param->setDefault(eParamFormatPCVideo);
                 param->setHint(kParamGeneratorFormatHint);
                 param->setAnimates(false);

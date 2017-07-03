@@ -112,7 +112,7 @@ private:
 
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     template <int nComponents>
     void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
@@ -287,7 +287,8 @@ AdjustRoDPlugin::render(const RenderArguments &args)
 bool
 AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
                             Clip * &identityClip,
-                            double & /*identityTime*/)
+                            double & /*identityTime*/
+                            , int& /*view*/, std::string& /*plane*/)
 {
     double w, h;
 

@@ -106,7 +106,7 @@ public:
 
 private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     // override the rod call
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
@@ -276,7 +276,8 @@ PositionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
 bool
 PositionPlugin::isIdentity(const IsIdentityArguments &args,
                            Clip * &identityClip,
-                           double & /*identityTime*/)
+                           double & /*identityTime*/
+                           , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     double par = _dstClip->getPixelAspectRatio();

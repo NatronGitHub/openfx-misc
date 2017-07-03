@@ -169,6 +169,7 @@ CImg.h: Inpaint/inpaint.h
 
 Inpaint/inpaint.h:
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/inpaint.h
+	patch -p0 -d. < Inpaint/inpaint.h.patch
 
 nlmeans.h:
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/nlmeans.h

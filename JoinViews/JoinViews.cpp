@@ -91,7 +91,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(PixelProcessorFilterBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -151,7 +151,8 @@ JoinViewsPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 bool
 JoinViewsPlugin::isIdentity(const IsIdentityArguments &args,
                             Clip * &identityClip,
-                            double & /*identityTime*/)
+                            double & /*identityTime*/
+                            , int& /*view*/, std::string& /*plane*/)
 {
     if (args.view == 0) {
         identityClip = _srcLeftClip;

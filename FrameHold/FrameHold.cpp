@@ -100,7 +100,7 @@ private:
     virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
@@ -180,7 +180,8 @@ FrameHoldPlugin::render(const RenderArguments & /*args*/)
 bool
 FrameHoldPlugin::isIdentity(const IsIdentityArguments &args,
                             Clip * &identityClip,
-                            double &identityTime)
+                            double &identityTime
+                            , int& /*view*/, std::string& /*plane*/)
 {
     identityClip = _srcClip;
     identityTime = getSourceTime(args.time);

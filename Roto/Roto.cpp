@@ -317,7 +317,7 @@ private:
 
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     template <int nComponents>
     void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
@@ -523,7 +523,8 @@ RotoPlugin::render(const RenderArguments &args)
 bool
 RotoPlugin::isIdentity(const IsIdentityArguments &args,
                        Clip * &identityClip,
-                       double & /*identityTime*/)
+                       double & /*identityTime*/
+                       , int& /*view*/, std::string& /*plane*/)
 {
     if (!_srcClip || !_srcClip->isConnected()) {
         return false;

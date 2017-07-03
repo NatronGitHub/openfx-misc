@@ -142,7 +142,7 @@ private:
     /** @brief get the clip preferences */
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 #ifdef OFX_EXTENSIONS_NUKE
-    virtual void getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+    virtual OfxStatus getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
 #endif
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
@@ -286,15 +286,15 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    std::vector<std::string> components;
-    _srcClip->getComponentsPresent(&components);
+    std::vector<std::string> planes;
+    _srcClip->getPlanesPresent(&planes);
 
     // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
     int rows, columns;
     if ( !_autoDims->getValueAtTime(time) ) {
         _rowsColumns->getValueAtTime(time, rows, columns);
     } else {
-        std::size_t n = components.size();
+        std::size_t n = planes.size();
         double w = rod.x2 - rod.x1;
         double h = rod.y2 - rod.y1;
         double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
@@ -303,7 +303,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
         rows = std::ceil( n / (double) columns);
     }
 
-    for (std::size_t layer = 0; layer < components.size(); ++layer) {
+    for (std::size_t layer = 0; layer < planes.size(); ++layer) {
         int r = layer / columns;
         int c = layer % columns;
         if (r >= rows) {
@@ -335,7 +335,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
             //render:
             //- get the the src Image
             std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                           _srcClip->fetchImagePlane(time, components[layer].c_str()) : 0 );
+                                           _srcClip->fetchImagePlane(time, planes[layer].c_str()) : 0 );
             if ( src.get() ) {
                 if ( (src->getRenderScale().x != args.renderScale.x) ||
                     ( src->getRenderScale().y != args.renderScale.y) ||
@@ -432,7 +432,7 @@ LayerContactSheetPlugin::getClipPreferences(OFX::ClipPreferencesSetter & clipPre
 }
 
 #ifdef OFX_EXTENSIONS_NUKE
-void
+OfxStatus
 LayerContactSheetPlugin::getClipComponents(const ClipComponentsArguments& args,
                                            ClipComponentsSetter& clipComponents)
 {
@@ -440,12 +440,16 @@ LayerContactSheetPlugin::getClipComponents(const ClipComponentsArguments& args,
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
 
     // produces RGBA only
-    clipComponents.addClipComponents(*_dstClip, ePixelComponentRGBA);
+    clipComponents.addClipPlane(*_dstClip, kFnOfxImagePlaneColour);
 
     // ask for the first rows * cols first components from the input
-    std::vector<std::string> components;
-    _srcClip->getComponentsPresent(&components);
+    std::vector<std::string> planes;
+    _srcClip->getPlanesPresent(&planes);
+    for (size_t layer = 0; layer < planes.size(); ++layer) {
+        clipComponents.addClipPlane(*_srcClip, planes[layer]);
+    }
 
+    return kOfxStatReplyDefault;
 }
 #endif
 
@@ -559,15 +563,15 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
         }
     }
 
-    std::vector<std::string> components;
-    _srcClip->getComponentsPresent(&components);
+    std::vector<std::string> planes;
+    _srcClip->getPlanesPresent(&planes);
 
     // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
     int rows, columns;
     if ( !_autoDims->getValueAtTime(time) ) {
         _rowsColumns->getValueAtTime(time, rows, columns);
     } else {
-        std::size_t n = components.size();
+        std::size_t n = planes.size();
         double w = rod.x2 - rod.x1;
         double h = rod.y2 - rod.y1;
         double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
@@ -587,8 +591,8 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
     shadow.x = 2. / (projection[0] * viewport[2]);
     shadow.y = 2. / (projection[5] * viewport[3]);
 
-    for (std::size_t layer = 0; layer < components.size(); ++layer) {
-        std::string name = components[layer];
+    for (std::size_t layer = 0; layer < planes.size(); ++layer) {
+        std::string name = planes[layer];
         {
             std::size_t first_underline = name.find_first_of('_');
             std::size_t second_underline = std::string::npos;
@@ -597,6 +601,20 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
                 name = name.substr(first_underline + 1, second_underline - (first_underline + 1));
             }
         }
+        std::string prefix("uk.co.thefoundry.OfxImagePlane");
+        if (!name.compare(0, prefix.size(), prefix)) {
+            name = name.substr(prefix.size());
+            if (name == "Colour") {
+                name = "Color"; // US English
+            }
+        }
+
+        /** @brief string to indicate a 2D right stereo disparity image plane be fetched.
+         
+         Passed to FnOfxImageEffectPlaneSuiteV1::clipGetImagePlane \e plane argument.
+         */
+#define kFnOfxImagePlaneStereoDisparityRight "uk.co.thefoundry.OfxImagePlaneStereoDisparityRight"
+
         int r = layer / columns;
         int c = layer % columns;
         if (r >= rows) {

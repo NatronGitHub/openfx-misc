@@ -427,7 +427,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(AddProcessorBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
@@ -585,7 +585,8 @@ AddPlugin::render(const RenderArguments &args)
 bool
 AddPlugin::isIdentity(const IsIdentityArguments &args,
                       Clip * &identityClip,
-                      double & /*identityTime*/)
+                      double & /*identityTime*/
+                    , int& /*view*/, std::string& /*plane*/)
 {
     double mix;
 

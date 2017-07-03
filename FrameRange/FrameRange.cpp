@@ -118,7 +118,7 @@ public:
 private:
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 #ifdef OFX_EXTENSIONS_NUKE
@@ -233,7 +233,8 @@ FrameRangePlugin::render(const RenderArguments &args)
 bool
 FrameRangePlugin::isIdentity(const IsIdentityArguments &args,
                              Clip * &identityClip,
-                             double &identityTime)
+                             double &identityTime
+                             , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     OfxPointI range = _frameRange->getValue();

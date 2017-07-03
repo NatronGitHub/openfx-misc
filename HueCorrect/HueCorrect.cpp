@@ -493,7 +493,7 @@ public:
 
 private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
@@ -672,7 +672,8 @@ HueCorrectPlugin::render(const RenderArguments &args)
 bool
 HueCorrectPlugin::isIdentity(const IsIdentityArguments &args,
                              Clip * &identityClip,
-                             double & /*identityTime*/)
+                             double & /*identityTime*/
+                             , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );

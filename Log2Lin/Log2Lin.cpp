@@ -491,7 +491,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(Log2LinProcessorBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
@@ -689,7 +689,8 @@ Log2LinPlugin::renderForBitDepth(const RenderArguments &args)
 bool
 Log2LinPlugin::isIdentity(const IsIdentityArguments &args,
                           Clip * &identityClip,
-                          double & /*identityTime*/)
+                          double & /*identityTime*/
+                          , int& /*view*/, std::string& /*plane*/)
 {
     //std::cout << "isIdentity!\n";
     const double time = args.time;
