@@ -4,6 +4,7 @@ TestRender.o \
 TestPosition.o \
 TestGroups.o \
 TestOpenGL.o TestOpenGLRenderGL.o  TestOpenGLRenderMesa.o \
+TestWarp.o TestWarpRenderGL.o  TestWarpRenderMesa.o \
 
 PLUGINNAME = Test
 

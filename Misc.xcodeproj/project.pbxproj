@@ -343,6 +343,9 @@
 		1E3AC8D018B6207600F228A6 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E3AC8D218B6207600F228A6 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E3AC8E018B6216200F228A6 /* Switch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3AC8DF18B6215F00F228A6 /* Switch.cpp */; };
+		1E3ADC281F0D2EE40044C727 /* TestWarp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3ADC231F0D2EDD0044C727 /* TestWarp.cpp */; };
+		1E3ADC291F0D2EEF0044C727 /* TestWarpRenderGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3ADC261F0D2EDD0044C727 /* TestWarpRenderGL.cpp */; };
+		1E3ADC2A1F0D2EF20044C727 /* TestWarpRenderMesa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3ADC271F0D2EDD0044C727 /* TestWarpRenderMesa.cpp */; };
 		1E3E3CBE17995D5C005F2132 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E3E3CBF17995D5C005F2132 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E3E3CC017995D5C005F2132 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -3399,6 +3402,11 @@
 		1E3AC8DD18B6215F00F228A6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E3AC8DE18B6215F00F228A6 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E3AC8DF18B6215F00F228A6 /* Switch.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Switch.cpp; sourceTree = "<group>"; };
+		1E3ADC231F0D2EDD0044C727 /* TestWarp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestWarp.cpp; sourceTree = "<group>"; };
+		1E3ADC241F0D2EDD0044C727 /* TestWarp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestWarp.h; sourceTree = "<group>"; };
+		1E3ADC251F0D2EDD0044C727 /* TestWarpRender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestWarpRender.h; sourceTree = "<group>"; };
+		1E3ADC261F0D2EDD0044C727 /* TestWarpRenderGL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestWarpRenderGL.cpp; sourceTree = "<group>"; };
+		1E3ADC271F0D2EDD0044C727 /* TestWarpRenderMesa.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestWarpRenderMesa.cpp; sourceTree = "<group>"; };
 		1E3E3CA417995BEE005F2132 /* ColorLookup.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorLookup.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsCore.cpp; sourceTree = "<group>"; };
 		1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsImageEffect.cpp; sourceTree = "<group>"; };
@@ -5765,6 +5773,11 @@
 				1E2868C61B82408700B18774 /* TestOpenGLRender.h */,
 				1E2868C71B8324F700B18774 /* TestOpenGLRenderGL.cpp */,
 				1E2868C91B83269100B18774 /* TestOpenGLRenderMesa.cpp */,
+				1E3ADC231F0D2EDD0044C727 /* TestWarp.cpp */,
+				1E3ADC241F0D2EDD0044C727 /* TestWarp.h */,
+				1E3ADC251F0D2EDD0044C727 /* TestWarpRender.h */,
+				1E3ADC261F0D2EDD0044C727 /* TestWarpRenderGL.cpp */,
+				1E3ADC271F0D2EDD0044C727 /* TestWarpRenderMesa.cpp */,
 				1EBAEFCB199A81AA0037B3E6 /* Info.plist */,
 				1EBAEFCC199A81AA0037B3E6 /* Makefile */,
 			);
@@ -8714,10 +8727,13 @@
 				1EBAEFD8199A81DB0037B3E6 /* ofxsMultiThread.cpp in Sources */,
 				1EBAEFD9199A81DB0037B3E6 /* ofxsParams.cpp in Sources */,
 				1EE72C141B525906001B0245 /* ofxsShutter.cpp in Sources */,
+				1E3ADC281F0D2EE40044C727 /* TestWarp.cpp in Sources */,
 				1EBAEFDA199A81DB0037B3E6 /* ofxsProperty.cpp in Sources */,
 				1EF77BD81E4B6438005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1EF77BE71E4B644B005C4845 /* tinythread.cpp in Sources */,
+				1E3ADC2A1F0D2EF20044C727 /* TestWarpRenderMesa.cpp in Sources */,
 				1EBAEFDB199A81DB0037B3E6 /* ofxsPropertyValidation.cpp in Sources */,
+				1E3ADC291F0D2EEF0044C727 /* TestWarpRenderGL.cpp in Sources */,
 				1E2868C81B8324F700B18774 /* TestOpenGLRenderGL.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
