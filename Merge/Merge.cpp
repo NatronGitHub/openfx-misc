@@ -337,8 +337,12 @@ public:
         _srcImgB = B;
     }
 
-    void setMaskImg(const Image *v,
-                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+    void setMaskInvert(bool invert)
+    {
+         _maskInvert = invert;
+    }
+
+    void setMaskImg(const Image *v) { _maskImg = v; }
 
     void setRotoMaskImg(const std::vector<const Image*>& rotoMaskAs, const Image *rotoMaskB) {
         _rotoMaskImgAs = rotoMaskAs;
@@ -409,6 +413,9 @@ private:
                         const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgB->getPixelAddress(x, y);
                         if (rotoMaskPix) {
                             b = *rotoMaskPix / (float)maxValue;
+                            if (_maskInvert) {
+                                b = 1. - b;
+                            }
                         }
                     }
 
@@ -445,6 +452,9 @@ private:
                                 a = *rotoMaskPix / (float)maxValue;
                             } else {
                                 a = 0.;
+                            }
+                            if (_maskInvert) {
+                                a = 1. - a;
                             }
                             // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
                             if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
@@ -514,6 +524,9 @@ private:
                                     a = *rotoMaskPix / (float)maxValue;
                                 } else {
                                     a = 0.;
+                                }
+                                if (_maskInvert) {
+                                    a = 1. - a;
                                 }
                                 // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
                                 if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
@@ -959,15 +972,17 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
 
     std::auto_ptr<const Image> mask(maskImage);
 
+    bool maskInvert = _maskInvert->getValueAtTime(time);
+    processor.setMaskInvert(maskInvert);
+
     // do we do masking
     if (doMasking) {
-        bool maskInvert = _maskInvert->getValueAtTime(time);
 
         // say we are masking
         processor.doMasking(true);
 
         // Set it in the processor
-        processor.setMaskImg(mask.get(), maskInvert);
+        processor.setMaskImg(mask.get());
     }
 
     const Image* rotoMaskImgB = 0;
