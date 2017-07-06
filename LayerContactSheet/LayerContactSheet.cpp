@@ -299,8 +299,8 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
         double h = rod.y2 - rod.y1;
         double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
         double sh = srcFormatCanonical.y2 - srcFormatCanonical.y1;
-        columns = std::ceil( std::sqrt( (n * w * sh) / (h * sw) ) );
-        rows = std::ceil( n / (double) columns);
+        columns = (int)std::max( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) );
+        rows = (int)std::ceil( n / (double) columns);
     }
 
     for (std::size_t layer = 0; layer < planes.size(); ++layer) {
@@ -576,8 +576,8 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
         double h = rod.y2 - rod.y1;
         double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
         double sh = srcFormatCanonical.y2 - srcFormatCanonical.y1;
-        columns = std::ceil( std::sqrt( (n * w * sh) / (h * sw) ) );
-        rows = std::ceil( n / (double) columns);
+        columns = (int)std::max( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) );
+        rows = (int)std::ceil( n / (double) columns);
     }
 
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
