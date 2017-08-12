@@ -536,7 +536,17 @@ private:
                                     }
                                 }
                             }
-                            
+
+                            // Update b from the previously computed value.
+                            // see https://github.com/MrKepzie/Natron/issues/1648
+                            if (nComponents == 4) {
+                                b = tmpPix[nComponents - 1];
+                            } else if (nComponents == 1) {
+                                b = tmpPix[0];
+                            } else {
+                                b = 1.;
+                            }
+
                             mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
                             
 #                         ifdef DEBUG
