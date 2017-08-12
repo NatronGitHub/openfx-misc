@@ -2968,6 +2968,9 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
             srcRodPixel.x2 = format.x2;
             srcRodPixel.y2 = format.y2;
         }
+        if (OFX::Coords::rectIsEmpty(srcRodPixel)) {
+            return false;
+        }
         const int step = 10;
         const double w= (srcRodPixel.x2 - srcRodPixel.x1);
         const double h= (srcRodPixel.y2 - srcRodPixel.y1);
