@@ -998,6 +998,13 @@ MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
+    // The output of Merge should always have an Alpha component.
+    // For example, if B is RGB, B is considered transparent, so
+    // that outside of A the output should be transparent.
+    // Thus, if A and B are RGB, output should be RGBA.
+    if (outputComps == ePixelComponentRGB) {
+        outputComps = ePixelComponentRGBA;
+    }
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
     for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
         clipPreferences.setClipComponents(*_srcClipAs[i], outputComps);
