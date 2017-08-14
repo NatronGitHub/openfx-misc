@@ -22,6 +22,7 @@
  * References:
  * https://www.shadertoy.com (v0.8.8 https://www.shadertoy.com/changelog)
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
+ * https://shadertoyunofficial.wordpress.com/2016/07/22/compatibility-issues-in-shadertoy-webglsl/#webgl2
  *
  * TODO:
  * - upgrade to Shaderttoy 0.9.1:
@@ -32,6 +33,7 @@
  *      GLSL 3.30 https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.3.30.pdf
  *      Note that this probably means we have to switch to an OpenGL Core profile,
  *      so the host must give us an OpenGL Core context.
+ *      See also: https://shadertoyunofficial.wordpress.com/2017/02/16/webgl-2-0-vs-webgl-1-0/
  * - add multipass support (using tabs for UI as in shadertoys)
  * - synthclipse-compatible comments http://synthclipse.sourceforge.net/user_guide/fragx/commands.html
  * - use .stoy for the presets shaders, and add the default shadertoy uniforms at the beginning, as in http://synthclipse.sourceforge.net/user_guide/shadertoy.html
@@ -236,6 +238,7 @@ using std::string;
     "float	iFrameRate	image	Number of frames rendered per second\n" \
     "float	iChannelTime["STRINGISE(NBINPUTS)"]	image	Time for channel (if video or sound), in seconds\n" \
     "vec3	iChannelResolution["STRINGISE(NBINPUTS)"]	image/sound	Input texture resolution for each channel\n" \
+    "vec2   iChannelOffset["STRINGISE(NBINPUTS)"]   image   Input texture offset in pixel coords for each channel\n" \
     "vec4	iMouse	image	xy = current pixel coords (if LMB is down). zw = click pixel\n" \
     "sampler2D	iChannel{i}	image/sound	Sampler for input textures i\n" \
     "vec4	iDate	image/sound	Year, month, day, time in seconds in .xyzw\n" \
@@ -250,6 +253,7 @@ using std::string;
     "OpenFX extensions to Shadertoy\n" \
     "\n" \
     "* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect. For compatibility with Shadertoy, the first line that starts with `const vec2 iRenderScale` is ignored (the full line should be `const vec2 iRenderScale = vec2(1.,1.);`).\n" \
+    "* The pre-defined `iChannelOffset` uniform contains the texture offset for each channel relative to channel 0. For compatibility with Shadertoy, the first line that starts with `const vec2 iChannelOffset` is ignored (the full line should be `const vec2 iChannelOffset[4] = vec2[4]( vec2(0.,0.), vec2(0.,0.), vec2(0.,0.), vec2(0.,0.) );`).\n" \
     "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = vec2(5., 5.);`.\n" \
     "  These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).\n" \
     "  A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.\n" \
@@ -444,6 +448,7 @@ using std::string;
     "float | iFrameRate | image | Number of frames rendered per second\n" \
     "float | iChannelTime["STRINGISE (NBINPUTS)"] | image | Time for channel (if video or sound), in seconds\n" \
     "vec3 | iChannelResolution["STRINGISE (NBINPUTS)"] | image/sound | Input texture resolution for each channel\n" \
+    "vec2 | iChannelOffset["STRINGISE(NBINPUTS)"] | image | Input texture offset in pixel coords for each channel\n" \
     "vec4 | iMouse | image | xy = current pixel coords (if LMB is down). zw = click pixel\n" \
     "sampler2D | iChannel{i} | image/sound | Sampler for input textures i\n" \
     "vec4 | iDate | image/sound | Year, month, day, time in seconds in .xyzw\n" \
@@ -458,6 +463,7 @@ using std::string;
     "### OpenFX extensions to Shadertoy\n" \
     "\n" \
     "* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect. For compatibility with Shadertoy, the first line that starts with `const vec2 iRenderScale` is ignored (the full line should be `const vec2 iRenderScale = vec2(1.,1.);`).\n" \
+    "* The pre-defined `iChannelOffset` uniform contains the texture offset for each channel relative to channel 0. For compatibility with Shadertoy, the first line that starts with `const vec2 iChannelOffset` is ignored (the full line should be `const vec2 iChannelOffset[4] = vec2[4]( vec2(0.,0.), vec2(0.,0.), vec2(0.,0.), vec2(0.,0.) );`).\n" \
     "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = vec2(5., 5.);`.\n" \
     "  These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).\n" \
     "  A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.\n" \
@@ -498,6 +504,7 @@ using std::string;
     "uniform int       iFrame;                // shader playback frame\n" \
     "uniform float     iChannelTime["STRINGISE (NBINPUTS)"];       // channel playback time (in seconds)\n" \
     "uniform vec3      iChannelResolution["STRINGISE (NBINPUTS)"]; // channel resolution (in pixels)\n" \
+    "uniform vec2      iChannelOffset["STRINGISE (NBINPUTS)"]; // channel texture offset relative to iChannel0 (in pixels)\n" \
     "uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click\n" \
     "uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube\n" \
     "uniform vec4      iDate;                 // (year, month, day, time in seconds)\n" \

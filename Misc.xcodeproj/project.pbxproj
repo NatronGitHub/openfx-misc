@@ -404,6 +404,18 @@
 		1E53BFA41C75D20300623EE0 /* ColorBars.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E53BF891C75CD8100623EE0 /* ColorBars.cpp */; };
 		1E53E2F21B359A010082B2AB /* ofxsGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E75A0311A87BA37005BAA36 /* ofxsGenerator.cpp */; };
 		1E53E2F31B359A020082B2AB /* ofxsGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E75A0311A87BA37005BAA36 /* ofxsGenerator.cpp */; };
+		1E5460391F41E060008D6932 /* bilateralfilter-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E54602F1F41E02A008D6932 /* bilateralfilter-natron.frag.glsl */; };
+		1E54603A1F41E060008D6932 /* bloompostproc-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E5460301F41E02A008D6932 /* bloompostproc-natron.frag.glsl */; };
+		1E54603B1F41E060008D6932 /* blurpoissondisc-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E5460311F41E02A008D6932 /* blurpoissondisc-natron.frag.glsl */; };
+		1E54603C1F41E060008D6932 /* circularblur-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E5460321F41E02A008D6932 /* circularblur-natron.frag.glsl */; };
+		1E54603D1F41E060008D6932 /* fastblur-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E5460331F41E02A008D6932 /* fastblur-natron.frag.glsl */; };
+		1E54603E1F41E060008D6932 /* gaussianblur-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E5460341F41E02A008D6932 /* gaussianblur-natron.frag.glsl */; };
+		1E54603F1F41E060008D6932 /* mipmapblur-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E5460351F41E02A008D6932 /* mipmapblur-natron.frag.glsl */; };
+		1E5460401F41E060008D6932 /* mipmapblur.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E5460361F41E02A008D6932 /* mipmapblur.frag.glsl */; };
+		1E5460411F41E060008D6932 /* montecarloblur-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E5460371F41E02A008D6932 /* montecarloblur-natron.frag.glsl */; };
+		1E5460421F41E060008D6932 /* radialblur-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E5460381F41E02A008D6932 /* radialblur-natron.frag.glsl */; };
+		1E54606F1F41F43B008D6932 /* imagecelshade-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E54606D1F41F40B008D6932 /* imagecelshade-natron.frag.glsl */; };
+		1E5460701F41F43B008D6932 /* sharpen-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E54606E1F41F40B008D6932 /* sharpen-natron.frag.glsl */; };
 		1E57FC8F1ABEC65200AC4EB7 /* net.sf.openfx.AdjustRoDPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06266A1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.png */; };
 		1E57FC901ABEC65200AC4EB7 /* net.sf.openfx.AdjustRoDPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06266B1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.svg */; };
 		1E57FC911ABEC71100AC4EB7 /* net.sf.openfx.IDistort.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626761ABDC65800B3D105 /* net.sf.openfx.IDistort.png */; };
@@ -2437,6 +2449,18 @@
 			dstPath = presets/default;
 			dstSubfolderSpec = 7;
 			files = (
+				1E54606F1F41F43B008D6932 /* imagecelshade-natron.frag.glsl in CopyFiles */,
+				1E5460701F41F43B008D6932 /* sharpen-natron.frag.glsl in CopyFiles */,
+				1E5460391F41E060008D6932 /* bilateralfilter-natron.frag.glsl in CopyFiles */,
+				1E54603A1F41E060008D6932 /* bloompostproc-natron.frag.glsl in CopyFiles */,
+				1E54603B1F41E060008D6932 /* blurpoissondisc-natron.frag.glsl in CopyFiles */,
+				1E54603C1F41E060008D6932 /* circularblur-natron.frag.glsl in CopyFiles */,
+				1E54603D1F41E060008D6932 /* fastblur-natron.frag.glsl in CopyFiles */,
+				1E54603E1F41E060008D6932 /* gaussianblur-natron.frag.glsl in CopyFiles */,
+				1E54603F1F41E060008D6932 /* mipmapblur-natron.frag.glsl in CopyFiles */,
+				1E5460401F41E060008D6932 /* mipmapblur.frag.glsl in CopyFiles */,
+				1E5460411F41E060008D6932 /* montecarloblur-natron.frag.glsl in CopyFiles */,
+				1E5460421F41E060008D6932 /* radialblur-natron.frag.glsl in CopyFiles */,
 				1EA70FC51DF5CDA10039BC64 /* c64.frag.glsl in CopyFiles */,
 				1EA70FC61DF5CDA10039BC64 /* glitchA.frag.glsl in CopyFiles */,
 				1EA70FC71DF5CDA10039BC64 /* glitchB.frag.glsl in CopyFiles */,
@@ -3437,6 +3461,18 @@
 		1E53BF8A1C75CD8100623EE0 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E53BF8B1C75CD8100623EE0 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E53BFA21C75D1D500623EE0 /* ColorBars.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorBars.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E54602F1F41E02A008D6932 /* bilateralfilter-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "bilateralfilter-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E5460301F41E02A008D6932 /* bloompostproc-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "bloompostproc-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E5460311F41E02A008D6932 /* blurpoissondisc-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "blurpoissondisc-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E5460321F41E02A008D6932 /* circularblur-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "circularblur-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E5460331F41E02A008D6932 /* fastblur-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "fastblur-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E5460341F41E02A008D6932 /* gaussianblur-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "gaussianblur-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E5460351F41E02A008D6932 /* mipmapblur-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "mipmapblur-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E5460361F41E02A008D6932 /* mipmapblur.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mipmapblur.frag.glsl; sourceTree = "<group>"; };
+		1E5460371F41E02A008D6932 /* montecarloblur-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "montecarloblur-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E5460381F41E02A008D6932 /* radialblur-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "radialblur-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E54606D1F41F40B008D6932 /* imagecelshade-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "imagecelshade-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E54606E1F41F40B008D6932 /* sharpen-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "sharpen-natron.frag.glsl"; sourceTree = "<group>"; };
 		1E551F5A179950EC00A4135C /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		1E55FCE619F104C70093F33B /* CImg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImg.h; sourceTree = "<group>"; };
 		1E58F9321AD6740D00E00CAE /* ofxNatron.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ofxNatron.h; path = openfx/include/ofxNatron.h; sourceTree = SOURCE_ROOT; };
@@ -5409,28 +5445,35 @@
 		1E738B2E1DF41DB6000F582E /* default */ = {
 			isa = PBXGroup;
 			children = (
+				1E738B451DF41DD3000F582E /* Shadertoy.txt */,
 				1E738B2F1DF41DD3000F582E /* ball.frag.glsl */,
 				1EA70F8F1DF5C0500039BC64 /* barrelblurchroma.frag.glsl */,
 				1E738B301DF41DD3000F582E /* basicfractal.frag.glsl */,
+				1E54602F1F41E02A008D6932 /* bilateralfilter-natron.frag.glsl */,
 				1EA70F901DF5C0500039BC64 /* bilateralfilter.frag.glsl */,
 				1E738B311DF41DD3000F582E /* bleepyblocks.frag.glsl */,
+				1E5460301F41E02A008D6932 /* bloompostproc-natron.frag.glsl */,
 				1EA70F911DF5C0500039BC64 /* bloompostproc.frag.glsl */,
+				1E5460311F41E02A008D6932 /* blurpoissondisc-natron.frag.glsl */,
 				1EA70F921DF5C0500039BC64 /* blurpoissondisc.frag.glsl */,
 				1EA70F6E1DF58D6C0039BC64 /* bubbles.frag.glsl */,
 				1EA70FC21DF5C51B0039BC64 /* c64.frag.glsl */,
 				1E738B321DF41DD3000F582E /* cellular.frag.glsl */,
 				1EA70F931DF5C0500039BC64 /* chromaticaberration.frag.glsl */,
+				1E5460321F41E02A008D6932 /* circularblur-natron.frag.glsl */,
 				1EA70F941DF5C0500039BC64 /* circularblur.frag.glsl */,
 				1EA70F951DF5C0500039BC64 /* cmykhalftone.frag.glsl */,
 				1E738B331DF41DD3000F582E /* colorcircles.frag.glsl */,
 				1E738B341DF41DD3000F582E /* deformflower.frag.glsl */,
 				1E738B351DF41DD3000F582E /* dotdotdot.frag.glsl */,
+				1E5460331F41E02A008D6932 /* fastblur-natron.frag.glsl */,
 				1EA70F961DF5C0500039BC64 /* fastblur.frag.glsl */,
 				1E738B361DF41DD3000F582E /* fastclouds.frag.glsl */,
 				1EA70F971DF5C0500039BC64 /* filmgrain.frag.glsl */,
 				1E738B371DF41DD3000F582E /* fireball.frag.glsl */,
 				1E738B381DF41DD3000F582E /* flaring.frag.glsl */,
 				1E738B391DF41DD3000F582E /* fractaltiling.frag.glsl */,
+				1E5460341F41E02A008D6932 /* gaussianblur-natron.frag.glsl */,
 				1EA70F981DF5C0500039BC64 /* gaussianblur.frag.glsl */,
 				1EA70F991DF5C0500039BC64 /* glitch01.frag.glsl */,
 				1EA70F9A1DF5C0500039BC64 /* glitch02.frag.glsl */,
@@ -5438,6 +5481,7 @@
 				1EA70FC41DF5C51B0039BC64 /* glitchB.frag.glsl */,
 				1E738B3A1DF41DD3000F582E /* glowingthing.frag.glsl */,
 				1EA70F9B1DF5C0500039BC64 /* hdrbloom.frag.glsl */,
+				1E54606D1F41F40B008D6932 /* imagecelshade-natron.frag.glsl */,
 				1EA70F9C1DF5C0500039BC64 /* imagecelshade.frag.glsl */,
 				1E738B3B1DF41DD3000F582E /* infinitefall.frag.glsl */,
 				1E738B3C1DF41DD3000F582E /* inputtime.frag.glsl */,
@@ -5454,7 +5498,10 @@
 				1EA70F9E1DF5C0500039BC64 /* mandelbrotdist.frag.glsl */,
 				1EA70F8C1DF5AD490039BC64 /* mandelbrottrap.frag.glsl */,
 				1EA70F9F1DF5C0500039BC64 /* medianfilter.frag.glsl */,
+				1E5460351F41E02A008D6932 /* mipmapblur-natron.frag.glsl */,
+				1E5460361F41E02A008D6932 /* mipmapblur.frag.glsl */,
 				1EA70F8D1DF5AD490039BC64 /* moneyfilter.frag.glsl */,
+				1E5460371F41E02A008D6932 /* montecarloblur-natron.frag.glsl */,
 				1EA70FA01DF5C0500039BC64 /* montecarloblur.frag.glsl */,
 				1EA70F751DF58D6C0039BC64 /* mpegartifacts.frag.glsl */,
 				1E738B3F1DF41DD3000F582E /* noise.frag.glsl */,
@@ -5467,8 +5514,10 @@
 				1E738B431DF41DD3000F582E /* plasma2.frag.glsl */,
 				1E738B441DF41DD3000F582E /* plasmatriangle.frag.glsl */,
 				1EA70FA21DF5C0500039BC64 /* postprocessing.frag.glsl */,
+				1E5460381F41E02A008D6932 /* radialblur-natron.frag.glsl */,
 				1EA70FA31DF5C0500039BC64 /* radialblur.frag.glsl */,
 				1EA70FA41DF5C0500039BC64 /* raining.frag.glsl */,
+				1E54606E1F41F40B008D6932 /* sharpen-natron.frag.glsl */,
 				1E738B461DF41DD3000F582E /* silexarst.frag.glsl */,
 				1E738B471DF41DD3000F582E /* simplefire.frag.glsl */,
 				1E738B481DF41DD3000F582E /* sinebands.frag.glsl */,
@@ -5488,7 +5537,6 @@
 				1EA70F791DF58D6C0039BC64 /* warptex.frag.glsl */,
 				1E738B501DF41DD3000F582E /* watercaustic.frag.glsl */,
 				1E738B511DF41DD3000F582E /* worleynoisewaters.frag.glsl */,
-				1E738B451DF41DD3000F582E /* Shadertoy.txt */,
 			);
 			path = default;
 			sourceTree = "<group>";
