@@ -536,7 +536,17 @@ private:
                                     }
                                 }
                             }
-                            
+
+                            // Update b from the previously computed value.
+                            // see https://github.com/MrKepzie/Natron/issues/1648
+                            if (nComponents == 4) {
+                                b = tmpPix[nComponents - 1];
+                            } else if (nComponents == 1) {
+                                b = tmpPix[0];
+                            } else {
+                                b = 1.;
+                            }
+
                             mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
                             
 #                         ifdef DEBUG
@@ -1226,6 +1236,15 @@ void
 MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PixelComponentEnum outputComps = getDefaultOutputClipComponents();
+
+    // The output of Merge should always have an Alpha component.
+    // For example, if B is RGB, B is considered transparent, so
+    // that outside of A the output should be transparent.
+    // Thus, if A and B are RGB, output should be RGBA.
+    if (outputComps == ePixelComponentRGB) {
+        outputComps = ePixelComponentRGBA;
+    }
+
     clipPreferences.setClipComponents(*_dstClip, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
     for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
@@ -1295,14 +1314,27 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     }
 
     bool outputChannels[4];
+    bool srcBChannels[4];
     for (int c = 0; c < 4; ++c) {
         _outputChannels[c]->getValueAtTime(time, outputChannels[c]);
+        _bChannels[c]->getValueAtTime(time, srcBChannels[c]);
     }
     if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3] && plane == kFnOfxImagePlaneColour) {
         identityClip = _srcClipB;
 
         return true;
     }
+
+    // For each checked output channels, if srcB channel is unchecked, we are not identity
+    for (int i = 0; i < 4; ++i) {
+        if (!outputChannels[i]) {
+            continue;
+        }
+        if (!srcBChannels[i]) {
+            return false;
+        }
+    }
+
 
     OfxRectI maskRoD;
     bool maskRoDValid = false;
@@ -1329,6 +1361,10 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
         return false;
     }
 
+    if (Coords::rectIsInfinite(args.renderWindow)) {
+        return false;
+    }
+    
     // The region of effect is only the set of the intersections between the A inputs and the mask.
     // If at least one of these regions intersects the renderwindow, the effect is not identity.
 
