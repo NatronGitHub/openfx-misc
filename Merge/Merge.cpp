@@ -536,7 +536,17 @@ private:
                                     }
                                 }
                             }
-                            
+
+                            // Update b from the previously computed value.
+                            // see https://github.com/MrKepzie/Natron/issues/1648
+                            if (nComponents == 4) {
+                                b = tmpPix[nComponents - 1];
+                            } else if (nComponents == 1) {
+                                b = tmpPix[0];
+                            } else {
+                                b = 1.;
+                            }
+
                             mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
                             
 #                         ifdef DEBUG
@@ -611,12 +621,7 @@ public:
 
         _operation = fetchChoiceParam(kParamOperation);
         _operationString = fetchStringParam(kNatronOfxParamStringSublabelName);
-        {
-            MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValue();
-            // depending on the operation, enable/disable alpha masking
-            _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
-            _operationString->setValue( MergeImages2D::getOperationString(operation) );
-        }
+
         _bbox = fetchChoiceParam(kParamBBox);
         _alphaMasking = fetchBooleanParam(kParamAlphaMasking);
         assert(_operation && _operationString && _bbox && _alphaMasking);
@@ -646,6 +651,13 @@ public:
         if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
             _aChannelAChanged = fetchBooleanParam(kParamAChannelsAChanged);
             _bChannelAChanged = fetchBooleanParam(kParamBChannelsAChanged);
+        }
+
+        {
+            MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValue();
+            // depending on the operation, enable/disable alpha masking
+            _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
+            _operationString->setValue( MergeImages2D::getOperationString(operation) );
         }
     }
 
@@ -1232,6 +1244,15 @@ void
 MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PixelComponentEnum outputComps = getDefaultOutputClipComponents();
+
+    // The output of Merge should always have an Alpha component.
+    // For example, if B is RGB, B is considered transparent, so
+    // that outside of A the output should be transparent.
+    // Thus, if A and B are RGB, output should be RGBA.
+    if (outputComps == ePixelComponentRGB) {
+        outputComps = ePixelComponentRGBA;
+    }
+
     clipPreferences.setClipComponents(*_dstClip, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
     for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
