@@ -38,7 +38,7 @@
 #endif
 
 #define SHADERTOY_NBINPUTS 4 // number of input channels (the standard shadertoy has 4 inputs)
-#define SHADERTOY_NBUNIFORMS 7 // number of additional uniforms (if more than 7, Nuke's parameter page goes blank when unfolding the Extra Parameters group)
+#define SHADERTOY_NBUNIFORMS 10 // number of additional uniforms (if more than 7, Nuke's parameter page goes blank when unfolding the Extra Parameters group)
 
 void getShadertoyPluginID(OFX::PluginFactoryArray &ids);
 

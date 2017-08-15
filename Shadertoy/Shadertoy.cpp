@@ -1016,7 +1016,32 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _groupExtra = fetchGroupParam(kGroupExtraParameters);
     _paramCount = fetchIntParam(kParamCount);
     assert(_groupExtra && _paramCount);
-    for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke") ? 7 : NBUNIFORMS; //if more than 7, Nuke's parameter page goes blank when unfolding the Extra Parameters group
+    _paramGroup.resize(nbuniforms);
+    _paramType.resize(nbuniforms);
+    _paramName.resize(nbuniforms);
+    _paramLabel.resize(nbuniforms);
+    _paramHint.resize(nbuniforms);
+    _paramValueBool.resize(nbuniforms);
+    _paramValueInt.resize(nbuniforms);
+    _paramValueFloat.resize(nbuniforms);
+    _paramValueVec2.resize(nbuniforms);
+    _paramValueVec3.resize(nbuniforms);
+    _paramValueVec4.resize(nbuniforms);
+    _paramDefaultBool.resize(nbuniforms);
+    _paramDefaultInt.resize(nbuniforms);
+    _paramDefaultFloat.resize(nbuniforms);
+    _paramDefaultVec2.resize(nbuniforms);
+    _paramDefaultVec3.resize(nbuniforms);
+    _paramDefaultVec4.resize(nbuniforms);
+    _paramMinInt.resize(nbuniforms);
+    _paramMinFloat.resize(nbuniforms);
+    _paramMinVec2.resize(nbuniforms);
+    _paramMaxInt.resize(nbuniforms);
+    _paramMaxFloat.resize(nbuniforms);
+    _paramMaxVec2.resize(nbuniforms);
+    for (unsigned i = 0; i < nbuniforms; ++i) {
         // generate the number string
         string nb = unsignedToString(i);
         _paramGroup[i]      = fetchGroupParam   (kGroupParameter  + nb);
@@ -1047,7 +1072,6 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
     assert(_enableGPU);
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     if (!gHostDescription.supportsOpenGLRender) {
         _enableGPU->setEnabled(false);
     }
@@ -1425,7 +1449,7 @@ ShadertoyPlugin::updateExtra()
                 _paramCount->setValue( _imageShaderExtraParameters.size() );
                 uniformsChanged = true;
             }
-            for (unsigned i = 0; i < _imageShaderExtraParameters.size(); ++i) {
+            for (unsigned i = 0; i < std::min(_paramType.size(), _imageShaderExtraParameters.size()); ++i) {
                 const ExtraParameter& p = _imageShaderExtraParameters[i];
                 UniformTypeEnum t = p.getType();
                 bool nChanged = false; // did the param name change? (required shader recompilation to get the uniform address)
@@ -2457,7 +2481,9 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke") ? 7 : NBUNIFORMS; //if more than 7, Nuke's parameter page goes blank when unfolding the Extra Parameters group
+    for (unsigned i = 0; i < nbuniforms; ++i) {
         // generate the number string
         string nb = unsignedToString(i);
         defineBooleanSub(desc, nb, kParamValueBool, kParamValueLabel, kParamValueHint, true, page, NULL);
@@ -2901,8 +2927,8 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 IntParamDescriptor* param = desc.defineIntParam(kParamCount);
                 param->setLabel(kParamCountLabel);
                 param->setHint(kParamCountHint);
-                param->setRange(0, NBUNIFORMS);
-                param->setDisplayRange(0, NBUNIFORMS);
+                param->setRange(0, nbuniforms);
+                param->setDisplayRange(0, nbuniforms);
                 param->setAnimates(false);
                 if (page) {
                     page->addChild(*param);
@@ -2912,7 +2938,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 }
             }
 
-            for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+            for (unsigned i = 0; i < nbuniforms; ++i) {
                 // generate the number string
                 string nb = unsignedToString(i);
                 GroupParamDescriptor* pgroup = desc.defineGroupParam(kGroupParameter + nb);

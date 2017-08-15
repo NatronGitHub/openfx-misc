@@ -926,6 +926,7 @@ static std::string fsHeader =
     "uniform vec2      ifFragCoordOffsetUniform;\n"
     "uniform vec2      iRenderScale;\n" // the OpenFX renderscale
     "uniform vec2      iChannelOffset["STRINGISE (NBINPUTS)"];\n"
+    "#define texture texture2D\n" // for some compatibility with newer Shadertoy
 ;
 
 // https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/fragment_main_image.glsl
