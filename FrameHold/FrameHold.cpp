@@ -90,6 +90,8 @@ public:
         _increment = fetchIntParam(kParamIncrement);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_firstFrame && _increment && _sublabel);
+
+        updateSublabel(0);
     }
 
 private:
@@ -311,7 +313,7 @@ FrameHoldPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecretAndDisabled(true); // always secret
-        param->setIsPersistent(true);
+        param->setIsPersistent(false);
         param->setEvaluateOnChange(false);
         param->setDefault("frame 0");
         if (page) {
