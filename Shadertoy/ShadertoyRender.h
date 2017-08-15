@@ -1480,6 +1480,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                         getBboxInfo(fragmentShader, _imageShaderBBox);
                     } // for (i = 0; i < count; i++) {
                 }
+
+                std::sort(_imageShaderExtraParameters.begin(), _imageShaderExtraParameters.end(), ExtraParameter::less_than_pos());
                 imageShaderParamsUpdated = true;
             } // if (_imageShaderUpdateParams)
 

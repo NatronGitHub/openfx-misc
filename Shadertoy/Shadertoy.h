@@ -110,6 +110,13 @@ public:
             double f[4]; // float, vec2, vec3, vec4
         };
 
+        struct less_than_pos
+        {
+            inline bool operator() (const ExtraParameter& struct1, const ExtraParameter& struct2)
+            {
+                return (struct1._pos < struct2._pos);
+            }
+        };
 private:
         UniformTypeEnum _type;
         std::string _name;
@@ -120,6 +127,7 @@ private:
         ExtraParameterValue _max;
         //ExtraParameterValue _displayMin;
         //ExtraParameterValue _displayMax;
+        int _pos;
 
 public:
         ExtraParameter()
@@ -173,6 +181,7 @@ public:
                 //_displayMax.f[0] = DBL_MAX;
                 break;
             }
+            _pos = -1;
         }
 
         UniformTypeEnum getType() const
@@ -180,49 +189,59 @@ public:
             return _type;
         }
 
-        const std::string&getName() const
+        const std::string& getName() const
         {
             return _name;
         }
 
-        const std::string&getLabel() const
+        const std::string& getLabel() const
         {
             return _label;
         }
 
-        const std::string&getHint() const
+        const std::string& getHint() const
         {
             return _hint;
         }
 
-        ExtraParameterValue&getDefault()
+        ExtraParameterValue& getDefault()
         {
             return _default;
         }
 
-        const ExtraParameterValue&getDefault() const
+        const ExtraParameterValue& getDefault() const
         {
             return _default;
         }
 
-        ExtraParameterValue&getMin()
+        ExtraParameterValue& getMin()
         {
             return _min;
         }
 
-        const ExtraParameterValue&getMin() const
+        const ExtraParameterValue& getMin() const
         {
             return _min;
         }
 
-        ExtraParameterValue&getMax()
+        ExtraParameterValue& getMax()
         {
             return _max;
         }
 
-        const ExtraParameterValue&getMax() const
+        const ExtraParameterValue& getMax() const
         {
             return _max;
+        }
+
+        int getPos()
+        {
+            return _pos;
+        }
+
+        void setPos(int pos)
+        {
+            _pos = pos;
         }
 
         void setLabel(const std::string& label)
