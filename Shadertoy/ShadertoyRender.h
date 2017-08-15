@@ -134,7 +134,7 @@ struct ShadertoyShader
     ShadertoyShader()
         : program(0)
         , iResolutionLoc(-1)
-        , iGlobalTimeLoc(-1)
+        , iTimeLoc(-1)
         , iTimeDeltaLoc(-1)
         , iFrameLoc(-1)
         , iChannelTimeLoc(-1)
@@ -152,7 +152,7 @@ struct ShadertoyShader
 
     GLuint program;
     GLint iResolutionLoc;
-    GLint iGlobalTimeLoc;
+    GLint iTimeLoc;
     GLint iTimeDeltaLoc;
     GLint iFrameLoc;
     GLint iChannelTimeLoc;
@@ -877,7 +877,7 @@ static std::string vsSource = "void main() { gl_Position = ftransform(); }";
    precision mediump sampler2D;
 
    uniform vec3      iResolution;                  // viewport resolution (in pixels)
-   uniform float     iGlobalTime;                  // shader playback time (in seconds)
+   uniform float     iTime;                        // shader playback time (in seconds)
    uniform vec4      iMouse;                       // mouse pixel coords
    uniform vec4      iDate;                        // (year, month, day, time in seconds)
    uniform float     iSampleRate;                  // sound sample rate (i.e., 44100)
@@ -915,6 +915,7 @@ static std::string fsHeader =
 #endif
     "uniform vec3      iResolution;\n"
     "uniform float     iGlobalTime;\n"
+    "uniform float     iTime;\n"
     "uniform float     iTimeDelta;\n"
     "uniform int       iFrame;\n"
     "uniform float     iChannelTime["STRINGISE (NBINPUTS)"];\n"
@@ -1297,7 +1298,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 return;
             }
             shadertoy->iResolutionLoc        = glGetUniformLocation(program, "iResolution");
-            shadertoy->iGlobalTimeLoc        = glGetUniformLocation(program, "iGlobalTime");
+            shadertoy->iTimeLoc        = glGetUniformLocation(program, "iTime");
+            if (shadertoy->iTimeLoc == -1) {
+                // for backward compatibility with older (pre-0.9.3) shaders
+                shadertoy->iTimeLoc        = glGetUniformLocation(program, "iGlobalTime");
+            }
             shadertoy->iTimeDeltaLoc         = glGetUniformLocation(program, "iTimeDelta");
             shadertoy->iFrameLoc             = glGetUniformLocation(program, "iFrame");
             shadertoy->iChannelTimeLoc       = glGetUniformLocation(program, "iChannelTime");
@@ -1367,6 +1372,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                             }
 
                             if ( (name == "iResolution") ||
+                                 ( name == "iTime") ||
                                  ( name == "iGlobalTime") ||
                                  ( name == "iTimeDelta") ||
                                  ( name == "iFrame") ||
@@ -1668,8 +1674,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderPassRenderer.m#L329
         glUniform3f (shadertoy->iResolutionLoc, width, height, 1.);
     }
-    if (shadertoy->iGlobalTimeLoc >= 0) {
-        glUniform1f (shadertoy->iGlobalTimeLoc, t);
+    if (shadertoy->iTimeLoc >= 0) {
+        glUniform1f (shadertoy->iTimeLoc, t);
     }
     if (shadertoy->iTimeDeltaLoc >= 0) {
         glUniform1f (shadertoy->iTimeDeltaLoc, 1 / fps); // is that it?

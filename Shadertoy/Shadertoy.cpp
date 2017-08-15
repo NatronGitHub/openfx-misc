@@ -232,7 +232,7 @@ using std::string;
     "\n" \
     "Shadertoy Inputs\n" \
     "vec3	iResolution	image	The viewport resolution (z is pixel aspect ratio, usually 1.0)\n" \
-    "float	iGlobalTime	image/sound	Current time in seconds\n" \
+    "float	iTime	image/sound	Current time in seconds\n" \
     "float	iTimeDelta	image	Time it takes to render a frame, in seconds\n" \
     "int	iFrame	image	Current frame\n" \
     "float	iFrameRate	image	Number of frames rendered per second\n" \
@@ -442,7 +442,7 @@ using std::string;
     "Type | Name | Function | Description\n" \
     "--- | --- | --- | ---\n" \
     "vec3 | iResolution | image | The viewport resolution (z is pixel aspect ratio, usually 1.0)\n" \
-    "float | iGlobalTime | image/sound | Current time in seconds\n" \
+    "float | iTime | image/sound | Current time in seconds\n" \
     "float | iTimeDelta | image | Time it takes to render a frame, in seconds\n" \
     "int | iFrame | image | Current frame\n" \
     "float | iFrameRate | image | Number of frames rendered per second\n" \
@@ -499,7 +499,7 @@ using std::string;
 #define kShaderInputsHint \
     "Shader Inputs:\n" \
     "uniform vec3      iResolution;           // viewport resolution (in pixels)\n" \
-    "uniform float     iGlobalTime;           // shader playback time (in seconds)\n" \
+    "uniform float     iTime;           // shader playback time (in seconds)\n" \
     "uniform float     iTimeDelta;            // render time (in seconds)\n" \
     "uniform int       iFrame;                // shader playback frame\n" \
     "uniform float     iChannelTime["STRINGISE (NBINPUTS)"];       // channel playback time (in seconds)\n" \
@@ -593,7 +593,7 @@ using std::string;
     "    vec2 uv = fragCoord.xy / iResolution.xy;\n"            \
     "    vec3 sinetex = vec3(0.5+0.5*amplitude*sin(fragCoord.x/(size*iRenderScale.x)),\n" \
     "                        0.5+0.5*amplitude*sin(fragCoord.y/(size*iRenderScale.y)),\n" \
-    "                        0.5+0.5*sin(iGlobalTime));\n" \
+    "                        0.5+0.5*sin(iTime));\n" \
     "    fragColor = vec4(amplitude*sinetex + (1 - amplitude)*texture2D( iChannel0, uv ).xyz,1.0);\n"  \
     "}"
 
