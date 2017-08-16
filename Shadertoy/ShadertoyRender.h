@@ -1052,7 +1052,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             // nearest = GL_NEAREST/GL_NEAREST
             // linear = GL_LINEAR/GL_LINEAR
             // mipmap = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR
-            filter[i] = args.renderQualityDraft ? eFilterNearest : (FilterEnum)_inputFilter[i]->getValueAtTime(time);
+            // Some shaders depend on to filter, so leave it as it is
+            filter[i] = /*args.renderQualityDraft ? eFilterNearest :*/ (FilterEnum)_inputFilter[i]->getValueAtTime(time);
 
             // wrap for each texture (repeat [default], clamp, mirror)
             // clamp = GL_CLAMP_TO_EDGE
