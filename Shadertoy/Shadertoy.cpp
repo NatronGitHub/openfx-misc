@@ -2401,8 +2401,8 @@ void
 ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum context)
 {
-#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     if (!gHostDescription.supportsOpenGLRender) {
         throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     }
@@ -2481,7 +2481,6 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke") ? 7 : NBUNIFORMS; //if more than 7, Nuke's parameter page goes blank when unfolding the Extra Parameters group
     for (unsigned i = 0; i < nbuniforms; ++i) {
         // generate the number string
