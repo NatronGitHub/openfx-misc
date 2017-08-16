@@ -8,12 +8,8 @@
 #define PI 3.14159265
 #define TILE_SIZE 16.0
 
-#ifdef GL_ES
-precision highp float;
-#endif
-
 float wow;
-float Amount = 1.0;
+uniform float Amount = 0.5; // Amount, min=0., max=1.
 
 vec3 rgb2hsv(vec3 c)
 {
@@ -35,7 +31,7 @@ vec3 hsv2rgb(vec3 c)
 
 vec3 posterize(vec3 color, float steps)
 {
-    return floor(color * steps) / steps;
+    return floor(color * steps + 0.5) / steps;
 }
 
 float quantize(float n, float steps)
@@ -103,8 +99,6 @@ vec3 distort(sampler2D sampler, vec2 uv, float edgeSize)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	vec2 uv = fragCoord.xy / iResolution.xy;
-    Amount = uv.x; // Just erase this line if you want to use the control at the top
-    wow = clamp(mod(noise(iTime + uv.y), 1.0), 0.0, 1.0) * 2.0 - 1.0;    
     vec3 finalColor;
     finalColor += distort(iChannel0, uv, 8.0);
     fragColor = vec4(finalColor, 1.0);

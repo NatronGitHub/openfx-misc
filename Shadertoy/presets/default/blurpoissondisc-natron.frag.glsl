@@ -1,7 +1,6 @@
 // https://www.shadertoy.com/view/lsfGWn
 
-// Just a regular poisson-disc blur.
-// (bottom picking from mipmap instead)
+// Just a regular poisson-disc blur with a fixed number (27) of taps.
 
 // Adapted to Natron by F. Devernay
 

@@ -3,10 +3,11 @@
 // iChannel0: Source, filter=linear, wrap=clamp
 // BBox: iChannel0
 
+uniform float contrast = 0.15; // Contrast, min=0., max=1.
 float cellFactor = floor(clamp(iResolution.x/30., 20., 100.)/6.)*6.;
 vec2 cellSize = vec2(cellFactor, cellFactor*1.5);
-const float light = 1.15;
-const float dark = 0.85;
+float light = 1. + contrast;
+float dark = 1. - contrast;
 float zoom = max(iResolution.x/iChannelResolution[0].x, iResolution.y/iChannelResolution[0].y);
 
 bool tri(const vec2 p1, const vec2 p2, const vec2 p3, const vec2 p)

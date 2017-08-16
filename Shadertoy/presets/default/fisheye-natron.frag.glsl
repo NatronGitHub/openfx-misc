@@ -4,7 +4,7 @@
 // iChannel0: Source, filter=linear, wrap=clamp
 // BBox: iChannel0
 
-uniform float effect = -0.4; // Amount, min=-0.5, max=0.5
+uniform float effect = -0.1; // Amount, min=-0.5, max=0.5
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )//Drag mouse over rendering area
 {

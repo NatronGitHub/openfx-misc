@@ -29,7 +29,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vec3 c = texture2D(iChannel0, uv).rgb;
 	{
 		//declare stuff
-		int kSize = min((MSIZE-1)/2, int(1.5*sigma_s*iRenderScale.x));
+		int kSize = int(min((MSIZE-1)/2., 1.5*sigma_s*iRenderScale.x));
 		float kernel[MSIZE];
 		vec3 final_colour = vec3(0.0);
 		

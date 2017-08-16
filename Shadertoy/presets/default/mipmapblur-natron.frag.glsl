@@ -8,7 +8,7 @@
 
 const vec2 iRenderScale = vec2(1.,1.);
 const vec2 iChannelOffset[4] = vec2[4]( vec2(0.,0.), vec2(0.,0.), vec2(0.,0.), vec2(0.,0.) );
-uniform float size = 10.; // Blur Size (Blur size in pixels), min=0., max=20.
+uniform float size = 10.; // Blur Size (Blur size in pixels), min=0., max=64.
 uniform bool perpixel_size = false; // Modulate (Modulate the blur size by multiplying it by the first channel of the Modulate input)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )

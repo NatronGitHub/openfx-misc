@@ -127,7 +127,7 @@ uniform float zoom = 0.05; // Zoom, min=0., max=0.5
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-   vec2 uv = (vec2(iResolution.x-fragCoord.x, fragCoord.y) / iResolution.xy) * (1. - 2.*zoom) + vec2(zoom, zoom);
+   vec2 uv = (fragCoord.xy / iResolution.xy) * (1. - 2.*zoom) + vec2(zoom, zoom);
    float niceNoise1 = FBM( vec3(80.0 * uv, speed * 60.*iTime));
    float niceNoise2 = FBM( vec3(80.0 * uv, speed * 62.*iTime + 300.));
    fragColor = texture(iChannel0, uv + vec2(magn*0.2*niceNoise1,magn*0.21*niceNoise2) );

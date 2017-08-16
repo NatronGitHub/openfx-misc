@@ -5,11 +5,11 @@
 // iChannel0: Source, filter=linear, wrap=clamp
 // BBox: iChannel0
 
-float GlitchAmount = 1.0;
+uniform float GlitchAmount = 1.0; // Intensity, min=0., max=1.
 
 vec4 posterize(vec4 color, float numColors)
 {
-    return floor(color * numColors - 0.5) / numColors;
+    return floor(color * numColors + 0.5) / numColors;
 }
 
 vec2 quantize(vec2 v, float steps)
@@ -26,13 +26,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {   
 	vec2 uv = fragCoord.xy / iResolution.xy;
     float amount = pow(GlitchAmount, 2.0);
-    vec2 pixel = 1.0 / iResolution.xy;    
+    vec2 pixel = iRenderScale.xy / iResolution.xy;    
     vec4 color = texture2D(iChannel0, uv);
-    if (fragCoord.x < iMouse.x)
-    {
-        fragColor = color;
-        return;
-    }
     float t = mod(mod(iTime, amount * 100.0 * (amount - 0.5)) * 109.0, 1.0);
     vec4 postColor = posterize(color, 16.0);
     vec4 a = posterize(texture2D(iChannel0, quantize(uv, 64.0 * t) + pixel * (postColor.rb - vec2(.5)) * 100.0), 5.0).rbga;
