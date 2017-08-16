@@ -253,7 +253,7 @@ getExtraParameterInfo(const char* fragmentShader,
     }
 
     //printf("found uniform!\n");
-    p.setPos(int(tokpos - tok));
+    p.setPos(int(tokpos - fragmentShader));
     const char* sstart = tokpos + strlen(tok);
     // look for ';' before EOF
     while (*sstart && *sstart != '\n' && *sstart != '\r' && *sstart != ';') {
