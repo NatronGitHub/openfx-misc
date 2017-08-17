@@ -1017,7 +1017,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _paramCount = fetchIntParam(kParamCount);
     assert(_groupExtra && _paramCount);
     const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke") ? 7 : NBUNIFORMS; //if more than 7, Nuke's parameter page goes blank when unfolding the Extra Parameters group
+    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke" && gHostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
     _paramGroup.resize(nbuniforms);
     _paramType.resize(nbuniforms);
     _paramName.resize(nbuniforms);
@@ -1293,8 +1293,8 @@ ShadertoyPlugin::updateVisibility()
     _mouseClick->setIsSecretAndDisabled(!mouseParams);
     _mousePressed->setIsSecretAndDisabled(!mouseParams);
 
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
-    for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
+    for (unsigned i = 0; i < _paramType.size(); ++i) {
         updateVisibilityParam(i, i < paramCount);
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
@@ -1445,11 +1445,12 @@ ShadertoyPlugin::updateExtra()
             if ( _imageShaderHasMouse != _mouseParams->getValue() ) {
                 _mouseParams->setValue(_imageShaderHasMouse);
             }
-            if ( (int)_imageShaderExtraParameters.size() != _paramCount->getValue() ) {
-                _paramCount->setValue( _imageShaderExtraParameters.size() );
+            unsigned paramCount = std::min( _imageShaderExtraParameters.size() , _paramType.size() );
+            if ( (int)paramCount != _paramCount->getValue() ) {
+                _paramCount->setValue(paramCount);
                 uniformsChanged = true;
             }
-            for (unsigned i = 0; i < std::min(_paramType.size(), _imageShaderExtraParameters.size()); ++i) {
+            for (unsigned i = 0; i < paramCount; ++i) {
                 const ExtraParameter& p = _imageShaderExtraParameters[i];
                 UniformTypeEnum t = p.getType();
                 bool nChanged = false; // did the param name change? (required shader recompilation to get the uniform address)
@@ -1658,7 +1659,7 @@ ShadertoyPlugin::updateExtra()
                 }
                 } // switch
             }
-            for (unsigned i = _imageShaderExtraParameters.size(); i < NBUNIFORMS; ++i) {
+            for (unsigned i = _imageShaderExtraParameters.size(); i < _paramType.size(); ++i) {
                 bool tChanged = ( (UniformTypeEnum)_paramType[i]->getValue() != eUniformTypeNone );
                 if (tChanged) {
                     _paramDefaultBool[i]->resetToDefault();
@@ -1690,7 +1691,7 @@ ShadertoyPlugin::updateExtra()
     }
 
     // update GUI
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
 
     for (unsigned i = 0; i < paramCount; ++i) {
         UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
@@ -1831,7 +1832,7 @@ void
 ShadertoyPlugin::resetParamsValues()
 {
     //beginEditBlock(kParamResetParams);
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
     for (unsigned i = 0; i < paramCount; ++i) {
         UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
         if (t == eUniformTypeNone) {
@@ -2481,7 +2482,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke") ? 7 : NBUNIFORMS; //if more than 7, Nuke's parameter page goes blank when unfolding the Extra Parameters group
+    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke" && gHostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
     for (unsigned i = 0; i < nbuniforms; ++i) {
         // generate the number string
         string nb = unsignedToString(i);

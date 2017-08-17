@@ -151,6 +151,8 @@
 		1E181AF719518CCF00FAB9A9 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E181B0019518DF500FAB9A9 /* Invert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E181AFD19518DF500FAB9A9 /* Invert.cpp */; };
 		1E181B0219518E0000FAB9A9 /* Invert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E181AFD19518DF500FAB9A9 /* Invert.cpp */; };
+		1E1C37111F45E24900151037 /* oldvideo-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E1C370F1F45E22200151037 /* oldvideo-natron.frag.glsl */; };
+		1E1C37121F45E24900151037 /* postprocessing-natron.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E1C37101F45E22200151037 /* postprocessing-natron.frag.glsl */; };
 		1E1DDFEC1A04E432007F45B2 /* CImgGuided.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E1DDFEA1A04E432007F45B2 /* CImgGuided.cpp */; };
 		1E1FB8E6190696F200F5515D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E1FB8E7190696F200F5515D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -2479,6 +2481,8 @@
 			dstPath = presets/default;
 			dstSubfolderSpec = 7;
 			files = (
+				1E1C37111F45E24900151037 /* oldvideo-natron.frag.glsl in CopyFiles */,
+				1E1C37121F45E24900151037 /* postprocessing-natron.frag.glsl in CopyFiles */,
 				1E5460D11F44F60A008D6932 /* dotdotdot-natron.frag.glsl in CopyFiles */,
 				1E5460D21F44F60A008D6932 /* filmgrain-natron.frag.glsl in CopyFiles */,
 				1E5460D31F44F60A008D6932 /* glitch01-natron.frag.glsl in CopyFiles */,
@@ -3413,6 +3417,8 @@
 		1E10A7101997C05200EE87A1 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E181AFB19518CCF00FAB9A9 /* Invert.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Invert.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E181AFD19518DF500FAB9A9 /* Invert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Invert.cpp; sourceTree = "<group>"; };
+		1E1C370F1F45E22200151037 /* oldvideo-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "oldvideo-natron.frag.glsl"; sourceTree = "<group>"; };
+		1E1C37101F45E22200151037 /* postprocessing-natron.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "postprocessing-natron.frag.glsl"; sourceTree = "<group>"; };
 		1E1DDFEA1A04E432007F45B2 /* CImgGuided.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgGuided.cpp; path = Guided/CImgGuided.cpp; sourceTree = "<group>"; };
 		1E1FB8F4190696F200F5515D /* Grade.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Grade.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E2212091E535F170069EB8D /* Card3D.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Card3D.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -5562,9 +5568,11 @@
 				1E738B421DF41DD3000F582E /* noiseanimwatery.frag.glsl */,
 				1EA70F761DF58D6C0039BC64 /* noiseblur.frag.glsl */,
 				1EA70F8E1DF5AD490039BC64 /* notebook.frag.glsl */,
+				1E1C370F1F45E22200151037 /* oldvideo-natron.frag.glsl */,
 				1EA70FA11DF5C0500039BC64 /* oldvideo.frag.glsl */,
 				1E738B431DF41DD3000F582E /* plasma2.frag.glsl */,
 				1E738B441DF41DD3000F582E /* plasmatriangle.frag.glsl */,
+				1E1C37101F45E22200151037 /* postprocessing-natron.frag.glsl */,
 				1EA70FA21DF5C0500039BC64 /* postprocessing.frag.glsl */,
 				1E5460811F435850008D6932 /* quadmirror-natron.frag.glsl */,
 				1E5460381F41E02A008D6932 /* radialblur-natron.frag.glsl */,

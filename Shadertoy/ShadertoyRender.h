@@ -1501,7 +1501,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
         if (must_recompile || uniforms_changed) {
             std::fill(shadertoy->iParamLoc, shadertoy->iParamLoc + NBUNIFORMS, -1);
-            unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+            unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
             for (unsigned i = 0; i < paramCount; ++i) {
                 std::string paramName;
                 _paramName[i]->getValue(paramName);
@@ -1727,7 +1727,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
         glUniform4f (shadertoy->iMouseLoc, x * rs.x, y * rs.y, xc * rs.x, yc * rs.y);
     }
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
     for (unsigned i = 0; i < paramCount; ++i) {
         if (shadertoy->iParamLoc[i] >= 0) {
             UniformTypeEnum paramType = (UniformTypeEnum)_paramType[i]->getValue();
