@@ -43,15 +43,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     {
          
    	 	tc = RGBToHSV(tc);
-    
-    	vec2 target_c = cutColor*floor(tc.gb/cutColor);
+
+    	vec2 target_c = cutColor*floor(tc.gb/cutColor+0.5);
     
     	tc = HSVToRGB(vec3(tc.r,target_c));
     }
     else
     {
-        
-        tc  = cutColor*floor(tc/cutColor);
+
+
+        tc  = cutColor*floor(tc/cutColor+0.5);
     }
     
     fragColor = vec4(tc, 1.0);

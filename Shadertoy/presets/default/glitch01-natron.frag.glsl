@@ -6,6 +6,8 @@
 // iChannel0: Source, filter=linear, wrap=clamp
 // BBox: iChannel0
 
+uniform float THRESHOLD = 0.1; // Intensity, min=0., max=1.
+
 float sat( float t ) {
 	return clamp( t, 0.0, 1.0 );
 }
@@ -64,7 +66,6 @@ vec3 rgb2yuv( vec3 rgb )
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	float THRESHOLD = 0.1 + iMouse.x / iResolution.x;
 	float time_s = mod( iTime, 32.0 );
 
 	float glitch_threshold = 1.0 - THRESHOLD;
@@ -73,7 +74,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	const float time_frq = 16.0;
 
 	vec2 uv = fragCoord.xy / iResolution.xy;
-    uv.y = 1.0 -  uv.y;
 	
 	const float min_change_frq = 4.0;
 	float ct = trunc( time_s, min_change_frq );

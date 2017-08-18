@@ -5,6 +5,9 @@
 // Created by inigo quilez - iq/2013
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 
+// iChannel0: Organic 2 (, filter=mipmap, wrap=repeat
+// BBox: iChannel0
+
 //#define PROCEDURAL
 
 float hash( float n )

@@ -520,7 +520,6 @@
 		1E738B6B1DF41E30000F582E /* colorcircles.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B331DF41DD3000F582E /* colorcircles.frag.glsl */; };
 		1E738B6C1DF41E30000F582E /* deformflower.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B341DF41DD3000F582E /* deformflower.frag.glsl */; };
 		1E738B6D1DF41E30000F582E /* dotdotdot.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B351DF41DD3000F582E /* dotdotdot.frag.glsl */; };
-		1E738B6E1DF41E30000F582E /* fastclouds.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B361DF41DD3000F582E /* fastclouds.frag.glsl */; };
 		1E738B6F1DF41E30000F582E /* fireball.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B371DF41DD3000F582E /* fireball.frag.glsl */; };
 		1E738B701DF41E30000F582E /* flaring.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B381DF41DD3000F582E /* flaring.frag.glsl */; };
 		1E738B711DF41E30000F582E /* fractaltiling.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B391DF41DD3000F582E /* fractaltiling.frag.glsl */; };
@@ -2513,7 +2512,6 @@
 				1E738B6B1DF41E30000F582E /* colorcircles.frag.glsl in CopyFiles */,
 				1E738B6C1DF41E30000F582E /* deformflower.frag.glsl in CopyFiles */,
 				1E738B6D1DF41E30000F582E /* dotdotdot.frag.glsl in CopyFiles */,
-				1E738B6E1DF41E30000F582E /* fastclouds.frag.glsl in CopyFiles */,
 				1E738B6F1DF41E30000F582E /* fireball.frag.glsl in CopyFiles */,
 				1E738B701DF41E30000F582E /* flaring.frag.glsl in CopyFiles */,
 				1E738B711DF41E30000F582E /* fractaltiling.frag.glsl in CopyFiles */,

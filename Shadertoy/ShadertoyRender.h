@@ -134,7 +134,7 @@ struct ShadertoyShader
     ShadertoyShader()
         : program(0)
         , iResolutionLoc(-1)
-        , iGlobalTimeLoc(-1)
+        , iTimeLoc(-1)
         , iTimeDeltaLoc(-1)
         , iFrameLoc(-1)
         , iChannelTimeLoc(-1)
@@ -152,7 +152,7 @@ struct ShadertoyShader
 
     GLuint program;
     GLint iResolutionLoc;
-    GLint iGlobalTimeLoc;
+    GLint iTimeLoc;
     GLint iTimeDeltaLoc;
     GLint iFrameLoc;
     GLint iChannelTimeLoc;
@@ -877,7 +877,7 @@ static std::string vsSource = "void main() { gl_Position = ftransform(); }";
    precision mediump sampler2D;
 
    uniform vec3      iResolution;                  // viewport resolution (in pixels)
-   uniform float     iGlobalTime;                  // shader playback time (in seconds)
+   uniform float     iTime;                        // shader playback time (in seconds)
    uniform vec4      iMouse;                       // mouse pixel coords
    uniform vec4      iDate;                        // (year, month, day, time in seconds)
    uniform float     iSampleRate;                  // sound sample rate (i.e., 44100)
@@ -915,6 +915,7 @@ static std::string fsHeader =
 #endif
     "uniform vec3      iResolution;\n"
     "uniform float     iGlobalTime;\n"
+    "uniform float     iTime;\n"
     "uniform float     iTimeDelta;\n"
     "uniform int       iFrame;\n"
     "uniform float     iChannelTime["STRINGISE (NBINPUTS)"];\n"
@@ -925,6 +926,7 @@ static std::string fsHeader =
     "uniform vec2      ifFragCoordOffsetUniform;\n"
     "uniform vec2      iRenderScale;\n" // the OpenFX renderscale
     "uniform vec2      iChannelOffset["STRINGISE (NBINPUTS)"];\n"
+    "#define texture texture2D\n" // for some compatibility with newer Shadertoy>
 ;
 
 // https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/fragment_main_image.glsl
@@ -1050,7 +1052,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             // nearest = GL_NEAREST/GL_NEAREST
             // linear = GL_LINEAR/GL_LINEAR
             // mipmap = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR
-            filter[i] = args.renderQualityDraft ? eFilterNearest : (FilterEnum)_inputFilter[i]->getValueAtTime(time);
+            // Some shaders depend on to filter, so leave it as it is
+            filter[i] = /*args.renderQualityDraft ? eFilterNearest :*/ (FilterEnum)_inputFilter[i]->getValueAtTime(time);
 
             // wrap for each texture (repeat [default], clamp, mirror)
             // clamp = GL_CLAMP_TO_EDGE
@@ -1297,7 +1300,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 return;
             }
             shadertoy->iResolutionLoc        = glGetUniformLocation(program, "iResolution");
-            shadertoy->iGlobalTimeLoc        = glGetUniformLocation(program, "iGlobalTime");
+            shadertoy->iTimeLoc        = glGetUniformLocation(program, "iTime");
+            if (shadertoy->iTimeLoc == -1) {
+                // for backward compatibility with older (pre-0.9.3) shaders
+                shadertoy->iTimeLoc        = glGetUniformLocation(program, "iGlobalTime");
+            }
             shadertoy->iTimeDeltaLoc         = glGetUniformLocation(program, "iTimeDelta");
             shadertoy->iFrameLoc             = glGetUniformLocation(program, "iFrame");
             shadertoy->iChannelTimeLoc       = glGetUniformLocation(program, "iChannelTime");
@@ -1367,6 +1374,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                             }
 
                             if ( (name == "iResolution") ||
+                                 ( name == "iTime") ||
                                  ( name == "iGlobalTime") ||
                                  ( name == "iTimeDelta") ||
                                  ( name == "iFrame") ||
@@ -1480,6 +1488,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                         getBboxInfo(fragmentShader, _imageShaderBBox);
                     } // for (i = 0; i < count; i++) {
                 }
+
+                std::sort(_imageShaderExtraParameters.begin(), _imageShaderExtraParameters.end(), ExtraParameter::less_than_pos());
                 imageShaderParamsUpdated = true;
             } // if (_imageShaderUpdateParams)
 
@@ -1491,7 +1501,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
         if (must_recompile || uniforms_changed) {
             std::fill(shadertoy->iParamLoc, shadertoy->iParamLoc + NBUNIFORMS, -1);
-            unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+            unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
             for (unsigned i = 0; i < paramCount; ++i) {
                 std::string paramName;
                 _paramName[i]->getValue(paramName);
@@ -1666,8 +1676,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderPassRenderer.m#L329
         glUniform3f (shadertoy->iResolutionLoc, width, height, 1.);
     }
-    if (shadertoy->iGlobalTimeLoc >= 0) {
-        glUniform1f (shadertoy->iGlobalTimeLoc, t);
+    if (shadertoy->iTimeLoc >= 0) {
+        glUniform1f (shadertoy->iTimeLoc, t);
     }
     if (shadertoy->iTimeDeltaLoc >= 0) {
         glUniform1f (shadertoy->iTimeDeltaLoc, 1 / fps); // is that it?
@@ -1717,7 +1727,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
         glUniform4f (shadertoy->iMouseLoc, x * rs.x, y * rs.y, xc * rs.x, yc * rs.y);
     }
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
     for (unsigned i = 0; i < paramCount; ++i) {
         if (shadertoy->iParamLoc[i] >= 0) {
             UniformTypeEnum paramType = (UniformTypeEnum)_paramType[i]->getValue();

@@ -5,17 +5,26 @@
 // e-mail: giacomo@kyrie.pe
 // website: http://kyrie.pe
 
+// Adapted to Natron by F. Devernay
+
 // iChannel0: Source, filter=linear, wrap=clamp
 // BBox: iChannel0
+
+uniform float amplitud = 0.03; // Amplitude, min=0., max=1.
+uniform float frecuencia = 10.0; // Frequency, min=0., max=100.
+uniform float size = 4.8; // Thickness, min=1., max=20.
+
+// Money filter by Giacomo Preciado
+// Based on: "Free Engraved Illustration Effect Action for Photoshop" - http://snip.ly/j0gq
+// e-mail: giacomo@kyrie.pe
+// website: http://kyrie.pe
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 xy = fragCoord.xy / iResolution.yy;
     
-    float amplitud = 0.03;
-    float frecuencia = 10.0;
     float gris = 1.0;
-    float divisor = 4.8 / iResolution.y;
+    float divisor = size * iRenderScale.y / iResolution.y;
     float grosorInicial = divisor * 0.2;
     
     const int kNumPatrones = 6;
@@ -58,7 +67,5 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
     
-    float mx = iMouse.x;
-    if(iMouse.z < 1.0) mx = iResolution.x * 0.5;
-    if(fragCoord.x < mx) fragColor = vec4(gris, gris, gris, 1.0);
+    fragColor = vec4(gris, gris, gris, 1.0);
 }

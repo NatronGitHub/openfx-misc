@@ -160,11 +160,12 @@ CXXFLAGS += \
 # commit 63a4356e9e93ff3cd407e1ae1264a616ea4ba0f2 is CImg pre-2.0.0 with the clamping on sigma_r fixed in blur_bilateral
 # commit 7c83bdad65ab7447220b54851a5a1035976777fa is CImg pre-2.0.0 with a fix to compile inpaint.h
 # commit 79fce46b2b1b54bc44276dccca040139f62835d7 is CImg 2.0.0
-CIMGVERSION=79fce46b2b1b54bc44276dccca040139f62835d7
+# commit 93862da3655db4a253c35de6754a430fa569b63a is CImg 2.0.2
+CIMGVERSION=93862da3655db4a253c35de6754a430fa569b63a
 
 CImg.h: Inpaint/inpaint.h
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
-	patch -p0 -d. < CImg-2.0.0-anisotropic.patch
+#	patch -p0 -d. < CImg-2.0.0-anisotropic.patch
 #	patch -p0 -d. < CImg-1.7.1-omp.patch
 
 Inpaint/inpaint.h:

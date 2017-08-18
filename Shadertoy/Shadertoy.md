@@ -162,7 +162,7 @@ The resulting color is gathered in `fragColor` as a four component vector.
 Type | Name | Function | Description
 --- | --- | --- | ---
 vec3 | iResolution | image | The viewport resolution (z is pixel aspect ratio, usually 1.0)
-float | iGlobalTime | image/sound | Current time in seconds
+float | iTime | image/sound | Current time in seconds
 float | iTimeDelta | image | Time it takes to render a frame, in seconds
 int | iFrame | image | Current frame
 float | iFrameRate | image | Number of frames rendered per second
