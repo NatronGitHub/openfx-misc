@@ -3820,6 +3820,10 @@
 		1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxSonyVegas.h; path = openfx/include/ofxSonyVegas.h; sourceTree = SOURCE_ROOT; };
 		1ECA4DF51A3F3A6500C5128B /* Ramp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Ramp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECA4E0E1A3F3ACD00C5128B /* Radial.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Radial.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1ECA692B1E780D3600DCD8C4 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1ECA692C1E780D3600DCD8C4 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1ECA692D1E780D3600DCD8C4 /* UVTool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UVTool.cpp; sourceTree = "<group>"; };
+		1ECA694B1E780D4F00DCD8C4 /* UVTool.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UVTool.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECACED81DD86E2700A33888 /* EdgeBlur.gizmo */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = EdgeBlur.gizmo; path = CImg/Blur/EdgeBlur.gizmo; sourceTree = "<group>"; };
 		1ECACED91DD86E2700A33888 /* EdgeBlur.nps */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = EdgeBlur.nps; path = CImg/Blur/EdgeBlur.nps; sourceTree = "<group>"; };
 		1ECACEDA1DD86E2700A33888 /* EdgeBlur.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = EdgeBlur.py; path = CImg/Blur/EdgeBlur.py; sourceTree = "<group>"; };
@@ -4529,6 +4533,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1ECA693F1E780D4F00DCD8C4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1ECA69401E780D4F00DCD8C4 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1ECE5447185F2374001ED442 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -5210,6 +5222,7 @@
 				1EB00C711EDEF686006CA180 /* ContactSheet.ofx.bundle */,
 				1EB00C911EE078D2006CA180 /* LayerContactSheet.ofx.bundle */,
 				1EEB29691EF91720008F40BC /* SpriteSheet.ofx.bundle */,
+				1ECA694B1E780D4F00DCD8C4 /* UVTool.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -5310,6 +5323,7 @@
 				1E235FF318369E2B0019C45F /* TimeOffset */,
 				D7704C74195B5E4F002E163E /* TrackerPM */,
 				D7349E8818E7766F0097DB1D /* Transform */,
+				1ECA692A1E780D1700DCD8C4 /* UVTool */,
 				1EFBC97E1A23A1CC00086E7A /* VectorToColor */,
 				1E8B5D4618B769B400C31FDC /* Misc */,
 				1E9B5F46198A51590095C8AA /* SupportExt */,
@@ -5895,6 +5909,16 @@
 				1E3284971A41C26300C9A4E4 /* net.sf.openfx.Radial.svg */,
 			);
 			path = Radial;
+			sourceTree = "<group>";
+		};
+		1ECA692A1E780D1700DCD8C4 /* UVTool */ = {
+			isa = PBXGroup;
+			children = (
+				1ECA692B1E780D3600DCD8C4 /* Info.plist */,
+				1ECA692C1E780D3600DCD8C4 /* Makefile */,
+				1ECA692D1E780D3600DCD8C4 /* UVTool.cpp */,
+			);
+			path = UVTool;
 			sourceTree = "<group>";
 		};
 		1ECACEDB1DD86E3600A33888 /* PyPlugs */ = {
@@ -7193,6 +7217,23 @@
 			productReference = 1ECA4E0E1A3F3ACD00C5128B /* Radial.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1ECA692E1E780D4F00DCD8C4 /* UVTool.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1ECA69481E780D4F00DCD8C4 /* Build configuration list for PBXNativeTarget "UVTool.ofx" */;
+			buildPhases = (
+				1ECA692F1E780D4F00DCD8C4 /* Sources */,
+				1ECA693F1E780D4F00DCD8C4 /* Frameworks */,
+				1ECA69411E780D4F00DCD8C4 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = UVTool.ofx;
+			productName = basic.ofx;
+			productReference = 1ECA694B1E780D4F00DCD8C4 /* UVTool.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1ECE543C185F2374001ED442 /* ReConverge.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1ECE5449185F2374001ED442 /* Build configuration list for PBXNativeTarget "ReConverge.ofx" */;
@@ -7837,6 +7878,7 @@
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
 				D7BB85B81955C00100A86649 /* TrackerPM.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
+				1ECA692E1E780D4F00DCD8C4 /* UVTool.ofx */,
 				1EFBC97F1A23A1EB00086E7A /* VectorToColor.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 			);
@@ -8509,6 +8551,7 @@
 				1ED4AEB81973DE1200EE64C8 /* randomGenerator.cpp in Sources */,
 				1EEAA6C81BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */,
 				1EE72C131B5253A4001B0245 /* ofxsShutter.cpp in Sources */,
+				1ECA694E1E780DDF00DCD8C4 /* UVTool.cpp in Sources */,
 				1E75A0341A87BA37005BAA36 /* ofxsGenerator.cpp in Sources */,
 				1EC1B4F91A964209001D7020 /* ofxsTransformInteract.cpp in Sources */,
 				1ED5373D1A2370D3007966D5 /* ofxsLut.cpp in Sources */,
@@ -8898,6 +8941,25 @@
 				1ECA4E031A3F3ACD00C5128B /* ofxsParams.cpp in Sources */,
 				1ECA4E041A3F3ACD00C5128B /* ofxsProperty.cpp in Sources */,
 				1ECA4E051A3F3ACD00C5128B /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1ECA692F1E780D4F00DCD8C4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1ECA694D1E780DD100DCD8C4 /* UVTool.cpp in Sources */,
+				1ECA69311E780D4F00DCD8C4 /* ofxsCore.cpp in Sources */,
+				1ECA69321E780D4F00DCD8C4 /* tinythread.cpp in Sources */,
+				1ECA69331E780D4F00DCD8C4 /* ofxsImageEffect.cpp in Sources */,
+				1ECA69341E780D4F00DCD8C4 /* ofxsInteract.cpp in Sources */,
+				1ECA69351E780D4F00DCD8C4 /* ofxsLog.cpp in Sources */,
+				1ECA69361E780D4F00DCD8C4 /* ofxsMultiThread.cpp in Sources */,
+				1ECA69371E780D4F00DCD8C4 /* ofxsThreadSuite.cpp in Sources */,
+				1ECA69391E780D4F00DCD8C4 /* ofxsMultiPlane.cpp in Sources */,
+				1ECA693A1E780D4F00DCD8C4 /* ofxsParams.cpp in Sources */,
+				1ECA693B1E780D4F00DCD8C4 /* ofxsProperty.cpp in Sources */,
+				1ECA693C1E780D4F00DCD8C4 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -11172,6 +11234,28 @@
 			};
 			name = Release;
 		};
+		1ECA69491E780D4F00DCD8C4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = UVTool/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1ECA694A1E780D4F00DCD8C4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = UVTool/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		1ECE544A185F2374001ED442 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -12463,6 +12547,15 @@
 			buildConfigurations = (
 				1ECA4E0C1A3F3ACD00C5128B /* Debug */,
 				1ECA4E0D1A3F3ACD00C5128B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1ECA69481E780D4F00DCD8C4 /* Build configuration list for PBXNativeTarget "UVTool.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1ECA69491E780D4F00DCD8C4 /* Debug */,
+				1ECA694A1E780D4F00DCD8C4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

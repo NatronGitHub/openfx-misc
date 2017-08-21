@@ -174,6 +174,7 @@ grouping).
 * STMapOFX: Move pixels around an image, based on a UVmap.
 * TrackerPM: Point tracker based on pattern matching using an exhaustive search within an image region.
 * TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D image.
+* UVTool: Manipulate and convert UV maps for STMap and IDistort
 
 ### Views
 
