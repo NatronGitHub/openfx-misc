@@ -22,6 +22,7 @@
  * References:
  * https://www.shadertoy.com (v0.8.8 https://www.shadertoy.com/changelog)
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
+ * https://shadertoyunofficial.wordpress.com/2016/07/22/compatibility-issues-in-shadertoy-webglsl/#webgl2
  *
  * TODO:
  * - upgrade to Shaderttoy 0.9.1:
@@ -32,6 +33,7 @@
  *      GLSL 3.30 https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.3.30.pdf
  *      Note that this probably means we have to switch to an OpenGL Core profile,
  *      so the host must give us an OpenGL Core context.
+ *      See also: https://shadertoyunofficial.wordpress.com/2017/02/16/webgl-2-0-vs-webgl-1-0/
  * - add multipass support (using tabs for UI as in shadertoys)
  * - synthclipse-compatible comments http://synthclipse.sourceforge.net/user_guide/fragx/commands.html
  * - use .stoy for the presets shaders, and add the default shadertoy uniforms at the beginning, as in http://synthclipse.sourceforge.net/user_guide/shadertoy.html
@@ -230,12 +232,13 @@ using std::string;
     "\n" \
     "Shadertoy Inputs\n" \
     "vec3	iResolution	image	The viewport resolution (z is pixel aspect ratio, usually 1.0)\n" \
-    "float	iGlobalTime	image/sound	Current time in seconds\n" \
+    "float	iTime	image/sound	Current time in seconds\n" \
     "float	iTimeDelta	image	Time it takes to render a frame, in seconds\n" \
     "int	iFrame	image	Current frame\n" \
     "float	iFrameRate	image	Number of frames rendered per second\n" \
     "float	iChannelTime["STRINGISE(NBINPUTS)"]	image	Time for channel (if video or sound), in seconds\n" \
     "vec3	iChannelResolution["STRINGISE(NBINPUTS)"]	image/sound	Input texture resolution for each channel\n" \
+    "vec2   iChannelOffset["STRINGISE(NBINPUTS)"]   image   Input texture offset in pixel coords for each channel\n" \
     "vec4	iMouse	image	xy = current pixel coords (if LMB is down). zw = click pixel\n" \
     "sampler2D	iChannel{i}	image/sound	Sampler for input textures i\n" \
     "vec4	iDate	image/sound	Year, month, day, time in seconds in .xyzw\n" \
@@ -250,6 +253,7 @@ using std::string;
     "OpenFX extensions to Shadertoy\n" \
     "\n" \
     "* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect. For compatibility with Shadertoy, the first line that starts with `const vec2 iRenderScale` is ignored (the full line should be `const vec2 iRenderScale = vec2(1.,1.);`).\n" \
+    "* The pre-defined `iChannelOffset` uniform contains the texture offset for each channel relative to channel 0. For compatibility with Shadertoy, the first line that starts with `const vec2 iChannelOffset` is ignored (the full line should be `const vec2 iChannelOffset[4] = vec2[4]( vec2(0.,0.), vec2(0.,0.), vec2(0.,0.), vec2(0.,0.) );`).\n" \
     "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = vec2(5., 5.);`.\n" \
     "  These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).\n" \
     "  A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.\n" \
@@ -438,12 +442,13 @@ using std::string;
     "Type | Name | Function | Description\n" \
     "--- | --- | --- | ---\n" \
     "vec3 | iResolution | image | The viewport resolution (z is pixel aspect ratio, usually 1.0)\n" \
-    "float | iGlobalTime | image/sound | Current time in seconds\n" \
+    "float | iTime | image/sound | Current time in seconds\n" \
     "float | iTimeDelta | image | Time it takes to render a frame, in seconds\n" \
     "int | iFrame | image | Current frame\n" \
     "float | iFrameRate | image | Number of frames rendered per second\n" \
     "float | iChannelTime["STRINGISE (NBINPUTS)"] | image | Time for channel (if video or sound), in seconds\n" \
     "vec3 | iChannelResolution["STRINGISE (NBINPUTS)"] | image/sound | Input texture resolution for each channel\n" \
+    "vec2 | iChannelOffset["STRINGISE(NBINPUTS)"] | image | Input texture offset in pixel coords for each channel\n" \
     "vec4 | iMouse | image | xy = current pixel coords (if LMB is down). zw = click pixel\n" \
     "sampler2D | iChannel{i} | image/sound | Sampler for input textures i\n" \
     "vec4 | iDate | image/sound | Year, month, day, time in seconds in .xyzw\n" \
@@ -458,6 +463,7 @@ using std::string;
     "### OpenFX extensions to Shadertoy\n" \
     "\n" \
     "* The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect. For compatibility with Shadertoy, the first line that starts with `const vec2 iRenderScale` is ignored (the full line should be `const vec2 iRenderScale = vec2(1.,1.);`).\n" \
+    "* The pre-defined `iChannelOffset` uniform contains the texture offset for each channel relative to channel 0. For compatibility with Shadertoy, the first line that starts with `const vec2 iChannelOffset` is ignored (the full line should be `const vec2 iChannelOffset[4] = vec2[4]( vec2(0.,0.), vec2(0.,0.), vec2(0.,0.), vec2(0.,0.) );`).\n" \
     "* The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = vec2(5., 5.);`.\n" \
     "  These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).\n" \
     "  A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.\n" \
@@ -493,11 +499,12 @@ using std::string;
 #define kShaderInputsHint \
     "Shader Inputs:\n" \
     "uniform vec3      iResolution;           // viewport resolution (in pixels)\n" \
-    "uniform float     iGlobalTime;           // shader playback time (in seconds)\n" \
+    "uniform float     iTime;           // shader playback time (in seconds)\n" \
     "uniform float     iTimeDelta;            // render time (in seconds)\n" \
     "uniform int       iFrame;                // shader playback frame\n" \
     "uniform float     iChannelTime["STRINGISE (NBINPUTS)"];       // channel playback time (in seconds)\n" \
     "uniform vec3      iChannelResolution["STRINGISE (NBINPUTS)"]; // channel resolution (in pixels)\n" \
+    "uniform vec2      iChannelOffset["STRINGISE (NBINPUTS)"]; // channel texture offset relative to iChannel0 (in pixels)\n" \
     "uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click\n" \
     "uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube\n" \
     "uniform vec4      iDate;                 // (year, month, day, time in seconds)\n" \
@@ -586,7 +593,7 @@ using std::string;
     "    vec2 uv = fragCoord.xy / iResolution.xy;\n"            \
     "    vec3 sinetex = vec3(0.5+0.5*amplitude*sin(fragCoord.x/(size*iRenderScale.x)),\n" \
     "                        0.5+0.5*amplitude*sin(fragCoord.y/(size*iRenderScale.y)),\n" \
-    "                        0.5+0.5*sin(iGlobalTime));\n" \
+    "                        0.5+0.5*sin(iTime));\n" \
     "    fragColor = vec4(amplitude*sinetex + (1 - amplitude)*texture2D( iChannel0, uv ).xyz,1.0);\n"  \
     "}"
 
@@ -1009,7 +1016,32 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _groupExtra = fetchGroupParam(kGroupExtraParameters);
     _paramCount = fetchIntParam(kParamCount);
     assert(_groupExtra && _paramCount);
-    for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke" && gHostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
+    _paramGroup.resize(nbuniforms);
+    _paramType.resize(nbuniforms);
+    _paramName.resize(nbuniforms);
+    _paramLabel.resize(nbuniforms);
+    _paramHint.resize(nbuniforms);
+    _paramValueBool.resize(nbuniforms);
+    _paramValueInt.resize(nbuniforms);
+    _paramValueFloat.resize(nbuniforms);
+    _paramValueVec2.resize(nbuniforms);
+    _paramValueVec3.resize(nbuniforms);
+    _paramValueVec4.resize(nbuniforms);
+    _paramDefaultBool.resize(nbuniforms);
+    _paramDefaultInt.resize(nbuniforms);
+    _paramDefaultFloat.resize(nbuniforms);
+    _paramDefaultVec2.resize(nbuniforms);
+    _paramDefaultVec3.resize(nbuniforms);
+    _paramDefaultVec4.resize(nbuniforms);
+    _paramMinInt.resize(nbuniforms);
+    _paramMinFloat.resize(nbuniforms);
+    _paramMinVec2.resize(nbuniforms);
+    _paramMaxInt.resize(nbuniforms);
+    _paramMaxFloat.resize(nbuniforms);
+    _paramMaxVec2.resize(nbuniforms);
+    for (unsigned i = 0; i < nbuniforms; ++i) {
         // generate the number string
         string nb = unsignedToString(i);
         _paramGroup[i]      = fetchGroupParam   (kGroupParameter  + nb);
@@ -1040,7 +1072,6 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
     assert(_enableGPU);
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
     if (!gHostDescription.supportsOpenGLRender) {
         _enableGPU->setEnabled(false);
     }
@@ -1262,8 +1293,8 @@ ShadertoyPlugin::updateVisibility()
     _mouseClick->setIsSecretAndDisabled(!mouseParams);
     _mousePressed->setIsSecretAndDisabled(!mouseParams);
 
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
-    for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
+    for (unsigned i = 0; i < _paramType.size(); ++i) {
         updateVisibilityParam(i, i < paramCount);
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
@@ -1414,11 +1445,12 @@ ShadertoyPlugin::updateExtra()
             if ( _imageShaderHasMouse != _mouseParams->getValue() ) {
                 _mouseParams->setValue(_imageShaderHasMouse);
             }
-            if ( (int)_imageShaderExtraParameters.size() != _paramCount->getValue() ) {
-                _paramCount->setValue( _imageShaderExtraParameters.size() );
+            unsigned paramCount = std::min( _imageShaderExtraParameters.size() , _paramType.size() );
+            if ( (int)paramCount != _paramCount->getValue() ) {
+                _paramCount->setValue(paramCount);
                 uniformsChanged = true;
             }
-            for (unsigned i = 0; i < _imageShaderExtraParameters.size(); ++i) {
+            for (unsigned i = 0; i < paramCount; ++i) {
                 const ExtraParameter& p = _imageShaderExtraParameters[i];
                 UniformTypeEnum t = p.getType();
                 bool nChanged = false; // did the param name change? (required shader recompilation to get the uniform address)
@@ -1627,7 +1659,7 @@ ShadertoyPlugin::updateExtra()
                 }
                 } // switch
             }
-            for (unsigned i = _imageShaderExtraParameters.size(); i < NBUNIFORMS; ++i) {
+            for (unsigned i = _imageShaderExtraParameters.size(); i < _paramType.size(); ++i) {
                 bool tChanged = ( (UniformTypeEnum)_paramType[i]->getValue() != eUniformTypeNone );
                 if (tChanged) {
                     _paramDefaultBool[i]->resetToDefault();
@@ -1659,7 +1691,7 @@ ShadertoyPlugin::updateExtra()
     }
 
     // update GUI
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
 
     for (unsigned i = 0; i < paramCount; ++i) {
         UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
@@ -1800,7 +1832,7 @@ void
 ShadertoyPlugin::resetParamsValues()
 {
     //beginEditBlock(kParamResetParams);
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
     for (unsigned i = 0; i < paramCount; ++i) {
         UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
         if (t == eUniformTypeNone) {
@@ -2226,6 +2258,7 @@ defineDoubleSub(ImageEffectDescriptor &desc,
     param->setRange(-DBL_MAX, DBL_MAX);
     param->setDisplayRange(-DBL_MAX, DBL_MAX);
     param->setDefault(defaultValue);
+    param->setDoubleType(eDoubleTypePlain);
     param->setEvaluateOnChange(isExtraParam);
     param->setAnimates(isExtraParam);
     if (page) {
@@ -2265,6 +2298,7 @@ defineDouble2DSub(ImageEffectDescriptor &desc,
     param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
     param->setDisplayRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
     param->setDefault(defaultValue, defaultValue);
+    param->setDoubleType(eDoubleTypePlain);
     param->setEvaluateOnChange(isExtraParam);
     param->setAnimates(isExtraParam);
     if (page) {
@@ -2368,8 +2402,8 @@ void
 ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum context)
 {
-#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     if (!gHostDescription.supportsOpenGLRender) {
         throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     }
@@ -2448,7 +2482,8 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke" && gHostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
+    for (unsigned i = 0; i < nbuniforms; ++i) {
         // generate the number string
         string nb = unsignedToString(i);
         defineBooleanSub(desc, nb, kParamValueBool, kParamValueLabel, kParamValueHint, true, page, NULL);
@@ -2755,45 +2790,45 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
             param->setLabel(kParamFormatLabel);
             assert(param->getNOptions() == eParamFormatPCVideo);
-            param->appendOption(kParamFormatPCVideoLabel);
+            param->appendOption(kParamFormatPCVideoLabel, "", kParamFormatPCVideo);
             assert(param->getNOptions() == eParamFormatNTSC);
-            param->appendOption(kParamFormatNTSCLabel);
+            param->appendOption(kParamFormatNTSCLabel, "", kParamFormatNTSC);
             assert(param->getNOptions() == eParamFormatPAL);
-            param->appendOption(kParamFormatPALLabel);
+            param->appendOption(kParamFormatPALLabel, "", kParamFormatPAL);
             assert(param->getNOptions() == eParamFormatNTSC169);
-            param->appendOption(kParamFormatNTSC169Label);
+            param->appendOption(kParamFormatNTSC169Label, "", kParamFormatNTSC169);
             assert(param->getNOptions() == eParamFormatPAL169);
-            param->appendOption(kParamFormatPAL169Label);
+            param->appendOption(kParamFormatPAL169Label, "", kParamFormatPAL169);
             assert(param->getNOptions() == eParamFormatHD720);
-            param->appendOption(kParamFormatHD720Label);
+            param->appendOption(kParamFormatHD720Label, "", kParamFormatHD720);
             assert(param->getNOptions() == eParamFormatHD);
-            param->appendOption(kParamFormatHDLabel);
+            param->appendOption(kParamFormatHDLabel, "", kParamFormatHD);
             assert(param->getNOptions() == eParamFormatUHD4K);
-            param->appendOption(kParamFormatUHD4KLabel);
+            param->appendOption(kParamFormatUHD4KLabel, "", kParamFormatUHD4K);
             assert(param->getNOptions() == eParamFormat1kSuper35);
-            param->appendOption(kParamFormat1kSuper35Label);
+            param->appendOption(kParamFormat1kSuper35Label, "", kParamFormat1kSuper35);
             assert(param->getNOptions() == eParamFormat1kCinemascope);
-            param->appendOption(kParamFormat1kCinemascopeLabel);
+            param->appendOption(kParamFormat1kCinemascopeLabel, "", kParamFormat1kCinemascope);
             assert(param->getNOptions() == eParamFormat2kSuper35);
-            param->appendOption(kParamFormat2kSuper35Label);
+            param->appendOption(kParamFormat2kSuper35Label, "", kParamFormat2kSuper35);
             assert(param->getNOptions() == eParamFormat2kCinemascope);
-            param->appendOption(kParamFormat2kCinemascopeLabel);
+            param->appendOption(kParamFormat2kCinemascopeLabel, "", kParamFormat2kCinemascope);
             assert(param->getNOptions() == eParamFormat2kDCP);
-            param->appendOption(kParamFormat2kDCPLabel);
+            param->appendOption(kParamFormat2kDCPLabel, "", kParamFormat2kDCP);
             assert(param->getNOptions() == eParamFormat4kSuper35);
-            param->appendOption(kParamFormat4kSuper35Label);
+            param->appendOption(kParamFormat4kSuper35Label, "", kParamFormat4kSuper35);
             assert(param->getNOptions() == eParamFormat4kCinemascope);
-            param->appendOption(kParamFormat4kCinemascopeLabel);
+            param->appendOption(kParamFormat4kCinemascopeLabel, "", kParamFormat4kCinemascope);
             assert(param->getNOptions() == eParamFormat4kDCP);
-            param->appendOption(kParamFormat4kDCPLabel);
+            param->appendOption(kParamFormat4kDCPLabel, "", kParamFormat4kDCP);
             assert(param->getNOptions() == eParamFormatSquare256);
-            param->appendOption(kParamFormatSquare256Label);
+            param->appendOption(kParamFormatSquare256Label, "", kParamFormatSquare256);
             assert(param->getNOptions() == eParamFormatSquare512);
-            param->appendOption(kParamFormatSquare512Label);
+            param->appendOption(kParamFormatSquare512Label, "", kParamFormatSquare512);
             assert(param->getNOptions() == eParamFormatSquare1k);
-            param->appendOption(kParamFormatSquare1kLabel);
+            param->appendOption(kParamFormatSquare1kLabel, "", kParamFormatSquare1k);
             assert(param->getNOptions() == eParamFormatSquare2k);
-            param->appendOption(kParamFormatSquare2kLabel);
+            param->appendOption(kParamFormatSquare2kLabel, "", kParamFormatSquare2k);
             param->setDefault(eParamFormatPCVideo);
             param->setHint(kParamFormatHint);
             param->setAnimates(false);
@@ -2892,8 +2927,8 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 IntParamDescriptor* param = desc.defineIntParam(kParamCount);
                 param->setLabel(kParamCountLabel);
                 param->setHint(kParamCountHint);
-                param->setRange(0, NBUNIFORMS);
-                param->setDisplayRange(0, NBUNIFORMS);
+                param->setRange(0, nbuniforms);
+                param->setDisplayRange(0, nbuniforms);
                 param->setAnimates(false);
                 if (page) {
                     page->addChild(*param);
@@ -2903,7 +2938,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 }
             }
 
-            for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+            for (unsigned i = 0; i < nbuniforms; ++i) {
                 // generate the number string
                 string nb = unsignedToString(i);
                 GroupParamDescriptor* pgroup = desc.defineGroupParam(kGroupParameter + nb);

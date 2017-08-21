@@ -92,8 +92,8 @@ vec3 distort(sampler2D sampler, vec2 uv, float edgeSize)
     vec2 pixel = vec2(1.0) / iResolution.xy;
     vec3 field = rgb2hsv(edge(sampler, uv, edgeSize));
     vec2 distort = pixel * sin((field.rb) * PI * 2.0);
-    float shiftx = noise(vec2(quantize(uv.y + 31.5, iResolution.y / TILE_SIZE) * iGlobalTime, fract(iGlobalTime) * 300.0));
-    float shifty = noise(vec2(quantize(uv.x + 11.5, iResolution.x / TILE_SIZE) * iGlobalTime, fract(iGlobalTime) * 100.0));
+    float shiftx = noise(vec2(quantize(uv.y + 31.5, iResolution.y / TILE_SIZE) * iTime, fract(iTime) * 300.0));
+    float shifty = noise(vec2(quantize(uv.x + 11.5, iResolution.x / TILE_SIZE) * iTime, fract(iTime) * 100.0));
     vec3 rgb = texture2D(sampler, uv + (distort + (pixel - pixel / 2.0) * vec2(shiftx, shifty) * (50.0 + 100.0 * Amount)) * Amount).rgb;
     vec3 hsv = rgb2hsv(rgb);
     hsv.y = mod(hsv.y + shifty * pow(Amount, 5.0) * 0.25, 1.0);
@@ -104,7 +104,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	vec2 uv = fragCoord.xy / iResolution.xy;
     Amount = uv.x; // Just erase this line if you want to use the control at the top
-    wow = clamp(mod(noise(iGlobalTime + uv.y), 1.0), 0.0, 1.0) * 2.0 - 1.0;    
+    wow = clamp(mod(noise(iTime + uv.y), 1.0), 0.0, 1.0) * 2.0 - 1.0;    
     vec3 finalColor;
     finalColor += distort(iChannel0, uv, 8.0);
     fragColor = vec4(finalColor, 1.0);

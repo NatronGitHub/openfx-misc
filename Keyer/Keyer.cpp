@@ -680,6 +680,10 @@ private:
         _softnessUpper->setIsSecretAndDisabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
         _despill->setIsSecretAndDisabled( !(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen) );
         _despillAngle->setIsSecretAndDisabled( !(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen) );
+
+        std::string keyerModeString;
+        _keyerMode->getOption( (int)keyerMode, keyerModeString );
+        _sublabel->setValue(keyerModeString);
     }
 
 private:
@@ -1016,7 +1020,7 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecretAndDisabled(true); // always secret
-        param->setIsPersistent(true);
+        param->setIsPersistent(false);
         param->setEvaluateOnChange(false);
         param->setDefault(kParamKeyerModeOptionLuminance);
         if (page) {

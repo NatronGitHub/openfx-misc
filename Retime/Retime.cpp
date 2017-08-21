@@ -171,7 +171,7 @@ public:
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
@@ -458,7 +458,8 @@ RetimePlugin::isIdentityInternal(OfxTime time,
 bool
 RetimePlugin::isIdentity(const IsIdentityArguments &args,
                          Clip * &identityClip,
-                         double &identityTime)
+                         double &identityTime
+                         , int& /*view*/, std::string& /*plane*/)
 {
     return isIdentityInternal(args.time, identityClip, identityTime);
 }

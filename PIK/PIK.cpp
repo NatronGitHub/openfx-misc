@@ -1584,7 +1584,7 @@ private:
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** Override the get frames needed action */
@@ -2052,7 +2052,8 @@ PIKPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 bool
 PIKPlugin::isIdentity(const IsIdentityArguments &args,
                       Clip * &identityClip,
-                      double &identityTime)
+                      double &identityTime
+                      , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     OutputModeEnum outputModeEnum = (OutputModeEnum)_outputMode->getValueAtTime(time);

@@ -113,12 +113,15 @@ public:
         assert(_frameRange && _before && _after);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_sublabel);
+
+        OfxPointI range = _frameRange->getValue();
+        refreshSubLabel(range.x, range.y);
     }
 
 private:
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 #ifdef OFX_EXTENSIONS_NUKE
@@ -135,6 +138,8 @@ private:
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
+
+    void refreshSubLabel(int rangeMin, int rangeMax);
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -233,7 +238,8 @@ FrameRangePlugin::render(const RenderArguments &args)
 bool
 FrameRangePlugin::isIdentity(const IsIdentityArguments &args,
                              Clip * &identityClip,
-                             double &identityTime)
+                             double &identityTime
+                             , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
     OfxPointI range = _frameRange->getValue();
@@ -352,21 +358,26 @@ FrameRangePlugin::changedClip(const InstanceChangedArgs &args,
 }
 
 void
+FrameRangePlugin::refreshSubLabel(int rangeMin, int rangeMax)
+{
+    char label[80];
+    snprintf(label, sizeof(label), "%d - %d", rangeMin, rangeMax);
+    _sublabel->setValue(label);
+}
+
+void
 FrameRangePlugin::changedParam(const InstanceChangedArgs &args,
                                const std::string &paramName)
 {
     if ( (paramName == kParamReset) && _srcClip && _srcClip->isConnected() && (args.reason == eChangeUserEdit) ) {
         OfxRangeD range = _srcClip->getFrameRange();
         _frameRange->setValue( (int)std::floor(range.min), (int)std::ceil(range.max) );
-        char label[80];
-        snprintf( label, sizeof(label), "%d - %d", (int)std::floor(range.min), (int)std::ceil(range.max) );
-        _sublabel->setValue(label);
+        refreshSubLabel((int)std::floor(range.min), (int)std::ceil(range.max));
     }
     if ( (paramName == kParamFrameRange) && (args.reason == eChangeUserEdit) ) {
+
         OfxPointI range = _frameRange->getValue();
-        char label[80];
-        snprintf(label, sizeof(label), "%d - %d", range.x, range.y);
-        _sublabel->setValue(label);
+        refreshSubLabel(range.x, range.y);
     }
 }
 
@@ -527,7 +538,7 @@ FrameRangePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecretAndDisabled(true); // always secret
-        param->setIsPersistent(true);
+        param->setIsPersistent(false);
         param->setEvaluateOnChange(false);
         param->setDefault("1 - 1");
     }

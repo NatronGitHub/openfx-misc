@@ -118,7 +118,7 @@ public:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     // override the roi call
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
@@ -360,7 +360,8 @@ DissolvePlugin::renderForBitDepth(const RenderArguments &args)
 bool
 DissolvePlugin::isIdentity(const IsIdentityArguments &args,
                            Clip * &identityClip,
-                           double &identityTime)
+                           double &identityTime
+                           , int& /*view*/, std::string& /*plane*/)
 {
     // get the transition value
     double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );

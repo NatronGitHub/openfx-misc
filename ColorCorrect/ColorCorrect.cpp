@@ -498,11 +498,14 @@ private:
         } else {
             double i_d = std::floor(value * LUT_MAX_PRECISION);
             int i = (int)i_d;
-            assert(i < LUT_MAX_PRECISION);
+            assert(0 <= i && i < LUT_MAX_PRECISION);
             double alpha = value * LUT_MAX_PRECISION - i_d;
             assert(0. <= alpha && alpha < 1.);
+            // clamp values within the admissible range
+            i = std::max( 0, std::min(i, LUT_MAX_PRECISION - 1) );
+            alpha = std::max( 0., std::min(alpha, 1.) );
 
-            return _lookupTable[curve][i] * (1. - alpha) + _lookupTable[curve][i] * alpha;
+            return _lookupTable[curve][i] * (1. - alpha) + _lookupTable[curve][i+1] * alpha;
         }
     }
 
@@ -804,7 +807,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(ColorCorrecterBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
@@ -1072,7 +1075,8 @@ groupIsIdentity(const ColorControlGroup& group)
 bool
 ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args,
                                Clip * &identityClip,
-                               double & /*identityTime*/)
+                               double & /*identityTime*/
+                            , int& /*view*/, std::string& /*plane*/)
 {
     //std::cout << "isIdentity!\n";
     double mix;

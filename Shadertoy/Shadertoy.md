@@ -162,12 +162,13 @@ The resulting color is gathered in `fragColor` as a four component vector.
 Type | Name | Function | Description
 --- | --- | --- | ---
 vec3 | iResolution | image | The viewport resolution (z is pixel aspect ratio, usually 1.0)
-float | iGlobalTime | image/sound | Current time in seconds
+float | iTime | image/sound | Current time in seconds
 float | iTimeDelta | image | Time it takes to render a frame, in seconds
 int | iFrame | image | Current frame
 float | iFrameRate | image | Number of frames rendered per second
 float | iChannelTime["STRINGISE(NBINPUTS)"] | image | Time for channel (if video or sound), in seconds
 vec3 | iChannelResolution["STRINGISE(NBINPUTS)"] | image/sound | Input texture resolution for each channel
+vec2 | iChannelOffset["STRINGISE(NBINPUTS)"] | image | Input texture offset in pixel coords for each channel
 vec4 | iMouse | image | xy = current pixel coords (if LMB is down). zw = click pixel
 sampler2D | iChannel{i} | image/sound | Sampler for input textures i
 vec4 | iDate | image/sound | Year, month, day, time in seconds in .xyzw
@@ -184,6 +185,7 @@ For sound shaders, the mainSound() function returns a vec2 containing the left a
 ### OpenFX extensions to Shadertoy
 
 * The pre-defined `iRenderScale` uniform contains the current render scale. Basically all pixel sizes must be multiplied by the renderscale to get a scale-independent effect. For compatibility with Shadertoy, the first line that starts with `const vec2 iRenderScale` is ignored (the full line should be `const vec2 iRenderScale = vec2(1.,1.);`).
+* The pre-defined `iChannelOffset` uniform contains the texture offset for each channel relative to channel 0. For compatibility with Shadertoy, the first line that starts with `const vec2 iChannelOffset` is ignored (the full line should be `const vec2 iChannelOffset[4] = vec2[4]( vec2(0.,0.), vec2(0.,0.), vec2(0.,0.), vec2(0.,0.) );`).
 * The shader may define additional uniforms, which should have a default value, as in `uniform vec2 blurSize = vec2(5., 5.);`.
   These uniforms can be made available as OpenFX parameters using settings in the 'Extra parameters' group, which can be set automatically using the 'Auto. Params' button (in this case, parameters are updated when the image is rendered).
   A parameter label and help string can be given in the comment on the same line. The help string must be in parenthesis.

@@ -657,7 +657,7 @@ public:
 
 private:
     /* override is identity */
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /* Override the clip preferences */
     void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -877,9 +877,10 @@ RectanglePlugin::render(const RenderArguments &args)
 bool
 RectanglePlugin::isIdentity(const IsIdentityArguments &args,
                             Clip * &identityClip,
-                            double &identityTime)
+                            double &identityTime
+                            , int& view, std::string& plane)
 {
-    if ( GeneratorPlugin::isIdentity(args, identityClip, identityTime) ) {
+    if ( GeneratorPlugin::isIdentity(args, identityClip, identityTime, view, plane) ) {
         return true;
     }
 

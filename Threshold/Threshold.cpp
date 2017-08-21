@@ -354,7 +354,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(ThresholdProcessorBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -487,8 +487,10 @@ ThresholdPlugin::render(const RenderArguments &args)
 
 bool
 ThresholdPlugin::isIdentity(const IsIdentityArguments &args,
-                      Clip * &identityClip,
-                      double & /*identityTime*/)
+                            Clip * &identityClip,
+                            double & /*identityTime*/,
+                            int & /*identityView*/,
+                            std::string& /*identityPlane*/)
 {
     {
         bool processR, processG, processB, processA;

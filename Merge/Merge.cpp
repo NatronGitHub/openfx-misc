@@ -36,6 +36,7 @@
 #endif
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
+#include "ofxsMultiPlane.h"
 #include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
@@ -206,6 +207,8 @@ enum BBoxEnum
 #define kParamAChannelsAChanged "aChannelsChanged" // did the user explicitely change the "A" checkbox for A input?
 #define kParamBChannelsAChanged "bChannelsChanged" // did the user explicitely change the "A" checkbox for B input?
 
+#define kRotoMaskPlaneID "RotoMask"
+
 #define kClipA "A"
 #define kClipAHint "The image sequence to merge with input B."
 #define kClipB "B"
@@ -216,6 +219,20 @@ enum BBoxEnum
 #define kMaximumAInputs 64
 
 using namespace MergeImages2D;
+
+static const char* alphaChannels[1] = {"A"};
+
+static const MultiPlane::ImagePlaneDesc& getRotoMaskPlane()
+{
+    static const MultiPlane::ImagePlaneDesc plane(kRotoMaskPlaneID, "", "Alpha", alphaChannels, 1);
+    return plane;
+}
+
+static std::string getRotoMaskPlaneOFXString()
+{
+    const MultiPlane::ImagePlaneDesc &plane = getRotoMaskPlane();
+    return MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane);
+}
 
 static
 MergingFunctionEnum
@@ -283,8 +300,9 @@ class MergeProcessorBase
 protected:
     std::vector<const Image*> _srcImgAs;
     const Image *_srcImgB;
+    const Image* _rotoMaskImgB;
     const Image *_maskImg;
-    const Image *_rotoMaskImg;
+    std::vector<const Image*> _rotoMaskImgAs;
     bool _doMasking;
     bool _alphaMasking;
     double _mix;
@@ -299,8 +317,9 @@ public:
         : ImageProcessor(instance)
         , _srcImgAs()
         , _srcImgB(0)
+        , _rotoMaskImgB(0)
         , _maskImg(0)
-        , _rotoMaskImg(0)
+        , _rotoMaskImgAs()
         , _doMasking(false)
         , _alphaMasking(false)
         , _mix(1.)
@@ -318,10 +337,17 @@ public:
         _srcImgB = B;
     }
 
-    void setMaskImg(const Image *v,
-                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+    void setMaskInvert(bool invert)
+    {
+         _maskInvert = invert;
+    }
 
-    void setRotoMaskImg(const Image *v) { _rotoMaskImg = v; }
+    void setMaskImg(const Image *v) { _maskImg = v; }
+
+    void setRotoMaskImg(const std::vector<const Image*>& rotoMaskAs, const Image *rotoMaskB) {
+        _rotoMaskImgAs = rotoMaskAs;
+        _rotoMaskImgB = rotoMaskB;
+    }
 
     void doMasking(bool v) {_doMasking = v; }
 
@@ -354,11 +380,11 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        float tmpPix[4];
-        float tmpA[4];
-        float tmpB[4];
+        float tmpPix[nComponents];
+        float tmpA[nComponents];
+        float tmpB[nComponents];
 
-        for (int c = 0; c < 4; ++c) {
+        for (int c = 0; c < nComponents; ++c) {
             tmpA[c] = tmpB[c] = 0.;
         }
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
@@ -381,54 +407,87 @@ private:
                     const PIX *srcPixA = (const PIX *)  (_srcImgAs[i] ? _srcImgAs[i]->getPixelAddress(x, y) : 0);
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
 
+
+                    float b = 0.;
+                    if (_rotoMaskImgB) {
+                        const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgB->getPixelAddress(x, y);
+                        if (rotoMaskPix) {
+                            b = *rotoMaskPix / (float)maxValue;
+                            if (_maskInvert) {
+                                b = 1. - b;
+                            }
+                        }
+                    }
+
                     if (srcPixA || srcPixB) {
                         for (std::size_t c = 0; c < nComponents; ++c) {
-#                     ifdef DEBUG
+#                         ifdef DEBUG
                             // check for NaN
                             assert(!srcPixA || srcPixA[c] == srcPixA[c]);
                             assert(!srcPixB || srcPixB[c] == srcPixB[c]);
-#                     endif
+#                         endif
                             // all images are supposed to be black and transparent outside o
                             tmpA[c] = (_aChannels[c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
                             tmpB[c] = (_bChannels[c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
-#                     ifdef DEBUG
+#                         ifdef DEBUG
                             // check for NaN
                             assert(tmpA[c] == tmpA[c]);
                             assert(tmpB[c] == tmpB[c]);
-#                     endif
+#                         endif
                         }
-                        if (nComponents != 4) {
-                            // set alpha (1 inside, 0 outside)
-                            tmpA[3] = (_aChannels[3] && srcPixA) ? 1. : 0.;
-                            tmpB[3] = (_bChannels[3] && srcPixB) ? 1. : 0.;
-                        }
+
                         // work in float: clamping is done when mixing
                         float a;
-                        if (_rotoMaskImg) {
-                            const PIX *rotoMaskPix = (const PIX *)_rotoMaskImg->getPixelAddress(x, y);
+                        if (i >= _rotoMaskImgAs.size() || !_rotoMaskImgAs[i]) {
+                            if (nComponents == 4) {
+                                a = tmpA[nComponents - 1];
+                            } else if (nComponents == 1) {
+                                a = tmpA[0];
+                            } else {
+                                a = (_aChannels[3] && srcPixA) ? 1. : 0.;
+                            }
+                        } else {
+                            const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgAs[i]->getPixelAddress(x, y);
                             if (rotoMaskPix) {
-                                a = *rotoMaskPix;
+                                a = *rotoMaskPix / (float)maxValue;
                             } else {
                                 a = 0.;
                             }
-                        } else {
-                            a = tmpA[3];
+                            if (_maskInvert) {
+                                a = 1. - a;
+                            }
+                            // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
+                            if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
+                                // Premult all A pixels by the roto mask
+                                for (int c = 0; c < nComponents; ++c) {
+                                    tmpA[c] *= a;
+                                }
+                            }
                         }
-                        float b = tmpB[3];
-                        mergePixel<f, float, 4, 1>(_alphaMasking, tmpA, a, tmpB, b, tmpPix);
+                        if (!_rotoMaskImgB) {
+                            if (nComponents == 4) {
+                                b = tmpB[nComponents - 1];
+                            } else if (nComponents == 1) {
+                                b = tmpB[0];
+                            } else {
+                                b = (_bChannels[3] && srcPixB) ? 1. : 0.;
+                            }
+                        }
+
+                        mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpB, b, tmpPix);
                     } else {
                         // everything is black and transparent
-                        for (int c = 0; c < 4; ++c) {
+                        for (int c = 0; c < nComponents; ++c) {
                             tmpPix[c] = 0;
                         }
                     }
 
-#             ifdef DEBUG
+#                 ifdef DEBUG
                     // check for NaN
-                    for (int c = 0; c < 4; ++c) {
+                    for (int c = 0; c < nComponents; ++c) {
                         assert(tmpPix[c] == tmpPix[c]);
                     }
-#             endif
+#                 endif
 
                     for (std::size_t i = 1; i < _srcImgAs.size(); ++i) {
                         // process the other connected A inputs
@@ -437,34 +496,65 @@ private:
 
                         if (srcPixA) {
                             for (std::size_t c = 0; c < nComponents; ++c) {
-#                     ifdef DEBUG
+#                             ifdef DEBUG
                                 // check for NaN
                                 assert(srcPixA[c] == srcPixA[c]);
-#                     endif
+#                             endif
                                 // all images are supposed to be black and transparent outside o
                                 tmpA[c] = _aChannels[c] ? ( (float)srcPixA[c] / maxValue ) : 0.f;
-#                         ifdef DEBUG
+#                             ifdef DEBUG
                                 // check for NaN
                                 assert(tmpA[c] == tmpA[c]);
-#                         endif
-                            }
-                            if (nComponents != 4) {
-                                // set alpha (1 inside, 0 outside)
-                                assert(srcPixA);
-                                tmpA[3] = _aChannels[3] ? 1. : 0.;
+#                             endif
                             }
 
                             // work in float: clamping is done when mixing
-                            float a = tmpA[3];
-                            float b = tmpPix[3];
-                            mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
+                            float a;
+                            if (i >= _rotoMaskImgAs.size() || !_rotoMaskImgAs[i]) {
+                                if (nComponents == 4) {
+                                    a = tmpA[nComponents - 1];
+                                } else if (nComponents == 1) {
+                                    a = tmpA[0];
+                                } else {
+                                    a = (_aChannels[3] && srcPixA) ? 1. : 0.;
+                                }
+                            } else {
+                                const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgAs[i]->getPixelAddress(x, y);
+                                if (rotoMaskPix) {
+                                    a = *rotoMaskPix / (float)maxValue;
+                                } else {
+                                    a = 0.;
+                                }
+                                if (_maskInvert) {
+                                    a = 1. - a;
+                                }
+                                // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
+                                if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
+                                    // Premult all A pixels by the roto mask
+                                    for (int c = 0; c < nComponents; ++c) {
+                                        tmpA[c] *= a;
+                                    }
+                                }
+                            }
 
-#                     ifdef DEBUG
+                            // Update b from the previously computed value.
+                            // see https://github.com/MrKepzie/Natron/issues/1648
+                            if (nComponents == 4) {
+                                b = tmpPix[nComponents - 1];
+                            } else if (nComponents == 1) {
+                                b = tmpPix[0];
+                            } else {
+                                b = 1.;
+                            }
+
+                            mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
+                            
+#                         ifdef DEBUG
                             // check for NaN
-                            for (int c = 0; c < 4; ++c) {
+                            for (int c = 0; c < nComponents; ++c) {
                                 assert(tmpPix[c] == tmpPix[c]);
                             }
-#                     endif
+#                         endif
                         }
                     }
 
@@ -482,7 +572,7 @@ private:
                         }
                     }
                 }
-
+                
                 dstPix += nComponents;
             }
         }
@@ -500,15 +590,14 @@ public:
     MergePlugin(OfxImageEffectHandle handle,
                 MergePluginEnum plugin,
                 bool numerousInputs)
-        : ImageEffect(handle)
-        , _plugin(plugin)
-        , _dstClip(0)
-        , _srcClipAs()
-        , _srcClipB(0)
-        , _maskClip(0)
-        , _rotoMaskClip(0)
-        , _aChannelAChanged(0)
-        , _bChannelAChanged(0)
+    : ImageEffect(handle)
+    , _pluginType(plugin)
+    , _dstClip(0)
+    , _srcClipAs()
+    , _srcClipB(0)
+    , _maskClip(0)
+    , _aChannelAChanged(0)
+    , _bChannelAChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentXY || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
@@ -529,12 +618,10 @@ public:
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
-        if (plugin == eMergePluginRoto) {
-            _rotoMaskClip = fetchClip(kClipRotoMask);
-            assert(!_rotoMaskClip || !_rotoMaskClip->isConnected() || _rotoMaskClip->getPixelComponents() == ePixelComponentAlpha);
-        }
+
         _operation = fetchChoiceParam(kParamOperation);
         _operationString = fetchStringParam(kNatronOfxParamStringSublabelName);
+
         _bbox = fetchChoiceParam(kParamBBox);
         _alphaMasking = fetchBooleanParam(kParamAlphaMasking);
         assert(_operation && _operationString && _bbox && _alphaMasking);
@@ -565,37 +652,47 @@ public:
             _aChannelAChanged = fetchBooleanParam(kParamAChannelsAChanged);
             _bChannelAChanged = fetchBooleanParam(kParamBChannelsAChanged);
         }
+
+        {
+            MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValue();
+            // depending on the operation, enable/disable alpha masking
+            _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
+            _operationString->setValue( MergeImages2D::getOperationString(operation) );
+        }
     }
 
 private:
     // override the rod call
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
+#ifdef OFX_EXTENSIONS_NUKE
+    virtual OfxStatus getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
+#endif
+
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(MergeProcessorBase &, const RenderArguments &args);
+    void setupAndProcess(MergeProcessorBase &, const RenderArguments &args, bool renderRotoMask);
 
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
     template<int nComponents>
-    void renderForComponents(const RenderArguments &args);
+    void renderForComponents(const RenderArguments &args, bool renderRotoMask);
 
     template <class PIX, int nComponents, int maxValue>
-    void renderForBitDepth(const RenderArguments &args);
+    void renderForBitDepth(const RenderArguments &args, bool renderRotoMask);
 
-    MergePluginEnum _plugin;
+    MergePluginEnum _pluginType;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     std::vector<Clip *> _srcClipAs;
     Clip *_srcClipB;
     Clip *_maskClip;
-    Clip *_rotoMaskClip;
     ChoiceParam *_operation;
     StringParam *_operationString;
     ChoiceParam *_bbox;
@@ -686,14 +783,84 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return false;
 } // MergePlugin::getRegionOfDefinition
 
+#ifdef OFX_EXTENSIONS_NUKE
+
+static void addRotoMaskIfAvailableOnClip(Clip* clip, ClipComponentsSetter& clipComponents)
+{
+    std::vector<std::string> availablePlanes;
+    clip->getPlanesPresent(&availablePlanes);
+    for (std::size_t i = 0; i < availablePlanes.size(); ++i) {
+        MultiPlane::ImagePlaneDesc plane;
+        if (availablePlanes[i] == kOfxMultiplaneColorPlaneID) {
+            plane = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(clip->getPixelComponentCount());
+        } else {
+            plane = MultiPlane::ImagePlaneDesc::mapOFXPlaneStringToPlane(availablePlanes[i]);
+        }
+        if (plane.getPlaneID() == kRotoMaskPlaneID) {
+            clipComponents.addClipPlane(*clip, availablePlanes[i]);
+            return;
+        }
+    }
+}
+
+OfxStatus
+MergePlugin::getClipComponents(const ClipComponentsArguments& args,
+                                    ClipComponentsSetter& clipComponents)
+{
+    assert(_pluginType == eMergePluginRoto);
+
+
+    bool isColorPlaneRendered = true;
+    bool outputChannels[4];
+    for (int c = 0; c < 4; ++c) {
+        _outputChannels[c]->getValueAtTime(args.time, outputChannels[c]);
+    }
+    if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3]) {
+        isColorPlaneRendered = false;
+    }
+
+    std::string ofxPlaneStr = getRotoMaskPlaneOFXString();
+
+    // For each clip we need color and RotoMask
+
+    clipComponents.addClipPlane(*_dstClip, ofxPlaneStr);
+    if (isColorPlaneRendered) {
+        clipComponents.addClipPlane(*_dstClip, kOfxMultiplaneColorPlaneID);
+    }
+
+    addRotoMaskIfAvailableOnClip(_srcClipB, clipComponents);
+    if (isColorPlaneRendered) {
+        clipComponents.addClipPlane(*_srcClipB, kOfxMultiplaneColorPlaneID);
+    }
+
+    for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
+        if (_srcClipAs[i]->isConnected()) {
+            addRotoMaskIfAvailableOnClip(_srcClipAs[i], clipComponents);
+            if (isColorPlaneRendered) {
+                clipComponents.addClipPlane(*_srcClipAs[i], kOfxMultiplaneColorPlaneID);
+            }
+        }
+    }
+
+    if (_maskClip && _maskClip->isConnected()) {
+        addRotoMaskIfAvailableOnClip(_maskClip, clipComponents);
+    }
+    return kOfxStatOK;
+
+} // getClipComponents
+
+#endif
+
 // Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
 {
     std::vector<const Image*> images;
+    std::vector<const Image*> rotoMaskImg;
 
     OptionalImagesHolder_RAII()
         : images()
+        , rotoMaskImg()
     {
     }
 
@@ -701,6 +868,9 @@ struct OptionalImagesHolder_RAII
     {
         for (std::size_t i = 0; i < images.size(); ++i) {
             delete images[i];
+        }
+        for (std::size_t i = 0; i < rotoMaskImg.size(); ++i) {
+            delete rotoMaskImg[i];
         }
     }
 };
@@ -714,47 +884,80 @@ struct OptionalImagesHolder_RAII
 /* set up and run a processor */
 void
 MergePlugin::setupAndProcess(MergeProcessorBase &processor,
-                             const RenderArguments &args)
+                             const RenderArguments &args,
+                             bool renderRotoMask)
 {
     const double time = args.time;
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
+    std::string rotoMaskOfxPlaneStr = getRotoMaskPlaneOFXString();
+
+    Image* dstImage = 0;
+    if (_pluginType != eMergePluginRoto || !renderRotoMask) {
+        dstImage = _dstClip->fetchImage(time);
+    } else {
+        dstImage = _dstClip->fetchImagePlane(args.time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+    }
+    std::auto_ptr<Image> dst(dstImage);
+
+    // If the plug-in is eMergePluginRoto, we can produce a RotoMask but don't necessarily produce a Color plane.
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-         ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        throwSuiteStatusException(kOfxStatFailed);
+    BitDepthEnum dstBitDepth = _dstClip->getPixelDepth();
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    if (dst.get() && _pluginType != eMergePluginRoto) {
+        // Only check if the plug-in is not multi-planar, because the RotoMask plane may not necessariy have the same properties
+        // as the color plane.
+        if ( ( dstBitDepth != dst->getPixelDepth() ) ||
+            ( dstComponents !=  dst->getPixelComponents()) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        if ( (dst->getRenderScale().x != args.renderScale.x) ||
+            ( dst->getRenderScale().y != args.renderScale.y) ||
+            ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-    std::auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
-                                     _srcClipB->fetchImage(time) : 0 );
+    std::auto_ptr<const Image> srcB( ( !renderRotoMask && _srcClipB && _srcClipB->isConnected() ) ?
+                                    _srcClipB->fetchImage(time) : 0 );
     OptionalImagesHolder_RAII srcAs;
     for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
-        const Image* srcA = ( _srcClipAs[i] && _srcClipAs[i]->isConnected() ) ?
-                              _srcClipAs[i]->fetchImage(time) : 0;
-        if (srcA) {
-            srcAs.images.push_back(srcA);
+        if ( _srcClipAs[i] && _srcClipAs[i]->isConnected() ) {
+            if (renderRotoMask) {
+#ifdef OFX_EXTENSIONS_NUKE
+                const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+                if (rotoMaskA) {
+                    srcAs.rotoMaskImg.push_back(rotoMaskA);
+                }
+#endif
+            } else {
+                const Image* srcA = _srcClipAs[i]->fetchImage(time);
+                if (srcA) {
+                    srcAs.images.push_back(srcA);
 
-            if ( (srcA->getRenderScale().x != args.renderScale.x) ||
-                 ( srcA->getRenderScale().y != args.renderScale.y) ||
-                 ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
-            }
-            BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
-            PixelComponentEnum srcComponents = srcA->getPixelComponents();
-            if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-                throwSuiteStatusException(kOfxStatErrImageFormat);
+                    if ( (srcA->getRenderScale().x != args.renderScale.x) ||
+                        ( srcA->getRenderScale().y != args.renderScale.y) ||
+                        ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
+                        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                        throwSuiteStatusException(kOfxStatFailed);
+                    }
+                    BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
+                    PixelComponentEnum srcComponents = srcA->getPixelComponents();
+                    if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+                        throwSuiteStatusException(kOfxStatErrImageFormat);
+                    }
+#ifdef OFX_EXTENSIONS_NUKE
+                    if (_pluginType == eMergePluginRoto) {
+                        const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+                        // always push the rotoMask, even if NULL, so that indexes in srcAs.images and srcAs.rotoMaskImg correspond
+                        srcAs.rotoMaskImg.push_back(rotoMaskA);
+
+                    }
+#endif
+                }
             }
         }
     }
@@ -775,21 +978,50 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+
+    const Image* maskImage = 0;
+    if (doMasking) {
+        if (_pluginType == eMergePluginRoto) {
+            maskImage = _maskClip->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+        } else {
+            maskImage = _maskClip->fetchImage(time);
+        }
+    }
+
+    std::auto_ptr<const Image> mask(maskImage);
+
+    bool maskInvert = _maskInvert->getValueAtTime(time);
+    processor.setMaskInvert(maskInvert);
 
     // do we do masking
     if (doMasking) {
-        bool maskInvert = _maskInvert->getValueAtTime(time);
 
         // say we are masking
         processor.doMasking(true);
 
         // Set it in the processor
-        processor.setMaskImg(mask.get(), maskInvert);
+        processor.setMaskImg(mask.get());
     }
 
-    std::auto_ptr<const Image> rotoMask(_rotoMaskClip ? _rotoMaskClip->fetchImage(time) : 0);
-    processor.setRotoMaskImg(rotoMask.get());
+    const Image* rotoMaskImgB = 0;
+    if (_pluginType == eMergePluginRoto) {
+#ifdef OFX_EXTENSIONS_NUKE
+        rotoMaskImgB = _srcClipB->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+#endif
+    }
+
+    processor.setDstImg( dst.get() );
+
+
+    std::auto_ptr<const Image> rotoMaskB(rotoMaskImgB);
+    if (!renderRotoMask) {
+        processor.setRotoMaskImg( srcAs.rotoMaskImg, rotoMaskB.get() );
+        processor.setSrcImg( srcAs.images, srcB.get() );
+    } else {
+        // We render the RotoMask
+        processor.setRotoMaskImg( srcAs.rotoMaskImg, rotoMaskB.get() );
+        processor.setSrcImg( srcAs.rotoMaskImg, rotoMaskB.get() );
+    }
 
     bool alphaMasking = _alphaMasking->getValueAtTime(time);
     double mix = _mix->getValueAtTime(time);
@@ -802,8 +1034,6 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         outputChannels[c] = _outputChannels[c]->getValueAtTime(time);
     }
     processor.setValues(alphaMasking, mix, aChannels, bChannels, outputChannels);
-    processor.setDstImg( dst.get() );
-    processor.setSrcImg( srcAs.images, srcB.get() );
     processor.setRenderWindow(args.renderWindow);
 
     processor.process();
@@ -811,21 +1041,21 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
 
 template<int nComponents>
 void
-MergePlugin::renderForComponents(const RenderArguments &args)
+MergePlugin::renderForComponents(const RenderArguments &args, bool renderRotoMask)
 {
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
 
     switch (dstBitDepth) {
     case eBitDepthUByte: {
-        renderForBitDepth<unsigned char, nComponents, 255>(args);
+        renderForBitDepth<unsigned char, nComponents, 255>(args, renderRotoMask);
         break;
     }
     case eBitDepthUShort: {
-        renderForBitDepth<unsigned short, nComponents, 65535>(args);
+        renderForBitDepth<unsigned short, nComponents, 65535>(args, renderRotoMask);
         break;
     }
     case eBitDepthFloat: {
-        renderForBitDepth<float, nComponents, 1>(args);
+        renderForBitDepth<float, nComponents, 1>(args, renderRotoMask);
         break;
     }
     default:
@@ -835,7 +1065,7 @@ MergePlugin::renderForComponents(const RenderArguments &args)
 
 template <class PIX, int nComponents, int maxValue>
 void
-MergePlugin::renderForBitDepth(const RenderArguments &args)
+MergePlugin::renderForBitDepth(const RenderArguments &args, bool renderRotoMask)
 {
     const double time = args.time;
     MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValueAtTime(time);
@@ -966,7 +1196,7 @@ MergePlugin::renderForBitDepth(const RenderArguments &args)
     } // switch
     assert( fred.get() );
     if ( fred.get() ) {
-        setupAndProcess(*fred, args);
+        setupAndProcess(*fred, args, renderRotoMask);
     }
 } // MergePlugin::renderForBitDepth
 
@@ -981,15 +1211,32 @@ MergePlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || _srcClipAs[0]->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
+
+
+    bool renderRotoMask = false;
+    if (_pluginType == eMergePluginRoto) {
+        std::string planeToRender;
+        if (args.planes.empty()) {
+            planeToRender = kFnOfxImagePlaneColour;
+        } else {
+            planeToRender = args.planes.front();
+            renderRotoMask = planeToRender == getRotoMaskPlaneOFXString();
+        }
+    }
+
+    if (renderRotoMask) {
+        dstComponents = ePixelComponentAlpha;
+    }
+
     if (dstComponents == ePixelComponentRGBA) {
-        renderForComponents<4>(args);
+        renderForComponents<4>(args, renderRotoMask);
     } else if (dstComponents == ePixelComponentRGB) {
-        renderForComponents<3>(args);
+        renderForComponents<3>(args, renderRotoMask);
     } else if (dstComponents == ePixelComponentXY) {
-        renderForComponents<2>(args);
+        renderForComponents<2>(args, renderRotoMask);
     } else {
         assert(dstComponents == ePixelComponentAlpha);
-        renderForComponents<1>(args);
+        renderForComponents<1>(args, renderRotoMask);
     }
 }
 
@@ -998,6 +1245,15 @@ MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
+    // The output of Merge should always have an Alpha component.
+    // For example, if B is RGB, B is considered transparent, so
+    // that outside of A the output should be transparent.
+    // Thus, if A and B are RGB, output should be RGBA.
+    if (outputComps == ePixelComponentRGB) {
+        outputComps = ePixelComponentRGBA;
+    }
+
+    clipPreferences.setClipComponents(*_dstClip, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
     for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
         clipPreferences.setClipComponents(*_srcClipAs[i], outputComps);
@@ -1051,7 +1307,8 @@ MergePlugin::changedClip(const InstanceChangedArgs &args,
 bool
 MergePlugin::isIdentity(const IsIdentityArguments &args,
                         Clip * &identityClip,
-                        double & /*identityTime*/)
+                        double & /*identityTime*/
+                        , int& /*view*/, std::string& plane)
 {
     const double time = args.time;
     double mix;
@@ -1065,14 +1322,27 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     }
 
     bool outputChannels[4];
+    bool srcBChannels[4];
     for (int c = 0; c < 4; ++c) {
         _outputChannels[c]->getValueAtTime(time, outputChannels[c]);
+        _bChannels[c]->getValueAtTime(time, srcBChannels[c]);
     }
-    if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3]) {
+    if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3] && plane == kFnOfxImagePlaneColour) {
         identityClip = _srcClipB;
 
         return true;
     }
+
+    // For each checked output channels, if srcB channel is unchecked, we are not identity
+    for (int i = 0; i < 4; ++i) {
+        if (!outputChannels[i]) {
+            continue;
+        }
+        if (!srcBChannels[i]) {
+            return false;
+        }
+    }
+
 
     OfxRectI maskRoD;
     bool maskRoDValid = false;
@@ -1095,10 +1365,14 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     MergingFunctionEnum blendingOperator = (MergingFunctionEnum)_operation->getValueAtTime(args.time);
     if ( !isIdentityForBOnly(blendingOperator) ) {
         // For most operators, we cannot be identity on regions where the A RoD does not intersect the render window.
-        // E.g: multiply should produce black and transparent in B regions that do not intersect A
+        // E.g: multiply should produce black and transparent in B regions that do not intersect A 
         return false;
     }
 
+    if (Coords::rectIsInfinite(args.renderWindow)) {
+        return false;
+    }
+    
     // The region of effect is only the set of the intersections between the A inputs and the mask.
     // If at least one of these regions intersects the renderwindow, the effect is not identity.
 
@@ -1134,7 +1408,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
 //mDeclarePluginFactory(MergePluginFactory, {ofxsThreadSuiteCheck();}, {});
 template<MergePluginEnum plugin>
 class MergePluginFactory
-    : public PluginFactoryHelper<MergePluginFactory<plugin> >
+: public PluginFactoryHelper<MergePluginFactory<plugin> >
 {
 public:
     MergePluginFactory<plugin>(const std::string & id, unsigned int verMaj, unsigned int verMin)
@@ -1311,7 +1585,7 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (plugin != eMergePluginRoto &&
+    bool numerousInputs =  (/*plugin != eMergePluginRoto &&*/
                             getImageEffectHostDescription()->isNatron &&
                             getImageEffectHostDescription()->versionMajor >= 2);
     ClipDescriptor* srcClipB = desc.defineClip(kClipB);
@@ -1350,15 +1624,6 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     maskClip->setSupportsTiles(kSupportsTiles);
     maskClip->setIsMask(true);
 
-    if (plugin == eMergePluginRoto) {
-        ClipDescriptor* rotoMaskClip = desc.defineClip(kClipRotoMask);
-        rotoMaskClip->addSupportedComponent(ePixelComponentAlpha);
-        rotoMaskClip->setTemporalClipAccess(false);
-        rotoMaskClip->setOptional(true);
-        rotoMaskClip->setSupportsTiles(kSupportsTiles);
-        rotoMaskClip->setIsMask(true);
-    }
-
     if (numerousInputs) {
         for (int i = 2; i <= kMaximumAInputs; ++i) {
             ClipDescriptor* optionalSrcClip = desc.defineClip( std::string(kClipA) + unsignedToString(i) );
@@ -1392,7 +1657,7 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecretAndDisabled(true); // always secret
-        param->setIsPersistent(true);
+        param->setIsPersistent(false);
         param->setEvaluateOnChange(false);
         param->setDefault( getOperationString( getDefaultOperation(plugin) ) );
         if (page) {
@@ -1491,6 +1756,7 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
 
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
+    desc.setIsMultiPlanar(plugin == eMergePluginRoto);
 #endif
     {
         StringParamDescriptor* param = desc.defineStringParam(kParamAChannels);
@@ -1646,6 +1912,7 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+
     if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
         // two hidden parameters to keep track of the fact that the user explicitely checked or unchecked tha "A" checkbox
         {
@@ -1681,7 +1948,7 @@ MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
     assert(unsignedToString(12345) == "12345");
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (plugin != eMergePluginRoto &&
+    bool numerousInputs =  (/*plugin != eMergePluginRoto &&*/
                             getImageEffectHostDescription()->isNatron &&
                             getImageEffectHostDescription()->versionMajor >= 2);
 

@@ -1,15 +1,12 @@
 // https://www.shadertoy.com/view/XlsXDN
 
-// Money filter based on "Free Engraved Illustration Effect Action for Photoshop" - http://snip.ly/j0gq
-// My website: http://kyrie.pe
-
-// iChannel0: Source, filter=linear, wrap=clamp
-// BBox: iChannel0
-
 // Money filter by Giacomo Preciado
 // Based on: "Free Engraved Illustration Effect Action for Photoshop" - http://snip.ly/j0gq
 // e-mail: giacomo@kyrie.pe
 // website: http://kyrie.pe
+
+// iChannel0: Source, filter=linear, wrap=clamp
+// BBox: iChannel0
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
@@ -32,7 +29,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     datosPatron[4] = vec3(1.0, 0.0, 0.3); // 90
     datosPatron[5] = vec3(0.0, 1.0, 0.2); // 0
 
-    vec4 color = texture2D(iChannel0, vec2(fragCoord.x / iResolution.x, xy.y));
+    vec4 color = texture(iChannel0, vec2(fragCoord.x / iResolution.x, xy.y));
     fragColor = color;
     
     for(int i = 0; i < kNumPatrones; i++)
