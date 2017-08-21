@@ -253,6 +253,7 @@ getExtraParameterInfo(const char* fragmentShader,
     }
 
     //printf("found uniform!\n");
+    p.setPos(int(tokpos - fragmentShader));
     const char* sstart = tokpos + strlen(tok);
     // look for ';' before EOF
     while (*sstart && *sstart != '\n' && *sstart != '\r' && *sstart != ';') {
@@ -311,8 +312,14 @@ getExtraParameterInfo(const char* fragmentShader,
         while ( *sstart && isspacenonewline(*sstart) ) {
             ++sstart;
         }
+        int depth = 0; // handle paren nesting
         send = sstart;
-        while (*send && *send != ')' && *send != '\n' && *send != '\r') {
+        while (*send && (depth > 0 || *send != ')') && *send != '\n' && *send != '\r') {
+            if (*send == '(') {
+                ++depth;
+            } else if (*send == ')' && depth > 0) {
+                --depth;
+            }
             ++send;
         }
         // we tolerate either space or comma after closing paren

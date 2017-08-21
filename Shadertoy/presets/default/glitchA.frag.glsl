@@ -33,7 +33,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         fragColor = color;
         return;
     }
-    float t = mod(mod(iGlobalTime, amount * 100.0 * (amount - 0.5)) * 109.0, 1.0);
+    float t = mod(mod(iTime, amount * 100.0 * (amount - 0.5)) * 109.0, 1.0);
     vec4 postColor = posterize(color, 16.0);
     vec4 a = posterize(texture2D(iChannel0, quantize(uv, 64.0 * t) + pixel * (postColor.rb - vec2(.5)) * 100.0), 5.0).rbga;
     vec4 b = posterize(texture2D(iChannel0, quantize(uv, 32.0 - t) + pixel * (postColor.rg - vec2(.5)) * 1000.0), 4.0).gbra;

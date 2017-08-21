@@ -900,7 +900,7 @@ TimeBufferReadPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecretAndDisabled(true); // always secret
-        param->setIsPersistent(true);
+        param->setIsPersistent(false);
         param->setEvaluateOnChange(false);
         param->setDefault("");
         if (page) {
@@ -960,6 +960,7 @@ public:
         std::string name;
         _bufferName->getValue(name);
         setName(name);
+        _sublabel->setValue(name);
         _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
         _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
     }

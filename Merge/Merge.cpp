@@ -621,6 +621,7 @@ public:
 
         _operation = fetchChoiceParam(kParamOperation);
         _operationString = fetchStringParam(kNatronOfxParamStringSublabelName);
+
         _bbox = fetchChoiceParam(kParamBBox);
         _alphaMasking = fetchBooleanParam(kParamAlphaMasking);
         assert(_operation && _operationString && _bbox && _alphaMasking);
@@ -650,6 +651,13 @@ public:
         if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
             _aChannelAChanged = fetchBooleanParam(kParamAChannelsAChanged);
             _bChannelAChanged = fetchBooleanParam(kParamBChannelsAChanged);
+        }
+
+        {
+            MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValue();
+            // depending on the operation, enable/disable alpha masking
+            _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
+            _operationString->setValue( MergeImages2D::getOperationString(operation) );
         }
     }
 
@@ -1649,7 +1657,7 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecretAndDisabled(true); // always secret
-        param->setIsPersistent(true);
+        param->setIsPersistent(false);
         param->setEvaluateOnChange(false);
         param->setDefault( getOperationString( getDefaultOperation(plugin) ) );
         if (page) {

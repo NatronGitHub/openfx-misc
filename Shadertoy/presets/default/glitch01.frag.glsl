@@ -65,7 +65,7 @@ vec3 rgb2yuv( vec3 rgb )
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	float THRESHOLD = 0.1 + iMouse.x / iResolution.x;
-	float time_s = mod( iGlobalTime, 32.0 );
+	float time_s = mod( iTime, 32.0 );
 
 	float glitch_threshold = 1.0 - THRESHOLD;
 	const float max_ofs_siz = 0.1; //TOOD: input
