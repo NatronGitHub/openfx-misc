@@ -28,13 +28,13 @@ float sqrtiter = sqrt(float(ITERATIONS));
 // - the length of the vangle vector changes, although it should remain the same -> renormalize
 // - the radius was sqrt(2) too large => properly compute the base norm
 //-------------------------------------------------------------------------------------------
-vec3 Bokeh(sampler2D tex, vec2 uv, float radius)
+vec4 Bokeh(sampler2D tex, vec2 uv, float radius)
 {
     // the spacing is the square root of the density on average: sqrt(pi*r^2/n)
     float spacing = sqrt(3.141592652) * radius * iRenderScale.x / sqrtiter;
     float level = log2(spacing);
 
-    vec3 acc = vec3(0);
+    vec4 acc = vec4(0);
     float r = 1.;
     vec2 vangle = vec2(0.,1.);
     float vanglenorm = radius / sqrtiter / sqrt(2);
@@ -42,11 +42,11 @@ vec3 Bokeh(sampler2D tex, vec2 uv, float radius)
     for (int j = 0; j < ITERATIONS; j++) {  
         // the approx increase in the scale of sqrt(0, 1, 2, 3...)
         r += 1. / r;
-	// r = 1. + sqrt(j) * sqrt(2); // slow version - gives almost the same result
+	    // r = 1. + sqrt(j) * sqrt(2); // slow version - gives almost the same result
         vangle = rot * vangle;
-	vangle /= length(vangle);
-	// vangle = vec2(cos(GOLDEN_ANGLE*j), sin(GOLDEN_ANGLE*j)); // slow version
-        vec3 col = texture2D(tex, uv + (r-1.) * vangle * vanglenorm * uvscale, level).xyz; /// ... Sample the image
+	    vangle /= length(vangle);
+	    // vangle = vec2(cos(GOLDEN_ANGLE*j), sin(GOLDEN_ANGLE*j)); // slow version
+        vec4 col = texture2D(tex, uv + (r-1.) * vangle * vanglenorm * uvscale, level).rgba; /// ... Sample the image
         acc += col;
     }
     return acc / ITERATIONS;
@@ -55,20 +55,20 @@ vec3 Bokeh(sampler2D tex, vec2 uv, float radius)
 #if 0
 // reference implementation
 //-------------------------------------------------------------------------------------------
-vec3 Bokeh2(sampler2D tex, vec2 uv, float radius)
+vec4 Bokeh2(sampler2D tex, vec2 uv, float radius)
 {
     // the spacing is the square root of the density on average: sqrt(pi*r^2/n)
     float spacing = sqrt(3.141592652/ITERATIONS) * radius * iRenderScale.x;
     float level = log2(spacing);
 
-    vec3 acc = vec3(0);
+    vec4 acc = vec4(0);
 
     // Vogel's method, described at http://blog.marmakoide.org/?p=1
     for (int j = 0; j < ITERATIONS; j++) {  
         float theta = GOLDEN_ANGLE * j;
         float r = sqrt(j) / sqrtiter;
         vec2 p = r * vec2(cos(theta), sin(theta));
-        vec3 col = texture2D(tex, uv + radius * p * iRenderScale.xy / iResolution.xy, level).xyz; /// ... Sample the image
+        vec4 col = texture2D(tex, uv + radius * p * iRenderScale.xy / iResolution.xy, level).rgba; /// ... Sample the image
         acc += col;
     }
     return acc / ITERATIONS;
@@ -83,10 +83,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float rad = size;
     if (perpixel_size) {
         rad *= texture2D(iChannel1, (fragCoord.xy-iChannelOffset[1].xy)/iChannelResolution[1].xy).x;
-        }
-    
-    {        
-        fragColor = vec4(Bokeh(iChannel0, uv, rad), 1.0);
     }
     
+    fragColor = Bokeh(iChannel0, uv, rad);
 }
