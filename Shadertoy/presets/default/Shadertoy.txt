@@ -24,6 +24,7 @@
 
 "Blur/Bilateral" "bilateralfilter-natron.frag.glsl"
 "Blur/Bloom" "bloompostproc-natron.frag.glsl"
+"Blur/Bokeh Disc" "bokehdisc-natron.frag.glsl"
 "Blur/Circular Blur" "circularblur-natron.frag.glsl"
 "Blur/Fast Blur" "fastblur-natron.frag.glsl"
 "Blur/Gaussian Blur" "gaussianblur-natron.frag.glsl"
