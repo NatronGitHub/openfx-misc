@@ -246,6 +246,10 @@ private:
                 } else {
                     maskAlpha = 1;
                 }
+#             ifdef DEBUG
+                assert(srcAlpha == srcAlpha); // check for NaN
+                assert(maskAlpha == maskAlpha); // check for NaN
+#             endif
 
 
                 PIX srcVal[nComponents];
