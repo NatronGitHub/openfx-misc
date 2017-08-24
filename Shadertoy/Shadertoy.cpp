@@ -1249,7 +1249,7 @@ ShadertoyPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     // We have to do this because the processing code does not support varying components for srcClip and dstClip
     // (The OFX spec doesn't state a default value for this)
     if (_srcClips[0]) {
-        clipPreferences.setClipComponents( *_dstClip, _srcClips[0]->getPixelComponents() );
+        clipPreferences.setClipComponents( *_dstClip, _srcClips[0]->getUnmappedPixelComponents() );
     }
     clipPreferences.setOutputFrameVarying(true);
     clipPreferences.setOutputHasContinuousSamples(true);
