@@ -61,6 +61,5 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	for( int i=0;i<NUM_SAMPLES2;++i )
 		sum += texture2D( iChannel0, uv-ofs[i] );
 
-	fragColor.rgb = sum.rgb / NUM_SAMPLES_F;
-	fragColor.a = 1.0;
+	fragColor = sum / NUM_SAMPLES_F;
 }
