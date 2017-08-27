@@ -3344,7 +3344,7 @@ DistortionPluginFactory<plugin, majorVersion>::describe(ImageEffectDescriptor &d
 #endif
 #if defined(OFX_EXTENSIONS_NUKE) && defined(OFX_EXTENSIONS_NATRON)
     gIsMultiPlaneV2 = getImageEffectHostDescription()->supportsDynamicChoices && gIsMultiPlaneV1;
-    if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
+    if ((gIsMultiPlaneV1 || gIsMultiPlaneV2) && (plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort)) {
         // This enables fetching different planes from the input.
         // Generally the user will read a multi-layered EXR file in the Reader node and then use the shuffle
         // to redirect the plane's channels into RGBA color plane.
