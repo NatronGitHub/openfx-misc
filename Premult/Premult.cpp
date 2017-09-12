@@ -468,9 +468,16 @@ PremultPlugin<isPremult>::fetchSourceAndOutputImage(const RenderArguments &args,
             }
         }
 
-        *dstImage = _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane).c_str() );
+
+        std::string ofxPlaneStr = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane);
+        if (std::find(args.planes.begin(), args.planes.end(), ofxPlaneStr) == args.planes.end()) {
+            setPersistentMessage(Message::eMessageError, "", "Host did not ask to render requested image plane");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+
+        *dstImage = _dstClip->fetchImagePlane( args.time, args.renderView, ofxPlaneStr.c_str() );
         if (_srcClip && _srcClip->isConnected()) {
-            *srcImage = _srcClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(plane).c_str() );
+            *srcImage = _srcClip->fetchImagePlane( args.time, args.renderView, ofxPlaneStr.c_str() );
         }
     }
 }
@@ -509,11 +516,42 @@ template<bool isPremult>
 OfxStatus
 PremultPlugin<isPremult>::getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents)
 {
-    OfxStatus stat = MultiPlaneEffect::getClipComponents(args, clipComponents);
 
+    // Request the premult channel plane on the source clip
+    std::string premultChannelOfxPlane;
+    {
+        MultiPlane::ImagePlaneDesc premultPlane;
+        int channelIndex = -1;
+        OFX::Clip* clip = 0;
+        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &premultPlane, &channelIndex);
+        if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
+            return kOfxStatFailed;
+        } else if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane) {
+            premultChannelOfxPlane = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(premultPlane);
+            clipComponents.addClipPlane(*_srcClip, premultChannelOfxPlane);
+        }
+    }
+
+    // Request the input plane on both the source and dst clip
+    {
+        MultiPlane::ImagePlaneDesc rgbPlane;
+        int channelIndex = -1;
+        OFX::Clip* clip = 0;
+        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_inputPlane->getName(), &clip, &rgbPlane, &channelIndex);
+        if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeFailed) {
+            return kOfxStatFailed;
+        } else if (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedPlane) {
+            std::string ofxDstPlane = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(rgbPlane);
+            if (ofxDstPlane != premultChannelOfxPlane) {
+                clipComponents.addClipPlane(*_srcClip, ofxDstPlane);
+            }
+            clipComponents.addClipPlane(*_dstClip, ofxDstPlane);
+        }
+    }
+    
     // Specify the pass-through clip
     clipComponents.setPassThroughClip(_srcClip, args.time, args.view);
-    return stat;
+    return kOfxStatOK;
 }
 
 
