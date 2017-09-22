@@ -255,7 +255,10 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
     }
     std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
-    if ( src.get() ) {
+    if ( !src.get() || !( _srcClip && _srcClip->isConnected() ) ) {
+        // nothing to do
+        return;
+    } else {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
              ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {

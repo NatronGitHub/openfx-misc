@@ -336,7 +336,10 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
             //- get the the src Image
             std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                            _srcClip->fetchImagePlane(time, planes[layer].c_str()) : 0 );
-            if ( src.get() ) {
+            if ( !src.get() || !( _srcClip && _srcClip->isConnected() ) ) {
+                // nothing to do
+                return;
+            } else {
                 if ( (src->getRenderScale().x != args.renderScale.x) ||
                     ( src->getRenderScale().y != args.renderScale.y) ||
                     ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {

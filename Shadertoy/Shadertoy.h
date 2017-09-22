@@ -133,6 +133,7 @@ private:
 public:
         ExtraParameter()
             : _type(eUniformTypeNone)
+            , _pos(-1)
         {
         }
 

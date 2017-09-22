@@ -505,6 +505,8 @@ PremultPlugin<isPremult>::fetchPremultChannelImage(const RenderArguments &args, 
                 srcImage = _srcClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(srcPlane).c_str() );
             }
             if (!srcImage || *channelIndex < 0 || *channelIndex >= srcImage->getPixelComponentCount() ) {
+                delete srcImage;
+
                 return NULL;
             }
         }
