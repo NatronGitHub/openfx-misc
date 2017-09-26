@@ -701,6 +701,11 @@ RampPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }
+
+    // if no input is connected, output is continuous
+    if ( !_srcClip || !_srcClip->isConnected() ) {
+        clipPreferences.setOutputHasContinuousSamples(true);
+    }
 }
 
 void

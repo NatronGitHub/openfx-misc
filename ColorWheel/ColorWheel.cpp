@@ -508,6 +508,11 @@ ColorWheelPlugin::render(const RenderArguments &args)
 void
 ColorWheelPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
+    // if no input is connected, output is continuous
+    if ( !_srcClip || !_srcClip->isConnected() ) {
+        clipPreferences.setOutputHasContinuousSamples(true);
+    }
+
     GeneratorPlugin::getClipPreferences(clipPreferences);
     clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
 }

@@ -268,7 +268,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(ColorBarsProcessorBase &, const RenderArguments &args);
 
-    //virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
     DoubleParam* _barIntensity;
@@ -386,6 +386,18 @@ ColorBarsPlugin::render(const RenderArguments &args)
         renderInternal<3>(args, dstBitDepth);
     }
 }
+
+
+void
+ColorBarsPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    // output is continuous
+    clipPreferences.setOutputHasContinuousSamples(true);
+
+    GeneratorPlugin::getClipPreferences(clipPreferences);
+    //clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
+}
+
 
 mDeclarePluginFactory(ColorBarsPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void

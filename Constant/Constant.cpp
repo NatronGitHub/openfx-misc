@@ -322,6 +322,9 @@ ConstantPlugin::render(const RenderArguments &args)
 void
 ConstantPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
+    // output is always continuous
+    clipPreferences.setOutputHasContinuousSamples(true);
+
     GeneratorPlugin::getClipPreferences(clipPreferences);
 
     clipPreferences.setOutputPremultiplication(_colorRGB ? eImageOpaque : eImagePreMultiplied);

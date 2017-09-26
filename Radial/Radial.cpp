@@ -822,6 +822,11 @@ RadialPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         }
     }
 
+    // if no input is connected, output is continuous
+    if ( !_srcClip || !_srcClip->isConnected() ) {
+        clipPreferences.setOutputHasContinuousSamples(true);
+    }
+
     GeneratorPlugin::getClipPreferences(clipPreferences);
 }
 

@@ -376,6 +376,8 @@ private:
     /* set up and run a processor */
     void setupAndProcess(CheckerBoardProcessorBase &, const RenderArguments &args);
 
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
 private:
     Double2DParam *_boxSize;
     RGBAParam  *_color0;
@@ -518,6 +520,16 @@ CheckerBoardPlugin::render(const RenderArguments &args)
         assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
+}
+
+void
+CheckerBoardPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    // output is continuous
+    clipPreferences.setOutputHasContinuousSamples(true);
+
+    GeneratorPlugin::getClipPreferences(clipPreferences);
+    //clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
 }
 
 mDeclarePluginFactory(CheckerBoardPluginFactory, {ofxsThreadSuiteCheck();}, {});
