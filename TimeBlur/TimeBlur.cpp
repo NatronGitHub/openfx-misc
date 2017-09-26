@@ -490,10 +490,10 @@ TimeBlurPlugin::getFramesNeeded(const FramesNeededArguments &args,
 #else
     // return the exact list of frames rather than a frame range , so that they can be pre-rendered by the host.
     double interval = (range.max - range.min) / divisions;
-    for (int i = 1; i < divisions; ++i) {
+    for (int i = 0; i < divisions; ++i) {
         double t = range.min + i * interval;
         OfxRangeD r = {t, t};
-        //std::printf("TimeBlur: range(%g,%g)\n", r.min, r.max);
+        //std::printf("TimeBlur: frames for t=%g range(%g,%g) %lx\n", args.time, r.min, r.max, *((unsigned long*)&t));
         frames.setFramesNeeded(*_srcClip, r);
     }
 #endif
