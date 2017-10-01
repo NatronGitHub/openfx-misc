@@ -918,14 +918,14 @@ static std::string fsHeader =
     "uniform float     iTime;\n"
     "uniform float     iTimeDelta;\n"
     "uniform int       iFrame;\n"
-    "uniform float     iChannelTime["STRINGISE (NBINPUTS)"];\n"
-    "uniform vec3      iChannelResolution["STRINGISE (NBINPUTS)"];\n"
+    "uniform float     iChannelTime[" STRINGISE (NBINPUTS) "];\n"
+    "uniform vec3      iChannelResolution[" STRINGISE (NBINPUTS) "];\n"
     "uniform vec4      iMouse;\n"
     "uniform vec4      iDate;\n"
     "uniform float     iSampleRate;\n"
     "uniform vec2      ifFragCoordOffsetUniform;\n"
     "uniform vec2      iRenderScale;\n" // the OpenFX renderscale
-    "uniform vec2      iChannelOffset["STRINGISE (NBINPUTS)"];\n"
+    "uniform vec2      iChannelOffset[" STRINGISE (NBINPUTS) "];\n"
     "#define texture texture2D\n" // for some compatibility with newer Shadertoy>
 ;
 

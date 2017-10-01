@@ -236,9 +236,9 @@ using std::string;
     "float	iTimeDelta	image	Time it takes to render a frame, in seconds\n" \
     "int	iFrame	image	Current frame\n" \
     "float	iFrameRate	image	Number of frames rendered per second\n" \
-    "float	iChannelTime["STRINGISE(NBINPUTS)"]	image	Time for channel (if video or sound), in seconds\n" \
-    "vec3	iChannelResolution["STRINGISE(NBINPUTS)"]	image/sound	Input texture resolution for each channel\n" \
-    "vec2   iChannelOffset["STRINGISE(NBINPUTS)"]   image   Input texture offset in pixel coords for each channel\n" \
+    "float	iChannelTime[" STRINGISE(NBINPUTS) "]	image	Time for channel (if video or sound), in seconds\n" \
+    "vec3	iChannelResolution[" STRINGISE(NBINPUTS) "]	image/sound	Input texture resolution for each channel\n" \
+    "vec2   iChannelOffset[" STRINGISE(NBINPUTS) "]   image   Input texture offset in pixel coords for each channel\n" \
     "vec4	iMouse	image	xy = current pixel coords (if LMB is down). zw = click pixel\n" \
     "sampler2D	iChannel{i}	image/sound	Sampler for input textures i\n" \
     "vec4	iDate	image/sound	Year, month, day, time in seconds in .xyzw\n" \
@@ -446,9 +446,9 @@ using std::string;
     "float | iTimeDelta | image | Time it takes to render a frame, in seconds\n" \
     "int | iFrame | image | Current frame\n" \
     "float | iFrameRate | image | Number of frames rendered per second\n" \
-    "float | iChannelTime["STRINGISE (NBINPUTS)"] | image | Time for channel (if video or sound), in seconds\n" \
-    "vec3 | iChannelResolution["STRINGISE (NBINPUTS)"] | image/sound | Input texture resolution for each channel\n" \
-    "vec2 | iChannelOffset["STRINGISE(NBINPUTS)"] | image | Input texture offset in pixel coords for each channel\n" \
+    "float | iChannelTime[" STRINGISE (NBINPUTS) "] | image | Time for channel (if video or sound), in seconds\n" \
+    "vec3 | iChannelResolution[" STRINGISE (NBINPUTS) "] | image/sound | Input texture resolution for each channel\n" \
+    "vec2 | iChannelOffset[" STRINGISE(NBINPUTS) "] | image | Input texture offset in pixel coords for each channel\n" \
     "vec4 | iMouse | image | xy = current pixel coords (if LMB is down). zw = click pixel\n" \
     "sampler2D | iChannel{i} | image/sound | Sampler for input textures i\n" \
     "vec4 | iDate | image/sound | Year, month, day, time in seconds in .xyzw\n" \
@@ -502,9 +502,9 @@ using std::string;
     "uniform float     iTime;           // shader playback time (in seconds)\n" \
     "uniform float     iTimeDelta;            // render time (in seconds)\n" \
     "uniform int       iFrame;                // shader playback frame\n" \
-    "uniform float     iChannelTime["STRINGISE (NBINPUTS)"];       // channel playback time (in seconds)\n" \
-    "uniform vec3      iChannelResolution["STRINGISE (NBINPUTS)"]; // channel resolution (in pixels)\n" \
-    "uniform vec2      iChannelOffset["STRINGISE (NBINPUTS)"]; // channel texture offset relative to iChannel0 (in pixels)\n" \
+    "uniform float     iChannelTime[" STRINGISE (NBINPUTS) "];       // channel playback time (in seconds)\n" \
+    "uniform vec3      iChannelResolution[" STRINGISE (NBINPUTS) "]; // channel resolution (in pixels)\n" \
+    "uniform vec2      iChannelOffset[" STRINGISE (NBINPUTS) "]; // channel texture offset relative to iChannel0 (in pixels)\n" \
     "uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click\n" \
     "uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube\n" \
     "uniform vec4      iDate;                 // (year, month, day, time in seconds)\n" \
@@ -559,7 +559,7 @@ using std::string;
 
 #define kParamImageShaderSource "imageShaderSource"
 #define kParamImageShaderSourceLabel "Source"
-#define kParamImageShaderSourceHint "Image shader.\n\n"kShaderInputsHint
+#define kParamImageShaderSourceHint "Image shader.\n\n" kShaderInputsHint
 
 #define kParamImageShaderCompile "imageShaderCompile"
 #define kParamImageShaderCompileLabel "Compile"

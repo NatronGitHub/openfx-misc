@@ -477,7 +477,7 @@ SpriteSheetPluginFactory::createInstance(OfxImageEffectHandle handle,
 
 void
 SpriteSheetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                     ContextEnum context)
+                                     ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip

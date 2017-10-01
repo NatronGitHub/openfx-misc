@@ -1338,7 +1338,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     if (type == ePosMatCamera) {
         GroupParamDescriptor* subgroup = desc.defineGroupParam(kCameraCam kParamCameraProjectionGroup);
         if (subgroup) {
-            subgroup->setLabel(kCameraCamLabel" "kParamCameraProjectionGroupLabel);
+            subgroup->setLabel(kCameraCamLabel " " kParamCameraProjectionGroupLabel);
             subgroup->setOpen(false);
             if (group) {
                 subgroup->setParent(*group);

@@ -260,7 +260,7 @@ static const char* help_string =
 #endif
     "- Note that the plugin must NOT be in a default location for OFX plugins, or\n"
     "  it will be loaded twice.\n"
-    "  The default locations for plugins on this system is "OFX_PATH "\n"
+    "  The default locations for plugins on this system is " OFX_PATH "\n"
     "- If the plugin depends on dynamic libraries and cannot find them, you can\n"
     "  modify the path to locate them by adding the directory containing the\n"
     "  dependency (usually the same as the plugin location) to\n"
@@ -293,7 +293,7 @@ static const char* help_string =
 #endif
 #if defined(__APPLE__)
     "  On OS X, this can be done using the following command:\n"
-    "  touch "OFX_PATH "DebugProxy.ofx.bundle/Contents/MacOS/DebugProxy.ofx\n"
+    "  touch " OFX_PATH "DebugProxy.ofx.bundle/Contents/MacOS/DebugProxy.ofx\n"
 #endif
 ;
 
