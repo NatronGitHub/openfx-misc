@@ -144,6 +144,9 @@ public:
         : _effect(effect)
         , _srcClip(srcClip)
     {
+        if (!_srcClip->isConnected()) {
+            _srcClip = NULL;
+        }
     }
 
     ~SourceImages()
@@ -155,10 +158,15 @@ public:
         }
     }
 
+    bool isConnected() const
+    {
+        return _srcClip != NULL;
+    }
+
     const Image* fetch(double time,
                        bool nofetch = false) const
     {
-        if (!_srcClip || !_srcClip->isConnected()) {
+        if (!_srcClip) {
             return NULL;
         }
         ImagesMap::const_iterator it = _images.find(time);
@@ -528,7 +536,7 @@ public:
     }
 
     /** @brief set the src images */
-    void setSourceImages(const SourceImages *v) {_sourceImages = v;}
+    void setSourceImages(const SourceImages *v) {_sourceImages = v->isConnected() ? v : NULL;}
 
     void setRetimeMap(const Image *v)   {_retimeMap = v;}
 
@@ -593,7 +601,7 @@ public:
                     break;
                 }
                 case eRetimeFunctionRetimeMap: {
-                    PIX *retimePix = (PIX *)_retimeMap->getPixelAddress(x, y);
+                    PIX *retimePix = _retimeMap ? (PIX *)_retimeMap->getPixelAddress(x, y) : NULL;
                     retimeVal = retimePix ? ( (double)*retimePix / maxValue ) : 0.;
                     break;
                 }
@@ -604,15 +612,15 @@ public:
                 }
                 if ( (_filter == eFilterNearest) || (retimeVal == (int)retimeVal) ) {
                     retimeVal = std::floor(retimeVal + 0.5);
-                    PIX* srcPix = (PIX*)_sourceImages->getPixelAddress(retimeVal, x, y);
+                    PIX* srcPix = _sourceImages ? (PIX*)_sourceImages->getPixelAddress(retimeVal, x, y) : NULL;
                     if (srcPix) {
                         std::copy(srcPix, srcPix + nComponents, dstPix);
                     } else {
                         std::fill( dstPix, dstPix + nComponents, PIX() );
                     }
                 } else {
-                    PIX* fromPix = (PIX*)_sourceImages->getPixelAddress(std::floor(retimeVal), x, y);
-                    PIX* toPix = (PIX*)_sourceImages->getPixelAddress(std::ceil(retimeVal), x, y);
+                    PIX* fromPix = _sourceImages ? (PIX*)_sourceImages->getPixelAddress(std::floor(retimeVal), x, y) : NULL;
+                    PIX* toPix = _sourceImages ? (PIX*)_sourceImages->getPixelAddress(std::ceil(retimeVal), x, y) : NULL;
                     float blend = retimeVal - std::floor(retimeVal);
                     float blendComp = 1.f - blend;
 
