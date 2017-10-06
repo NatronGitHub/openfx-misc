@@ -101,10 +101,10 @@ static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNo
 
 #define kParamCameraProjectionMode kNukeOfxCameraParamProjectionMode
 #define kParamCameraProjectionModeLabel "Projection"
-#define kParamCameraProjectionModeOptionPerspective "Perspective"
-#define kParamCameraProjectionModeOptionOrthographic "Orthographic"
-#define kParamCameraProjectionModeOptionUV "UV"
-#define kParamCameraProjectionModeOptionSpherical "Spherical"
+#define kParamCameraProjectionModeOptionPerspective "Perspective", "Perspective projection.", "perspective"
+#define kParamCameraProjectionModeOptionOrthographic "Orthographic", "Orthographic projection", "orthographic"
+//#define kParamCameraProjectionModeOptionUV "UV", "UV projection", "uv" // used in Nuke to compute uv coordinates instead of pixel values
+//#define kParamCameraProjectionModeOptionSpherical "Spherical", "Spherical projection." , "spherical"
 enum CameraProjectionModeEnum {
     eCameraProjectionModePerspective = 0,
     eCameraProjectionModeOrthographic,
@@ -545,8 +545,8 @@ enum PosMatTypeEnum {
 
 #define kParamPosMatImportFormat "ImportFormat"
 #define kParamPosMatImportFormatLabel "Import Format", "The format of the file to import."
-#define kParamPosMatImportFormatOptionChan "chan", "Chan format, each line is FRAME TX TY TZ RX RY RZ VFOV. Can be created using Natron, Nuke, 3D-Equalizer, Maya and other 3D tracking software. Be careful that the rotation order must be exactly the same when exporting and importing the chan file."
-#define kParamPosMatImportFormatOptionBoujou "Boujou", "Boujou text export. In Boujou, after finishing the track and solving, go to Export > Export Camera Solve (Or press F12) > choose where to save the data and give it a name, click he drop down Export Type and make sure it will save as a .txt, then click Save. Each camera line is R(0,0) R(0,1) R(0,2) R(1,0) R(1,1) R(1,2) R(2,0) R(2,1) R(2,2) Tx Ty Tz F(mm)."
+#define kParamPosMatImportFormatOptionChan "chan", "Chan format, each line is FRAME TX TY TZ RX RY RZ VFOV. Can be created using Natron, Nuke, 3D-Equalizer, Maya and other 3D tracking software. Be careful that the rotation order must be exactly the same when exporting and importing the chan file.", "chan"
+#define kParamPosMatImportFormatOptionBoujou "Boujou", "Boujou text export. In Boujou, after finishing the track and solving, go to Export > Export Camera Solve (Or press F12) > choose where to save the data and give it a name, click he drop down Export Type and make sure it will save as a .txt, then click Save. Each camera line is R(0,0) R(0,1) R(0,2) R(1,0) R(1,1) R(1,2) R(2,0) R(2,1) R(2,2) Tx Ty Tz F(mm).", "boujou"
 enum ImportFormatEnum {
     eImportFormatChan = 0,
     eImportFormatBoujou,
@@ -560,12 +560,12 @@ enum ImportFormatEnum {
 
 #define kParamPosMatTransformOrder "XformOrder"
 #define kParamPosMatTransformOrderLabel "Transform Order", "Order in which scale (S), rotation (R) and translation (T) are applied."
-#define kParamPosMatTransformOrderOptionSRT "SRT", "Scale, Rotation, Translation."
-#define kParamPosMatTransformOrderOptionSTR "STR", "Scale, Translation, Rotation."
-#define kParamPosMatTransformOrderOptionRST "RST", "Rotation, Scale, Translation."
-#define kParamPosMatTransformOrderOptionRTS "RTS", "Rotation, Translation, Scale."
-#define kParamPosMatTransformOrderOptionTSR "TSR", "Translation, Scale, Rotation."
-#define kParamPosMatTransformOrderOptionTRS "TRS", "Translation, Rotation, Scale."
+#define kParamPosMatTransformOrderOptionSRT "SRT", "Scale, Rotation, Translation.", "srt"
+#define kParamPosMatTransformOrderOptionSTR "STR", "Scale, Translation, Rotation.", "str"
+#define kParamPosMatTransformOrderOptionRST "RST", "Rotation, Scale, Translation.", "rst"
+#define kParamPosMatTransformOrderOptionRTS "RTS", "Rotation, Translation, Scale.", "rts"
+#define kParamPosMatTransformOrderOptionTSR "TSR", "Translation, Scale, Rotation.", "tsr"
+#define kParamPosMatTransformOrderOptionTRS "TRS", "Translation, Rotation, Scale.", "trs"
 enum PosMatTransformOrderEnum {
     ePosMatTransformOrderSRT = 0,
     ePosMatTransformOrderSTR,
@@ -578,12 +578,12 @@ enum PosMatTransformOrderEnum {
 
 #define kParamPosMatRotationOrder "RotOrder"
 #define kParamPosMatRotationOrderLabel "Rotation Order", "Order in which Euler angles are applied in the rotation."
-#define kParamPosMatRotationOrderOptionXYZ "XYZ"
-#define kParamPosMatRotationOrderOptionXZY "XZR"
-#define kParamPosMatRotationOrderOptionYXZ "YXZ"
-#define kParamPosMatRotationOrderOptionYZX "YZX"
-#define kParamPosMatRotationOrderOptionZXY "ZXY"
-#define kParamPosMatRotationOrderOptionZYX "ZYX"
+#define kParamPosMatRotationOrderOptionXYZ "XYZ", "Rotation over X axis, then Y and Z.", "xyz"
+#define kParamPosMatRotationOrderOptionXZY "XZY", "Rotation over X axis, then Z and Y.", "xzy"
+#define kParamPosMatRotationOrderOptionYXZ "YXZ", "Rotation over Y axis, then X and Z.", "yxz"
+#define kParamPosMatRotationOrderOptionYZX "YZX", "Rotation over Y axis, then Z and X.", "yzx"
+#define kParamPosMatRotationOrderOptionZXY "ZXY", "Rotation over Z axis, then X and Y.", "zxy"
+#define kParamPosMatRotationOrderOptionZYX "ZYX", "Rotation over Z axis, then Y and X.", "zyx"
 enum PosMatRotationOrderEnum {
     ePosMatRotationOrderXYZ = 0,
     ePosMatRotationOrderXZY,

@@ -91,12 +91,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamYPbPrColorspace "colorspace"
 #define kParamYPbPrColorspaceLabel "YCbCr Colorspace"
 #define kParamYPbPrColorspaceHint "Formula used to compute YCbCr from RGB values."
-#define kParamYPbPrColorspaceOptionCcir601 "CCIR 601"
-#define kParamYPbPrColorspaceOptionCCir601Hint "Use CCIR 601 (SD footage)."
-#define kParamYPbPrColorspaceOptionRec709 "Rec. 709"
-#define kParamYPbPrColorspaceOptionRec709Hint "Use Rec. 709 (HD footage)."
-#define kParamYPbPrColorspaceOptionRec2020 "Rec. 2020"
-#define kParamYPbPrColorspaceOptionRec2020Hint "Use Rec. 2020 (UltraHD/4K footage)."
+#define kParamYPbPrColorspaceOptionCcir601 "CCIR 601", "Use CCIR 601 (SD footage).", "ccir601"
+#define kParamYPbPrColorspaceOptionRec709 "Rec. 709", "Use Rec. 709 (HD footage).", "rec709"
+#define kParamYPbPrColorspaceOptionRec2020 "Rec. 2020", "Use Rec. 2020 (UltraHD/4K footage).", "rec2020"
 
 enum YPbPrColorspaceEnum
 {
@@ -141,25 +138,18 @@ enum YPbPrColorspaceEnum
 #define kParamOutputModeLabel "Output Mode"
 #define kParamOutputModeHint \
     "What image to output."
-#define kParamOutputModeOptionIntermediate "Intermediate"
-#define kParamOutputModeOptionIntermediateHint "Color is the source color. Alpha is the foreground key. Use for multi-pass keying."
-#define kParamOutputModeOptionPremultiplied "Premultiplied"
-#define kParamOutputModeOptionPremultipliedHint "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key."
-#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied"
-#define kParamOutputModeOptionUnpremultipliedHint "Color is the Source color after key color suppression. Alpha is the foreground key."
-#define kParamOutputModeOptionComposite "Composite"
-#define kParamOutputModeOptionCompositeHint "Color is the composite of Source and Bg. Alpha is the foreground key."
+#define kParamOutputModeOptionIntermediate "Intermediate", "Color is the source color. Alpha is the foreground key. Use for multi-pass keying.", "intermediate"
+#define kParamOutputModeOptionPremultiplied "Premultiplied", "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key.", "premultiplied"
+#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied", "Color is the Source color after key color suppression. Alpha is the foreground key.", "unpremultiplied"
+#define kParamOutputModeOptionComposite "Composite", "Color is the composite of Source and Bg. Alpha is the foreground key.", "composite"
 
 #define kParamSourceAlpha "sourceAlphaHandling"
 #define kParamSourceAlphaLabel "Source Alpha"
 #define kParamSourceAlphaHint \
     "How the alpha embedded in the Source input should be used"
-#define kParamSourceAlphaOptionIgnore "Ignore"
-#define kParamSourceAlphaOptionIgnoreHint "Ignore the source alpha."
-#define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask"
-#define kParamSourceAlphaOptionAddToInsideMaskHint "Source alpha is added to the inside mask. Use for multi-pass keying."
-#define kParamSourceAlphaOptionNormal "Normal"
-#define kParamSourceAlphaOptionNormalHint "Foreground key is multiplied by source alpha when compositing."
+#define kParamSourceAlphaOptionIgnore "Ignore", "Ignore the source alpha.", "ignore"
+#define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask", "Source alpha is added to the inside mask. Use for multi-pass keying.", "insidemask"
+#define kParamSourceAlphaOptionNormal "Normal", "Foreground key is multiplied by source alpha when compositing.", "normal"
 
 #define kClipSourceHint "The foreground image to key."
 #define kClipBg "Bg"
@@ -971,11 +961,11 @@ ChromaKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamYPbPrColorspaceLabel);
         param->setHint(kParamYPbPrColorspaceHint);
         assert(param->getNOptions() == (int)eYPbPrColorspaceCcir601);
-        param->appendOption(kParamYPbPrColorspaceOptionCcir601, kParamYPbPrColorspaceOptionCCir601Hint);
+        param->appendOption(kParamYPbPrColorspaceOptionCcir601);
         assert(param->getNOptions() == (int)eYPbPrColorspaceRec709);
-        param->appendOption(kParamYPbPrColorspaceOptionRec709, kParamYPbPrColorspaceOptionRec709Hint);
+        param->appendOption(kParamYPbPrColorspaceOptionRec709);
         assert(param->getNOptions() == (int)eYPbPrColorspaceRec2020);
-        param->appendOption(kParamYPbPrColorspaceOptionRec2020, kParamYPbPrColorspaceOptionRec2020Hint);
+        param->appendOption(kParamYPbPrColorspaceOptionRec2020);
         param->setDefault(kParamYPbPrColorspaceDefault);
         param->setAnimates(false);
         if (page) {
@@ -1061,13 +1051,13 @@ ChromaKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamOutputModeLabel);
         param->setHint(kParamOutputModeHint);
         assert(param->getNOptions() == (int)eOutputModeIntermediate);
-        param->appendOption(kParamOutputModeOptionIntermediate, kParamOutputModeOptionIntermediateHint);
+        param->appendOption(kParamOutputModeOptionIntermediate);
         assert(param->getNOptions() == (int)eOutputModePremultiplied);
-        param->appendOption(kParamOutputModeOptionPremultiplied, kParamOutputModeOptionPremultipliedHint);
+        param->appendOption(kParamOutputModeOptionPremultiplied);
         assert(param->getNOptions() == (int)eOutputModeUnpremultiplied);
-        param->appendOption(kParamOutputModeOptionUnpremultiplied, kParamOutputModeOptionUnpremultipliedHint);
+        param->appendOption(kParamOutputModeOptionUnpremultiplied);
         assert(param->getNOptions() == (int)eOutputModeComposite);
-        param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
+        param->appendOption(kParamOutputModeOptionComposite);
         param->setDefault( (int)eOutputModeComposite );
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
@@ -1082,11 +1072,11 @@ ChromaKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamSourceAlphaLabel);
         param->setHint(kParamSourceAlphaHint);
         assert(param->getNOptions() == (int)eSourceAlphaIgnore);
-        param->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);
+        param->appendOption(kParamSourceAlphaOptionIgnore);
         assert(param->getNOptions() == (int)eSourceAlphaAddToInsideMask);
-        param->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
+        param->appendOption(kParamSourceAlphaOptionAddToInsideMask);
         assert(param->getNOptions() == (int)eSourceAlphaNormal);
-        param->appendOption(kParamSourceAlphaOptionNormal, kParamSourceAlphaOptionNormalHint);
+        param->appendOption(kParamSourceAlphaOptionNormal);
         param->setDefault( (int)eSourceAlphaIgnore );
         param->setAnimates(true);
         if (page) {

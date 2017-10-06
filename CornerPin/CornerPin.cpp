@@ -145,8 +145,8 @@ static const char* const kParamFrom[4] = {
 #define kParamOverlayPoints "overlayPoints"
 #define kParamOverlayPointsLabel "Overlay Points"
 #define kParamOverlayPointsHint "Whether to display the \"from\" or the \"to\" points in the overlay"
-#define kParamOverlayPointsOptionTo "To"
-#define kParamOverlayPointsOptionFrom "From"
+#define kParamOverlayPointsOptionTo "To", "Display the \"to\" points.", "to"
+#define kParamOverlayPointsOptionFrom "From", "Display the \"from\" points.", "from"
 
 #define kParamTransformAmount "transformAmount"
 #define kParamTransformAmountLabel "Amount"

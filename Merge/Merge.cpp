@@ -139,14 +139,10 @@ enum MergePluginEnum
 #define kParamBBox "bbox"
 #define kParamBBoxLabel "Bounding Box"
 #define kParamBBoxHint "What to use to produce the output image's bounding box."
-#define kParamBBoxOptionUnion "Union"
-#define kParamBBoxOptionUnionHint "Union of all connected inputs."
-#define kParamBBoxOptionIntersection "Intersection"
-#define kParamBBoxOptionIntersectionHint "Intersection of all connected inputs."
-#define kParamBBoxOptionA "A"
-#define kParamBBoxOptionAHint "Bounding box of input A."
-#define kParamBBoxOptionB "B"
-#define kParamBBoxOptionBHint "Bounding box of input B."
+#define kParamBBoxOptionUnion "Union", "Union of all connected inputs.", "union"
+#define kParamBBoxOptionIntersection "Intersection", "Intersection of all connected inputs.", "intersection"
+#define kParamBBoxOptionA "A", "Bounding box of input A.", "a"
+#define kParamBBoxOptionB "B", "Bounding box of input B.", "b"
 
 enum BBoxEnum
 {
@@ -1726,13 +1722,13 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamBBoxLabel);
         param->setHint(kParamBBoxHint);
         assert(param->getNOptions() == (int)eBBoxUnion);
-        param->appendOption(kParamBBoxOptionUnion, kParamBBoxOptionUnionHint);
+        param->appendOption(kParamBBoxOptionUnion);
         assert(param->getNOptions() == (int)eBBoxIntersection);
-        param->appendOption(kParamBBoxOptionIntersection, kParamBBoxOptionIntersectionHint);
+        param->appendOption(kParamBBoxOptionIntersection);
         assert(param->getNOptions() == (int)eBBoxA);
-        param->appendOption(kParamBBoxOptionA, kParamBBoxOptionAHint);
+        param->appendOption(kParamBBoxOptionA);
         assert(param->getNOptions() == (int)eBBoxB);
-        param->appendOption(kParamBBoxOptionB, kParamBBoxOptionBHint);
+        param->appendOption(kParamBBoxOptionB);
         param->setAnimates(true);
         param->setDefault( (int)eBBoxUnion );
         if (page) {

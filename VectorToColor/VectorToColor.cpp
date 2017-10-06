@@ -63,14 +63,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamYChannelLabel "Y channel"
 #define kParamYChannelHint "Selects the Y component of vectors"
 
-#define kParamChannelOptionR "r"
-#define kParamChannelOptionRHint "R channel from input"
-#define kParamChannelOptionG "g"
-#define kParamChannelOptionGHint "G channel from input"
-#define kParamChannelOptionB "b"
-#define kParamChannelOptionBHint "B channel from input"
-#define kParamChannelOptionA "a"
-#define kParamChannelOptionAHint "A channel from input"
+#define kParamChannelOptionR "r", "R channel from input.", "r"
+#define kParamChannelOptionG "g", "G channel from input.", "g"
+#define kParamChannelOptionB "b", "B channel from input.", "b"
+#define kParamChannelOptionA "a", "A channel from input.", "a"
 
 enum InputChannelEnum
 {
@@ -417,13 +413,13 @@ addInputChannelOtions(ChoiceParamDescriptor* outputR,
                       ContextEnum /*context*/)
 {
     assert(outputR->getNOptions() == eInputChannelR);
-    outputR->appendOption(kParamChannelOptionR, kParamChannelOptionRHint);
+    outputR->appendOption(kParamChannelOptionR);
     assert(outputR->getNOptions() == eInputChannelG);
-    outputR->appendOption(kParamChannelOptionG, kParamChannelOptionGHint);
+    outputR->appendOption(kParamChannelOptionG);
     assert(outputR->getNOptions() == eInputChannelB);
-    outputR->appendOption(kParamChannelOptionB, kParamChannelOptionBHint);
+    outputR->appendOption(kParamChannelOptionB);
     assert(outputR->getNOptions() == eInputChannelA);
-    outputR->appendOption(kParamChannelOptionA, kParamChannelOptionAHint);
+    outputR->appendOption(kParamChannelOptionA);
     outputR->setDefault(def);
 }
 

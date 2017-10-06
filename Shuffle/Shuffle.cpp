@@ -57,9 +57,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputComponentsLabel "Output Components"
 #define kParamOutputComponentsHint "Select what types of components the plug-in should output, this has an effect only when the Output Layer is set to the Color layer." \
     " This controls what should be the components for the Color Layer: Alpha, RGB or RGBA"
-#define kParamOutputComponentsOptionRGBA "RGBA"
-#define kParamOutputComponentsOptionRGB "RGB"
-#define kParamOutputComponentsOptionAlpha "Alpha"
+#define kParamOutputComponentsOptionRGBA "RGBA", "Output RGBA components.", "rgba"
+#define kParamOutputComponentsOptionRGB "RGB", "Output RGB components.", "rgb"
+#define kParamOutputComponentsOptionAlpha "Alpha", "Output Alpha component.", "alpha"
 
 #define kParamOutputChannels "outputLayer"
 #define kParamOutputChannelsLabel "Output Plane"
@@ -69,9 +69,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputBitDepth "outputBitDepth"
 #define kParamOutputBitDepthLabel "Output Bit Depth"
 #define kParamOutputBitDepthHint "Bit depth of the output.\nWARNING: the conversion is linear, even for 8-bit or 16-bit depth. Use with care."
-#define kParamOutputBitDepthOptionByte "Byte (8 bits)"
-#define kParamOutputBitDepthOptionShort "Short (16 bits)"
-#define kParamOutputBitDepthOptionFloat "Float (32 bits)"
+#define kParamOutputBitDepthOptionByte "Byte (8 bits)", "Output 8-bit images.", "byte"
+#define kParamOutputBitDepthOptionShort "Short (16 bits)", "Output 16-bit images.", "short"
+#define kParamOutputBitDepthOptionFloat "Float (32 bits)", "Output 32-bit floating-point images.", "float"
 
 #define kParamOutputPremultiplication "outputPremult"
 #define kParamOutputPremultiplicationLabel "Output Premult"

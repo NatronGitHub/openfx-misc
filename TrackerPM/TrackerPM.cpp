@@ -73,14 +73,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamScore "score"
 #define kParamScoreLabel "Score"
 #define kParamScoreHint "Correlation score computation method"
-#define kParamScoreOptionSSD "SSD"
-#define kParamScoreOptionSSDHint "Sum of Squared Differences"
-#define kParamScoreOptionSAD "SAD"
-#define kParamScoreOptionSADHint "Sum of Absolute Differences, more robust to occlusions"
-#define kParamScoreOptionNCC "NCC"
-#define kParamScoreOptionNCCHint "Normalized Cross-Correlation"
-#define kParamScoreOptionZNCC "ZNCC"
-#define kParamScoreOptionZNCCHint "Zero-mean Normalized Cross-Correlation, less sensitive to illumination changes"
+#define kParamScoreOptionSSD "SSD", "Sum of Squared Differences", "ssd"
+#define kParamScoreOptionSAD "SAD", "Sum of Absolute Differences, more robust to occlusions", "sad"
+#define kParamScoreOptionNCC "NCC", "Normalized Cross-Correlation", "ncc"
+#define kParamScoreOptionZNCC "ZNCC", "Zero-mean Normalized Cross-Correlation, less sensitive to illumination changes", "zncc"
 
 
 enum TrackerScoreEnum
@@ -1149,13 +1145,13 @@ TrackerPMPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamScoreLabel);
         param->setHint(kParamScoreHint);
         assert(param->getNOptions() == eTrackerSSD);
-        param->appendOption(kParamScoreOptionSSD, kParamScoreOptionSSDHint);
+        param->appendOption(kParamScoreOptionSSD);
         assert(param->getNOptions() == eTrackerSAD);
-        param->appendOption(kParamScoreOptionSAD, kParamScoreOptionSADHint);
+        param->appendOption(kParamScoreOptionSAD);
         assert(param->getNOptions() == eTrackerNCC);
-        param->appendOption(kParamScoreOptionNCC, kParamScoreOptionNCCHint);
+        param->appendOption(kParamScoreOptionNCC);
         assert(param->getNOptions() == eTrackerZNCC);
-        param->appendOption(kParamScoreOptionZNCC, kParamScoreOptionZNCCHint);
+        param->appendOption(kParamScoreOptionZNCC);
         param->setDefault( (int)eTrackerSAD );
         if (page) {
             page->addChild(*param);

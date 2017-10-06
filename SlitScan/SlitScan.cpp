@@ -79,12 +79,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRetimeFunction "retimeFunction"
 #define kParamRetimeFunctionLabel "Retime Function"
 #define kParamRetimeFunctionHint "The function that gives, for each pixel in the image, its time. The default retime function corresponds to a horizontal slit: it is a vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the top image line. Optionally, a vertical slit may be used (0 at the center of the leftmost image column, 1 at the center of the rightmost image column), or the optional single-channel \"Retime Map\" input may also be used."
-#define kParamRetimeFunctionOptionHorizontalSlit "Horizontal Slit"
-#define kParamRetimeFunctionOptionHorizontalSlitHint "A vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the top image line."
-#define kParamRetimeFunctionOptionVerticalSlit "Vertical Slit"
-#define kParamRetimeFunctionOptionVerticalSlitHint "A horizontal ramp (alinear function of x) which is 0 at the center of the leftmost image line, and 1 at the center of the rightmost image line."
-#define kParamRetimeFunctionOptionRetimeMap "Retime Map"
-#define kParamRetimeFunctionOptionRetimeMapHint "The single-channel image from the \"Retime Map\" input (zero if not connected)."
+#define kParamRetimeFunctionOptionHorizontalSlit "Horizontal Slit", "A vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the top image line.", "horizontalslit"
+#define kParamRetimeFunctionOptionVerticalSlit "Vertical Slit", "A horizontal ramp (alinear function of x) which is 0 at the center of the leftmost image line, and 1 at the center of the rightmost image line.", "verticalslit"
+#define kParamRetimeFunctionOptionRetimeMap "Retime Map", "The single-channel image from the \"Retime Map\" input (zero if not connected).", "retimemap"
 #define kParamRetimeFunctionDefault eRetimeFunctionHorizontalSlit
 enum RetimeFunctionEnum
 {
@@ -93,7 +90,6 @@ enum RetimeFunctionEnum
     eRetimeFunctionRetimeMap,
 };
 
-#define kParamRetimeFunctionOptionVertical
 #define kParamRetimeOffset "retimeOffset"
 #define kParamRetimeOffsetLabel "Retime Offset"
 #define kParamRetimeOffsetHint "Offset to the retime map."
@@ -118,13 +114,10 @@ enum RetimeFunctionEnum
 #define kParamFilterLabel "Filter"
 #define kParamFilterHint "How input images are combined to compute the output image."
 
-#define kParamFilterOptionNearest "Nearest"
-#define kParamFilterOptionNearestHint "Pick input image with nearest integer time."
-#define kParamFilterOptionLinear "Linear"
-#define kParamFilterOptionLinearHint "Blend the two nearest images with linear interpolation."
+#define kParamFilterOptionNearest "Nearest", "Pick input image with nearest integer time.", "nearest"
+#define kParamFilterOptionLinear "Linear", "Blend the two nearest images with linear interpolation.", "linear"
 // TODO:
-#define kParamFilterOptionBox "Box"
-#define kParamFilterOptionBoxHint "Weighted average of images over the shutter time (shutter time is defined in the output sequence)." // requires shutter parameter
+#define kParamFilterOptionBox "Box", "Weighted average of images over the shutter time (shutter time is defined in the output sequence).", "box" // requires shutter parameter
 
 enum FilterEnum
 {
@@ -968,11 +961,11 @@ SlitScanPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamRetimeFunctionLabel);
         param->setHint(kParamRetimeFunctionHint);
         assert(param->getNOptions() == eRetimeFunctionHorizontalSlit);
-        param->appendOption(kParamRetimeFunctionOptionHorizontalSlit, kParamRetimeFunctionOptionHorizontalSlitHint);
+        param->appendOption(kParamRetimeFunctionOptionHorizontalSlit);
         assert(param->getNOptions() == eRetimeFunctionVerticalSlit);
-        param->appendOption(kParamRetimeFunctionOptionVerticalSlit, kParamRetimeFunctionOptionVerticalSlitHint);
+        param->appendOption(kParamRetimeFunctionOptionVerticalSlit);
         assert(param->getNOptions() == eRetimeFunctionRetimeMap);
-        param->appendOption(kParamRetimeFunctionOptionRetimeMap, kParamRetimeFunctionOptionRetimeMapHint);
+        param->appendOption(kParamRetimeFunctionOptionRetimeMap);
         param->setDefault( (int)kParamRetimeFunctionDefault );
         if (page) {
             page->addChild(*param);
@@ -1024,9 +1017,9 @@ SlitScanPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamFilterLabel);
         param->setHint(kParamFilterHint);
         assert(param->getNOptions() == eFilterNearest);
-        param->appendOption(kParamFilterOptionNearest, kParamFilterOptionNearestHint);
+        param->appendOption(kParamFilterOptionNearest);
         assert(param->getNOptions() == eFilterLinear);
-        param->appendOption(kParamFilterOptionLinear, kParamFilterOptionLinearHint);
+        param->appendOption(kParamFilterOptionLinear);
         //assert(param->getNOptions() == eFilterBox);
         //param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
         param->setDefault( (int)kParamFilterDefault );

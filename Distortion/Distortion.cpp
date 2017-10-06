@@ -205,9 +205,9 @@ enum InputChannelEnum
 #define kParamWrapV "wrapV"
 #define kParamWrapVLabel "V Wrap Mode", "Wrap mode for V coordinate."
 
-#define kParamWrapOptionClamp "Clamp", "Texture edges are black (if blackOutside is checked) or stretched indefinitely."
-#define kParamWrapOptionRepeat "Repeat", "Texture is repeated."
-#define kParamWrapOptionMirror "Mirror", "Texture is mirrored alternatively."
+#define kParamWrapOptionClamp "Clamp", "Texture edges are black (if blackOutside is checked) or stretched indefinitely.", "clamp"
+#define kParamWrapOptionRepeat "Repeat", "Texture is repeated.", "repeat"
+#define kParamWrapOptionMirror "Mirror", "Texture is mirrored alternatively.", "mirror"
 
 enum WrapEnum
 {
@@ -228,14 +228,14 @@ enum WrapEnum
 
 #define kParamDistortionModel "model"
 #define kParamDistortionModelLabel "Model", "Choice of the distortion model, i.e. the function that goes from distorted to undistorted image coordinates."
-#define kParamDistortionModelOptionNuke "Nuke", "The model used in Nuke's LensDistortion plugin."
-#define kParamDistortionModelOptionPFBarrel "PFBarrel", "The PFBarrel model used in PFTrack by PixelFarm."
-#define kParamDistortionModelOption3DEClassic "3DE Classic", "Degree-2 anamorphic and degree-4 radial mixed model, used in 3DEqualizer by Science-D-Visions. Works, but it is recommended to use 3DE4 Radial Standard Degree 4 or 3DE4 Anamorphic Standard Degree 4 instead."
-#define kParamDistortionModelOption3DEAnamorphic6 "3DE4 Anamorphic Degree 6", "Degree-6 anamorphic model, used in 3DEqualizer by Science-D-Visions."
-#define kParamDistortionModelOption3DEFishEye8 "3DE4 Radial Fisheye Degree 8", "Radial lens distortion model with equisolid-angle fisheye projection, used in 3DEqualizer by Science-D-Visions."
-#define kParamDistortionModelOption3DEStandard "3DE4 Radial Standard Degree 4", "Radial lens distortion model, a.k.a. radial decentered cylindric degree 4, which compensates for decentered lenses (and beam splitter artefacts in stereo rigs), used in 3DEqualizer by Science-D-Visions."
-#define kParamDistortionModelOption3DEAnamorphic4 "3DE4 Anamorphic Standard Degree 4", "Degree-4 anamorphic model with anamorphic lens rotation, which handles 'human-touched' mounted anamorphic lenses, used in 3DEqualizer by Science-D-Visions."
-#define kParamDistortionModelOptionPanoTools "PanoTools", "The model used in PanoTools, PTGui, PTAssembler, Hugin. See http://wiki.panotools.org/Lens_correction_model"
+#define kParamDistortionModelOptionNuke "Nuke", "The model used in Nuke's LensDistortion plugin.", "nuke"
+#define kParamDistortionModelOptionPFBarrel "PFBarrel", "The PFBarrel model used in PFTrack by PixelFarm.", "pfbarrel"
+#define kParamDistortionModelOption3DEClassic "3DE Classic", "Degree-2 anamorphic and degree-4 radial mixed model, used in 3DEqualizer by Science-D-Visions. Works, but it is recommended to use 3DE4 Radial Standard Degree 4 or 3DE4 Anamorphic Standard Degree 4 instead.", "3declassic"
+#define kParamDistortionModelOption3DEAnamorphic6 "3DE4 Anamorphic Degree 6", "Degree-6 anamorphic model, used in 3DEqualizer by Science-D-Visions.", "3deanamorphic6"
+#define kParamDistortionModelOption3DEFishEye8 "3DE4 Radial Fisheye Degree 8", "Radial lens distortion model with equisolid-angle fisheye projection, used in 3DEqualizer by Science-D-Visions.", "3defisheye8"
+#define kParamDistortionModelOption3DEStandard "3DE4 Radial Standard Degree 4", "Radial lens distortion model, a.k.a. radial decentered cylindric degree 4, which compensates for decentered lenses (and beam splitter artefacts in stereo rigs), used in 3DEqualizer by Science-D-Visions.", "3deradial4"
+#define kParamDistortionModelOption3DEAnamorphic4 "3DE4 Anamorphic Standard Degree 4", "Degree-4 anamorphic model with anamorphic lens rotation, which handles 'human-touched' mounted anamorphic lenses, used in 3DEqualizer by Science-D-Visions.", "3deanamorphic4"
+#define kParamDistortionModelOptionPanoTools "PanoTools", "The model used in PanoTools, PTGui, PTAssembler, Hugin. See http://wiki.panotools.org/Lens_correction_model", "panotools"
 
 /*
    Possible distortion models:

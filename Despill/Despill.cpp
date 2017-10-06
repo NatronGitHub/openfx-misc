@@ -64,8 +64,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamScreenType "screenType"
 #define kParamScreenTypeLabel "Screen Type"
 #define kParamScreenTypeHint "Select the screen type according to your footage"
-#define kParamScreenTypeOptionGreen "Greenscreen"
-#define kParamScreenTypeOptionBlue "Bluescreen"
+#define kParamScreenTypeOptionGreen "Greenscreen", "The background screen has a green tint.", "green"
+#define kParamScreenTypeOptionBlue "Bluescreen", "The background screen has a blue tint.", "blue"
 enum ScreenTypeEnum
 {
     eScreenTypeGreenScreen,

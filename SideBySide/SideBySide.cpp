@@ -59,8 +59,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamView2 "view2"
 #define kParamView2Label "View 2"
 #define kParamView2Hint "Second view"
-#define kParamViewOptionLeft "Left"
-#define kParamViewOptionRight "Right"
+#define kParamViewOptionLeft "Left", "Left view.", "left"
+#define kParamViewOptionRight "Right", "Right view.", "right"
 
 // Base class for the RGBA and the Alpha processor
 class SideBySideBase

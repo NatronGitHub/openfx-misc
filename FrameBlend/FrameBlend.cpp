@@ -112,16 +112,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOperationLabel "Operation"
 #define kParamOperationHint \
     "The operation used to compute the output image."
-#define kParamOperationOptionAverage "Average"
-#define kParamOperationOptionAverageHint "Output is the average of selected frames."
-#define kParamOperationOptionMin "Min"
-#define kParamOperationOptionMinHint "Output is the minimum of selected frames."
-#define kParamOperationOptionMax "Max"
-#define kParamOperationOptionMaxHint "Output is the maximum of selected frames."
-#define kParamOperationOptionSum "Sum"
-#define kParamOperationOptionSumHint "Output is the sum/addition of selected frames."
-#define kParamOperationOptionProduct "Product"
-#define kParamOperationOptionProductHint "Output is the product/multiplication of selected frames."
+#define kParamOperationOptionAverage "Average", "Output is the average of selected frames.", "average"
+#define kParamOperationOptionMin "Min", "Output is the minimum of selected frames.", "min"
+#define kParamOperationOptionMax "Max", "Output is the maximum of selected frames.", "max"
+#define kParamOperationOptionSum "Sum", "Output is the sum/addition of selected frames.", "sum"
+#define kParamOperationOptionProduct "Product", "Output is the product/multiplication of selected frames.", "product"
 #define kParamOperationDefault eOperationAverage
 enum OperationEnum
 {
@@ -1196,15 +1191,15 @@ FrameBlendPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamOperationLabel);
         param->setHint(kParamOperationHint);
         assert(param->getNOptions() == (int)eOperationAverage);
-        param->appendOption(kParamOperationOptionAverage, kParamOperationOptionAverageHint);
+        param->appendOption(kParamOperationOptionAverage);
         assert(param->getNOptions() == (int)eOperationMin);
-        param->appendOption(kParamOperationOptionMin, kParamOperationOptionMinHint);
+        param->appendOption(kParamOperationOptionMin);
         assert(param->getNOptions() == (int)eOperationMax);
-        param->appendOption(kParamOperationOptionMax, kParamOperationOptionMaxHint);
+        param->appendOption(kParamOperationOptionMax);
         assert(param->getNOptions() == (int)eOperationSum);
-        param->appendOption(kParamOperationOptionSum, kParamOperationOptionSumHint);
+        param->appendOption(kParamOperationOptionSum);
         assert(param->getNOptions() == (int)eOperationProduct);
-        param->appendOption(kParamOperationOptionProduct, kParamOperationOptionProductHint);
+        param->appendOption(kParamOperationOptionProduct);
         param->setDefault( (int)kParamOperationDefault );
         if (page) {
             page->addChild(*param);

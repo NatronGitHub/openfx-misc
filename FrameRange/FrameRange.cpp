@@ -74,12 +74,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamAfter "after"
 #define kParamAfterLabel "After"
 #define kParamAfterHint "What the plugin should return for frames after the last frame."
-#define kParamBeforeAfterOptionOriginal "Original"
-#define kParamBeforeAfterOptionOriginalHint "Return the original frame from the source, even if it is out of the frame range."
-#define kParamBeforeAfterOptionHold "Hold"
-#define kParamBeforeAfterOptionHoldHint "Return the nearest frame within the frame range."
-#define kParamBeforeAfterOptionBlack "Black"
-#define kParamBeforeAfterOptionBlackHint "Return an empty frame."
+#define kParamBeforeAfterOptionOriginal "Original", "Return the original frame from the source, even if it is out of the frame range.", "original"
+#define kParamBeforeAfterOptionHold "Hold", "Return the nearest frame within the frame range.", "hold"
+#define kParamBeforeAfterOptionBlack "Black", "Return an empty frame.", "black"
 
 enum BeforeAfterEnum
 {
@@ -506,11 +503,11 @@ FrameRangePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamBeforeLabel);
         param->setHint(kParamBeforeHint);
         assert(param->getNOptions() == (int)eBeforeAfterOriginal);
-        param->appendOption(kParamBeforeAfterOptionOriginal, kParamBeforeAfterOptionOriginalHint);
+        param->appendOption(kParamBeforeAfterOptionOriginal);
         assert(param->getNOptions() == (int)eBeforeAfterHold);
-        param->appendOption(kParamBeforeAfterOptionHold, kParamBeforeAfterOptionHoldHint);
+        param->appendOption(kParamBeforeAfterOptionHold);
         assert(param->getNOptions() == (int)eBeforeAfterBlack);
-        param->appendOption(kParamBeforeAfterOptionBlack, kParamBeforeAfterOptionBlackHint);
+        param->appendOption(kParamBeforeAfterOptionBlack);
         param->setDefault( (int)eBeforeAfterBlack );
         param->setAnimates(false);
         if (page) {
@@ -523,11 +520,11 @@ FrameRangePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamAfterLabel);
         param->setHint(kParamAfterHint);
         assert(param->getNOptions() == (int)eBeforeAfterOriginal);
-        param->appendOption(kParamBeforeAfterOptionOriginal, kParamBeforeAfterOptionOriginalHint);
+        param->appendOption(kParamBeforeAfterOptionOriginal);
         assert(param->getNOptions() == (int)eBeforeAfterHold);
-        param->appendOption(kParamBeforeAfterOptionHold, kParamBeforeAfterOptionHoldHint);
+        param->appendOption(kParamBeforeAfterOptionHold);
         assert(param->getNOptions() == (int)eBeforeAfterBlack);
-        param->appendOption(kParamBeforeAfterOptionBlack, kParamBeforeAfterOptionBlackHint);
+        param->appendOption(kParamBeforeAfterOptionBlack);
         param->setDefault( (int)eBeforeAfterBlack );
         param->setAnimates(false);
         if (page) {

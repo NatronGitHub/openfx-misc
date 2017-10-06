@@ -58,12 +58,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBoundary "boundary"
 #define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
 #define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Nearest (Neumann) conditions should be used. If the image represents gradients or derivatives, Black (Dirichlet) boundary conditions should be used."
-#define kParamBoundaryOptionDirichlet "Black"
-#define kParamBoundaryOptionDirichletHint "Dirichlet boundary condition: pixel values out of the image domain are zero."
-#define kParamBoundaryOptionNeumann "Nearest"
-#define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain."
-#define kParamBoundaryOptionPeriodic "Periodic"
-#define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
+#define kParamBoundaryOptionDirichlet "Black", "Dirichlet boundary condition: pixel values out of the image domain are zero.", "black"
+#define kParamBoundaryOptionNeumann "Nearest", "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain.", "nearest"
+#define kParamBoundaryOptionPeriodic "Periodic", "Image is considered to be periodic out of the image domain.", "periodic"
 #define kParamBoundaryDefault eBoundaryDirichlet
 #define kParamBoundaryDefaultLaplacian eBoundaryNeumann
 #define kParamBoundaryDefaultBloom eBoundaryNeumann
@@ -407,11 +404,11 @@ AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamBoundaryLabel);
         param->setHint(kParamBoundaryHint);
         assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
-        param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
+        param->appendOption(kParamBoundaryOptionDirichlet);
         assert(param->getNOptions() == eBoundaryNeumann && param->getNOptions() == 1);
-        param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
+        param->appendOption(kParamBoundaryOptionNeumann);
         //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
-        //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
+        //param->appendOption(kParamBoundaryOptionPeriodic);
         param->setDefault( (int)eBoundaryNeumann ); // aka zero
         if (page) {
             page->addChild(*param);

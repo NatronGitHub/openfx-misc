@@ -109,12 +109,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamUnorderedRenderHint \
     "What should be done whenever rendering is not performed in the expected order (i.e. read at t, write at t, read at t+1, etc.).\n" \
     "Any value other than \"Error\" may result in a non-reproductible render. For better safety, \"Error\" should be used for all final renders."
-#define kParamUnorderedRenderOptionError "Error"
-#define kParamUnorderedRenderOptionErrorHint "Do not render anything and return an error. This value should be used for final renders."
-#define kParamUnorderedRenderOptionBlack "Black"
-#define kParamUnorderedRenderOptionBlackHint "Output a black and transparent image. The size of the black image is either the size of the Source clip, or the project size if it is not connected."
-#define kParamUnorderedRenderOptionLast "Last"
-#define kParamUnorderedRenderOptionLastHint "Output the last image, even if it was not produced at the previous frame."
+#define kParamUnorderedRenderOptionError "Error", "Do not render anything and return an error. This value should be used for final renders.", "error"
+#define kParamUnorderedRenderOptionBlack "Black", "Output a black and transparent image. The size of the black image is either the size of the Source clip, or the project size if it is not connected.", "black"
+#define kParamUnorderedRenderOptionLast "Last", "Output the last image, even if it was not produced at the previous frame.", "last"
 
 enum UnorderedRenderEnum
 {
@@ -842,11 +839,11 @@ TimeBufferReadPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamUnorderedRenderLabel);
         param->setHint(kParamUnorderedRenderHint);
         assert(param->getNOptions() == eUnorderedRenderError);
-        param->appendOption(kParamUnorderedRenderOptionError, kParamUnorderedRenderOptionErrorHint);
+        param->appendOption(kParamUnorderedRenderOptionError);
         assert(param->getNOptions() == eUnorderedRenderBlack);
-        param->appendOption(kParamUnorderedRenderOptionBlack, kParamUnorderedRenderOptionBlackHint);
+        param->appendOption(kParamUnorderedRenderOptionBlack);
         assert(param->getNOptions() == eUnorderedRenderLast);
-        param->appendOption(kParamUnorderedRenderOptionLast, kParamUnorderedRenderOptionLastHint);
+        param->appendOption(kParamUnorderedRenderOptionLast);
         param->setDefault( (int)eUnorderedRenderError );
         param->setAnimates(false);
         if (page) {

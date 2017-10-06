@@ -86,12 +86,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamMetric "metric"
 #define kParamMetricLabel "Metric"
 #define kParamMetricHint "Type of metric."
-#define kParamMetricOptionChebyshev "Chebyshev", "max(abs(x-xborder),abs(y-yborder))"
-#define kParamMetricOptionManhattan "Manhattan", "abs(x-xborder) + abs(y-yborder)"
-#define kParamMetricOptionEuclidean "Euclidean", "sqrt(sqr(x-xborder) + sqr(y-yborder))"
-//#define kParamMetricOptionSquaredEuclidean "Squared Euclidean", "sqr(x-xborder) + sqr(y-yborder)"
+#define kParamMetricOptionChebyshev "Chebyshev", "max(abs(x-xborder),abs(y-yborder))", "chebyshev"
+#define kParamMetricOptionManhattan "Manhattan", "abs(x-xborder) + abs(y-yborder)", "manhattan"
+#define kParamMetricOptionEuclidean "Euclidean", "sqrt(sqr(x-xborder) + sqr(y-yborder))", "euclidean"
+//#define kParamMetricOptionSquaredEuclidean "Squared Euclidean", "sqr(x-xborder) + sqr(y-yborder)", "squaredeuclidean"
 #ifdef EXPERIMENTAL
-#define kParamMetricOptionSpherical "Spherical", "Compute the Euclidean distance, and draw a 2.5D sphere at each point with the distance as radius. Gives a round shape rather than a conical shape to the distance function."
+#define kParamMetricOptionSpherical "Spherical", "Compute the Euclidean distance, and draw a 2.5D sphere at each point with the distance as radius. Gives a round shape rather than a conical shape to the distance function.", "spherical"
 #endif
 enum MetricEnum {
     eMetricChebyshev = 0,

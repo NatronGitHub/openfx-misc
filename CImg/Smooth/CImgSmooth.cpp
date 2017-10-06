@@ -115,12 +115,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamInterp "interpolation"
 #define kParamInterpLabel "Interpolation"
 #define kParamInterpHint "Interpolation type"
-#define kParamInterpOptionNearest "Nearest-neighbor"
-#define kParamInterpOptionNearestHint "Nearest-neighbor."
-#define kParamInterpOptionLinear "Linear"
-#define kParamInterpOptionLinearHint "Linear interpolation."
-#define kParamInterpOptionRungeKutta "Runge-Kutta"
-#define kParamInterpOptionRungeKuttaHint "Runge-Kutta interpolation."
+#define kParamInterpOptionNearest "Nearest-neighbor", "Nearest-neighbor.", "nearest"
+#define kParamInterpOptionLinear "Linear", "Linear interpolation.", "linear"
+#define kParamInterpOptionRungeKutta "Runge-Kutta", "Runge-Kutta interpolation.", "rungekutta"
 #define kParamInterpDefault eInterpNearest
 enum InterpEnum
 {
@@ -430,11 +427,11 @@ CImgSmoothPluginFactory::describeInContext(ImageEffectDescriptor& desc,
         param->setLabel(kParamInterpLabel);
         param->setHint(kParamInterpHint);
         assert(param->getNOptions() == eInterpNearest && param->getNOptions() == 0);
-        param->appendOption(kParamInterpOptionNearest, kParamInterpOptionNearestHint);
+        param->appendOption(kParamInterpOptionNearest);
         assert(param->getNOptions() == eInterpLinear && param->getNOptions() == 1);
-        param->appendOption(kParamInterpOptionLinear, kParamInterpOptionLinearHint);
+        param->appendOption(kParamInterpOptionLinear);
         assert(param->getNOptions() == eInterpRungeKutta && param->getNOptions() == 2);
-        param->appendOption(kParamInterpOptionRungeKutta, kParamInterpOptionRungeKuttaHint);
+        param->appendOption(kParamInterpOptionRungeKutta);
         param->setDefault( (int)kParamInterpDefault );
         if (page) {
             page->addChild(*param);

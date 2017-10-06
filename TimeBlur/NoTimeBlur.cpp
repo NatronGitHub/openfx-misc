@@ -36,14 +36,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRounding "rounding"
 #define kParamRoundingLabel "Rounding"
 #define kParamRoundingHint "Rounding type/operation to use when blocking fractional frames."
-#define kParamRoundingOptionRint "rint"
-#define kParamRoundingOptionRintHint "Round to the nearest integer value."
-#define kParamRoundingOptionFloor "floor"
-#define kParamRoundingOptionFloorHint "Round dound to the nearest integer value."
-#define kParamRoundingOptionCeil "ceil"
-#define kParamRoundingOptionCeilHint "Round up to the nearest integer value."
-#define kParamRoundingOptionNone "none"
-#define kParamRoundingOptionNoneHint "Do not round."
+#define kParamRoundingOptionRint "rint", "Round to the nearest integer value.", "rint"
+#define kParamRoundingOptionFloor "floor", "Round dound to the nearest integer value.", "floor"
+#define kParamRoundingOptionCeil "ceil", "Round up to the nearest integer value.", "ceil"
+#define kParamRoundingOptionNone "none", "Do not round.", "none"
 #define kParamRoundingDefault eRoundingRint
 
 enum RoundingEnum
@@ -294,13 +290,13 @@ NoTimeBlurPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamRoundingLabel);
         param->setHint(kParamRoundingHint);
         assert(param->getNOptions() == eRoundingRint);
-        param->appendOption(kParamRoundingOptionRint, kParamRoundingOptionRintHint);
+        param->appendOption(kParamRoundingOptionRint);
         assert(param->getNOptions() == eRoundingFloor);
-        param->appendOption(kParamRoundingOptionFloor, kParamRoundingOptionFloorHint);
+        param->appendOption(kParamRoundingOptionFloor);
         assert(param->getNOptions() == eRoundingCeil);
-        param->appendOption(kParamRoundingOptionCeil, kParamRoundingOptionCeilHint);
+        param->appendOption(kParamRoundingOptionCeil);
         assert(param->getNOptions() == eRoundingNone);
-        param->appendOption(kParamRoundingOptionNone, kParamRoundingOptionNoneHint);
+        param->appendOption(kParamRoundingOptionNone);
         param->setDefault(kParamRoundingDefault);
         param->setAnimates(true);
         if (page) {

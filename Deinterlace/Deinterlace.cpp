@@ -61,20 +61,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamMode "mode"
 #define kParamModeLabel "Deinterlacing Mode"
 #define kParamModeHint "Choice of the deinterlacing mode/algorithm"
-#define kParamModeOptionWeave "Weave"
-#define kParamModeOptionWeaveHint "This is what 100fps.com calls \"do nothing\". Other names: \"disabled\" or \"no deinterlacing\". Should be used for PsF content."
-#define kParamModeOptionBlend "Blend"
-#define kParamModeOptionBlendHint "Blender (full resolution). Each line of the picture is created as the average of a line from the odd and a line from the even half-pictures. This ignores the fact that they are supposed to be displayed at different times."
-#define kParamModeOptionBob "Bob"
-#define kParamModeOptionBobHint "Doubler. Display each half-picture like a full picture, by simply displaying each line twice. Preserves temporal resolution of interlaced video."
-#define kParamModeOptionDiscard "Discard"
-#define kParamModeOptionDiscardHint "Only display one of the half-pictures, discard the other. Other name: \"single field\". Both temporal and vertical spatial resolutions are halved. Can be used for slower computers or to give interlaced video movie-like look with characteristic judder."
-#define kParamModeOptionLinear "Linear"
-#define kParamModeOptionLinearHint "Doubler. Bob with linear interpolation: instead of displaying each line twice, line 2 is created as the average of line 1 and 3, etc."
-#define kParamModeOptionMean "Mean"
-#define kParamModeOptionMeanHint "Blender (half resolution). Display a half-picture that is created as the average of the two original half-pictures."
-#define kParamModeOptionYadif "Yadif"
-#define kParamModeOptionYadifHint "Interpolator (Yet Another DeInterlacing Filter) from MPlayer by Michael Niedermayer (http://www.mplayerhq.hu). It checks pixels of previous, current and next frames to re-create the missed field by some local adaptive method (edge-directed interpolation) and uses spatial check to prevent most artifacts."
+#define kParamModeOptionWeave "Weave", "This is what 100fps.com calls \"do nothing\". Other names: \"disabled\" or \"no deinterlacing\". Should be used for PsF content.", "weave"
+#define kParamModeOptionBlend "Blend", "Blender (full resolution). Each line of the picture is created as the average of a line from the odd and a line from the even half-pictures. This ignores the fact that they are supposed to be displayed at different times.", "blend"
+#define kParamModeOptionBob "Bob", "Doubler. Display each half-picture like a full picture, by simply displaying each line twice. Preserves temporal resolution of interlaced video.", "bob"
+#define kParamModeOptionDiscard "Discard", "Only display one of the half-pictures, discard the other. Other name: \"single field\". Both temporal and vertical spatial resolutions are halved. Can be used for slower computers or to give interlaced video movie-like look with characteristic judder.", "discard"
+#define kParamModeOptionLinear "Linear", "Doubler. Bob with linear interpolation: instead of displaying each line twice, line 2 is created as the average of line 1 and 3, etc.", "linear"
+#define kParamModeOptionMean "Mean", "Blender (half resolution). Display a half-picture that is created as the average of the two original half-pictures.", "mean"
+#define kParamModeOptionYadif "Yadif", "Interpolator (Yet Another DeInterlacing Filter) from MPlayer by Michael Niedermayer (http://www.mplayerhq.hu). It checks pixels of previous, current and next frames to re-create the missed field by some local adaptive method (edge-directed interpolation) and uses spatial check to prevent most artifacts.", "yadif"
 
 enum DeinterlaceModeEnum
 {
@@ -90,9 +83,9 @@ enum DeinterlaceModeEnum
 #define kParamFieldOrder "fieldOrder"
 #define kParamFieldOrderLabel "Field Order"
 #define kParamFieldOrderHint "Interlaced field order"
-#define kParamFieldOrderOptionLower "Lower field first"
-#define kParamFieldOrderOptionUpper "Upper field first"
-#define kParamFieldOrderOptionAuto "HD=upper,SD=lower"
+#define kParamFieldOrderOptionLower "Lower field first", "Lower field first.", "lower"
+#define kParamFieldOrderOptionUpper "Upper field first", "Upper field first", "upper"
+#define kParamFieldOrderOptionAuto "HD=upper,SD=lower", "Automatic.", "auto"
 
 enum FieldOrderEnum
 {
@@ -103,9 +96,9 @@ enum FieldOrderEnum
 
 #define kParamParity "parity"
 #define kParamParityLabel "Parity"
-#define kParamParityHint "Interpolate which field"
-#define kParamParityOptionLower "Lower"
-#define kParamParityOptionUpper "Upper"
+#define kParamParityHint "Field to interpolate."
+#define kParamParityOptionLower "Lower", "Interpolate lower field.", "lower"
+#define kParamParityOptionUpper "Upper", "Interpolate upper field.", "upper"
 
 enum ParityEnum
 {
@@ -120,10 +113,8 @@ enum ParityEnum
 #define kParamYadifMode "yadifMode"
 #define kParamYadifModeLabel "Yadif Processing Mode"
 #define kParamYadifModeHint "Mode of checking fields"
-#define kParamYadifModeOptionTemporalSpatial "Temporal & spatial"
-#define kParamYadifModeOptionTemporalSpatialHint "temporal and spatial interlacing check (default)."
-#define kParamYadifModeOptionTemporal "Temporal only"
-#define kParamYadifModeOptionTemporalHint "skips spatial interlacing check."
+#define kParamYadifModeOptionTemporalSpatial "Temporal & spatial", "Temporal and spatial interlacing check (default).", "temporalspatial"
+#define kParamYadifModeOptionTemporal "Temporal only", "Skips spatial interlacing check.", "temporal"
 
 enum YadifModeEnum
 {
@@ -753,19 +744,19 @@ DeinterlacePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamModeLabel);
         param->setHint(kParamModeHint);
         assert(param->getNOptions() == eDeinterlaceModeWeave);
-        param->appendOption(kParamModeOptionWeave, kParamModeOptionWeaveHint);
+        param->appendOption(kParamModeOptionWeave);
         assert(param->getNOptions() == eDeinterlaceModeBlend);
-        param->appendOption(kParamModeOptionBlend, kParamModeOptionBlendHint);
+        param->appendOption(kParamModeOptionBlend);
         assert(param->getNOptions() == eDeinterlaceModeBob);
-        param->appendOption(kParamModeOptionBob, kParamModeOptionBobHint);
+        param->appendOption(kParamModeOptionBob);
         assert(param->getNOptions() == eDeinterlaceModeDiscard);
-        param->appendOption(kParamModeOptionDiscard, kParamModeOptionDiscardHint);
+        param->appendOption(kParamModeOptionDiscard);
         assert(param->getNOptions() == eDeinterlaceModeLinear);
-        param->appendOption(kParamModeOptionLinear, kParamModeOptionLinearHint);
+        param->appendOption(kParamModeOptionLinear);
         assert(param->getNOptions() == eDeinterlaceModeMean);
-        param->appendOption(kParamModeOptionMean, kParamModeOptionMeanHint);
+        param->appendOption(kParamModeOptionMean);
         assert(param->getNOptions() == eDeinterlaceModeYadif);
-        param->appendOption(kParamModeOptionYadif, kParamModeOptionYadifHint);
+        param->appendOption(kParamModeOptionYadif);
         param->setDefault( int(eDeinterlaceModeYadif) );
         param->setAnimates(true); // can animate
         param->setIsSecretAndDisabled(true); // Not yet implemented!
@@ -810,9 +801,9 @@ DeinterlacePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamYadifModeLabel);
         param->setHint(kParamYadifModeHint);
         assert(param->getNOptions() == eYadifModeTemporalSpatial);
-        param->appendOption(kParamYadifModeOptionTemporalSpatial, kParamYadifModeOptionTemporalSpatialHint);
+        param->appendOption(kParamYadifModeOptionTemporalSpatial);
         assert(param->getNOptions() == eYadifModeTemporal);
-        param->appendOption(kParamYadifModeOptionTemporal, kParamYadifModeOptionTemporalHint);
+        param->appendOption(kParamYadifModeOptionTemporal);
         param->setDefault(eYadifModeTemporalSpatial);
         param->setAnimates(true); // can animate
         if (page) {

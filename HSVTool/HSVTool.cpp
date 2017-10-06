@@ -159,22 +159,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputAlpha "outputAlpha"
 #define kParamOutputAlphaLabel "Output Alpha"
 #define kParamOutputAlphaHint "Output alpha channel. This can either be the source alpha, one of the coefficients for hue, saturation, brightness, or a combination of those. If it is not source alpha, the image on output are unpremultiplied, even if input is premultiplied."
-#define kParamOutputAlphaOptionSource "Source"
-#define kParamOutputAlphaOptionSourceHint "Alpha channel is kept unmodified"
-#define kParamOutputAlphaOptionHue "Hue"
-#define kParamOutputAlphaOptionHueHint "Set Alpha to the Hue modification mask"
-#define kParamOutputAlphaOptionSaturation "Saturation"
-#define kParamOutputAlphaOptionSaturationHint "Set Alpha to the Saturation modification mask"
-#define kParamOutputAlphaOptionBrightness "Brightness"
-#define kParamOutputAlphaOptionBrightnessHint "Alpha is set to the Brighness mask"
-#define kParamOutputAlphaOptionHueSaturation "min(Hue,Saturation)"
-#define kParamOutputAlphaOptionHueSaturationHint "Alpha is set to min(Hue mask,Saturation mask)"
-#define kParamOutputAlphaOptionHueBrightness "min(Hue,Brightness)"
-#define kParamOutputAlphaOptionHueBrightnessHint "Alpha is set to min(Hue mask,Brightness mask)"
-#define kParamOutputAlphaOptionSaturationBrightness "min(Saturation)"
-#define kParamOutputAlphaOptionSaturationBrightnessHint "Alpha is set to min(Hue mask,Saturation mask)"
-#define kParamOutputAlphaOptionAll "min(all)"
-#define kParamOutputAlphaOptionAllHint "Alpha is set to min(Hue mask,Saturation mask,Brightness mask)"
+#define kParamOutputAlphaOptionSource "Source", "Alpha channel is kept unmodified.", "source"
+#define kParamOutputAlphaOptionHue "Hue", "Set Alpha to the Hue modification mask.", "hue"
+#define kParamOutputAlphaOptionSaturation "Saturation", "Set Alpha to the Saturation modification mask.", "saturation"
+#define kParamOutputAlphaOptionBrightness "Brightness", "Alpha is set to the Brighness mask.", "brightness"
+#define kParamOutputAlphaOptionHueSaturation "min(Hue,Saturation)", "Alpha is set to min(Hue mask,Saturation mask)", "minhuesaturation"
+#define kParamOutputAlphaOptionHueBrightness "min(Hue,Brightness)", "Alpha is set to min(Hue mask,Brightness mask)", "minhuebrightness"
+#define kParamOutputAlphaOptionSaturationBrightness "min(Saturation,Brightness)", "Alpha is set to min(Saturation mask,Brightness mask)", "minsaturationbrightness"
+#define kParamOutputAlphaOptionAll "min(all)", "Alpha is set to min(Hue mask,Saturation mask,Brightness mask)", "min"
 
 enum OutputAlphaEnum
 {
@@ -2239,21 +2231,21 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamOutputAlphaLabel);
         param->setHint(kParamOutputAlphaHint);
         assert(param->getNOptions() == (int)eOutputAlphaSource);
-        param->appendOption(kParamOutputAlphaOptionSource, kParamOutputAlphaOptionSourceHint);
+        param->appendOption(kParamOutputAlphaOptionSource);
         assert(param->getNOptions() == (int)eOutputAlphaHue);
-        param->appendOption(kParamOutputAlphaOptionHue, kParamOutputAlphaOptionHueHint);
+        param->appendOption(kParamOutputAlphaOptionHue);
         assert(param->getNOptions() == (int)eOutputAlphaSaturation);
-        param->appendOption(kParamOutputAlphaOptionSaturation, kParamOutputAlphaOptionSaturationHint);
+        param->appendOption(kParamOutputAlphaOptionSaturation);
         assert(param->getNOptions() == (int)eOutputAlphaBrightness);
-        param->appendOption(kParamOutputAlphaOptionBrightness, kParamOutputAlphaOptionBrightnessHint);
+        param->appendOption(kParamOutputAlphaOptionBrightness);
         assert(param->getNOptions() == (int)eOutputAlphaHueSaturation);
-        param->appendOption(kParamOutputAlphaOptionHueSaturation, kParamOutputAlphaOptionHueSaturationHint);
+        param->appendOption(kParamOutputAlphaOptionHueSaturation);
         assert(param->getNOptions() == (int)eOutputAlphaHueBrightness);
-        param->appendOption(kParamOutputAlphaOptionHueBrightness, kParamOutputAlphaOptionHueBrightnessHint);
+        param->appendOption(kParamOutputAlphaOptionHueBrightness);
         assert(param->getNOptions() == (int)eOutputAlphaSaturationBrightness);
-        param->appendOption(kParamOutputAlphaOptionSaturationBrightness, kParamOutputAlphaOptionSaturationBrightnessHint);
+        param->appendOption(kParamOutputAlphaOptionSaturationBrightness);
         assert(param->getNOptions() == (int)eOutputAlphaAll);
-        param->appendOption(kParamOutputAlphaOptionAll, kParamOutputAlphaOptionAllHint);
+        param->appendOption(kParamOutputAlphaOptionAll);
         param->setDefault( (int)eOutputAlphaHue );
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);

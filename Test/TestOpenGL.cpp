@@ -112,9 +112,9 @@ using namespace OFX;
 #define kParamCPUDriver "cpuDriver"
 #define kParamCPUDriverLabel "CPU Driver"
 #define kParamCPUDriverHint "Driver for CPU rendering. May be \"softpipe\" (slower, has GL_EXT_texture_filter_anisotropic GL_ARB_texture_query_lod GL_ARB_pipeline_statistics_query), \"llvmpipe\" (faster, has GL_ARB_buffer_storage GL_EXT_polygon_offset_clamp) or \"swr\" (OpenSWR, not always available)."
-#define kParamCPUDriverOptionSoftPipe "softpipe"
-#define kParamCPUDriverOptionLLVMPipe "llvmpipe"
-#define kParamCPUDriverOptionSWR "swr"
+#define kParamCPUDriverOptionSoftPipe "softpipe", "Gallium softpipe driver from Mesa. A reference signle-threaded driver (slower, has GL_EXT_texture_filter_anisotropic GL_ARB_texture_query_lod GL_ARB_pipeline_statistics_query).", "softpipe"
+#define kParamCPUDriverOptionLLVMPipe "llvmpipe", "Gallium llvmpipe driver from Mesa, if available. Uses LLVM for x86 JIT code generation and is multi-threaded (faster, has GL_ARB_buffer_storage GL_EXT_polygon_offset_clamp).", "llvmpipe"
+#define kParamCPUDriverOptionSWR "swr", "OpenSWR driver from Mesa, if available. Fully utilizes modern instruction sets like AVX and AVX2 to achieve high rendering performance.", "swr"
 #define kParamCPUDriverDefault TestOpenGLPlugin::eCPUDriverLLVMPipe
 #endif
 

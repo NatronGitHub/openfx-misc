@@ -89,15 +89,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamKeyerModeLabel "Keyer Mode"
 #define kParamKeyerModeHint \
     "The operation used to compute the foreground key."
-#define kParamKeyerModeOptionLuminance "Luminance"
-#define kParamKeyerModeOptionLuminanceHint "Use the luminance for keying. The foreground key value is in luminance."
-#define kParamKeyerModeOptionColor "Color"
-#define kParamKeyerModeOptionColorHint "Use the color for keying. If the key color is pure green, this corresponds a green keyer, etc."
-#define kParamKeyerModeOptionScreen "Screen"
-#define kParamKeyerModeOptionScreenHint "Use the color minus the other components for keying. If the key color is pure green, this corresponds a greenscreen, etc. When in screen mode, the upper tolerance should be set to 1."
-#define kParamKeyerModeOptionNone "None"
-#define kParamKeyerModeOptionNoneHint "No keying, just despill color values. You can control despill areas using either set the inside mask, or use with 'Source Alpha' set to 'Add to Inside Mask'. If 'Output Mode' is set to 'Unpremultiplied', this despills the image even if no mask is present."
+#define kParamKeyerModeOptionLuminance "Luminance", "Use the luminance for keying. The foreground key value is in luminance.", "luminance"
+#define kParamKeyerModeOptionColor "Color", "Use the color for keying. If the key color is pure green, this corresponds a green keyer, etc.", "color"
+#define kParamKeyerModeOptionScreen "Screen", "Use the color minus the other components for keying. If the key color is pure green, this corresponds a greenscreen, etc. When in screen mode, the upper tolerance should be set to 1.", "screen"
+#define kParamKeyerModeOptionNone "None", "No keying, just despill color values. You can control despill areas using either set the inside mask, or use with 'Source Alpha' set to 'Add to Inside Mask'. If 'Output Mode' is set to 'Unpremultiplied', this despills the image even if no mask is present.", "none"
 #define kParamKeyerModeDefault eKeyerModeLuminance
+#define kParamKeyerModeDefaultString "Luminance"
 enum KeyerModeEnum
 {
     eKeyerModeLuminance,
@@ -109,20 +106,13 @@ enum KeyerModeEnum
 #define kParamLuminanceMath "luminanceMath"
 #define kParamLuminanceMathLabel "Luminance Math"
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
-#define kParamLuminanceMathOptionRec709 "Rec. 709"
-#define kParamLuminanceMathOptionRec709Hint "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b)."
-#define kParamLuminanceMathOptionRec2020 "Rec. 2020"
-#define kParamLuminanceMathOptionRec2020Hint "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b)."
-#define kParamLuminanceMathOptionACESAP0 "ACES AP0"
-#define kParamLuminanceMathOptionACESAP0Hint "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b)."
-#define kParamLuminanceMathOptionACESAP1 "ACES AP1"
-#define kParamLuminanceMathOptionACESAP1Hint "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b)."
-#define kParamLuminanceMathOptionCcir601 "CCIR 601"
-#define kParamLuminanceMathOptionCcir601Hint "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b)."
-#define kParamLuminanceMathOptionAverage "Average"
-#define kParamLuminanceMathOptionAverageHint "Use average of r, g, b."
-#define kParamLuminanceMathOptionMaximum "Max"
-#define kParamLuminanceMathOptionMaximumHint "Use max or r, g, b."
+#define kParamLuminanceMathOptionRec709 "Rec. 709", "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b).", "rec709"
+#define kParamLuminanceMathOptionRec2020 "Rec. 2020", "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b).", "rec2020"
+#define kParamLuminanceMathOptionACESAP0 "ACES AP0", "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b).", "acesap0"
+#define kParamLuminanceMathOptionACESAP1 "ACES AP1", "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b).", "acesap1"
+#define kParamLuminanceMathOptionCcir601 "CCIR 601", "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b).", "ccir601"
+#define kParamLuminanceMathOptionAverage "Average", "Use average of r, g, b.", "average"
+#define kParamLuminanceMathOptionMaximum "Max", "Use max or r, g, b.", "max"
 
 enum LuminanceMathEnum
 {
@@ -169,25 +159,18 @@ enum LuminanceMathEnum
 #define kParamOutputModeLabel "Output Mode"
 #define kParamOutputModeHint \
     "What image to output."
-#define kParamOutputModeOptionIntermediate "Intermediate"
-#define kParamOutputModeOptionIntermediateHint "Color is the source color. Alpha is the foreground key. Use for multi-pass keying."
-#define kParamOutputModeOptionPremultiplied "Premultiplied"
-#define kParamOutputModeOptionPremultipliedHint "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key."
-#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied"
-#define kParamOutputModeOptionUnpremultipliedHint "Color is the Source color after key color suppression. Alpha is the foreground key."
-#define kParamOutputModeOptionComposite "Composite"
-#define kParamOutputModeOptionCompositeHint "Color is the composite of Source and Bg. Alpha is the foreground key."
+#define kParamOutputModeOptionIntermediate "Intermediate", "Color is the source color. Alpha is the foreground key. Use for multi-pass keying.", "intermediate"
+#define kParamOutputModeOptionPremultiplied "Premultiplied", "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key.", "premultiplied"
+#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied", "Color is the Source color after key color suppression. Alpha is the foreground key.", "unpremultiplied"
+#define kParamOutputModeOptionComposite "Composite", "Color is the composite of Source and Bg. Alpha is the foreground key.", "composite"
 
 #define kParamSourceAlpha "sourceAlphaHandling"
 #define kParamSourceAlphaLabel "Source Alpha"
 #define kParamSourceAlphaHint \
     "How the alpha embedded in the Source input should be used"
-#define kParamSourceAlphaOptionIgnore "Ignore"
-#define kParamSourceAlphaOptionIgnoreHint "Ignore the source alpha."
-#define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask"
-#define kParamSourceAlphaOptionAddToInsideMaskHint "Source alpha is added to the inside mask. Use for multi-pass keying."
-#define kParamSourceAlphaOptionNormal "Normal"
-#define kParamSourceAlphaOptionNormalHint "Foreground key is multiplied by source alpha when compositing."
+#define kParamSourceAlphaOptionIgnore "Ignore", "Ignore the source alpha.", "ignore"
+#define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask", "Source alpha is added to the inside mask. Use for multi-pass keying.", "inside"
+#define kParamSourceAlphaOptionNormal "Normal", "Foreground key is multiplied by source alpha when compositing.", "normal"
 
 #define kClipSourceHint "The foreground image to key."
 #define kClipBg "Bg"
@@ -1022,7 +1005,8 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setIsSecretAndDisabled(true); // always secret
         param->setIsPersistent(false);
         param->setEvaluateOnChange(false);
-        param->setDefault(kParamKeyerModeOptionLuminance);
+        std::string keyerModeString;
+        param->setDefault(kParamKeyerModeDefaultString);
         if (page) {
             page->addChild(*param);
         }
@@ -1051,13 +1035,13 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamKeyerModeLabel);
         param->setHint(kParamKeyerModeHint);
         assert(param->getNOptions() == (int)eKeyerModeLuminance);
-        param->appendOption(kParamKeyerModeOptionLuminance, kParamKeyerModeOptionLuminanceHint);
+        param->appendOption(kParamKeyerModeOptionLuminance);
         assert(param->getNOptions() == (int)eKeyerModeColor);
-        param->appendOption(kParamKeyerModeOptionColor, kParamKeyerModeOptionColorHint);
+        param->appendOption(kParamKeyerModeOptionColor);
         assert(param->getNOptions() == (int)eKeyerModeScreen);
-        param->appendOption(kParamKeyerModeOptionScreen, kParamKeyerModeOptionScreenHint);
+        param->appendOption(kParamKeyerModeOptionScreen);
         assert(param->getNOptions() == (int)eKeyerModeNone);
-        param->appendOption(kParamKeyerModeOptionNone, kParamKeyerModeOptionNoneHint);
+        param->appendOption(kParamKeyerModeOptionNone);
         param->setDefault( (int)kParamKeyerModeDefault );
         if (page) {
             page->addChild(*param);
@@ -1069,19 +1053,19 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamLuminanceMathLabel);
         param->setHint(kParamLuminanceMathHint);
         assert(param->getNOptions() == eLuminanceMathRec709);
-        param->appendOption(kParamLuminanceMathOptionRec709, kParamLuminanceMathOptionRec709Hint);
+        param->appendOption(kParamLuminanceMathOptionRec709);
         assert(param->getNOptions() == eLuminanceMathRec2020);
-        param->appendOption(kParamLuminanceMathOptionRec2020, kParamLuminanceMathOptionRec2020Hint);
+        param->appendOption(kParamLuminanceMathOptionRec2020);
         assert(param->getNOptions() == eLuminanceMathACESAP0);
-        param->appendOption(kParamLuminanceMathOptionACESAP0, kParamLuminanceMathOptionACESAP0Hint);
+        param->appendOption(kParamLuminanceMathOptionACESAP0);
         assert(param->getNOptions() == eLuminanceMathACESAP1);
-        param->appendOption(kParamLuminanceMathOptionACESAP1, kParamLuminanceMathOptionACESAP1Hint);
+        param->appendOption(kParamLuminanceMathOptionACESAP1);
         assert(param->getNOptions() == eLuminanceMathCcir601);
-        param->appendOption(kParamLuminanceMathOptionCcir601, kParamLuminanceMathOptionCcir601Hint);
+        param->appendOption(kParamLuminanceMathOptionCcir601);
         assert(param->getNOptions() == eLuminanceMathAverage);
-        param->appendOption(kParamLuminanceMathOptionAverage, kParamLuminanceMathOptionAverageHint);
+        param->appendOption(kParamLuminanceMathOptionAverage);
         assert(param->getNOptions() == eLuminanceMathMaximum);
-        param->appendOption(kParamLuminanceMathOptionMaximum, kParamLuminanceMathOptionMaximumHint);
+        param->appendOption(kParamLuminanceMathOptionMaximum);
         if (page) {
             page->addChild(*param);
         }
@@ -1196,13 +1180,13 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamOutputModeLabel);
         param->setHint(kParamOutputModeHint);
         assert(param->getNOptions() == (int)eOutputModeIntermediate);
-        param->appendOption(kParamOutputModeOptionIntermediate, kParamOutputModeOptionIntermediateHint);
+        param->appendOption(kParamOutputModeOptionIntermediate);
         assert(param->getNOptions() == (int)eOutputModePremultiplied);
-        param->appendOption(kParamOutputModeOptionPremultiplied, kParamOutputModeOptionPremultipliedHint);
+        param->appendOption(kParamOutputModeOptionPremultiplied);
         assert(param->getNOptions() == (int)eOutputModeUnpremultiplied);
-        param->appendOption(kParamOutputModeOptionUnpremultiplied, kParamOutputModeOptionUnpremultipliedHint);
+        param->appendOption(kParamOutputModeOptionUnpremultiplied);
         assert(param->getNOptions() == (int)eOutputModeComposite);
-        param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
+        param->appendOption(kParamOutputModeOptionComposite);
         param->setDefault( (int)eOutputModeIntermediate );
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
@@ -1217,11 +1201,11 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamSourceAlphaLabel);
         param->setHint(kParamSourceAlphaHint);
         assert(param->getNOptions() == (int)eSourceAlphaIgnore);
-        param->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);
+        param->appendOption(kParamSourceAlphaOptionIgnore);
         assert(param->getNOptions() == (int)eSourceAlphaAddToInsideMask);
-        param->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
+        param->appendOption(kParamSourceAlphaOptionAddToInsideMask);
         assert(param->getNOptions() == (int)eSourceAlphaNormal);
-        param->appendOption(kParamSourceAlphaOptionNormal, kParamSourceAlphaOptionNormalHint);
+        param->appendOption(kParamSourceAlphaOptionNormal);
         param->setDefault( (int)eSourceAlphaIgnore );
         param->setAnimates(true);
         if (page) {

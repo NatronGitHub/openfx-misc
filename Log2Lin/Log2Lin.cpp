@@ -97,10 +97,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOperation "operation"
 #define kParamOperationLabel "Operation"
 #define kParamOperationHint "The operation to perform."
-#define kParamOperationOptionLog2Lin "Log to Lin"
-#define kParamOperationOptionLog2LinHint "Convert the input from logarithmic to linear colorspace (usually after a Read node)."
-#define kParamOperationOptionLin2Log "Lin to Log"
-#define kParamOperationOptionLin2LogHint "Convert the input from linear to logarithmic colorspace (usually before a Write node)."
+#define kParamOperationOptionLog2Lin "Log to Lin", "Convert the input from logarithmic to linear colorspace (usually after a Read node).", "log2lin"
+#define kParamOperationOptionLin2Log "Lin to Log", "Convert the input from linear to logarithmic colorspace (usually before a Write node).", "lin2log"
 
 enum OperationEnum
 {
@@ -873,9 +871,9 @@ Log2LinPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamOperationLabel);
         param->setHint(kParamOperationHint);
         assert(param->getNOptions() == eOperationLog2Lin);
-        param->appendOption(kParamOperationOptionLog2Lin, kParamOperationOptionLog2LinHint);
+        param->appendOption(kParamOperationOptionLog2Lin);
         assert(param->getNOptions() == eOperationLin2Log);
-        param->appendOption(kParamOperationOptionLin2Log, kParamOperationOptionLin2LogHint);
+        param->appendOption(kParamOperationOptionLin2Log);
         param->setDefault( (int)eOperationLog2Lin );
         if (page) {
             page->addChild(*param);

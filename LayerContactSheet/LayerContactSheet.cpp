@@ -96,8 +96,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRowOrderLabel "Row Order"
 #define kParamRowOrderHint \
 "How image rows are populated."
-#define kParamRowOrderOptionTopBottom "TopBottom", "From top to bottom row."
-#define kParamRowOrderOptionBottomTop "BottomTop", "From bottom to top row."
+#define kParamRowOrderOptionTopBottom "TopBottom", "From top to bottom row.", "topbottom"
+#define kParamRowOrderOptionBottomTop "BottomTop", "From bottom to top row.", "bottomtop"
 enum RowOrderEnum {
     eRowOrderTopBottom = 0,
     eRowOrderBottomTop,
@@ -107,8 +107,8 @@ enum RowOrderEnum {
 #define kParamColumnOrderLabel "Column Order"
 #define kParamColumnOrderHint \
 "How image columns are populated."
-#define kParamColumnOrderOptionLeftRight "LeftRight", "From left to right column."
-#define kParamColumnOrderOptionRightLeft "RightLeft", "From right to left column."
+#define kParamColumnOrderOptionLeftRight "LeftRight", "From left to right column.", "leftright"
+#define kParamColumnOrderOptionRightLeft "RightLeft", "From right to left column.", "rightleft"
 enum ColumnOrderEnum {
     eColumnOrderLeftRight = 0,
     eColumnOrderRightLeft,

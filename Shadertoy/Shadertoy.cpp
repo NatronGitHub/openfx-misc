@@ -513,18 +513,14 @@ using std::string;
 #define kParamBBox "bbox"
 #define kParamBBoxLabel "Output Bounding Box"
 #define kParamBBoxHint "What to use to produce the output image's bounding box. If no selected input is connected, use the project size."
-#define kParamBBoxOptionDefault "Default"
-#define kParamBBoxOptionDefaultHint "Default bounding box (project size)."
-#define kParamBBoxOptionFormat "Format"
-#define kParamBBoxOptionFormatHint "Use a pre-defined image format."
-//#define kParamBBoxOptionSize "Size"
-//#define kParamBBoxOptionSizeHint "Use a specific extent (size and offset)."
-#define kParamBBoxOptionUnion "Union"
-#define kParamBBoxOptionUnionHint "Union of all connected inputs."
-#define kParamBBoxOptionIntersection "Intersect"
-#define kParamBBoxOptionIntersectionHint "Intersection of all connected inputs."
+#define kParamBBoxOptionDefault "Default", "Default bounding box (project size).", "default"
+#define kParamBBoxOptionFormat "Format", "Use a pre-defined image format.", "format"
+//#define kParamBBoxOptionSize "Size", "Use a specific extent (size and offset).", "size"
+#define kParamBBoxOptionUnion "Union", "Union of all connected inputs.", "union"
+#define kParamBBoxOptionIntersection "Intersect", "Intersection of all connected inputs.", "intersection"
 #define kParamBBoxOptionIChannel "iChannel"
 #define kParamBBoxOptionIChannelHint "Bounding box of iChannel"
+#define kParamBBoxOptionIChannelEnum "iChannel"
 
 #define kParamFormat kNatronParamFormatChoice
 #define kParamFormatLabel "Format"
@@ -635,13 +631,13 @@ using std::string;
 #define kParamType "paramType" // followed by param number
 #define kParamTypeLabel "Type"
 #define kParamTypeHint "Type of the parameter."
-#define kParamTypeOptionNone "none"
-#define kParamTypeOptionBool "bool"
-#define kParamTypeOptionInt "int"
-#define kParamTypeOptionFloat "float"
-#define kParamTypeOptionVec2 "vec2"
-#define kParamTypeOptionVec3 "vec3"
-#define kParamTypeOptionVec4 "vec4"
+#define kParamTypeOptionNone "none", "No parameter.", "none"
+#define kParamTypeOptionBool "bool", "Boolean parameter (checkbox).", "bool"
+#define kParamTypeOptionInt "int", "Integer parameter.", "int"
+#define kParamTypeOptionFloat "float", "Floating-point parameter.", "float"
+#define kParamTypeOptionVec2 "vec2", "2D floating-point parameter (e.g. position).", "vec2"
+#define kParamTypeOptionVec3 "vec3", "3D floating-point parameter (e.g. 3D position or RGB color).", "vec3"
+#define kParamTypeOptionVec4 "vec4", "4D floating-point parameter (e.g. RGBA color).", "vec4"
 
 #define kParamName "paramName" // followed by param number
 #define kParamNameLabel "Name"
@@ -692,24 +688,16 @@ using std::string;
 #define kParamInputFilter "mipmap"
 #define kParamInputFilterLabel "Filter"
 #define kParamInputFilterHint "Texture filter for this input."
-#define kParamInputFilterOptionNearest "Nearest"
-#define kParamInputFilterOptionNearestHint "MIN/MAG = GL_NEAREST/GL_NEAREST"
-#define kParamInputFilterOptionLinear "Linear"
-#define kParamInputFilterOptionLinearHint "MIN/MAG = GL_LINEAR/GL_LINEAR"
-#define kParamInputFilterOptionMipmap "Mipmap"
-#define kParamInputFilterOptionMipmapHint "MIN/MAG = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR"
-#define kParamInputFilterOptionAnisotropic "Anisotropic"
-#define kParamInputFilterOptionAnisotropicHint "Mipmap with anisotropic filtering. Available with GPU if supported (check for the presence of the GL_EXT_texture_filter_anisotropic extension in the Renderer Info) and with \"softpipe\" CPU driver."
+#define kParamInputFilterOptionNearest "Nearest", "MIN/MAG = GL_NEAREST/GL_NEAREST", "nearest"
+#define kParamInputFilterOptionLinear "Linear", "MIN/MAG = GL_LINEAR/GL_LINEAR", "linear"
+#define kParamInputFilterOptionMipmap "Mipmap", "MIN/MAG = GL_LINEAR_MIPMAP_LINEAR/GL_LINEAR", "mipmap"
+#define kParamInputFilterOptionAnisotropic "Anisotropic", "Mipmap with anisotropic filtering. Available with GPU if supported (check for the presence of the GL_EXT_texture_filter_anisotropic extension in the Renderer Info) and with \"softpipe\" CPU driver.", "anisotropic"
 
 #define kParamInputWrap "wrap"
-#define kParamInputWrapLabel "Wrap"
-#define kParamInputWrapHint "Texture wrap parameter for this input."
-#define kParamInputWrapOptionRepeat "Repeat"
-#define kParamInputWrapOptionRepeatHint "WRAP_S/T = GL_REPEAT"
-#define kParamInputWrapOptionClamp "Clamp"
-#define kParamInputWrapOptionClampHint "WRAP_S/T = GL_CLAMP_TO_EDGE"
-#define kParamInputWrapOptionMirror "Mirror"
-#define kParamInputWrapOptionMirrorHint "WRAP_S/T = GL_MIRRORED_REPEAT"
+#define kParamInputWrapLabel "Wrap", "Texture wrap parameter for this input."
+#define kParamInputWrapOptionRepeat "Repeat", "WRAP_S/T = GL_REPEAT", "repeat"
+#define kParamInputWrapOptionClamp "Clamp", "WRAP_S/T = GL_CLAMP_TO_EDGE", "clamp"
+#define kParamInputWrapOptionMirror "Mirror", "WRAP_S/T = GL_MIRRORED_REPEAT", "mirror"
 
 #define kParamInputName "inputName" // name for the label for each input
 
@@ -737,10 +725,10 @@ using std::string;
 #ifdef HAVE_OSMESA
 #define kParamCPUDriver "cpuDriver"
 #define kParamCPUDriverLabel "CPU Driver"
-#define kParamCPUDriverHint "Driver for CPU rendering. May be \"softpipe\" (slower, has GL_EXT_texture_filter_anisotropic GL_ARB_texture_query_lod GL_ARB_pipeline_statistics_query), \"llvmpipe\" (faster, has GL_ARB_buffer_storage GL_EXT_polygon_offset_clamp) or \"swr\" (OpenSWR, not always available)."
-#define kParamCPUDriverOptionSoftPipe "softpipe"
-#define kParamCPUDriverOptionLLVMPipe "llvmpipe"
-#define kParamCPUDriverOptionSWR "swr"
+#define kParamCPUDriverHint "Driver for CPU rendering. May be \"softpipe\" , \"llvmpipe\"  or \"swr\" (OpenSWR, not always available)."
+#define kParamCPUDriverOptionSoftPipe "softpipe", "Gallium softpipe driver from Mesa. A reference signle-threaded driver (slower, has GL_EXT_texture_filter_anisotropic GL_ARB_texture_query_lod GL_ARB_pipeline_statistics_query).", "softpipe"
+#define kParamCPUDriverOptionLLVMPipe "llvmpipe", "Gallium llvmpipe driver from Mesa, if available. Uses LLVM for x86 JIT code generation and is multi-threaded (faster, has GL_ARB_buffer_storage GL_EXT_polygon_offset_clamp).", "llvmpipe"
+#define kParamCPUDriverOptionSWR "swr", "OpenSWR driver from Mesa, if available. Fully utilizes modern instruction sets like AVX and AVX2 to achieve high rendering performance.", "swr"
 #define kParamCPUDriverDefault ShadertoyPlugin::eCPUDriverLLVMPipe
 #endif
 
@@ -2692,13 +2680,13 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 param->setLabel(kParamInputFilterLabel);
                 param->setHint(kParamInputFilterHint);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterNearest);
-                param->appendOption(kParamInputFilterOptionNearest, kParamInputFilterOptionNearestHint);
+                param->appendOption(kParamInputFilterOptionNearest);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterLinear);
-                param->appendOption(kParamInputFilterOptionLinear, kParamInputFilterOptionLinearHint);
+                param->appendOption(kParamInputFilterOptionLinear);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterMipmap);
-                param->appendOption(kParamInputFilterOptionMipmap, kParamInputFilterOptionMipmapHint);
+                param->appendOption(kParamInputFilterOptionMipmap);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterAnisotropic);
-                param->appendOption(kParamInputFilterOptionAnisotropic, kParamInputFilterOptionAnisotropicHint);
+                param->appendOption(kParamInputFilterOptionAnisotropic);
                 param->setDefault( (int)ShadertoyPlugin::eFilterMipmap );
                 param->setAnimates(false);
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -2711,14 +2699,13 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             }
             {
                 ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamInputWrap + nb);
-                param->setLabel(kParamInputWrapLabel);
-                param->setHint(kParamInputWrapHint);
+                param->setLabelAndHint(kParamInputWrapLabel);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapRepeat);
-                param->appendOption(kParamInputWrapOptionRepeat, kParamInputWrapOptionRepeatHint);
+                param->appendOption(kParamInputWrapOptionRepeat);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapClamp);
-                param->appendOption(kParamInputWrapOptionClamp, kParamInputWrapOptionClampHint);
+                param->appendOption(kParamInputWrapOptionClamp);
                 assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapMirror);
-                param->appendOption(kParamInputWrapOptionMirror, kParamInputWrapOptionMirrorHint);
+                param->appendOption(kParamInputWrapOptionMirror);
                 param->setDefault( (int)ShadertoyPlugin::eWrapRepeat );
                 param->setAnimates(false);
                 if (page) {
@@ -2761,19 +2748,19 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamBBoxLabel);
             param->setHint(kParamBBoxHint);
             assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxDefault);
-            param->appendOption(kParamBBoxOptionDefault, kParamBBoxOptionDefaultHint);
+            param->appendOption(kParamBBoxOptionDefault);
             assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxFormat);
-            param->appendOption(kParamBBoxOptionFormat, kParamBBoxOptionFormatHint);
+            param->appendOption(kParamBBoxOptionFormat);
             //assert(param->getNOptions() == (int)eBBoxSize);
             //param->appendOption(kParamBBoxOptionSize, kParamBBoxOptionSizeHint);
             assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxUnion);
-            param->appendOption(kParamBBoxOptionUnion, kParamBBoxOptionUnionHint);
+            param->appendOption(kParamBBoxOptionUnion);
             assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxIntersection);
-            param->appendOption(kParamBBoxOptionIntersection, kParamBBoxOptionIntersectionHint);
+            param->appendOption(kParamBBoxOptionIntersection);
             assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxIChannel);
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 string nb = unsignedToString(i);
-                param->appendOption(string(kParamBBoxOptionIChannel) + nb, string(kParamBBoxOptionIChannelHint) + nb + '.');
+                param->appendOption(string(kParamBBoxOptionIChannel) + nb, string(kParamBBoxOptionIChannelHint) + nb + '.', string(kParamBBoxOptionIChannelEnum) + nb);
             }
             param->setAnimates(true);
             param->setDefault( (int)ShadertoyPlugin::eBBoxDefault );

@@ -189,9 +189,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamScreenType "screenType"
 #define kParamScreenTypeLabel "Screen Type"
 #define kParamScreenTypeHint "The type of background screen used for the key."
-#define kParamScreenTypeOptionGreen "C-Green"
-#define kParamScreenTypeOptionBlue "C-Blue"
-#define kParamScreenTypeOptionPick "Pick"
+#define kParamScreenTypeOptionGreen "C-Green", "Background screen with a green tint.", "green"
+#define kParamScreenTypeOptionBlue "C-Blue", "Background screen with a blue tint.", "blue"
+#define kParamScreenTypeOptionPick "Pick", "The background screen color is selected by the \"color\" parameter, and the type of screen (green or blue) is set automatically from this color.", "pick"
 enum ScreenTypeEnum
 {
     eScreenTypeGreen = 0,
@@ -308,12 +308,9 @@ enum ScreenTypeEnum
 #define kParamSourceAlphaLabel "Source Alpha"
 #define kParamSourceAlphaHint \
     "How the alpha embedded in the Source input should be used"
-#define kParamSourceAlphaOptionIgnore "Ignore"
-#define kParamSourceAlphaOptionIgnoreHint "Ignore the source alpha."
-#define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask"
-#define kParamSourceAlphaOptionAddToInsideMaskHint "Source alpha is added to the inside mask. Use for multi-pass keying."
-//#define kParamSourceAlphaOptionNormal "Normal"
-//#define kParamSourceAlphaOptionNormalHint "Foreground key is multiplied by source alpha when compositing."
+#define kParamSourceAlphaOptionIgnore "Ignore", "Ignore the source alpha.", "ignore"
+#define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask", "Source alpha is added to the inside mask. Use for multi-pass keying.", "inside"
+//#define kParamSourceAlphaOptionNormal "Normal", "Foreground key is multiplied by source alpha when compositing.", "normal"
 enum SourceAlphaEnum
 {
     eSourceAlphaIgnore,
@@ -324,14 +321,10 @@ enum SourceAlphaEnum
 #define kParamInsideReplace "insideReplace"
 #define kParamInsideReplaceLabel "Inside Replace"
 #define kParamInsideReplaceHint "What to do with the color of the pixels for which alpha was modified by the inside mask."
-#define kParamReplaceOptionNone "None"
-#define kParamReplaceOptionNoneHint "Subtracted image is not affected by alpha modifications."
-#define kParamReplaceOptionSource "Source"
-#define kParamReplaceOptionSourceHint "When alpha is modified, a corresponding amount of the Fg color is added."
-#define kParamReplaceOptionHardColor "Hard Color"
-#define kParamReplaceOptionHardColorHint "When alpha is modified, a corresponding amount of the replace color is added."
-#define kParamReplaceOptionSoftColor "Soft Color"
-#define kParamReplaceOptionSoftColorHint "When alpha is modified, a corresponding amount of the replace color is added, but the resulting luminance is matched with Fg."
+#define kParamReplaceOptionNone "None", "Subtracted image is not affected by alpha modifications.", "none"
+#define kParamReplaceOptionSource "Source", "When alpha is modified, a corresponding amount of the Fg color is added.", "source"
+#define kParamReplaceOptionHardColor "Hard Color", "When alpha is modified, a corresponding amount of the replace color is added.", "hardcolor"
+#define kParamReplaceOptionSoftColor "Soft Color", "When alpha is modified, a corresponding amount of the replace color is added, but the resulting luminance is matched with Fg.", "softcolor"
 enum ReplaceEnum
 {
     eReplaceNone,
@@ -362,14 +355,10 @@ enum ReplaceEnum
 #define kParamColorspace "colorspace"
 #define kParamColorspaceLabel "Colorspace"
 #define kParamColorspaceHint "Formula used to compute luminance and chrominance from RGB values for the \"Use Bg Luminance\" and \"Use Bg Choma\" options."
-#define kParamColorspaceOptionRec709 "Rec. 709"
-#define kParamColorspaceOptionRec709Hint "Use Rec. 709 with D65 illuminant."
-#define kParamColorspaceOptionRec2020 "Rec. 2020"
-#define kParamColorspaceOptionRec2020Hint "Use Rec. 2020 with D65 illuminant."
-#define kParamColorspaceOptionACESAP0 "ACES AP0"
-#define kParamColorspaceOptionACESAP0Hint "Use ACES AP0 with ACES (approx. D60) illuminant."
-#define kParamColorspaceOptionACESAP1 "ACES AP1"
-#define kParamColorspaceOptionACESAP1Hint "Use ACES AP1 with ACES (approx. D60) illuminant."
+#define kParamColorspaceOptionRec709 "Rec. 709", "Use Rec. 709 with D65 illuminant.", "rec709"
+#define kParamColorspaceOptionRec2020 "Rec. 2020", "Use Rec. 2020 with D65 illuminant.", "rec2020"
+#define kParamColorspaceOptionACESAP0 "ACES AP0", "Use ACES AP0 with ACES (approx. D60) illuminant.", "acesap0"
+#define kParamColorspaceOptionACESAP1 "ACES AP1", "Use ACES AP1 with ACES (approx. D60) illuminant.", "acesap1"
 
 enum ColorspaceEnum
 {
@@ -383,30 +372,18 @@ enum ColorspaceEnum
 #define kParamOutputModeLabel "Output Mode"
 #define kParamOutputModeHint \
     "What image to output."
-#define kParamOutputModeOptionSource "Source"
-#define kParamOutputModeOptionSourceHint "The PFg input (or Fg input, if PFg is not connected)."
-#define kParamOutputModeOptionSourceAlpha "Source Alpha"
-#define kParamOutputModeOptionSourceAlphaHint "The Alpha channel from the PFg input (or Fg input, if PFg is not connected), displayed as luminance."
-#define kParamOutputModeOptionCleanPlate "Clean Plate"
-#define kParamOutputModeOptionCleanPlateHint "The clean plate from the C input (or the screen color, if C is not connected)."
-#define kParamOutputModeOptionScreenMatte "Screen Matte"
-#define kParamOutputModeOptionScreenMatteHint "The screen matte after keying and screen matte processing, but before applying the inside and outside mask, displayed as luminance."
-#define kParamOutputModeOptionInsideMask "Inside Mask"
-#define kParamOutputModeOptionInsideMaskHint "The inside mask, displayed as luminance."
-#define kParamOutputModeOptionOutsideMask "Outside Mask"
-#define kParamOutputModeOptionOutsideMaskHint "The outside mask, displayed as luminance."
-#define kParamOutputModeOptionCombinedMatte "Combined Matte"
-#define kParamOutputModeOptionCombinedMatteHint "The final matte, after applying inside and outside mask, displayed as luminance."
-#define kParamOutputModeOptionStatus "Status"
-#define kParamOutputModeOptionStatusHint "An image showing which pixels are pure background (black), pure foreground (white), partially transparent (grey), affected by Screen Replace (green), affected by Inside Replace (blue), or affected by Outside Mask (red)."
-#define kParamOutputModeOptionIntermediate "Intermediate"
-#define kParamOutputModeOptionIntermediateHint "Color is the source color. Alpha is the foreground key. Use for multi-pass keying."
-#define kParamOutputModeOptionPremultiplied "Premultiplied"
-#define kParamOutputModeOptionPremultipliedHint "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key."
-#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied"
-#define kParamOutputModeOptionUnpremultipliedHint "Color is the Source color after key color suppression. Alpha is the foreground key."
-#define kParamOutputModeOptionComposite "Composite"
-#define kParamOutputModeOptionCompositeHint "Color is the composite of Source and Bg. Alpha is the foreground key."
+#define kParamOutputModeOptionSource "Source", "The PFg input (or Fg input, if PFg is not connected).", "source"
+#define kParamOutputModeOptionSourceAlpha "Source Alpha", "The Alpha channel from the PFg input (or Fg input, if PFg is not connected), displayed as luminance.", "sourcealpha"
+#define kParamOutputModeOptionCleanPlate "Clean Plate", "The clean plate from the C input (or the screen color, if C is not connected).", "cleanplate"
+#define kParamOutputModeOptionScreenMatte "Screen Matte", "The screen matte after keying and screen matte processing, but before applying the inside and outside mask, displayed as luminance.", "screenmatte"
+#define kParamOutputModeOptionInsideMask "Inside Mask", "The inside mask, displayed as luminance.", "insidemask"
+#define kParamOutputModeOptionOutsideMask "Outside Mask", "The outside mask, displayed as luminance.", "outsidemask"
+#define kParamOutputModeOptionCombinedMatte "Combined Matte", "The final matte, after applying inside and outside mask, displayed as luminance.", "matte"
+#define kParamOutputModeOptionStatus "Status", "An image showing which pixels are pure background (black), pure foreground (white), partially transparent (grey), affected by Screen Replace (green), affected by Inside Replace (blue), or affected by Outside Mask (red).", "status"
+#define kParamOutputModeOptionIntermediate "Intermediate", "Color is the source color. Alpha is the foreground key. Use for multi-pass keying.", "intermediate"
+#define kParamOutputModeOptionPremultiplied "Premultiplied", "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key.", "premultiplied"
+#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied", "Color is the Source color after key color suppression. Alpha is the foreground key.", "unpremultiplied"
+#define kParamOutputModeOptionComposite "Composite", "Color is the composite of Source and Bg. Alpha is the foreground key.", "composite"
 
 enum OutputModeEnum
 {
@@ -2690,13 +2667,13 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamScreenReplaceLabel);
             param->setHint(kParamScreenReplaceHint);
             assert(param->getNOptions() == (int)eReplaceNone);
-            param->appendOption(kParamReplaceOptionNone, kParamReplaceOptionNoneHint);
+            param->appendOption(kParamReplaceOptionNone);
             assert(param->getNOptions() == (int)eReplaceSource);
-            param->appendOption(kParamReplaceOptionSource, kParamReplaceOptionSourceHint);
+            param->appendOption(kParamReplaceOptionSource);
             assert(param->getNOptions() == (int)eReplaceHardColor);
-            param->appendOption(kParamReplaceOptionHardColor, kParamReplaceOptionHardColorHint);
+            param->appendOption(kParamReplaceOptionHardColor);
             assert(param->getNOptions() == (int)eReplaceSoftColor);
-            param->appendOption(kParamReplaceOptionSoftColor, kParamReplaceOptionSoftColorHint);
+            param->appendOption(kParamReplaceOptionSoftColor);
             param->setDefault( (int)eReplaceSoftColor );
             param->setAnimates(false);
             if (group) {
@@ -2739,9 +2716,9 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamSourceAlphaLabel);
             param->setHint(kParamSourceAlphaHint);
             assert(param->getNOptions() == (int)eSourceAlphaIgnore);
-            param->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);
+            param->appendOption(kParamSourceAlphaOptionIgnore);
             assert(param->getNOptions() == (int)eSourceAlphaAddToInsideMask);
-            param->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
+            param->appendOption(kParamSourceAlphaOptionAddToInsideMask);
             //assert(param->getNOptions() == (int)eSourceAlphaNormal);
             //param->appendOption(kParamSourceAlphaOptionNormal, kParamSourceAlphaOptionNormalHint);
             param->setDefault( (int)eSourceAlphaIgnore );
@@ -2759,13 +2736,13 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setLabel(kParamInsideReplaceLabel);
             param->setHint(kParamInsideReplaceHint);
             assert(param->getNOptions() == (int)eReplaceNone);
-            param->appendOption(kParamReplaceOptionNone, kParamReplaceOptionNoneHint);
+            param->appendOption(kParamReplaceOptionNone);
             assert(param->getNOptions() == (int)eReplaceSource);
-            param->appendOption(kParamReplaceOptionSource, kParamReplaceOptionSourceHint);
+            param->appendOption(kParamReplaceOptionSource);
             assert(param->getNOptions() == (int)eReplaceHardColor);
-            param->appendOption(kParamReplaceOptionHardColor, kParamReplaceOptionHardColorHint);
+            param->appendOption(kParamReplaceOptionHardColor);
             assert(param->getNOptions() == (int)eReplaceSoftColor);
-            param->appendOption(kParamReplaceOptionSoftColor, kParamReplaceOptionSoftColorHint);
+            param->appendOption(kParamReplaceOptionSoftColor);
             param->setDefault( (int)eReplaceSoftColor );
             param->setAnimates(false);
             if (group) {
@@ -2824,13 +2801,13 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamColorspaceLabel);
         param->setHint(kParamColorspaceHint);
         assert(param->getNOptions() == eColorspaceRec709);
-        param->appendOption(kParamColorspaceOptionRec709, kParamColorspaceOptionRec709Hint);
+        param->appendOption(kParamColorspaceOptionRec709);
         assert(param->getNOptions() == eColorspaceRec2020);
-        param->appendOption(kParamColorspaceOptionRec2020, kParamColorspaceOptionRec2020Hint);
+        param->appendOption(kParamColorspaceOptionRec2020);
         assert(param->getNOptions() == eColorspaceACESAP0);
-        param->appendOption(kParamColorspaceOptionACESAP0, kParamColorspaceOptionACESAP0Hint);
+        param->appendOption(kParamColorspaceOptionACESAP0);
         assert(param->getNOptions() == eColorspaceACESAP1);
-        param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
+        param->appendOption(kParamColorspaceOptionACESAP1);
         param->setDefault( (int)eColorspaceRec709 );
         param->setLayoutHint(eLayoutHintDivider);
         param->setAnimates(false);
@@ -2847,29 +2824,29 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamOutputModeLabel);
         param->setHint(kParamOutputModeHint);
         assert(param->getNOptions() == eOutputModeSource);
-        param->appendOption(kParamOutputModeOptionSource, kParamOutputModeOptionSourceHint);
+        param->appendOption(kParamOutputModeOptionSource);
         assert(param->getNOptions() == eOutputModeSourceAlpha);
-        param->appendOption(kParamOutputModeOptionSourceAlpha, kParamOutputModeOptionSourceAlphaHint);
+        param->appendOption(kParamOutputModeOptionSourceAlpha);
         assert(param->getNOptions() == eOutputModeCleanPlate);
-        param->appendOption(kParamOutputModeOptionCleanPlate, kParamOutputModeOptionCleanPlateHint);
+        param->appendOption(kParamOutputModeOptionCleanPlate);
         assert(param->getNOptions() == eOutputModeScreenMatte);
-        param->appendOption(kParamOutputModeOptionScreenMatte, kParamOutputModeOptionScreenMatteHint);
+        param->appendOption(kParamOutputModeOptionScreenMatte);
         assert(param->getNOptions() == eOutputModeInsideMask);
-        param->appendOption(kParamOutputModeOptionInsideMask, kParamOutputModeOptionInsideMaskHint);
+        param->appendOption(kParamOutputModeOptionInsideMask);
         assert(param->getNOptions() == eOutputModeOutsideMask);
-        param->appendOption(kParamOutputModeOptionOutsideMask, kParamOutputModeOptionOutsideMaskHint);
+        param->appendOption(kParamOutputModeOptionOutsideMask);
         assert(param->getNOptions() == eOutputModeCombinedMatte);
-        param->appendOption(kParamOutputModeOptionCombinedMatte, kParamOutputModeOptionCombinedMatteHint);
+        param->appendOption(kParamOutputModeOptionCombinedMatte);
         assert(param->getNOptions() == eOutputModeStatus);
-        param->appendOption(kParamOutputModeOptionStatus, kParamOutputModeOptionStatusHint);
+        param->appendOption(kParamOutputModeOptionStatus);
         assert(param->getNOptions() == eOutputModeIntermediate);
-        param->appendOption(kParamOutputModeOptionIntermediate, kParamOutputModeOptionIntermediateHint);
+        param->appendOption(kParamOutputModeOptionIntermediate);
         assert(param->getNOptions() == eOutputModePremultiplied);
-        param->appendOption(kParamOutputModeOptionPremultiplied, kParamOutputModeOptionPremultipliedHint);
+        param->appendOption(kParamOutputModeOptionPremultiplied);
         assert(param->getNOptions() == eOutputModeUnpremultiplied);
-        param->appendOption(kParamOutputModeOptionUnpremultiplied, kParamOutputModeOptionUnpremultipliedHint);
+        param->appendOption(kParamOutputModeOptionUnpremultiplied);
         assert(param->getNOptions() == eOutputModeComposite);
-        param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
+        param->appendOption(kParamOutputModeOptionComposite);
         param->setDefault( (int)eOutputModePremultiplied );
         param->setLayoutHint(eLayoutHintDivider);
         param->setAnimates(false);

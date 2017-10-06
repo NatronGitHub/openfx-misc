@@ -106,20 +106,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamDither "dither"
 #define kParamDitherLabel "Dither"
 #define kParamDitherHint "Dithering method to apply in order to avoid the banding effect."
-#define kParamDitherOptionNone "None"
-#define kParamDitherOptionNoneHint "No dithering (posterize), creating abrupt changes."
-#define kParamDitherOptionOrderedBayer2 "Ordered (Bayer 2x2)"
-#define kParamDitherOptionOrderedBayer2Hint "Ordered dithering using a 2x2 Bayer matrix."
-#define kParamDitherOptionOrderedBayer4 "Ordered (Bayer 4x4)"
-#define kParamDitherOptionOrderedBayer4Hint "Ordered dithering using a 4x4 Bayer matrix."
-#define kParamDitherOptionOrderedBayer8 "Ordered (Bayer 8x8)"
-#define kParamDitherOptionOrderedBayer8Hint "Ordered dithering using a 8x8 Bayer matrix."
-#define kParamDitherOptionOrderedVoidAndCluster14 "Ordered (void-and-cluster 14x14)"
-#define kParamDitherOptionOrderedVoidAndCluster14Hint "Ordered dithering using a void-and-cluster 14x14 matrix."
-#define kParamDitherOptionOrderedVoidAndCluster25 "Ordered (void-and-cluster 25x25)"
-#define kParamDitherOptionOrderedVoidAndCluster25Hint "Ordered dithering using a void-and-cluster 25x25 matrix."
-#define kParamDitherOptionRandom "Random"
-#define kParamDitherOptionRandomHint "Random dithering."
+#define kParamDitherOptionNone "None", "No dithering (posterize), creating abrupt changes.", "none"
+#define kParamDitherOptionOrderedBayer2 "Ordered (Bayer 2x2)", "Ordered dithering using a 2x2 Bayer matrix.", "bayer2x2"
+#define kParamDitherOptionOrderedBayer4 "Ordered (Bayer 4x4)", "Ordered dithering using a 4x4 Bayer matrix.", "bayer4x4"
+#define kParamDitherOptionOrderedBayer8 "Ordered (Bayer 8x8)", "Ordered dithering using a 8x8 Bayer matrix.", "bayer8x8"
+#define kParamDitherOptionOrderedVoidAndCluster14 "Ordered (void-and-cluster 14x14)", "Ordered dithering using a void-and-cluster 14x14 matrix.", "vac14x14"
+#define kParamDitherOptionOrderedVoidAndCluster25 "Ordered (void-and-cluster 25x25)", "Ordered dithering using a void-and-cluster 25x25 matrix.", "vac25x25"
+#define kParamDitherOptionRandom "Random", "Random dithering.", "random"
 enum DitherEnum
 {
     eDitherNone = 0,
@@ -1077,19 +1070,19 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamDitherHint);
         param->setAnimates(false);
         assert(param->getNOptions() == eDitherNone);
-        param->appendOption(kParamDitherOptionNone, kParamDitherOptionNoneHint);
+        param->appendOption(kParamDitherOptionNone);
         assert(param->getNOptions() == eDitherOrderedBayer2);
-        param->appendOption(kParamDitherOptionOrderedBayer2, kParamDitherOptionOrderedBayer2Hint);
+        param->appendOption(kParamDitherOptionOrderedBayer2);
         assert(param->getNOptions() == eDitherOrderedBayer4);
-        param->appendOption(kParamDitherOptionOrderedBayer4, kParamDitherOptionOrderedBayer4Hint);
+        param->appendOption(kParamDitherOptionOrderedBayer4);
         assert(param->getNOptions() == eDitherOrderedBayer8);
-        param->appendOption(kParamDitherOptionOrderedBayer8, kParamDitherOptionOrderedBayer8Hint);
+        param->appendOption(kParamDitherOptionOrderedBayer8);
         assert(param->getNOptions() == eDitherOrderedVAC14);
-        param->appendOption(kParamDitherOptionOrderedVoidAndCluster14, kParamDitherOptionOrderedVoidAndCluster14Hint);
+        param->appendOption(kParamDitherOptionOrderedVoidAndCluster14);
         assert(param->getNOptions() == eDitherOrderedVAC25);
-        param->appendOption(kParamDitherOptionOrderedVoidAndCluster25, kParamDitherOptionOrderedVoidAndCluster25Hint);
+        param->appendOption(kParamDitherOptionOrderedVoidAndCluster25);
         assert(param->getNOptions() == eDitherRandom);
-        param->appendOption(kParamDitherOptionRandom, kParamDitherOptionRandomHint);
+        param->appendOption(kParamDitherOptionRandom);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

@@ -98,14 +98,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamColorModel "colorModel"
 #define kParamColorModelLabel "Color Model"
 #define kParamColorModelHint "The colorspace where denoising is performed."
-#define kParamColorModelOptionYCbCr "Y'CbCr(A)"
-#define kParamColorModelOptionYCbCrHint "The YCbCr color model has one luminance channel (Y) which contains most of the detail information of an image (such as brightness and contrast) and two chroma channels (Cb = blueness, Cr = reddness) that hold the color information. Note that this choice drastically affects the result."
-#define kParamColorModelOptionLab "CIE L*a*b(A)"
-#define kParamColorModelOptionLabHint "CIE L*a*b* is a color model in which chrominance is separated from lightness and color distances are perceptually uniform. Note that this choice drastically affects the result."
-#define kParamColorModelOptionRGB "R'G'B'(A)"
-#define kParamColorModelOptionRGBHint "The R'G'B' color model (gamma-corrected RGB) separates an image into channels of red, green, and blue. Note that this choice drastically affects the result."
-#define kParamColorModelOptionLinearRGB "RGB(A)"
-#define kParamColorModelOptionLinearRGBHint "The Linear RGB color model processes the raw linear components."
+#define kParamColorModelOptionYCbCr "Y'CbCr(A)", "The YCbCr color model has one luminance channel (Y) which contains most of the detail information of an image (such as brightness and contrast) and two chroma channels (Cb = blueness, Cr = reddness) that hold the color information. Note that this choice drastically affects the result.", "ycbcr"
+#define kParamColorModelOptionLab "CIE L*a*b(A)", "CIE L*a*b* is a color model in which chrominance is separated from lightness and color distances are perceptually uniform. Note that this choice drastically affects the result.", "cielab"
+#define kParamColorModelOptionRGB "R'G'B'(A)", "The R'G'B' color model (gamma-corrected RGB) separates an image into channels of red, green, and blue. Note that this choice drastically affects the result.", "gammargb"
+#define kParamColorModelOptionLinearRGB "RGB(A)", "The Linear RGB color model processes the raw linear components.", "linearrgb"
 enum ColorModelEnum
 {
     eColorModelYCbCr = 0,

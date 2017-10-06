@@ -94,20 +94,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamLuminanceMath "luminanceMath"
 #define kParamLuminanceMathLabel "Luminance Math"
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
-#define kParamLuminanceMathOptionRec709 "Rec. 709"
-#define kParamLuminanceMathOptionRec709Hint "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b)."
-#define kParamLuminanceMathOptionRec2020 "Rec. 2020"
-#define kParamLuminanceMathOptionRec2020Hint "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b)."
-#define kParamLuminanceMathOptionACESAP0 "ACES AP0"
-#define kParamLuminanceMathOptionACESAP0Hint "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b)."
-#define kParamLuminanceMathOptionACESAP1 "ACES AP1"
-#define kParamLuminanceMathOptionACESAP1Hint "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b)."
-#define kParamLuminanceMathOptionCcir601 "CCIR 601"
-#define kParamLuminanceMathOptionCcir601Hint "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b)."
-#define kParamLuminanceMathOptionAverage "Average"
-#define kParamLuminanceMathOptionAverageHint "Use average of r, g, b."
-#define kParamLuminanceMathOptionMaximum "Max"
-#define kParamLuminanceMathOptionMaximumHint "Use max or r, g, b."
+#define kParamLuminanceMathOptionRec709 "Rec. 709", "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b).", "rec709"
+#define kParamLuminanceMathOptionRec2020 "Rec. 2020", "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b).", "rec2020"
+#define kParamLuminanceMathOptionACESAP0 "ACES AP0", "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b).", "acesap0"
+#define kParamLuminanceMathOptionACESAP1 "ACES AP1", "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b).", "acesap1"
+#define kParamLuminanceMathOptionCcir601 "CCIR 601", "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b).", "ccir601"
+#define kParamLuminanceMathOptionAverage "Average", "Use average of r, g, b.", "average"
+#define kParamLuminanceMathOptionMaximum "Max", "Use max or r, g, b.", "max"
 
 enum LuminanceMathEnum
 {
@@ -872,19 +865,19 @@ SaturationPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamLuminanceMathLabel);
         param->setHint(kParamLuminanceMathHint);
         assert(param->getNOptions() == eLuminanceMathRec709);
-        param->appendOption(kParamLuminanceMathOptionRec709, kParamLuminanceMathOptionRec709Hint);
+        param->appendOption(kParamLuminanceMathOptionRec709);
         assert(param->getNOptions() == eLuminanceMathRec2020);
-        param->appendOption(kParamLuminanceMathOptionRec2020, kParamLuminanceMathOptionRec2020Hint);
+        param->appendOption(kParamLuminanceMathOptionRec2020);
         assert(param->getNOptions() == eLuminanceMathACESAP0);
-        param->appendOption(kParamLuminanceMathOptionACESAP0, kParamLuminanceMathOptionACESAP0Hint);
+        param->appendOption(kParamLuminanceMathOptionACESAP0);
         assert(param->getNOptions() == eLuminanceMathACESAP1);
-        param->appendOption(kParamLuminanceMathOptionACESAP1, kParamLuminanceMathOptionACESAP1Hint);
+        param->appendOption(kParamLuminanceMathOptionACESAP1);
         assert(param->getNOptions() == eLuminanceMathCcir601);
-        param->appendOption(kParamLuminanceMathOptionCcir601, kParamLuminanceMathOptionCcir601Hint);
+        param->appendOption(kParamLuminanceMathOptionCcir601);
         assert(param->getNOptions() == eLuminanceMathAverage);
-        param->appendOption(kParamLuminanceMathOptionAverage, kParamLuminanceMathOptionAverageHint);
+        param->appendOption(kParamLuminanceMathOptionAverage);
         assert(param->getNOptions() == eLuminanceMathMaximum);
-        param->appendOption(kParamLuminanceMathOptionMaximum, kParamLuminanceMathOptionMaximumHint);
+        param->appendOption(kParamLuminanceMathOptionMaximum);
         if (page) {
             page->addChild(*param);
         }

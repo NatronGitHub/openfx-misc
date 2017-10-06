@@ -92,8 +92,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRowOrderLabel "Row Order"
 #define kParamRowOrderHint \
 "How image rows are populated."
-#define kParamRowOrderOptionTopBottom "TopBottom", "From top to bottom row."
-#define kParamRowOrderOptionBottomTop "BottomTop", "From bottom to top row."
+#define kParamRowOrderOptionTopBottom "TopBottom", "From top to bottom row.", "topbottom"
+#define kParamRowOrderOptionBottomTop "BottomTop", "From bottom to top row.", "bottomtop"
 enum RowOrderEnum {
     eRowOrderTopBottom = 0,
     eRowOrderBottomTop,

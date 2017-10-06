@@ -79,15 +79,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamFilterLabel "Filter"
 #define kParamFilterHint "How input images are combined to compute the output image."
 
-#define kParamFilterOptionNone "None"
-#define kParamFilterOptionNoneHint "Do not interpolate, ask for images with fractional time to the input effect. Useful if the input effect can interpolate itself."
-#define kParamFilterOptionNearest "Nearest"
-#define kParamFilterOptionNearestHint "Pick input image with nearest integer time."
-#define kParamFilterOptionLinear "Linear"
-#define kParamFilterOptionLinearHint "Blend the two nearest images with linear interpolation."
+#define kParamFilterOptionNone "None", "Do not interpolate, ask for images with fractional time to the input effect. Useful if the input effect can interpolate itself.", "none"
+#define kParamFilterOptionNearest "Nearest", "Pick input image with nearest integer time.", "nearest"
+#define kParamFilterOptionLinear "Linear", "Blend the two nearest images with linear interpolation.", "linear"
 // TODO:
-#define kParamFilterOptionBox "Box"
-#define kParamFilterOptionBoxHint "Weighted average of images over the shutter time (shutter time is defined in the output sequence)." // requires shutter parameter
+#define kParamFilterOptionBox "Box", "Weighted average of images over the shutter time (shutter time is defined in the output sequence).", "box" // requires shutter parameter
 
 enum FilterEnum
 {
@@ -757,11 +753,11 @@ RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamFilterLabel);
         param->setHint(kParamFilterHint);
         assert(param->getNOptions() == eFilterNone);
-        param->appendOption(kParamFilterOptionNone, kParamFilterOptionNoneHint);
+        param->appendOption(kParamFilterOptionNone);
         assert(param->getNOptions() == eFilterNearest);
-        param->appendOption(kParamFilterOptionNearest, kParamFilterOptionNearestHint);
+        param->appendOption(kParamFilterOptionNearest);
         assert(param->getNOptions() == eFilterLinear);
-        param->appendOption(kParamFilterOptionLinear, kParamFilterOptionLinearHint);
+        param->appendOption(kParamFilterOptionLinear);
         //assert(param->getNOptions() == eFilterBox);
         //param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
         param->setDefault( (int)kParamFilterDefault );

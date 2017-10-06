@@ -52,16 +52,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputComponentsLabel "Output Components"
 #define kParamOutputComponentsHint "Select what types of components the plug-in should output, this has an effect only when the Output Layer is set to the Color layer." \
     " This controls what should be the components for the Color Layer: Alpha, RGB or RGBA"
-#define kParamOutputComponentsOptionRGBA "RGBA"
-#define kParamOutputComponentsOptionRGB "RGB"
-#define kParamOutputComponentsOptionAlpha "Alpha"
+#define kParamOutputComponentsOptionRGBA "RGBA", "Output RGBA components.", "rgba"
+#define kParamOutputComponentsOptionRGB "RGB", "Output RGB components.", "rgb"
+#define kParamOutputComponentsOptionAlpha "Alpha", "Output Alpha component.", "alpha"
 
 #define kParamOutputBitDepth "outputBitDepth"
 #define kParamOutputBitDepthLabel "Output Bit Depth"
 #define kParamOutputBitDepthHint "Bit depth of the output.\nWARNING: the conversion is linear, even for 8-bit or 16-bit depth. Use with care."
-#define kParamOutputBitDepthOptionByte "Byte (8 bits)"
-#define kParamOutputBitDepthOptionShort "Short (16 bits)"
-#define kParamOutputBitDepthOptionFloat "Float (32 bits)"
+#define kParamOutputBitDepthOptionByte "Byte (8 bits)", "Output 8-bit images.", "byte"
+#define kParamOutputBitDepthOptionShort "Short (16 bits)", "Output 16-bit images.", "short"
+#define kParamOutputBitDepthOptionFloat "Float (32 bits)", "Output 32-bit floating-point images.", "float"
 
 #define kParamOutputPremultiplication "outputPremult"
 #define kParamOutputPremultiplicationLabel "Output Premult"
@@ -87,26 +87,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputALabel "A"
 #define kParamOutputAHint "Input channel for the output alpha channel"
 
-#define kParamOutputOptionAR "A.r"
-#define kParamOutputOptionARHint "R channel from input A"
-#define kParamOutputOptionAG "A.g"
-#define kParamOutputOptionAGHint "G channel from input A"
-#define kParamOutputOptionAB "A.b"
-#define kParamOutputOptionABHint "B channel from input A"
-#define kParamOutputOptionAA "A.a"
-#define kParamOutputOptionAAHint "A channel from input A"
-#define kParamOutputOption0 "0"
-#define kParamOutputOption0Hint "0 constant channel"
-#define kParamOutputOption1 "1"
-#define kParamOutputOption1Hint "1 constant channel"
-#define kParamOutputOptionBR "B.r"
-#define kParamOutputOptionBRHint "R channel from input B"
-#define kParamOutputOptionBG "B.g"
-#define kParamOutputOptionBGHint "G channel from input B"
-#define kParamOutputOptionBB "B.b"
-#define kParamOutputOptionBBHint "B channel from input B"
-#define kParamOutputOptionBA "B.a"
-#define kParamOutputOptionBAHint "A channel from input B"
+#define kParamOutputOptionAR "A.r", "R channel from input A", "ar"
+#define kParamOutputOptionAG "A.g", "G channel from input A", "ag"
+#define kParamOutputOptionAB "A.b", "B channel from input A", "ab"
+#define kParamOutputOptionAA "A.a", "A channel from input A", "aa"
+#define kParamOutputOption0 "0", "0 constant channel", "zero"
+#define kParamOutputOption1 "1", "1 constant channel", "one"
+#define kParamOutputOptionBR "B.r", "R channel from input B", "br"
+#define kParamOutputOptionBG "B.g", "G channel from input B", "bg"
+#define kParamOutputOptionBB "B.b", "B channel from input B", "bb"
+#define kParamOutputOptionBA "B.a", "A channel from input B", "ba"
 
 #define kParamClipInfo "clipInfo"
 #define kParamClipInfoLabel "Clip Info..."
@@ -1142,26 +1132,26 @@ addInputChannelOtions(ChoiceParamDescriptor* outputR,
                       ContextEnum context)
 {
     assert(outputR->getNOptions() == eInputChannelAR);
-    outputR->appendOption(kParamOutputOptionAR, kParamOutputOptionARHint);
+    outputR->appendOption(kParamOutputOptionAR);
     assert(outputR->getNOptions() == eInputChannelAG);
-    outputR->appendOption(kParamOutputOptionAG, kParamOutputOptionAGHint);
+    outputR->appendOption(kParamOutputOptionAG);
     assert(outputR->getNOptions() == eInputChannelAB);
-    outputR->appendOption(kParamOutputOptionAB, kParamOutputOptionABHint);
+    outputR->appendOption(kParamOutputOptionAB);
     assert(outputR->getNOptions() == eInputChannelAA);
-    outputR->appendOption(kParamOutputOptionAA, kParamOutputOptionAAHint);
+    outputR->appendOption(kParamOutputOptionAA);
     assert(outputR->getNOptions() == eInputChannel0);
-    outputR->appendOption(kParamOutputOption0, kParamOutputOption0Hint);
+    outputR->appendOption(kParamOutputOption0);
     assert(outputR->getNOptions() == eInputChannel1);
-    outputR->appendOption(kParamOutputOption1, kParamOutputOption1Hint);
+    outputR->appendOption(kParamOutputOption1);
     if (context == eContextGeneral) {
         assert(outputR->getNOptions() == eInputChannelBR);
-        outputR->appendOption(kParamOutputOptionBR, kParamOutputOptionBRHint);
+        outputR->appendOption(kParamOutputOptionBR);
         assert(outputR->getNOptions() == eInputChannelBG);
-        outputR->appendOption(kParamOutputOptionBG, kParamOutputOptionBGHint);
+        outputR->appendOption(kParamOutputOptionBG);
         assert(outputR->getNOptions() == eInputChannelBB);
-        outputR->appendOption(kParamOutputOptionBB, kParamOutputOptionBBHint);
+        outputR->appendOption(kParamOutputOptionBB);
         assert(outputR->getNOptions() == eInputChannelBA);
-        outputR->appendOption(kParamOutputOptionBA, kParamOutputOptionBAHint);
+        outputR->appendOption(kParamOutputOptionBA);
     }
     outputR->setDefault(def);
 }

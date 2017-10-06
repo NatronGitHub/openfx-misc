@@ -308,12 +308,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBoundary "boundary"
 #define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
 #define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Nearest (Neumann) conditions should be used. If the image represents gradients or derivatives, Black (Dirichlet) boundary conditions should be used."
-#define kParamBoundaryOptionDirichlet "Black"
-#define kParamBoundaryOptionDirichletHint "Dirichlet boundary condition: pixel values out of the image domain are zero."
-#define kParamBoundaryOptionNeumann "Nearest"
-#define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain."
-#define kParamBoundaryOptionPeriodic "Periodic"
-#define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
+#define kParamBoundaryOptionDirichlet "Black", "Dirichlet boundary condition: pixel values out of the image domain are zero.", "black"
+#define kParamBoundaryOptionNeumann "Nearest", "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain.", "nearest"
+#define kParamBoundaryOptionPeriodic "Periodic", "Image is considered to be periodic out of the image domain.", "periodic"
 #define kParamBoundaryDefault eBoundaryDirichlet
 #define kParamBoundaryDefaultLaplacian eBoundaryNeumann
 #define kParamBoundaryDefaultBloom eBoundaryNeumann
@@ -329,14 +326,10 @@ enum BoundaryEnum
 #define kParamColorspace "colorspace"
 #define kParamColorspaceLabel "Colorspace"
 #define kParamColorspaceHint "Formula used to compute chrominance from RGB values."
-#define kParamColorspaceOptionRec709 "Rec. 709"
-#define kParamColorspaceOptionRec709Hint "Use Rec. 709 with D65 illuminant."
-#define kParamColorspaceOptionRec2020 "Rec. 2020"
-#define kParamColorspaceOptionRec2020Hint "Use Rec. 2020 with D65 illuminant."
-#define kParamColorspaceOptionACESAP0 "ACES AP0"
-#define kParamColorspaceOptionACESAP0Hint "Use ACES AP0 with ACES (approx. D60) illuminant."
-#define kParamColorspaceOptionACESAP1 "ACES AP1"
-#define kParamColorspaceOptionACESAP1Hint "Use ACES AP1 with ACES (approx. D60) illuminant."
+#define kParamColorspaceOptionRec709 "Rec. 709", "Use Rec. 709 with D65 illuminant.", "rec709"
+#define kParamColorspaceOptionRec2020 "Rec. 2020", "Use Rec. 2020 with D65 illuminant.", "rec2020"
+#define kParamColorspaceOptionACESAP0 "ACES AP0", "Use ACES AP0 with ACES (approx. D60) illuminant.", "acesap0"
+#define kParamColorspaceOptionACESAP1 "ACES AP1", "Use ACES AP1 with ACES (approx. D60) illuminant.", "acesap1"
 
 enum ColorspaceEnum
 {
@@ -349,16 +342,11 @@ enum ColorspaceEnum
 #define kParamFilter "filter"
 #define kParamFilterLabel "Filter"
 #define kParamFilterHint "Bluring filter. The quasi-Gaussian filter should be appropriate in most cases. The Gaussian filter is more isotropic (its impulse response has rotational symmetry), but slower."
-#define kParamFilterOptionQuasiGaussian "Quasi-Gaussian"
-#define kParamFilterOptionQuasiGaussianHint "Quasi-Gaussian filter (0-order recursive Deriche filter, faster) - IIR (infinite support / impulsional response)."
-#define kParamFilterOptionGaussian "Gaussian"
-#define kParamFilterOptionGaussianHint "Gaussian filter (Van Vliet recursive Gaussian filter, more isotropic, slower) - IIR (infinite support / impulsional response)."
-#define kParamFilterOptionBox "Box"
-#define kParamFilterOptionBoxHint "Box filter - FIR (finite support / impulsional response)."
-#define kParamFilterOptionTriangle "Triangle"
-#define kParamFilterOptionTriangleHint "Triangle/tent filter - FIR (finite support / impulsional response)."
-#define kParamFilterOptionQuadratic "Quadratic"
-#define kParamFilterOptionQuadraticHint "Quadratic filter - FIR (finite support / impulsional response)."
+#define kParamFilterOptionQuasiGaussian "Quasi-Gaussian", "Quasi-Gaussian filter (0-order recursive Deriche filter, faster) - IIR (infinite support / impulsional response).", "quasigaussian"
+#define kParamFilterOptionGaussian "Gaussian", "Gaussian filter (Van Vliet recursive Gaussian filter, more isotropic, slower) - IIR (infinite support / impulsional response).", "gaussian"
+#define kParamFilterOptionBox "Box", "Box filter - FIR (finite support / impulsional response).", "box"
+#define kParamFilterOptionTriangle "Triangle", "Triangle/tent filter - FIR (finite support / impulsional response).", "triangle"
+#define kParamFilterOptionQuadratic "Quadratic", "Quadratic filter - FIR (finite support / impulsional response).", "quadratic"
 #define kParamFilterDefault eFilterGaussian
 #define kParamFilterDefaultBloom eFilterQuasiGaussian
 #define kParamFilterDefaultEdgeExtend eFilterQuasiGaussian
@@ -374,22 +362,14 @@ enum FilterEnum
 #define kParamEdgeDetectFilter "filter"
 #define kParamEdgeDetectFilterLabel "Filter"
 #define kParamEdgeDetectFilterHint "Edge detection filter. If the blur size is not zero, it is used as the kernel size for quasi-Gaussian, Gaussian, box, triangle and quadratic filters. For the simple, rotation-invariant and Sobel filters, the image is pre-blurred with a Gaussian filter."
-#define kParamEdgeDetectFilterOptionSimple "Simple"
-#define kParamEdgeDetectFilterOptionSimpleHint "Gradient is estimated by centered finite differences."
-#define kParamEdgeDetectFilterOptionSobel "Sobel"
-#define kParamEdgeDetectFilterOptionSobelHint "Compute gradient using the Sobel 3x3 filter."
-#define kParamEdgeDetectFilterOptionRotationInvariant "Rotation Invariant"
-#define kParamEdgeDetectFilterOptionRotationInvariantHint "Compute gradient using a 3x3 rotation-invariant filter."
-#define kParamEdgeDetectFilterOptionQuasiGaussian "Quasi-Gaussian"
-#define kParamEdgeDetectFilterOptionQuasiGaussianHint "Quasi-Gaussian filter (0-order recursive Deriche filter, faster) - IIR (infinite support / impulsional response)."
-#define kParamEdgeDetectFilterOptionGaussian "Gaussian"
-#define kParamEdgeDetectFilterOptionGaussianHint "Gaussian filter (Van Vliet recursive Gaussian filter, more isotropic, slower) - IIR (infinite support / impulsional response)."
-#define kParamEdgeDetectFilterOptionBox "Box"
-#define kParamEdgeDetectFilterOptionBoxHint "Box filter - FIR (finite support / impulsional response)."
-#define kParamEdgeDetectFilterOptionTriangle "Triangle"
-#define kParamEdgeDetectFilterOptionTriangleHint "Triangle/tent filter - FIR (finite support / impulsional response)."
-#define kParamEdgeDetectFilterOptionQuadratic "Quadratic"
-#define kParamEdgeDetectFilterOptionQuadraticHint "Quadratic filter - FIR (finite support / impulsional response)."
+#define kParamEdgeDetectFilterOptionSimple "Simple", "Gradient is estimated by centered finite differences.", "simple"
+#define kParamEdgeDetectFilterOptionSobel "Sobel", "Compute gradient using the Sobel 3x3 filter.", "sobel"
+#define kParamEdgeDetectFilterOptionRotationInvariant "Rotation Invariant", "Compute gradient using a 3x3 rotation-invariant filter.", "rotinvariant"
+#define kParamEdgeDetectFilterOptionQuasiGaussian "Quasi-Gaussian", "Quasi-Gaussian filter (0-order recursive Deriche filter, faster) - IIR (infinite support / impulsional response).", "quasigaussian"
+#define kParamEdgeDetectFilterOptionGaussian "Gaussian", "Gaussian filter (Van Vliet recursive Gaussian filter, more isotropic, slower) - IIR (infinite support / impulsional response).", "gaussian"
+#define kParamEdgeDetectFilterOptionBox "Box", "Box filter - FIR (finite support / impulsional response).", "box"
+#define kParamEdgeDetectFilterOptionTriangle "Triangle", "Triangle/tent filter - FIR (finite support / impulsional response).", "triangle"
+#define kParamEdgeDetectFilterOptionQuadratic "Quadratic", "Quadratic filter - FIR (finite support / impulsional response).", "quadratic"
 #define kParamEdgeDetectFilterDefault eEdgeDetectFilterGaussian
 enum EdgeDetectFilterEnum
 {
@@ -406,14 +386,10 @@ enum EdgeDetectFilterEnum
 #define kParamEdgeDetectMultiChannel "multiChannel"
 #define kParamEdgeDetectMultiChannelLabel "Multi-Channel"
 #define kParamEdgeDetectMultiChannelHint "Operation used to combine multi-channel (e.g. color) gradients into an edge detector. This parameter has no effect if a single channel (e.g. alpha) is processed."
-#define kParamEdgeDetectMultiChannelOptionSeparate "Separate"
-#define kParamEdgeDetectMultiChannelOptionSeparateHint "The gradient magnitude is computed in each channel separately, and the output is a color edge image."
-#define kParamEdgeDetectMultiChannelOptionRMS "RMS"
-#define kParamEdgeDetectMultiChannelOptionRMSHint "The RMS of per-channel gradients magnitudes is computed."
-#define kParamEdgeDetectMultiChannelOptionMax "Max"
-#define kParamEdgeDetectMultiChannelOptionMaxHint "The maximum per-channel gradient magnitude is computed."
-#define kParamEdgeDetectMultiChannelOptionTensor "Tensor"
-#define kParamEdgeDetectMultiChannelOptionTensorHint "The tensor gradient norm is computed. See Silvano Di Zenzo, A note on the gradient of a multi-image, CVGIP 33, 116-125 (1986)."
+#define kParamEdgeDetectMultiChannelOptionSeparate "Separate", "The gradient magnitude is computed in each channel separately, and the output is a color edge image.", "separate"
+#define kParamEdgeDetectMultiChannelOptionRMS "RMS", "The RMS of per-channel gradients magnitudes is computed.", "rms"
+#define kParamEdgeDetectMultiChannelOptionMax "Max", "The maximum per-channel gradient magnitude is computed.", "max"
+#define kParamEdgeDetectMultiChannelOptionTensor "Tensor", "The tensor gradient norm is computed. See Silvano Di Zenzo, A note on the gradient of a multi-image, CVGIP 33, 116-125 (1986).", "tensor"
 enum EdgeDetectMultiChannelEnum
 {
     eEdgeDetectMultiChannelSeparate = 0,
@@ -2771,13 +2747,13 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         param->setLabel(kParamColorspaceLabel);
         param->setHint(kParamColorspaceHint);
         assert(param->getNOptions() == eColorspaceRec709);
-        param->appendOption(kParamColorspaceOptionRec709, kParamColorspaceOptionRec709Hint);
+        param->appendOption(kParamColorspaceOptionRec709);
         assert(param->getNOptions() == eColorspaceRec2020);
-        param->appendOption(kParamColorspaceOptionRec2020, kParamColorspaceOptionRec2020Hint);
+        param->appendOption(kParamColorspaceOptionRec2020);
         assert(param->getNOptions() == eColorspaceACESAP0);
-        param->appendOption(kParamColorspaceOptionACESAP0, kParamColorspaceOptionACESAP0Hint);
+        param->appendOption(kParamColorspaceOptionACESAP0);
         assert(param->getNOptions() == eColorspaceACESAP1);
-        param->appendOption(kParamColorspaceOptionACESAP1, kParamColorspaceOptionACESAP1Hint);
+        param->appendOption(kParamColorspaceOptionACESAP1);
         param->setDefault( (int)eColorspaceRec709 );
         if (page) {
             page->addChild(*param);
@@ -2790,9 +2766,9 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         param->setLabel(kParamBoundaryLabel);
         param->setHint(kParamBoundaryHint);
         assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
-        param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
+        param->appendOption(kParamBoundaryOptionDirichlet);
         assert(param->getNOptions() == eBoundaryNeumann && param->getNOptions() == 1);
-        param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
+        param->appendOption(kParamBoundaryOptionNeumann);
         //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
         //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
         if (blurPlugin == eBlurPluginLaplacian || blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) {
@@ -2817,21 +2793,21 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         param->setLabel(kParamEdgeDetectFilterLabel);
         param->setHint(kParamEdgeDetectFilterHint);
         assert(param->getNOptions() == eEdgeDetectFilterSimple);
-        param->appendOption(kParamEdgeDetectFilterOptionSimple, kParamEdgeDetectFilterOptionSimpleHint);
+        param->appendOption(kParamEdgeDetectFilterOptionSimple);
         assert(param->getNOptions() == eEdgeDetectFilterSobel);
-        param->appendOption(kParamEdgeDetectFilterOptionSobel, kParamEdgeDetectFilterOptionSobelHint);
+        param->appendOption(kParamEdgeDetectFilterOptionSobel);
         assert(param->getNOptions() == eEdgeDetectFilterRotationInvariant);
-        param->appendOption(kParamEdgeDetectFilterOptionRotationInvariant, kParamEdgeDetectFilterOptionRotationInvariantHint);
+        param->appendOption(kParamEdgeDetectFilterOptionRotationInvariant);
         assert(param->getNOptions() == eEdgeDetectFilterQuasiGaussian);
-        param->appendOption(kParamEdgeDetectFilterOptionQuasiGaussian, kParamEdgeDetectFilterOptionQuasiGaussianHint);
+        param->appendOption(kParamEdgeDetectFilterOptionQuasiGaussian);
         assert(param->getNOptions() == eEdgeDetectFilterGaussian);
-        param->appendOption(kParamEdgeDetectFilterOptionGaussian, kParamEdgeDetectFilterOptionGaussianHint);
+        param->appendOption(kParamEdgeDetectFilterOptionGaussian);
         assert(param->getNOptions() == eEdgeDetectFilterBox);
-        param->appendOption(kParamEdgeDetectFilterOptionBox, kParamEdgeDetectFilterOptionBoxHint);
+        param->appendOption(kParamEdgeDetectFilterOptionBox);
         assert(param->getNOptions() == eEdgeDetectFilterTriangle);
-        param->appendOption(kParamEdgeDetectFilterOptionTriangle, kParamEdgeDetectFilterOptionTriangleHint);
+        param->appendOption(kParamEdgeDetectFilterOptionTriangle);
         assert(param->getNOptions() == eEdgeDetectFilterQuadratic);
-        param->appendOption(kParamEdgeDetectFilterOptionQuadratic, kParamEdgeDetectFilterOptionQuadraticHint);
+        param->appendOption(kParamEdgeDetectFilterOptionQuadratic);
         param->setDefault( (int)kParamEdgeDetectFilterDefault );
         if (page) {
             page->addChild(*param);
@@ -2847,15 +2823,15 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         param->setLabel(kParamFilterLabel);
         param->setHint(kParamFilterHint);
         assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
-        param->appendOption(kParamFilterOptionQuasiGaussian, kParamFilterOptionQuasiGaussianHint);
+        param->appendOption(kParamFilterOptionQuasiGaussian);
         assert(param->getNOptions() == eFilterGaussian && param->getNOptions() == 1);
-        param->appendOption(kParamFilterOptionGaussian, kParamFilterOptionGaussianHint);
+        param->appendOption(kParamFilterOptionGaussian);
         assert(param->getNOptions() == eFilterBox && param->getNOptions() == 2);
-        param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
+        param->appendOption(kParamFilterOptionBox);
         assert(param->getNOptions() == eFilterTriangle && param->getNOptions() == 3);
-        param->appendOption(kParamFilterOptionTriangle, kParamFilterOptionTriangleHint);
+        param->appendOption(kParamFilterOptionTriangle);
         assert(param->getNOptions() == eFilterQuadratic && param->getNOptions() == 4);
-        param->appendOption(kParamFilterOptionQuadratic, kParamFilterOptionQuadraticHint);
+        param->appendOption(kParamFilterOptionQuadratic);
         if (blurPlugin == eBlurPluginBloom) {
             param->setDefault( (int)kParamFilterDefaultBloom );
         } else if (blurPlugin == eBlurPluginEdgeExtend) {
@@ -2873,13 +2849,13 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
             param->setLabel(kParamEdgeDetectMultiChannelLabel);
             param->setHint(kParamEdgeDetectMultiChannelHint);
             assert(param->getNOptions() == eEdgeDetectMultiChannelSeparate);
-            param->appendOption(kParamEdgeDetectMultiChannelOptionSeparate, kParamEdgeDetectMultiChannelOptionSeparateHint);
+            param->appendOption(kParamEdgeDetectMultiChannelOptionSeparate);
             assert(param->getNOptions() == eEdgeDetectMultiChannelRMS);
-            param->appendOption(kParamEdgeDetectMultiChannelOptionRMS, kParamEdgeDetectMultiChannelOptionRMSHint);
+            param->appendOption(kParamEdgeDetectMultiChannelOptionRMS);
             assert(param->getNOptions() == eEdgeDetectMultiChannelMax);
-            param->appendOption(kParamEdgeDetectMultiChannelOptionMax, kParamEdgeDetectMultiChannelOptionMaxHint);
+            param->appendOption(kParamEdgeDetectMultiChannelOptionMax);
             assert(param->getNOptions() == eEdgeDetectMultiChannelTensor);
-            param->appendOption(kParamEdgeDetectMultiChannelOptionTensor, kParamEdgeDetectMultiChannelOptionTensorHint);
+            param->appendOption(kParamEdgeDetectMultiChannelOptionTensor);
             param->setDefault( (int)kParamEdgeDetectMultiChannelDefault);
             if (page) {
                 page->addChild(*param);

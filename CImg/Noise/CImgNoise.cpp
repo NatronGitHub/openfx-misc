@@ -81,16 +81,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamType "type"
 #define kParamTypeLabel "Type"
 #define kParamTypeHint "Type of additive noise."
-#define kParamTypeOptionGaussian "Gaussian"
-#define kParamTypeOptionGaussianHint "Gaussian noise."
-#define kParamTypeOptionUniform "Uniform"
-#define kParamTypeOptionUniformHint "Uniform noise."
-#define kParamTypeOptionSaltPepper "Salt & Pepper"
-#define kParamTypeOptionSaltPepperHint "Salt & pepper noise."
-#define kParamTypeOptionPoisson "Poisson"
-#define kParamTypeOptionPoissonHint "Poisson noise. Image is divided by Sigma before computing noise, then remultiplied by Sigma."
-#define kParamTypeOptionRice "Rice"
-#define kParamTypeOptionRiceHint "Rician noise."
+#define kParamTypeOptionGaussian "Gaussian", "Gaussian noise.", "gaussian"
+#define kParamTypeOptionUniform "Uniform", "Uniform noise.", "uniform"
+#define kParamTypeOptionSaltPepper "Salt & Pepper", "Salt & pepper noise.", "saltnpepper"
+#define kParamTypeOptionPoisson "Poisson", "Poisson noise. Image is divided by Sigma before computing noise, then remultiplied by Sigma.", "poisson"
+#define kParamTypeOptionRice "Rice", "Rician noise.", "rice"
 #define kParamTypeDefault eTypeGaussian
 
 #define kParamSeed "seed"
@@ -411,15 +406,15 @@ CImgNoisePluginFactory::describeInContext(ImageEffectDescriptor& desc,
         param->setLabel(kParamTypeLabel);
         param->setHint(kParamTypeHint);
         assert(param->getNOptions() == eTypeGaussian && param->getNOptions() == 0);
-        param->appendOption(kParamTypeOptionGaussian, kParamTypeOptionGaussianHint);
+        param->appendOption(kParamTypeOptionGaussian);
         assert(param->getNOptions() == eTypeUniform && param->getNOptions() == 1);
-        param->appendOption(kParamTypeOptionUniform, kParamTypeOptionUniformHint);
+        param->appendOption(kParamTypeOptionUniform);
         assert(param->getNOptions() == eTypeSaltPepper && param->getNOptions() == 2);
-        param->appendOption(kParamTypeOptionSaltPepper, kParamTypeOptionSaltPepperHint);
+        param->appendOption(kParamTypeOptionSaltPepper);
         assert(param->getNOptions() == eTypePoisson && param->getNOptions() == 3);
-        param->appendOption(kParamTypeOptionPoisson, kParamTypeOptionPoissonHint);
+        param->appendOption(kParamTypeOptionPoisson);
         assert(param->getNOptions() == eTypeRice && param->getNOptions() == 4);
-        param->appendOption(kParamTypeOptionRice, kParamTypeOptionRiceHint);
+        param->appendOption(kParamTypeOptionRice);
         param->setDefault( (int)kParamTypeDefault );
         if (page) {
             page->addChild(*param);

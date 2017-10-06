@@ -50,8 +50,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamView "view"
 #define kParamViewLabel "View"
 #define kParamViewHint "View to take from the input"
-#define kParamViewOptionLeft "Left"
-#define kParamViewOptionRight "Right"
+#define kParamViewOptionLeft "Left", "Take the left view.", "left"
+#define kParamViewOptionRight "Right", "Take the righ view.", "right"
 
 
 static bool gHostSupportsDynamicChoices = false;

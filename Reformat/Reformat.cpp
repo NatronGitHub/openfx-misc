@@ -62,9 +62,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamTypeHint "To Format: Converts between formats, the image is resized to fit in the target format. " \
     "To Box: Scales to fit into a box of a given width and height. " \
     "Scale: Scales the image (rounding to integer pixel sizes)."
-#define kParamTypeOptionToFormat "To Format"
-#define kParamTypeOptionToBox "To Box"
-#define kParamTypeOptionScale "Scale"
+#define kParamTypeOptionToFormat "To Format", "Resize to predefined format.", "format"
+#define kParamTypeOptionToBox "To Box", "Resize to given bounding box.", "box"
+#define kParamTypeOptionScale "Scale", "Apply scale.", "scale"
 
 enum ReformatTypeEnum
 {
@@ -112,18 +112,12 @@ enum ReformatTypeEnum
 #define kParamResizeHint "Format: Converts between formats, the image is resized to fit in the target format. " \
     "Size: Scales to fit into a box of a given width and height. " \
     "Scale: Scales the image."
-#define kParamResizeOptionNone "None"
-#define kParamResizeOptionNoneHint "Do not resize the original."
-#define kParamResizeOptionWidth "Width"
-#define kParamResizeOptionWidthHint "Scale the original so that its width fits the output width, while preserving the aspect ratio."
-#define kParamResizeOptionHeight "Height"
-#define kParamResizeOptionHeightHint "Scale the original so that its height fits the output height, while preserving the aspect ratio."
-#define kParamResizeOptionFit "Fit"
-#define kParamResizeOptionFitHint "Scale the original so that its smallest size fits the output width or height, while preserving the aspect ratio."
-#define kParamResizeOptionFill "Fill"
-#define kParamResizeOptionFillHint "Scale the original so that its longest size fits the output width or height, while preserving the aspect ratio."
-#define kParamResizeOptionDistort "Distort"
-#define kParamResizeOptionDistortHint "Scale the original so that both sides fit the output dimensions. This does not preserve the aspect ratio."
+#define kParamResizeOptionNone "None", "Do not resize the original.", "none"
+#define kParamResizeOptionWidth "Width", "Scale the original so that its width fits the output width, while preserving the aspect ratio.", "width"
+#define kParamResizeOptionHeight "Height", "Scale the original so that its height fits the output height, while preserving the aspect ratio.", "height"
+#define kParamResizeOptionFit "Fit", "Scale the original so that its smallest size fits the output width or height, while preserving the aspect ratio.", "fit"
+#define kParamResizeOptionFill "Fill", "Scale the original so that its longest size fits the output width or height, while preserving the aspect ratio.", "fill"
+#define kParamResizeOptionDistort "Distort", "Scale the original so that both sides fit the output dimensions. This does not preserve the aspect ratio.", "distort"
 
 enum ResizeEnum
 {
@@ -957,17 +951,17 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamResizeLabel);
         param->setHint(kParamResizeHint);
         assert(param->getNOptions() == eResizeNone);
-        param->appendOption(kParamResizeOptionNone, kParamResizeOptionNoneHint);
+        param->appendOption(kParamResizeOptionNone);
         assert(param->getNOptions() == eResizeWidth);
-        param->appendOption(kParamResizeOptionWidth, kParamResizeOptionWidthHint);
+        param->appendOption(kParamResizeOptionWidth);
         assert(param->getNOptions() == eResizeHeight);
-        param->appendOption(kParamResizeOptionHeight, kParamResizeOptionHeightHint);
+        param->appendOption(kParamResizeOptionHeight);
         assert(param->getNOptions() == eResizeFit);
-        param->appendOption(kParamResizeOptionFit, kParamResizeOptionFitHint);
+        param->appendOption(kParamResizeOptionFit);
         assert(param->getNOptions() == eResizeFill);
-        param->appendOption(kParamResizeOptionFill, kParamResizeOptionFillHint);
+        param->appendOption(kParamResizeOptionFill);
         assert(param->getNOptions() == eResizeDistort);
-        param->appendOption(kParamResizeOptionDistort, kParamResizeOptionDistortHint);
+        param->appendOption(kParamResizeOptionDistort);
         param->setDefault( (int)eResizeWidth );
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);

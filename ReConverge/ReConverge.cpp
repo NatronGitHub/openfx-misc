@@ -78,9 +78,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamConvergeMode "convergeMode"
 #define kParamConvergeModeLabel "Mode"
 #define kParamConvergeModeHint "Select to view to be shifted in order to set convergence"
-#define kParamConvergeModeOptionShiftRight "Shift Right"
-#define kParamConvergeModeOptionShiftLeft "Shift Left"
-#define kParamConvergeModeOptionShiftBoth "Shift Both"
+#define kParamConvergeModeOptionShiftRight "Shift Right", "Shift right view.", "right"
+#define kParamConvergeModeOptionShiftLeft "Shift Left", "Shift left view.", "left"
+#define kParamConvergeModeOptionShiftBoth "Shift Both", "Shift both views in opposite directions.", "both"
 
 #define kClipDisparity "Disparity"
 

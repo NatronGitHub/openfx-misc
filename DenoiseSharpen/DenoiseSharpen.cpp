@@ -194,12 +194,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputMode "outputMode"
 #define kParamOutputModeLabel "Output"
 #define kParamOutputModeHint "Select which image is output when analysis is locked. When analysis is not locked, the effect does nothing (the output is the source image)."
-#define kParamOutputModeOptionResult "Result"
-#define kParamOutputModeOptionResultHint "The result of denoising and sharpening the Source image."
-#define kParamOutputModeOptionNoise "Noise"
-#define kParamOutputModeOptionNoiseHint "An image containing what would be added to the image to denoise it. If 'Denoise Amount' is zero, this image should be black. Only noise should be visible in this image. If you can see a lot of picture detail in the noise output, it means the current settings are denoising too hard and remove too much of the image, which leads to a smoothed result. Try to lower the noise levels or the noise level gain."
-#define kParamOutputModeOptionSharpen "Sharpen"
-#define kParamOutputModeOptionSharpenHint "An image containing what would be added to the image to sharpen it. If 'Sharpen Amount' is zero, this image should be black. Only image details should be visible in this image. If you can see a lot of noise in the sharpen output, it means the current settings are denoising not enough, which leads to a noisy result. Try to raise the noise levels or the noise level gain."
+#define kParamOutputModeOptionResult "Result", "The result of denoising and sharpening the Source image.", "result"
+#define kParamOutputModeOptionNoise "Noise", "An image containing what would be added to the image to denoise it. If 'Denoise Amount' is zero, this image should be black. Only noise should be visible in this image. If you can see a lot of picture detail in the noise output, it means the current settings are denoising too hard and remove too much of the image, which leads to a smoothed result. Try to lower the noise levels or the noise level gain.", "noise"
+#define kParamOutputModeOptionSharpen "Sharpen", "An image containing what would be added to the image to sharpen it. If 'Sharpen Amount' is zero, this image should be black. Only image details should be visible in this image. If you can see a lot of noise in the sharpen output, it means the current settings are denoising not enough, which leads to a noisy result. Try to raise the noise levels or the noise level gain.", "sharpen"
 enum OutputModeEnum
 {
     eOutputModeResult = 0,
@@ -210,14 +207,10 @@ enum OutputModeEnum
 #define kParamColorModel "colorModel"
 #define kParamColorModelLabel "Color Model"
 #define kParamColorModelHint "The colorspace where denoising is performed. These colorspaces assume that input and output use the Rec.709/sRGB chromaticities and the D65 illuminant, but should tolerate other input colorspaces (the output colorspace will always be the same as the input colorspace). Noise levels are reset when the color model is changed."
-#define kParamColorModelOptionYCbCr "Y'CbCr(A)"
-#define kParamColorModelOptionYCbCrHint "The YCbCr color model has one luminance channel (Y) which contains most of the detail information of an image (such as brightness and contrast) and two chroma channels (Cb = blueness, Cr = reddness) that hold the color information. Note that this choice drastically affects the result. Uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B' and the the Rec.709 primaries to convert from R'G'B' to Y'CbCr."
-#define kParamColorModelOptionLab "CIE L*a*b(A)"
-#define kParamColorModelOptionLabHint "CIE L*a*b* is a color model in which chrominance is separated from lightness and color distances are perceptually uniform. Note that this choice drastically affects the result. Uses the Rec.709 primaries to convert from RGB to L*a*b."
-#define kParamColorModelOptionRGB "R'G'B'(A)"
-#define kParamColorModelOptionRGBHint "The R'G'B' color model (gamma-corrected RGB) separates an image into channels of red, green, and blue. Note that this choice drastically affects the result. Uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B'."
-#define kParamColorModelOptionLinearRGB "RGB(A)"
-#define kParamColorModelOptionLinearRGBHint "The Linear RGB color model processes the raw linear components. Usually a bad choice, except when denoising non-color data (e.g. depth or motion vectors). No assumption is made about the RGB color space."
+#define kParamColorModelOptionYCbCr "Y'CbCr(A)", "The YCbCr color model has one luminance channel (Y) which contains most of the detail information of an image (such as brightness and contrast) and two chroma channels (Cb = blueness, Cr = reddness) that hold the color information. Note that this choice drastically affects the result. Uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B' and the the Rec.709 primaries to convert from R'G'B' to Y'CbCr.", "ycbcr"
+#define kParamColorModelOptionLab "CIE L*a*b(A)", "CIE L*a*b* is a color model in which chrominance is separated from lightness and color distances are perceptually uniform. Note that this choice drastically affects the result. Uses the Rec.709 primaries to convert from RGB to L*a*b.", "cielab"
+#define kParamColorModelOptionRGB "R'G'B'(A)", "The R'G'B' color model (gamma-corrected RGB) separates an image into channels of red, green, and blue. Note that this choice drastically affects the result. Uses the Rec.709 opto-electronic transfer function to convert from RGB to R'G'B'.", "gammargb"
+#define kParamColorModelOptionLinearRGB "RGB(A)", "The Linear RGB color model processes the raw linear components. Usually a bad choice, except when denoising non-color data (e.g. depth or motion vectors). No assumption is made about the RGB color space.", "linearrgb"
 enum ColorModelEnum
 {
     eColorModelYCbCr = 0,
@@ -3345,11 +3338,11 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamOutputModeHint);
         param->setAnimates(false);
         assert(param->getNOptions() == (int)eOutputModeResult);
-        param->appendOption(kParamOutputModeOptionResult, kParamOutputModeOptionResultHint);
+        param->appendOption(kParamOutputModeOptionResult);
         assert(param->getNOptions() == (int)eOutputModeNoise);
-        param->appendOption(kParamOutputModeOptionNoise, kParamOutputModeOptionNoiseHint);
+        param->appendOption(kParamOutputModeOptionNoise);
         assert(param->getNOptions() == (int)eOutputModeSharpen);
-        param->appendOption(kParamOutputModeOptionSharpen, kParamOutputModeOptionSharpenHint);
+        param->appendOption(kParamOutputModeOptionSharpen);
         param->setDefault( (int)eOutputModeResult );
         if (group) {
             // coverity[dead_error_line]
@@ -3366,13 +3359,13 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamColorModelHint);
         param->setAnimates(false);
         assert(param->getNOptions() == (int)eColorModelYCbCr);
-        param->appendOption(kParamColorModelOptionYCbCr, kParamColorModelOptionYCbCrHint);
+        param->appendOption(kParamColorModelOptionYCbCr);
         assert(param->getNOptions() == (int)eColorModelLab);
-        param->appendOption(kParamColorModelOptionLab, kParamColorModelOptionLabHint);
+        param->appendOption(kParamColorModelOptionLab);
         assert(param->getNOptions() == (int)eColorModelRGB);
-        param->appendOption(kParamColorModelOptionRGB, kParamColorModelOptionRGBHint);
+        param->appendOption(kParamColorModelOptionRGB);
         assert(param->getNOptions() == (int)eColorModelLinearRGB);
-        param->appendOption(kParamColorModelOptionLinearRGB, kParamColorModelOptionLinearRGBHint);
+        param->appendOption(kParamColorModelOptionLinearRGB);
         param->setDefault( (int)eColorModelYCbCr );
         if (group) {
             // coverity[dead_error_line]
