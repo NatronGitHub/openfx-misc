@@ -558,6 +558,8 @@ TimeDissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
         // set the min/max parametric range to 0..1
         param->setRange(0.0, 1.0);
+        // set the default Y range to 0..1 for all dimensions
+        param->setDimensionDisplayRange(0., 1., 0);
 
         param->addControlPoint(0, // curve to set
                                0.0,   // time, ignored in this case, as we are not adding a key

@@ -938,6 +938,16 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
         // set the min/max parametric range to 0..6
         param->setRange(0.0, 6.0);
+        // set the default Y range to 0..1 for all dimensions
+        param->setDimensionDisplayRange(0., 1., kCurveSat);
+        param->setDimensionDisplayRange(0., 1., kCurveLum);
+        param->setDimensionDisplayRange(0., 1., kCurveRed);
+        param->setDimensionDisplayRange(0., 1., kCurveGreen);
+        param->setDimensionDisplayRange(0., 1., kCurveBlue);
+        param->setDimensionDisplayRange(0., 1., kCurveRSup);
+        param->setDimensionDisplayRange(0., 1., kCurveGSup);
+        param->setDimensionDisplayRange(0., 1., kCurveBSup);
+        param->setDimensionDisplayRange(0., 1., kCurveSatThrsh);
 
 
         int plast = param->supportsPeriodic() ? 5 : 6;
@@ -1486,6 +1496,9 @@ HueKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
         // set the min/max parametric range to 0..6
         param->setRange(0.0, 6.0);
+        // set the default Y range to 0..1 for all dimensions
+        param->setDimensionDisplayRange(0., 1., kCurveKeyerAmount);
+        param->setDimensionDisplayRange(0., 1., kCurveKeyerSatThrsh);
 
 
         int plast = param->supportsPeriodic() ? 5 : 6;
