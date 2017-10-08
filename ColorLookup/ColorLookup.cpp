@@ -50,7 +50,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ColorLookupOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
-    "Apply a parametric lookup curve to each channel separately.\n" \
+    "Apply a parametric lookup curve with the possibility to adjust each channel separately.\n" \
     "The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
     "Computation is faster for values that are within the given range, so it is recommended to set the Range parameter if the input range goes beyond [0,1].\n" \
     "\n" \
@@ -59,9 +59,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This is very useful for matching color of one shot to another, or adding custom colors to a black and white ramp.\n" \
     "See also: http://opticalenquiry.com/nuke/index.php?title=ColorLookup"
 
+// History:
+// 1.0 initial version
+// 1.1 (10/2017) add display/computation of histogram and master curve modes
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -108,23 +111,31 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamResetCtrlPtsLabel "Reset"
 #endif
 
+#define kParamMasterCurveMode "masterCurveMode"
+#define kParamMasterCurveModeLabel "Master Curve Mode", "Algorithm that will be used for the master curve. The curve mode will have a strong effect on the appearance of colors, especially if you use a contrast-enhancing curve (S-curve). This can be used for creative effect, but can for some purposes or styles cause undesired color changes depending which mode you choose. Choose a mode that suits your specific taste and needs for the photo at hand. More information can be found at http://rawpedia.rawtherapee.com/Exposure"
+#define kParamMasterCurveModeOptionStandard "Standard", "The marster curve is applied independently to R, G and B channels. The drawback of this mode is that e.g. considering an S-curve shape to get more contrast, an orange color with a high value of red and green and a low value of blue will tend to shift toward yellow, because the red and green component will be raised, while the blue one will be lowered.", "standard"
+#define kParamMasterCurveModeOptionWeightedStandard "Weighted Standard", "You can use this method to limit the color shift of the standard curve, even if it won't suppress it entirely.", "weightedstandard"
+#define kParamMasterCurveModeOptionFilmLike "Film-Like", "The film-like curve provides a result highly similar to the standard type (that is strong saturation increase with increased contrast), but the RGB-HSV hue is kept constant - that is, there are less color-shift problems. This curve type was designed by Adobe as a part of DNG and is thus the one used by Adobe Camera Raw and Lightroom.", "filmlike"
+#define kParamMasterCurveModeOptionLuminance "Luminance", "Each component of the pixel is boosted by the same factor so color and saturation is kept stable, that is the result is very true to the original color. However contrast-increasing curves can still lead to a slightly desaturated look. First the relative luminance value of a pixel is obtained, then the curve is applied to that value, the multiplication factor between before and after luminance is calculated, and then this factor is applied to each R, G and B component. The formula used to compute the luminance can be selected using the \"luminanceMath\" parameter.", "luminance"
+enum MasterCurveModeEnum
+{
+    eMasterCurveModeStandard = 0,
+    eMasterCurveModeWeightedStandard,
+    eMasterCurveModeFilmLike,
+    eMasterCurveModeLuminance,
+};
+#define kParamMasterCurveModeDefault eMasterCurveModeStandard
+
 #define kParamLuminanceMath "luminanceMath"
 #define kParamLuminanceMathLabel "Luminance Math"
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values (only used by 'Set Master')."
-#define kParamLuminanceMathOptionRec709 "Rec. 709"
-#define kParamLuminanceMathOptionRec709Hint "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b)."
-#define kParamLuminanceMathOptionRec2020 "Rec. 2020"
-#define kParamLuminanceMathOptionRec2020Hint "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b)."
-#define kParamLuminanceMathOptionACESAP0 "ACES AP0"
-#define kParamLuminanceMathOptionACESAP0Hint "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b)."
-#define kParamLuminanceMathOptionACESAP1 "ACES AP1"
-#define kParamLuminanceMathOptionACESAP1Hint "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b)."
-#define kParamLuminanceMathOptionCcir601 "CCIR 601"
-#define kParamLuminanceMathOptionCcir601Hint "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b)."
-#define kParamLuminanceMathOptionAverage "Average"
-#define kParamLuminanceMathOptionAverageHint "Use average of r, g, b."
-#define kParamLuminanceMathOptionMaximum "Max"
-#define kParamLuminanceMathOptionMaximumHint "Use max or r, g, b."
+#define kParamLuminanceMathOptionRec709 "Rec. 709", "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b).", "rec709"
+#define kParamLuminanceMathOptionRec2020 "Rec. 2020", "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b).", "rec2020"
+#define kParamLuminanceMathOptionACESAP0 "ACES AP0", "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b).", "acesap0"
+#define kParamLuminanceMathOptionACESAP1 "ACES AP1", "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b).", "acesap1"
+#define kParamLuminanceMathOptionCcir601 "CCIR 601", "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b).", "ccir601"
+#define kParamLuminanceMathOptionAverage "Average", "Use average of r, g, b.", "average"
+#define kParamLuminanceMathOptionMaximum "Max", "Use max or r, g, b.", "max"
 
 enum LuminanceMathEnum
 {
@@ -139,9 +150,25 @@ enum LuminanceMathEnum
 
 #define kParamHasBackgroundInteract "hasBackgroundInteract"
 
-#define kParamShowRamp "showRamp"
-#define kParamShowRampLabel "Display Color Ramp"
-#define kParamShowRampHint "Display the color ramp under the curves."
+#define kParamShowRamp "showRamp" // left here for backward compatibility, but replaced by kParamDisplay
+//#define kParamShowRampLabel "Display Color Ramp"
+//#define kParamShowRampHint "Display the color ramp under the curves."
+
+#define kParamDisplay "backgroundDisplay"
+#define kParamDisplayLabel "Display", "Display a color ramp or a histogram behind the curves."
+#define kParamDisplayOptionNone "None", "No background display.", "none"
+#define kParamDisplayOptionColorRamp "Color Ramp", "Display a color ramp.", "colorramp"
+#define kParamDisplayOptionHistogram "Histogram", "Display the input histogram. Press \"Refresh Histogram\" to recompute the histogram. [NOT YET IMPLEMENTED]", "histogram"
+enum DisplayEnum
+{
+    eDisplayNone = 0,
+    eDisplayColorRamp,
+    eDisplayHistogram,
+};
+#define kParamDisplayDefault eDisplayColorRamp
+
+#define kParamUpdateHistogram "updateHistogram"
+#define kParamUpdateHistogramLabel "Update Histogram", "Update the histogram from the input at current time."
 
 #define kParamRange "range"
 #define kParamRangeLabel "Range"
@@ -164,6 +191,12 @@ enum LuminanceMathEnum
 #define kCurveAlpha 4
 #define kCurveNb 5
 
+static
+double
+luminance(double r,
+          double g,
+          double b,
+          LuminanceMathEnum luminanceMath);
 
 class ColorLookupProcessorBase
     : public ImageProcessor
@@ -216,7 +249,7 @@ protected:
     // clamp for integer PIX types
     template<class PIX>
     float clamp(float value,
-                int maxValue)
+                int maxValue) const
     {
         return std::max( 0.f, std::min( value, float(maxValue) ) );
     }
@@ -224,7 +257,7 @@ protected:
     // clamp for integer PIX types
     template<class PIX>
     double clamp(double value,
-                 int maxValue)
+                 int maxValue) const
     {
         return std::max( 0., std::min( value, double(maxValue) ) );
     }
@@ -235,7 +268,7 @@ protected:
 template<>
 float
 ColorLookupProcessorBase::clamp<float>(float value,
-                                       int maxValue)
+                                       int maxValue) const
 {
     assert(maxValue == 1.);
     if ( _clampBlack && (value < 0.) ) {
@@ -250,7 +283,7 @@ ColorLookupProcessorBase::clamp<float>(float value,
 template<>
 double
 ColorLookupProcessorBase::clamp<float>(double value,
-                                       int maxValue)
+                                       int maxValue) const
 {
     assert(maxValue == 1.);
     if ( _clampBlack && (value < 0.) ) {
@@ -287,7 +320,7 @@ componentToCurve(int comp)
 // template to do the processing.
 // nbValues is the number of values in the LUT minus 1. For integer types, it should be the same as
 // maxValue
-template <class PIX, int nComponents, int maxValue, int nbValues>
+template <class PIX, int nComponents, int maxValue, int nbValues, MasterCurveModeEnum masterCurveMode>
 class ColorLookupProcessor
     : public ColorLookupProcessorBase
 {
@@ -299,11 +332,13 @@ public:
                          double rangeMin,
                          double rangeMax,
                          bool clampBlack,
-                         bool clampWhite)
+                         bool clampWhite,
+                         LuminanceMathEnum luminanceMath)
         : ColorLookupProcessorBase(instance, clampBlack, clampWhite)
         , _lookupTableParam(lookupTableParam)
         , _rangeMin( std::min(rangeMin, rangeMax) )
         , _rangeMax( std::max(rangeMin, rangeMax) )
+        , _luminanceMath( luminanceMath )
     {
         // build the LUT
         assert(_lookupTableParam);
@@ -315,20 +350,41 @@ public:
         assert( (PIX)maxValue == maxValue );
         // except for float, maxValue is the same as nbValues
         assert( maxValue == 1 || (maxValue == nbValues) );
-        for (int component = 0; component < nComponents; ++component) {
-            _lookupTable[component].resize(nbValues + 1);
-            int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
-            for (int position = 0; position <= nbValues; ++position) {
-                // position to evaluate the param at
-                double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
+        if (masterCurveMode == eMasterCurveModeStandard ||
+            masterCurveMode == eMasterCurveModeWeightedStandard) {
+            // Standard and WeightedStandard use separate R,G,B curves
+            for (int component = 0; component < nComponents; ++component) {
+                _lookupTable[component].resize(nbValues + 1);
+                int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
+                for (int position = 0; position <= nbValues; ++position) {
+                    // position to evaluate the param at
+                    double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
 
-                // evaluate the parametric param
-                double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
-                if ( (nComponents != 1) && (lutIndex != kCurveAlpha) ) {
-                    value += _lookupTableParam->getValue(kCurveMaster, _time, parametricPos) - parametricPos;
+                    // evaluate the parametric param
+                    double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
+                    if ( (nComponents != 1) && (lutIndex != kCurveAlpha) ) {
+                        value += _lookupTableParam->getValue(kCurveMaster, _time, parametricPos) - parametricPos;
+                    }
+                    // set that in the lut
+                    _lookupTable[component][position] = (float)clamp<PIX>(value, maxValue);
                 }
-                // set that in the lut
-                _lookupTable[component][position] = (float)clamp<PIX>(value, maxValue);
+            }
+        } else {
+            // FilmLike and Luminance require a separate master curve
+            for (int component = 0; component <= nComponents; ++component) {
+                _lookupTable[component].resize(nbValues + 1);
+                int lutIndex = component == nComponents ? kCurveMaster :
+                                ( (nComponents == 1  && component == 0) ? kCurveAlpha :
+                                 componentToCurve(component) ); // special case for components == alpha only
+                for (int position = 0; position <= nbValues; ++position) {
+                    // position to evaluate the param at
+                    double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
+
+                    // evaluate the parametric param
+                    double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
+                    // set that in the lut
+                    _lookupTable[component][position] = (float)clamp<PIX>(value, maxValue);
+                }
             }
         }
     }
@@ -349,13 +405,97 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if ( (nComponents == 1) || (nComponents == 3) ) {
-                    // RGB and Alpha: don't premult/unpremult, just apply curves
+                if (nComponents == 1) {
+                    // Alpha: don't premult/unpremult, just apply curves
                     // normalize/denormalize properly
+                    float a = srcPix ? (srcPix[0] / (float)maxValue) : 0.f;
+                    tmpPix[0] = interpolate(0, a) * maxValue;
                     for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = (float)interpolate(c, srcPix ? (srcPix[c] / (float)maxValue) : 0.f) * maxValue;
-                        assert( ( !srcPix || ( !isnan(srcPix[c]) && !isnan(srcPix[c]) ) ) &&
-                                !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
+                        assert( ( !srcPix || ( !isnan(srcPix[c]) && !isnan(srcPix[c]) ) ) && !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
+                    }
+                    // ofxsMaskMix expects denormalized input
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+               } else if (nComponents == 3) {
+                    // RGB: don't premult/unpremult, just apply curves
+                    float r = srcPix ? (srcPix[0] / (float)maxValue) : 0.f;
+                    float g = srcPix ? (srcPix[1] / (float)maxValue) : 0.f;
+                    float b = srcPix ? (srcPix[2] / (float)maxValue) : 0.f;
+                    // normalize/denormalize properly
+                    switch (masterCurveMode) {
+                        case eMasterCurveModeStandard: {
+                            tmpPix[0] = interpolate(0, r) * maxValue;
+                            tmpPix[1] = interpolate(1, r) * maxValue;
+                            tmpPix[2] = interpolate(2, r) * maxValue;
+                            break;
+                        }
+                        case eMasterCurveModeWeightedStandard: {
+                            // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L1042
+
+                            float r1 = interpolate(0, r);
+                            float g1 = Triangle(r, r1, g);
+                            float b1 = Triangle(r, r1, b);
+
+                            float g2 = interpolate(1, g);
+                            float r2 = Triangle(g, g2, r);
+                            float b2 = Triangle(g, g2, b);
+
+                            float b3 = interpolate(2, b);
+                            float r3 = Triangle(b, b3, r);
+                            float g3 = Triangle(b, b3, g);
+
+                            r = (r1 * 0.50f + r2 * 0.25f + r3 * 0.25f);
+                            g = (g1 * 0.25f + g2 * 0.50f + g3 * 0.25f);
+                            b = (b1 * 0.25f + b2 * 0.25f + b3 * 0.50f);
+                            tmpPix[0] = clamp<float>(r, 1) * maxValue;
+                            tmpPix[1] = clamp<float>(g, 1) * maxValue;
+                            tmpPix[2] = clamp<float>(b, 1) * maxValue;
+                            break;
+                        }
+                        case eMasterCurveModeFilmLike: {
+                            // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L919
+                            // and https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L974
+                            double rcoef = r < 1e-8 ? 1. : (interpolate(0, r) / r);
+                            double gcoef = g < 1e-8 ? 1. : (interpolate(1, g) / g);
+                            double bcoef = b < 1e-8 ? 1. : (interpolate(2, b) / b);
+                            if (r >= g) {
+                                if (g > b) {
+                                    RGBTone (r, g, b);    // Case 1: r >= g >  b
+                                } else if (b > r) {
+                                    RGBTone (b, r, g);    // Case 2: b >  r >= g
+                                } else if (b > g) {
+                                    RGBTone (r, b, g);    // Case 3: r >= b >  g
+                                } else {                           // Case 4: r >= g == b
+                                    r = interpolate(nComponents, r); // master curve
+                                    g = interpolate(nComponents, g); // master curve
+                                    b = g;
+                                }
+                            } else {
+                                if (r >= b) {
+                                    RGBTone (g, r, b);    // Case 5: g >  r >= b
+                                } else if (b >  g) {
+                                    RGBTone (b, g, r);    // Case 6: b >  g >  r
+                                } else {
+                                    RGBTone (g, b, r);    // Case 7: g >= b >  r
+                                }
+                            }
+                            tmpPix[0] = clamp<float>(rcoef * r, 1) * maxValue;
+                            tmpPix[1] = clamp<float>(gcoef * g, 1) * maxValue;
+                            tmpPix[2] = clamp<float>(bcoef * b, 1) * maxValue;
+                            break;
+                        }
+                        case eMasterCurveModeLuminance: {
+                            // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
+                            double l = std::max(luminance(r, g, b, _luminanceMath), 1e-8); // avoid division by zero
+                            // apply the master curve to the luminance, and
+                            double coef = interpolate(nComponents, l) / l;
+                            tmpPix[0] = clamp<float>(coef * interpolate(0, r), 1) * maxValue;
+                            tmpPix[1] = clamp<float>(coef * interpolate(1, g), 1) * maxValue;
+                            tmpPix[2] = clamp<float>(coef * interpolate(2, b), 1) * maxValue;
+                            break;
+                        }
+                    }
+                    for (int c = 0; c < nComponents; ++c) {
+                        assert( ( !srcPix || ( !isnan(srcPix[c]) && !isnan(srcPix[c]) ) ) && !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
                     }
                     // ofxsMaskMix expects denormalized input
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -363,11 +503,89 @@ private:
                     //assert(nComponents == 4);
                     float unpPix[nComponents];
                     ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                    float r = unpPix[0];
+                    float g = unpPix[1];
+                    float b = unpPix[2];
                     // ofxsUnPremult outputs normalized data
+                    switch (masterCurveMode) {
+                        case eMasterCurveModeStandard: {
+                            tmpPix[0] = interpolate(0, unpPix[0]);
+                            tmpPix[1] = interpolate(1, unpPix[1]);
+                            tmpPix[2] = interpolate(2, unpPix[2]);
+                            tmpPix[3] = interpolate(3, unpPix[3]);
+                            break;
+                        }
+                        case eMasterCurveModeWeightedStandard: {
+                            // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L1042
+
+                            float r1 = interpolate(0, r);
+                            float g1 = Triangle(r, r1, g);
+                            float b1 = Triangle(r, r1, b);
+
+                            float g2 = interpolate(1, g);
+                            float r2 = Triangle(g, g2, r);
+                            float b2 = Triangle(g, g2, b);
+
+                            float b3 = interpolate(2, b);
+                            float r3 = Triangle(b, b3, r);
+                            float g3 = Triangle(b, b3, g);
+
+                            r = (r1 * 0.50f + r2 * 0.25f + r3 * 0.25f);
+                            g = (g1 * 0.25f + g2 * 0.50f + g3 * 0.25f);
+                            b = (b1 * 0.25f + b2 * 0.25f + b3 * 0.50f);
+                            tmpPix[0] = clamp<float>(r, 1);
+                            tmpPix[1] = clamp<float>(g, 1);
+                            tmpPix[2] = clamp<float>(b, 1);
+                            tmpPix[3] = interpolate(3, unpPix[3]);
+                            break;
+                        }
+                        case eMasterCurveModeFilmLike: {
+                            // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L919
+                            // and https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L974
+                            double rcoef = r < 1e-8 ? 1. : (interpolate(0, r) / r);
+                            double gcoef = g < 1e-8 ? 1. : (interpolate(1, g) / g);
+                            double bcoef = b < 1e-8 ? 1. : (interpolate(2, b) / b);
+                            if (r >= g) {
+                                if (g > b) {
+                                    RGBTone (r, g, b);    // Case 1: r >= g >  b
+                                } else if (b > r) {
+                                    RGBTone (b, r, g);    // Case 2: b >  r >= g
+                                } else if (b > g) {
+                                    RGBTone (r, b, g);    // Case 3: r >= b >  g
+                                } else {                           // Case 4: r >= g == b
+                                    r = interpolate(nComponents, r); // master curve
+                                    g = interpolate(nComponents, g); // master curve
+                                    b = g;
+                                }
+                            } else {
+                                if (r >= b) {
+                                    RGBTone (g, r, b);    // Case 5: g >  r >= b
+                                } else if (b >  g) {
+                                    RGBTone (b, g, r);    // Case 6: b >  g >  r
+                                } else {
+                                    RGBTone (g, b, r);    // Case 7: g >= b >  r
+                                }
+                            }
+                            tmpPix[0] = clamp<float>(rcoef * r, 1);
+                            tmpPix[1] = clamp<float>(gcoef * g, 1);
+                            tmpPix[2] = clamp<float>(bcoef * b, 1);
+                            tmpPix[3] = interpolate(3, unpPix[3]);
+                            break;
+                        }
+                        case eMasterCurveModeLuminance: {
+                            // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
+                            double l = std::max(luminance(r, g, b, _luminanceMath), 1e-8); // avoid division by zero
+                            // apply the master curve to the luminance, and
+                            double coef = interpolate(nComponents, l) / l;
+                            tmpPix[0] = clamp<float>(coef * interpolate(0, r), 1);
+                            tmpPix[1] = clamp<float>(coef * interpolate(1, g), 1);
+                            tmpPix[2] = clamp<float>(coef * interpolate(2, b), 1);
+                            tmpPix[3] = interpolate(3, unpPix[3]);
+                            break;
+                        }
+                    }
                     for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = interpolate(c, unpPix[c]);
-                        assert( !isnan(unpPix[c]) && !isnan(unpPix[c]) &&
-                                !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
+                        assert( !isnan(unpPix[c]) && !isnan(unpPix[c]) && !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
                     }
                     // ofxsPremultMaskMixPix expects normalized input
                     ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -380,17 +598,21 @@ private:
 
     // on input to interpolate, value should be normalized to the [0-1] range
     float interpolate(int component,
-                      float value)
+                      float value) const
     {
         if ( (value < _rangeMin) || (_rangeMax < value) ) {
             // slow version
-            int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
+            int lutIndex = component == nComponents ? kCurveMaster :
+                            ( (nComponents == 1  && component == 0) ? kCurveAlpha :
+                             componentToCurve(component) ); // special case for components == alpha only
             double ret = _lookupTableParam->getValue(lutIndex, _time, value);
-            if ( (nComponents != 1) && (lutIndex != kCurveAlpha) ) {
+            if ( (masterCurveMode == eMasterCurveModeStandard ||
+                  masterCurveMode == eMasterCurveModeWeightedStandard) &&
+                 (nComponents != 1) && (lutIndex != kCurveAlpha) ) {
                 ret += _lookupTableParam->getValue(kCurveMaster, _time, value) - value;
             }
 
-            return (float)clamp<PIX>(ret, maxValue);;
+            return clamp<float>(ret, 1);;
         } else {
             float x = (float)(value - _rangeMin) / (float)(_rangeMax - _rangeMin);
             int i = (int)(x * nbValues);
@@ -404,11 +626,40 @@ private:
     }
 
 private:
-    std::vector<float> _lookupTable[nComponents];
+    float Triangle(float a, float a1, float b) const
+    {
+        if (a != b) {
+            float b1;
+            float a2 = a1 - a;
+
+            if (b < a) {
+                b1 = b + a2 *      b  /     a ;
+            } else       {
+                b1 = b + a2 * (1. - b) / (1. - a);
+            }
+
+            return b1;
+        }
+
+        return a1;
+    }
+
+    void RGBTone (float& r, float& g, float& b) const
+    {
+        float rold = r, gold = g, bold = b;
+
+        r = interpolate(nComponents, rold); // master curve
+        b = interpolate(nComponents, bold); // master curve
+        g = b + ((r - b) * (gold - bold) / (rold - bold));
+    }
+
+private:
+    std::vector<float> _lookupTable[nComponents+1]; // for Film-Like and Luminance, a separate lookup table is used for master
     ParametricParam*  _lookupTableParam;
     double _time;
     double _rangeMin;
     double _rangeMax;
+    LuminanceMathEnum _luminanceMath;
 };
 
 static
@@ -473,12 +724,15 @@ public:
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _hasBackgroundInteract = fetchBooleanParam(kParamHasBackgroundInteract);
         _lookupTable = fetchParametricParam(kParamLookupTable);
-        _showRamp = fetchBooleanParam(kParamShowRamp);
+        _display = fetchChoiceParam(kParamDisplay);
+        _updateHistogram = fetchPushButtonParam(kParamUpdateHistogram);
         _range = fetchDouble2DParam(kParamRange);
-        assert(_hasBackgroundInteract && _lookupTable && _showRamp && _range);
+        assert(_hasBackgroundInteract && _lookupTable && _display && _updateHistogram && _range);
         _source = fetchRGBAParam(kParamSource);
         _target = fetchRGBAParam(kParamTarget);
         assert(_source && _target);
+        _masterCurveMode = fetchChoiceParam(kParamMasterCurveMode);
+        assert(_masterCurveMode);
         _luminanceMath = fetchChoiceParam(kParamLuminanceMath);
         assert(_luminanceMath);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
@@ -495,7 +749,14 @@ public:
         assert(_premultChanged);
 
         bool hasBackgroundInteract = _hasBackgroundInteract->getValue();
-        _showRamp->setIsSecretAndDisabled(!hasBackgroundInteract);
+        _display->setIsSecretAndDisabled(!hasBackgroundInteract);
+        _updateHistogram->setIsSecret(!hasBackgroundInteract);
+        if (hasBackgroundInteract) {
+            DisplayEnum display = (DisplayEnum)_display->getValue();
+            _updateHistogram->setEnabled(display == eDisplayHistogram);
+        } else {
+            _updateHistogram->setEnabled(false);
+        }
     }
 
 private:
@@ -515,9 +776,16 @@ private:
     {
         const double time = args.time;
 
-        if ( (paramName == kParamHasBackgroundInteract) ) {
+        if ( (paramName == kParamHasBackgroundInteract) || (paramName == kParamDisplay)) {
             bool hasBackgroundInteract = _hasBackgroundInteract->getValueAtTime(time);
-            _showRamp->setIsSecretAndDisabled(!hasBackgroundInteract);
+            _display->setIsSecretAndDisabled(!hasBackgroundInteract);
+            _updateHistogram->setIsSecret(!hasBackgroundInteract);
+            if (hasBackgroundInteract) {
+                DisplayEnum display = (DisplayEnum)_display->getValue();
+                _updateHistogram->setEnabled(display == eDisplayHistogram);
+            } else {
+                _updateHistogram->setEnabled(false);
+            }
         }
         if ( (paramName == kParamSetMaster) && (args.reason == eChangeUserEdit) ) {
             double source[4];
@@ -643,10 +911,12 @@ private:
     Clip *_maskClip;
     BooleanParam* _hasBackgroundInteract;
     ParametricParam  *_lookupTable;
-    BooleanParam* _showRamp;
+    ChoiceParam* _display;
+    PushButtonParam* _updateHistogram;
     Double2DParam* _range;
     RGBAParam* _source;
     RGBAParam* _target;
+    ChoiceParam* _masterCurveMode;
     ChoiceParam* _luminanceMath;
     BooleanParam* _clampBlack;
     BooleanParam* _clampWhite;
@@ -746,31 +1016,96 @@ ColorLookupPlugin::renderForComponents(const RenderArguments &args,
                                        BitDepthEnum dstBitDepth)
 {
     double rangeMin, rangeMax;
-    bool clampBlack, clampWhite;
     const double time = args.time;
 
     _range->getValueAtTime(time, rangeMin, rangeMax);
-    _clampBlack->getValueAtTime(time, clampBlack);
-    _clampWhite->getValueAtTime(time, clampWhite);
-    switch (dstBitDepth) {
-    case eBitDepthUByte: {
-        ColorLookupProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
-        setupAndProcess(fred, args);
-        break;
+    bool clampBlack = _clampBlack->getValueAtTime(time);
+    bool clampWhite = _clampWhite->getValueAtTime(time);
+    LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
+    MasterCurveModeEnum masterCurveMode = (MasterCurveModeEnum)_masterCurveMode->getValueAtTime(time);
+    std::auto_ptr<ColorLookupProcessorBase> proc;
+    switch (masterCurveMode) {
+        case eMasterCurveModeStandard: {
+            switch (dstBitDepth) {
+                case eBitDepthUByte: {
+                    proc.reset( new ColorLookupProcessor<unsigned char, nComponents, 255, 255, eMasterCurveModeStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                case eBitDepthUShort: {
+                    proc.reset( new ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, eMasterCurveModeStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                case eBitDepthFloat: {
+                    proc.reset( new ColorLookupProcessor<float, nComponents, 1, 1023, eMasterCurveModeStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                default:
+                    throwSuiteStatusException(kOfxStatErrUnsupported);
+            }
+            break;
+        }
+        case eMasterCurveModeWeightedStandard: {
+            switch (dstBitDepth) {
+                case eBitDepthUByte: {
+                    proc.reset( new ColorLookupProcessor<unsigned char, nComponents, 255, 255, eMasterCurveModeWeightedStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                case eBitDepthUShort: {
+                    proc.reset( new ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, eMasterCurveModeWeightedStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                case eBitDepthFloat: {
+                    proc.reset( new ColorLookupProcessor<float, nComponents, 1, 1023, eMasterCurveModeWeightedStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                default:
+                    throwSuiteStatusException(kOfxStatErrUnsupported);
+            }
+            break;
+        }
+        case eMasterCurveModeFilmLike: {
+            switch (dstBitDepth) {
+                case eBitDepthUByte: {
+                    proc.reset( new ColorLookupProcessor<unsigned char, nComponents, 255, 255, eMasterCurveModeFilmLike>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                case eBitDepthUShort: {
+                    proc.reset( new ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, eMasterCurveModeFilmLike>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                case eBitDepthFloat: {
+                    proc.reset( new ColorLookupProcessor<float, nComponents, 1, 1023, eMasterCurveModeFilmLike>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                default:
+                    throwSuiteStatusException(kOfxStatErrUnsupported);
+            }
+            break;
+        }
+        case eMasterCurveModeLuminance: {
+            switch (dstBitDepth) {
+                case eBitDepthUByte: {
+                    proc.reset( new ColorLookupProcessor<unsigned char, nComponents, 255, 255, eMasterCurveModeLuminance>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                case eBitDepthUShort: {
+                    proc.reset( new ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, eMasterCurveModeLuminance>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                case eBitDepthFloat: {
+                    proc.reset( new ColorLookupProcessor<float, nComponents, 1, 1023, eMasterCurveModeLuminance>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
+                    break;
+                }
+                default:
+                    throwSuiteStatusException(kOfxStatErrUnsupported);
+            }
+            break;
+        }
     }
-    case eBitDepthUShort: {
-        ColorLookupProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
-        setupAndProcess(fred, args);
-        break;
-    }
-    case eBitDepthFloat: {
-        ColorLookupProcessor<float, nComponents, 1, 1023> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
-        setupAndProcess(fred, args);
-        break;
-    }
-    default:
+    if (!proc.get()) {
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
+    setupAndProcess(*proc, args);
 }
 
 void
@@ -860,11 +1195,12 @@ public:
         ParamInteract(handle, effect)
     {
         _hasBackgroundInteract = effect->fetchBooleanParam(kParamHasBackgroundInteract);
-        _showRamp = effect->fetchBooleanParam(kParamShowRamp);
+        _display = effect->fetchChoiceParam(kParamDisplay);
         _lookupTableParam = effect->fetchParametricParam(paramName);
         _range = effect->fetchDouble2DParam(kParamRange);
         setColourPicking(true); // we always want colour picking if the host has it
-        addParamToSlaveTo(_showRamp);
+        addParamToSlaveTo(_display);
+        addParamToSlaveTo(_hasBackgroundInteract);
     }
 
     virtual bool draw(const DrawArgs &args) OVERRIDE FINAL
@@ -880,13 +1216,15 @@ public:
 
         _range->getValueAtTime(time, rangeMin, rangeMax);
 
-        // let us draw one slice every 8 pixels
+
+        DisplayEnum display = (DisplayEnum)_display->getValueAtTime(time);
+
         const int sliceWidth = 8;
         int nbValues = args.pixelScale.x > 0 ? std::ceil( (rangeMax - rangeMin) / (sliceWidth * args.pixelScale.x) ) : 1;
-        const int nComponents = 3;
-        GLfloat color[nComponents];
-
-        if ( _showRamp->getValueAtTime(time)  && (nbValues > 0) ) {
+        if ( display == eDisplayColorRamp  && (nbValues > 0) ) {
+            // let us draw one slice every 8 pixels
+            const int nComponents = 3;
+            GLfloat color[nComponents];
             OfxStatus stat = kOfxStatOK;
             glBegin(GL_TRIANGLE_STRIP);
             try { // getValue may throw
@@ -945,7 +1283,7 @@ public:
 
 protected:
     BooleanParam* _hasBackgroundInteract;
-    BooleanParam* _showRamp;
+    ChoiceParam* _display;
     ParametricParam* _lookupTableParam;
     Double2DParam* _range;
 };
@@ -1102,6 +1440,12 @@ ColorLookupPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
         // set the min/max parametric range to 0..1
         param->setRange(0.0, 1.0);
+        // set the default Y range to 0..1 for all dimensions
+        param->setDimensionDisplayRange(0., 1., kCurveMaster);
+        param->setDimensionDisplayRange(0., 1., kCurveRed);
+        param->setDimensionDisplayRange(0., 1., kCurveGreen);
+        param->setDimensionDisplayRange(0., 1., kCurveBlue);
+        param->setDimensionDisplayRange(0., 1., kCurveAlpha);
 
         /*
            // set a default curve, this example sets identity
@@ -1122,17 +1466,32 @@ ColorLookupPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
     {
+        // dummy parameter, for backward compat with version 1.0
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamShowRamp);
-        param->setLabel(kParamShowRampLabel);
-        param->setHint(kParamShowRampHint);
-        param->setDefault(true);
-        param->setIsSecretAndDisabled(false);
-        param->setIsPersistent(true);
+        param->setIsSecretAndDisabled(true);
         param->setEvaluateOnChange(false);
         param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
+    }
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDisplay);
+        param->setLabelAndHint(kParamDisplayLabel);
+        assert(param->getNOptions() == eDisplayNone);
+        param->appendOption(kParamDisplayOptionNone);
+        assert(param->getNOptions() == eDisplayColorRamp);
+        param->appendOption(kParamDisplayOptionColorRamp);
+        assert(param->getNOptions() == eDisplayHistogram);
+        param->appendOption(kParamDisplayOptionHistogram);
+        param->setDefault((int)kParamDisplayDefault);
+        param->setEvaluateOnChange(false);
+        param->setAnimates(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+    }
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamUpdateHistogram);
+        param->setLabelAndHint(kParamUpdateHistogramLabel);
     }
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamSource);
@@ -1212,24 +1571,37 @@ ColorLookupPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 #endif
     {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamMasterCurveMode);
+        param->setLabelAndHint(kParamMasterCurveModeLabel);
+        assert(param->getNOptions() == eMasterCurveModeStandard);
+        param->appendOption(kParamMasterCurveModeOptionStandard);
+        assert(param->getNOptions() == eMasterCurveModeWeightedStandard);
+        param->appendOption(kParamMasterCurveModeOptionWeightedStandard);
+        assert(param->getNOptions() == eMasterCurveModeFilmLike);
+        param->appendOption(kParamMasterCurveModeOptionFilmLike);
+        assert(param->getNOptions() == eMasterCurveModeLuminance);
+        param->appendOption(kParamMasterCurveModeOptionLuminance);
+        param->setAnimates(false);
+        param->setDefault(kParamMasterCurveModeDefault);
+    }
+    {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
         param->setLabel(kParamLuminanceMathLabel);
         param->setHint(kParamLuminanceMathHint);
-        param->setEvaluateOnChange(false); // WARNING: RENDER IS NOT AFFECTED BY THIS OPTION IN THIS PLUGIN
         assert(param->getNOptions() == eLuminanceMathRec709);
-        param->appendOption(kParamLuminanceMathOptionRec709, kParamLuminanceMathOptionRec709Hint);
+        param->appendOption(kParamLuminanceMathOptionRec709);
         assert(param->getNOptions() == eLuminanceMathRec2020);
-        param->appendOption(kParamLuminanceMathOptionRec2020, kParamLuminanceMathOptionRec2020Hint);
+        param->appendOption(kParamLuminanceMathOptionRec2020);
         assert(param->getNOptions() == eLuminanceMathACESAP0);
-        param->appendOption(kParamLuminanceMathOptionACESAP0, kParamLuminanceMathOptionACESAP0Hint);
+        param->appendOption(kParamLuminanceMathOptionACESAP0);
         assert(param->getNOptions() == eLuminanceMathACESAP1);
-        param->appendOption(kParamLuminanceMathOptionACESAP1, kParamLuminanceMathOptionACESAP1Hint);
+        param->appendOption(kParamLuminanceMathOptionACESAP1);
         assert(param->getNOptions() == eLuminanceMathCcir601);
-        param->appendOption(kParamLuminanceMathOptionCcir601, kParamLuminanceMathOptionCcir601Hint);
+        param->appendOption(kParamLuminanceMathOptionCcir601);
         assert(param->getNOptions() == eLuminanceMathAverage);
-        param->appendOption(kParamLuminanceMathOptionAverage, kParamLuminanceMathOptionAverageHint);
+        param->appendOption(kParamLuminanceMathOptionAverage);
         assert(param->getNOptions() == eLuminanceMathMaximum);
-        param->appendOption(kParamLuminanceMathOptionMaximum, kParamLuminanceMathOptionMaximumHint);
+        param->appendOption(kParamLuminanceMathOptionMaximum);
         if (page) {
             page->addChild(*param);
         }
