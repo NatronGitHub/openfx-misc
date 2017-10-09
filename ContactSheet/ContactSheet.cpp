@@ -581,7 +581,7 @@ ContactSheetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
         int clipCount = std::min(framesLeft, count); // number of frames from this clip
         OfxRangeD range;
         range.min = first;
-        range.max = first + clipCount;
+        range.max = std::min(last, first + clipCount);
         frames.setFramesNeeded(*_srcClip[i], range);
 
         framesLeft -= clipCount;
