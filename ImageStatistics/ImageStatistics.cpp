@@ -447,14 +447,13 @@ private:
                     double sum[nComponents],
                     unsigned long count)
     {
-        _mutex.lock();
+        AutoMutex l (&_mutex);
         for (int c = 0; c < nComponents; ++c) {
             _min[c] = std::min(_min[c], min[c]);
             _max[c] = std::max(_max[c], max[c]);
             _sum[c] += sum[c];
         }
         _count += count;
-        _mutex.unlock();
     }
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
@@ -540,12 +539,11 @@ private:
     void addResults(double sum_p2[nComponents],
                     unsigned long count)
     {
-        _mutex.lock();
+        AutoMutex l (&_mutex);
         for (int c = 0; c < nComponents; ++c) {
             _sum_p2[c] += sum_p2[c];
         }
         _count += count;
-        _mutex.unlock();
     }
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
@@ -647,13 +645,12 @@ private:
                     double sum_p4[nComponents],
                     unsigned long count)
     {
-        _mutex.lock();
+        AutoMutex l (&_mutex);
         for (int c = 0; c < nComponents; ++c) {
             _sum_p3[c] += sum_p3[c];
             _sum_p4[c] += sum_p4[c];
         }
         _count += count;
-        _mutex.unlock();
     }
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
@@ -747,14 +744,13 @@ private:
                     double sum[nComponentsHSVL],
                     unsigned long count)
     {
-        _mutex.lock();
+        AutoMutex l (&_mutex);
         for (int c = 0; c < nComponentsHSVL; ++c) {
             _min[c] = std::min(_min[c], min[c]);
             _max[c] = std::max(_max[c], max[c]);
             _sum[c] += sum[c];
         }
         _count += count;
-        _mutex.unlock();
     }
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
@@ -842,12 +838,11 @@ private:
     void addResults(double sum_p2[nComponentsHSVL],
                     unsigned long count)
     {
-        _mutex.lock();
+        AutoMutex l (&_mutex);
         for (int c = 0; c < nComponentsHSVL; ++c) {
             _sum_p2[c] += sum_p2[c];
         }
         _count += count;
-        _mutex.unlock();
     }
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
@@ -947,13 +942,12 @@ private:
                     double sum_p4[nComponentsHSVL],
                     unsigned long count)
     {
-        _mutex.lock();
+        AutoMutex l (&_mutex);
         for (int c = 0; c < nComponentsHSVL; ++c) {
             _sum_p3[c] += sum_p3[c];
             _sum_p4[c] += sum_p4[c];
         }
         _count += count;
-        _mutex.unlock();
     }
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
@@ -1094,7 +1088,7 @@ private:
                     double minVal[nComponents],
                     double minLuma)
     {
-        _mutex.lock();
+        AutoMutex l (&_mutex);
         if (maxLuma > _maxLuma) {
             _maxPos = maxPos;
             for (int c = 0; c < nComponents; ++c) {
@@ -1109,7 +1103,6 @@ private:
             }
             _minLuma = minLuma;
         }
-        _mutex.unlock();
     }
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
