@@ -42,6 +42,20 @@ using std::isnan;
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+namespace {
+    typedef MultiThread::Mutex Mutex;
+    typedef MultiThread::AutoMutex AutoMutex;
+}
+#else
+// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
+// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
+#include "fast_mutex.h"
+namespace {
+    typedef tthread::fast_mutex Mutex;
+    typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+}
+#endif
 
 using namespace OFX;
 
@@ -52,11 +66,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Apply a parametric lookup curve with the possibility to adjust each channel separately.\n" \
     "The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
+    "Different algorithms are available when applying the master curve, which are selectable using the \"Master Curve Mode\" parameter.\n" \
     "Computation is faster for values that are within the given range, so it is recommended to set the Range parameter if the input range goes beyond [0,1].\n" \
     "\n" \
     "Note that you can easily do color remapping by setting Source and Target colors and clicking \"Set RGB\" or \"Set RGBA\" below.\n" \
     "This will add control points on the curve to match the target from the source. You can add as many point as you like.\n" \
     "This is very useful for matching color of one shot to another, or adding custom colors to a black and white ramp.\n" \
+    "\n" \
+    "Optionally, the RGB histogram or a color ramp can be displayed in the background of the lookup curves.\n" \
+    "\n" \
     "See also: http://opticalenquiry.com/nuke/index.php?title=ColorLookup"
 
 // History:
@@ -158,7 +176,7 @@ enum LuminanceMathEnum
 #define kParamDisplayLabel "Display", "Display a color ramp or a histogram behind the curves."
 #define kParamDisplayOptionNone "None", "No background display.", "none"
 #define kParamDisplayOptionColorRamp "Color Ramp", "Display a color ramp.", "colorramp"
-#define kParamDisplayOptionHistogram "Histogram", "Display the input histogram. Press \"Refresh Histogram\" to recompute the histogram. [NOT YET IMPLEMENTED]", "histogram"
+#define kParamDisplayOptionHistogram "RGB Histogram", "Display the input histogram. Press \"Refresh Histogram\" to recompute the histogram.", "histogram"
 enum DisplayEnum
 {
     eDisplayNone = 0,
@@ -696,6 +714,153 @@ luminance(double r,
     }
 }
 
+#define HISTOGRAM_BINS 256
+
+struct RGBAValues
+{
+    double r, g, b, a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
+
+struct Results
+{
+    Results()
+    : rangemin(0.)
+    , rangemax(0.)
+    , histogram()
+    , bins(0)
+    , components(0)
+    , hmax(0)
+    {
+    }
+
+    double rangemin;
+    double rangemax;
+    std::vector<unsigned long> histogram;
+    int bins;
+    int components;
+    unsigned long hmax;
+};
+
+class HistogramProcessorBase
+: public ImageProcessor
+{
+protected:
+    Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    unsigned long _count;
+
+public:
+    HistogramProcessorBase(ImageEffect &instance)
+    : ImageProcessor(instance)
+    , _mutex()
+    , _count(0)
+    {
+    }
+
+    virtual ~HistogramProcessorBase()
+    {
+    }
+
+    virtual void getResults(Results *results) const = 0;
+};
+
+
+template <class PIX, int nComponents, int maxValue>
+class HistogramProcessor
+: public HistogramProcessorBase
+{
+private:
+    std::vector<unsigned long> _histogram;
+    double _rangemin;
+    double _rangemax;
+    bool _premult;
+    int _premultChannel;
+
+public:
+    HistogramProcessor(ImageEffect &instance, double rangemin, double rangemax, bool premult, int premultChannel)
+    : HistogramProcessorBase(instance)
+    , _histogram(HISTOGRAM_BINS * nComponents)
+    , _rangemin(rangemin)
+    , _rangemax(rangemax)
+    , _premult(premult)
+    , _premultChannel(premultChannel)
+    {
+    }
+
+    ~HistogramProcessor()
+    {
+    }
+
+    void getResults(Results *results) const OVERRIDE FINAL
+    {
+        results->rangemin = _rangemin;
+        results->rangemax = _rangemax;
+        results->histogram = _histogram;
+        results->bins = HISTOGRAM_BINS;
+        results->components = nComponents;
+        unsigned long hmax = 0;
+        // compute the max, excluding the first and last bins
+        for (int c = 0; c < nComponents; ++c) {
+            for (int i = 1; i < HISTOGRAM_BINS - 1; ++i) {
+                unsigned long h = _histogram[c * HISTOGRAM_BINS + i];
+                if (h > hmax) {
+                    hmax = h;
+                }
+            }
+        }
+        results->hmax = hmax;
+    }
+
+private:
+
+    void addResults(const std::vector<unsigned long>& histogram,
+                    unsigned long count)
+    {
+        AutoMutex l (&_mutex);
+        assert(histogram.size() == _histogram.size());
+        for (size_t i = 0; i < HISTOGRAM_BINS * nComponents; ++i) {
+            _histogram[i] += histogram[i];
+        }
+        _count += count;
+    }
+
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    {
+        std::vector<unsigned long> histogram(HISTOGRAM_BINS * nComponents);
+        unsigned long count = 0;
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if ( _effect.abort() ) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                float unpPix[4];
+                ofxsUnPremult<PIX, nComponents, maxValue>(dstPix, unpPix, _premult, _premultChannel);
+
+                for (int c = 0; c < std::min(nComponents, 3); ++c) {
+                    int bin = 0;
+                    if (unpPix[c] >= _rangemax) {
+                        bin = HISTOGRAM_BINS - 1;
+                    } else if (unpPix[c] >= _rangemin) {
+                        bin = std::floor(HISTOGRAM_BINS * (unpPix[c] - _rangemin) / (_rangemax - _rangemin));
+                    }
+                    ++histogram[c * HISTOGRAM_BINS + bin];
+                }
+                dstPix += nComponents;
+            }
+            count += procWindow.x2 - procWindow.x1;
+        }
+
+        addResults(histogram, count);
+    }
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class ColorLookupPlugin
@@ -759,6 +924,13 @@ public:
         }
     }
 
+    void getHistogram(Results* histogram)
+    {
+        assert(histogram != NULL);
+        AutoMutex l(&_histogramMutex);
+        *histogram = _histogram;
+    }
+
 private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
@@ -772,138 +944,114 @@ private:
     void setupAndProcess(ColorLookupProcessorBase &, const RenderArguments &args);
 
     virtual void changedParam(const InstanceChangedArgs &args,
-                              const std::string &paramName) OVERRIDE FINAL
+                              const std::string &paramName) OVERRIDE FINAL;
+
+    // methods related to Histogram
+
+    void updateHistogram(const InstanceChangedArgs &args);
+
+    /* set up and run a processor */
+    void
+    setupAndProcess(HistogramProcessorBase &processor,
+                    const Image* srcImg,
+                    const OfxRectI &analysisWindow,
+                    Results *results)
     {
-        const double time = args.time;
+        // set the images
+        processor.setDstImg( const_cast<Image*>(srcImg) ); // not a bug: we only set dst
 
-        if ( (paramName == kParamHasBackgroundInteract) || (paramName == kParamDisplay)) {
-            bool hasBackgroundInteract = _hasBackgroundInteract->getValueAtTime(time);
-            _display->setIsSecretAndDisabled(!hasBackgroundInteract);
-            _updateHistogram->setIsSecret(!hasBackgroundInteract);
-            if (hasBackgroundInteract) {
-                DisplayEnum display = (DisplayEnum)_display->getValue();
-                _updateHistogram->setEnabled(display == eDisplayHistogram);
-            } else {
-                _updateHistogram->setEnabled(false);
-            }
-        }
-        if ( (paramName == kParamSetMaster) && (args.reason == eChangeUserEdit) ) {
-            double source[4];
-            double target[4];
-            _source->getValueAtTime(time, source[0], source[1], source[2], source[3]);
-            _target->getValueAtTime(time, target[0], target[1], target[2], target[3]);
-            LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
-            double s = luminance(source[0], source[1], source[2], luminanceMath);
-            double t = luminance(target[0], target[1], target[2], luminanceMath);
-            _lookupTable->addControlPoint(kCurveMaster, // curve to set
-                                          time,   // time, ignored in this case, as we are not adding a key
-                                          s,   // parametric position
-                                          t,   // value to be
-                                          false);   // don't add a key
-        }
-        if ( ( (paramName == kParamSetRGB) || (paramName == kParamSetRGBA) || (paramName == kParamSetA) ) && (args.reason == eChangeUserEdit) ) {
-            double source[4];
-            double target[4];
-            _source->getValueAtTime(time, source[0], source[1], source[2], source[3]);
-            _target->getValueAtTime(time, target[0], target[1], target[2], target[3]);
+        // set the render window
+        processor.setRenderWindow(analysisWindow);
 
-            int cbegin = (paramName == kParamSetA) ? 3 : 0;
-            int cend = (paramName == kParamSetRGB) ? 3 : 4;
-            for (int c = cbegin; c < cend; ++c) {
-                int curve = componentToCurve(c);
-                _lookupTable->addControlPoint(curve, // curve to set
-                                              time,   // time, ignored in this case, as we are not adding a key
-                                              source[c],   // parametric position
-                                              target[c],   // value to be
-                                              false);   // don't add a key
-            }
-        }
-#ifdef COLORLOOKUP_ADD
-        if ( (paramName == kParamAddCtrlPts) && (args.reason == eChangeUserEdit) ) {
-            for (int component = 0; component < kCurveNb; ++component) {
-                int n = _lookupTable->getNControlPoints(component, time);
-                if (n <= 1) {
-                    // less than two points: add the two default control points
-                    // add a control point at 0, value is 0
-                    _lookupTable->addControlPoint(component, // curve to set
-                                                  time,  // time, ignored in this case, as we are not adding a key
-                                                  0.0,  // parametric position, zero
-                                                  0.0,  // value to be, 0
-                                                  false);  // don't add a key
-                    // add a control point at 1, value is 1
-                    _lookupTable->addControlPoint(component, time, 1.0, 1.0, false);
-                } else {
-                    std::pair<double, double> prev = _lookupTable->getNthControlPoint(component, time, 0);
-                    std::list<std::pair<double, double> > newCtrlPts;
+        // Call the base class process member, this will call the derived templated process code
+        processor.process();
 
-                    // compute new points, put them in a list
-                    for (int i = 1; i < n; ++i) {
-                        std::pair<double, double> next = _lookupTable->getNthControlPoint(component, time, i);
-                        if (prev.first != next.first) { // don't create additional points if there is no space for one
-                            // create a new control point between two existing control points
-                            double parametricPos = (prev.first + next.first) / 2.;
-                            double parametricVal = _lookupTable->getValueAtTime(time, component, time, parametricPos);
-                            newCtrlPts.push_back( std::make_pair(parametricPos, parametricVal) );
-                        }
-                        prev = next;
-                    }
-                    // now add the new points
-                    for (std::list<std::pair<double, double> >::const_iterator it = newCtrlPts.begin();
-                         it != newCtrlPts.end();
-                         ++it) {
-                        _lookupTable->addControlPoint(component, // curve to set
-                                                      time,   // time, ignored in this case, as we are not adding a key
-                                                      it->first,   // parametric position
-                                                      it->second,   // value to be, 0
-                                                      false);
-                    }
-                }
-            }
+        if ( !abort() ) {
+            processor.getResults(results);
         }
-#endif
-#ifdef COLORLOOKUP_RESET
-        if ( (paramName == kParamResetCtrlPts) && (args.reason == eChangeUserEdit) ) {
-            Message::MessageReplyEnum reply = sendMessage(Message::eMessageQuestion, "", "Delete all control points for all components?");
-            // Nuke seems to always reply eMessageReplyOK, whatever the real answer was
-            switch (reply) {
-            case Message::eMessageReplyOK:
-                sendMessage(Message::eMessageMessage, "", "OK");
-                break;
-            case Message::eMessageReplyYes:
-                sendMessage(Message::eMessageMessage, "", "Yes");
-                break;
-            case Message::eMessageReplyNo:
-                sendMessage(Message::eMessageMessage, "", "No");
-                break;
-            case Message::eMessageReplyFailed:
-                sendMessage(Message::eMessageMessage, "", "Failed");
-                break;
-            }
-            if (reply == Message::eMessageReplyYes) {
-                for (int component = 0; component < kCurveNb; ++component) {
-                    _lookupTable->deleteControlPoint(component);
-                    // add a control point at 0, value is 0
-                    _lookupTable->addControlPoint(component, // curve to set
-                                                  time,  // time, ignored in this case, as we are not adding a key
-                                                  0.0,  // parametric position, zero
-                                                  0.0,  // value to be, 0
-                                                  false);  // don't add a key
-                    // add a control point at 1, value is 1
-                    lookupTable->addControlPoint(component, time, 1.0, 1.0, false);
-                }
-            }
+    }
+
+    // update image statistics
+    void
+    update(const Image* srcImg,
+           double time,
+           const OfxRectI &analysisWindow)
+    {
+        // TODO: CHECK if checkDoubleAnalysis param is true and analysisWindow is the same as btmLeft/sizeAnalysis
+        Results results;
+
+        if ( !abort() ) {
+            updateSub<HistogramProcessor>(srcImg, time, analysisWindow, &results);
         }
-#endif
-        if ( (paramName == kParamRange) && (args.reason == eChangeUserEdit) ) {
-            double rmin, rmax;
-            _range->getValueAtTime(time, rmin, rmax);
-            if (rmax < rmin) {
-                _range->setValue(rmax, rmin);
-            }
-        } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
-            _premultChanged->setValue(true);
+        {
+            AutoMutex l (&_histogramMutex);
+            _histogram = results; // uses default copy constructor
         }
-    } // changedParam
+    }
+
+    template <template<class PIX, int nComponents, int maxValue> class Processor, class PIX, int nComponents, int maxValue>
+    void updateSubComponentsDepth(const Image* srcImg,
+                                  double time,
+                                  const OfxRectI &analysisWindow,
+                                  Results* results)
+    {
+        double rangemin, rangemax;
+        _range->getValueAtTime(time, rangemin, rangemax);
+        bool premult;
+        int premultChannel;
+        _premult->getValueAtTime(time, premult);
+        _premultChannel->getValueAtTime(time, premultChannel);
+        Processor<PIX, nComponents, maxValue> fred(*this, rangemin, rangemax, premult, premultChannel);
+        setupAndProcess(fred, srcImg, analysisWindow, results);
+    }
+
+    template <template<class PIX, int nComponents, int maxValue> class Processor, int nComponents>
+    void updateSubComponents(const Image* srcImg,
+                             double time,
+                             const OfxRectI &analysisWindow,
+                             Results* results)
+    {
+        BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
+
+        switch (srcBitDepth) {
+            case eBitDepthUByte: {
+                updateSubComponentsDepth<Processor, unsigned char, nComponents, 255>(srcImg, time, analysisWindow, results);
+                break;
+            }
+            case eBitDepthUShort: {
+                updateSubComponentsDepth<Processor, unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, results);
+                break;
+            }
+            case eBitDepthFloat: {
+                updateSubComponentsDepth<Processor, float, nComponents, 1>(srcImg, time, analysisWindow, results);
+                break;
+            }
+            default:
+                throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    }
+
+    template <template<class PIX, int nComponents, int maxValue> class Processor>
+    void updateSub(const Image* srcImg,
+                   double time,
+                   const OfxRectI &analysisWindow,
+                   Results* results)
+    {
+        PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+
+        assert(srcComponents == ePixelComponentAlpha || srcComponents == ePixelComponentRGB || srcComponents == ePixelComponentRGBA);
+        if (srcComponents == ePixelComponentAlpha) {
+            updateSubComponents<Processor, 1>(srcImg, time, analysisWindow, results);
+        } else if (srcComponents == ePixelComponentRGBA) {
+            updateSubComponents<Processor, 4>(srcImg, time, analysisWindow, results);
+        } else if (srcComponents == ePixelComponentRGB) {
+            updateSubComponents<Processor, 3>(srcImg, time, analysisWindow, results);
+        } else {
+            // coverity[dead_error_line]
+            throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    }
+
 
 private:
     Clip *_dstClip;
@@ -926,6 +1074,8 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
+    Mutex _histogramMutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    Results _histogram;
 };
 
 void
@@ -1185,21 +1335,187 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args,
     }
 }
 
+void
+ColorLookupPlugin::updateHistogram(const InstanceChangedArgs &args)
+{
+    std::auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                             _srcClip->fetchImage(args.time) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+            ( src->getRenderScale().y != args.renderScale.y) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+#     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+#     endif
+        beginEditBlock("analyzeFrame");
+        update(src.get(), args.time, src->getBounds());
+        endEditBlock();
+#     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+#     endif
+    }
+}
+
+void
+ColorLookupPlugin::changedParam(const InstanceChangedArgs &args,
+                                const std::string &paramName)
+{
+    const double time = args.time;
+
+    if ( paramName == kParamUpdateHistogram && _srcClip && _srcClip->isConnected() ) {
+        updateHistogram(args);
+    }
+    if ( (paramName == kParamHasBackgroundInteract) || (paramName == kParamDisplay)) {
+        bool hasBackgroundInteract = _hasBackgroundInteract->getValueAtTime(time);
+        _display->setIsSecretAndDisabled(!hasBackgroundInteract);
+        _updateHistogram->setIsSecret(!hasBackgroundInteract);
+        if (!hasBackgroundInteract) {
+            _updateHistogram->setEnabled(false);
+        } else {
+            DisplayEnum display = (DisplayEnum)_display->getValue();
+            _updateHistogram->setEnabled(display == eDisplayHistogram);
+            if ( (display == eDisplayHistogram) && _histogram.histogram.empty() ) {
+                updateHistogram(args); // compute the histogram (which is not persistent)
+            }
+        }
+    }
+    if ( (paramName == kParamSetMaster) && (args.reason == eChangeUserEdit) ) {
+        double source[4];
+        double target[4];
+        _source->getValueAtTime(time, source[0], source[1], source[2], source[3]);
+        _target->getValueAtTime(time, target[0], target[1], target[2], target[3]);
+        LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
+        double s = luminance(source[0], source[1], source[2], luminanceMath);
+        double t = luminance(target[0], target[1], target[2], luminanceMath);
+        _lookupTable->addControlPoint(kCurveMaster, // curve to set
+                                      time,   // time, ignored in this case, as we are not adding a key
+                                      s,   // parametric position
+                                      t,   // value to be
+                                      false);   // don't add a key
+    }
+    if ( ( (paramName == kParamSetRGB) || (paramName == kParamSetRGBA) || (paramName == kParamSetA) ) && (args.reason == eChangeUserEdit) ) {
+        double source[4];
+        double target[4];
+        _source->getValueAtTime(time, source[0], source[1], source[2], source[3]);
+        _target->getValueAtTime(time, target[0], target[1], target[2], target[3]);
+
+        int cbegin = (paramName == kParamSetA) ? 3 : 0;
+        int cend = (paramName == kParamSetRGB) ? 3 : 4;
+        for (int c = cbegin; c < cend; ++c) {
+            int curve = componentToCurve(c);
+            _lookupTable->addControlPoint(curve, // curve to set
+                                          time,   // time, ignored in this case, as we are not adding a key
+                                          source[c],   // parametric position
+                                          target[c],   // value to be
+                                          false);   // don't add a key
+        }
+    }
+#ifdef COLORLOOKUP_ADD
+    if ( (paramName == kParamAddCtrlPts) && (args.reason == eChangeUserEdit) ) {
+        for (int component = 0; component < kCurveNb; ++component) {
+            int n = _lookupTable->getNControlPoints(component, time);
+            if (n <= 1) {
+                // less than two points: add the two default control points
+                // add a control point at 0, value is 0
+                _lookupTable->addControlPoint(component, // curve to set
+                                              time,  // time, ignored in this case, as we are not adding a key
+                                              0.0,  // parametric position, zero
+                                              0.0,  // value to be, 0
+                                              false);  // don't add a key
+                // add a control point at 1, value is 1
+                _lookupTable->addControlPoint(component, time, 1.0, 1.0, false);
+            } else {
+                std::pair<double, double> prev = _lookupTable->getNthControlPoint(component, time, 0);
+                std::list<std::pair<double, double> > newCtrlPts;
+
+                // compute new points, put them in a list
+                for (int i = 1; i < n; ++i) {
+                    std::pair<double, double> next = _lookupTable->getNthControlPoint(component, time, i);
+                    if (prev.first != next.first) { // don't create additional points if there is no space for one
+                        // create a new control point between two existing control points
+                        double parametricPos = (prev.first + next.first) / 2.;
+                        double parametricVal = _lookupTable->getValueAtTime(time, component, time, parametricPos);
+                        newCtrlPts.push_back( std::make_pair(parametricPos, parametricVal) );
+                    }
+                    prev = next;
+                }
+                // now add the new points
+                for (std::list<std::pair<double, double> >::const_iterator it = newCtrlPts.begin();
+                     it != newCtrlPts.end();
+                     ++it) {
+                    _lookupTable->addControlPoint(component, // curve to set
+                                                  time,   // time, ignored in this case, as we are not adding a key
+                                                  it->first,   // parametric position
+                                                  it->second,   // value to be, 0
+                                                  false);
+                }
+            }
+        }
+    }
+#endif
+#ifdef COLORLOOKUP_RESET
+    if ( (paramName == kParamResetCtrlPts) && (args.reason == eChangeUserEdit) ) {
+        Message::MessageReplyEnum reply = sendMessage(Message::eMessageQuestion, "", "Delete all control points for all components?");
+        // Nuke seems to always reply eMessageReplyOK, whatever the real answer was
+        switch (reply) {
+            case Message::eMessageReplyOK:
+                sendMessage(Message::eMessageMessage, "", "OK");
+                break;
+            case Message::eMessageReplyYes:
+                sendMessage(Message::eMessageMessage, "", "Yes");
+                break;
+            case Message::eMessageReplyNo:
+                sendMessage(Message::eMessageMessage, "", "No");
+                break;
+            case Message::eMessageReplyFailed:
+                sendMessage(Message::eMessageMessage, "", "Failed");
+                break;
+        }
+        if (reply == Message::eMessageReplyYes) {
+            for (int component = 0; component < kCurveNb; ++component) {
+                _lookupTable->deleteControlPoint(component);
+                // add a control point at 0, value is 0
+                _lookupTable->addControlPoint(component, // curve to set
+                                              time,  // time, ignored in this case, as we are not adding a key
+                                              0.0,  // parametric position, zero
+                                              0.0,  // value to be, 0
+                                              false);  // don't add a key
+                // add a control point at 1, value is 1
+                lookupTable->addControlPoint(component, time, 1.0, 1.0, false);
+            }
+        }
+    }
+#endif
+    if ( (paramName == kParamRange) && (args.reason == eChangeUserEdit) ) {
+        double rmin, rmax;
+        _range->getValueAtTime(time, rmin, rmax);
+        if (rmax < rmin) {
+            _range->setValue(rmax, rmin);
+        }
+    } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
+        _premultChanged->setValue(true);
+    }
+} // changedParam
+
 class ColorLookupInteract
     : public ParamInteract
 {
 public:
     ColorLookupInteract(OfxInteractHandle handle,
                         ImageEffect* effect,
-                        const std::string& paramName) :
-        ParamInteract(handle, effect)
+                        const std::string& paramName)
+        : ParamInteract(handle, effect)
     {
         _hasBackgroundInteract = effect->fetchBooleanParam(kParamHasBackgroundInteract);
         _display = effect->fetchChoiceParam(kParamDisplay);
+        _updateHistogram = effect->fetchPushButtonParam(kParamUpdateHistogram);
         _lookupTableParam = effect->fetchParametricParam(paramName);
         _range = effect->fetchDouble2DParam(kParamRange);
         setColourPicking(true); // we always want colour picking if the host has it
         addParamToSlaveTo(_display);
+        addParamToSlaveTo(_updateHistogram);
         addParamToSlaveTo(_hasBackgroundInteract);
     }
 
@@ -1219,39 +1535,83 @@ public:
 
         DisplayEnum display = (DisplayEnum)_display->getValueAtTime(time);
 
-        const int sliceWidth = 8;
-        int nbValues = args.pixelScale.x > 0 ? std::ceil( (rangeMax - rangeMin) / (sliceWidth * args.pixelScale.x) ) : 1;
-        if ( display == eDisplayColorRamp  && (nbValues > 0) ) {
-            // let us draw one slice every 8 pixels
-            const int nComponents = 3;
-            GLfloat color[nComponents];
+        if ( display == eDisplayColorRamp  ) {
             OfxStatus stat = kOfxStatOK;
-            glBegin(GL_TRIANGLE_STRIP);
-            try { // getValue may throw
-                for (int position = 0; position <= nbValues; ++position) {
-                    // position to evaluate the param at
-                    double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
+            const int sliceWidth = 8;
+            int nbValues = args.pixelScale.x > 0 ? std::ceil( (rangeMax - rangeMin) / (sliceWidth * args.pixelScale.x) ) : 1;
+            if (nbValues > 0) {
+                // let us draw one slice every 8 pixels
+                const int nComponents = 3;
+                GLfloat color[nComponents];
+                glBegin(GL_TRIANGLE_STRIP);
+                try { // getValue may throw
+                    for (int position = 0; position <= nbValues; ++position) {
+                        // position to evaluate the param at
+                        double parametricPos = rangeMin + (rangeMax - rangeMin) * double(position) / nbValues;
 
-                    for (int component = 0; component < nComponents; ++component) {
-                        int lutIndex = componentToCurve(component); // special case for components == alpha only
-                        // evaluate the parametric param
-                        double value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
-                        value += _lookupTableParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
-                        // set that in the lut
-                        color[component] = value;
+                        for (int component = 0; component < nComponents; ++component) {
+                            int lutIndex = componentToCurve(component); // special case for components == alpha only
+                            // evaluate the parametric param
+                            double value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
+                            value += _lookupTableParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
+                            // set that in the lut
+                            color[component] = value;
+                        }
+                        glColor3f(color[0], color[1], color[2]);
+                        glVertex2f(parametricPos, rangeMin);
+                        glVertex2f(parametricPos, rangeMax);
                     }
-                    glColor3f(color[0], color[1], color[2]);
-                    glVertex2f(parametricPos, rangeMin);
-                    glVertex2f(parametricPos, rangeMax);
+                } catch (...) {
+                    stat = kOfxStatFailed;
                 }
-            } catch (...) {
-                stat = kOfxStatFailed;
+                glEnd();
             }
-            glEnd();
             throwSuiteStatusException(stat);
         }
 
+        if ( display == eDisplayHistogram  ) {
+            Results histogram;
+            ColorLookupPlugin* effect = dynamic_cast<ColorLookupPlugin*>(_effect);
+            if (effect) {
+                effect->getHistogram(&histogram); // copy the histogram
+            }
+            if (histogram.hmax > 0 && histogram.rangemin < histogram.rangemax && !histogram.histogram.empty()) {
+                double binSize = (histogram.rangemax - histogram.rangemin) / HISTOGRAM_BINS;
+                glEnable(GL_BLEND);
+                glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+                glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+                for (int c = 0; c < 3; ++c) {
+                    glBegin(GL_QUADS);
+                    // use three colors with equal luminance (0.33), so that the blue is visible and their sum is white
+                    switch (c) {
+                        case 0:
+                            glColor3f(0.711519527404004, 0.164533420851110, 0.164533420851110);
+                            break;
+                        case 1:
+                            glColor3f(0., 0.546986106552894, 0.);
+                            break;
+                        case 2:
+                            glColor3f(0.288480472595996, 0.288480472595996, 0.835466579148890);
+                            break;
+                    }
+                    for (unsigned int i = 0; i < HISTOGRAM_BINS; ++i) {
+                        double binMinX = histogram.rangemin + i * binSize;
+                        double binMaxX = binMinX + binSize;
+                        double binY = histogram.histogram[c* HISTOGRAM_BINS + i] / (double)histogram.hmax;
+                        glVertex2d(binMinX, 0);
+                        glVertex2d(binMinX, binY);
+                        glVertex2d(binMaxX, binY);
+                        glVertex2d(binMaxX, 0);
+                    }
+                    glEnd(); // GL_QUADS
+                }
+            }
+        }
+
         if (args.hasPickerColour) {
+            //glEnable(GL_BLEND);
+            //glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+            //glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
             glLineWidth(1.5);
             glBegin(GL_LINES);
             {
@@ -1284,6 +1644,7 @@ public:
 protected:
     BooleanParam* _hasBackgroundInteract;
     ChoiceParam* _display;
+    PushButtonParam* _updateHistogram;
     ParametricParam* _lookupTableParam;
     Double2DParam* _range;
 };
