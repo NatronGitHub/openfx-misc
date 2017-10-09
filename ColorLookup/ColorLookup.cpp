@@ -424,8 +424,8 @@ private:
                     switch (masterCurveMode) {
                         case eMasterCurveModeStandard: {
                             tmpPix[0] = interpolate(0, r) * maxValue;
-                            tmpPix[1] = interpolate(1, r) * maxValue;
-                            tmpPix[2] = interpolate(2, r) * maxValue;
+                            tmpPix[1] = interpolate(1, g) * maxValue;
+                            tmpPix[2] = interpolate(2, b) * maxValue;
                             break;
                         }
                         case eMasterCurveModeWeightedStandard: {
@@ -501,7 +501,7 @@ private:
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 } else {
                     //assert(nComponents == 4);
-                    float unpPix[nComponents];
+                    float unpPix[4];
                     ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
                     float r = unpPix[0];
                     float g = unpPix[1];
@@ -509,9 +509,9 @@ private:
                     // ofxsUnPremult outputs normalized data
                     switch (masterCurveMode) {
                         case eMasterCurveModeStandard: {
-                            tmpPix[0] = interpolate(0, unpPix[0]);
-                            tmpPix[1] = interpolate(1, unpPix[1]);
-                            tmpPix[2] = interpolate(2, unpPix[2]);
+                            tmpPix[0] = interpolate(0, r);
+                            tmpPix[1] = interpolate(1, g);
+                            tmpPix[2] = interpolate(2, b);
                             tmpPix[3] = interpolate(3, unpPix[3]);
                             break;
                         }
