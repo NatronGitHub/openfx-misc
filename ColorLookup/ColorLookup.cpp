@@ -30,10 +30,15 @@
 using std::isnan;
 #endif
 
+#if !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
+#define GL_GLEXT_PROTOTYPES
+#endif
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
+#include <OpenGL/glext.h>
 #else
 #include <GL/gl.h>
+#include <GL/glext.h>
 #endif
 
 #include "ofxsProcessing.H"
@@ -1517,6 +1522,9 @@ public:
         addParamToSlaveTo(_display);
         addParamToSlaveTo(_updateHistogram);
         addParamToSlaveTo(_hasBackgroundInteract);
+#if ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
+        glBlendFuncSeparate = (PFNGLBLENDFUNCSEPARATEPROC)wglGetProcAddress("glBlendFuncSeparate");
+#endif
     }
 
     virtual bool draw(const DrawArgs &args) OVERRIDE FINAL
@@ -1647,6 +1655,10 @@ protected:
     PushButtonParam* _updateHistogram;
     ParametricParam* _lookupTableParam;
     Double2DParam* _range;
+private:
+#if ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
+    PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
+#endif
 };
 
 // We are lucky, there's only one lookupTable param, so we need only one interact
