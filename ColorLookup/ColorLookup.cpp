@@ -30,7 +30,7 @@
 using std::isnan;
 #endif
 
-#if !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
+#if !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
 #define GL_GLEXT_PROTOTYPES
 #endif
 #ifdef __APPLE__
@@ -39,6 +39,15 @@ using std::isnan;
 #else
 #include <GL/gl.h>
 #include <GL/glext.h>
+#endif
+
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#ifndef GL_VERSION_1_4
+typedef void (APIENTRYP PFNGLBLENDFUNCSEPARATEPROC)(GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha);
+#endif
+#ifndef GL_VERSION_2_0
+typedef void (APIENTRYP PFNGLBLENDEQUATIONSEPARATEPROC)(GLenum modeRGB, GLenum modeAlpha);
+#endif
 #endif
 
 #include "ofxsProcessing.H"
@@ -1522,7 +1531,8 @@ public:
         addParamToSlaveTo(_display);
         addParamToSlaveTo(_updateHistogram);
         addParamToSlaveTo(_hasBackgroundInteract);
-#if ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+        glBlendEquationSeparate = (PFNGLBLENDEQUATIONSEPARATEPROC)wglGetProcAddress("glBlendEquationSeparate");
         glBlendFuncSeparate = (PFNGLBLENDFUNCSEPARATEPROC)wglGetProcAddress("glBlendFuncSeparate");
 #endif
     }
@@ -1586,8 +1596,12 @@ public:
             if (histogram.hmax > 0 && histogram.rangemin < histogram.rangemax && !histogram.histogram.empty()) {
                 double binSize = (histogram.rangemax - histogram.rangemin) / HISTOGRAM_BINS;
                 glEnable(GL_BLEND);
-                glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-                glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+                if (glBlendEquationSeparate) {
+                    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+                }
+                if (glBlendFuncSeparate) {
+                    glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+                }
                 for (int c = 0; c < 3; ++c) {
                     glBegin(GL_QUADS);
                     // use three colors with equal luminance (0.33), so that the blue is visible and their sum is white
@@ -1656,7 +1670,8 @@ protected:
     ParametricParam* _lookupTableParam;
     Double2DParam* _range;
 private:
-#if ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate;
     PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
 #endif
 };
