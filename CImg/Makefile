@@ -163,7 +163,8 @@ CXXFLAGS += \
 # commit 93862da3655db4a253c35de6754a430fa569b63a is CImg 2.0.2
 # commit 82b7a22b7c343af194245f5389e95c22cab44762 is CImg 2.0.3
 # commit d1949a2b334a4b43625a527760838850ec5dcb74 is CImg 2.0.4
-CIMGVERSION=d1949a2b334a4b43625a527760838850ec5dcb74
+# commit a954e66a002ae5fc094097992967598d03d8347b is CImg 2.1.1
+CIMGVERSION=a954e66a002ae5fc094097992967598d03d8347b
 
 CImg.h: Inpaint/inpaint.h
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
