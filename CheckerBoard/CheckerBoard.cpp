@@ -344,15 +344,15 @@ public:
     /** @brief ctor */
     CheckerBoardPlugin(OfxImageEffectHandle handle)
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
-        , _boxSize(0)
-        , _color0(0)
-        , _color1(0)
-        , _color2(0)
-        , _color3(0)
-        , _lineColor(0)
-        , _lineWidth(0)
-        , _centerlineColor(0)
-        , _centerlineWidth(0)
+        , _boxSize(NULL)
+        , _color0(NULL)
+        , _color1(NULL)
+        , _color2(NULL)
+        , _color3(NULL)
+        , _lineColor(NULL)
+        , _lineWidth(NULL)
+        , _centerlineColor(NULL)
+        , _centerlineWidth(NULL)
     {
         _boxSize = fetchDouble2DParam(kParamBoxSize);
         _color0 = fetchRGBAParam(kParamColor0);

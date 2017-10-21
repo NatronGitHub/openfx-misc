@@ -68,17 +68,17 @@ public:
                     bool masked,
                     bool isDirBlur)
         : Transform3x3Plugin(handle, masked, isDirBlur ? eTransform3x3ParamsTypeDirBlur : eTransform3x3ParamsTypeMotionBlur)
-        , _translate(0)
-        , _rotate(0)
-        , _scale(0)
-        , _scaleUniform(0)
-        , _skewX(0)
-        , _skewY(0)
-        , _skewOrder(0)
+        , _translate(NULL)
+        , _rotate(NULL)
+        , _scale(NULL)
+        , _scaleUniform(NULL)
+        , _skewX(NULL)
+        , _skewY(NULL)
+        , _skewOrder(NULL)
         , _transformAmount(NULL)
-        , _center(0)
-        , _interactive(0)
-        , _srcClipChanged(0)
+        , _center(NULL)
+        , _interactive(NULL)
+        , _srcClipChanged(NULL)
     {
         // NON-GENERIC
         if (isDirBlur) {

@@ -1161,12 +1161,12 @@ public:
     /** @brief ctor */
     ImageStatisticsPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _btmLeft(0)
-        , _size(0)
-        , _interactive(0)
-        , _restrictToRectangle(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _btmLeft(NULL)
+        , _size(NULL)
+        , _interactive(NULL)
+        , _restrictToRectangle(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -1812,7 +1812,7 @@ public:
     ImageStatisticsInteract(OfxInteractHandle handle,
                             ImageEffect* effect)
         : RectangleInteract(handle, effect)
-        , _restrictToRectangle(0)
+        , _restrictToRectangle(NULL)
     {
         _restrictToRectangle = effect->fetchBooleanParam(kParamRestrictToRectangle);
         addParamToSlaveTo(_restrictToRectangle);

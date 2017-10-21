@@ -74,9 +74,9 @@ public:
     /** @brief ctor */
     PositionPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _translate(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _translate(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);

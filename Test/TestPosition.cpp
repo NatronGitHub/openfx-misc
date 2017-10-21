@@ -57,7 +57,7 @@ public:
     /** @brief ctor */
     TestPositionPlugin(OfxImageEffectHandle handle)
         : Transform3x3Plugin(handle, /*masked=*/ true, eTransform3x3ParamsTypeMotionBlur) // plugin is masked because it cannot be composed downwards
-        , _translate(0)
+        , _translate(NULL)
     {
         // NON-GENERIC
         _translate = fetchDouble2DParam(kParamPositionTranslate);

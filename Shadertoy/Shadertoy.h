@@ -482,7 +482,7 @@ private:
         OpenGLContextData()
             : haveAniso(false)
             , maxAnisoMax(1.)
-            , imageShader(0)
+            , imageShader(NULL)
             , imageShaderID(0)
             , imageShaderUniformsID(0)
         {

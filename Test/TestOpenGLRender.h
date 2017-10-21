@@ -322,7 +322,7 @@ struct TestOpenGLPlugin::OSMesaPrivate
 {
     OSMesaPrivate(TestOpenGLPlugin *effect)
         : _effect(effect)
-        , _ctx(0)
+        , _ctx(NULL)
         , _ctxFormat(0)
         , _ctxDepthBits(0)
         , _ctxStencilBits(0)

@@ -331,13 +331,13 @@ public:
 
     CImgErodeSmoothPlugin(OfxImageEffectHandle handle)
         : CImgFilterPluginHelper<CImgErodeSmoothParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
-        , _range(0)
-        , _size(0)
-        , _uniform(0)
-        , _exponent(0)
-        , _boundary(0)
-        , _filter(0)
-        , _expandRoD(0)
+        , _range(NULL)
+        , _size(NULL)
+        , _uniform(NULL)
+        , _exponent(NULL)
+        , _boundary(NULL)
+        , _filter(NULL)
+        , _expandRoD(NULL)
     {
         _range = fetchDouble2DParam(kParamRange);
         _size  = fetchDouble2DParam(kParamSize);

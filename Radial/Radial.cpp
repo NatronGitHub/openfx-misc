@@ -166,8 +166,8 @@ protected:
 public:
     RadialProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
-        , _maskImg(0)
+        , _srcImg(NULL)
+        , _maskImg(NULL)
         , _doMasking(false)
         , _mix(1.)
         , _maskInvert(false)
@@ -494,14 +494,14 @@ public:
     /** @brief ctor */
     RadialPlugin(OfxImageEffectHandle handle)
         : GeneratorPlugin(handle, false, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
-        , _srcClip(0)
-        , _processR(0)
-        , _processG(0)
-        , _processB(0)
-        , _processA(0)
-        , _color0(0)
-        , _color1(0)
-        , _expandRoD(0)
+        , _srcClip(NULL)
+        , _processR(NULL)
+        , _processG(NULL)
+        , _processB(NULL)
+        , _processA(NULL)
+        , _color0(NULL)
+        , _color1(NULL)
+        , _expandRoD(NULL)
     {
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == eContextGenerator) ||

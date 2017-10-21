@@ -701,7 +701,7 @@ struct InputPlaneChannel
     int channelIndex;
     bool fillZero;
 
-    InputPlaneChannel() : img(0), channelIndex(-1), fillZero(true) {}
+    InputPlaneChannel() : img(NULL), channelIndex(-1), fillZero(true) {}
 };
 
 class DistortionProcessorBase
@@ -738,8 +738,8 @@ public:
 
     DistortionProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
-        , _maskImg(0)
+        , _srcImg(NULL)
+        , _maskImg(NULL)
         , _processR(true)
         , _processG(true)
         , _processB(true)
@@ -1622,7 +1622,7 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         double par = _uvClip->getPixelAspectRatio();
         if ( OFX::Coords::rectIsEmpty(uvFormat) ) {
             // no format is available, use the RoD instead
-            const OfxRectD& srcRod = _uvClip->getRegionOfDefinition(0);
+            const OfxRectD& srcRod = _uvClip->getRegionOfDefinition(0.);
             const OfxPointD rs1 = {1., 1.};
             Coords::toPixelNearest(srcRod, rs1, par, &uvFormat);
         }

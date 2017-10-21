@@ -323,11 +323,11 @@ public:
     /** @brief ctor */
     MirrorPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _flip(0)
-        , _flop(0)
-        , _srcClipChanged(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _flip(NULL)
+        , _flop(NULL)
+        , _srcClipChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);

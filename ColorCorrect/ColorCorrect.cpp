@@ -384,8 +384,8 @@ public:
     ColorCorrecterBase(ImageEffect &instance,
                        const RenderArguments & /*args*/)
         : ImageProcessor(instance)
-        , _srcImg(0)
-        , _maskImg(0)
+        , _srcImg(NULL)
+        , _maskImg(NULL)
         , _premult(false)
         , _premultChannel(3)
         , _doMasking(false)
@@ -701,12 +701,12 @@ private:
 struct ColorControlParamGroup
 {
     ColorControlParamGroup()
-        : enable(0)
-        , saturation(0)
-        , contrast(0)
-        , gamma(0)
-        , gain(0)
-        , offset(0) {}
+        : enable(NULL)
+        , saturation(NULL)
+        , contrast(NULL)
+        , gamma(NULL)
+        , gain(NULL)
+        , offset(NULL) {}
 
     BooleanParam* enable;
     RGBAParam* saturation;
@@ -736,23 +736,23 @@ public:
                        bool supportsParametricParameter)
         : ImageEffect(handle)
         , _supportsParametricParameter(supportsParametricParameter)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _maskClip(0)
-        , _processR(0)
-        , _processG(0)
-        , _processB(0)
-        , _processA(0)
-        , _rangesParam(0)
-        , _luminanceMath(0)
-        , _clampBlack(0)
-        , _clampWhite(0)
-        , _premult(0)
-        , _premultChannel(0)
-        , _mix(0)
-        , _maskApply(0)
-        , _maskInvert(0)
-        , _premultChanged(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _maskClip(NULL)
+        , _processR(NULL)
+        , _processG(NULL)
+        , _processB(NULL)
+        , _processA(NULL)
+        , _rangesParam(NULL)
+        , _luminanceMath(NULL)
+        , _clampBlack(NULL)
+        , _clampWhite(NULL)
+        , _premult(NULL)
+        , _premultChannel(NULL)
+        , _mix(NULL)
+        , _maskApply(NULL)
+        , _maskInvert(NULL)
+        , _premultChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||

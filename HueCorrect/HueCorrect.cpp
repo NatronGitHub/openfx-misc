@@ -163,8 +163,8 @@ public:
                             bool clampBlack,
                             bool clampWhite)
         : ImageProcessor(instance)
-        , _srcImg(0)
-        , _maskImg(0)
+        , _srcImg(NULL)
+        , _maskImg(NULL)
         , _doMasking(false)
         , _luminanceMath(eLuminanceMathRec709)
         , _luminanceMix(0.)
@@ -446,11 +446,11 @@ class HueCorrectPlugin
 public:
     HueCorrectPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _maskClip(0)
-        , _luminanceMath(0)
-        , _premultChanged(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _maskClip(NULL)
+        , _luminanceMath(NULL)
+        , _premultChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -727,11 +727,11 @@ public:
                        ImageEffect* effect,
                        const std::string& paramName)
         : ParamInteract(handle, effect)
-        , _hueParam(0)
-        , _xMin(0)
-        , _xMax(0)
-        , _yMin(0)
-        , _yMax(0)
+        , _hueParam(NULL)
+        , _xMin(0.)
+        , _xMax(0.)
+        , _yMin(0.)
+        , _yMax(0.)
     {
         _hueParam = effect->fetchParametricParam(paramName);
         setColourPicking(true);
@@ -1103,7 +1103,7 @@ protected:
 public:
     HueKeyerProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
+        , _srcImg(NULL)
     {
     }
 
@@ -1265,8 +1265,8 @@ class HueKeyerPlugin
 public:
     HueKeyerPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||

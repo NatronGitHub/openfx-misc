@@ -173,10 +173,10 @@ private:
 SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle,
                            bool numerousInputs)
     : ImageEffect(handle)
-    , _dstClip(0)
+    , _dstClip(NULL)
     , _srcClip(numerousInputs ? kClipSourceCountNumerous : kClipSourceCount)
-    , _which(0)
-    , _automatic(0)
+    , _which(NULL)
+    , _automatic(NULL)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA) );

@@ -150,9 +150,9 @@ public:
     /** @brief no arg ctor */
     PremultBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
+        , _srcImg(NULL)
         , _srcNComps(0)
-        , _premultChanImg(0)
+        , _premultChanImg(NULL)
         , _premultChanIndex(0)
         , _premultWith1IfNoImage(false)
         , _processR(true)
@@ -345,15 +345,15 @@ public:
     /** @brief ctor */
     PremultPlugin(OfxImageEffectHandle handle)
         : MultiPlaneEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _processR(0)
-        , _processG(0)
-        , _processB(0)
-        , _processA(0)
-        , _premult(0)
-        , _inputPlane(0)
-        //, _premultChanged(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _processR(NULL)
+        , _processG(NULL)
+        , _processB(NULL)
+        , _processA(NULL)
+        , _premult(NULL)
+        , _inputPlane(NULL)
+        //, _premultChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||

@@ -86,11 +86,11 @@ public:
     DissolvePlugin(OfxImageEffectHandle handle,
                    bool numerousInputs)
         : ImageEffect(handle)
-        , _dstClip(0)
+        , _dstClip(NULL)
         , _srcClip(numerousInputs ? kClipSourceCount : 2)
-        , _which(0)
-        , _maskApply(0)
-        , _maskInvert(0)
+        , _which(NULL)
+        , _maskApply(NULL)
+        , _maskInvert(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentXY || _dstClip->getPixelComponents() == ePixelComponentAlpha) );

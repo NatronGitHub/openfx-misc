@@ -65,9 +65,9 @@ public:
     /** @brief ctor */
     OneViewPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _view(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _view(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||

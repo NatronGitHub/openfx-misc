@@ -169,8 +169,8 @@ protected:
 public:
     ShufflerBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImgA(0)
-        , _srcImgB(0)
+        , _srcImgA(NULL)
+        , _srcImgB(NULL)
         , _outputComponents(ePixelComponentNone)
         , _outputComponentCount(0)
         , _outputBitDepth(eBitDepthNone)
@@ -438,12 +438,12 @@ public:
     ShufflePlugin(OfxImageEffectHandle handle,
                   ContextEnum context)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClipA(0)
-        , _srcClipB(0)
-        , _outputBitDepth(0)
+        , _dstClip(NULL)
+        , _srcClipA(NULL)
+        , _srcClipB(NULL)
+        , _outputBitDepth(NULL)
         , _channelParam()
-        , _outputComponents(0)
+        , _outputComponents(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (1 <= _dstClip->getPixelComponentCount() && _dstClip->getPixelComponentCount() <= 4) );

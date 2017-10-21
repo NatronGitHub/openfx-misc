@@ -329,7 +329,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     // intersect against the destination RoD
     bool intersect = OFX::Coords::rectIntersection(srcRoI, dstRoD, &srcRoI);
     if (!intersect) {
-        srcA.reset(0);
+        srcA.reset(NULL);
         srcAPixelData = NULL;
         srcABounds.x1 = srcABounds.y1 = srcABounds.x2 = srcABounds.y2 = 0;
         srcARoD.x1 = srcARoD.y1 = srcARoD.x2 = srcARoD.y2 = 0;
@@ -337,7 +337,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcAPixelComponentCount = 0;
         srcABitDepth = _srcAClip ? _srcAClip->getPixelDepth() : OFX::eBitDepthNone;
         srcARowBytes = 0;
-        srcB.reset(0);
+        srcB.reset(NULL);
         srcBPixelData = NULL;
         srcBBounds.x1 = srcBBounds.y1 = srcBBounds.x2 = srcBBounds.y2 = 0;
         srcBRoD.x1 = srcBRoD.y1 = srcBRoD.x2 = srcBRoD.y2 = 0;

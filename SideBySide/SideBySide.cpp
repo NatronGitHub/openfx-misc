@@ -78,8 +78,8 @@ public:
     /** @brief no arg ctor */
     SideBySideBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg1(0)
-        , _srcImg2(0)
+        , _srcImg1(NULL)
+        , _srcImg2(NULL)
         , _vertical(false)
         , _srcOffset()
     {
@@ -156,11 +156,11 @@ public:
     /** @brief ctor */
     SideBySidePlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , vertical_(0)
-        , view1_(0)
-        , view2_(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , vertical_(NULL)
+        , view1_(NULL)
+        , view2_(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||

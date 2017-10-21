@@ -67,7 +67,7 @@ protected:
 public:
     SpriteSheetProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
+        , _srcImg(NULL)
     {
         _cropRectPixel.x1 = _cropRectPixel.y1 = _cropRectPixel.x2 = _cropRectPixel.y2 = 0;
     }

@@ -93,13 +93,13 @@ public:
     /** @brief ctor */
     TestGroupsPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _optionalClip(0)
-        , _maskClip(0)
-        , _testButton(0)
-        , _labelString(0)
-        , _double2(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _optionalClip(NULL)
+        , _maskClip(NULL)
+        , _testButton(NULL)
+        , _labelString(NULL)
+        , _double2(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||

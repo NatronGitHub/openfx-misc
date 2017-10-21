@@ -97,16 +97,16 @@ public:
     /** @brief ctor */
     TrackerPMPlugin(OfxImageEffectHandle handle)
         : GenericTrackerPlugin(handle)
-        , _score(0)
-        , _center(0)
-        , _offset(0)
-        , _referenceFrame(0)
-        , _enableReferenceFrame(0)
-        , _correlationScore(0)
-        , _innerBtmLeft(0)
-        , _innerTopRight(0)
-        , _outerBtmLeft(0)
-        , _outerTopRight(0)
+        , _score(NULL)
+        , _center(NULL)
+        , _offset(NULL)
+        , _referenceFrame(NULL)
+        , _enableReferenceFrame(NULL)
+        , _correlationScore(NULL)
+        , _innerBtmLeft(NULL)
+        , _innerTopRight(NULL)
+        , _outerBtmLeft(NULL)
+        , _outerTopRight(NULL)
     {
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
@@ -187,7 +187,7 @@ protected:
 public:
     TrackerPMProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _otherImg(0)
+        , _otherImg(NULL)
         , _refRectPixel()
         , _refCenterI()
     {
@@ -227,10 +227,10 @@ protected:
 public:
     TrackerPMProcessor(ImageEffect &instance)
         : TrackerPMProcessorBase(instance)
-        , _patternImg(0)
-        , _patternData(0)
-        , _weightImg(0)
-        , _weightData(0)
+        , _patternImg(NULL)
+        , _patternData(NULL)
+        , _weightImg(NULL)
+        , _weightData(NULL)
         , _weightTotal(0.)
     {
     }

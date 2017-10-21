@@ -182,11 +182,11 @@ public:
     CornerPinPlugin(OfxImageEffectHandle handle,
                     bool masked)
         : Transform3x3Plugin(handle, masked, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur)
-        , _transformAmount(0)
-        , _extraMatrixRow1(0)
-        , _extraMatrixRow2(0)
-        , _extraMatrixRow3(0)
-        , _srcClipChanged(0)
+        , _transformAmount(NULL)
+        , _extraMatrixRow1(NULL)
+        , _extraMatrixRow2(NULL)
+        , _extraMatrixRow3(NULL)
+        , _srcClipChanged(NULL)
     {
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
@@ -542,9 +542,9 @@ public:
                                ImageEffect* effect)
         : OverlayInteract(handle)
         , _plugin( dynamic_cast<CornerPinPlugin*>(effect) )
-        , _invert(0)
-        , _overlayPoints(0)
-        , _interactive(0)
+        , _invert(NULL)
+        , _overlayPoints(NULL)
+        , _interactive(NULL)
         , _dragging(-1)
         , _hovering(-1)
         , _lastMousePos()

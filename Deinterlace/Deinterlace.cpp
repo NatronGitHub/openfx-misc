@@ -126,7 +126,7 @@ class DeinterlacePlugin
     : public ImageEffect
 {
 public:
-    DeinterlacePlugin(OfxImageEffectHandle handle) : ImageEffect(handle), _dstClip(0), _srcClip(0)
+    DeinterlacePlugin(OfxImageEffectHandle handle) : ImageEffect(handle), _dstClip(NULL), _srcClip(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);

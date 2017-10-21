@@ -210,8 +210,8 @@ struct TimeBuffer
     double par;
 
     TimeBuffer()
-        : readInstance(0)
-        , writeInstance(0)
+        : readInstance(NULL)
+        , writeInstance(NULL)
         , mutex()
         , time(-DBL_MAX)
         , dirty(true)
@@ -245,15 +245,15 @@ public:
     /** @brief ctor */
     TimeBufferReadPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _bufferName(0)
-        , _startFrame(0)
-        , _unorderedRender(0)
-        , _timeOut(0)
-        , _resetTrigger(0)
-        , _sublabel(0)
-        , _buffer(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _bufferName(NULL)
+        , _startFrame(NULL)
+        , _unorderedRender(NULL)
+        , _timeOut(NULL)
+        , _resetTrigger(NULL)
+        , _sublabel(NULL)
+        , _buffer(NULL)
         , _name()
     {
         setSequentialRender(true); // must also be set here, since it is missing from the plugin descriptor in Resolve
@@ -924,13 +924,13 @@ public:
     /** @brief ctor */
     TimeBufferWritePlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _syncClip(0)
-        , _bufferName(0)
-        , _resetTrigger(0)
-        , _sublabel(0)
-        , _buffer(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _syncClip(NULL)
+        , _bufferName(NULL)
+        , _resetTrigger(NULL)
+        , _sublabel(NULL)
+        , _buffer(NULL)
         , _name()
     {
         if ( !gTimeBufferMapMutex.get() ) {

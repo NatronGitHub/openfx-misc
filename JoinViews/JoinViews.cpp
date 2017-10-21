@@ -62,9 +62,9 @@ public:
     /** @brief ctor */
     JoinViewsPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcLeftClip(0)
-        , _srcRightClip(0)
+        , _dstClip(NULL)
+        , _srcLeftClip(NULL)
+        , _srcRightClip(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA) );

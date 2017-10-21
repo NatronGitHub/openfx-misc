@@ -102,10 +102,10 @@ protected:
 public:
     CropProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
+        , _srcImg(NULL)
         , _par(1.)
         , _blackOutside(false)
-        , _softness(0)
+        , _softness(0.)
     {
         _cropRect.x1 = _cropRect.y1 = _cropRect.x2 = _cropRect.y2 = 0.;
         _cropRectFull.x1 = _cropRectFull.y1 = _cropRectFull.x2 = _cropRectFull.y2 = 0.;
@@ -247,20 +247,20 @@ public:
     /** @brief ctor */
     CropPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _extent(0)
-        , _format(0)
-        , _formatSize(0)
-        , _formatPar(0)
-        , _btmLeft(0)
-        , _size(0)
-        , _interactive(0)
-        , _recenter(0)
-        , _softness(0)
-        , _reformat(0)
-        , _intersect(0)
-        , _blackOutside(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _extent(NULL)
+        , _format(NULL)
+        , _formatSize(NULL)
+        , _formatPar(NULL)
+        , _btmLeft(NULL)
+        , _size(NULL)
+        , _interactive(NULL)
+        , _recenter(NULL)
+        , _softness(NULL)
+        , _reformat(NULL)
+        , _intersect(NULL)
+        , _blackOutside(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -735,7 +735,7 @@ public:
     CropInteract(OfxInteractHandle handle,
                  ImageEffect* effect)
         : RectangleInteract(handle, effect)
-        , _reformat(0)
+        , _reformat(NULL)
         , _isReformated(false)
     {
         _reformat = effect->fetchBooleanParam(kParamReformat);

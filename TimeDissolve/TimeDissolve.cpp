@@ -84,12 +84,12 @@ public:
     TimeDissolvePlugin(OfxImageEffectHandle handle,
                        bool supportsParametricParameter)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClipA(0)
-        , _srcClipB(0)
-        , _dissolveIn(0)
-        , _dissolveOut(0)
-        , _dissolveCurve(0)
+        , _dstClip(NULL)
+        , _srcClipA(NULL)
+        , _srcClipB(NULL)
+        , _dissolveIn(NULL)
+        , _dissolveOut(NULL)
+        , _dissolveCurve(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentXY || _dstClip->getPixelComponents() == ePixelComponentAlpha) );

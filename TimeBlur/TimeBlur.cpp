@@ -83,8 +83,8 @@ public:
 
     TimeBlurProcessorBase(ImageEffect &instance)
         : PixelProcessor(instance)
-        , _srcImgs(0)
-        , _accumulatorData(0)
+        , _srcImgs()
+        , _accumulatorData(NULL)
         , _divisions(0)
     {
     }
@@ -178,12 +178,12 @@ public:
     /** @brief ctor */
     TimeBlurPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _divisions(0)
-        , _shutter(0)
-        , _shutteroffset(0)
-        , _shuttercustomoffset(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _divisions(NULL)
+        , _shutter(NULL)
+        , _shutteroffset(NULL)
+        , _shuttercustomoffset(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||

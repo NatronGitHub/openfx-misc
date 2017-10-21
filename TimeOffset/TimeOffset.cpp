@@ -95,9 +95,9 @@ private:
 
 TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , _srcClip(0)
-    , _time_offset(0)
-    , _reverse_input(0)
+    , _srcClip(NULL)
+    , _time_offset(NULL)
+    , _reverse_input(NULL)
 {
     _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert( (!_srcClip && getContext() == eContextGenerator) ||

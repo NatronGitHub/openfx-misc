@@ -95,8 +95,8 @@ protected:
 public:
     RotoProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
-        , _roto(0)
+        , _srcImg(NULL)
+        , _roto(NULL)
         , _processR(false)
         , _processG(false)
         , _processB(false)
@@ -290,9 +290,9 @@ public:
     RotoPlugin(OfxImageEffectHandle handle,
                bool /*masked*/)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _rotoClip(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _rotoClip(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||

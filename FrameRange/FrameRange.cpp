@@ -95,12 +95,12 @@ public:
     /** @brief ctor */
     FrameRangePlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _frameRange(0)
-        , _before(0)
-        , _after(0)
-        , _sublabel(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _frameRange(NULL)
+        , _before(NULL)
+        , _after(NULL)
+        , _sublabel(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);

@@ -60,9 +60,9 @@ public:
     /** @brief ctor */
     NoTimeBlurPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _rounding(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _rounding(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);

@@ -93,8 +93,8 @@ protected:
 public:
     DifferencerBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImgA(0)
-        , _srcImgB(0)
+        , _srcImgA(NULL)
+        , _srcImgB(NULL)
         , _offset(0.)
         , _gain(1.)
     {
@@ -172,9 +172,9 @@ public:
     /** @brief ctor */
     DifferencePlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClipA(0)
-        , _srcClipB(0)
+        , _dstClip(NULL)
+        , _srcClipA(NULL)
+        , _srcClipB(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );

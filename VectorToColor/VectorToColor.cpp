@@ -109,7 +109,7 @@ public:
 
     VectorToColorProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
+        , _srcImg(NULL)
         , _xChannel(eInputChannelR)
         , _yChannel(eInputChannelG)
         , _opposite(false)
@@ -247,8 +247,8 @@ public:
     /** @brief ctor */
     VectorToColorPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA) );

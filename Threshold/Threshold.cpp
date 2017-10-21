@@ -124,7 +124,7 @@ public:
 
     ThresholdProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
+        , _srcImg(NULL)
         , _processR(true)
         , _processG(true)
         , _processB(true)
@@ -308,14 +308,14 @@ public:
     /** @brief ctor */
     ThresholdPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _processR(0)
-        , _processG(0)
-        , _processB(0)
-        , _processA(0)
-        , _level(0)
-        , _softness(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _processR(NULL)
+        , _processG(NULL)
+        , _processB(NULL)
+        , _processA(NULL)
+        , _level(NULL)
+        , _softness(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() ||

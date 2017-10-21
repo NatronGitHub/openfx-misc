@@ -723,7 +723,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     bool intersect = OFX::Coords::rectIntersection(srcRoI, dstRoD, &srcRoI);
     printRectI("srcRoIIntersected", srcRoI);
     if (!intersect) {
-        src.reset(0);
+        src.reset(NULL);
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;

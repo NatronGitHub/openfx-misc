@@ -209,8 +209,10 @@ public:
     /** @brief ctor */
     RandPlugin(OfxImageEffectHandle handle)
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
-        , _noise(0)
-        , _seed(0)
+        , _noise(NULL)
+        , _density(NULL)
+        , _seed(NULL)
+        , _staticSeed(NULL)
     {
         _noise   = fetchDoubleParam(kParamNoiseLevel);
         _density = fetchDoubleParam(kParamNoiseDensity);

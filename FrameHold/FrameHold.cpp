@@ -70,11 +70,11 @@ public:
     /** @brief ctor */
     FrameHoldPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _firstFrame(0)
-        , _increment(0)
-        , _sublabel(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _firstFrame(NULL)
+        , _increment(NULL)
+        , _sublabel(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -91,7 +91,7 @@ public:
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_firstFrame && _increment && _sublabel);
 
-        updateSublabel(0);
+        updateSublabel(0.);
     }
 
 private:

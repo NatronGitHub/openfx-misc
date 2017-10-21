@@ -249,8 +249,8 @@ public:
                              bool clampBlack,
                              bool clampWhite)
         : ImageProcessor(instance)
-        , _srcImg(0)
-        , _maskImg(0)
+        , _srcImg(NULL)
+        , _maskImg(NULL)
         , _doMasking(false)
         , _clampBlack(clampBlack)
         , _clampWhite(clampWhite)
@@ -883,11 +883,11 @@ class ColorLookupPlugin
 public:
     ColorLookupPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _maskClip(0)
-        , _luminanceMath(0)
-        , _premultChanged(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _maskClip(NULL)
+        , _luminanceMath(NULL)
+        , _premultChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||

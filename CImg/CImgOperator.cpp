@@ -31,8 +31,8 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
                                                            bool defaultUnpremult,
                                                            bool defaultProcessAlphaOnRGBA)
     : CImgFilterPluginHelperBase(handle, usesMask, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA)
-    , _srcAClip(0)
-    , _srcBClip(0)
+    , _srcAClip(NULL)
+    , _srcBClip(NULL)
     , _srcAClipName(srcAClipName)
     , _srcBClipName(srcBClipName)
 {

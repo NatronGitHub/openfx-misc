@@ -99,7 +99,7 @@ public:
     /** @brief no arg ctor */
     TranslateBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
+        , _srcImg(NULL)
         , _translateX(0)
         , _translateY(0)
     {
@@ -168,12 +168,12 @@ public:
     /** @brief ctor */
     ReConvergePlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _dispClip(0)
-        , _convergepoint(0)
-        , _offset(0)
-        , _convergemode(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _dispClip(NULL)
+        , _convergepoint(NULL)
+        , _offset(NULL)
+        , _convergemode(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||

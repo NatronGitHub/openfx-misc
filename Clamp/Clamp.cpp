@@ -174,8 +174,8 @@ public:
     /** @brief no arg ctor */
     ClampBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
-        , _maskImg(0)
+        , _srcImg(NULL)
+        , _maskImg(NULL)
         , _processR(true)
         , _processG(true)
         , _processB(true)
@@ -441,9 +441,9 @@ public:
     /** @brief ctor */
     ClampPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _premultChanged(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _premultChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||

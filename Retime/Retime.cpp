@@ -124,14 +124,14 @@ public:
     RetimePlugin(OfxImageEffectHandle handle,
                  bool supportsParametricParameter)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _reverse_input(0)
-        , _sourceTime(0)
-        , _speed(0)
-        , _warp(0)
-        , _duration(0)
-        , _filter(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _reverse_input(NULL)
+        , _sourceTime(NULL)
+        , _speed(NULL)
+        , _warp(NULL)
+        , _duration(NULL)
+        , _filter(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);

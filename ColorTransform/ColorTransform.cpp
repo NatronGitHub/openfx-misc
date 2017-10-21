@@ -228,7 +228,7 @@ public:
 
     ColorTransformProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
+        , _srcImg(NULL)
         , _premult(false)
         , _premultChannel(3)
         , _mix(1.)
@@ -483,11 +483,11 @@ public:
     /** @brief ctor */
     ColorTransformPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _premult(0)
-        , _premultChannel(0)
-        , _premultChanged(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _premult(NULL)
+        , _premultChannel(NULL)
+        , _premultChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||

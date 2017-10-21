@@ -482,23 +482,23 @@ public:
     /** @brief ctor */
     GodRaysPlugin(OfxImageEffectHandle handle)
         : Transform3x3Plugin(handle, true, eTransform3x3ParamsTypeDirBlur)
-        , _translate(0)
-        , _rotate(0)
-        , _scale(0)
-        , _scaleUniform(0)
-        , _skewX(0)
-        , _skewY(0)
-        , _skewOrder(0)
-        , _center(0)
-        , _interactive(0)
-        , _fromColor(0)
-        , _toColor(0)
-        , _gamma(0)
+        , _translate(NULL)
+        , _rotate(NULL)
+        , _scale(NULL)
+        , _scaleUniform(NULL)
+        , _skewX(NULL)
+        , _skewY(NULL)
+        , _skewOrder(NULL)
+        , _center(NULL)
+        , _interactive(NULL)
+        , _fromColor(NULL)
+        , _toColor(NULL)
+        , _gamma(NULL)
 #ifdef USE_STEPS
-        , _steps(0)
+        , _steps(NULL)
 #endif
-        , _max(0)
-        , _premultChanged(0)
+        , _max(NULL)
+        , _premultChanged(NULL)
     {
         // NON-GENERIC
         if ( paramExists(kParamTransformTranslateOld) ) {

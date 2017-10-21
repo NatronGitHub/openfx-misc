@@ -114,13 +114,13 @@ public:
     AppendClipPlugin(OfxImageEffectHandle handle,
                      bool numerousInputs)
         : ImageEffect(handle)
-        , _dstClip(0)
+        , _dstClip(NULL)
         , _srcClip(numerousInputs ? kClipSourceCount : 2)
-        , _fadeIn(0)
-        , _fadeOut(0)
-        , _crossDissolve(0)
-        , _firstFrame(0)
-        , _lastFrame(0)
+        , _fadeIn(NULL)
+        , _fadeOut(NULL)
+        , _crossDissolve(NULL)
+        , _firstFrame(NULL)
+        , _lastFrame(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );

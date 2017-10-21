@@ -113,8 +113,8 @@ public:
     /** @brief no arg ctor */
     TestRenderBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(0)
-        , _maskImg(0)
+        , _srcImg(NULL)
+        , _maskImg(NULL)
         , _doMasking(false)
         , _mix(1.)
         , _maskInvert(false)
@@ -197,9 +197,9 @@ public:
     /** @brief ctor */
     TestRenderPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _maskClip(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _maskClip(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||

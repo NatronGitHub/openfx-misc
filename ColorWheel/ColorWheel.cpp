@@ -110,12 +110,12 @@ public:
     /** @brief no arg ctor */
     ColorWheelProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _centerSaturation(0)
-        , _edgeSaturation(0)
-        , _centerValue(0)
-        , _edgeValue(0)
-        , _gamma(0)
-        , _rotate(0)
+        , _centerSaturation(0.)
+        , _edgeSaturation(0.)
+        , _centerValue(0.)
+        , _edgeValue(0.)
+        , _gamma(0.)
+        , _rotate(0.)
         , _center()
         , _radius(1.)
     {
@@ -338,12 +338,12 @@ public:
     /** @brief ctor */
     ColorWheelPlugin(OfxImageEffectHandle handle)
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
-        , _centerSaturation(0)
-        , _edgeSaturation(0)
-        , _centerValue(0)
-        , _edgeValue(0)
-        , _gamma(0)
-        , _rotate(0)
+        , _centerSaturation(NULL)
+        , _edgeSaturation(NULL)
+        , _centerValue(NULL)
+        , _edgeValue(NULL)
+        , _gamma(NULL)
+        , _rotate(NULL)
     {
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA ||

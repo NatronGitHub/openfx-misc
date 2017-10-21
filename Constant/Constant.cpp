@@ -186,8 +186,8 @@ public:
     ConstantPlugin(OfxImageEffectHandle handle,
                    bool solid)
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
-        , _color(0)
-        , _colorRGB(0)
+        , _color(NULL)
+        , _colorRGB(NULL)
     {
         if (solid) {
             _colorRGB   = fetchRGBParam(kParamColor);

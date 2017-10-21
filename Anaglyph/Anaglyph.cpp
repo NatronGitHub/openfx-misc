@@ -78,11 +78,11 @@ public:
     /** @brief no arg ctor */
     AnaglyphBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcLeftImg(0)
-        , _srcRightImg(0)
+        , _srcLeftImg(NULL)
+        , _srcRightImg(NULL)
         , _amtcolour(0.)
         , _swap(false)
-        , _offset(0)
+        , _offset(NULL)
     {
     }
 
@@ -188,11 +188,11 @@ public:
     /** @brief ctor */
     AnaglyphPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _amtcolour(0)
-        , _swap(0)
-        , _offset(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _amtcolour(NULL)
+        , _swap(NULL)
+        , _offset(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );

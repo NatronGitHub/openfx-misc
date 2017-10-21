@@ -64,9 +64,9 @@ public:
     /** @brief no arg ctor */
     MixViewsBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcLeftImg(0)
-        , _srcRightImg(0)
-        , _mix(0)
+        , _srcLeftImg(NULL)
+        , _srcRightImg(NULL)
+        , _mix(0.f)
     {
     }
 
@@ -128,9 +128,9 @@ public:
     /** @brief ctor */
     MixViewsPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _mix(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _mix(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||

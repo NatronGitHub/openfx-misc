@@ -157,8 +157,8 @@ protected:
 public:
     ShufflerBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImgA(0)
-        , _srcImgB(0)
+        , _srcImgA(NULL)
+        , _srcImgB(NULL)
         , _outputLayer(ePixelComponentNone)
         , _outputComponentCount(0)
         , _outputBitDepth(eBitDepthNone)
@@ -423,7 +423,7 @@ struct InputPlaneChannel
     int channelIndex;
     bool fillZero;
 
-    InputPlaneChannel() : img(0), channelIndex(-1), fillZero(true) {}
+    InputPlaneChannel() : img(NULL), channelIndex(-1), fillZero(true) {}
 };
 
 class MultiPlaneShufflerBase
@@ -526,13 +526,13 @@ public:
     ShufflePlugin(OfxImageEffectHandle handle,
                   ContextEnum context)
         : MultiPlane::MultiPlaneEffect(handle)
-        , _dstClip(0)
-        , _srcClipA(0)
-        , _srcClipB(0)
-        , _outputLayer(0)
-        , _outputBitDepth(0)
+        , _dstClip(NULL)
+        , _srcClipA(NULL)
+        , _srcClipB(NULL)
+        , _outputLayer(NULL)
+        , _outputBitDepth(NULL)
         , _channelParam()
-        , _outputComponents(0)
+        , _outputComponents(NULL)
     {
         _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -689,7 +689,7 @@ struct IdentityChoiceData
     int index;
 
     IdentityChoiceData()
-    : clip(0)
+    : clip(NULL)
     , plane()
     , index(-1)
     {

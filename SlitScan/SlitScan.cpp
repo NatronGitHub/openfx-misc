@@ -235,15 +235,15 @@ public:
     /** @brief ctor */
     SlitScanPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClip(0)
-        , _retimeMapClip(0)
-        , _retimeFunction(0)
-        , _retimeOffset(0)
-        , _retimeGain(0)
-        , _retimeAbsolute(0)
-        , _frameRange(0)
-        , _filter(0)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _retimeMapClip(NULL)
+        , _retimeFunction(NULL)
+        , _retimeOffset(NULL)
+        , _retimeGain(NULL)
+        , _retimeAbsolute(NULL)
+        , _frameRange(NULL)
+        , _filter(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -516,9 +516,9 @@ public:
     /** @brief no arg ctor */
     SlitScanProcessorBase(ImageEffect &instance)
         : PixelProcessor(instance)
-        , _sourceImages(0)
-        , _retimeMap(0)
-        , _time(0)
+        , _sourceImages(NULL)
+        , _retimeMap(NULL)
+        , _time(0.)
         , _filter(eFilterNearest)
         , _retimeFunction(eRetimeFunctionHorizontalSlit)
         , _retimeGain(1.)

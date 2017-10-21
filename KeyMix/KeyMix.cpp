@@ -129,9 +129,9 @@ public:
 
     KeyMixProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImgA(0)
-        , _srcImgB(0)
-        , _maskImg(0)
+        , _srcImgA(NULL)
+        , _srcImgB(NULL)
+        , _maskImg(NULL)
         , _mix(1.)
         , _maskInvert(false)
         , _aChannels()
@@ -243,10 +243,10 @@ public:
     /** @brief ctor */
     KeyMixPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(0)
-        , _srcClipA(0)
-        , _srcClipB(0)
-        , _maskClip(0)
+        , _dstClip(NULL)
+        , _srcClipA(NULL)
+        , _srcClipB(NULL)
+        , _maskClip(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
