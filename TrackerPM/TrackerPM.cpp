@@ -227,9 +227,9 @@ protected:
 public:
     TrackerPMProcessor(ImageEffect &instance)
         : TrackerPMProcessorBase(instance)
-        , _patternImg(NULL)
+        , _patternImg()
         , _patternData(NULL)
-        , _weightImg(NULL)
+        , _weightImg()
         , _weightData(NULL)
         , _weightTotal(0.)
     {
