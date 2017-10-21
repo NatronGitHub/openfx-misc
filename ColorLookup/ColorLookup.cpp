@@ -427,7 +427,7 @@ private:
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float tmpPix[nComponents];
+        float tmpPix[4];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -1596,24 +1596,30 @@ public:
             if (histogram.hmax > 0 && histogram.rangemin < histogram.rangemax && !histogram.histogram.empty()) {
                 double binSize = (histogram.rangemax - histogram.rangemin) / HISTOGRAM_BINS;
                 glEnable(GL_BLEND);
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
                 if (glBlendEquationSeparate) {
                     glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
                 }
                 if (glBlendFuncSeparate) {
                     glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
                 }
+#else
+                glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+                glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+#endif
                 for (int c = 0; c < 3; ++c) {
                     glBegin(GL_QUADS);
                     // use three colors with equal luminance (0.33), so that the blue is visible and their sum is white
+                    // we divide by two to get 50% white.
                     switch (c) {
                         case 0:
-                            glColor3f(0.711519527404004, 0.164533420851110, 0.164533420851110);
+                            glColor3f(0.711519527404004/2, 0.164533420851110/2, 0.164533420851110/2);
                             break;
                         case 1:
-                            glColor3f(0., 0.546986106552894, 0.);
+                            glColor3f(0./2, 0.546986106552894/2, 0./2);
                             break;
                         case 2:
-                            glColor3f(0.288480472595996, 0.288480472595996, 0.835466579148890);
+                            glColor3f(0.288480472595996/2, 0.288480472595996/2, 0.835466579148890/2);
                             break;
                     }
                     for (unsigned int i = 0; i < HISTOGRAM_BINS; ++i) {
