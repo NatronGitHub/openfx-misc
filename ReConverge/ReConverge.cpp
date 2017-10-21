@@ -233,7 +233,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
                                   const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -253,7 +253,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
     }
 
     // fetch main input image
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
 
     // make sure bit depths are sane

@@ -246,7 +246,7 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor,
     const double time = args.time;
 
     // get a dst image
-    std::auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);

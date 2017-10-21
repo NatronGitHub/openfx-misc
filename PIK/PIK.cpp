@@ -1682,7 +1682,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
 {
     const double time = args.time;
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -1815,20 +1815,20 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     getc = getc && doSomething && (screenType != eScreenTypePick);
     getbg = getbg && ( ubl || ubc || (outputMode == eOutputModeComposite) );
 
-    std::auto_ptr<const Image> pfg( ( getpfg && !noKey && ( _pfgClip && _pfgClip->isConnected() ) ) ?
+    auto_ptr<const Image> pfg( ( getpfg && !noKey && ( _pfgClip && _pfgClip->isConnected() ) ) ?
                                     _pfgClip->fetchImage(time) : 0 );
     if ( getpfg && !pfg.get() ) {
         getfg = true;
     }
-    std::auto_ptr<const Image> fg( ( getfg && ( _fgClip && _fgClip->isConnected() ) ) ?
+    auto_ptr<const Image> fg( ( getfg && ( _fgClip && _fgClip->isConnected() ) ) ?
                                    _fgClip->fetchImage(time) : 0 );
-    std::auto_ptr<const Image> c( ( getc && ( _cClip && _cClip->isConnected() ) ) ?
+    auto_ptr<const Image> c( ( getc && ( _cClip && _cClip->isConnected() ) ) ?
                                   _cClip->fetchImage(time) : 0 );
-    std::auto_ptr<const Image> bg( ( getbg && ( _bgClip && _bgClip->isConnected() ) ) ?
+    auto_ptr<const Image> bg( ( getbg && ( _bgClip && _bgClip->isConnected() ) ) ?
                                    _bgClip->fetchImage(time) : 0 );
-    std::auto_ptr<const Image> inMask( ( getinm && ( _inMaskClip && _inMaskClip->isConnected() ) ) ?
+    auto_ptr<const Image> inMask( ( getinm && ( _inMaskClip && _inMaskClip->isConnected() ) ) ?
                                        _inMaskClip->fetchImage(time) : 0 );
-    std::auto_ptr<const Image> outMask( ( getoutm && ( _outMaskClip && _outMaskClip->isConnected() ) ) ?
+    auto_ptr<const Image> outMask( ( getoutm && ( _outMaskClip && _outMaskClip->isConnected() ) ) ?
                                         _outMaskClip->fetchImage(time) : 0 );
     if ( fg.get() ) {
         if ( (fg->getRenderScale().x != args.renderScale.x) ||

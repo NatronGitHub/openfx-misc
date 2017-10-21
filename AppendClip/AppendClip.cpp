@@ -550,7 +550,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
                                   const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -596,7 +596,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
     if ( (clip1 == -1) && (alpha0 == 1.) ) {
         // should never happen, since it's identity, but it still may happen (Resolve)
         //assert(0);
-        std::auto_ptr<const Image> src( ( _srcClip[clip0] && _srcClip[clip0]->isConnected() ) ?
+        auto_ptr<const Image> src( ( _srcClip[clip0] && _srcClip[clip0]->isConnected() ) ?
                                         _srcClip[clip0]->fetchImage(t0) : 0 );
         if ( src.get() ) {
             if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -617,9 +617,9 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
     }
 
     // fetch the two source images
-    std::auto_ptr<const Image> fromImg( ( clip0 != -1 && _srcClip[clip0] && _srcClip[clip0]->isConnected() ) ?
+    auto_ptr<const Image> fromImg( ( clip0 != -1 && _srcClip[clip0] && _srcClip[clip0]->isConnected() ) ?
                                         _srcClip[clip0]->fetchImage(t0) : 0 );
-    std::auto_ptr<const Image> toImg( ( clip1 != -1 && _srcClip[clip1] && _srcClip[clip1]->isConnected() ) ?
+    auto_ptr<const Image> toImg( ( clip1 != -1 && _srcClip[clip1] && _srcClip[clip1]->isConnected() ) ?
                                       _srcClip[clip1]->fetchImage(t1) : 0 );
 
     // make sure bit depths are sane

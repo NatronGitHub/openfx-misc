@@ -250,7 +250,7 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     const double time = args.time;
 
     // get a dst image
-    std::auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -271,7 +271,7 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
 
     if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
         // should have been caught by isIdentity...
-        std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+        auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                         _srcClip->fetchImage(sourceTime) : 0 );
         if ( src.get() ) {
             if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -297,9 +297,9 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     framesNeeded(sourceTime, args.fieldToRender, &fromTime, &toTime, &blend);
 
     // fetch the two source images
-    std::auto_ptr<Image> fromImg( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<Image> fromImg( ( _srcClip && _srcClip->isConnected() ) ?
                                   _srcClip->fetchImage(fromTime) : 0 );
-    std::auto_ptr<Image> toImg( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<Image> toImg( ( _srcClip && _srcClip->isConnected() ) ?
                                 _srcClip->fetchImage(toTime) : 0 );
 
     // make sure bit depths are sane

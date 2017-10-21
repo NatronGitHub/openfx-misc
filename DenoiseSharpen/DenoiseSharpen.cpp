@@ -913,9 +913,9 @@ private:
     void renderForBitDepth(const RenderArguments &args);
 
     void setup(const RenderArguments &args,
-               std::auto_ptr<const Image>& src,
-               std::auto_ptr<Image>& dst,
-               std::auto_ptr<const Image>& mask,
+               auto_ptr<const Image>& src,
+               auto_ptr<Image>& dst,
+               auto_ptr<const Image>& mask,
                Params& p);
 
     // override the roi call
@@ -2285,9 +2285,9 @@ borderSize(int adaptiveRadius,
 
 void
 DenoiseSharpenPlugin::setup(const RenderArguments &args,
-                            std::auto_ptr<const Image>& src,
-                            std::auto_ptr<Image>& dst,
-                            std::auto_ptr<const Image>& mask,
+                            auto_ptr<const Image>& src,
+                            auto_ptr<Image>& dst,
+                            auto_ptr<const Image>& mask,
                             Params& p)
 {
     const double time = args.time;
@@ -2445,9 +2445,9 @@ template <class PIX, int nComponents, int maxValue>
 void
 DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
 {
-    std::auto_ptr<const Image> src;
-    std::auto_ptr<Image> dst;
-    std::auto_ptr<const Image> mask;
+    auto_ptr<const Image> src;
+    auto_ptr<Image> dst;
+    auto_ptr<const Image> mask;
     Params p;
 
     setup(args, src, dst, mask, p);
@@ -2463,7 +2463,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
     unsigned int iwidth = p.srcWindow.x2 - p.srcWindow.x1;
     unsigned int iheight = p.srcWindow.y2 - p.srcWindow.y1;
     unsigned int isize = iwidth * iheight;
-    std::auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * ( nComponents + 2 + ( (p.adaptiveRadius > 0) ? 1 : 0 ) ), this) );
+    auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * ( nComponents + 2 + ( (p.adaptiveRadius > 0) ? 1 : 0 ) ), this) );
     float* tmpPixelData = tmpData.get() ? (float*)tmpData->lock() : NULL;
     float* fimgcolor[3] = { NULL, NULL, NULL };
     float* fimgalpha = NULL;
@@ -2968,8 +2968,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
     const double time = args.time;
 
-    std::auto_ptr<const Image> src;
-    std::auto_ptr<const Image> mask;
+    auto_ptr<const Image> src;
+    auto_ptr<const Image> mask;
 
     if ( _analysisSrcClip && _analysisSrcClip->isConnected() ) {
         src.reset( _analysisSrcClip->fetchImage(time) );
@@ -3028,7 +3028,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     unsigned int iwidth = srcWindow.x2 - srcWindow.x1;
     unsigned int iheight = srcWindow.y2 - srcWindow.y1;
     unsigned int isize = iwidth * iheight;
-    std::auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * (nComponents + 3), this) );
+    auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * (nComponents + 3), this) );
     float* tmpPixelData = (float*)tmpData->lock();
     float* fimgcolor[3] = { NULL, NULL, NULL };
     float* fimgalpha = NULL;
@@ -3040,7 +3040,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     fimgtmp[0] = tmpPixelData + nComponents * isize;
     fimgtmp[1] = tmpPixelData + (nComponents + 1) * isize;
     fimgtmp[2] = tmpPixelData + (nComponents + 2) * isize;
-    std::auto_ptr<ImageMemory> maskData( doMasking ? new ImageMemory(sizeof(bool) * isize, this) : NULL );
+    auto_ptr<ImageMemory> maskData( doMasking ? new ImageMemory(sizeof(bool) * isize, this) : NULL );
     bool* bimgmask = doMasking ? (bool*)maskData->lock() : NULL;
 
 

@@ -2170,7 +2170,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
 {
     const double time = args.time;
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -2191,7 +2191,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
 
     OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
 
-    std::auto_ptr<const Image> src( ( (outputMode == eOutputModeImage) && _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( (outputMode == eOutputModeImage) && _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -2347,7 +2347,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     // do we do masking
     if (doMasking) {
         if ( mask.get() ) {
@@ -2446,7 +2446,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     }
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
-    std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
+    auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
                         format,
@@ -2829,7 +2829,7 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         getLensDistortionFormat(time, args.renderScale, &format, &par);
 
         DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
-        std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
+        auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
 
         OfxRectD roiPixel = { std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
         assert( OFX::Coords::rectIsEmpty(roiPixel) );
@@ -2949,7 +2949,7 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         getLensDistortionFormat(time, args.renderScale, &format, &par);
 
         DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
-        std::auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
+        auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
 
         OfxRectD rodPixel = { std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
         assert( OFX::Coords::rectIsEmpty(rodPixel) );

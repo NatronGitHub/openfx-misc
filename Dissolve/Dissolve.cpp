@@ -190,7 +190,7 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
                                 const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -215,7 +215,7 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
     int next = std::ceil(which);
 
     if (prev == next) {
-        std::auto_ptr<const Image> src( ( _srcClip[prev] && _srcClip[prev]->isConnected() ) ?
+        auto_ptr<const Image> src( ( _srcClip[prev] && _srcClip[prev]->isConnected() ) ?
                                         _srcClip[prev]->fetchImage(args.time) : 0 );
         if ( src.get() ) {
             if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -236,9 +236,9 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
     }
 
     // fetch the two source images
-    std::auto_ptr<const Image> fromImg( ( _srcClip[prev] && _srcClip[prev]->isConnected() ) ?
+    auto_ptr<const Image> fromImg( ( _srcClip[prev] && _srcClip[prev]->isConnected() ) ?
                                         _srcClip[prev]->fetchImage(args.time) : 0 );
-    std::auto_ptr<const Image> toImg( ( _srcClip[next] && _srcClip[next]->isConnected() ) ?
+    auto_ptr<const Image> toImg( ( _srcClip[next] && _srcClip[next]->isConnected() ) ?
                                       _srcClip[next]->fetchImage(args.time) : 0 );
 
     // make sure bit depths are sane
@@ -262,7 +262,7 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
     }
 
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ||

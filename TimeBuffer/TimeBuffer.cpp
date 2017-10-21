@@ -232,8 +232,8 @@ struct TimeBuffer
 // so that the same name can exist in different groups and/or different projects
 typedef std::string TimeBufferKey;
 typedef std::map<TimeBufferKey, TimeBuffer*> TimeBufferMap;
-static std::auto_ptr<TimeBufferMap> gTimeBufferMap;
-static std::auto_ptr<Mutex> gTimeBufferMapMutex;
+static auto_ptr<TimeBufferMap> gTimeBufferMap;
+static auto_ptr<Mutex> gTimeBufferMapMutex;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -478,7 +478,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -1154,7 +1154,7 @@ TimeBufferWritePlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     // get a dst image
-    std::auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -1174,7 +1174,7 @@ TimeBufferWritePlugin::render(const RenderArguments &args)
     }
 
     const double time = args.time;
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||

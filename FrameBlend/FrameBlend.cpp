@@ -557,7 +557,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
-// Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
+// Since we cannot hold a auto_ptr in the vector we must hold a raw pointer.
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
 {
@@ -583,7 +583,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
 {
     const double time = args.time;
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -605,7 +605,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     // fetch the mask
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     // do we do masking
     if (doMasking) {
         if ( mask.get() ) {
@@ -636,7 +636,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     _processA->getValueAtTime(time, processA);
 
     // If masking or mixing, fetch the original image
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() && (doMasking || mix != 1.) ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() && (doMasking || mix != 1.) ) ?
                                     _srcClip->fetchImage(args.time) :
                                     0 );
     if ( src.get() ) {
@@ -654,9 +654,9 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     }
 
     // accumulator image
-    std::auto_ptr<ImageMemory> accumulator;
+    auto_ptr<ImageMemory> accumulator;
     float *accumulatorData = NULL;
-    std::auto_ptr<ImageMemory> count;
+    auto_ptr<ImageMemory> count;
     unsigned short *countData = NULL;
 
     // compute range

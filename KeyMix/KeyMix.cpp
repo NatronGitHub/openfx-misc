@@ -347,7 +347,7 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
 {
     const double time = args.time;
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -365,9 +365,9 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
+    auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
                                      _srcClipA->fetchImage(time) : 0 );
-    std::auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
+    auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(time) : 0 );
 
     if ( srcA.get() ) {
@@ -400,7 +400,7 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
 
     // do we do masking
     if (doMasking) {
@@ -453,7 +453,7 @@ void
 KeyMixPlugin::renderForBitDepth(const RenderArguments &args)
 {
     //const double time = args.time;
-    std::auto_ptr<KeyMixProcessorBase> fred;
+    auto_ptr<KeyMixProcessorBase> fred;
 
     fred.reset( new KeyMixProcessor<PIX, nComponents, maxValue>(*this) );
 

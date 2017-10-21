@@ -445,7 +445,7 @@ DeinterlacePlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -456,11 +456,11 @@ DeinterlacePlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
 
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
-    std::auto_ptr<const Image> srcp( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> srcp( ( _srcClip && _srcClip->isConnected() ) ?
                                      _srcClip->fetchImage(args.time - 1) : 0 );
-    std::auto_ptr<const Image> srcn( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> srcn( ( _srcClip && _srcClip->isConnected() ) ?
                                      _srcClip->fetchImage(args.time + 1) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||

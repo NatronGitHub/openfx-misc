@@ -167,7 +167,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
                                const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -189,7 +189,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
     int view;
     _view->getValueAtTime(args.time, view);
     // fetch main input image
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImagePlane(args.time, view, kFnOfxImagePlaneColour) : 0 );
 
     // make sure bit depths are sane

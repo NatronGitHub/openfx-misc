@@ -840,7 +840,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
 {
     const double time = args.time;
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -858,7 +858,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     size_t invtransformsizealloc = 0;
     size_t invtransformsize = 0;
@@ -951,7 +951,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if (doMasking) {
         bool maskInvert = false;
         if (_maskInvert) {

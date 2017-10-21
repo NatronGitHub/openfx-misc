@@ -837,9 +837,9 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     InputChannelEnum r, g, b, a;
     // compute the components mapping tables
     std::vector<InputChannelEnum> channelMap;
-    std::auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
+    auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
                                      _srcClipA->fetchImage(args.time) : 0 );
-    std::auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
+    auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(args.time) : 0 );
     BitDepthEnum srcBitDepth = eBitDepthNone;
     PixelComponentEnum srcComponents = ePixelComponentNone;
@@ -1191,7 +1191,7 @@ ShufflePlugin::render(const RenderArguments &args)
         }
     }
 
-    std::auto_ptr<Image> dst;
+    auto_ptr<Image> dst;
     if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
         dst.reset( _dstClip->fetchImage(args.time) );
 

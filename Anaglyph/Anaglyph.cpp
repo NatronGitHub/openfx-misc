@@ -237,7 +237,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
                                 const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -257,7 +257,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
     }
 
     // fetch main input image
-    std::auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
                                         _srcClip->fetchImagePlane(args.time, 0, kFnOfxImagePlaneColour) : 0 );
     if ( srcLeft.get() ) {
         if ( (srcLeft->getRenderScale().x != args.renderScale.x) ||
@@ -267,7 +267,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchImagePlane(args.time, 1, kFnOfxImagePlaneColour) : 0 );
     if ( srcRight.get() ) {
         if ( (srcRight->getRenderScale().x != args.renderScale.x) ||

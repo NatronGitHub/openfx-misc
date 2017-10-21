@@ -438,7 +438,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     const double time = args.time;
     const OfxPointD& renderScale = args.renderScale;
     const OfxRectI& renderWindow = args.renderWindow;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    OFX::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -453,7 +453,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     const int dstPixelComponentCount = dst->getPixelComponentCount();
     assert(dstBitDepth == OFX::eBitDepthFloat); // only float is supported for now (others are untested)
 
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    OFX::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -605,7 +605,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     }
 
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    OFX::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     OfxRectI processWindow = renderWindow; //!< the window where pixels have to be computed (may be smaller than renderWindow if mask is zero on the borders)
 
     if (mix == 0.) {
@@ -671,7 +671,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     copyWindowE.y1 = processWindow.y1;
     copyWindowE.y2 = processWindow.y2;
     {
-        std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (dstPixelComponentCount == 4) {
             fred.reset( new OFX::PixelCopier<float, 4>(*this) );
         } else if (dstPixelComponentCount == 3) {
@@ -786,13 +786,13 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
     const size_t tmpRowBytes = (size_t)tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
     size_t tmpSize = tmpRowBytes * tmpHeight;
-    std::auto_ptr<OFX::ImageMemory> tmpData;
+    OFX::auto_ptr<OFX::ImageMemory> tmpData;
     float *tmpPixelData = NULL;
     if (tmpSize > 0) {
         tmpData.reset( new OFX::ImageMemory(tmpSize, this) );
         tmpPixelData = (float*)tmpData->lock();
 
-        std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if ( !src.get() ) {
             // no src, fill with black & transparent
             fred.reset( new OFX::BlackFiller<float>(*this, dstPixelComponentCount) );
@@ -893,7 +893,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         }
     }
     if (cimgSize) { // may be zero if no channel is processed
-        std::auto_ptr<OFX::ImageMemory> cimgData( new OFX::ImageMemory(cimgSize, this) );
+        OFX::auto_ptr<OFX::ImageMemory> cimgData( new OFX::ImageMemory(cimgSize, this) );
         cimgpix_t *cimgPixelData = (cimgpix_t*)cimgData->lock();
         cimg_library::CImg<cimgpix_t> maskcimg;
         cimg_library::CImg<cimgpix_t> cimg(cimgPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
@@ -992,7 +992,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // 5- copy+premult+max+mix tmp to dst (only processWindow)
 
     {
-        std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (dstPixelComponents == OFX::ePixelComponentRGBA) {
             fred.reset( new OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1>(*this) );
         } else if (dstPixelComponentCount == 4) {

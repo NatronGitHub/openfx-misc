@@ -176,7 +176,7 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
                                  const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -196,7 +196,7 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
     }
 
     // fetch main input image
-    std::auto_ptr<const Image> src( args.renderView == 0 ?
+    auto_ptr<const Image> src( args.renderView == 0 ?
                                     ( ( _srcLeftClip && _srcLeftClip->isConnected() ) ?
                                       _srcLeftClip->fetchStereoscopicImage(args.time, 0) : 0 ) :
                                     ( ( _srcRightClip && _srcRightClip->isConnected() ) ?

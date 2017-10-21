@@ -648,7 +648,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
     const double time = args.time;
 
     // get a dst image
-    std::auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -687,7 +687,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
         }
         if (identityTime == (int)identityTime) {
             // should have been caught by isIdentity...
-            std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+            auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                             _srcClip->fetchImage(identityTime) : 0 );
             if ( src.get() ) {
                 if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -721,7 +721,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
     SourceImages sourceImages(*this, _srcClip);
     std::set<double> sourceImagesTimes;
 
-    std::auto_ptr<const Image> retimeMap;
+    auto_ptr<const Image> retimeMap;
 
     switch (retimeFunction) {
     case eRetimeFunctionHorizontalSlit: {

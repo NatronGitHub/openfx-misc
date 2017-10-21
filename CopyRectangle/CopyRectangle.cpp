@@ -361,7 +361,7 @@ void
 CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
                                      const RenderArguments &args)
 {
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -379,7 +379,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
+    auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
                                      _srcClipA->fetchImage(args.time) : 0 );
     if ( srcA.get() ) {
         if ( (srcA->getRenderScale().x != args.renderScale.x) ||
@@ -394,7 +394,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
+    auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(args.time) : 0 );
     if ( srcB.get() ) {
         if ( (srcB->getRenderScale().x != args.renderScale.x) ||
@@ -410,7 +410,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
         }
     }
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ||

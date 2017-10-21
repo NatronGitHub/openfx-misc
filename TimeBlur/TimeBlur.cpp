@@ -240,7 +240,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
-// Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
+// Since we cannot hold a auto_ptr in the vector we must hold a raw pointer.
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
 {
@@ -266,7 +266,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
 {
     const double time = args.time;
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -286,7 +286,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
     }
 
     // accumulator image
-    std::auto_ptr<ImageMemory> accumulator;
+    auto_ptr<ImageMemory> accumulator;
     float *accumulatorData = NULL;
 
     // compute range

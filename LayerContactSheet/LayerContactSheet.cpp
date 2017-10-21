@@ -230,7 +230,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     const double time = args.time;
 
     // do the rendering
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -334,7 +334,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
 
             //render:
             //- get the the src Image
-            std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+            auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                            _srcClip->fetchImagePlane(time, planes[layer].c_str()) : 0 );
             if ( !src.get() || !( _srcClip && _srcClip->isConnected() ) ) {
                 // nothing to do

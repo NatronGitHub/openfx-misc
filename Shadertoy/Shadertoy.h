@@ -464,7 +464,7 @@ private:
     std::vector<OFX::Double2DParam *> _paramMaxVec2;
     OFX::BooleanParam *_enableGPU;
     OFX::ChoiceParam *_cpuDriver;
-    std::auto_ptr<Mutex> _imageShaderMutex;
+    OFX::auto_ptr<Mutex> _imageShaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
     bool _imageShaderUpdateParams; // ask to extract parameters from the shader on next compilation
@@ -497,7 +497,7 @@ private:
 
     OpenGLContextData _openGLContextData; // (OpenGL-only) - the single openGL context, in case the host does not support kNatronOfxImageEffectPropOpenGLContextData
     bool _openGLContextAttached; // (OpenGL-only) - set to true when the contextAttached function is executed - used for checking non-conformant hosts such as Sony Catalyst
-    std::auto_ptr<Mutex> _rendererInfoMutex;
+    OFX::auto_ptr<Mutex> _rendererInfoMutex;
     std::string _rendererInfo;
 
     std::vector<Preset> _presets;
@@ -508,7 +508,7 @@ private:
     // A new context is created if the list is empty.
     // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
     std::list<OSMesaPrivate *> _osmesa;
-    std::auto_ptr<Mutex> _osmesaMutex;
+    OFX::auto_ptr<Mutex> _osmesaMutex;
 #endif
 };
 

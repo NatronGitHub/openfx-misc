@@ -283,7 +283,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
     const double time = args.time;
 
     // do the rendering
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -387,7 +387,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
                 //render:
                 //- get the the src Image
                 double srcTime = absolute ? (first + frame) : (time + first + frame);
-                std::auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
+                auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
                                                srcClip->fetchImage(srcTime) : 0 );
                 if ( src.get() ) {
                     if ( (src->getRenderScale().x != args.renderScale.x) ||

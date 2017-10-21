@@ -218,9 +218,9 @@ class TrackerPMProcessor
     : public TrackerPMProcessorBase
 {
 protected:
-    std::auto_ptr<ImageMemory> _patternImg;
+    auto_ptr<ImageMemory> _patternImg;
     PIX *_patternData;
-    std::auto_ptr<ImageMemory> _weightImg;
+    auto_ptr<ImageMemory> _weightImg;
     float *_weightData;
     double _weightTotal;
 
@@ -859,9 +859,9 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
     OfxRectD otherBounds;
     getOtherBounds(prevTimeCenterWithOffset, searchRect, &otherBounds);
 
-    std::auto_ptr<const Image> srcRef( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> srcRef( ( _srcClip && _srcClip->isConnected() ) ?
                                        _srcClip->fetchImage(refTime, refBounds) : 0 );
-    std::auto_ptr<const Image> srcOther( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> srcOther( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchImage(otherTime, otherBounds) : 0 );
     if ( !srcRef.get() || !srcOther.get() ) {
         return;
@@ -892,7 +892,7 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
 
     //  mask cannot be black and transparent, so an empty mask means mask is disabled.
     // auto ptr for the mask.
-    std::auto_ptr<const Image> mask( ( _maskClip && _maskClip->isConnected() ) ?
+    auto_ptr<const Image> mask( ( _maskClip && _maskClip->isConnected() ) ?
                                      _maskClip->fetchImage(refTime) : 0 );
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||

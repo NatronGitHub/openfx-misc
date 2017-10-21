@@ -584,7 +584,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
     // auto-ptr pointing to it.
     const Image* premultChannelImage = 0;
     premultChannelImage = fetchPremultChannelImage(args, &premultChannelIndex, &premultWith1IfNoImage);
-    std::auto_ptr<const Image> premultChanImg(premultChannelImage);
+    auto_ptr<const Image> premultChanImg(premultChannelImage);
 
 
 
@@ -642,7 +642,7 @@ PremultPlugin<isPremult>::render(const RenderArguments &args)
         Image* dstImage;
         fetchSourceAndOutputImage(args, &srcImage, &dstImage);
         assert(!srcImage);
-        std::auto_ptr<Image> dst(dstImage);
+        auto_ptr<Image> dst(dstImage);
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
@@ -656,9 +656,9 @@ PremultPlugin<isPremult>::render(const RenderArguments &args)
         fetchSourceAndOutputImage(args, &srcImage, &dstImage);
 
         // fetch main input image
-        std::auto_ptr<const Image> src(srcImage);
+        auto_ptr<const Image> src(srcImage);
         // get a dst image
-        std::auto_ptr<Image> dst(dstImage);
+        auto_ptr<Image> dst(dstImage);
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
@@ -674,8 +674,8 @@ PremultPlugin<isPremult>::render(const RenderArguments &args)
         Image* dstImage;
         fetchSourceAndOutputImage(args, &srcImage, &dstImage);
 
-        std::auto_ptr<Image> dst(dstImage);
-        std::auto_ptr<const Image> src(srcImage);
+        auto_ptr<Image> dst(dstImage);
+        auto_ptr<const Image> src(srcImage);
 
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
@@ -684,7 +684,7 @@ PremultPlugin<isPremult>::render(const RenderArguments &args)
         int dstNComps = dst->getPixelComponentCount();
 
 
-        std::auto_ptr<PremultBase> proc;
+        auto_ptr<PremultBase> proc;
         switch (dstBitDepth) {
         case eBitDepthUByte: {
             switch (dstNComps) {

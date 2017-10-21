@@ -143,7 +143,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const double time = args.time;
     const OfxPointD& renderScale = args.renderScale;
     const OfxRectI& renderWindow = args.renderWindow;
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    OFX::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -158,7 +158,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const int dstPixelComponentCount = dst->getPixelComponentCount();
     assert(dstBitDepth == OFX::eBitDepthFloat); // only float is supported for now (others are untested)
 
-    std::auto_ptr<const OFX::Image> srcA( ( _srcAClip && _srcAClip->isConnected() ) ?
+    OFX::auto_ptr<const OFX::Image> srcA( ( _srcAClip && _srcAClip->isConnected() ) ?
                                           _srcAClip->fetchImage(args.time) : 0 );
     if ( srcA.get() ) {
         OFX::BitDepthEnum srcABitDepth      = srcA->getPixelDepth();
@@ -206,7 +206,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcARowBytes = srcA->getRowBytes();
     }
 
-    std::auto_ptr<const OFX::Image> srcB( ( _srcBClip && _srcBClip->isConnected() ) ?
+    OFX::auto_ptr<const OFX::Image> srcB( ( _srcBClip && _srcBClip->isConnected() ) ?
                                           _srcBClip->fetchImage(args.time) : 0 );
     if ( srcB.get() ) {
         OFX::BitDepthEnum srcBBitDepth      = srcB->getPixelDepth();
@@ -385,11 +385,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     size_t tmpSize = tmpRowBytes * tmpHeight;
 
     assert(tmpSize > 0);
-    std::auto_ptr<OFX::ImageMemory> tmpAData( new OFX::ImageMemory(tmpSize, this) );
+    OFX::auto_ptr<OFX::ImageMemory> tmpAData( new OFX::ImageMemory(tmpSize, this) );
     float *tmpAPixelData = (float*)tmpAData->lock();
 
     {
-        std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if ( !srcA.get() ) {
             // no src, fill with black & transparent
             fred.reset( new OFX::BlackFiller<float>(*this, dstPixelComponentCount) );
@@ -420,11 +420,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
                          1., false);
         }
     }
-    std::auto_ptr<OFX::ImageMemory> tmpBData( new OFX::ImageMemory(tmpSize, this) );
+    OFX::auto_ptr<OFX::ImageMemory> tmpBData( new OFX::ImageMemory(tmpSize, this) );
     float *tmpBPixelData = (float*)tmpBData->lock();
 
     {
-        std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if ( !srcB.get() ) {
             // no src, fill with black & transparent
             if (dstPixelComponentCount == 4) {
@@ -463,7 +463,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
                          1., false);
         }
     }
-    std::auto_ptr<OFX::ImageMemory> tmpData( new OFX::ImageMemory(tmpSize, this) );
+    OFX::auto_ptr<OFX::ImageMemory> tmpData( new OFX::ImageMemory(tmpSize, this) );
     float *tmpPixelData = (float*)tmpData->lock();
 
     //////////////////////////////////////////////////////////////////////////////////////////
@@ -477,7 +477,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
 
 
     if (cimgSize) { // may be zero if no channel is processed
-        std::auto_ptr<OFX::ImageMemory> cimgAData( new OFX::ImageMemory(cimgSize, this) );
+        OFX::auto_ptr<OFX::ImageMemory> cimgAData( new OFX::ImageMemory(cimgSize, this) );
         cimgpix_t *cimgAPixelData = (cimgpix_t*)cimgAData->lock();
         cimg_library::CImg<cimgpix_t> cimgA(cimgAPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
 
@@ -489,7 +489,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
             }
         }
 
-        std::auto_ptr<OFX::ImageMemory> cimgBData( new OFX::ImageMemory(cimgSize, this) );
+        OFX::auto_ptr<OFX::ImageMemory> cimgBData( new OFX::ImageMemory(cimgSize, this) );
         cimgpix_t *cimgBPixelData = (cimgpix_t*)cimgBData->lock();
         cimg_library::CImg<cimgpix_t> cimgB(cimgBPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
 
@@ -526,7 +526,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     // 5- copy+premult+max+mix tmp to dst (only processWindow)
 
     {
-        std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (dstPixelComponents == OFX::ePixelComponentRGBA) {
             fred.reset( new OFX::PixelCopierPremult<float, 4, 1, float, 4, 1>(*this) );
         } else if (dstPixelComponentCount == 4) {

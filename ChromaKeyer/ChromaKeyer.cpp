@@ -709,7 +709,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
 {
     const double time = args.time;
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -727,9 +727,9 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
-    std::auto_ptr<const Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
+    auto_ptr<const Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
                                    _bgClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -760,7 +760,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
     }
 
     // auto ptr for the masks.
-    std::auto_ptr<const Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
+    auto_ptr<const Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
                                        _inMaskClip->fetchImage(time) : 0 );
     if ( inMask.get() ) {
         if ( (inMask->getRenderScale().x != args.renderScale.x) ||
@@ -770,7 +770,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
+    auto_ptr<const Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
                                         _outMaskClip->fetchImage(time) : 0 );
     if ( outMask.get() ) {
         if ( (outMask->getRenderScale().x != args.renderScale.x) ||

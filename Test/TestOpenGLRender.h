@@ -1135,9 +1135,9 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     // get the output image texture
 # ifdef USE_OPENGL
-    std::auto_ptr<OFX::Texture> dst( _dstClip->loadTexture(time) );
+    auto_ptr<OFX::Texture> dst( _dstClip->loadTexture(time) );
 # else
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
 # endif
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1174,10 +1174,10 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
 
 # ifdef USE_OPENGL
-    std::auto_ptr<const OFX::Texture> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const OFX::Texture> src( ( _srcClip && _srcClip->isConnected() ) ?
                                            _srcClip->loadTexture(time) : 0 );
 # else
-    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchImage(time) : 0 );
 # endif
 

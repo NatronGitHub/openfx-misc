@@ -1099,7 +1099,7 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
     const double time = args.time;
 
     assert(_dstClip);
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -1116,7 +1116,7 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -1132,7 +1132,7 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
         }
     }
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
@@ -1187,7 +1187,7 @@ ColorLookupPlugin::renderForComponents(const RenderArguments &args,
     bool clampWhite = _clampWhite->getValueAtTime(time);
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
     MasterCurveModeEnum masterCurveMode = (MasterCurveModeEnum)_masterCurveMode->getValueAtTime(time);
-    std::auto_ptr<ColorLookupProcessorBase> proc;
+    auto_ptr<ColorLookupProcessorBase> proc;
     switch (masterCurveMode) {
         case eMasterCurveModeStandard: {
             switch (dstBitDepth) {
@@ -1352,7 +1352,7 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args,
 void
 ColorLookupPlugin::updateHistogram(const InstanceChangedArgs &args)
 {
-    std::auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                              _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||

@@ -176,7 +176,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
                                 const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -196,9 +196,9 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
     }
 
     // fetch main input image
-    std::auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
                                         _srcClip->fetchStereoscopicImage(args.time, 0) : 0 );
-    std::auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchStereoscopicImage(args.time, 1) : 0 );
 
     // make sure bit depths are sane

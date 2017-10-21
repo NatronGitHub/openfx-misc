@@ -218,7 +218,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
                                   const RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -249,9 +249,9 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
 
         return;
     }
-    std::auto_ptr<const Image> src1( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src1( ( _srcClip && _srcClip->isConnected() ) ?
                                      _srcClip->fetchImagePlane(args.time, view1, kFnOfxImagePlaneColour) : 0 );
-    std::auto_ptr<const Image> src2( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src2( ( _srcClip && _srcClip->isConnected() ) ?
                                      _srcClip->fetchImagePlane(args.time, view2, kFnOfxImagePlaneColour) : 0 );
 
     // make sure bit depths are sane

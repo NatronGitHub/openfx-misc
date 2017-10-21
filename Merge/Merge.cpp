@@ -847,7 +847,7 @@ MergePlugin::getClipComponents(const ClipComponentsArguments& args,
 
 #endif
 
-// Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
+// Since we cannot hold a auto_ptr in the vector we must hold a raw pointer.
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
 {
@@ -894,7 +894,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     } else {
         dstImage = _dstClip->fetchImagePlane(args.time, args.renderView, rotoMaskOfxPlaneStr.c_str());
     }
-    std::auto_ptr<Image> dst(dstImage);
+    auto_ptr<Image> dst(dstImage);
 
     // If the plug-in is eMergePluginRoto, we can produce a RotoMask but don't necessarily produce a Color plane.
     if ( !dst.get() ) {
@@ -917,7 +917,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const Image> srcB( ( !renderRotoMask && _srcClipB && _srcClipB->isConnected() ) ?
+    auto_ptr<const Image> srcB( ( !renderRotoMask && _srcClipB && _srcClipB->isConnected() ) ?
                                     _srcClipB->fetchImage(time) : 0 );
     OptionalImagesHolder_RAII srcAs;
     for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
@@ -984,7 +984,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         }
     }
 
-    std::auto_ptr<const Image> mask(maskImage);
+    auto_ptr<const Image> mask(maskImage);
 
     bool maskInvert = _maskInvert->getValueAtTime(time);
     processor.setMaskInvert(maskInvert);
@@ -1009,7 +1009,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     processor.setDstImg( dst.get() );
 
 
-    std::auto_ptr<const Image> rotoMaskB(rotoMaskImgB);
+    auto_ptr<const Image> rotoMaskB(rotoMaskImgB);
     if (!renderRotoMask) {
         processor.setRotoMaskImg( srcAs.rotoMaskImg, rotoMaskB.get() );
         processor.setSrcImg( srcAs.images, srcB.get() );
@@ -1066,7 +1066,7 @@ MergePlugin::renderForBitDepth(const RenderArguments &args, bool renderRotoMask)
     const double time = args.time;
     MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValueAtTime(time);
 
-    std::auto_ptr<MergeProcessorBase> fred;
+    auto_ptr<MergeProcessorBase> fred;
 
     switch (operation) {
     case eMergeATop:

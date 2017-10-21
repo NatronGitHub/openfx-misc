@@ -396,7 +396,7 @@ ColorWheelPlugin::setupAndProcess(ColorWheelProcessorBase &processor,
     const double time = args.time;
 
     // get a dst image
-    std::auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);

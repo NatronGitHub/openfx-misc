@@ -206,7 +206,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
     const double time = args.time;
 
     // get a dst image
-    std::auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -229,7 +229,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
     double which = getTransition(time);
 
     if ( (which == 0.) || (which == 1.) ) {
-        std::auto_ptr<const Image> src( ( which == 0. && _srcClipA && _srcClipA->isConnected() ) ?
+        auto_ptr<const Image> src( ( which == 0. && _srcClipA && _srcClipA->isConnected() ) ?
                                         _srcClipA->fetchImage(time) :
                                         ( which == 1. && _srcClipB && _srcClipB->isConnected() ) ?
                                         _srcClipB->fetchImage(time) : 0 );
@@ -252,9 +252,9 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
     }
 
     // fetch the two source images
-    std::auto_ptr<const Image> fromImg( ( _srcClipA && _srcClipA->isConnected() ) ?
+    auto_ptr<const Image> fromImg( ( _srcClipA && _srcClipA->isConnected() ) ?
                                         _srcClipA->fetchImage(time) : 0 );
-    std::auto_ptr<const Image> toImg( ( _srcClipB && _srcClipB->isConnected() ) ?
+    auto_ptr<const Image> toImg( ( _srcClipB && _srcClipB->isConnected() ) ?
                                       _srcClipB->fetchImage(time) : 0 );
 
     // make sure bit depths are sane

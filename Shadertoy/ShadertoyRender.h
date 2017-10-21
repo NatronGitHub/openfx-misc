@@ -974,9 +974,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     // get the output image texture
 # ifdef USE_OPENGL
-    std::auto_ptr<OFX::Texture> dst( _dstClip->loadTexture(time) );
+    OFX::auto_ptr<OFX::Texture> dst( _dstClip->loadTexture(time) );
 # else
-    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+    OFX::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
 # endif
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1012,13 +1012,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         inputEnable[i] = _inputEnable[i]->getValue();
     }
 # ifdef USE_OPENGL
-    std::auto_ptr<const OFX::Texture> src[NBINPUTS];
+    OFX::auto_ptr<const OFX::Texture> src[NBINPUTS];
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
                       _srcClips[i]->loadTexture(time) : 0 );
     }
 # else
-    std::auto_ptr<const OFX::Image> src[NBINPUTS];
+    OFX::auto_ptr<const OFX::Image> src[NBINPUTS];
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
                       _srcClips[i]->fetchImage(time) : 0 );

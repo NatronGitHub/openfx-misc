@@ -1199,7 +1199,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor,
 {
     const double time = args.time;
 
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -1228,7 +1228,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor,
         }
     }
 
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -1245,7 +1245,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor,
         }
     }
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    std::auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
@@ -1648,7 +1648,7 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
         _setSrcFromRectangle->setIsSecretAndDisabled(!enableRectangle);
         _srcColor->setEnabled(!enableRectangle);
     } else if ( (paramName == kParamSetSrcFromRectangle) && (args.reason == eChangeUserEdit) ) {
-        std::auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+        auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                   _srcClip->fetchImage(args.time) : 0 );
         if ( src.get() ) {
             if ( (src->getRenderScale().x != args.renderScale.x) ||

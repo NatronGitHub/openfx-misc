@@ -138,7 +138,7 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
                               const RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
@@ -149,7 +149,7 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() && dst.get() ) {
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();

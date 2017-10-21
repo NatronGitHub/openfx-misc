@@ -216,7 +216,7 @@ SwitchPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !srcClip || srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !srcClip || srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -228,7 +228,7 @@ SwitchPlugin::render(const RenderArguments &args)
     }
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
                                     srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||

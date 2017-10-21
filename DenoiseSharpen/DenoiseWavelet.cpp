@@ -594,9 +594,9 @@ private:
     void renderForBitDepth(const RenderArguments &args);
 
     void setup(const RenderArguments &args,
-               std::auto_ptr<const Image>& src,
-               std::auto_ptr<Image>& dst,
-               std::auto_ptr<const Image>& mask,
+               auto_ptr<const Image>& src,
+               auto_ptr<Image>& dst,
+               auto_ptr<const Image>& mask,
                Params& p);
 
     // override the roi call
@@ -741,9 +741,9 @@ DenoiseWaveletPlugin::renderForComponents(const RenderArguments &args)
 
 void
 DenoiseWaveletPlugin::setup(const RenderArguments &args,
-                            std::auto_ptr<const Image>& src,
-                            std::auto_ptr<Image>& dst,
-                            std::auto_ptr<const Image>& mask,
+                            auto_ptr<const Image>& src,
+                            auto_ptr<Image>& dst,
+                            auto_ptr<const Image>& mask,
                             Params& p)
 {
     const double time = args.time;
@@ -857,9 +857,9 @@ template <class PIX, int nComponents, int maxValue>
 void
 DenoiseWaveletPlugin::renderForBitDepth(const RenderArguments &args)
 {
-    std::auto_ptr<const Image> src;
-    std::auto_ptr<Image> dst;
-    std::auto_ptr<const Image> mask;
+    auto_ptr<const Image> src;
+    auto_ptr<Image> dst;
+    auto_ptr<const Image> mask;
     Params p;
 
     setup(args, src, dst, mask, p);
@@ -871,7 +871,7 @@ DenoiseWaveletPlugin::renderForBitDepth(const RenderArguments &args)
     unsigned int iwidth = p.srcWindow.x2 - p.srcWindow.x1;
     unsigned int iheight = p.srcWindow.y2 - p.srcWindow.y1;
     unsigned int isize = iwidth * iheight;
-    std::auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * (nComponents + 2), this) );
+    auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * (nComponents + 2), this) );
     float* tmpPixelData = (float*)tmpData->lock();
     float* fimgcolor[3] = { NULL, NULL, NULL };
     float* fimgalpha = NULL;

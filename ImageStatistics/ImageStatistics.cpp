@@ -1370,7 +1370,7 @@ ImageStatisticsPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -1382,7 +1382,7 @@ ImageStatisticsPlugin::render(const RenderArguments &args)
     }
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -1588,7 +1588,7 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
     }
     // RGBA analysis
     if ( (doAnalyzeRGBA || doAnalyzeHSVL || doAnalyzeLuma) && _srcClip && _srcClip->isConnected() ) {
-        std::auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+        auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                   _srcClip->fetchImage(args.time) : 0 );
         if ( src.get() ) {
             if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -1629,7 +1629,7 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         int tmin = (int)std::ceil(range.min);
         int tmax = (int)std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
-            std::auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+            auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                       _srcClip->fetchImage(t) : 0 );
             if ( src.get() ) {
                 if ( (src->getRenderScale().x != args.renderScale.x) ||
