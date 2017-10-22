@@ -140,7 +140,7 @@ public:
         , _greenScale(NULL)
         , _blueScale(NULL)
         , _brightness(NULL)
-        , _mix(NULL)
+        , _mix(0.)
     {
     }
 

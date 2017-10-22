@@ -82,7 +82,7 @@ public:
         , _srcRightImg(NULL)
         , _amtcolour(0.)
         , _swap(false)
-        , _offset(NULL)
+        , _offset(0)
     {
     }
 
