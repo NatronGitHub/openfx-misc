@@ -669,7 +669,7 @@ std::string PFBarrelCommon::FileReader::readRawLine(void)
 }
 
 
-
+#ifdef DEBUG
 void PFBarrelCommon::FileReader::dump(void)
 {
     std::printf("VERSION [%i]\n", version_);
@@ -688,7 +688,7 @@ void PFBarrelCommon::FileReader::dump(void)
         std::printf("KEY %i YP %f\n", i, yp_[i]);
     }
 }
-
+#endif
 
 
 

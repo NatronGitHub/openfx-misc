@@ -134,12 +134,12 @@ public:
         , _maskImg(NULL)
         , _maskInvert(false)
         , _outputToAlpha(false)
-        , _spillMix(NULL)
-        , _spillExpand(NULL)
-        , _redScale(NULL)
-        , _greenScale(NULL)
-        , _blueScale(NULL)
-        , _brightness(NULL)
+        , _spillMix(0.)
+        , _spillExpand(0.)
+        , _redScale(0.)
+        , _greenScale(0.)
+        , _blueScale(0.)
+        , _brightness(0.)
         , _mix(0.)
     {
     }

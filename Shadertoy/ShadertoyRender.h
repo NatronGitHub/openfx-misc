@@ -1000,7 +1000,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
         return;
     }
-# ifdef USE_OPENGL
+# if defined(USE_OPENGL) && defined(DEBUG)
     const GLuint dstIndex = (GLuint)dst->getIndex();
     const GLenum dstTarget = (GLenum)dst->getTarget();
     DPRINT( ( "openGL: output texture index %d, target 0x%04X, depth %s\n",
