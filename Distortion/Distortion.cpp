@@ -101,6 +101,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginLensDistortionGrouping "Transform"
 #define kPluginLensDistortionDescription \
     "Add or remove lens distortion, or produce an STMap that can be used to apply that transform.\n" \
+    "The region of definition of the transformed image is computed from the region of definition of the Source input. If the input is defined outside of the project format, this may result in a very large region. A Crop effect may be inserted before LensDistortion to avoid this. If the input region of definition is inside the format, the Crop To Format parameter may be used to avoid expanding it.\n" \
     "LensDistortion can directly apply distortion/undistortion, but if the distortion parameters are not animated, the most efficient way to use LensDistortion and avoid repeated distortion function calculations is the following:\n" \
     "- If the footage size is not the same as the project size, insert a FrameHold plugin between the footage to distort or undistort and the Source input of LensDistortion. This connection is only used to get the size of the input footage.\n" \
     "- Set Output Mode to \"STMap\" in LensDistortion.\n" \
@@ -127,7 +128,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 3.0: use format instead of rod as the default for distortion domain
-#define kPluginVersionLensDistortionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// version 4.0: add the CropToFormat parameter
+#define kPluginVersionLensDistortionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionLensDistortionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -494,6 +496,9 @@ enum OutputModeEnum {
 #define kParamPanoToolsT "pt_t"
 #define kParamPanoToolsTLabel "t", "PanoTools: Horizontal lens shear (in pixels)."
 
+#define kParamCropToFormat "cropToFormat"
+#define kParamCropToFormatLabel "Crop To Format"
+#define kParamCropToFormatHint "If the source is inside the format and the effect extends it outside of the format, crop it to avoid unnecessary calculations. To avoid unwanted crops, only the borders that were inside of the format in the source clip will be cropped."
 
 
 
@@ -1226,6 +1231,7 @@ public:
         , _filter(NULL)
         , _clamp(NULL)
         , _blackOutside(NULL)
+        , _cropToFormat(NULL)
         , _mix(NULL)
         , _maskApply(NULL)
         , _maskInvert(NULL)
@@ -1397,6 +1403,12 @@ public:
         _clamp = fetchBooleanParam(kParamFilterClamp);
         _blackOutside = fetchBooleanParam(kParamFilterBlackOutside);
         assert(_filter && _clamp && _blackOutside);
+        if ( paramExists(kParamCropToFormat) ) {
+            _cropToFormat = fetchBooleanParam(kParamCropToFormat);
+            assert(_cropToFormat);
+        } else {
+            assert( !paramExists(kParamCropToFormat) );
+        }
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -1580,6 +1592,7 @@ private:
     ChoiceParam* _filter;
     BooleanParam* _clamp;
     BooleanParam* _blackOutside;
+    BooleanParam* _cropToFormat;
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
@@ -1725,8 +1738,8 @@ getChannelIndex(InputChannelEnum e,
 
 // renderScale should be:
 // 1,1 when calling from getRoD
-// rs when calling fro getRoI
-// rs when calling fro render
+// rs when calling from getRoI
+// rs when calling from render
 // format is in pixels (but may be non-integer)
 DistortionModel*
 DistortionPlugin::getDistortionModel(const OfxRectD& format, const OfxPointD& renderScale, double time)
@@ -2892,14 +2905,14 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         OFX::Coords::toCanonical(roiPixel, args.renderScale, par, &roi);
         assert( !OFX::Coords::rectIsEmpty(roi) );
         rois.setRegionOfInterest(*_srcClip, roi);
-        /*
+        ///*
         printf("getRegionsOfInterest: rs=(%g,%g) rw=(%g,%g,%g,%g) rwp=(%d,%d,%d,%d) -> roiPixel(%g,%g,%g,%g) roiCanonical=(%g,%g,%g,%g)\n",
                args.renderScale.x, args.renderScale.y,
                renderWin.x1, renderWin.y1, renderWin.x2, renderWin.y2,
                renderWinPixel.x1, renderWinPixel.y1, renderWinPixel.x2, renderWinPixel.y2,
                roiPixel.x1, roiPixel.y1, roiPixel.x2, roiPixel.y2,
                roi.x1, roi.y1, roi.x2, roi.y2);
-         */
+         //*/
 
         return;
     }
@@ -2956,12 +2969,12 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
         OfxRectD srcRodPixel;
         if (_srcClip && _srcClip->isConnected()) {
-            OfxRectD rod = _srcClip->getRegionOfDefinition(time);
+            OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
             double srcPar = _srcClip->getPixelAspectRatio();
-            srcRodPixel.x1 = rod.x1 * args.renderScale.x / srcPar;
-            srcRodPixel.y1 = rod.y1 * args.renderScale.y;
-            srcRodPixel.x2 = rod.x2 * args.renderScale.x / srcPar;
-            srcRodPixel.y2 = rod.y2 * args.renderScale.y;
+            srcRodPixel.x1 = srcRod.x1 * args.renderScale.x / srcPar;
+            srcRodPixel.y1 = srcRod.y1 * args.renderScale.y;
+            srcRodPixel.x2 = srcRod.x2 * args.renderScale.x / srcPar;
+            srcRodPixel.y2 = srcRod.y2 * args.renderScale.y;
         } else {
             srcRodPixel.x1 = format.x1;
             srcRodPixel.y1 = format.y1;
@@ -3032,6 +3045,35 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                rod.x1, rod.y1, rod.x2, rod.y2);
          */
 
+        if ( _cropToFormat && _cropToFormat->getValueAtTime(time) ) {
+            // crop to format works by clamping the output rod to the format wherever the input rod was inside the format
+            // this avoids unwanted crops (cropToFormat is checked by default)
+            OfxRectI srcFormat;
+            _srcClip->getFormat(srcFormat);
+            OfxRectI srcFormatEnclosing;
+            srcFormatEnclosing.x1 = std::floor(srcFormat.x1 * args.renderScale.x);
+            srcFormatEnclosing.x2 = std::ceil(srcFormat.x2 * args.renderScale.x);
+            srcFormatEnclosing.y1 = std::floor(srcFormat.y1 * args.renderScale.y);
+            srcFormatEnclosing.y2 = std::ceil(srcFormat.y2 * args.renderScale.y);
+            srcFormat.x1 = std::ceil(srcFormat.x1 * args.renderScale.x);
+            srcFormat.x2 = std::floor(srcFormat.x2 * args.renderScale.x);
+            srcFormat.y1 = std::ceil(srcFormat.y1 * args.renderScale.y);
+            srcFormat.y2 = std::floor(srcFormat.y2 * args.renderScale.y);
+            if (! Coords::rectIsEmpty(srcFormat) ) {
+                if (rodPixel.x1 < srcFormat.x1 && srcRodPixel.x1 >= srcFormatEnclosing.x1) {
+                    rod.x1 = srcFormat.x1 / args.renderScale.x * par;
+                }
+                if (rodPixel.x2 > srcFormat.x2 && srcRodPixel.x2 <= srcFormatEnclosing.x2) {
+                    rod.x2 = srcFormat.x2 / args.renderScale.x * par;
+                }
+                if (rodPixel.y1 < srcFormat.y1 && srcRodPixel.y1 >= srcFormatEnclosing.y1) {
+                    rod.y1 = srcFormat.y1 / args.renderScale.y;
+                }
+                if (rodPixel.y2 > srcFormat.y2 && srcRodPixel.y2 <= srcFormatEnclosing.y2) {
+                    rod.y2 = srcFormat.y2 / args.renderScale.y;
+                }
+            }
+        }
         return true;
         //return false;     // use source RoD
         break;
@@ -4480,6 +4522,17 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
     }
 
     ofxsFilterDescribeParamsInterpolate2D( desc, page, (plugin == eDistortionPluginSTMap) );
+#ifdef OFX_EXTENSIONS_NATRON
+    if (plugin == eDistortionPluginLensDistortion && majorVersion >= 4 && getImageEffectHostDescription()->isNatron) {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCropToFormat);
+        param->setLabel(kParamCropToFormatLabel);
+        param->setHint(kParamCropToFormatHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+#endif
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 } // >::describeInContext
@@ -4492,13 +4545,15 @@ DistortionPluginFactory<plugin, majorVersion>::createInstance(OfxImageEffectHand
     return new DistortionPlugin(handle, this->getMajorVersion(), plugin);
 }
 
-static DistortionPluginFactory<eDistortionPluginIDistort,kPluginVersionMajor> p1(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginSTMap,kPluginVersionMajor> p2(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion,2> p3(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion,kPluginVersionLensDistortionMajor> p4(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
-mRegisterPluginFactoryInstance(p1)
-mRegisterPluginFactoryInstance(p2)
-mRegisterPluginFactoryInstance(p3)
-mRegisterPluginFactoryInstance(p4)
+static DistortionPluginFactory<eDistortionPluginIDistort,kPluginVersionMajor> pIDistort(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginSTMap,kPluginVersionMajor> pSTMap(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,2> pLensDistortion2(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,3> pLensDistortion3(kPluginLensDistortionIdentifier, 3, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,kPluginVersionLensDistortionMajor> pLensDistortion4(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
+mRegisterPluginFactoryInstance(pIDistort)
+mRegisterPluginFactoryInstance(pSTMap)
+mRegisterPluginFactoryInstance(pLensDistortion2)
+mRegisterPluginFactoryInstance(pLensDistortion3)
+mRegisterPluginFactoryInstance(pLensDistortion4)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
