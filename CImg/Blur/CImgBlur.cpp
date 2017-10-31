@@ -1557,7 +1557,7 @@ public:
             sy *= scale;
         }
         *dstRoD = srcRoD;
-        if ( params.expandRoD && !isEmpty(srcRoD) ) {
+        if ( params.expandRoD && !Coords::rectIsEmpty(srcRoD) ) {
             if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
                 float sigmax = (float)(sx / 2.4);
                 float sigmay = (float)(sy / 2.4);
@@ -1603,7 +1603,7 @@ public:
             srcFormat.x2 = std::floor(srcFormat.x2 * renderScale.x);
             srcFormat.y1 = std::ceil(srcFormat.y1 * renderScale.y);
             srcFormat.y2 = std::floor(srcFormat.y2 * renderScale.y);
-            if (! isEmpty(srcFormat) ) {
+            if ( !Coords::rectIsEmpty(srcFormat) ) {
                 if (dstRoD->x1 < srcFormat.x1 && srcRoD.x1 >= srcFormatEnclosing.x1) {
                     dstRoD->x1 = srcFormat.x1;
                     retval = true;

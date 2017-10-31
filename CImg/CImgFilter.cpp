@@ -356,7 +356,7 @@ CImgFilterPluginHelperBase::setupAndCopy(PixelProcessorFilterBase & processor,
         throwSuiteStatusException(kOfxStatErrFormat);
     }
 
-    if ( isEmpty(renderWindow) ) {
+    if ( Coords::rectIsEmpty(renderWindow) ) {
         return;
     }
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );

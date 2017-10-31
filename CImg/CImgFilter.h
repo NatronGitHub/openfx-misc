@@ -256,13 +256,6 @@ public:
                                      OFX::PageParamDescriptor* page,
                                      bool hasUnpremult = true);
 
-    // utility functions
-    template <typename Rect>
-    static bool isEmpty(const Rect& r)
-    {
-        return r.x1 >= r.x2 || r.y1 >= r.y2;
-    }
-
 protected:
 #ifdef CIMG_DEBUG
     static void printRectI(const char*name,
@@ -709,7 +702,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     printRectI("renderWindow", renderWindow);
     printRectI("processWindow", processWindow);
 
-    if ( isEmpty(processWindow) ) {
+    if ( OFX::Coords::rectIsEmpty(processWindow) ) {
         // the area that actually has to be processed is empty, the job is finished!
         return;
     }

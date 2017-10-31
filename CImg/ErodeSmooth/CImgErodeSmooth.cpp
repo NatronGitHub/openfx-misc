@@ -392,7 +392,7 @@ public:
         double sx = renderScale.x * std::abs(params.sizex);
         double sy = renderScale.y * std::abs(params.sizey);
 
-        if ( params.expandRoD && !isEmpty(srcRoD) ) {
+        if ( params.expandRoD && !Coords::rectIsEmpty(srcRoD) ) {
             if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
                 float sigmax = (float)(sx / 2.4);
                 float sigmay = (float)(sy / 2.4);

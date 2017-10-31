@@ -175,7 +175,7 @@ public:
         srcFormatD.x2 = srcFormat.x2 * args.renderScale.x;
         srcFormatD.y1 = srcFormat.y1 * args.renderScale.y;
         srcFormatD.y2 = srcFormat.y2 * args.renderScale.y;
-        if ( !isEmpty(srcFormatD) ) {
+        if ( !Coords::rectIsEmpty(srcFormatD) ) {
             maxdim = max( srcFormatD.x2 - srcFormatD.x1, srcFormatD.y2 - srcFormatD.y1 );
         }
 #endif
