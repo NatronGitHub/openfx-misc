@@ -2905,14 +2905,14 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         OFX::Coords::toCanonical(roiPixel, args.renderScale, par, &roi);
         assert( !OFX::Coords::rectIsEmpty(roi) );
         rois.setRegionOfInterest(*_srcClip, roi);
-        ///*
+        /*
         printf("getRegionsOfInterest: rs=(%g,%g) rw=(%g,%g,%g,%g) rwp=(%d,%d,%d,%d) -> roiPixel(%g,%g,%g,%g) roiCanonical=(%g,%g,%g,%g)\n",
                args.renderScale.x, args.renderScale.y,
                renderWin.x1, renderWin.y1, renderWin.x2, renderWin.y2,
                renderWinPixel.x1, renderWinPixel.y1, renderWinPixel.x2, renderWinPixel.y2,
                roiPixel.x1, roiPixel.y1, roiPixel.x2, roiPixel.y2,
                roi.x1, roi.y1, roi.x2, roi.y2);
-         //*/
+        */
 
         return;
     }
