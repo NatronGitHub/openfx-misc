@@ -646,12 +646,18 @@ private:
 
             return clamp<float>(ret, 1);;
         } else {
-            float x = (float)(value - _rangeMin) / (float)(_rangeMax - _rangeMin);
+            double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
+            if (x <= 0.) {
+                return _lookupTable[component][0];
+            } else if (x >= 1.) {
+                return _lookupTable[component][nbValues];
+            }
             int i = (int)(x * nbValues);
-            assert(0 <= i && i <= nbValues);
-            float alpha = std::max( 0.f, std::min(x * nbValues - i, 1.f) );
+            assert(0 <= i && i < nbValues);
+            i = std::max( 0, std::min(i, nbValues - 1) );
+            double alpha = std::max( 0., std::min(x * nbValues - i, 1.) );
             float a = _lookupTable[component][i];
-            float b = (i  < nbValues) ? _lookupTable[component][i + 1] : 0.f;
+            float b = _lookupTable[component][i + 1];
 
             return a * (1.f - alpha) + b * alpha;
         }
