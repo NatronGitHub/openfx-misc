@@ -43,7 +43,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec4 N11 = texture2D(iChannel0, uv + Circle(Start, 14.0, 11.0) * Scale).rgba;
     vec4 N12 = texture2D(iChannel0, uv + Circle(Start, 14.0, 12.0) * Scale).rgba;
     vec4 N13 = texture2D(iChannel0, uv + Circle(Start, 14.0, 13.0) * Scale).rgba;
-    vec4 N14 = texture2D(iChannel0, uv).rgb;
+    vec4 N14 = texture2D(iChannel0, uv).rgba;
     
     float W = 1.0 / 15.0;
     
