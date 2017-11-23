@@ -33,6 +33,21 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
+#include "ofxsMultiThread.h"
+#ifdef OFX_USE_MULTITHREAD_MUTEX
+namespace {
+    typedef MultiThread::Mutex Mutex;
+    typedef MultiThread::AutoMutex AutoMutex;
+}
+#else
+// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
+// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
+#include "fast_mutex.h"
+namespace {
+    typedef tthread::fast_mutex Mutex;
+    typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+}
+#endif
 
 using namespace OFX;
 
@@ -137,6 +152,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamPremultChanged "premultChanged"
 
+#define kParamNormalize "normalize"
+#define kParamNormalizeLabel "Normalize", "Normalize the image by setting the white point and black point from the minimum and maximum values of the input."
+
 
 struct RGBAValues
 {
@@ -144,6 +162,211 @@ struct RGBAValues
     RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
 
     RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
+
+struct Results
+{
+    Results()
+    : min( std::numeric_limits<double>::infinity() )
+    , max( -std::numeric_limits<double>::infinity() )
+    //, mean(0.)
+    //, sdev( std::numeric_limits<double>::infinity() )
+    //, skewness( std::numeric_limits<double>::infinity() )
+    //, kurtosis( std::numeric_limits<double>::infinity() )
+    //, maxVal( -std::numeric_limits<double>::infinity() )
+    //, minVal( std::numeric_limits<double>::infinity() )
+    {
+        //maxPos.x = maxPos.y = minPos.x = minPos.y = 0.;
+    }
+
+    RGBAValues min;
+    RGBAValues max;
+    //RGBAValues mean;
+    //RGBAValues sdev;
+    //RGBAValues skewness;
+    //RGBAValues kurtosis;
+    //OfxPointD maxPos; // luma only
+    //RGBAValues maxVal; // luma only
+    //OfxPointD minPos; // luma only
+    //RGBAValues minVal; // luma only
+};
+
+class ImageStatisticsProcessorBase
+: public ImageProcessor
+{
+protected:
+    Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    unsigned long _count;
+
+public:
+    ImageStatisticsProcessorBase(ImageEffect &instance)
+    : ImageProcessor(instance)
+    , _mutex()
+    , _count(0)
+    {
+    }
+
+    virtual ~ImageStatisticsProcessorBase()
+    {
+    }
+
+    virtual void setPrevResults(double time, const Results &results) = 0;
+    virtual void getResults(Results *results) = 0;
+
+protected:
+
+    template<class PIX, int nComponents, int maxValue>
+    void toRGBA(const PIX *p,
+                RGBAValues* rgba)
+    {
+        if (nComponents == 4) {
+            rgba->r = p[0] / (double)maxValue;
+            rgba->g = p[1] / (double)maxValue;
+            rgba->b = p[2] / (double)maxValue;
+            rgba->a = p[3] / (double)maxValue;
+        } else if (nComponents == 3) {
+            rgba->r = p[0] / (double)maxValue;
+            rgba->g = p[1] / (double)maxValue;
+            rgba->b = p[2] / (double)maxValue;
+            rgba->a = 0;
+        } else if (nComponents == 2) {
+            rgba->r = p[0] / (double)maxValue;
+            rgba->g = p[1] / (double)maxValue;
+            rgba->b = 0;
+            rgba->a = 0;
+        } else if (nComponents == 1) {
+            rgba->r = 0;
+            rgba->g = 0;
+            rgba->b = 0;
+            rgba->a = p[0] / (double)maxValue;
+        } else {
+            rgba->r = 0;
+            rgba->g = 0;
+            rgba->b = 0;
+            rgba->a = 0;
+        }
+    }
+
+    /*
+    template<class PIX, int nComponents, int maxValue>
+    void pixToHSVL(const PIX *p,
+                   float hsvl[4])
+    {
+        if ( (nComponents == 4) || (nComponents == 3) ) {
+            float r, g, b;
+            r = p[0] / (float)maxValue;
+            g = p[1] / (float)maxValue;
+            b = p[2] / (float)maxValue;
+            Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
+            hsvl[0] *= 360 / OFXS_HUE_CIRCLE;
+            float min = std::min(std::min(r, g), b);
+            float max = std::max(std::max(r, g), b);
+            hsvl[3] = (min + max) / 2;
+        } else {
+            hsvl[0] = hsvl[1] = hsvl[2] = hsvl[3] = 0.f;
+        }
+    }
+    */
+
+    template<class PIX, int nComponents, int maxValue>
+    void toComponents(const RGBAValues& rgba,
+                      PIX *p)
+    {
+        if (nComponents == 4) {
+            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[2] = rgba.b * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[3] = rgba.a * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+        } else if (nComponents == 3) {
+            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[2] = rgba.b * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+        } else if (nComponents == 2) {
+            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+        } else if (nComponents == 1) {
+            p[0] = rgba.a * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+        }
+    }
+};
+
+
+template <class PIX, int nComponents, int maxValue>
+class ImageMinMaxProcessor
+: public ImageStatisticsProcessorBase
+{
+private:
+    double _min[nComponents];
+    double _max[nComponents];
+
+public:
+    ImageMinMaxProcessor(ImageEffect &instance)
+    : ImageStatisticsProcessorBase(instance)
+    {
+        std::fill( _min, _min + nComponents, +std::numeric_limits<double>::infinity() );
+        std::fill( _max, _max + nComponents, -std::numeric_limits<double>::infinity() );
+    }
+
+    ~ImageMinMaxProcessor()
+    {
+    }
+
+    void setPrevResults(double /* time */,
+                        const Results & /*results*/) OVERRIDE FINAL {}
+
+    void getResults(Results *results) OVERRIDE FINAL
+    {
+        if (_count > 0) {
+            toRGBA<double, nComponents, 1>(_min, &results->min);
+            toRGBA<double, nComponents, 1>(_max, &results->max);
+        }
+    }
+
+private:
+
+    void addResults(double min[nComponents],
+                    double max[nComponents],
+                    unsigned long count)
+    {
+        AutoMutex l (&_mutex);
+        for (int c = 0; c < nComponents; ++c) {
+            _min[c] = std::min(_min[c], min[c]);
+            _max[c] = std::max(_max[c], max[c]);
+        }
+        _count += count;
+    }
+
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    {
+        double min[nComponents], max[nComponents], sum[nComponents];
+
+        std::fill( min, min + nComponents, +std::numeric_limits<double>::infinity() );
+        std::fill( max, max + nComponents, -std::numeric_limits<double>::infinity() );
+        unsigned long count = 0;
+
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if ( _effect.abort() ) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                for (int c = 0; c < nComponents; ++c) {
+                    double v = *dstPix;
+                    min[c] = std::min(min[c], v);
+                    max[c] = std::max(max[c], v);
+                    ++dstPix;
+                }
+            }
+            count += procWindow.x2 - procWindow.x1;
+        }
+        count += (procWindow.x2 - procWindow.x1) * (procWindow.y2 - procWindow.y1);
+
+        addResults(min, max, count);
+    }
 };
 
 class GradeProcessorBase
@@ -518,6 +741,98 @@ private:
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    /// Set the black and white point from the image minimum/maximum from the given image
+    void normalize(const Image* srcImg)
+    {
+        PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+        Results results;
+        assert(srcComponents == ePixelComponentAlpha || srcComponents == ePixelComponentRGB || srcComponents == ePixelComponentRGBA);
+        if (srcComponents == ePixelComponentAlpha) {
+            normalizeComponents<1>(srcImg, &results);
+        } else if (srcComponents == ePixelComponentRGBA) {
+            normalizeComponents<4>(srcImg, &results);
+        } else if (srcComponents == ePixelComponentRGB) {
+            normalizeComponents<3>(srcImg, &results);
+        } else {
+            // coverity[dead_error_line]
+            throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+        beginEditBlock(kParamNormalize);
+        _blackPoint->setValue(results.min.r, results.min.g, results.min.b, results.min.a);
+        _whitePoint->setValue(results.max.r, results.max.g, results.max.b, results.max.a);
+        endEditBlock();
+    }
+
+    template <class PIX, int nComponents, int maxValue>
+    void normalizeComponentsDepth(const Image* srcImg,
+                                  Results* results)
+    {
+        ImageMinMaxProcessor<PIX, nComponents, maxValue> fred(*this);
+        setupAndProcessImageProcessor(fred, srcImg, results);
+    }
+
+    template <int nComponents>
+    void normalizeComponents(const Image* srcImg,
+                             Results* results)
+    {
+        BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
+
+        switch (srcBitDepth) {
+            case eBitDepthUByte: {
+                normalizeComponentsDepth<unsigned char, nComponents, 255>(srcImg, results);
+                break;
+            }
+            case eBitDepthUShort: {
+                normalizeComponentsDepth<unsigned short, nComponents, 65535>(srcImg, results);
+                break;
+            }
+            case eBitDepthFloat: {
+                normalizeComponentsDepth<float, nComponents, 1>(srcImg, results);
+                break;
+            }
+            default:
+                throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+        // if all computed components are equal, set the remaining components
+        if (nComponents == 3) {
+            if ( (results->min.r == results->min.g) && (results->min.r == results->min.b) ) {
+                results->min.a = results->min.r;
+            }
+            if ( (results->max.r == results->max.g) && (results->max.r == results->max.b) ) {
+                results->max.a = results->max.r;
+            }
+        } else if (nComponents == 2) {
+            if (results->min.r == results->min.g) {
+                results->min.b = results->min.r;
+                results->min.a = results->min.r;
+            }
+            if (results->max.r == results->max.g) {
+                results->max.b = results->max.r;
+                results->max.a = results->max.r;
+            }
+        } else if (nComponents == 1) {
+            results->min.r = results->min.g = results->min.b = results->min.a;
+            results->max.r = results->max.g = results->max.b = results->max.a;
+        }
+    }
+
+    void setupAndProcessImageProcessor(ImageStatisticsProcessorBase &processor,
+                                           const Image* srcImg,
+                                           Results *results)
+    {
+        // set the images
+        processor.setDstImg( const_cast<Image*>(srcImg) ); // not a bug: we only set dst
+
+        // set the render window
+        processor.setRenderWindow(srcImg->getBounds());
+
+        // Call the base class process member, this will call the derived templated process code
+        processor.process();
+
+        if ( !abort() ) {
+            processor.getResults(results);
+        }
+    }
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -810,6 +1125,11 @@ GradePlugin::changedParam(const InstanceChangedArgs &args,
     if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
+    if (paramName == kParamNormalize) {
+        auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                            _srcClip->fetchImage(args.time) : 0 );
+        normalize( src.get() );
+    }
 }
 
 mDeclarePluginFactory(GradePluginFactory, {ofxsThreadSuiteCheck();}, {});
@@ -947,6 +1267,14 @@ GradePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     defineRGBAScaleParam(desc, kParamMultiply, kParamMultiplyLabel, kParamMultiplyHint, page, 1., 0., 4.);
     defineRGBAScaleParam(desc, kParamOffset, kParamOffsetLabel, kParamOffsetHint, page, 0., -1., 1.);
     defineRGBAScaleParam(desc, kParamGamma, kParamGammaLabel, kParamGammaHint, page, 1., 0.2, 5.);
+
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamNormalize);
+        param->setLabelAndHint(kParamNormalizeLabel);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
