@@ -338,7 +338,7 @@ private:
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
-        double min[nComponents], max[nComponents], sum[nComponents];
+        double min[nComponents], max[nComponents];
 
         std::fill( min, min + nComponents, +std::numeric_limits<double>::infinity() );
         std::fill( max, max + nComponents, -std::numeric_limits<double>::infinity() );
