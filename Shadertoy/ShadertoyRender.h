@@ -940,7 +940,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
     const double time = args.time;
 
-#if GL_ARB_framebuffer_object && !defined(GL_GLEXT_FUNCTION_POINTERS)
+#if (GL_ARB_framebuffer_object || GL_EXT_framebuffer_object) && !defined(GL_GLEXT_FUNCTION_POINTERS)
     const bool supportsMipmap = true;
 #else
     const bool supportsMipmap = (bool)glGenerateMipmap;
@@ -1787,7 +1787,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             // https://www.opengl.org/wiki/Common_Mistakes#Automatic_mipmap_generation
             if ( ( (filter[i] == eFilterMipmap) || (filter[i] == eFilterAnisotropic) ) && supportsMipmap ) {
                 glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
+#if GL_ARB_framebuffer_object || defined(GL_GLEXT_FUNCTION_POINTERS)
                 glGenerateMipmap(GL_TEXTURE_2D);  //Generate mipmaps now!!!
+#else
+                glGenerateMipmapEXT(GL_TEXTURE_2D);  //Generate mipmaps now!!!
+#endif
                 glCheckError();
             }
             GLenum min_filter = GL_NEAREST;
