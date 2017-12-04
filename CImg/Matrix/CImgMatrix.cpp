@@ -38,6 +38,7 @@
 #include "CImgFilter.h"
 
 using namespace OFX;
+using namespace cimg_library;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
@@ -140,8 +141,8 @@ public:
                         const CImgMatrixParams<dim>& params,
                         int /*x1*/,
                         int /*y1*/,
-                        cimg_library::CImg<cimgpix_t>& /*mask*/,
-                        cimg_library::CImg<cimgpix_t>& cimg,
+                        CImg<cimgpix_t>& /*mask*/,
+                        CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {
         // PROCESSING.
@@ -163,7 +164,7 @@ public:
             }
         }
         if (dim == 5 && renderScale.x > 0.6) {
-            cimg_library::CImg<cimgpix_t> res(cimg.width(), cimg.height(), cimg.depth(), cimg.spectrum());
+            CImg<cimgpix_t> res(cimg.width(), cimg.height(), cimg.depth(), cimg.spectrum());
             double *M = (double*)params.coeff;
             double Mbb = M[0]; double Mpb = M[1]; double Mcb = M[2]; double Mnb = M[3]; double Mab = M[4];
             double Mbp = M[5]; double Mpp = M[6]; double Mcp = M[7]; double Mnp = M[8]; double Map = M[9];
@@ -190,7 +191,7 @@ public:
 
         } else if ( (dim == 3 && renderScale.x > 1./3.) ||
                     (dim == 5 && renderScale.x > 0.4) ) {
-            cimg_library::CImg<cimgpix_t> res(cimg.width(), cimg.height(), cimg.depth(), cimg.spectrum());
+            CImg<cimgpix_t> res(cimg.width(), cimg.height(), cimg.depth(), cimg.spectrum());
             double *M = (double*)params.coeff;
             double Mpp = M[0]; double Mcp = M[1]; double Mnp = M[2];
             double Mpc = M[3]; double Mcc = M[4]; double Mnc = M[5];
