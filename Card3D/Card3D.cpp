@@ -488,7 +488,7 @@ CameraParam::getMatrix(const Matrix4x4& pos,
 {
     // apply camera params
     double a = hAperture / std::max(1e-8, focalLength);
-#warning // make sure the standard camera matrix gives z > 0 in orthographic and projective cases
+#pragma message WARN("make sure the standard camera matrix gives z > 0 in orthographic and projective cases")
     (*mat)(0,0) = -pos(0,0); (*mat)(0,1) = -pos(0,1); (*mat)(0,2) = -pos(0,3);
     (*mat)(1,0) = -pos(1,0); (*mat)(1,1) = -pos(1,1); (*mat)(1,2) = -pos(1,3);
     if (projectionMode == eCameraProjectionModePerspective) {
