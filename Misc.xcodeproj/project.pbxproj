@@ -604,6 +604,7 @@
 		1E75A0891A88E2D0005BAA36 /* net.sf.openfx.CheckerBoardPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E75A0811A88E260005BAA36 /* net.sf.openfx.CheckerBoardPlugin.svg */; };
 		1E75A08A1A88E2E7005BAA36 /* net.sf.openfx.ImageStatistics.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E75A0821A88E286005BAA36 /* net.sf.openfx.ImageStatistics.png */; };
 		1E75A08B1A88E2E7005BAA36 /* net.sf.openfx.ImageStatistics.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E75A0831A88E286005BAA36 /* net.sf.openfx.ImageStatistics.svg */; };
+		1E75F8A31FC8676A00893757 /* CImgMatrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E75F8A21FC8676A00893757 /* CImgMatrix.cpp */; };
 		1E7B38BD1B95DEC200012B76 /* CImgFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E7B38BC1B95DEAB00012B76 /* CImgFilter.cpp */; };
 		1E7B38BF1B95E80E00012B76 /* CImgOperator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E7B38BE1B95E80D00012B76 /* CImgOperator.cpp */; };
 		1E7BCEB91E5EED420016A01E /* ofxsFileOpen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E5EBA0C1D4B6ABE0005A5A8 /* ofxsFileOpen.cpp */; };
@@ -3694,6 +3695,7 @@
 		1E75A0811A88E260005BAA36 /* net.sf.openfx.CheckerBoardPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.CheckerBoardPlugin.svg; sourceTree = "<group>"; };
 		1E75A0821A88E286005BAA36 /* net.sf.openfx.ImageStatistics.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ImageStatistics.png; sourceTree = "<group>"; };
 		1E75A0831A88E286005BAA36 /* net.sf.openfx.ImageStatistics.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.ImageStatistics.svg; sourceTree = "<group>"; };
+		1E75F8A21FC8676A00893757 /* CImgMatrix.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = CImgMatrix.cpp; path = Matrix/CImgMatrix.cpp; sourceTree = "<group>"; };
 		1E7B38BC1B95DEAB00012B76 /* CImgFilter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgFilter.cpp; sourceTree = "<group>"; };
 		1E7B38BE1B95E80D00012B76 /* CImgOperator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgOperator.cpp; sourceTree = "<group>"; };
 		1E814C9319C9816E00C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.ChromaKeyerPlugin.svg; sourceTree = "<group>"; };
@@ -5014,6 +5016,7 @@
 				1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */,
 				1E0C66801E97C187005AB8AD /* CImgInpaint-gpl.cpp */,
 				1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */,
+				1E75F8A21FC8676A00893757 /* CImgMatrix.cpp */,
 				1E868B7919E6E72B00B793BA /* CImgNoise.cpp */,
 				1E7B38BE1B95E80D00012B76 /* CImgOperator.cpp */,
 				1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */,
@@ -8207,6 +8210,7 @@
 				1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */,
 				1E7B38BD1B95DEC200012B76 /* CImgFilter.cpp in Sources */,
 				1E92575119ECF38A0018F19A /* CImgRollingGuidance.cpp in Sources */,
+				1E75F8A31FC8676A00893757 /* CImgMatrix.cpp in Sources */,
 				1EA92DC31B1DD1B400FE3709 /* CImgExpression.cpp in Sources */,
 				1E31942219D9B2560027D0E2 /* CImgSmooth.cpp in Sources */,
 				1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */,

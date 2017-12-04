@@ -123,6 +123,7 @@ grouping).
 * GMICExpr: Quickly generate or process image from mathematical formula evaluated for each pixel.
 * GodRays: Average an image over a range of transforms, or create crepuscular rays.
 * InpaintCImg: Inpaint the areas indicated by the Mask input using patch-based inpainting.
+* Matrix3x3 and Matrix5x5: Apply a filter given by a 3x3 or 5x5 matrix.
 * Shadertoy: Apply a [Shadertoy](http://www.shadertoy.com) fragment shaders (multipass shaders are not supported).
 * SharpenCImg: Sharpen the input stream by enhancing its Laplacian.
 * SharpenInvDiffCImg: Sharpen selected images by inverse diffusion.

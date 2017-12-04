@@ -13,6 +13,7 @@ CImgExpression.o \
 CImgGuided.o \
 CImgHistEQ.o \
 CImgInpaint-gpl.o \
+CImgMatrix.o \
 CImgMedian.o \
 CImgNoise.o \
 CImgPlasma.o \
@@ -97,6 +98,7 @@ Expression \
 Guided \
 HistEQ \
 Inpaint \
+Matrix \
 Median \
 Noise \
 Plasma \
@@ -123,6 +125,7 @@ CXXFLAGS += \
 -IGuided \
 -IHistEQ \
 -IInpaint \
+-IMatrix \
 -IMedian \
 -INoise \
 -IPlasma \
@@ -207,6 +210,8 @@ $(OBJECTPATH)/CImgGuided.o: CImgGuided.cpp CImgFilter.h CImg.h
 $(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgInpaint-gpl.o: CImgInpaint-gpl.cpp CImgFilter.h CImg.h Inpaint/inpaint.h
+
+$(OBJECTPATH)/CImgMatrix.o: CImgMatrix.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgMedian.o: CImgMedian.cpp CImgFilter.h CImg.h
 
