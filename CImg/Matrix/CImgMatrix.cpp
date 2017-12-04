@@ -171,7 +171,7 @@ public:
             double Mbn = M[15]; double Mpn = M[16]; double Mcn = M[17]; double Mnn = M[18]; double Man = M[19];
             double Mba = M[20]; double Mpa = M[21]; double Mca = M[22]; double Mna = M[23]; double Maa = M[24];
 
-            cimg_pragma_openmp(parallel for cimg_openmp_if(_width*_height>=262144 && _spectrum>=2))
+            cimg_pragma_openmp(parallel for cimg_openmp_if(cimg.width() * cimg.height() >= 262144 && cimg.spectrum() >= 2))
             cimg_forC(cimg,c) {
                 cimgpix_t *ptrd = res.data() + cimg.width() * cimg.height() * c;
                 CImg_5x5(I,cimgpix_t);
@@ -196,7 +196,7 @@ public:
             double Mpc = M[3]; double Mcc = M[4]; double Mnc = M[5];
             double Mpn = M[6]; double Mcn = M[7]; double Mnn = M[8];
 
-            cimg_pragma_openmp(parallel for cimg_openmp_if(_width*_height>=262144 && _spectrum>=2))
+            cimg_pragma_openmp(parallel for cimg_openmp_if(cimg.width() * cimg.height() >= 262144 && cimg.spectrum() >= 2))
             cimg_forC(cimg,c) {
                 cimgpix_t *ptrd = res.data() + cimg.width() * cimg.height() * c;
                 CImg_3x3(I,cimgpix_t);
