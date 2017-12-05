@@ -45,8 +45,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "Matrix0x0CImg"
 #define kPluginGrouping      "Filter/Matrix"
 #define kPluginDescription \
-"Apply a Matrix filter to input images. Pixel values within a square box of the given size around the current pixel are sorted, and the Matrix value is output if it does not differ from the current value by more than the given. Matrix filtering is performed per-channel.\n" \
-"Uses the 'blur_Matrix' function from the CImg library.\n" \
+"Compute the convolution of the input image with the specified matrix.\n" \
+"This works by multiplying each surrounding pixel of the input image with the corresponding matrix coefficient (the current pixel is at the center of the matrix), and summing up the results.\n" \
+"For example [-1 -1 -1] [-1 8 -1] [-1 -1 -1] produces an edge detection filter (which is an approximation of the Laplacian filter) by multiplying the center pixel by 8 and the surrounding pixels by -1, and then adding the nine values together to calculate the new value of the center pixel.\n" \
+"Uses the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.eu)."
@@ -54,8 +56,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier    "eu.cimg.CImgMatrix"
 // History:
 // version 1.0: initial version
-// version 2.0: use kNatronOfxParamProcess* parameters
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsComponentRemapping 1
