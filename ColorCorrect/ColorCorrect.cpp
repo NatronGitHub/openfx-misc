@@ -53,8 +53,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: add range params
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -102,6 +103,11 @@ static const std::string kParamOffset = std::string("Offset");
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Process alpha component."
 #endif
+
+#define kParamRange "range"
+#define kParamRangeLabel "Range"
+#define kParamRangeHint "Expected range for input values. Within this range, a lookup table is used for faster computation."
+
 #define kParamColorCorrectToneRanges "toneRanges"
 #define kParamColorCorrectToneRangesLabel "Tone Ranges"
 #define kParamColorCorrectToneRangesHint "Tone ranges lookup table"
@@ -139,8 +145,6 @@ enum LuminanceMathEnum
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
 #define kParamPremultChanged "premultChanged"
-
-#define LUT_MAX_PRECISION 100
 
 struct ColorControlValues
 {
@@ -376,12 +380,16 @@ protected:
     bool _premult;
     int _premultChannel;
     bool _doMasking;
+    const bool _clampBlack;
+    const bool _clampWhite;
     double _mix;
     bool _maskInvert;
     bool _processR, _processG, _processB, _processA;
 
 public:
     ColorCorrecterBase(ImageEffect &instance,
+                       bool clampBlack,
+                       bool clampWhite,
                        const RenderArguments & /*args*/)
         : ImageProcessor(instance)
         , _srcImg(NULL)
@@ -389,6 +397,8 @@ public:
         , _premult(false)
         , _premultChannel(3)
         , _doMasking(false)
+        , _clampBlack(clampBlack)
+        , _clampWhite(clampWhite)
         , _mix(1.)
         , _maskInvert(false)
         , _processR(false)
@@ -396,8 +406,6 @@ public:
         , _processB(false)
         , _processA(false)
         , _luminanceMath(eLuminanceMathRec709)
-        , _clampBlack(true)
-        , _clampWhite(true)
     {
     }
 
@@ -413,8 +421,6 @@ public:
                                const ColorControlGroup& midtone,
                                const ColorControlGroup& hightlights,
                                LuminanceMathEnum luminanceMath,
-                               bool clampBlack,
-                               bool clampWhite,
                                bool premult,
                                int premultChannel,
                                double mix,
@@ -428,8 +434,6 @@ public:
         _midtoneValues = midtone;
         _highlightsValues = hightlights;
         _luminanceMath = luminanceMath;
-        _clampBlack = clampBlack;
-        _clampWhite = clampWhite;
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
@@ -439,118 +443,102 @@ public:
         _processA = processA;
     }
 
-    template<bool processR, bool processG, bool processB, bool processA>
-    void colorTransform(double *r,
-                        double *g,
-                        double *b,
-                        double *a)
-    {
-        double l = luminance(*r, *g, *b, _luminanceMath);
-        double s_scale = interpolate(0, l);
-        double h_scale = interpolate(1, l);
-        double m_scale = 1.f - s_scale - h_scale;
 
-        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, l);
-        p.applySMH(_shadowValues, s_scale,
-                   _midtoneValues, m_scale,
-                   _highlightsValues, h_scale,
-                   _masterValues);
-        if (processR) {
-            *r = clamp(p.r);
-        }
-        if (processG) {
-            *g = clamp(p.g);
-        }
-        if (processB) {
-            *b = clamp(p.b);
-        }
-        if (processA) {
-            *a = clamp(p.a);
-        }
+protected:
+    // clamp for integer PIX types
+    template<class PIX>
+    float clamp(float value,
+                int maxValue) const
+    {
+        return std::max( 0.f, std::min( value, float(maxValue) ) );
     }
 
-private:
-    double clamp(double comp)
+    // clamp for integer PIX types
+    template<class PIX>
+    double clamp(double value,
+                 int maxValue) const
     {
-        if ( _clampBlack && (comp < 0.) ) {
-            comp = 0.;
-        } else if ( _clampWhite && (comp > 1.0) ) {
-            comp = 1.0;
-        }
-
-        return comp;
+        return std::max( 0., std::min( value, double(maxValue) ) );
     }
 
-    double interpolate(int curve,
-                       double value)
-    {
-        if (value < 0.) {
-            return _lookupTable[curve][0];
-        } else if (value >= 1.) {
-            return _lookupTable[curve][LUT_MAX_PRECISION];
-        } else {
-            double i_d = std::floor(value * LUT_MAX_PRECISION);
-            int i = (int)i_d;
-            assert(0 <= i && i < LUT_MAX_PRECISION);
-            double alpha = value * LUT_MAX_PRECISION - i_d;
-            assert(0. <= alpha && alpha < 1.);
-            // clamp values within the admissible range
-            i = std::max( 0, std::min(i, LUT_MAX_PRECISION - 1) );
-            alpha = std::max( 0., std::min(alpha, 1.) );
-
-            return _lookupTable[curve][i] * (1. - alpha) + _lookupTable[curve][i+1] * alpha;
-        }
-    }
-
-private:
+protected:
     ColorControlGroup _masterValues;
     ColorControlGroup _shadowValues;
     ColorControlGroup _midtoneValues;
     ColorControlGroup _highlightsValues;
     LuminanceMathEnum _luminanceMath;
-    bool _clampBlack;
-    bool _clampWhite;
-
-protected:
-
-    // clamp for integer types
-    template<class PIX>
-    double clamp(double value,
-                 int maxValue)
-    {
-        return std::max( 0., std::min( value, double(maxValue) ) );
-    }
-
-    double _lookupTable[2][LUT_MAX_PRECISION + 1];
 };
 
+// floats don't clamp except if _clampBlack or _clampWhite
+template<>
+float
+ColorCorrecterBase::clamp<float>(float value,
+                                 int maxValue) const
+{
+    assert(maxValue == 1.);
+    if ( _clampBlack && (value < 0.) ) {
+        value = 0.f;
+    } else if ( _clampWhite && (value > 1.0) ) {
+        value = 1.0f;
+    }
 
-template <class PIX, int nComponents, int maxValue>
+    return value;
+}
+
+template<>
+double
+ColorCorrecterBase::clamp<float>(double value,
+                                 int maxValue) const
+{
+    assert(maxValue == 1.);
+    if ( _clampBlack && (value < 0.) ) {
+        value = 0.f;
+    } else if ( _clampWhite && (value > 1.0) ) {
+        value = 1.0f;
+    }
+
+    return value;
+}
+
+// template to do the processing.
+// nbValues is the number of values in the LUT minus 1. For integer types, it should be the same as
+// maxValue
+template <class PIX, int nComponents, int maxValue, int nbValues>
 class ColorCorrecter
     : public ColorCorrecterBase
 {
 public:
     ColorCorrecter(ImageEffect &instance,
                    const RenderArguments &args,
-                   bool supportsParametricParameter)
-        : ColorCorrecterBase(instance, args)
+                   ParametricParam  *lookupTableParam,
+                   double rangeMin,
+                   double rangeMax,
+                   bool clampBlack,
+                   bool clampWhite)
+        : ColorCorrecterBase(instance, clampBlack, clampWhite, args)
+        , _lookupTableParam(lookupTableParam)
+        , _rangeMin( std::min(rangeMin, rangeMax) )
+        , _rangeMax( std::max(rangeMin, rangeMax) )
     {
-        const double time = args.time;
+        _time = args.time;
         // build the LUT
-        ParametricParam  *lookupTable = 0;
-
-        if (supportsParametricParameter) {
-            lookupTable = instance.fetchParametricParam(kParamColorCorrectToneRanges);
+        if (_rangeMin == _rangeMax) {
+            // avoid divisions by zero
+            _rangeMax = _rangeMin + 1.;
         }
+        assert( (PIX)maxValue == maxValue );
+        // except for float, maxValue is the same as nbValues
+        assert( maxValue == 1 || (maxValue == nbValues) );
         for (int curve = 0; curve < 2; ++curve) {
-            for (int position = 0; position <= LUT_MAX_PRECISION; ++position) {
+            _lookupTable[curve].resize(nbValues + 1);
+            for (int position = 0; position <= nbValues; ++position) {
                 // position to evaluate the param at
-                double parametricPos = double(position) / LUT_MAX_PRECISION;
+                double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
 
                 // evaluate the parametric param
                 double value;
-                if (lookupTable) {
-                    value = lookupTable->getValue(curve, time, parametricPos);
+                if (_lookupTableParam) {
+                    value = _lookupTableParam->getValue(curve, _time, parametricPos);
                 } else if (curve == 0) {
                     if (parametricPos < 0.09) {
                         value = 1. - parametricPos / 0.09;
@@ -696,6 +684,69 @@ private:
             }
         }
     } // process
+
+    template<bool processR, bool processG, bool processB, bool processA>
+    void colorTransform(double *r,
+                        double *g,
+                        double *b,
+                        double *a)
+    {
+        double l = luminance(*r, *g, *b, _luminanceMath);
+        double s_scale = interpolate(0, l);
+        double h_scale = interpolate(1, l);
+        double m_scale = 1.f - s_scale - h_scale;
+
+        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, l);
+        p.applySMH(_shadowValues, s_scale,
+                   _midtoneValues, m_scale,
+                   _highlightsValues, h_scale,
+                   _masterValues);
+        if (processR) {
+            *r = clamp<float>(p.r, 1);
+        }
+        if (processG) {
+            *g = clamp<float>(p.g, 1);
+        }
+        if (processB) {
+            *b = clamp<float>(p.b, 1);
+        }
+        if (processA) {
+            *a = clamp<float>(p.a, 1);
+        }
+    }
+
+    // on input to interpolate, value should be normalized to the [0-1] range
+    float interpolate(int component,
+                      float value) const
+    {
+        if ( (value < _rangeMin) || (_rangeMax < value) ) {
+            // slow version
+            double ret = _lookupTableParam->getValue(component, _time, value);
+
+            return clamp<float>(ret, 1);;
+        } else {
+            double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
+            if (x <= 0.) {
+                return _lookupTable[component][0];
+            } else if (x >= 1.) {
+                return _lookupTable[component][nbValues];
+            }
+            int i = (int)(x * nbValues);
+            assert(0 <= i && i < nbValues);
+            i = std::max( 0, std::min(i, nbValues - 1) );
+            double alpha = std::max( 0., std::min(x * nbValues - i, 1.) );
+            float a = _lookupTable[component][i];
+            float b = _lookupTable[component][i + 1];
+
+            return a * (1.f - alpha) + b * alpha;
+        }
+    }
+
+    std::vector<float> _lookupTable[2];
+    ParametricParam*  _lookupTableParam;
+    double _time;
+    double _rangeMin;
+    double _rangeMax;
 };
 
 struct ColorControlParamGroup
@@ -743,6 +794,7 @@ public:
         , _processG(NULL)
         , _processB(NULL)
         , _processA(NULL)
+        , _range(NULL)
         , _rangesParam(NULL)
         , _luminanceMath(NULL)
         , _clampBlack(NULL)
@@ -767,6 +819,8 @@ public:
         fetchColorControlGroup(kGroupShadows, &_shadowsParamsGroup);
         fetchColorControlGroup(kGroupMidtones, &_midtonesParamsGroup);
         fetchColorControlGroup(kGroupHighlights, &_highlightsParamsGroup);
+        _range = fetchDouble2DParam(kParamRange);
+        assert(_range);
         if (_supportsParametricParameter) {
             _rangesParam = fetchParametricParam(kParamColorCorrectToneRanges);
             assert(_rangesParam);
@@ -855,6 +909,7 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
+    Double2DParam* _range;
     ParametricParam* _rangesParam;
     ChoiceParam* _luminanceMath;
     BooleanParam* _clampBlack;
@@ -966,8 +1021,6 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
     getColorCorrectGroupValues(time, &midtoneValues,   eGroupMidtone);
     getColorCorrectGroupValues(time, &highlightValues, eGroupHighlight);
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
-    bool clampBlack = _clampBlack->getValueAtTime(time);
-    bool clampWhite = _clampWhite->getValueAtTime(time);
     bool premult = _premult->getValueAtTime(time);
     int premultChannel = _premultChannel->getValueAtTime(time);
     double mix = _mix->getValueAtTime(time);
@@ -976,7 +1029,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
     bool processB = _processB->getValueAtTime(time);
     bool processA = _processA->getValueAtTime(time);
 
-    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, luminanceMath, clampBlack, clampWhite, premult, premultChannel, mix,
+    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, luminanceMath, premult, premultChannel, mix,
                                     processR, processG, processB, processA);
     processor.process();
 } // ColorCorrectPlugin::setupAndProcess
@@ -993,20 +1046,27 @@ ColorCorrectPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentRGBA);
+    double rangeMin, rangeMax;
+    const double time = args.time;
+
+    _range->getValueAtTime(time, rangeMin, rangeMax);
+    bool clampBlack = _clampBlack->getValueAtTime(time);
+    bool clampWhite = _clampWhite->getValueAtTime(time);
+
     if (dstComponents == ePixelComponentRGBA) {
         switch (dstBitDepth) {
         case eBitDepthUByte: {
-            ColorCorrecter<unsigned char, 4, 255> fred(*this, args, _supportsParametricParameter);
+            ColorCorrecter<unsigned char, 4, 255, 255> fred(*this, args, _rangesParam, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
             break;
         }
         case eBitDepthUShort: {
-            ColorCorrecter<unsigned short, 4, 65535> fred(*this, args, _supportsParametricParameter);
+            ColorCorrecter<unsigned short, 4, 65535, 65535> fred(*this, args, _rangesParam, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
             break;
         }
         case eBitDepthFloat: {
-            ColorCorrecter<float, 4, 1> fred(*this, args, _supportsParametricParameter);
+            ColorCorrecter<float, 4, 1, 1023> fred(*this, args, _rangesParam, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
             break;
         }
@@ -1018,17 +1078,17 @@ ColorCorrectPlugin::render(const RenderArguments &args)
         assert(dstComponents == ePixelComponentRGB);
         switch (dstBitDepth) {
         case eBitDepthUByte: {
-            ColorCorrecter<unsigned char, 3, 255> fred(*this, args, _supportsParametricParameter);
+            ColorCorrecter<unsigned char, 3, 255, 255> fred(*this, args, _rangesParam, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
             break;
         }
         case eBitDepthUShort: {
-            ColorCorrecter<unsigned short, 3, 65535> fred(*this, args, _supportsParametricParameter);
+            ColorCorrecter<unsigned short, 3, 65535, 65535> fred(*this, args, _rangesParam, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
             break;
         }
         case eBitDepthFloat: {
-            ColorCorrecter<float, 3, 1> fred(*this, args, _supportsParametricParameter);
+            ColorCorrecter<float, 3, 1, 1023> fred(*this, args, _rangesParam, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
             break;
         }
@@ -1176,7 +1236,15 @@ void
 ColorCorrectPlugin::changedParam(const InstanceChangedArgs &args,
                                  const std::string &paramName)
 {
-    if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
+    const double time = args.time;
+
+    if ( (paramName == kParamRange) && (args.reason == eChangeUserEdit) ) {
+        double rmin, rmax;
+        _range->getValueAtTime(time, rmin, rmax);
+        if (rmax < rmin) {
+            _range->setValue(rmax, rmin);
+        }
+    } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
 }
@@ -1356,45 +1424,64 @@ ColorCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     defineColorGroup(kGroupMidtones, "", page, desc, false);
     defineColorGroup(kGroupHighlights, "", page, desc, false);
 
-    PageParamDescriptor* ranges = desc.definePageParam("Ranges");
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
-                                               !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                 8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric
-    if (supportsParametricParameter) {
-        ParametricParamDescriptor* param = desc.defineParametricParam(kParamColorCorrectToneRanges);
-        assert(param);
-        param->setLabel(kParamColorCorrectToneRangesLabel);
-        param->setHint(kParamColorCorrectToneRangesHint);
-
-        // define it as two dimensional
-        param->setDimension(2);
-
-        param->setDimensionLabel(kParamColorCorrectToneRangesDim0, 0);
-        param->setDimensionLabel(kParamColorCorrectToneRangesDim1, 1);
-
-        // set the UI colour for each dimension
-        const OfxRGBColourD shadow   = {0.6, 0.4, 0.6};
-        const OfxRGBColourD highlight  =  {0.8, 0.7, 0.6};
-        param->setUIColour( 0, shadow );
-        param->setUIColour( 1, highlight );
-
-        // set the min/max parametric range to 0..1
-        param->setRange(0.0, 1.0);
-        // set the default Y range to 0..1 for all dimensions
-        param->setDimensionDisplayRange(0., 1., 0);
-        param->setDimensionDisplayRange(0., 1., 1);
-
-        param->addControlPoint(0, // curve to set
-                               0.0,         // time, ignored in this case, as we are not adding a key
-                               0.0,         // parametric position, zero
-                               1.0,         // value to be, 0
-                               false);         // don't add a key
-        param->addControlPoint(0, 0.0, 0.09, 0.0, false);
-
-        param->addControlPoint(1, 0.0, 0.5, 0.0, false);
-        param->addControlPoint(1, 0.0, 1.0, 1.0, false);
-        ranges->addChild(*param);
+    {
+        PageParamDescriptor* ranges = desc.definePageParam("Ranges");
+        {
+            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamRange);
+            param->setLabel(kParamRangeLabel);
+            param->setDimensionLabels("min", "max");
+            param->setHint(kParamRangeHint);
+            param->setDefault(0., 1.);
+            param->setDoubleType(eDoubleTypePlain);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 0., 1., 1.);
+            param->setUseHostNativeOverlayHandle(false);
+            param->setAnimates(true);
+            if (ranges) {
+                ranges->addChild(*param);
+            }
+        }
+        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+        const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
+                                                  !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                    8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 10) );  // Nuke 8-10 are known to *not* support Parametric
+        if (supportsParametricParameter) {
+            ParametricParamDescriptor* param = desc.defineParametricParam(kParamColorCorrectToneRanges);
+            assert(param);
+            param->setLabel(kParamColorCorrectToneRangesLabel);
+            param->setHint(kParamColorCorrectToneRangesHint);
+            
+            // define it as two dimensional
+            param->setDimension(2);
+            
+            param->setDimensionLabel(kParamColorCorrectToneRangesDim0, 0);
+            param->setDimensionLabel(kParamColorCorrectToneRangesDim1, 1);
+            
+            // set the UI colour for each dimension
+            const OfxRGBColourD shadow   = {0.6, 0.4, 0.6};
+            const OfxRGBColourD highlight  =  {0.8, 0.7, 0.6};
+            param->setUIColour( 0, shadow );
+            param->setUIColour( 1, highlight );
+            
+            // set the min/max parametric range to 0..1
+            param->setRange(0.0, 1.0);
+            // set the default Y range to 0..1 for all dimensions
+            param->setDimensionDisplayRange(0., 1., 0);
+            param->setDimensionDisplayRange(0., 1., 1);
+            
+            param->addControlPoint(0, // curve to set
+                                   0.0,         // time, ignored in this case, as we are not adding a key
+                                   0.0,         // parametric position, zero
+                                   1.0,         // value to be, 0
+                                   false);         // don't add a key
+            param->addControlPoint(0, 0.0, 0.09, 0.0, false);
+            
+            param->addControlPoint(1, 0.0, 0.5, 0.0, false);
+            param->addControlPoint(1, 0.0, 1.0, 1.0, false);
+            if (ranges) {
+                ranges->addChild(*param);
+            }
+        }
     }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
