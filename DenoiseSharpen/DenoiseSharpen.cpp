@@ -414,8 +414,6 @@ static const float noise_b3[] = { 0.8908,   0.2007,   0.0855,    0.0412,    0.02
 #define abort_test_loop() if ( abort() ) { if ( !omp_get_thread_num() ) {throwSuiteStatusException(kOfxStatFailed);} \
                                            else { continue;} \
 }
-#define abort_test() ( (void)0 )
-#define abort_test_loop() ( (void)0 )
 #else
 #define abort_test() if ( abort() ) { throwSuiteStatusException(kOfxStatFailed); }
 #define abort_test_loop() abort_test()
