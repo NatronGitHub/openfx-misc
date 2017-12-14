@@ -224,18 +224,19 @@ luminance(double r,
 template<bool processR, bool processG, bool processB, bool processA>
 struct RGBAPixel
 {
-    double r, g, b, a, l;
+    double r, g, b, a;
+    LuminanceMathEnum luminanceMath;
 
     RGBAPixel(double r_,
               double g_,
               double b_,
               double a_,
-              double l_)
+              LuminanceMathEnum luminanceMath_)
         : r(r_)
         , g(g_)
         , b(b_)
         , a(a_)
-        , l(l_)
+        , luminanceMath(luminanceMath_)
     {
     }
 
@@ -273,6 +274,13 @@ struct RGBAPixel
 private:
     void applySaturation(const ColorControlValues &c)
     {
+        if (!(processR && c.r != 1.) &&
+            !(processG && c.g != 1.) &&
+            !(processB && c.b != 1.)) {
+
+            return;
+        }
+        double l = luminance(r, g, b, luminanceMath);
         if (processR && c.r != 1.) {
             r = (1.f - c.r) * l + c.r * r;
         }
@@ -540,8 +548,12 @@ public:
                 if (_lookupTableParam) {
                     value = _lookupTableParam->getValue(curve, _time, parametricPos);
                 } else if (curve == 0) {
-                    if (parametricPos < 0.09) {
-                        value = 1. - parametricPos / 0.09;
+                    if (parametricPos <= 0.) {
+                        value = 1.;
+                    } else if (parametricPos < 0.09) {
+                        double x = parametricPos / 0.09;
+                        x = -2 * x * x * x + 3 * x * x; // cubic
+                        value = 1. - x;
                     } else {
                         value = 0.;
                     }
@@ -549,8 +561,12 @@ public:
                     assert(curve == 1);
                     if (parametricPos <= 0.5) {
                         value = 0.;
+                    } else if (parametricPos >= 1.) {
+                        value = 1.;
                     } else {
-                        value = (parametricPos - 0.5) / 0.5;
+                        double x = (parametricPos - 0.5) / 0.5;
+                        x = -2 * x * x * x + 3 * x * x; // cubic
+                        value = x;
                     }
                 }
                 // set that in the lut
@@ -696,7 +712,7 @@ private:
         double h_scale = interpolate(1, l);
         double m_scale = 1.f - s_scale - h_scale;
 
-        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, l);
+        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, _luminanceMath);
         p.applySMH(_shadowValues, s_scale,
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
