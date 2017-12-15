@@ -2689,6 +2689,13 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &arg
 
     Coords::rectIntersection<OfxRectD>(roi, srcRod, &roi);
     rois.setRegionOfInterest(*_srcClip, roi);
+
+    // if analysis is locked, we do not need the analysis inputs
+    if ( _analysisLock->getValueAtTime(time) ) {
+        OfxRectD emptyRoi = {0., 0., 0., 0.};
+        rois.setRegionOfInterest(*_analysisSrcClip, emptyRoi);
+        rois.setRegionOfInterest(*_analysisMaskClip, emptyRoi);
+    }
 }
 
 bool
