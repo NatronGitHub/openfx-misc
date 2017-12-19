@@ -419,16 +419,16 @@ private:
                         for (std::size_t c = 0; c < nComponents; ++c) {
 #                         ifdef DEBUG
                             // check for NaN
-                            assert(!srcPixA || srcPixA[c] == srcPixA[c]);
-                            assert(!srcPixB || srcPixB[c] == srcPixB[c]);
+                            assert( !srcPixA || !OFX::IsNaN(srcPixA[c]) );
+                            assert( !srcPixB || !OFX::IsNaN(srcPixB[c]) );
 #                         endif
                             // all images are supposed to be black and transparent outside o
                             tmpA[c] = (_aChannels[c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
                             tmpB[c] = (_bChannels[c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
 #                         ifdef DEBUG
                             // check for NaN
-                            assert(tmpA[c] == tmpA[c]);
-                            assert(tmpB[c] == tmpB[c]);
+                            assert( !OFX::IsNaN(tmpA[c]) );
+                            assert( !OFX::IsNaN(tmpB[c]) );
 #                         endif
                         }
 
@@ -481,7 +481,7 @@ private:
 #                 ifdef DEBUG
                     // check for NaN
                     for (int c = 0; c < nComponents; ++c) {
-                        assert(tmpPix[c] == tmpPix[c]);
+                        assert( !OFX::IsNaN(tmpPix[c]) );
                     }
 #                 endif
 
@@ -494,13 +494,13 @@ private:
                             for (std::size_t c = 0; c < nComponents; ++c) {
 #                             ifdef DEBUG
                                 // check for NaN
-                                assert(srcPixA[c] == srcPixA[c]);
+                                assert( !OFX::IsNaN(srcPixA[c]) );
 #                             endif
                                 // all images are supposed to be black and transparent outside o
                                 tmpA[c] = _aChannels[c] ? ( (float)srcPixA[c] / maxValue ) : 0.f;
 #                             ifdef DEBUG
                                 // check for NaN
-                                assert(tmpA[c] == tmpA[c]);
+                                assert( !OFX::IsNaN(tmpA[c]) );
 #                             endif
                             }
 
@@ -548,7 +548,7 @@ private:
 #                         ifdef DEBUG
                             // check for NaN
                             for (int c = 0; c < nComponents; ++c) {
-                                assert(tmpPix[c] == tmpPix[c]);
+                                assert( !OFX::IsNaN(tmpPix[c]) );
                             }
 #                         endif
                         }

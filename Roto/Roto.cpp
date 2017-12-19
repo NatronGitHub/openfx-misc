@@ -247,8 +247,8 @@ private:
                     maskAlpha = 1;
                 }
 #             ifdef DEBUG
-                assert(srcAlpha == srcAlpha); // check for NaN
-                assert(maskAlpha == maskAlpha); // check for NaN
+                assert( !OFX::IsNaN(srcAlpha) ); // check for NaN
+                assert( !OFX::IsNaN(maskAlpha) ); // check for NaN
 #             endif
 
 
@@ -270,8 +270,8 @@ private:
                 for (int c = 0; c < nComponents; ++c) {
                     dstPix[c] = MergeImages2D::overFunctor<PIX, maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha);
 #                 ifdef DEBUG
-                    assert(srcVal[c] == srcVal[c]); // check for NaN
-                    assert(dstPix[c] == dstPix[c]); // check for NaN
+                    assert( !OFX::IsNaN(srcVal[c]) ); // check for NaN
+                    assert( !OFX::IsNaN(dstPix[c]) ); // check for NaN
 #                 endif
                 }
             }
