@@ -23,12 +23,6 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm>
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#define isnan _isnan
-#else
-using std::isnan;
-#endif
 
 #if !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
 #define GL_GLEXT_PROTOTYPES
@@ -443,7 +437,7 @@ private:
                     float a = srcPix ? (srcPix[0] / (float)maxValue) : 0.f;
                     tmpPix[0] = interpolate(0, a) * maxValue;
                     for (int c = 0; c < nComponents; ++c) {
-                        assert( ( !srcPix || ( !isnan(srcPix[c]) && !isnan(srcPix[c]) ) ) && !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
+                        assert( ( !srcPix || ( !OFX::IsNaN(srcPix[c]) && !OFX::IsNaN(srcPix[c]) ) ) && !OFX::IsNaN(tmpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
                     }
                     // ofxsMaskMix expects denormalized input
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -527,7 +521,7 @@ private:
                         }
                     }
                     for (int c = 0; c < nComponents; ++c) {
-                        assert( ( !srcPix || ( !isnan(srcPix[c]) && !isnan(srcPix[c]) ) ) && !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
+                        assert( ( !srcPix || ( !OFX::IsNaN(srcPix[c]) && !OFX::IsNaN(srcPix[c]) ) ) && !OFX::IsNaN(tmpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
                     }
                     // ofxsMaskMix expects denormalized input
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -617,7 +611,7 @@ private:
                         }
                     }
                     for (int c = 0; c < nComponents; ++c) {
-                        assert( !isnan(unpPix[c]) && !isnan(unpPix[c]) && !isnan(tmpPix[c]) && !isnan(tmpPix[c]) );
+                        assert( !OFX::IsNaN(unpPix[c]) && !OFX::IsNaN(unpPix[c]) && !OFX::IsNaN(tmpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
                     }
                     // ofxsPremultMaskMixPix expects normalized input
                     ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);

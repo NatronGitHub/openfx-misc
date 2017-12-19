@@ -55,13 +55,6 @@ typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 #include <GL/gl.h>
 #endif
 
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#define isnan _isnan
-#else
-using std::isnan;
-#endif
-
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -619,23 +612,23 @@ public:
             double skewness[nComponents];
             // factor for the adjusted Fisher-Pearson standardized moment coefficient G_1
             double skewfac = ( (double)_count * _count ) / ( (double)(_count - 1) * (_count - 2) );
-            assert( !isnan(skewfac) );
+            assert( !OFX::IsNaN(skewfac) );
             for (int c = 0; c < nComponents; ++c) {
                 skewness[c] = skewfac * _sum_p3[c] / _count;
             }
             toRGBA<double, nComponents, 1>(skewness, &results->skewness);
-            assert( !isnan(results->skewness.r) && !isnan(results->skewness.g) && !isnan(results->skewness.b) && !isnan(results->skewness.a) );
+            assert( !OFX::IsNaN(results->skewness.r) && !OFX::IsNaN(results->skewness.g) && !OFX::IsNaN(results->skewness.b) && !OFX::IsNaN(results->skewness.a) );
         }
         if (_count > 3) {
             double kurtosis[nComponents];
             double kurtfac = ( (double)(_count + 1) * _count ) / ( (double)(_count - 1) * (_count - 2) * (_count - 3) );
             double kurtshift = -3 * ( (double)(_count - 1) * (_count - 1) ) / ( (double)(_count - 2) * (_count - 3) );
-            assert( !isnan(kurtfac) && !isnan(kurtshift) );
+            assert( !OFX::IsNaN(kurtfac) && !OFX::IsNaN(kurtshift) );
             for (int c = 0; c < nComponents; ++c) {
                 kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
             }
             toRGBA<double, nComponents, 1>(kurtosis, &results->kurtosis);
-            assert( !isnan(results->kurtosis.r) && !isnan(results->kurtosis.g) && !isnan(results->kurtosis.b) && !isnan(results->kurtosis.a) );
+            assert( !OFX::IsNaN(results->kurtosis.r) && !OFX::IsNaN(results->kurtosis.g) && !OFX::IsNaN(results->kurtosis.b) && !OFX::IsNaN(results->kurtosis.a) );
         }
     }
 
