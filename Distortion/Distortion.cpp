@@ -262,6 +262,23 @@ enum WrapEnum
    http://www.ptgui.com/ptguihelp/main_lens.htm
    http://www.nukepedia.com/written-tutorials/the-lens-distortion-model-in-the-card-node-explained/
    https://web.archive.org/web/20010409044720/http://www.fh-furtwangen.de/~dersch/barrel/barrel.html
+
+   OpenCV / Matlab Camera Calibration Toolbox:
+   - https://docs.opencv.org/trunk/d9/d0c/group__calib3d.html
+     intrinsic parameters are (fx, fy, cx, cy). fx,fy are the focal lengths expressed in pixel units. (cx,cy) is a principal point that is usually at the image center. These depend on the image resolution.
+     distortion coefficients are a vector (k1,k2,p1,p2[,k3[,k4,k5,k6[,s1,s2,s3,s4[,τx,τy]]]]) of 4, 5, 8, 12 or 14 elements. These are independent of image resolution.
+
+   OpenCV 3 Fisheye / Matlab Camera Calibration Toolbox Fisheye / Kannala-Brandt:
+   - A Generic Camera Model and Calibration Method for Conventional, Wide-Angle, and Fish-Eye Lenses <http://www.ee.oulu.fi/~jkannala/publications/tpami2006.pdf>
+     The "undocumented" fisheye model contained in the calibration toolbox follows the equidistance projection model described by equation (3) in this very nice paper. The distortion model follows equation (6), to the exception that k1=1 (otherwise indistinguishable from f).
+   - https://docs.opencv.org/trunk/db/d58/group__calib3d__fisheye.html
+     intrinsic parameters are (fx, fy, cx, cy). fx,fy are the focal lengths expressed in pixel units. (cx,cy) is a principal point that is usually at the image center. These depend on the image resolution.
+     distortion coefficients are (k1,k2,k3,k4): θd=θ(1+k1θ^2+k2θ^4+k3θ^6+k4θ^8) (θ is the angle of the incoming ray)
+    The distorted point coordinates are [x'; y'] where
+      x′=(θd/r)a, y′=(θd/r)b (r = sqrt((x/z)^2+(y/z)^2)
+    Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
+      u=fx(x′+αy′)+cx, v=fyy′+cy
+   - https://stackoverflow.com/questions/31089265/what-are-the-main-references-to-the-fish-eye-camera-model-in-opencv3-0-0dev
  */
 
 enum DistortionModelEnum
