@@ -54,8 +54,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: http://opticalenquiry.com/nuke/index.php?title=Reformat"
 
 #define kPluginIdentifier "net.sf.openfx.Reformat"
+// History:
+// version 1.0: initial version
+// version 1.1: fix https://github.com/MrKepzie/Natron/issues/1397
+// version 1.2: add useRoD parameter for Natron
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+
+#define kParamUseRoD "useRoD"
+#define kParamUseRoDLabel "Use Source RoD"
+#define kParamUseRoDHint "Use the region of definition of the source as the source format."
 
 #define kParamType "reformatType"
 #define kParamTypeLabel "Type"
@@ -156,6 +164,7 @@ enum ResizeEnum
 
 static bool gHostCanTransform;
 static bool gHostIsNatron = false;
+static bool gHostSupportsFormat = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -185,6 +194,7 @@ public:
         _blackOutside = fetchBooleanParam(kParamFilterBlackOutside);
 
         // NON-GENERIC
+        _useRoD = fetchBooleanParam(kParamUseRoD);
         _type = fetchChoiceParam(kParamType);
         _format = fetchChoiceParam(kParamFormat);
         _formatBoxSize = fetchInt2DParam(kParamFormatBoxSize);
@@ -200,7 +210,7 @@ public:
         _flip = fetchBooleanParam(kParamFlip);
         _flop = fetchBooleanParam(kParamFlop);
         _turn = fetchBooleanParam(kParamTurn);
-        assert(_type && _format && _boxSize && _boxFixed && _boxPAR && _scale && _scaleUniform && _preserveBB && _resize && _center && _flip && _flop && _turn);
+        assert(_useRoD && _type && _format && _boxSize && _boxFixed && _boxPAR && _scale && _scaleUniform && _preserveBB && _resize && _center && _flip && _flop && _turn);
 
 
         if (!gHostIsNatron) {
@@ -266,14 +276,15 @@ private:
 
     void getInputFormat(const double time,
                         double* par,
-                        OfxRectI* rect) const;
+                        OfxRectD* rect) const;
 
     void getOutputFormat(const double time,
                          double* par,
-                         OfxRectI* rect, // the rect to which the input format is mapped
+                         OfxRectD* rect, // the rect to which the input format is mapped
                          OfxRectI* format) const; // the full format (only useful if host supports format, really)
 
     // NON-GENERIC
+    BooleanParam* _useRoD;
     ChoiceParam *_type;
     ChoiceParam *_format;
     Int2DParam *_formatBoxSize;
@@ -308,7 +319,8 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     const double time = args.time;
     // intersect with format RoD
-    OfxRectI rect, format;
+    OfxRectD rect;
+    OfxRectI format;
     double par;
     getOutputFormat(time, &par, &rect, &format);
     const OfxPointD rsOne = {1., 1.}; // format is with respect to unit renderscale
@@ -336,29 +348,37 @@ ReformatPlugin::isIdentity(const double time)
     return false;
 }
 
+// recturn the input format in pixel units (we use a RectD in case the input format is the RoD)
 void
 ReformatPlugin::getInputFormat(const double time,
                                double* par,
-                               OfxRectI* rect) const
+                               OfxRectD* rect) const
 {
     *par = _srcClip->getPixelAspectRatio();
 #ifdef OFX_EXTENSIONS_NATRON
-    _srcClip->getFormat(*rect);
-    if ( !Coords::rectIsEmpty(*rect) ) {
-        // host returned a non-empty format
-        return;
+    if (gHostSupportsFormat && !_useRoD->getValueAtTime(time)) {
+        OfxRectI format;
+        _srcClip->getFormat(format);
+        if ( !Coords::rectIsEmpty(format) ) {
+            // host returned a non-empty format
+            rect->x1 = format.x1;
+            rect->y1 = format.y1;
+            rect->x2 = format.x2;
+            rect->y2 = format.y2;
+            return;
+        }
     }
     // host does not support format
 #endif
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
     const OfxPointD rsOne = {1., 1.}; // format is with respect to unit renderscale
-    Coords::toPixelNearest(srcRod, rsOne, *par, rect);
+    Coords::toPixelSub(srcRod, rsOne, *par, rect);
 }
 
 void
 ReformatPlugin::getOutputFormat(const double time,
                                 double* par,
-                                OfxRectI* rect,
+                                OfxRectD* rect,
                                 OfxRectI* format) const
 {
     int type_i;
@@ -488,9 +508,9 @@ ReformatPlugin::getOutputFormat(const double time,
     assert( !Coords::rectIsEmpty(dstRod) );
     *par = boxPAR;
     const OfxPointD rsOne = {1., 1.}; // format is with respect to unit renderscale
-    Coords::toPixelNearest(dstRod, rsOne, *par, rect);
+    Coords::toPixelSub(dstRod, rsOne, *par, rect);
     if (format && !boxFixed) {
-        *format = *rect;
+        Coords::toPixelNearest(dstRod, rsOne, *par, format);
     }
 } // ReformatPlugin::getOutputFormat
 
@@ -508,7 +528,7 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
     OfxRectD srcRod, dstRod;
     {
         double par;
-        OfxRectI format;
+        OfxRectD format;
         const OfxPointD rsOne = {1., 1.}; // format is with respect to unit renderscale
         getInputFormat(time, &par, &format);
         Coords::toCanonical(format, rsOne, par, &srcRod);
@@ -712,7 +732,7 @@ ReformatPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
     double par;
-    OfxRectI rect;
+    OfxRectD rect;
     OfxRectI format;
 
     getOutputFormat(0., &par, &rect, &format);
@@ -758,6 +778,7 @@ ReformatPluginFactory::describe(ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     if (getImageEffectHostDescription()->isNatron) {
         gHostIsNatron = true;
+        gHostSupportsFormat = true;
     }
 #endif
 }
@@ -768,6 +789,19 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
+
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamUseRoD);
+        param->setLabel(kParamUseRoDLabel);
+        param->setHint(kParamUseRoDHint);
+        // for now, only Natron supports OFX format extension
+        param->setEnabled(gHostSupportsFormat);
+        param->setDefault(!gHostSupportsFormat);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     // type
     {
