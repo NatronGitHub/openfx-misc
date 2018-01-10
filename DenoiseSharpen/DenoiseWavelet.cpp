@@ -24,8 +24,10 @@
 #include <cfloat> // DBL_MAX
 #include <algorithm>
 //#include <iostream>
-#ifdef _WINDOWS
-#include <windows.h>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
 #endif
 
 #include "ofxsMaskMix.h"

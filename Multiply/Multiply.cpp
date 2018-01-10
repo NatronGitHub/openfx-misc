@@ -23,9 +23,6 @@
 #include <cmath>
 #include <cstring>
 #include <cfloat> // DBL_MAX
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#endif
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
@@ -335,6 +332,7 @@ public:
         , _premultChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+#ifndef _MSC_VER
         assert( _dstClip && (!_dstClip->isConnected() ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha ||
 #ifdef OFX_EXTENSIONS_NATRON
@@ -342,7 +340,9 @@ public:
 #endif
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
+#endif
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+#ifndef _MSC_VER
         assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -351,6 +351,7 @@ public:
 #endif
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
+#endif
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);
@@ -501,11 +502,13 @@ MultiplyPlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+#ifndef _MSC_VER
     assert(dstComponents == ePixelComponentAlpha ||
 #ifdef OFX_EXTENSIONS_NATRON
            dstComponents == ePixelComponentXY ||
 #endif
            dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentRGBA);
+#endif
     if (dstComponents == ePixelComponentRGBA) {
         switch (dstBitDepth) {
         case eBitDepthUByte: {

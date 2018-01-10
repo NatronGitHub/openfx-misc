@@ -25,13 +25,15 @@
 #include <algorithm>
 #include <cmath>
 
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#endif
-
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
 #else
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+#endif
+
 #include <GL/gl.h>
 #endif
 

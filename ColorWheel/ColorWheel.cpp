@@ -20,10 +20,8 @@
  * OFX ColorWheel plugin.
  */
 
+#define _USE_MATH_DEFINES
 #include <cmath>
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#endif
 #include <climits>
 #include <cfloat> // DBL_MAX
 

@@ -31,6 +31,12 @@
 #include <OpenGL/gl.h>
 #include <OpenGL/glext.h>
 #else
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+#endif
+
 #include <GL/gl.h>
 #include <GL/glext.h>
 #endif

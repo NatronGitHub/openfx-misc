@@ -20,15 +20,13 @@
  * OFX Transform & DirBlur plugins.
  */
 
+#define _USE_MATH_DEFINES
 #include <cmath> // tan, atan2
 #include <cstring> // strerror
 #include <cstdio> // fopen, fclose
 #include <cstdlib> // atoi, atof
 #include <cerrno> // errno
 #include <iostream>
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#endif
 
 #include "ofxsTransform3x3.h"
 #include "ofxsCoords.h"
@@ -1825,7 +1823,7 @@ Card3DPlugin::getInverseTransformCanonical(double time,
             _camCamera->getParameter(kNukeOfxCameraParamPositionMatrix, time, view, &cam(0,0), 16);
             double projectionMode;
             _camCamera->getParameter(kNukeOfxCameraParamProjectionMode, time, view, &projectionMode, 1);
-            camProjectionMode = (CameraProjectionModeEnum)projectionMode;
+            camProjectionMode = (CameraProjectionModeEnum)((int)projectionMode);
             _camCamera->getParameter(kNukeOfxCameraParamFocalLength, time, view, &camFocal, 1);
             _camCamera->getParameter(kNukeOfxCameraParamHorizontalAperture, time, view, &camHAperture, 1);
             _camCamera->getParameter(kNukeOfxCameraParamWindowTranslate, time, view, camWinTranslate, 2);

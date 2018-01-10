@@ -3,9 +3,6 @@
  */
 
 #include <cmath>
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#endif
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"

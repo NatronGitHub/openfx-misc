@@ -18,6 +18,7 @@
 
 #include "DistortionModel.h"
 
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <cfloat> // DBL_EPSILON
 #include <algorithm> // max
