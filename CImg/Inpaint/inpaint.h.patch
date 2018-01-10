@@ -1,5 +1,5 @@
---- inpaint.h	2018-01-10 10:16:57.000000000 +0100
-+++ inpaint-abortable.h	2018-01-10 10:19:14.000000000 +0100
+--- Inpaint/inpaint.h	2018-01-10 10:16:57.000000000 +0100
++++ Inpaint/inpaint-abortable.h	2018-01-10 10:19:14.000000000 +0100
 @@ -103,6 +103,7 @@
    // Find (dilated by 2) bounding box for the inpainting mask.
    unsigned int xm0 = _width, ym0 = _height, xm1 = 0, ym1 = 0;
