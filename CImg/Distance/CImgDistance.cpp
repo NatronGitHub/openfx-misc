@@ -212,7 +212,7 @@ public:
                 // see http://pageperso.lif.univ-mrs.fr/~edouard.thiel/IVC2004/
 
                 while (!finished) {
-                    cimg_abort_test();
+                    cimg_abort_test;
                     int max_x = 0, max_y = 0, max_z = 0, max_c = 0;
                     cimgpix_t dmax = distance(0,0,0,0);
                     // TODO: if we start from the MAT, we can process each sphere center sequentially: no need to extract the maximum to get the next center (this is only useful to prune points that are within the Z-cone). The main loop would thus be on the non-zero MAT pixels.

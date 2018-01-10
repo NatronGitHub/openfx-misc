@@ -6,8 +6,8 @@
 \n       "$c"++"$n", "$c"--"$n", "$c"+="$n", "$c"-="$n", "$c"*="$n", "$c"/="$n", "$c"%="$n", "$c"&="$n", "$c"|="$n", "$c"^="$n", "$c">>="$n", "$c"<<="$n" (in-place operators).
 \n
 \n    _ "${g}"Usual math functions:"$n" "${c}"abs(), acos(), arg(), argkth(), argmax(), argmin(), asin(), atan(),
-\n       atan2(), bool(), cbrt(), ceil(), cos(), cosh(), cut(), exp(), fact(), fibo(), floor(), gauss(), int(), isval(),
-\n       isnan(), isinf(), isint(), isbool(), isfile(), isdir(), isin(), kth(), log(), log2(), log10(),
+\n       atan2(), avg(), bool(), cbrt(), ceil(), cos(), cosh(), cut(), exp(), fact(), fibo(), floor(), gauss(), int(),
+\n       isval(), isnan(), isinf(), isint(), isbool(), isfile(), isdir(), isin(), kth(), log(), log2(), log10(),
 \n       max(), mean(), med(), min(), narg(), prod(), rol()"$n" (left bit rotation),
 \n       "${c}"ror()"$n" (right bit rotation)"${c}", round(), sign(), sin(), sinc(), sinh(), sqrt(), std(),
 \n       srand(_seed), sum(), tan(), tanh(), variance(), xor()"$n".
@@ -50,8 +50,8 @@
 \n       . All these variables are considered as "${g}"constant values"$n" by the math parser (for optimization
 \n          purposes) which is indeed the case most of the time. Anyway, this might not be the case,
 \n          if function '"${c}"resize(#ind,..)"$n"' is used in the math expression.
-\n          If so, it is safer to invoke functions '"${c}"l()"$n"', '"${c}"w(_#ind)"$n"', '"${c}"h(_#ind)"$n"', ... '"${c}"cm(_#ind)"$n"'
-\n          and '"${c}"cM(_#ind)"$n"' instead of the corresponding named variables.
+\n          If so, it is safer to invoke functions '"${c}"l()"$n"', '"${c}"w(_#ind)"$n"', '"${c}"h(_#ind)"$n"', ... '"${c}"s(_#ind)"$n"'
+\n          and '"${c}"ic(_#ind)"$n"' instead of the corresponding named variables.
 \n       . '"${c}"i"$n"': current processed pixel value (i.e. value located at "$g"(x,y,z,c)"$n") in the associated
 \n          image, if any ("${g}"0"$n" otherwise).
 \n       . '"${c}"iN"$n"': Nth channel value of current processed pixel (i.e. value located at "$g"(x,y,z,N)"$n") in
@@ -124,7 +124,7 @@
 \n          '"${c}"transp(A,nb_colsA)"$n"' (matrix transpose). Argument '"${c}"nb_colsB"$n"' may be omitted if it is
 \n          equal to "${g}"1"$n".
 \n       . Specifying a vector-valued math expression as an argument of a command that operates on
-\n          image values (e.g. '"$c"-fill"$n"') modifies the whole spectrum range of the processed image(s),
+\n          image values (e.g. '"${c}"fill"$n"') modifies the whole spectrum range of the processed image(s),
 \n          for each spatial coordinates "$g"(x,y,z)"$n". The command does not loop over the "${g}"C"$n"-axis in this
 \n          case.
 \n
@@ -173,7 +173,7 @@
 \n          '"${g}"boundary_conditions"$n"' can be "$g"{ 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }"$n".
 \n          Omitted coordinates are replaced by their default values which are respectively
 \n          "${c}"x, y, z, c, interpolation"$n" and "${c}"boundary"$n".
-\n          For instance command '"${c}"-fill 0.5*(i(x+1)-i(x-1))"$n"' will estimate the X-derivative of an
+\n          For instance command '"${c}"fill 0.5*(i(x+1)-i(x-1))"$n"' will estimate the X-derivative of an
 \n          image with a classical finite difference scheme.
 \n       . '"${c}"j(_dx,_dy,_dz,_dc,_interpolation_type,_boundary_conditions)"$n"' does the same for the pixel
 \n          located at position "$g"(x+dx,y+dy,z+dz,c+dc)"$n" (pixel access relative to the current
@@ -209,7 +209,7 @@
 \n          depending on the value of '"${c}"condition"$n"' "${g}"(0=false, other=true)"$n". '"${c}"expr_else"$n"' can be omitted
 \n          in which case "${g}"0"$n" is returned if the condition does not hold. Using the ternary operator
 \n          '"${c}"condition?expr_then[:expr_else]"$n"' gives an equivalent expression.
-\n          For instance, "${-GMIC}" commands '"${c}"-fill if(x%10==0,255,i)"$n"' and '"${c}"-fill x%10?i:255"$n"' both draw
+\n          For instance, "${-GMIC}" commands '"${c}"fill if(x%10==0,255,i)"$n"' and '"${c}"fill x%10?i:255"$n"' both draw
 \n          blank vertical lines on every 10th column of an image.
 \n       . '"${c}"dowhile(expression,_condition)"$n"' repeats the evaluation of '"${c}"expression"$n"' until '"${c}"condition"$n"'
 \n          vanishes (or until '"${c}"expression"$n"' vanishes if no '"${c}"condition"$n"' is specified). For instance,
@@ -229,7 +229,7 @@
 \n          (loop, init or main environment).
 \n       . '"${c}"date(attr,path)"$n"' returns the date attribute for the given 'path' (file or directory),
 \n          with '"${g}"attr"$n"' being "$g"{ 0=year | 1=month | 2=day | 3=day of week | 4=hour | 5=minute |
-\n          6=second }"$n".
+\n          6=second }"$n", or a vector of those values.
 \n       . '"${c}"date(_attr)"$n" returns the specified attribute for the current (locale) date.
 \n       . '"${c}"print(expr1,expr2,...)"$n" or '"${c}"print(#ind)"$n" prints the value of the specified expressions
 \n          (or image information) on the console, and returns the value of the last expression
@@ -242,11 +242,13 @@
 \n          snapshot of the math parser environment is displayed instead.
 \n       . '"${c}"init(expression)"$n" and '"${c}"end(expression)"$n" evaluates the specified expressions only once,
 \n          respectively at the beginning and end of the evaluation procedure, and this,
-\n          even when multiple evaluations are required (e.g. in '"${c}"-fill init(foo=0);++foo"$n"').
+\n          even when multiple evaluations are required (e.g. in '"${c}"fill init(foo=0);++foo"$n"').
 \n       . '"${c}"copy(dest,src,_nb_elts,_inc_d,_inc_s,_opacity)"$n" copies an entire memory block of '"${c}"nb_elts"$n"'
 \n          elements starting from a source value '"${c}"src"$n"' to a specified destination '"${c}"dest"$n"', with
 \n          increments defined by '"${c}"inc_d"$n"' and '"${c}"inc_s"$n"' respectively for the destination and source
 \n          pointers.
+\n       . '"${c}"stats(_#ind)"$n" returns the statistics vector of the running image '"${c}"[ind]"$n"', i.e the vector
+\n          "${g}"[ im,iM,ia,iv,xm,ym,zm,cm,xM,yM,zM,cM,is,ip ]"$n" (14 values).
 \n       . '"${c}"unref(a,b,...)"$n" destroys references to the named variable given as arguments.
 \n       . '"${c}"breakpoint()"$n" inserts a possible computation breakpoint (not supported by the cli interface).
 \n       . '"${c}"_(expr)"$n" just ignores its arguments (mainly useful for debugging).
@@ -276,7 +278,7 @@
 \n    - "${g}"Multi-threaded"$n" and "${g}"in-place"$n" evaluation:
 \n
 \n       . If your image data are large enough and you have several CPUs available, it is likely that
-\n          the math expression passed to a '"$c"-fill"$n"' or '"$c"-input"$n"' command is evaluated in parallel,
+\n          the math expression passed to a '"${c}"fill"$n"' or '"${c}"input"$n"' command is evaluated in parallel,
 \n          using multiple computation threads.
 \n       . Starting an expression with '"$c":"$n"' or '"$c"*"$n"' forces the evaluations required for an image to be
 \n          run in parallel, even if the amount of data to process is small (beware, it may be slower

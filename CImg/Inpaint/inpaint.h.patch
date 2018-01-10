@@ -1,5 +1,5 @@
---- Inpaint/inpaint.h	2017-05-03 19:08:30.000000000 +0200
-+++ Inpaint/inpaint-abortable.h	2017-05-03 19:07:45.000000000 +0200
+--- inpaint.h	2018-01-10 10:16:57.000000000 +0100
++++ inpaint-abortable.h	2018-01-10 10:19:14.000000000 +0100
 @@ -103,6 +103,7 @@
    // Find (dilated by 2) bounding box for the inpainting mask.
    unsigned int xm0 = _width, ym0 = _height, xm1 = 0, ym1 = 0;
@@ -8,23 +8,26 @@
    cimg_forXY(mask,x,y) if (mask(x,y)) {
      is_mask_found = true;
      if (x<(int)xm0) xm0 = (unsigned int)x;
-@@ -140,6 +141,7 @@
+@@ -139,7 +140,10 @@
+   weights.draw_gaussian((float)p1,(float)p1,patch_size/15.0f,&one)/=patch_size2;
    unsigned int target_index = 0;
  
++  _cimg_abort_init_omp;
++  cimg_abort_init;
    while (true) {
-+    cimg_abort_test();
++    cimg_abort_test;
  
      // Extract mask border points and compute priorities to find target point.
      unsigned int nb_border_points = 0;
-@@ -416,6 +418,7 @@
+@@ -416,6 +420,7 @@
      // Generate blending scales.
      CImg<T> result = _inpaint_patch_crop(ox,oy,ox + dx - 1,oy + dy - 1,0);
      for (unsigned int blend_iter = 1; blend_iter<=blend_scales; ++blend_iter) {
-+      cimg_abort_test();
++      cimg_abort_test;
        const unsigned int
          _blend_width = blend_iter*blend_size/blend_scales,
          blend_width = _blend_width?_blend_width + 1 - (_blend_width%2):0;
-@@ -454,19 +457,25 @@
+@@ -454,19 +459,25 @@
        }
  
        if (is_blend_outer) {

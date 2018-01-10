@@ -191,14 +191,14 @@ public:
 
 #undef cimg_abort_test
 #ifdef cimg_use_openmp
-#define cimg_abort_test() if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
+#define cimg_abort_test if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
 #else
-#define cimg_abort_test() if (abort()) throw CImgAbortException("")
+#define cimg_abort_test if (abort()) throw CImgAbortException("")
 #endif
 
         // the macros are taken from CImg.h, with (*this) replaced by (cimg)
 #define _cimg_blur_patch2d_fast(N) \
-        cimg_for##N##Y(res,y) { cimg_abort_test(); \
+        cimg_for##N##Y(res,y) { cimg_abort_test; \
         cimg_for##N##X(res,x) { \
           T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
           const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
@@ -218,7 +218,7 @@ public:
         } }
 
 #define _cimg_blur_patch2d(N) \
-        cimg_for##N##Y(res,y) { cimg_abort_test(); \
+        cimg_for##N##Y(res,y) { cimg_abort_test; \
         cimg_for##N##X(res,x) { \
           T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
           const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
@@ -262,12 +262,13 @@ public:
             //case 9 : if (is_fast_approx) _cimg_blur_patch2d_fast(9) else _cimg_blur_patch2d(9) break;
             default : { // Fast
                 const int psize2 = (int)patch_size/2, psize1 = (int)patch_size - psize2 - 1;
+                _cimg_abort_init_omp;
                 cimg_abort_init;
                 if (is_fast_approx) {
                     cimg_pragma_openmp(parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q))
                     cimg_forY(res,y) {
-                        cimg_abort_try {
-                            cimg_abort_test();
+                        _cimg_abort_try_omp {
+                            cimg_abort_test;
                             cimg_forX(res,x) { // 2d fast approximation.
                                 P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
                                 const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
@@ -284,13 +285,13 @@ public:
                                 if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
                                 else cimg_forC(res,c) res(x,y,c) = (Tfloat)(cimg(x,y,c));
                             }
-                        } cimg_abort_catch()
+                        } _cimg_abort_catch_omp
                     }
                 } else {
                     cimg_pragma_openmp(parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q))
                     cimg_forY(res,y) {
-                        cimg_abort_try {
-                            cimg_abort_test();
+                        _cimg_abort_try_omp {
+                            cimg_abort_test;
                             cimg_forX(res,x) { // 2d exact algorithm.
                                 P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
                                 const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
@@ -309,10 +310,10 @@ public:
                                 if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
                                 else cimg_forC(res,c) res(x,y,0,c) = (Tfloat)(cimg(x,y,c));
                             }
-                        } cimg_abort_catch()
+                        } _cimg_abort_catch_omp
                     }
                 }
-                cimg_abort_test();
+                cimg_abort_test;
             }
         }
         cimg.assign(res);
