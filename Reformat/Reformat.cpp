@@ -428,21 +428,15 @@ ReformatPlugin::getOutputFormat(const double time,
         return;
     }
     OfxRectD boxRod = { 0., 0., (double)boxSize.x * boxPAR, (double)boxSize.y};
-#ifdef OFX_EXTENSIONS_NATRON
+
     OfxRectD srcRod;
-    OfxRectI srcFormat;
-    _srcClip->getFormat(srcFormat);
-    if ( Coords::rectIsEmpty(srcFormat) ) {
-        srcRod = _srcClip->getRegionOfDefinition(time);
-    } else {
-        // host returned a non-empty format, use it as the src rod to compute the transform
-        double srcPar = _srcClip->getPixelAspectRatio();
-        const OfxPointD rsOne = {1., 1.}; // format is always with respect to unit renderscale
-        Coords::toCanonical(srcFormat, rsOne, srcPar, &srcRod);
+    {
+        double par;
+        OfxRectD format;
+        const OfxPointD rsOne = {1., 1.}; // format is with respect to unit renderscale
+        getInputFormat(time, &par, &format);
+        Coords::toCanonical(format, rsOne, par, &srcRod);
     }
-#else
-    OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
-#endif
     if ( Coords::rectIsEmpty(srcRod) ) {
         // degenerate case
         rect->x1 = rect->y1 = rect->x2 = rect->y2 = 0;
