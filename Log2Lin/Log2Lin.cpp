@@ -23,9 +23,6 @@
 #include <cmath>
 #include <algorithm>
 //#include <iostream>
-#ifdef _WINDOWS
-#include <windows.h>
-#endif
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"

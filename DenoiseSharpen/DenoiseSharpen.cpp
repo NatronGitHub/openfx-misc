@@ -62,9 +62,6 @@
 #else
 #define DBG(x) (void)0
 #endif
-#ifdef _WINDOWS
-#include <windows.h>
-#endif
 
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"

@@ -23,6 +23,7 @@
 #include <cmath>
 #include <stdio.h> // for snprintf & _snprintf
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#  define NOMINMAX
 #  include <windows.h>
 #  if defined(_MSC_VER) && _MSC_VER < 1900
 #    define snprintf _snprintf

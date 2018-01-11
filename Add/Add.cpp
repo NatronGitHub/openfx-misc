@@ -23,9 +23,6 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <cstring>
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#endif
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
@@ -381,6 +378,7 @@ public:
         , _premultChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+#ifndef _MSC_VER
         assert( _dstClip && (!_dstClip->isConnected() ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha ||
 #ifdef OFX_EXTENSIONS_NATRON
@@ -388,7 +386,9 @@ public:
 #endif
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
+#endif
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+#ifndef _MSC_VER
         assert( (!_srcClip && getContext() == eContextGenerator) ||
                 ( _srcClip && (!_srcClip->isConnected() ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -397,6 +397,7 @@ public:
 #endif
                                _srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
+#endif
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);

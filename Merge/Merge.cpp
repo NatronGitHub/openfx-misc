@@ -24,9 +24,6 @@
 #include <cstring>
 #include <algorithm>
 #include <bitset>
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#endif
 #ifdef DEBUG
 #include <iostream>
 #endif

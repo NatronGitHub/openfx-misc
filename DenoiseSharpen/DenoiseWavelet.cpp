@@ -24,7 +24,9 @@
 #include <cfloat> // DBL_MAX
 #include <algorithm>
 //#include <iostream>
-#ifdef _WINDOWS
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <windows.h>
 #endif
 
