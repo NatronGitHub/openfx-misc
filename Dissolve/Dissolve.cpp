@@ -61,6 +61,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kClipSourceCount 64
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
+
 static
 std::string
 unsignedToString(unsigned i)
@@ -93,14 +99,14 @@ public:
         , _maskInvert(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentXY || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
         for (unsigned i = 0; i < _srcClip.size(); ++i) {
             if ( (getContext() == eContextTransition) && (i < 2) ) {
                 _srcClip[i] = fetchClip(i == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
             } else {
                 _srcClip[i] = fetchClip( unsignedToString(i) );
             }
-            assert( _srcClip[i] && (_srcClip[i]->getPixelComponents() == ePixelComponentRGBA || _srcClip[i]->getPixelComponents() == ePixelComponentRGB || _srcClip[i]->getPixelComponents() == ePixelComponentXY || _srcClip[i]->getPixelComponents() == ePixelComponentAlpha) );
+            assert( _srcClip[i] && (!_srcClip[i]->isConnected() || OFX_COMPONENTS_OK(_srcClip[i]->getPixelComponents())) );
         }
 
         _maskClip = fetchClip("Mask");
@@ -310,8 +316,10 @@ DissolvePlugin::render(const RenderArguments &args)
         renderForComponents<4>(args);
     } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args);
+#endif
     }  else {
         assert(dstComponents == ePixelComponentAlpha);
         renderForComponents<1>(args);
@@ -539,7 +547,9 @@ DissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentNone);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
         srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
@@ -557,7 +567,9 @@ DissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentNone);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
         srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
@@ -580,7 +592,9 @@ DissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
             srcClip->addSupportedComponent(ePixelComponentNone);
             srcClip->addSupportedComponent(ePixelComponentRGBA);
             srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
             srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
             srcClip->addSupportedComponent(ePixelComponentAlpha);
             srcClip->setTemporalClipAccess(false);
             srcClip->setSupportsTiles(kSupportsTiles);
@@ -592,7 +606,9 @@ DissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

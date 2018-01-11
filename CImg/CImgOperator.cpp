@@ -120,11 +120,13 @@ CImgOperatorPluginHelperBase::describeInContextBegin(ImageEffectDescriptor &desc
         srcBClip->addSupportedComponent(ePixelComponentRGB);
         dstClip->addSupportedComponent(ePixelComponentRGB);
     }
+#ifdef OFX_EXTENSIONS_NATRON
     if (supportsXY) {
         srcAClip->addSupportedComponent(ePixelComponentXY);
         srcBClip->addSupportedComponent(ePixelComponentXY);
         dstClip->addSupportedComponent(ePixelComponentXY);
     }
+#endif
     if (supportsAlpha) {
         srcAClip->addSupportedComponent(ePixelComponentAlpha);
         srcBClip->addSupportedComponent(ePixelComponentAlpha);

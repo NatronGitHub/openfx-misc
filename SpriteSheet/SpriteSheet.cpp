@@ -56,6 +56,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamFrameOffset "frameOffset"
 #define kParamFrameOffsetLabel "Frame Offset", "Output frame number for the first sprite."
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
+
 
 class SpriteSheetProcessorBase
     : public ImageProcessor
@@ -400,13 +406,15 @@ SpriteSheetPlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
+    assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
+#endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
@@ -487,7 +495,9 @@ SpriteSheetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -497,7 +507,9 @@ SpriteSheetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

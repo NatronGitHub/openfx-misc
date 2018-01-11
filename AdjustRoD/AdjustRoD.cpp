@@ -66,6 +66,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBoundaryDefaultBloom eBoundaryNeumann
 #define kParamBoundaryDefaultEdgeExtend eBoundaryNeumann
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
+
+
 enum BoundaryEnum
 {
     eBoundaryDirichlet = 0,
@@ -262,11 +269,7 @@ AdjustRoDPlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-#ifdef OFX_EXTENSIONS_NATRON
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
-#else
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentAlpha);
-#endif
+    assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {

@@ -568,8 +568,10 @@ RetimePlugin::render(const RenderArguments &args)
         renderInternal<4>(args, sourceTime, filter, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, sourceTime, filter, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, sourceTime, filter, dstBitDepth);
+#endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, sourceTime, filter, dstBitDepth);
@@ -636,7 +638,9 @@ RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(true); // say we will be doing random time access on this clip
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -646,7 +650,9 @@ RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setFieldExtraction(eFieldExtractDoubled); // which is the default anyway
     dstClip->setSupportsTiles(kSupportsTiles);

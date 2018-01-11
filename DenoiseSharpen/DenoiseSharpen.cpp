@@ -2227,9 +2227,11 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
     case ePixelComponentRGB:
         renderForComponents<3>(args);
         break;
+#ifdef OFX_EXTENSIONS_NATRON
     //case ePixelComponentXY:
     //    renderForComponents<2>(args);
     //    break;
+#endif
     case ePixelComponentAlpha:
         renderForComponents<1>(args);
         break;
@@ -2914,9 +2916,11 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     case ePixelComponentRGB:
         analyzeNoiseLevelsForComponents<3>(args);
         break;
+#ifdef OFX_EXTENSIONS_NATRON
     //case ePixelComponentXY:
     //    renderForComponents<2>(args);
     //    break;
+#endif
     case ePixelComponentAlpha:
         analyzeNoiseLevelsForComponents<1>(args);
         break;
@@ -3230,7 +3234,9 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     srcClip->setHint(kClipSourceHint);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     //srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -3240,7 +3246,9 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     //dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
@@ -3258,7 +3266,9 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     analysisSrcClip->setHint(kClipAnalysisSourceHint);
     analysisSrcClip->addSupportedComponent(ePixelComponentRGBA);
     analysisSrcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     //analysisSrcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     analysisSrcClip->addSupportedComponent(ePixelComponentAlpha);
     analysisSrcClip->setTemporalClipAccess(false);
     analysisSrcClip->setOptional(true);

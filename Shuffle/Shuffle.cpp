@@ -883,11 +883,13 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         channelMap[2] = b;
         channelMap[3] = a;
         break;
+#ifdef OFX_EXTENSIONS_NATRON
     case ePixelComponentXY:
         channelMap.resize(2);
         channelMap[0] = r;
         channelMap[1] = g;
         break;
+#endif
     case ePixelComponentRGB:
         channelMap.resize(3);
         channelMap[0] = r;

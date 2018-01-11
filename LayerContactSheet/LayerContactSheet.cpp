@@ -732,7 +732,9 @@ LayerContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         ClipDescriptor *srcClip; 
         srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
         srcClip->addSupportedComponent(ePixelComponentNone);
+#ifdef OFX_EXTENSIONS_NATRON
         srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);

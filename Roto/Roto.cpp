@@ -80,6 +80,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamPremultLabel "Premultiply"
 #define kParamPremultHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
+
 
 class RotoProcessorBase
     : public ImageProcessor
@@ -214,11 +220,18 @@ private:
     void process(const OfxRectI& procWindow)
     {
         // roto and dst should have the same number of components
+#ifdef OFX_EXTENSIONS_NATRON
         assert( !_roto ||
                 (_roto->getPixelComponents() == ePixelComponentAlpha && nComponents == 1) ||
                 (_roto->getPixelComponents() == ePixelComponentXY && nComponents == 2) ||
                 (_roto->getPixelComponents() == ePixelComponentRGB && nComponents == 3) ||
                 (_roto->getPixelComponents() == ePixelComponentRGBA && nComponents == 4) );
+#else
+        assert( !_roto ||
+               (_roto->getPixelComponents() == ePixelComponentAlpha && nComponents == 1) ||
+               (_roto->getPixelComponents() == ePixelComponentRGB && nComponents == 3) ||
+               (_roto->getPixelComponents() == ePixelComponentRGBA && nComponents == 4) );
+#endif
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -405,8 +418,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
                 throwSuiteStatusException(kOfxStatFailed);
             }
         }
-        assert(mask->getPixelComponents() == ePixelComponentRGBA || mask->getPixelComponents() == ePixelComponentAlpha
-               || mask->getPixelComponents() == ePixelComponentRGB || mask->getPixelComponents() == ePixelComponentXY);
+        assert(OFX_COMPONENTS_OK(mask->getPixelComponents()));
         if ( mask->getPixelComponents() != dst->getPixelComponents() ) {
             throwSuiteStatusException(kOfxStatErrFormat);
         }
@@ -511,13 +523,15 @@ RotoPlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentAlpha || dstComponents == ePixelComponentXY);
+    assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
+#endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
@@ -644,7 +658,9 @@ RotoPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     //srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -660,7 +676,9 @@ RotoPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         if (context != eContextPaint) {
             maskClip->addSupportedComponent(ePixelComponentRGBA);
             //maskClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
             maskClip->addSupportedComponent(ePixelComponentXY);
+#endif
             maskClip->setOptional(false);
         }
         maskClip->setSupportsTiles(kSupportsTiles);
@@ -671,7 +689,9 @@ RotoPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     //dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

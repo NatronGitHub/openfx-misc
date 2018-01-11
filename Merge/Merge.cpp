@@ -211,6 +211,12 @@ enum BBoxEnum
 
 #define kMaximumAInputs 64
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
+
 using namespace MergeImages2D;
 
 static const char* alphaChannels[1] = {"A"};
@@ -593,9 +599,9 @@ public:
     , _bChannelAChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentXY || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
         _srcClipAs.push_back( fetchClip(kClipA) );
-        assert( _srcClipAs[0] && (!_srcClipAs[0]->isConnected() || _srcClipAs[0]->getPixelComponents() == ePixelComponentXY || _srcClipAs[0]->getPixelComponents() == ePixelComponentRGB || _srcClipAs[0]->getPixelComponents() == ePixelComponentRGBA || _srcClipAs[0]->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _srcClipAs[0] && (!_srcClipAs[0]->isConnected() || OFX_COMPONENTS_OK(_srcClipAs[0]->getPixelComponents())) );
 
         if (numerousInputs) {
             _srcClipAs.resize(kMaximumAInputs);
@@ -1225,8 +1231,10 @@ MergePlugin::render(const RenderArguments &args)
         renderForComponents<4>(args, renderRotoMask);
     } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args, renderRotoMask);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args, renderRotoMask);
+#endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
         renderForComponents<1>(args, renderRotoMask);
@@ -1638,7 +1646,9 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

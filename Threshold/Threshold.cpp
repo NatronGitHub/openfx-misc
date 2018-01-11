@@ -99,6 +99,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSoftnessLabel "Threshold Softness"
 #define kParamSoftnessHint  "Threshold softness for the selected channels."
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
+
 
 struct RGBAValues
 {
@@ -318,22 +324,10 @@ public:
         , _softness(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() ||
-                             _dstClip->getPixelComponents() == ePixelComponentAlpha ||
-#ifdef OFX_EXTENSIONS_NATRON
-                             _dstClip->getPixelComponents() == ePixelComponentXY ||
-#endif
-                             _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
+        assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() ||
-                               _srcClip->getPixelComponents() == ePixelComponentAlpha ||
-#ifdef OFX_EXTENSIONS_NATRON
-                               _srcClip->getPixelComponents() == ePixelComponentXY ||
-#endif
-                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
+                ( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) ) );
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
         _processB = fetchBooleanParam(kParamProcessB);
@@ -466,11 +460,7 @@ ThresholdPlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-#ifdef OFX_EXTENSIONS_NATRON
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
-#else
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentAlpha);
-#endif
+    assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {

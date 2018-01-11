@@ -74,6 +74,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipB "B"
 #define kClipBHint "The input you intend to dissolve from."
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
+
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TimeDissolvePlugin
@@ -92,13 +99,13 @@ public:
         , _dissolveCurve(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentXY || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
 
         _srcClipA = fetchClip(kClipA);
-        assert( _srcClipA && (!_srcClipA->isConnected() || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentXY || _srcClipA->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _srcClipA && (!_srcClipA->isConnected() || OFX_COMPONENTS_OK(_srcClipA->getPixelComponents())) );
 
         _srcClipB = fetchClip(getContext() == eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB);
-        assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentXY || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _srcClipB && (!_srcClipB->isConnected() || OFX_COMPONENTS_OK(_srcClipB->getPixelComponents())) );
 
         _dissolveIn = fetchIntParam(kParamIn);
         _dissolveOut = fetchIntParam(kParamOut);
@@ -307,8 +314,10 @@ TimeDissolvePlugin::render(const RenderArguments &args)
         renderForComponents<4>(args);
     } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args);
+#endif
     }  else {
         assert(dstComponents == ePixelComponentAlpha);
         renderForComponents<1>(args);
@@ -482,7 +491,9 @@ TimeDissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentNone);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
         srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
@@ -496,7 +507,9 @@ TimeDissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentNone);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
         srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
@@ -508,7 +521,9 @@ TimeDissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

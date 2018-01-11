@@ -91,6 +91,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamPremultChanged "premultChanged"
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
+
 
 struct RGBAValues
 {
@@ -332,26 +338,10 @@ public:
         , _premultChanged(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-#ifndef _MSC_VER
-        assert( _dstClip && (!_dstClip->isConnected() ||
-                             _dstClip->getPixelComponents() == ePixelComponentAlpha ||
-#ifdef OFX_EXTENSIONS_NATRON
-                             _dstClip->getPixelComponents() == ePixelComponentXY ||
-#endif
-                             _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-#endif
+        assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-#ifndef _MSC_VER
         assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() ||
-                               _srcClip->getPixelComponents() == ePixelComponentAlpha ||
-#ifdef OFX_EXTENSIONS_NATRON
-                               _srcClip->getPixelComponents() == ePixelComponentXY ||
-#endif
-                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
-#endif
+                ( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) ) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);
@@ -502,13 +492,7 @@ MultiplyPlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-#ifndef _MSC_VER
-    assert(dstComponents == ePixelComponentAlpha ||
-#ifdef OFX_EXTENSIONS_NATRON
-           dstComponents == ePixelComponentXY ||
-#endif
-           dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentRGBA);
-#endif
+    assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         switch (dstBitDepth) {
         case eBitDepthUByte: {

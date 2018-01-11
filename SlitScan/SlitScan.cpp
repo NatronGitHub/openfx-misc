@@ -866,8 +866,10 @@ SlitScanPlugin::render(const RenderArguments &args)
         renderForComponents<4>(args);
     } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args);
+#endif
     } else if (dstComponents == ePixelComponentAlpha) {
         renderForComponents<1>(args);
     } else {
@@ -932,7 +934,9 @@ SlitScanPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(true); // say we will be doing random time access on this clip
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -948,7 +952,9 @@ SlitScanPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setFieldExtraction(eFieldExtractDoubled); // which is the default anyway
     dstClip->setSupportsTiles(kSupportsTiles);

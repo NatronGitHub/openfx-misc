@@ -183,9 +183,11 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
     if (supportsRGB) {
         srcClip->addSupportedComponent(ePixelComponentRGB);
     }
+#ifdef OFX_EXTENSIONS_NATRON
     if (supportsXY) {
         srcClip->addSupportedComponent(ePixelComponentXY);
     }
+#endif
     if (supportsAlpha) {
         srcClip->addSupportedComponent(ePixelComponentAlpha);
     }
@@ -203,9 +205,11 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
     if (supportsRGB) {
         dstClip->addSupportedComponent(ePixelComponentRGB);
     }
+#ifdef OFX_EXTENSIONS_NATRON
     if (supportsXY) {
         dstClip->addSupportedComponent(ePixelComponentXY);
     }
+#endif
     if (supportsAlpha) {
         dstClip->addSupportedComponent(ePixelComponentAlpha);
     }

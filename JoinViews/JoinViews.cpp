@@ -280,8 +280,10 @@ JoinViewsPlugin::render(const RenderArguments &args)
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
+#endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
@@ -364,7 +366,9 @@ JoinViewsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *srcRightClip = desc.defineClip(kClipRight);
     srcRightClip->addSupportedComponent(ePixelComponentRGBA);
     srcRightClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcRightClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcRightClip->addSupportedComponent(ePixelComponentAlpha);
     srcRightClip->setTemporalClipAccess(false);
     srcRightClip->setSupportsTiles(kSupportsTiles);
@@ -373,7 +377,9 @@ JoinViewsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *srcLeftClip = desc.defineClip(kClipLeft);
     srcLeftClip->addSupportedComponent(ePixelComponentRGBA);
     srcLeftClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcLeftClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcLeftClip->addSupportedComponent(ePixelComponentAlpha);
     srcLeftClip->setTemporalClipAccess(false);
     srcLeftClip->setSupportsTiles(kSupportsTiles);

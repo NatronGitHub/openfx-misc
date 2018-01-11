@@ -90,6 +90,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRotateHint "Sets the amount of rotation to apply to color position in the color wheel. Negative values produce clockwise rotation and vice-versa."
 #define kParamRotateDefault 0
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
 
 class ColorWheelProcessorBase
     : public ImageProcessor
@@ -344,10 +349,7 @@ public:
         , _rotate(NULL)
     {
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentXY ||
-                             _srcClip->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) );
         _centerSaturation = fetchDoubleParam(kParamCenterSaturation);
         _edgeSaturation = fetchDoubleParam(kParamEdgeSaturation);
         _centerValue = fetchDoubleParam(kParamCenterValue);
@@ -486,7 +488,7 @@ ColorWheelPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
+    assert(OFX_COMPONENTS_OK(dstComponents));
 
     checkComponents(dstBitDepth, dstComponents);
 
@@ -495,8 +497,10 @@ ColorWheelPlugin::render(const RenderArguments &args)
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderInternal<2>(args, dstBitDepth);
+#endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
@@ -561,7 +565,9 @@ ColorWheelPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(true);
@@ -569,7 +575,9 @@ ColorWheelPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

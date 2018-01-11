@@ -652,8 +652,10 @@ HueCorrectPlugin::render(const RenderArguments &args)
         renderForComponents<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args, dstBitDepth);
+#ifdef OFX_EXTENSIONS_NATRON
         //} else if (dstComponents == ePixelComponentXY) {
         //    renderForComponents<2>(args, dstBitDepth);
+#endif
         //} else {
         //    assert(dstComponents == ePixelComponentAlpha);
         //    renderForComponents<1>(args, dstBitDepth);
@@ -867,7 +869,9 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     assert(srcClip);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     //srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     //srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -877,7 +881,9 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     assert(dstClip);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     //dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     //dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
@@ -1446,7 +1452,9 @@ HueKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     assert(srcClip);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     //srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     //srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     //srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -1456,7 +1464,9 @@ HueKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     assert(dstClip);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     //dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     //dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     //dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

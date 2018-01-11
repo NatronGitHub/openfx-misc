@@ -97,6 +97,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamCenterLineWidthLabel "Centerline Width"
 #define kParamCenterLineWidthHint "Width, in pixels, of the center lines."
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
+
+
 /** @brief  Base class used to blend two images together */
 class CheckerBoardProcessorBase
     : public ImageProcessor
@@ -496,11 +503,7 @@ CheckerBoardPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-#ifdef OFX_EXTENSIONS_NATRON
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
-#else
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentAlpha);
-#endif
+    assert(OFX_COMPONENTS_OK(dstComponents));
 
     checkComponents(dstBitDepth, dstComponents);
 

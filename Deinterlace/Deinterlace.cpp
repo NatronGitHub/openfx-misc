@@ -578,6 +578,7 @@ DeinterlacePlugin::render(const RenderArguments &args)
             default:
                 break;
             }
+#ifdef OFX_EXTENSIONS_NATRON
         } else if (dstComponents == ePixelComponentXY) {
             switch (dstBitDepth) {
             case eBitDepthUByte:
@@ -604,6 +605,7 @@ DeinterlacePlugin::render(const RenderArguments &args)
             default:
                 break;
             }
+#endif
         } else if (dstComponents == ePixelComponentAlpha) {
             switch (dstBitDepth) {
             case eBitDepthUByte:
@@ -720,7 +722,9 @@ DeinterlacePluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(true);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -731,7 +735,9 @@ DeinterlacePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+#ifdef OFX_EXTENSIONS_NATRON
     dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
     dstClip->setFieldExtraction(eFieldExtractBoth);

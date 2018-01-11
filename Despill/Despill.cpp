@@ -457,8 +457,10 @@ DespillPlugin::render(const RenderArguments &args)
         renderForComponents<4>(args);
     } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args);
+#ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
         renderForComponents<2>(args);
+#endif
     }  else {
         assert(dstComponents == ePixelComponentAlpha);
         renderForComponents<1>(args);

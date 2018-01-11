@@ -70,6 +70,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputIRELabel "Output IRE"
 #define kParamOutputIREHint "When checked, the output is scaled so that 0 is black, the max value is white, and the superblack (under the middle of the magenta bar) has a negative value."
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#else
+#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
+#endif
 
 class ColorBarsProcessorBase
     : public ImageProcessor
@@ -246,10 +251,7 @@ public:
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
     {
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentXY ||
-                             _srcClip->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) );
         _barIntensity = fetchDoubleParam(kParamBarIntensity);
         _outputIRE = fetchBooleanParam(kParamOutputIRE);
         assert(_barIntensity && _outputIRE);
@@ -372,7 +374,7 @@ ColorBarsPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
+    assert(OFX_COMPONENTS_OK(dstComponents));
 
     checkComponents(dstBitDepth, dstComponents);
 
