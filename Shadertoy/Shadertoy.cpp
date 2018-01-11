@@ -1114,6 +1114,11 @@ ShadertoyPlugin::render(const RenderArguments &args)
 #if defined(OFX_SUPPORTS_OPENGLRENDER)
     openGLRender = args.openGLEnabled;
 
+    if (getImageEffectHostDescription()->hostName.compare(0, 14, "DaVinciResolve") == 0) {
+        // DaVinci Resolve advertises GL supported but doesn't enable it here :|
+        openGLRender = true;
+    }
+
     // do the rendering
     if (openGLRender) {
         return renderGL(args);
