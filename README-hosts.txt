@@ -36,6 +36,7 @@ supportsChannelSelector=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxImageEffectOpenGLRenderSuite
 
 Caveats/Bugs:
+- Resolve 14: OpenGL render is never called, but an OpenGL context is attached when render action is called (thus the plugin may perform offscreen rendering)
 - version 11 of Resolve Lite (from Mac App Store) does not support symbolic links in /Library/OFX/Plugins
 - in Generators, even if the source clip is defined, it can not be fetched by the plug-in (the source clip should always be fetchable, it is mandatory in OpenFX)
 - all defined clips will appear connected (property kOfxImageClipPropConnected = 1) but give black and transparent (NULL) images. This is a problem for Mask clips, so a "Mask" boolean param must be added specifically for Resolve (see kParamMaskApply in openfx-misc)
