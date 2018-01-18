@@ -541,31 +541,7 @@ public:
                 double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
 
                 // evaluate the parametric param
-                double value;
-                if (_lookupTableParam) {
-                    value = _lookupTableParam->getValue(curve, _time, parametricPos);
-                } else if (curve == 0) {
-                    if (parametricPos <= 0.) {
-                        value = 1.;
-                    } else if (parametricPos < 0.09) {
-                        double x = parametricPos / 0.09;
-                        x = -2 * x * x * x + 3 * x * x; // cubic
-                        value = 1. - x;
-                    } else {
-                        value = 0.;
-                    }
-                } else {
-                    assert(curve == 1);
-                    if (parametricPos <= 0.5) {
-                        value = 0.;
-                    } else if (parametricPos >= 1.) {
-                        value = 1.;
-                    } else {
-                        double x = (parametricPos - 0.5) / 0.5;
-                        x = -2 * x * x * x + 3 * x * x; // cubic
-                        value = x;
-                    }
-                }
+                double value = lookupTableValue(curve, parametricPos);
                 // set that in the lut
                 _lookupTable[curve][position] = (float)clamp<PIX>(value, maxValue);
             }
@@ -728,13 +704,42 @@ private:
         }
     }
 
+    double lookupTableValue(int curve, double parametricPos) const
+    {
+        double value;
+        if (_lookupTableParam) {
+            value = _lookupTableParam->getValue(curve, _time, parametricPos);
+        } else if (curve == 0) {
+            if (parametricPos <= 0.) {
+                value = 1.;
+            } else if (parametricPos < 0.09) {
+                double x = parametricPos / 0.09;
+                x = -2 * x * x * x + 3 * x * x; // cubic
+                value = 1. - x;
+            } else {
+                value = 0.;
+            }
+        } else {
+            assert(curve == 1);
+            if (parametricPos <= 0.5) {
+                value = 0.;
+            } else if (parametricPos >= 1.) {
+                value = 1.;
+            } else {
+                double x = (parametricPos - 0.5) / 0.5;
+                x = -2 * x * x * x + 3 * x * x; // cubic
+                value = x;
+            }
+        }
+        return value;
+    }
     // on input to interpolate, value should be normalized to the [0-1] range
     float interpolate(int component,
                       float value) const
     {
         if ( (value < _rangeMin) || (_rangeMax < value) ) {
             // slow version
-            double ret = _lookupTableParam->getValue(component, _time, value);
+            double ret = lookupTableValue(component, value);
 
             return clamp<float>(ret, 1);;
         } else {
