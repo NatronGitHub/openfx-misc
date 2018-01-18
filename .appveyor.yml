@@ -91,7 +91,7 @@ configuration:
 before_build:
   - mkdir build
   - cd build
-  - cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PATH="c:/dev/openfx-misc/install/Misc.ofx.bundle"
+  - cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install/Misc.ofx.bundle"
 
 # scripts to run after build
 #after_build:
@@ -144,7 +144,7 @@ artifacts:
   # pushing all *.nupkg files in directory
   #- path: out\*.nupkg
 
-  - path: c:\dev\openfx-misc\install"
+  - path: install
 
 
 #---------------------------------#
