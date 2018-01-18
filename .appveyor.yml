@@ -1,0 +1,219 @@
+# ***** BEGIN LICENSE BLOCK *****
+# This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
+# Copyright (C) 2013-2018 INRIA
+#
+# openfx-misc is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# openfx-misc is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with openfx-misc.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
+# ***** END LICENSE BLOCK *****
+
+#---------------------------------#
+#      general configuration      #
+#---------------------------------#
+
+# version format
+version: 1.0.{build}-{branch}
+
+# branches to build
+branches:
+  # whitelist
+  # only:
+  #   - master
+
+  # blacklist
+  except:
+    - gh-pages
+
+# Do not build on tags (GitHub only)
+skip_tags: true
+
+skip_commits:
+  files:
+    - docs/*
+    - LICENSE
+    - README.md
+
+pull_requests:
+  do_not_increment_build_number: true
+
+#---------------------------------#
+#    environment configuration    #
+#---------------------------------#
+
+# Operating system (build VM template)
+os: Visual Studio 2017
+
+# scripts that are called at very beginning, before repo cloning
+init:
+  - git config --global core.autocrlf input
+  - set arch=
+  - if "%PLATFORM%" == "x64" (set arch= Win64)
+  - if "%PLATFORM%" == "x86" (set arch=)
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2017" (set GENERATOR="Visual Studio 15 2017%arch%")
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2015" (set GENERATOR="Visual Studio 14 2015%arch%")
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2013" (set GENERATOR="Visual Studio 12 2013%arch%")
+
+
+# clone directory
+clone_folder: c:\dev\openfx-misc
+
+# environment variables
+#environment:
+
+# build cache to preserve files/folders between builds
+#cache:
+
+# scripts that run after cloning repository
+install:
+  - git submodule -q update --init --recursive
+
+#---------------------------------#
+#       build configuration       #
+#---------------------------------#
+
+# build platform, i.e. x86, x64, Any CPU. This setting is optional.
+platform: x64
+
+# build Configuration, i.e. Debug, Release, etc.
+configuration:
+  - RelWithDebInfo
+
+# scripts to run before build
+before_build:
+  - mkdir build
+  - cd build
+  - cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install/Misc.ofx.bundle"
+
+# scripts to run after build
+#after_build:
+
+build:
+  project: c:\dev\openfx-misc\build\INSTALL.vcxproj
+  verbosity: minimal
+  parallel: true
+
+# to run your custom scripts instead of automatic MSBuild
+# We also compile the tests here instead of later on.
+#build_script:
+
+# to disable automatic builds
+#build: off
+
+
+#---------------------------------#
+#       tests configuration       #
+#---------------------------------#
+
+# scripts to run before tests
+#before_test:
+
+# scripts to run after tests
+#after_test:
+
+# to run your custom scripts instead of automatic tests
+#test_script:
+
+# to disable automatic tests
+test: off
+
+
+#---------------------------------#
+#      artifacts configuration    #
+#---------------------------------#
+
+artifacts:
+  # pushing a single file
+  #- path: test.zip
+
+  # pushing a single file with environment variable in path and "Deployment name" specified
+  #- path: MyProject\bin\$(configuration)
+  #  name: myapp
+
+  # pushing entire folder as a zip archive
+  #- path: logs
+
+  # pushing all *.nupkg files in directory
+  #- path: out\*.nupkg
+
+  - path: install
+
+
+#---------------------------------#
+#     deployment configuration    #
+#---------------------------------#
+
+# providers: Local, FTP, WebDeploy, AzureCS, AzureBlob, S3, NuGet, Environment
+# provider names are case-sensitive!
+deploy:
+  - provider: Environment
+    name: openfx-misc
+    release: ofxmisc-$(appveyor_repo_branch)-v$(appveyor_build_version)
+    artifact: ofxmisc-$(appveyor_repo_branch).zip
+    draft: false
+    prerelease: true
+    on:
+      branch: master                # release from master branch only
+      configuration: release        # deploy release builds only
+      appveyor_repo_tag: true       # deploy on tag push only
+      is_not_pr: true               # don't deploy pull requests
+
+# scripts to run before deployment
+#before_deploy:
+
+# scripts to run after deployment
+#after_deploy:
+
+# to run your custom scripts instead of provider deployments
+#deploy_script:
+
+# to disable deployment
+# deploy: off
+
+
+#---------------------------------#
+#        global handlers          #
+#---------------------------------#
+
+# on successful build
+on_success:
+
+# on build failure
+on_failure:
+
+# after build failure or success
+on_finish:
+
+
+#---------------------------------#
+#         notifications           #
+#---------------------------------#
+
+# notifications:
+#   # Email
+#   - provider: Email
+#     to:
+#       - user1@email.com
+#       - user2@email.com
+#     subject: 'Build {{status}}'                  # optional
+#     message: "{{message}}, {{commitId}}, ..."    # optional
+#     on_build_status_changed: true
+
+#   # Webhook
+#   - provider: Webhook
+#     url: http://www.myhook2.com
+#     headers:
+#       User-Agent: myapp 1.0
+#       Authorization:
+#         secure: GhD+5xhLz/tkYY6AO3fcfQ==
+#     on_build_success: false
+#     on_build_failure: true
+#     on_build_status_changed: true
