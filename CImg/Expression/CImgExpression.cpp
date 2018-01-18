@@ -58,7 +58,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n" \
     "\n" \
-    "'sqrt(zr=-1.2+2.4*x/w;zi=-1.2+2.4*y/h;for(i=0,zr*zr+zi*zi<=4&&i<256,t=zr*zr-zi*zi+0.4;zi=2*zr*zi+0.2;zr=t; i=i+1))/255' draws the Mandelbrot fractal (give it a 1024x1024 image as input).\n" \
+    "Press the 'Help' button for more documentation or read the expression documentation at http://gmic.eu/reference.shtml#section9\n" \
     "\n" \
     "Uses the 'fill' function from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
