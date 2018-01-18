@@ -4012,7 +4012,6 @@
 		1EDFE9F61CB79314001E68FA /* ShadertoyRenderMesa.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ShadertoyRenderMesa.cpp; sourceTree = "<group>"; };
 		1EE0A7891D68A5FE00B69526 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EE0A78A1D68A5FE00B69526 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		1EE0A78B1D68A5FE00B69526 /* DenoiseWavelet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DenoiseWavelet.cpp; sourceTree = "<group>"; };
 		1EE0A78C1D68A5FE00B69526 /* DenoiseSharpen.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DenoiseSharpen.cpp; sourceTree = "<group>"; };
 		1EE0A7A01D68A60F00B69526 /* DenoiseSharpen.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DenoiseSharpen.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenInvDiff.cpp; path = SharpenInvDiff/CImgSharpenInvDiff.cpp; sourceTree = "<group>"; };
@@ -6187,7 +6186,6 @@
 				1EE0A78C1D68A5FE00B69526 /* DenoiseSharpen.cpp */,
 				1EE0A7891D68A5FE00B69526 /* Makefile */,
 				1EE0A78A1D68A5FE00B69526 /* Info.plist */,
-				1EE0A78B1D68A5FE00B69526 /* DenoiseWavelet.cpp */,
 			);
 			path = DenoiseSharpen;
 			sourceTree = "<group>";
