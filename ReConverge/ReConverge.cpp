@@ -137,7 +137,7 @@ private:
                 // do we have a source image to scale up
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
-#pragma message ("TODO")
+#pragma message WARN("TODO")
                         dstPix[c] = max - srcPix[c];
                     }
                 } else {
@@ -280,7 +280,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
-#pragma message ("TODO")
+#pragma message WARN("TODO")
     (void)offset;
     // set the parameters
     if ( (getContext() == eContextGeneral) && _convergepoint && _dispClip ) {
