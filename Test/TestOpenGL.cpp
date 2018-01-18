@@ -222,6 +222,15 @@ TestOpenGLPlugin::render(const RenderArguments &args)
 #if defined(OFX_SUPPORTS_OPENGLRENDER)
     openGLRender = args.openGLEnabled;
 
+    if (getImageEffectHostDescription()->hostName.compare(0, 14, "DaVinciResolve") == 0) {
+        // DaVinci Resolve advertises GL supported but doesn't enable it here :|
+        // DaVinci always executes the standard render, but when render is called an OpenGL
+        // context is attached, thus we can do off-screen rendering.
+        // We execute the OpenGL code, but with args.openGLEnabled = false, which creates a
+        // framebuffer and reads back the rendered image using glReadPixels.
+        openGLRender = true;
+    }
+
     // do the rendering
     if (openGLRender) {
         return renderGL(args);
