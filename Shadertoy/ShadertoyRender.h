@@ -327,6 +327,7 @@ static PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
 static PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
 static PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
 static PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = NULL;
+static PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 //PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D = NULL;
 static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 //PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D = NULL;
@@ -952,20 +953,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif
 
 # ifdef OFX_SUPPORTS_OPENGLRENDER
-    const int& gl_enabled = args.openGLEnabled;
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     //DPRINT( ("render: openGLSuite %s\n", gHostDescription.supportsOpenGLRender ? "found" : "not found") );
     if (gHostDescription.supportsOpenGLRender) {
-        DPRINT( ("render: openGL rendering %s\n", gl_enabled ? "enabled" : "DISABLED") );
+        DPRINT( ("render: openGL rendering %s\n", args.openGLEnabled ? "enabled" : "DISABLED") );
     }
-#  ifdef USE_OPENGL
-    // For this test, we only process in OpenGL mode.
-    if (!gl_enabled) {
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-
-        return;
-    }
-#  endif
 # endif
 
     const OfxRectI& renderWindow = args.renderWindow;
@@ -973,11 +965,12 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
 
     // get the output image texture
-# ifdef USE_OPENGL
-    OFX::auto_ptr<OFX::Texture> dst( _dstClip->loadTexture(time) );
-# else
-    OFX::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
-# endif
+    OFX::auto_ptr<OFX::ImageBase> dst;
+    if (args.openGLEnabled) {
+        dst.reset(_dstClip->loadTexture(time));
+    } else {
+        dst.reset(_dstClip->fetchImage(time));
+    }
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
 
@@ -1001,29 +994,31 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         return;
     }
 # if defined(USE_OPENGL) && defined(DEBUG)
-    const GLuint dstIndex = (GLuint)dst->getIndex();
-    const GLenum dstTarget = (GLenum)dst->getTarget();
-    DPRINT( ( "openGL: output texture index %d, target 0x%04X, depth %s\n",
-              dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth) ) );
+    if (args.openGLEnabled) {
+        const GLuint dstIndex = (GLuint)((OFX::Texture*)dst.get())->getIndex();
+        const GLenum dstTarget = (GLenum)((OFX::Texture*)dst.get())->getTarget();
+        DPRINT( ( "openGL: output texture index %d, target 0x%04X, depth %s\n",
+                  dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth) ) );
+    }
 # endif
 
     bool inputEnable[NBINPUTS];
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         inputEnable[i] = _inputEnable[i]->getValue();
     }
-# ifdef USE_OPENGL
-    OFX::auto_ptr<const OFX::Texture> src[NBINPUTS];
-    for (unsigned i = 0; i < NBINPUTS; ++i) {
-        src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
-                      _srcClips[i]->loadTexture(time) : 0 );
+
+    OFX::auto_ptr<const OFX::ImageBase> src[NBINPUTS];
+    if (args.openGLEnabled) {
+        for (unsigned i = 0; i < NBINPUTS; ++i) {
+            src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
+                          _srcClips[i]->loadTexture(time) : 0 );
+        }
+    } else {
+        for (unsigned i = 0; i < NBINPUTS; ++i) {
+            src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
+                          _srcClips[i]->fetchImage(time) : 0 );
+        }
     }
-# else
-    OFX::auto_ptr<const OFX::Image> src[NBINPUTS];
-    for (unsigned i = 0; i < NBINPUTS; ++i) {
-        src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
-                      _srcClips[i]->fetchImage(time) : 0 );
-    }
-# endif
 
     std::vector<OFX::BitDepthEnum> srcBitDepth(NBINPUTS, OFX::eBitDepthNone);
     std::vector<OFX::PixelComponentEnum> srcComponents(NBINPUTS, OFX::ePixelComponentNone);
@@ -1031,12 +1026,15 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     std::vector<GLuint> srcIndex(NBINPUTS);
     std::vector<FilterEnum> filter(NBINPUTS, eFilterNearest);
     std::vector<WrapEnum> wrap(NBINPUTS, eWrapRepeat);
-#ifdef USE_OSMESA
+    GLuint dstFrameBuffer = 0;
+    GLuint dstTarget = GL_TEXTURE_2D;
+    GLuint dstIndex = 0;
     GLenum format = 0;
+    GLenum type = 0;
     GLint depthBits = 0;
+#ifdef USE_OSMESA
     GLint stencilBits = 0;
     GLint accumBits = 0;
-    GLenum type = 0;
 #endif
 
     for (unsigned i = 0; i < NBINPUTS; ++i) {
@@ -1060,10 +1058,12 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             wrap[i] = (WrapEnum)_inputWrap[i]->getValueAtTime(time);
 
 # ifdef USE_OPENGL
-            srcIndex[i] = (GLuint)src[i]->getIndex();
-            srcTarget[i] = (GLenum)src[i]->getTarget();
-            DPRINT( ( "openGL: source texture %u index %d, target 0x%04X, depth %s\n",
-                      i, srcIndex[i], srcTarget[i], mapBitDepthEnumToStr(srcBitDepth[i]) ) );
+            if (args.openGLEnabled) {
+                srcIndex[i] = (GLuint)((OFX::Texture*)src[i].get())->getIndex();
+                srcTarget[i] = (GLenum)((OFX::Texture*)src[i].get())->getTarget();
+                DPRINT( ( "openGL: source texture %u index %d, target 0x%04X, depth %s\n",
+                          i, srcIndex[i], srcTarget[i], mapBitDepthEnumToStr(srcBitDepth[i]) ) );
+            }
 # endif
             // XXX: check status for errors
 
@@ -1123,7 +1123,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
 
-#ifdef USE_OSMESA
     //const OfxRectI dstBounds = dst->getBounds();
     if (format == 0) {
         switch (dstComponents) {
@@ -1159,6 +1158,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             return;
         }
     }
+#ifdef USE_OSMESA
     /* Allocate the image buffer */
     OSMesaPrivate *osmesa;
     {
@@ -1187,7 +1187,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     GLsizei bufferHeight = renderWindow.y2 - renderWindow.y1;
     GLsizei bufferRowLength = std::abs( dst->getRowBytes() ) / dst->getPixelBytes();
     GLboolean bufferYUp = (dst->getRowBytes() > 0);
-    void* buffer = bufferYUp ? dst->getPixelAddress(renderWindow.x1, renderWindow.y1) : dst->getPixelAddress(renderWindow.x1, renderWindow.y2 - 1);
+    void* buffer = bufferYUp ? ((OFX::Image*)dst.get())->getPixelAddress(renderWindow.x1, renderWindow.y1) : ((OFX::Image*)dst.get())->getPixelAddress(renderWindow.x1, renderWindow.y2 - 1);
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, buffer, bufferWidth, bufferHeight, bufferRowLength, bufferYUp);
 #endif // ifdef USE_OSMESA
 
@@ -1513,133 +1513,151 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     glCheckError();
 
-#ifdef USE_OSMESA
-    // load the source image into a texture
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
+    if (!args.openGLEnabled) {
+        // load the source image into a texture
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glActiveTexture(GL_TEXTURE0);
 
-    glActiveTexture(GL_TEXTURE0);
-    for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if ( src[i].get() && (shadertoy->iChannelLoc[i] >= 0) ) {
-            glGenTextures(1, &srcIndex[i]);
-            OfxRectI srcBounds = src[i]->getBounds();
-            glBindTexture(srcTarget[i], srcIndex[i]);
-            // legacy mipmap generation was replaced by glGenerateMipmap from GL_ARB_framebuffer_object (see below)
-            if ( ( (filter[i] == eFilterMipmap) || (filter[i] == eFilterAnisotropic) ) && !supportsMipmap ) {
-                DPRINT( ("Shadertoy: legacy mipmap generation!\n") );
-                // this must be done before glTexImage2D
-                glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
-                // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
-                glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
-            }
-            GLenum internalFormat = format;
-            switch (format) {
-            case GL_ALPHA:
-                switch (type) {
-                case GL_UNSIGNED_BYTE:
-                    internalFormat = GL_ALPHA8;
-                    break;
-                case GL_UNSIGNED_SHORT:
-                    internalFormat = GL_ALPHA16;
-                    break;
-                case GL_FLOAT:
-                    internalFormat = GL_ALPHA32F_ARB;
-                    break;
-                case GL_HALF_FLOAT_ARB:
-                    internalFormat = GL_ALPHA16F_ARB;
-                    break;
-                default:
-                    //format/type combo not supported
-                    break;
-                }
+        GLenum internalFormat = format;
+        switch (format) {
+        case GL_ALPHA:
+            switch (type) {
+            case GL_UNSIGNED_BYTE:
+                internalFormat = GL_ALPHA8;
                 break;
-            case GL_LUMINANCE:
-                switch (type) {
-                case GL_UNSIGNED_BYTE:
-                    internalFormat = GL_R8;// GL_LUMINANCE8;
-                    break;
-                case GL_UNSIGNED_SHORT:
-                    internalFormat = GL_LUMINANCE16;
-                    break;
-                case GL_FLOAT:
-                    internalFormat = GL_LUMINANCE32F_ARB;
-                    break;
-                case GL_HALF_FLOAT_ARB:
-                    internalFormat = GL_LUMINANCE16F_ARB;
-                    break;
-                default:
-                    //format/type combo not supported
-                    break;
-                }
+            case GL_UNSIGNED_SHORT:
+                internalFormat = GL_ALPHA16;
                 break;
-            case GL_LUMINANCE_ALPHA:
-                switch (type) {
-                case GL_UNSIGNED_BYTE:
-                    internalFormat = GL_RG8;// GL_LUMINANCE8_ALPHA8;
-                    break;
-                case GL_UNSIGNED_SHORT:
-                    internalFormat = GL_LUMINANCE16_ALPHA16;
-                    break;
-                case GL_FLOAT:
-                    internalFormat = GL_LUMINANCE_ALPHA32F_ARB;
-                    break;
-                case GL_HALF_FLOAT_ARB:
-                    internalFormat = GL_LUMINANCE_ALPHA16F_ARB;
-                    break;
-                default:
-                    //format/type combo not supported
-                    break;
-                }
+            case GL_FLOAT:
+                internalFormat = GL_ALPHA32F_ARB;
                 break;
-            case GL_RGB:
-                switch (type) {
-                case GL_UNSIGNED_BYTE:
-                    internalFormat = GL_RGB8;
-                    break;
-                case GL_UNSIGNED_SHORT:
-                    internalFormat = GL_RGB16;
-                    break;
-                case GL_FLOAT:
-                    internalFormat = GL_RGB32F_ARB;
-                    break;
-                case GL_HALF_FLOAT_ARB:
-                    internalFormat = GL_RGB16F_ARB;
-                    break;
-                default:
-                    //format/type combo not supported
-                    break;
-                }
+            case GL_HALF_FLOAT_ARB:
+                internalFormat = GL_ALPHA16F_ARB;
                 break;
-            case GL_RGBA:
-                switch (type) {
-                case GL_UNSIGNED_BYTE:
-                    internalFormat = GL_RGBA8;
-                    break;
-                case GL_UNSIGNED_SHORT:
-                    internalFormat = GL_RGBA16;
-                    break;
-                case GL_FLOAT:
-                    internalFormat = GL_RGBA32F_ARB;
-                    break;
-                case GL_HALF_FLOAT_ARB:
-                    internalFormat = GL_RGBA16F_ARB;
-                    break;
-                default:
-                    break;
-                    //format/type combo not supported
-                }
             default:
-                //bad format
+                //format/type combo not supported
                 break;
             }
-            glTexImage2D( srcTarget[i], 0, internalFormat,
-                          srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
-                          format, type, src[i]->getPixelData() );
-            glBindTexture(srcTarget[i], 0);
+            break;
+        case GL_LUMINANCE:
+            switch (type) {
+            case GL_UNSIGNED_BYTE:
+                internalFormat = GL_R8;// GL_LUMINANCE8;
+                break;
+            case GL_UNSIGNED_SHORT:
+                internalFormat = GL_LUMINANCE16;
+                break;
+            case GL_FLOAT:
+                internalFormat = GL_LUMINANCE32F_ARB;
+                break;
+            case GL_HALF_FLOAT_ARB:
+                internalFormat = GL_LUMINANCE16F_ARB;
+                break;
+            default:
+                //format/type combo not supported
+                break;
+            }
+            break;
+        case GL_LUMINANCE_ALPHA:
+            switch (type) {
+            case GL_UNSIGNED_BYTE:
+                internalFormat = GL_RG8;// GL_LUMINANCE8_ALPHA8;
+                break;
+            case GL_UNSIGNED_SHORT:
+                internalFormat = GL_LUMINANCE16_ALPHA16;
+                break;
+            case GL_FLOAT:
+                internalFormat = GL_LUMINANCE_ALPHA32F_ARB;
+                break;
+            case GL_HALF_FLOAT_ARB:
+                internalFormat = GL_LUMINANCE_ALPHA16F_ARB;
+                break;
+            default:
+                //format/type combo not supported
+                break;
+            }
+            break;
+        case GL_RGB:
+            switch (type) {
+            case GL_UNSIGNED_BYTE:
+                internalFormat = GL_RGB8;
+                break;
+            case GL_UNSIGNED_SHORT:
+                internalFormat = GL_RGB16;
+                break;
+            case GL_FLOAT:
+                internalFormat = GL_RGB32F_ARB;
+                break;
+            case GL_HALF_FLOAT_ARB:
+                internalFormat = GL_RGB16F_ARB;
+                break;
+            default:
+                //format/type combo not supported
+                break;
+            }
+            break;
+        case GL_RGBA:
+            switch (type) {
+            case GL_UNSIGNED_BYTE:
+                internalFormat = GL_RGBA8;
+                break;
+            case GL_UNSIGNED_SHORT:
+                internalFormat = GL_RGBA16;
+                break;
+            case GL_FLOAT:
+                internalFormat = GL_RGBA32F_ARB;
+                break;
+            case GL_HALF_FLOAT_ARB:
+                internalFormat = GL_RGBA16F_ARB;
+                break;
+            default:
+                break;
+                //format/type combo not supported
+            }
+        default:
+            //bad format
+            break;
         }
-    }
-    glCheckError();
+
+#ifdef USE_OPENGL
+        // create a framebuffer to render to (OpenGL only)
+        glGenFramebuffers(1, &dstFrameBuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, dstFrameBuffer);
+
+        OfxRectI dstBounds = dst->getBounds();
+        glGenTextures(1, &dstIndex);
+        glBindTexture(dstTarget, dstIndex);
+        glTexImage2D(dstTarget, 0, internalFormat, dstBounds.x2 - dstBounds.x1,
+                     dstBounds.y2 - dstBounds.y1, 0, format, type, NULL);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstTarget, dstIndex, 0);
+
+        GLenum buf = GL_COLOR_ATTACHMENT0;
+        glDrawBuffers(1, &buf);
+        glCheckError();
 #endif
+
+        // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
+        for (unsigned i = 0; i < NBINPUTS; ++i) {
+            if ( src[i].get() && (shadertoy->iChannelLoc[i] >= 0) ) {
+                glGenTextures(1, &srcIndex[i]);
+                OfxRectI srcBounds = src[i]->getBounds();
+                glBindTexture(srcTarget[i], srcIndex[i]);
+                // legacy mipmap generation was replaced by glGenerateMipmap from GL_ARB_framebuffer_object (see below)
+                if ( ( (filter[i] == eFilterMipmap) || (filter[i] == eFilterAnisotropic) ) && !supportsMipmap ) {
+                    DPRINT( ("Shadertoy: legacy mipmap generation!\n") );
+                    // this must be done before glTexImage2D
+                    glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
+                    // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
+                    glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
+                }
+                glTexImage2D( srcTarget[i], 0, internalFormat,
+                              srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
+                              format, type, ((OFX::Image*)src[i].get())->getPixelData() );
+                glBindTexture(srcTarget[i], 0);
+            }
+        }
+        glCheckError();
+    }
 
     bool haveAniso = contextData->haveAniso;
     float maxAnisoMax = contextData->maxAnisoMax;
@@ -1907,7 +1925,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glDisable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_SCISSOR_TEST);
     glDepthFunc(GL_LESS);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glCheckError();
@@ -1921,7 +1940,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     int tile_w;
     int tile_h;
 #ifdef USE_OSMESA
-    glEnable(GL_SCISSOR_TEST);
     {
         int nCPUs = OFX::MultiThread::getNumCPUs();
         // - take the square root of nCPUs
@@ -1936,6 +1954,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #else
     tile_w = w;
     tile_h = h;
+#endif
+
+#ifdef USE_OPENGL
+    if (!args.openGLEnabled) {
+        glBindFramebuffer(GL_FRAMEBUFFER, dstFrameBuffer);
+        glViewport(0, 0, w, h);
+    }
 #endif
 
     bool aborted = abort();
@@ -1997,21 +2022,37 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 #endif
 
-#ifdef USE_OSMESA
-    /* This is very important!!!
-     * Make sure buffered commands are finished!!!
-     */
-    for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if ( src[i].get() ) {
-            glDeleteTextures(1, &srcIndex[i]);
+    if (!args.openGLEnabled) {
+        /* This is very important!!!
+         * Make sure buffered commands are finished!!!
+         */
+        for (unsigned i = 0; i < NBINPUTS; ++i) {
+            if ( src[i].get() ) {
+                glDeleteTextures(1, &srcIndex[i]);
+            }
         }
+
+        if (!aborted) {
+            glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
+            glFinish(); // waits for all previously submitted commands to complete executing
+        }
+        glCheckError();
+
+#ifdef USE_OPENGL
+        if (!aborted) {
+            // Copy pixels back into the destination.
+            glReadPixels(0, 0, w, h, format, type, ((OFX::Image*)dst.get())->getPixelAddress(renderWindow.x1, renderWindow.y1));
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+
+        // Free the framebuffer and its resources.
+        glDeleteTextures(1, &dstIndex);
+        glDeleteFramebuffers(1, &dstFrameBuffer);
+        glCheckError();
+#endif
     }
 
-    if (!aborted) {
-        glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
-        glFinish(); // waits for all previously submitted commands to complete executing
-    }
-    glCheckError();
+#ifdef USE_OSMESA
     // make sure the buffer is not referenced anymore
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, NULL, 0, 0, 0, true);
     OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
@@ -2266,6 +2307,7 @@ ShadertoyPlugin::contextAttached(bool createContextData)
         glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)wglGetProcAddress("glDeleteFramebuffers");
         glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)wglGetProcAddress("glGenFramebuffers");
         glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)wglGetProcAddress("glCheckFramebufferStatus");
+        glDrawBuffers = (PFNGLDRAWBUFFERSPROC)wglGetProcAddress("glDrawBuffers");
         //glFramebufferTexture1D = (PFNGLFRAMEBUFFERTEXTURE1DPROC)wglGetProcAddress("glFramebufferTexture1D");
         glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)wglGetProcAddress("glFramebufferTexture2D");
         //glFramebufferTexture3D = (PFNGLFRAMEBUFFERTEXTURE3DPROC)wglGetProcAddress("glFramebufferTexture3D");
