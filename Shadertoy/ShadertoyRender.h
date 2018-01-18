@@ -326,14 +326,17 @@ typedef void (APIENTRYP PFNGLGENERATEMIPMAPPROC)(GLenum target);
 static PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
 static PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
 static PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
-static PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = NULL;
-static PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
+//static PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = NULL;
 //PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D = NULL;
 static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 //PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D = NULL;
 //PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
 //PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetFramebufferAttachmentParameteriv = NULL;
 static PFNGLGENERATEMIPMAPPROC glGenerateMipmap = NULL;
+#ifndef GL_VERSION_2_0
+typedef void (APIENTRYP PFNGLDRAWBUFFERSPROC) (GLsizei n, const GLenum *bufs);
+#endif
+static PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 
 // Sync Objects https://www.opengl.org/wiki/Sync_Object
 #ifndef GL_ARB_sync
@@ -965,12 +968,21 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
 
     // get the output image texture
+#ifdef USE_OPENGL
     OFX::auto_ptr<OFX::ImageBase> dst;
+    OFX::Image *dstImage = NULL;
+    OFX::Texture *dstTexture = NULL;
     if (args.openGLEnabled) {
-        dst.reset(_dstClip->loadTexture(time));
+        dstTexture = _dstClip->loadTexture(time);
+        dst.reset(dstTexture);
     } else {
-        dst.reset(_dstClip->fetchImage(time));
+        dstImage = _dstClip->fetchImage(time);
+        dst.reset(dstImage);
     }
+#else
+    OFX::Image *dstImage = _dstClip->fetchImage(time);
+    OFX::auto_ptr<OFX::Image> dst(dstImage);
+#endif
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
 
@@ -995,8 +1007,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 # if defined(USE_OPENGL) && defined(DEBUG)
     if (args.openGLEnabled) {
-        const GLuint dstIndex = (GLuint)((OFX::Texture*)dst.get())->getIndex();
-        const GLenum dstTarget = (GLenum)((OFX::Texture*)dst.get())->getTarget();
+        const GLuint dstIndex = (GLuint)dstTexture->getIndex();
+        const GLenum dstTarget = (GLenum)dstTexture->getTarget();
         DPRINT( ( "openGL: output texture index %d, target 0x%04X, depth %s\n",
                   dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth) ) );
     }
@@ -1008,15 +1020,25 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 
     OFX::auto_ptr<const OFX::ImageBase> src[NBINPUTS];
+    const OFX::Image* srcImage[NBINPUTS];
+    const OFX::Texture* srcTexture[NBINPUTS];
+#ifdef USE_OPENGL
+
     if (args.openGLEnabled) {
         for (unsigned i = 0; i < NBINPUTS; ++i) {
-            src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
-                          _srcClips[i]->loadTexture(time) : 0 );
+            srcTexture[i] = ( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
+                             _srcClips[i]->loadTexture(time) : 0 );
+            src[i].reset(srcTexture[i]);
+            srcImage[i] = NULL;
         }
-    } else {
+    } else
+#endif
+    {
         for (unsigned i = 0; i < NBINPUTS; ++i) {
-            src[i].reset( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
-                          _srcClips[i]->fetchImage(time) : 0 );
+            srcImage[i] = ( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
+                           _srcClips[i]->fetchImage(time) : 0 );
+            src[i].reset(srcImage[i]);
+            srcTexture[i] = NULL;
         }
     }
 
@@ -1026,9 +1048,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     std::vector<GLuint> srcIndex(NBINPUTS);
     std::vector<FilterEnum> filter(NBINPUTS, eFilterNearest);
     std::vector<WrapEnum> wrap(NBINPUTS, eWrapRepeat);
-    GLuint dstFrameBuffer = 0;
-    GLuint dstTarget = GL_TEXTURE_2D;
-    GLuint dstIndex = 0;
     GLenum format = 0;
     GLenum type = 0;
     GLint depthBits = 0;
@@ -1059,8 +1078,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
 # ifdef USE_OPENGL
             if (args.openGLEnabled) {
-                srcIndex[i] = (GLuint)((OFX::Texture*)src[i].get())->getIndex();
-                srcTarget[i] = (GLenum)((OFX::Texture*)src[i].get())->getTarget();
+                srcIndex[i] = (GLuint)srcTexture[i]->getIndex();
+                srcTarget[i] = (GLenum)srcTexture[i]->getTarget();
                 DPRINT( ( "openGL: source texture %u index %d, target 0x%04X, depth %s\n",
                           i, srcIndex[i], srcTarget[i], mapBitDepthEnumToStr(srcBitDepth[i]) ) );
             }
@@ -1187,7 +1206,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     GLsizei bufferHeight = renderWindow.y2 - renderWindow.y1;
     GLsizei bufferRowLength = std::abs( dst->getRowBytes() ) / dst->getPixelBytes();
     GLboolean bufferYUp = (dst->getRowBytes() > 0);
-    void* buffer = bufferYUp ? ((OFX::Image*)dst.get())->getPixelAddress(renderWindow.x1, renderWindow.y1) : ((OFX::Image*)dst.get())->getPixelAddress(renderWindow.x1, renderWindow.y2 - 1);
+    void* buffer = bufferYUp ? dstImage->getPixelAddress(renderWindow.x1, renderWindow.y1) : dstImage->getPixelAddress(renderWindow.x1, renderWindow.y2 - 1);
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, buffer, bufferWidth, bufferHeight, bufferRowLength, bufferYUp);
 #endif // ifdef USE_OSMESA
 
@@ -1513,6 +1532,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     glCheckError();
 
+#ifdef USE_OPENGL
+    GLuint dstFrameBuffer = 0;
+    GLuint dstTarget = GL_TEXTURE_2D;
+    GLuint dstIndex = 0;
+#endif
     if (!args.openGLEnabled) {
         // load the source image into a texture
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -1652,7 +1676,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 }
                 glTexImage2D( srcTarget[i], 0, internalFormat,
                               srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
-                              format, type, ((OFX::Image*)src[i].get())->getPixelData() );
+                              format, type, srcImage[i]->getPixelData() );
                 glBindTexture(srcTarget[i], 0);
             }
         }
@@ -1926,7 +1950,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glDisable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
-    glEnable(GL_SCISSOR_TEST);
     glDepthFunc(GL_LESS);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glCheckError();
@@ -1940,6 +1963,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     int tile_w;
     int tile_h;
 #ifdef USE_OSMESA
+    glEnable(GL_SCISSOR_TEST); // for Mesa tiled rendering only
     {
         int nCPUs = OFX::MultiThread::getNumCPUs();
         // - take the square root of nCPUs
@@ -2041,7 +2065,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #ifdef USE_OPENGL
         if (!aborted) {
             // Copy pixels back into the destination.
-            glReadPixels(0, 0, w, h, format, type, ((OFX::Image*)dst.get())->getPixelAddress(renderWindow.x1, renderWindow.y1));
+            glReadPixels(0, 0, w, h, format, type, dstImage->getPixelAddress(renderWindow.x1, renderWindow.y1));
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
 
@@ -2306,14 +2330,14 @@ ShadertoyPlugin::contextAttached(bool createContextData)
         glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)wglGetProcAddress("glBindFramebuffer");
         glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)wglGetProcAddress("glDeleteFramebuffers");
         glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)wglGetProcAddress("glGenFramebuffers");
-        glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)wglGetProcAddress("glCheckFramebufferStatus");
-        glDrawBuffers = (PFNGLDRAWBUFFERSPROC)wglGetProcAddress("glDrawBuffers");
+        //glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)wglGetProcAddress("glCheckFramebufferStatus");
         //glFramebufferTexture1D = (PFNGLFRAMEBUFFERTEXTURE1DPROC)wglGetProcAddress("glFramebufferTexture1D");
         glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)wglGetProcAddress("glFramebufferTexture2D");
         //glFramebufferTexture3D = (PFNGLFRAMEBUFFERTEXTURE3DPROC)wglGetProcAddress("glFramebufferTexture3D");
         //glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)wglGetProcAddress("glFramebufferRenderbuffer");
         //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)wglGetProcAddress("glGetFramebufferAttachmentParameteriv");
         glGenerateMipmap = (PFNGLGENERATEMIPMAPPROC)wglGetProcAddress("glGenerateMipmap");
+        glDrawBuffers = (PFNGLDRAWBUFFERSPROC)wglGetProcAddress("glDrawBuffers");
 
         // GL_ARB_sync
         // Sync Objects https://www.opengl.org/wiki/Sync_Object
