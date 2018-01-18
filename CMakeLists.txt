@@ -104,7 +104,7 @@ FILE(GLOB MISC_SOURCES
   "CornerPin/*.cpp"
   "Crop/*.cpp"
   "Deinterlace/*.cpp"
-  # "DenoiseSharpen/*.cpp"
+  "DenoiseSharpen/*.cpp"
   "Despill/*.cpp"
   "Difference/*.cpp"
   "Dissolve/*.cpp"
