@@ -225,11 +225,11 @@ enum DisplayEnum
 #define kCurveAlpha 4
 #define kCurveNb 5
 
-static
-double
-luminance(double r,
-          double g,
-          double b,
+template<class T>
+T
+luminance(T r,
+          T g,
+          T b,
           LuminanceMathEnum luminanceMath);
 
 class ColorLookupProcessorBase
@@ -519,7 +519,7 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            double l = std::max(luminance(r, g, b, _luminanceMath), 1e-8); // avoid division by zero
+                            double l = std::max(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
                             // apply the master curve to the luminance, and
                             double coef = interpolate(nComponents, l) / l;
                             tmpPix[0] = clamp<float>(coef * interpolate(0, r), 1) * maxValue;
@@ -608,7 +608,7 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            double l = std::max(luminance(r, g, b, _luminanceMath), 1e-8); // avoid division by zero
+                            double l = std::max(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
                             // apply the master curve to the luminance, and
                             double coef = interpolate(nComponents, l) / l;
                             tmpPix[0] = clamp<float>(coef * interpolate(0, r), 1);
@@ -702,11 +702,11 @@ private:
     LuminanceMathEnum _luminanceMath;
 };
 
-static
-double
-luminance(double r,
-          double g,
-          double b,
+template<class T>
+T
+luminance(T r,
+          T g,
+          T b,
           LuminanceMathEnum luminanceMath)
 {
     switch (luminanceMath) {
@@ -726,7 +726,7 @@ luminance(double r,
         return Color::rgbACESAP1_to_y(r, g, b);
     case eLuminanceMathCcir601:
 
-        return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+        return (T)(0.2989f * r + 0.5866f * g + 0.1145f * b);
     case eLuminanceMathAverage:
 
         return (r + g + b) / 3;

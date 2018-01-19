@@ -1046,13 +1046,14 @@ public:
 
 private:
 
-    double luminance (const PIX *p)
+    double
+    luminance(const PIX *p)
     {
         if ( (nComponents == 4) || (nComponents == 3) ) {
-            float r, g, b;
-            r = p[0] / (float)maxValue;
-            g = p[1] / (float)maxValue;
-            b = p[2] / (float)maxValue;
+            double r, g, b;
+            r = p[0] / (double)maxValue;
+            g = p[1] / (double)maxValue;
+            b = p[2] / (double)maxValue;
             switch (_luminanceMath) {
             case eLuminanceMathRec709:
             default:
@@ -1069,7 +1070,7 @@ private:
                 return Color::rgbACESAP1_to_y(r, g, b);
             case eLuminanceMathCcir601:
 
-                return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+                return (double)(0.2989f * r + 0.5866f * g + 0.1145f * b);
             case eLuminanceMathAverage:
 
                 return (r + g + b) / 3;

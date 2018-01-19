@@ -234,11 +234,11 @@ HueCorrectProcessorBase::clamp<float>(float value,
     return value;
 }
 
-static
-double
-luminance(double r,
-          double g,
-          double b,
+template<typename T>
+T
+luminance(T r,
+          T g,
+          T b,
           LuminanceMathEnum luminanceMath)
 {
     switch (luminanceMath) {
@@ -258,7 +258,7 @@ luminance(double r,
         return Color::rgbACESAP1_to_y(r, g, b);
     case eLuminanceMathCcir601:
 
-        return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+        return (T)(0.2989f * r + 0.5866f * g + 0.1145f * b);
     case eLuminanceMathAverage:
 
         return (r + g + b) / 3;

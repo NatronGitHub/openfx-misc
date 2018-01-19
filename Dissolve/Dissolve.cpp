@@ -427,8 +427,8 @@ DissolvePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                      RegionOfInterestSetter &rois)
 {
     double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
-    unsigned prev = std::floor(which);
-    unsigned next = std::ceil(which);
+    unsigned prev = (unsigned)std::floor(which);
+    unsigned next = (unsigned)std::ceil(which);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
 
     for (unsigned i = 0; i < _srcClip.size(); ++i) {

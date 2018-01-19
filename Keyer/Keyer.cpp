@@ -192,12 +192,12 @@ enum SourceAlphaEnum
     eSourceAlphaNormal,
 };
 
-static
-double
-luminance (LuminanceMathEnum luminanceMath,
-           double r,
-           double g,
-           double b)
+template<typename T>
+T
+luminance(LuminanceMathEnum luminanceMath,
+          T r,
+          T g,
+          T b)
 {
     switch (luminanceMath) {
     case eLuminanceMathRec709:
@@ -215,7 +215,7 @@ luminance (LuminanceMathEnum luminanceMath,
         return Color::rgbACESAP1_to_y(r, g, b);
     case eLuminanceMathCcir601:
 
-        return 0.2989 * r + 0.5866 * g + 0.1145 * b;
+        return (T)(0.2989f * r + 0.5866f * g + 0.1145f * b);
     case eLuminanceMathAverage:
 
         return (r + g + b) / 3;

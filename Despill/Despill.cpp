@@ -124,7 +124,7 @@ protected:
     double _spillExpand;
     double _redScale, _greenScale, _blueScale;
     double _brightness;
-    double _mix;
+    float _mix;
 
 public:
 
@@ -140,7 +140,7 @@ public:
         , _greenScale(0.)
         , _blueScale(0.)
         , _brightness(0.)
-        , _mix(0.)
+        , _mix(0.f)
     {
     }
 
@@ -162,7 +162,7 @@ public:
                    double green,
                    double blue,
                    double brightness,
-                   double mix,
+                   float mix,
                    bool outputToAlpha)
     {
         _spillMix = spillMix;
@@ -436,7 +436,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     }
 
 
-    processor.setValues(spillMix, spillExpand, redScale, greenScale, blueScale, brightNess, mix, outputAlpha);
+    processor.setValues(spillMix, spillExpand, redScale, greenScale, blueScale, brightNess, (float)mix, outputAlpha);
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);

@@ -1083,12 +1083,12 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     std::vector<WrapEnum> wrap(NBINPUTS, eWrapRepeat);
     GLenum format = GL_NONE;
     GLenum type = GL_NONE;
+# ifdef USE_OSMESA
 # ifdef USE_DEPTH
     GLint depthBits = 24;
 # else
     GLint depthBits = 0;
 # endif
-# ifdef USE_OSMESA
     GLint stencilBits = 0;
     GLint accumBits = 0;
 # endif

@@ -207,10 +207,10 @@ private:
         }
         int r = i / cols;
         int c = i % cols;
-        cropRectPixel->x1 = renderScale.x * (rodPixel.x1 + c * spriteSize.x); // left to right
-        cropRectPixel->y1 = renderScale.y * (rodPixel.y2 - (r + 1) * spriteSize.y); // top to bottom
-        cropRectPixel->x2 = renderScale.x * (rodPixel.x1 + (c + 1) * spriteSize.x);
-        cropRectPixel->y2 = renderScale.y * (rodPixel.y2 - r * spriteSize.y);
+        cropRectPixel->x1 = (int)(renderScale.x * (rodPixel.x1 + c * spriteSize.x)); // left to right
+        cropRectPixel->y1 = (int)(renderScale.y * (rodPixel.y2 - (r + 1) * spriteSize.y)); // top to bottom
+        cropRectPixel->x2 = (int)(renderScale.x * (rodPixel.x1 + (c + 1) * spriteSize.x));
+        cropRectPixel->y2 = (int)(renderScale.y * (rodPixel.y2 - r * spriteSize.y));
     } // SpriteSheetPlugin::getCropRectangle
 
     Clip* getSrcClip() const
