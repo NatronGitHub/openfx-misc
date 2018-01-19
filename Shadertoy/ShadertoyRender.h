@@ -126,6 +126,32 @@ print_dbg(const char *format,
 
 #endif // ifndef DEBUG
 
+#if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
+static
+PROC getProcAddress(LPCSTR lpszProc) {
+    return wglGetProcAddress(lpszProc);
+}
+
+static
+PROC getProcAddress(LPCSTR lpszProc1, LPCSTR lpszProc2) {
+    PROC ret = wglGetProcAddress(lpszProc1);
+    if (!ret) {
+        ret = wglGetProcAddress(lpszProc2);
+    }
+}
+
+static
+PROC getProcAddress(LPCSTR lpszProc1, LPCSTR lpszProc2, LPCSTR lpszProc3) {
+    PROC ret = wglGetProcAddress(lpszProc1);
+    if (!ret) {
+        ret = wglGetProcAddress(lpszProc2);
+    }
+    if (!ret) {
+        ret = wglGetProcAddress(lpszProc3);
+    }
+}
+#endif
+
 #define NBINPUTS SHADERTOY_NBINPUTS
 #define NBUNIFORMS SHADERTOY_NBUNIFORMS
 
@@ -326,11 +352,11 @@ typedef void (APIENTRYP PFNGLGENERATEMIPMAPPROC)(GLenum target);
 static PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
 static PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
 static PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
-//static PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = NULL;
+static PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = NULL;
 //PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D = NULL;
 static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 //PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D = NULL;
-//PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
+static PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
 //PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetFramebufferAttachmentParameteriv = NULL;
 static PFNGLGENERATEMIPMAPPROC glGenerateMipmap = NULL;
 #ifndef GL_VERSION_2_0
@@ -973,9 +999,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     OFX::Image *dstImage = NULL;
     OFX::Texture *dstTexture = NULL;
     if (args.openGLEnabled) {
+        // (OpenGL direct rendering only)
         dstTexture = _dstClip->loadTexture(time);
         dst.reset(dstTexture);
     } else {
+        // (OpenGL off-screen rendering only)
         dstImage = _dstClip->fetchImage(time);
         dst.reset(dstImage);
     }
@@ -1007,6 +1035,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 # if defined(USE_OPENGL) && defined(DEBUG)
     if (args.openGLEnabled) {
+        // (OpenGL direct rendering only)
         const GLuint dstIndex = (GLuint)dstTexture->getIndex();
         const GLenum dstTarget = (GLenum)dstTexture->getTarget();
         DPRINT( ( "openGL: output texture index %d, target 0x%04X, depth %s\n",
@@ -1025,6 +1054,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #ifdef USE_OPENGL
 
     if (args.openGLEnabled) {
+        // (OpenGL direct rendering only)
         for (unsigned i = 0; i < NBINPUTS; ++i) {
             srcTexture[i] = ( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
                              _srcClips[i]->loadTexture(time) : 0 );
@@ -1034,6 +1064,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     } else
 #endif
     {
+        // (OpenGL off-screen rendering or OSMesa)
         for (unsigned i = 0; i < NBINPUTS; ++i) {
             srcImage[i] = ( ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) ?
                            _srcClips[i]->fetchImage(time) : 0 );
@@ -1048,13 +1079,17 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     std::vector<GLuint> srcIndex(NBINPUTS);
     std::vector<FilterEnum> filter(NBINPUTS, eFilterNearest);
     std::vector<WrapEnum> wrap(NBINPUTS, eWrapRepeat);
-    GLenum format = 0;
-    GLenum type = 0;
+    GLenum format = GL_NONE;
+    GLenum type = GL_NONE;
+# ifdef USE_DEPTH
+    GLint depthBits = 24;
+# else
     GLint depthBits = 0;
-#ifdef USE_OSMESA
+# endif
+# ifdef USE_OSMESA
     GLint stencilBits = 0;
     GLint accumBits = 0;
-#endif
+# endif
 
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         if ( src[i].get() ) {
@@ -1078,6 +1113,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
 # ifdef USE_OPENGL
             if (args.openGLEnabled) {
+                // (OpenGL direct rendering only)
                 srcIndex[i] = (GLuint)srcTexture[i]->getIndex();
                 srcTarget[i] = (GLenum)srcTexture[i]->getTarget();
                 DPRINT( ( "openGL: source texture %u index %d, target 0x%04X, depth %s\n",
@@ -1100,21 +1136,17 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
                 return;
             }
-            GLint depthBitsi = 0;
             GLint stencilBitsi = 0;
             GLint accumBitsi = 0;
-            GLenum typei;
+            GLenum typei = GL_NONE;
             switch (srcBitDepth[i]) {
             case OFX::eBitDepthUByte:
-                depthBitsi = 16;
                 typei = GL_UNSIGNED_BYTE;
                 break;
             case OFX::eBitDepthUShort:
-                depthBitsi = 16;
                 typei = GL_UNSIGNED_SHORT;
                 break;
             case OFX::eBitDepthFloat:
-                depthBitsi = 32;
                 typei = GL_FLOAT;
                 break;
             default:
@@ -1122,15 +1154,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
                 return;
             }
-            if (format == 0) {
+            if (format == GL_NONE) {
                 format = formati;
-                depthBits = depthBitsi;
                 stencilBits = stencilBitsi;
                 accumBits = accumBitsi;
                 type = typei;
             } else {
                 if ( (format != formati) ||
-                     ( depthBits != depthBitsi) ||
                      ( stencilBits != stencilBitsi) ||
                      ( accumBits != accumBitsi) ||
                      ( type != typei) ) {
@@ -1143,7 +1173,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 
     //const OfxRectI dstBounds = dst->getBounds();
-    if (format == 0) {
+    if (format == GL_NONE) {
         switch (dstComponents) {
         case OFX::ePixelComponentRGBA:
             format = GL_RGBA;
@@ -1157,18 +1187,15 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             return;
         }
     }
-    if (depthBits == 0) {
+    if (type == GL_NONE) {
         switch (dstBitDepth) {
         case OFX::eBitDepthUByte:
-            depthBits = 16;
             type = GL_UNSIGNED_BYTE;
             break;
         case OFX::eBitDepthUShort:
-            depthBits = 16;
             type = GL_UNSIGNED_SHORT;
             break;
         case OFX::eBitDepthFloat:
-            depthBits = 32;
             type = GL_FLOAT;
             break;
         default:
@@ -1534,10 +1561,14 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
 #ifdef USE_OPENGL
     GLuint dstFrameBuffer = 0;
+# ifdef USE_DEPTH
+    GLuint dstDepthBuffer = 0;
+# endif
     GLuint dstTarget = GL_TEXTURE_2D;
     GLuint dstIndex = 0;
 #endif
     if (!args.openGLEnabled) {
+        // (OpenGL off-screen rendering or OSMesa)
         // load the source image into a texture
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glActiveTexture(GL_TEXTURE0);
@@ -1644,19 +1675,52 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
 
 #ifdef USE_OPENGL
-        // create a framebuffer to render to (OpenGL only)
-        glGenFramebuffers(1, &dstFrameBuffer);
-        glBindFramebuffer(GL_FRAMEBUFFER, dstFrameBuffer);
-
+        // create a framebuffer to render to (OpenGL off-screen rendering only)
+        // see https://www.khronos.org/opengl/wiki/Framebuffer_Object_Extension_Examples
         OfxRectI dstBounds = dst->getBounds();
         glGenTextures(1, &dstIndex);
+        assert(dstIndex > 0);
         glBindTexture(dstTarget, dstIndex);
         glTexImage2D(dstTarget, 0, internalFormat, dstBounds.x2 - dstBounds.x1,
                      dstBounds.y2 - dstBounds.y1, 0, format, type, NULL);
+        //-------------------------
+        glGenFramebuffers(1, &dstFrameBuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, dstFrameBuffer);
+        //Attach 2D texture to this FBO
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstTarget, dstIndex, 0);
-
+        //-------------------------
+        // Optional: also create a depth texture and attach it to GL_DEPTH_ATTACHMENT here
+#     ifdef USE_DEPTH
+        glGenRenderbuffers(1, &dstDepthBuffer);
+        glBindRenderbuffer(GL_RENDERBUFFER_EXT, dstDepthBuffer);
+        glRenderbufferStorage(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1);
+        //-------------------------
+        //Attach depth buffer to FBO
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, dstDepthBuffer);
+#     endif
+        //-------------------------
+        //Does the GPU support current FBO configuration?
+        GLenum status;
+        status = glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
+        switch(status) {
+        case GL_FRAMEBUFFER_COMPLETE:
+            DPRINT( ("TestOpenGL: framebuffer attachment complete!\n") );
+            break;
+        default:
+            // Free the framebuffer and its resources.
+            glDeleteTextures(1, &dstIndex);
+            glDeleteFramebuffers(1, &dstFrameBuffer);
+#         ifdef USE_DEPTH
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+            glDeleteRenderbuffers(1, &dstDepthBuffer);
+#         endif
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+        //-------------------------
+        //and now you can render to GL_TEXTURE_2D
         GLenum buf = GL_COLOR_ATTACHMENT0;
         glDrawBuffers(1, &buf);
+
         glCheckError();
 #endif
 
@@ -1687,6 +1751,17 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     float maxAnisoMax = contextData->maxAnisoMax;
     int w = (renderWindow.x2 - renderWindow.x1);
     int h = (renderWindow.y2 - renderWindow.y1);
+
+#ifdef USE_OPENGL
+    if (!args.openGLEnabled) {
+        // (OpenGL off-screen rendering only)
+        glBindFramebuffer(GL_FRAMEBUFFER, dstFrameBuffer);
+        glViewport(0, 0, w, h);
+    }
+#endif
+
+    //--------------------------------------------
+    // START of the actual OpenGL rendering code
 
     // setup the projection
     glMatrixMode(GL_PROJECTION);
@@ -1949,8 +2024,12 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glDisable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
+# ifdef USE_DEPTH
+    glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+# else
+    glDisable(GL_DEPTH_TEST);
+#endif
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glCheckError();
 
@@ -1980,12 +2059,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     tile_h = h;
 #endif
 
-#ifdef USE_OPENGL
-    if (!args.openGLEnabled) {
-        glBindFramebuffer(GL_FRAMEBUFFER, dstFrameBuffer);
-        glViewport(0, 0, w, h);
-    }
-#endif
 
     bool aborted = abort();
     for (int y1 = 0; y1 < h && !aborted; y1 += tile_h) {
@@ -2046,7 +2119,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 #endif
 
+    // END of the actual OpenGL rendering code
+    //--------------------------------------------
+
     if (!args.openGLEnabled) {
+        // (OpenGL off-screen rendering or OSMesa)
         /* This is very important!!!
          * Make sure buffered commands are finished!!!
          */
@@ -2063,15 +2140,22 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glCheckError();
 
 #ifdef USE_OPENGL
+        // (OpenGL off-screen rendering only)
+        // Read back the framebuffer content (OpenGL off-screen rendering only)
         if (!aborted) {
             // Copy pixels back into the destination.
             glReadPixels(0, 0, w, h, format, type, dstImage->getPixelAddress(renderWindow.x1, renderWindow.y1));
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
 
         // Free the framebuffer and its resources.
         glDeleteTextures(1, &dstIndex);
+        //Bind 0, which means render to back buffer, as a result, fb is unbound
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDeleteFramebuffers(1, &dstFrameBuffer);
+#ifdef USE_DEPTH
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        glDeleteRenderbuffers(1, &dstDepthBuffer);
+#endif
         glCheckError();
 #endif
     }
@@ -2262,90 +2346,90 @@ ShadertoyPlugin::contextAttached(bool createContextData)
     if (glCreateProgram == NULL) {
         // Program
         // GL_VERSION_2_0
-        glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
-        glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
-        glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
-        glAttachShader = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
-        glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
-        glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
-        glGetProgramiv = (PFNGLGETPROGRAMIVPROC)wglGetProcAddress("glGetProgramiv");
-        glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)wglGetProcAddress("glGetProgramInfoLog");
-        glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
-        glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
-        glGetUniformfv = (PFNGLGETUNIFORMFVPROC)wglGetProcAddress("glGetUniformfv");
-        glGetUniformiv = (PFNGLGETUNIFORMIVPROC)wglGetProcAddress("glGetUniformiv");
-        glUniform1i = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
-        glUniform2i = (PFNGLUNIFORM2IPROC)wglGetProcAddress("glUniform2i");
-        glUniform3i = (PFNGLUNIFORM3IPROC)wglGetProcAddress("glUniform3i");
-        glUniform4i = (PFNGLUNIFORM4IPROC)wglGetProcAddress("glUniform4i");
-        glUniform1iv = (PFNGLUNIFORM1IVPROC)wglGetProcAddress("glUniform1iv");
-        glUniform2iv = (PFNGLUNIFORM2IVPROC)wglGetProcAddress("glUniform2iv");
-        glUniform3iv = (PFNGLUNIFORM3IVPROC)wglGetProcAddress("glUniform3iv");
-        glUniform4iv = (PFNGLUNIFORM4IVPROC)wglGetProcAddress("glUniform4iv");
-        glUniform1f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f");
-        glUniform2f = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
-        glUniform3f = (PFNGLUNIFORM3FPROC)wglGetProcAddress("glUniform3f");
-        glUniform4f = (PFNGLUNIFORM4FPROC)wglGetProcAddress("glUniform4f");
-        glUniform1fv = (PFNGLUNIFORM1FVPROC)wglGetProcAddress("glUniform1fv");
-        glUniform2fv = (PFNGLUNIFORM2FVPROC)wglGetProcAddress("glUniform2fv");
-        glUniform3fv = (PFNGLUNIFORM3FVPROC)wglGetProcAddress("glUniform3fv");
-        glUniform4fv = (PFNGLUNIFORM4FVPROC)wglGetProcAddress("glUniform4fv");
-        glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)wglGetProcAddress("glUniformMatrix4fv");
-        glGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)wglGetProcAddress("glGetAttribLocation");
-        glVertexAttrib1f = (PFNGLVERTEXATTRIB1FPROC)wglGetProcAddress("glVertexAttrib1f");
-        glVertexAttrib1fv = (PFNGLVERTEXATTRIB1FVPROC)wglGetProcAddress("glVertexAttrib1fv");
-        glVertexAttrib2fv = (PFNGLVERTEXATTRIB2FVPROC)wglGetProcAddress("glVertexAttrib2fv");
-        glVertexAttrib3fv = (PFNGLVERTEXATTRIB3FVPROC)wglGetProcAddress("glVertexAttrib3fv");
-        glVertexAttrib4fv = (PFNGLVERTEXATTRIB4FVPROC)wglGetProcAddress("glVertexAttrib4fv");
-        glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
-        glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
-        glGetActiveAttrib = (PFNGLGETACTIVEATTRIBPROC)wglGetProcAddress("glGetActiveAttrib");
-        glBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)wglGetProcAddress("glBindAttribLocation");
-        glGetActiveUniform = (PFNGLGETACTIVEUNIFORMPROC)wglGetProcAddress("glGetActiveUniform");
+        glCreateProgram = (PFNGLCREATEPROGRAMPROC)getProcAddress("glCreateProgram", "glCreateProgramObjectARB");
+        glDeleteProgram = (PFNGLDELETEPROGRAMPROC)getProcAddress("glDeleteProgram", "glDeleteObjectARB");
+        glUseProgram = (PFNGLUSEPROGRAMPROC)getProcAddress("glUseProgram", "glUseProgramObjectARB");
+        glAttachShader = (PFNGLATTACHSHADERPROC)getProcAddress("glAttachShader", "glAttachObjectARB");
+        glDetachShader = (PFNGLDETACHSHADERPROC)getProcAddress("glDetachShader", "glDetachObjectARB");
+        glLinkProgram = (PFNGLLINKPROGRAMPROC)getProcAddress("glLinkProgram", "glLinkProgramARB");
+        glGetProgramiv = (PFNGLGETPROGRAMIVPROC)getProcAddress("glGetProgramiv", "glGetObjectParameterivARB");
+        glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)getProcAddress("glGetProgramInfoLog", "glGetInfoLogARB");
+        glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)getProcAddress("glGetShaderInfoLog", "glGetInfoLogARB");
+        glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)getProcAddress("glGetUniformLocation", "glGetUniformLocationARB");
+        glGetUniformfv = (PFNGLGETUNIFORMFVPROC)getProcAddress("glGetUniformfv", "glGetUniformfvARB");
+        glGetUniformiv = (PFNGLGETUNIFORMIVPROC)getProcAddress("glGetUniformiv", "glGetUniformivARB");
+        glUniform1i = (PFNGLUNIFORM1IPROC)getProcAddress("glUniform1i", "glUniform1iARB");
+        glUniform2i = (PFNGLUNIFORM2IPROC)getProcAddress("glUniform2i", "glUniform2iARB");
+        glUniform3i = (PFNGLUNIFORM3IPROC)getProcAddress("glUniform3i", "glUniform3iARB");
+        glUniform4i = (PFNGLUNIFORM4IPROC)getProcAddress("glUniform4i", "glUniform4iARB");
+        glUniform1iv = (PFNGLUNIFORM1IVPROC)getProcAddress("glUniform1iv", "glUniform1ivARB");
+        glUniform2iv = (PFNGLUNIFORM2IVPROC)getProcAddress("glUniform2iv", "glUniform2ivARB");
+        glUniform3iv = (PFNGLUNIFORM3IVPROC)getProcAddress("glUniform3iv", "glUniform3ivARB");
+        glUniform4iv = (PFNGLUNIFORM4IVPROC)getProcAddress("glUniform4iv", "glUniform4ivARB");
+        glUniform1f = (PFNGLUNIFORM1FPROC)getProcAddress("glUniform1f", "glUniform1fARB");
+        glUniform2f = (PFNGLUNIFORM2FPROC)getProcAddress("glUniform2f", "glUniform2fARB");
+        glUniform3f = (PFNGLUNIFORM3FPROC)getProcAddress("glUniform3f", "glUniform3fARB");
+        glUniform4f = (PFNGLUNIFORM4FPROC)getProcAddress("glUniform4f", "glUniform4fARB");
+        glUniform1fv = (PFNGLUNIFORM1FVPROC)getProcAddress("glUniform1fv", "glUniform1vfARB");
+        glUniform2fv = (PFNGLUNIFORM2FVPROC)getProcAddress("glUniform2fv", "glUniform2vfARB");
+        glUniform3fv = (PFNGLUNIFORM3FVPROC)getProcAddress("glUniform3fv", "glUniform3vfARB");
+        glUniform4fv = (PFNGLUNIFORM4FVPROC)getProcAddress("glUniform4fv", "glUniform4vfARB");
+        glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)getProcAddress("glUniformMatrix4fv", "glUniformMatrix2fvARB");
+        glGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)getProcAddress("glGetAttribLocation", "glGetAttribLocationARB");
+        glVertexAttrib1f = (PFNGLVERTEXATTRIB1FPROC)getProcAddress("glVertexAttrib1f", "glVertexAttrib1fARB");
+        glVertexAttrib1fv = (PFNGLVERTEXATTRIB1FVPROC)getProcAddress("glVertexAttrib1fv", "glVertexAttrib1fvARB");
+        glVertexAttrib2fv = (PFNGLVERTEXATTRIB2FVPROC)getProcAddress("glVertexAttrib2fv", "glVertexAttrib2fvARB");
+        glVertexAttrib3fv = (PFNGLVERTEXATTRIB3FVPROC)getProcAddress("glVertexAttrib3fv", "glVertexAttrib3fvARB");
+        glVertexAttrib4fv = (PFNGLVERTEXATTRIB4FVPROC)getProcAddress("glVertexAttrib4fv", "glVertexAttrib4fvARB");
+        glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)getProcAddress("glVertexAttribPointer", "glVertexAttribPointerARB");
+        glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)getProcAddress("glEnableVertexAttribArray", "glEnableVertexAttribArrayARB");
+        glGetActiveAttrib = (PFNGLGETACTIVEATTRIBPROC)getProcAddress("glGetActiveAttrib", "glGetActiveAttribARB");
+        glBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)getProcAddress("glBindAttribLocation", "glBindAttribLocationARB");
+        glGetActiveUniform = (PFNGLGETACTIVEUNIFORMPROC)getProcAddress("glGetActiveUniform", "glGetActiveUniformARB");
 
         // Shader
         // GL_VERSION_2_0
-        glCreateShader = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
-        glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
-        glShaderSource = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
-        glCompileShader = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
-        glGetShaderiv = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
+        glCreateShader = (PFNGLCREATESHADERPROC)getProcAddress("glCreateShader", "glCreateShaderObjectARB");
+        glDeleteShader = (PFNGLDELETESHADERPROC)getProcAddress("glDeleteShader", "glDeleteObjectARB");
+        glShaderSource = (PFNGLSHADERSOURCEPROC)getProcAddress("glShaderSource", "glShaderSourceARB");
+        glCompileShader = (PFNGLCOMPILESHADERPROC)getProcAddress("glCompileShader", "glCompileShaderARB");
+        glGetShaderiv = (PFNGLGETSHADERIVPROC)getProcAddress("glGetShaderiv", "glGetObjectParameterivARB");
 
         // VBO
         // GL_VERSION_1_5
-        glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
-        glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
-        glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
+        glGenBuffers = (PFNGLGENBUFFERSPROC)getProcAddress("glGenBuffers", "glGenBuffersEXT", "glGenBuffersARB");
+        glBindBuffer = (PFNGLBINDBUFFERPROC)getProcAddress("glBindBuffer", "glBindBufferEXT", "glBindBufferARB");
+        glBufferData = (PFNGLBUFFERDATAPROC)getProcAddress("glBufferData", "glBufferDataEXT", "glBufferDataARB");
 
         // Multitexture
         // GL_VERSION_1_3
-        glActiveTexture = (PFNGLACTIVETEXTUREARBPROC)wglGetProcAddress("glActiveTexture");
+        glActiveTexture = (PFNGLACTIVETEXTUREARBPROC)getProcAddress("glActiveTexture", "glActiveTextureARB");
         // GL_VERSION_1_3_DEPRECATED
-        //glClientActiveTexture = (PFNGLCLIENTACTIVETEXTUREPROC)wglGetProcAddress("glClientActiveTexture");
-        //glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FPROC)wglGetProcAddress("glMultiTexCoord2f");
+        //glClientActiveTexture = (PFNGLCLIENTACTIVETEXTUREPROC)getProcAddress("glClientActiveTexture");
+        //glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FPROC)getProcAddress("glMultiTexCoord2f");
 
         // Framebuffers
         // GL_ARB_framebuffer_object
-        //glIsFramebuffer = (PFNGLISFRAMEBUFFERPROC)wglGetProcAddress("glIsFramebuffer");
-        glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)wglGetProcAddress("glBindFramebuffer");
-        glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)wglGetProcAddress("glDeleteFramebuffers");
-        glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)wglGetProcAddress("glGenFramebuffers");
-        //glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)wglGetProcAddress("glCheckFramebufferStatus");
-        //glFramebufferTexture1D = (PFNGLFRAMEBUFFERTEXTURE1DPROC)wglGetProcAddress("glFramebufferTexture1D");
-        glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)wglGetProcAddress("glFramebufferTexture2D");
-        //glFramebufferTexture3D = (PFNGLFRAMEBUFFERTEXTURE3DPROC)wglGetProcAddress("glFramebufferTexture3D");
-        //glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)wglGetProcAddress("glFramebufferRenderbuffer");
-        //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)wglGetProcAddress("glGetFramebufferAttachmentParameteriv");
-        glGenerateMipmap = (PFNGLGENERATEMIPMAPPROC)wglGetProcAddress("glGenerateMipmap");
-        glDrawBuffers = (PFNGLDRAWBUFFERSPROC)wglGetProcAddress("glDrawBuffers");
+        //glIsFramebuffer = (PFNGLISFRAMEBUFFERPROC)getProcAddress("glIsFramebuffer", "glIsFramebufferEXT", "glIsFramebufferARB");
+        glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)getProcAddress("glBindFramebuffer", "glBindFramebufferEXT", "glBindFramebufferARB");
+        glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)getProcAddress("glDeleteFramebuffers", "glDeleteFramebuffersEXT", "glDeleteFramebuffersARB");
+        glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)getProcAddress("glGenFramebuffers", "glGenFramebuffersEXT", "glGenFramebuffersARB");
+        glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)getProcAddress("glCheckFramebufferStatus", "glCheckFramebufferStatusEXT", "glCheckFramebufferStatusARB");
+        //glFramebufferTexture1D = (PFNGLFRAMEBUFFERTEXTURE1DPROC)getProcAddress("glFramebufferTexture1D", "glFramebufferTexture1DEXT", "glFramebufferTexture1DARB");
+        glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)getProcAddress("glFramebufferTexture2D", "glFramebufferTexture2DEXT", "glFramebufferTexture2DARB");
+        //glFramebufferTexture3D = (PFNGLFRAMEBUFFERTEXTURE3DPROC)getProcAddress("glFramebufferTexture3D", "glFramebufferTexture3DEXT", "glFramebufferTexture3DARB");
+        glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)getProcAddress("glFramebufferRenderbuffer", "glFramebufferRenderbufferEXT", "glFramebufferRenderbufferARB");
+        //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)getProcAddress("glGetFramebufferAttachmentParameteriv", "glGetFramebufferAttachmentParameterivEXT", "glGetFramebufferAttachmentParameterivARB");
+        glGenerateMipmap = (PFNGLGENERATEMIPMAPPROC)getProcAddress("glGenerateMipmap", "glGenerateMipmapEXT", "glGenerateMipmapARB");
+        glDrawBuffers = (PFNGLDRAWBUFFERSPROC)getProcAddress("glDrawBuffers", "glDrawBuffersEXT", "glDrawBuffersARB");
 
         // GL_ARB_sync
         // Sync Objects https://www.opengl.org/wiki/Sync_Object
-        glFenceSync = (PFNGLFENCESYNCPROC)wglGetProcAddress("glFenceSync​");
-        glIsSync = (PFNGLISSYNCPROC)wglGetProcAddress("glIsSync");
-        glDeleteSync = (PFNGLDELETESYNCPROC)wglGetProcAddress("glDeleteSync");
-        glClientWaitSync = (PFNGLCLIENTWAITSYNCPROC)wglGetProcAddress("glClientWaitSync​");
-        glWaitSync = (PFNGLWAITSYNCPROC)wglGetProcAddress("glWaitSync​");
+        glFenceSync = (PFNGLFENCESYNCPROC)getProcAddress("glFenceSync​", "glFenceSync​EXT", "glFenceSync​ARB");
+        glIsSync = (PFNGLISSYNCPROC)getProcAddress("glIsSync", "glIsSyncEXT", "glIsSyncARB");
+        glDeleteSync = (PFNGLDELETESYNCPROC)getProcAddress("glDeleteSync", "glDeleteSyncEXT", "glDeleteSyncARB");
+        glClientWaitSync = (PFNGLCLIENTWAITSYNCPROC)getProcAddress("glClientWaitSync​", "glClientWaitSync​EXT", "glClientWaitSync​ARB");
+        glWaitSync = (PFNGLWAITSYNCPROC)getProcAddress("glWaitSync​", "glWaitSync​EXT", "glWaitSync​ARB");
     }
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
