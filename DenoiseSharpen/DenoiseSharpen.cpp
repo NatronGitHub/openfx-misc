@@ -395,7 +395,7 @@ static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNo
 //static const float noise[] = { 0.800521, 0.272831, 0.119881, 0.0578049, 0.0287941, 0.0144411, 0.00739661, 0.00370236 };
 //static const float noise[] = { 0.800543, 0.272880, 0.119764, 0.0577759, 0.0285594, 0.0143134, 0.00717619, 0.00366561 };
 //static const float noise[] = { 0.800370, 0.272859, 0.119750, 0.0577506, 0.0285429, 0.0144341, 0.00733049, 0.00362141 };
-static const float noise[] = { 0.8005,   0.2729,   0.1197,   0.0578,    0.0286,    0.0144,    0.0073,     0.0037 };
+static const float noise[] = { 0.8005f,   0.2729f,   0.1197f,   0.0578f,    0.0286f,    0.0144f,    0.0073f,     0.0037f };
 
 // for B3 Splines, the noise levels are different
 //static const float noise_b3[] = { 0.890983, 0.200605, 0.0855252, 0.0412078, 0.0204200, 0.0104461, 0.00657528, 0.00447530 };
@@ -404,7 +404,7 @@ static const float noise[] = { 0.8005,   0.2729,   0.1197,   0.0578,    0.0286, 
 //static const float noise_b3[] = { 0.890611, 0.200791, 0.0856202, 0.0412572, 0.0206385, 0.0103060, 0.00653794, 0.00458579  };
 //static const float noise_b3[] = { 0.890800, 0.200619, 0.0856033, 0.0412239, 0.0206324, 0.0104488, 0.00664716, 0.00440302  };
 //static const float noise_b3[] = { 0.890912, 0.200739, 0.0856778, 0.0412566, 0.0205922, 0.0103516, 0.00650336, 0.00445504  };
-static const float noise_b3[] = { 0.8908,   0.2007,   0.0855,    0.0412,    0.0206,    0.0104,    0.0065,     0.0045  };
+static const float noise_b3[] = { 0.8908f,   0.2007f,   0.0855f,    0.0412f,    0.0206f,    0.0104f,    0.0065f,     0.0045f  };
 
 #if defined(_OPENMP)
 #define abort_test() if ( !omp_get_thread_num() && abort() ) { throwSuiteStatusException(kOfxStatFailed); }

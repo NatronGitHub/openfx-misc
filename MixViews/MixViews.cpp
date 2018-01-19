@@ -104,7 +104,7 @@ private:
                 const PIX *srcRightPix = (const PIX *)(_srcRightImg ? _srcRightImg->getPixelAddress(x, y) : 0);
 
                 for (int c = 0; c < nComponents; c++) {
-                    dstPix[c] = ( srcLeftPix ? srcLeftPix[c] : PIX() ) * (1 - _mix) + ( srcRightPix ? srcRightPix[c] : PIX() ) * _mix;
+                    dstPix[c] = (PIX)(( srcLeftPix ? srcLeftPix[c] : PIX() ) * (1 - _mix) + ( srcRightPix ? srcRightPix[c] : PIX() ) * _mix);
                 }
 
                 // increment the dst pixel

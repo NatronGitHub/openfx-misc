@@ -203,7 +203,7 @@ private:
             }
             // clamp and convert to the destination type
             for (int c = 0; c < nComponents; ++c) {
-                colorPix[c] = Color::floatToInt<max + 1>(colorf[c]);
+                colorPix[c] = (PIX)Color::floatToInt<max + 1>(colorf[c]);
             }
         }
     }

@@ -483,13 +483,13 @@ buildTimesSlit(double time,
     int tmin, tmax;
     switch (filter) {
     case eFilterNearest: {
-        tmin = std::floor(a + 0.5);
-        tmax = std::floor(b + 0.5);
+        tmin = (int)std::floor(a + 0.5);
+        tmax = (int)std::floor(b + 0.5);
         break;
     }
     case eFilterLinear: {
-        tmin = std::floor(a);
-        tmax = std::ceil(b);
+        tmin = (int)std::floor(a);
+        tmax = (int)std::ceil(b);
         break;
     }
     }

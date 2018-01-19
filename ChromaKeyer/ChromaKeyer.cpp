@@ -397,12 +397,12 @@ private:
                 outMask = std::max( 0.f, std::min(outMask, 1.f) );
 
                 // output of the foreground suppressor
-                float fgr = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[0]) : 0.;
-                float fgg = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[1]) : 0.;
-                float fgb = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[2]) : 0.;
-                float bgr = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[0]) : 0.;
-                float bgg = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[1]) : 0.;
-                float bgb = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[2]) : 0.;
+                float fgr = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[0]) : 0.f;
+                float fgg = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[1]) : 0.f;
+                float fgb = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[2]) : 0.f;
+                float bgr = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[0]) : 0.f;
+                float bgg = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[1]) : 0.f;
+                float bgb = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[2]) : 0.f;
 
                 // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {

@@ -1583,7 +1583,7 @@ public:
                             double value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
                             value += _lookupTableParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
                             // set that in the lut
-                            color[component] = value;
+                            color[component] = (GLfloat)value;
                         }
                         glColor3f(color[0], color[1], color[2]);
                         glVertex2f(parametricPos, rangeMin);

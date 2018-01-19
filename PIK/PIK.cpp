@@ -556,24 +556,24 @@ public:
                    OutputModeEnum outputMode)
     {
         // all colors are normalized with unit luminance
-        _alphaBias[0] = std::max(0.0001, alphaBias.r);
-        _alphaBias[1] = std::max(0.0001, alphaBias.g);
-        _alphaBias[2] = std::max(0.0001, alphaBias.b);
+        _alphaBias[0] = (float)std::max(0.0001, alphaBias.r);
+        _alphaBias[1] = (float)std::max(0.0001, alphaBias.g);
+        _alphaBias[2] = (float)std::max(0.0001, alphaBias.b);
         float l = luminance(_colorspace, _alphaBias);
         _alphaBias[0] /= l;
         _alphaBias[1] /= l;
         _alphaBias[2] /= l;
-        _despillBias[0] = std::max(0.0001, despillBias.r);
-        _despillBias[1] = std::max(0.0001, despillBias.g);
-        _despillBias[2] = std::max(0.0001, despillBias.b);
+        _despillBias[0] = (float)std::max(0.0001, despillBias.r);
+        _despillBias[1] = (float)std::max(0.0001, despillBias.g);
+        _despillBias[2] = (float)std::max(0.0001, despillBias.b);
         _despillBias[0] /= l;
         _despillBias[1] /= l;
         _despillBias[2] /= l;
         if (screenType == eScreenTypePick) {
             _screenType = (color.g / _alphaBias[1] > color.b / _alphaBias[2]) ? eScreenTypeGreen : eScreenTypeBlue;
-            _color[0] = color.r / _alphaBias[0];
-            _color[1] = color.g / _alphaBias[1];
-            _color[2] = color.b / _alphaBias[2];
+            _color[0] = (float)(color.r / _alphaBias[0]);
+            _color[1] = (float)(color.g / _alphaBias[1]);
+            _color[2] = (float)(color.b / _alphaBias[2]);
             _useColor = true;
         } else {
             _screenType = screenType;

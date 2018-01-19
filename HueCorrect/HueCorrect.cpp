@@ -369,27 +369,27 @@ private:
                 }
                 if (s > sat_thrsh) {
                     // Get a smooth effect: identity at s=sat_thrsh, full if sat_thrsh = 0
-                    r *= (sat_thrsh * 1. + (s - sat_thrsh) * red * lum) / s; // red * lum
-                    g *= (sat_thrsh * 1. + (s - sat_thrsh) * green * lum) / s; // green * lum;
-                    b *= (sat_thrsh * 1. + (s - sat_thrsh) * blue * lum) / s; // blue * lum;
+                    r *= (float)((sat_thrsh * 1. + (s - sat_thrsh) * red * lum) / s); // red * lum
+                    g *= (float)((sat_thrsh * 1. + (s - sat_thrsh) * green * lum) / s); // green * lum;
+                    b *= (float)((sat_thrsh * 1. + (s - sat_thrsh) * blue * lum) / s); // blue * lum;
                 } else if (sat_thrsh == 0.) {
                     assert(s == 0.);
-                    r *= red * lum; // red * lum
-                    g *= green * lum; // green * lum;
-                    b *= blue * lum; // blue * lum;
+                    r *= (float)(red * lum); // red * lum
+                    g *= (float)(green * lum); // green * lum;
+                    b *= (float)(blue * lum); // blue * lum;
                 }
                 if (sat != 1.) {
                     float l_sat = luminance(r, g, b, _luminanceMath);
-                    r = (1. - sat) * l_sat + sat * r;
-                    g = (1. - sat) * l_sat + sat * g;
-                    b = (1. - sat) * l_sat + sat * b;
+                    r = (float)((1. - sat) * l_sat + sat * r);
+                    g = (float)((1. - sat) * l_sat + sat * g);
+                    b = (float)((1. - sat) * l_sat + sat * b);
                 }
                 if (_luminanceMix > 0.) {
                     float l_out = luminance(r, g, b, _luminanceMath);
                     if (l_out <= 0.) {
                         r = g = b = l_in;
                     } else {
-                        double f = 1 + _luminanceMix * (l_in / l_out - 1.);
+                        float f = (float)(1 + _luminanceMix * (l_in / l_out - 1.));
                         r *= f;
                         g *= f;
                         b *= f;
