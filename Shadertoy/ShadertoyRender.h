@@ -138,6 +138,7 @@ PROC getProcAddress(LPCSTR lpszProc1, LPCSTR lpszProc2) {
     if (!ret) {
         ret = wglGetProcAddress(lpszProc2);
     }
+    return ret;
 }
 
 static
@@ -149,6 +150,7 @@ PROC getProcAddress(LPCSTR lpszProc1, LPCSTR lpszProc2, LPCSTR lpszProc3) {
     if (!ret) {
         ret = wglGetProcAddress(lpszProc3);
     }
+    return ret;
 }
 #endif
 
