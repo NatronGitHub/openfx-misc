@@ -512,7 +512,7 @@ private:
 #endif
 };
 
-void getChannelInfo(const char* fragmentShader, int channel, std::string& label, std::string& hint, ShadertoyPlugin::FilterEnum& filter, ShadertoyPlugin::WrapEnum& wrap);
+void getChannelInfo(const char* fragmentShader, unsigned channel, std::string& label, std::string& hint, ShadertoyPlugin::FilterEnum& filter, ShadertoyPlugin::WrapEnum& wrap);
 
 void getBboxInfo(const char* fragmentShader, ShadertoyPlugin::BBoxEnum& bbox);
 

@@ -49,7 +49,7 @@ isspacenonewline(char c)
 
 void
 getChannelInfo(const char* fragmentShader,
-               int channel,
+               unsigned channel,
                std::string& label,
                std::string& hint,
                ShadertoyPlugin::FilterEnum& filter,
@@ -58,7 +58,7 @@ getChannelInfo(const char* fragmentShader,
     char iChannelX[14] = "// iChannelX:"; // index 11 holds the channel character
 
     assert(channel < 10 && iChannelX[11] == 'X');
-    iChannelX[11] = '0' + channel;
+    iChannelX[11] = '0' + (char)channel;
     const char* tok = iChannelX;
     const char* tokpos = strstr(fragmentShader, tok);
     if (tokpos == NULL) {
@@ -470,7 +470,7 @@ main(int argc,
     ShadertoyPlugin::FilterEnum filter = ShadertoyPlugin::eFilterNearest;
 
     std::cout << "Shader:\n" << s1;
-    for (int i = 0; i < SHADERTOY_NBINPUTS; ++i) {
+    for (unsigned i = 0; i < SHADERTOY_NBINPUTS; ++i) {
         getChannelInfo(s1, i, label, hint, filter, wrap);
         std::cout << "channel " << i << ":\n";
         std::cout << "label: '" << label << "'\n";

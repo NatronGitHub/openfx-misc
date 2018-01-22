@@ -512,7 +512,7 @@ struct ShadertoyPlugin::OSMesaPrivate
                 int attribs[100], n = 0;
 
                 attribs[n++] = OSMESA_FORMAT;
-                attribs[n++] = format;
+                attribs[n++] = (int)format;
                 attribs[n++] = OSMESA_DEPTH_BITS;
                 attribs[n++] = depthBits;
                 attribs[n++] = OSMESA_STENCIL_BITS;
@@ -775,7 +775,7 @@ compileAndLinkProgram(const char *vertexShader,
 
         // Attributes
         glGetProgramiv(program,  GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &bufSize);
-        name.resize(bufSize);
+        name.resize((unsigned)bufSize);
         count = 0;
         glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &count);
         if (count > 0) {
@@ -789,7 +789,7 @@ compileAndLinkProgram(const char *vertexShader,
 
         // Uniforms
         glGetProgramiv(program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &bufSize);
-        name.resize(bufSize);
+        name.resize((unsigned)bufSize);
         count = 0;
         glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
         if (count > 0) {
@@ -1125,7 +1125,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             // XXX: check status for errors
 
 #ifdef USE_OSMESA
-            GLenum formati;
+            GLenum formati = GL_NONE;
             switch (srcComponents[i]) {
             case OFX::ePixelComponentRGBA:
                 formati = GL_RGBA;
@@ -1366,7 +1366,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             char iChannelX[10] = "iChannelX"; // index 8 holds the channel character
             assert(NBINPUTS < 10 && iChannelX[8] == 'X');
             for (unsigned i = 0; i < NBINPUTS; ++i) {
-                iChannelX[8] = '0' + i;
+                iChannelX[8] = '0' + (char)i;
                 shadertoy->iChannelLoc[i] = glGetUniformLocation(shadertoy->program, iChannelX);
                 //printf("%s -> %d\n", iChannelX, (int)shadertoy->iChannelLoc[i]);
             }
@@ -1396,10 +1396,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                     }
                     _imageShaderInputEnabled.assign(NBINPUTS, false);
                     for (i = 0; i < count; i++) {
-                        name.resize(bufSize);
+                        name.resize((unsigned)bufSize);
                         glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
                         glCheckError();
-                        name.resize(length);
+                        name.resize((unsigned)length);
                         //DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), &name[0]) );
                         GLint loc = glGetUniformLocation(program, &name[0]);
 
@@ -1549,7 +1549,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
         if (must_recompile || uniforms_changed) {
             std::fill(shadertoy->iParamLoc, shadertoy->iParamLoc + NBUNIFORMS, -1);
-            unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
+            unsigned paramCount = (unsigned)std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
             for (unsigned i = 0; i < paramCount; ++i) {
                 std::string paramName;
                 _paramName[i]->getValue(paramName);
@@ -1575,7 +1575,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glActiveTexture(GL_TEXTURE0);
 
-        GLenum internalFormat = format;
+        GLint internalFormat = (GLint)format;
         switch (format) {
         case GL_ALPHA:
             switch (type) {
@@ -1778,7 +1778,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     if (fps <= 0) {
         fps = 1.;
     }
-    GLfloat t = time / fps;
+    GLfloat t = (GLfloat)(time / fps);
     const OfxPointD& rs = args.renderScale;
     OfxRectI dstBoundsFull;
     OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), rs, _dstClip->getPixelAspectRatio(), &dstBoundsFull);
@@ -1793,16 +1793,16 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         double height = dstBoundsFull.y2 - dstBoundsFull.y1;
         // last coord is 1.
         // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderPassRenderer.m#L329
-        glUniform3f (shadertoy->iResolutionLoc, width, height, 1.);
+        glUniform3f (shadertoy->iResolutionLoc, (GLfloat)width, (GLfloat)height, (GLfloat)1.f);
     }
     if (shadertoy->iTimeLoc >= 0) {
         glUniform1f (shadertoy->iTimeLoc, t);
     }
     if (shadertoy->iTimeDeltaLoc >= 0) {
-        glUniform1f (shadertoy->iTimeDeltaLoc, 1 / fps); // is that it?
+        glUniform1f (shadertoy->iTimeDeltaLoc, (GLfloat)(1. / fps)); // is that it?
     }
     if (shadertoy->iFrameLoc >= 0) {
-        glUniform1f (shadertoy->iFrameLoc, time); // is that it?
+        glUniform1f (shadertoy->iFrameLoc, (GLfloat)time); // is that it?
     }
     if (shadertoy->iChannelTimeLoc >= 0) {
         GLfloat tv[NBINPUTS];
@@ -1844,9 +1844,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 yc = -yc;
             }
         }
-        glUniform4f (shadertoy->iMouseLoc, x * rs.x, y * rs.y, xc * rs.x, yc * rs.y);
+        glUniform4f (shadertoy->iMouseLoc, (GLfloat)(x * rs.x), (GLfloat)(y * rs.y), (GLfloat)(xc * rs.x), (GLfloat)(yc * rs.y));
     }
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
+    unsigned paramCount = (unsigned)std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
     for (unsigned i = 0; i < paramCount; ++i) {
         if (shadertoy->iParamLoc[i] >= 0) {
             UniformTypeEnum paramType = (UniformTypeEnum)_paramType[i]->getValue();
@@ -1866,25 +1866,25 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             }
             case eUniformTypeFloat: {
                 double v = _paramValueFloat[i]->getValue();
-                glUniform1f(shadertoy->iParamLoc[i], v);
+                glUniform1f(shadertoy->iParamLoc[i], (GLfloat)v);
                 break;
             }
             case eUniformTypeVec2: {
                 double x, y;
                 _paramValueVec2[i]->getValue(x, y);
-                glUniform2f(shadertoy->iParamLoc[i], x, y);
+                glUniform2f(shadertoy->iParamLoc[i], (GLfloat)x, (GLfloat)y);
                 break;
             }
             case eUniformTypeVec3: {
                 double x, y, z;
                 _paramValueVec3[i]->getValue(x, y, z);
-                glUniform3f(shadertoy->iParamLoc[i], x, y, z);
+                glUniform3f(shadertoy->iParamLoc[i], (GLfloat)x, (GLfloat)y, (GLfloat)z);
                 break;
             }
             case eUniformTypeVec4: {
                 double x, y, z, w;
                 _paramValueVec4[i]->getValue(x, y, z, w);
-                glUniform4f(shadertoy->iParamLoc[i], x, y, z, w);
+                glUniform4f(shadertoy->iParamLoc[i], (GLfloat)x, (GLfloat)y, (GLfloat)z, (GLfloat)w);
                 break;
             }
             default: {
@@ -1898,7 +1898,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
         if ( src[i].get() && (shadertoy->iChannelLoc[i] >= 0) ) {
-            glUniform1i(shadertoy->iChannelLoc[i], i);
+            glUniform1i(shadertoy->iChannelLoc[i], (GLint)i);
             glBindTexture(srcTarget[i], srcIndex[i]);
             glEnable(srcTarget[i]);
 
@@ -1913,8 +1913,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif
                 glCheckError();
             }
-            GLenum min_filter = GL_NEAREST;
-            GLenum mag_filter = GL_NEAREST;
+            GLint min_filter = GL_NEAREST;
+            GLint mag_filter = GL_NEAREST;
             switch (filter[i]) {
             case eFilterNearest:
                 min_filter = GL_NEAREST;
@@ -1939,7 +1939,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             glTexParameteri(srcTarget[i], GL_TEXTURE_MIN_FILTER, min_filter);
             glTexParameteri(srcTarget[i], GL_TEXTURE_MAG_FILTER, mag_filter);
 
-            GLenum wrapst = (wrap[i] == eWrapClamp) ? GL_CLAMP_TO_EDGE : ( (wrap[i] == eWrapMirror) ? GL_MIRRORED_REPEAT : GL_REPEAT );
+            GLint wrapst = (wrap[i] == eWrapClamp) ? GL_CLAMP_TO_EDGE : ( (wrap[i] == eWrapMirror) ? GL_MIRRORED_REPEAT : GL_REPEAT );
             glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_S, wrapst);
             glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_T, wrapst);
 
@@ -1961,7 +1961,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         month = std::floor(month);
         day = std::floor(day);
         seconds += t;
-        int dayincr = std::floor(seconds / (24*60*60));
+        int dayincr = (int)std::floor(seconds / (24*60*60));
         seconds = seconds - dayincr * (24*60*60);
         day += dayincr;
         if (month == 0 || // jan
@@ -1989,7 +1989,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 month = ((int)month + 1) % 12;
             }
         }
-        glUniform4f(shadertoy->iDateLoc, year, month, day, seconds);
+        glUniform4f(shadertoy->iDateLoc, (GLfloat)year, (GLfloat)month, (GLfloat)day, (GLfloat)seconds);
     }
     if (shadertoy->iSampleRateLoc >= 0) {
         glUniform1f(shadertoy->iSampleRateLoc, 44100);
@@ -1999,14 +1999,14 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         //DPRINT(("offset=%d,%d\n",(int)(renderWindow.x1 - dstBoundsFull.x1), (int)(renderWindow.y1 - dstBoundsFull.y1)));
     }
     if (shadertoy->iRenderScaleLoc >= 0) {
-        glUniform2f(shadertoy->iRenderScaleLoc, rs.x, rs.y);
+        glUniform2f(shadertoy->iRenderScaleLoc, (GLfloat)rs.x, (GLfloat)rs.y);
     }
     if (shadertoy->iChannelOffsetLoc >= 0) {
         GLfloat rv[2 * NBINPUTS];
         if ( src[0].get() ) {
             OfxRectI srcBounds = src[0]->getBounds();
-            rv[0] = srcBounds.x1;
-            rv[1] = srcBounds.y1;
+            rv[0] = (GLfloat)srcBounds.x1;
+            rv[1] = (GLfloat)srcBounds.y1;
         } else {
             rv[0] = 0;
             rv[1] = 0;
@@ -2046,13 +2046,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #ifdef USE_OSMESA
     glEnable(GL_SCISSOR_TEST); // for Mesa tiled rendering only
     {
-        int nCPUs = OFX::MultiThread::getNumCPUs();
+        unsigned int nCPUs = OFX::MultiThread::getNumCPUs();
         // - take the square root of nCPUs
         // - compute the next closest power of two -> this gives the number of tiles for the x dimension
-        int pow2_x = std::ceil(std::log( std::sqrt(nCPUs) ) / M_LN2);
+        int pow2_x = (int)std::ceil(std::log( std::sqrt(nCPUs) ) / M_LN2);
         tile_w = 64 * (1 << pow2_x);
         // - compute the next power of two for the other side
-        int pow2_y = std::ceil(std::log( nCPUs / (double)(1 << pow2_x) ) / M_LN2);
+        int pow2_y = (int)std::ceil(std::log( nCPUs / (double)(1 << pow2_x) ) / M_LN2);
         tile_h = 64 * (1 << pow2_y);
         //DPRINT( ("Shadertoy: tile size: %d %d for %d CPUs\n", tile_w, tile_h, nCPUs) );
     }
@@ -2154,10 +2154,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         //Bind 0, which means render to back buffer, as a result, fb is unbound
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDeleteFramebuffers(1, &dstFrameBuffer);
-#ifdef USE_DEPTH
+#     ifdef USE_DEPTH
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
         glDeleteRenderbuffers(1, &dstDepthBuffer);
-#endif
+#     endif
         glCheckError();
 #endif
     }

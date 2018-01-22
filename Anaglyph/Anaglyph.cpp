@@ -144,17 +144,17 @@ private:
                 dstPix[3] = 0; // start with transparent
                 if (srcRedPix) {
                     PIX srcLuminance = luminance(srcRedPix[0], srcRedPix[1], srcRedPix[2]);
-                    dstPix[0] = srcLuminance * (1.f - (float)_amtcolour) + srcRedPix[0] * (float)_amtcolour;
-                    dstPix[3] += 0.5f * srcRedPix[3];
+                    dstPix[0] = (PIX)(srcLuminance * (1.f - (float)_amtcolour) + srcRedPix[0] * (float)_amtcolour);
+                    dstPix[3] += (PIX)(0.5f * srcRedPix[3]);
                 } else {
                     // no src pixel here, be black and transparent
                     dstPix[0] = 0;
                 }
                 if (srcCyanPix) {
                     PIX srcLuminance = luminance(srcCyanPix[0], srcCyanPix[1], srcCyanPix[2]);
-                    dstPix[1] = srcLuminance * (1.f - (float)_amtcolour) + srcCyanPix[1] * (float)_amtcolour;
-                    dstPix[2] = srcLuminance * (1.f - (float)_amtcolour) + srcCyanPix[2] * (float)_amtcolour;
-                    dstPix[3] += 0.5f * srcCyanPix[3];
+                    dstPix[1] = (PIX)(srcLuminance * (1.f - (float)_amtcolour) + srcCyanPix[1] * (float)_amtcolour);
+                    dstPix[2] = (PIX)(srcLuminance * (1.f - (float)_amtcolour) + srcCyanPix[2] * (float)_amtcolour);
+                    dstPix[3] += (PIX)(0.5f * srcCyanPix[3]);
                 } else {
                     // no src pixel here, be black and transparent
                     dstPix[1] = 0;
@@ -313,7 +313,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
     // set the parameters
     processor.setAmtColour(amtcolour);
     processor.setSwap(swap);
-    processor.setOffset( std::floor(offset * args.renderScale.x + 0.5) );
+    processor.setOffset( (int)std::floor(offset * args.renderScale.x + 0.5) );
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
