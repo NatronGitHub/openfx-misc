@@ -51,6 +51,8 @@
 #include <cstdio>
 #include <cmath>
 #include <string>
+#include <set>
+#include <vector>
 #include <fstream>
 #include <streambuf>
 #ifdef DEBUG
@@ -778,7 +780,8 @@ presetsFromDir(const string &dir, std::vector<ShadertoyPlugin::Preset>& presets)
     //std::printf( kOfxPluginPropFilePath"= %s", filePath.c_str() );
     char line[1024];
     presets.clear();
-    FILE* fp = std::fopen( (dir + "/Shadertoy.txt").c_str(), "r" );
+    std::set<string> filenames;
+    FILE* fp = fopen( (dir + "/Shadertoy.txt").c_str(), "r" );
     if (fp != NULL) {
         //int i = 0;
         while (1) {
@@ -821,7 +824,12 @@ presetsFromDir(const string &dir, std::vector<ShadertoyPlugin::Preset>& presets)
                 continue;
             }
             std::fclose(fps);
-            presets.push_back( ShadertoyPlugin::Preset(description, filename) );
+            // make sure there is no preset with the same filename
+            // fixes https://github.com/MrKepzie/Natron/issues/1724
+            if ( filenames.find(filename) != filenames.end() ) {
+                presets.push_back( ShadertoyPlugin::Preset(description, filename) );
+            }
+            filenames.insert(filename);
         }
         std::fclose(fp);
     }
@@ -1923,7 +1931,7 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
         _imageShaderPreset->resetOptions();
         _imageShaderPreset->appendOption("No preset");
         for (std::vector<ShadertoyPlugin::Preset>::iterator it = _presets.begin(); it != _presets.end(); ++it) {
-            _imageShaderPreset->appendOption(it->description);
+            _imageShaderPreset->appendOption(it->description, it->filename);
         }
     } else if (paramName == kParamImageShaderPreset) {
         int preset = _imageShaderPreset->getValue() - 1;
