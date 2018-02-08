@@ -762,6 +762,7 @@ LayerContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(1, 1, INT_MAX, INT_MAX);
         param->setDisplayRange(256, 256, 4096, 4096);
         param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
