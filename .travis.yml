@@ -37,6 +37,21 @@ before_install:
 
 install:
   - git submodule update --init --recursive
+  - if [[ ${COVERITY_BUILD_DISABLED} == 1 ]];
+    then
+        exit 0;
+    fi
+  - if [ ${TRAVIS_OS_NAME} = "linux" -a "$CC" = "gcc" ];
+    then
+        if [ "$BUILDDOC" = 1 ]; then
+            sudo apt-get install doxygen xsltproc;
+        fi;
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test;
+        sudo apt-get update;
+        sudo apt-get install gcc-7 g++-7;
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 90;
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 90;
+    fi
 
 # CImg is now downloaded by CImg/Makefile, no need to install it
 #  - sudo apt-get install cimg-dev
@@ -55,7 +70,14 @@ script:
       make -C CImg CONFIG=debug CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp;
     fi
 
+# ubuntu-toolchain-r/test contains recent versions of gcc
 addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-7
+    - g++-7
   coverity_scan:
     # customized build script URL
     # TRAVIS_REPO_SLUG: owner_name/repo_name of repository currently being built
