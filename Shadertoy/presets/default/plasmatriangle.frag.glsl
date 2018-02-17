@@ -22,17 +22,17 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	// Coefficients are arbitrary to give different behaviours.
 	// The Z coordinate should always be >0.0, as it's used directly to
 	//  multiply the radius to give the impression of depth.
-	pointR.x += 0.32 * sin(1.32 * iGlobalTime);
-	pointR.y += 0.3 * sin(1.03 * iGlobalTime);
-	pointR.z += 0.4 * sin(1.32 * iGlobalTime);
+	pointR.x += 0.32 * sin(1.32 * iTime);
+	pointR.y += 0.3 * sin(1.03 * iTime);
+	pointR.z += 0.4 * sin(1.32 * iTime);
 	
-	pointG.x += 0.31 * sin(0.92 * iGlobalTime);
-	pointG.y += 0.29 * sin(0.99 * iGlobalTime);
-	pointG.z += 0.38 * sin(1.24 * iGlobalTime);
+	pointG.x += 0.31 * sin(0.92 * iTime);
+	pointG.y += 0.29 * sin(0.99 * iTime);
+	pointG.z += 0.38 * sin(1.24 * iTime);
 	
-	pointB.x += 0.33 * sin(1.245 * iGlobalTime);
-	pointB.y += 0.3 * sin(1.41 * iGlobalTime);
-	pointB.z += 0.41 * sin(1.11 * iGlobalTime);
+	pointB.x += 0.33 * sin(1.245 * iTime);
+	pointB.y += 0.3 * sin(1.41 * iTime);
+	pointB.z += 0.41 * sin(1.11 * iTime);
 	
 	// Centre the points in the display
 	vec2 midUV = vec2(bounds.x * 0.5, bounds.y * 0.5);

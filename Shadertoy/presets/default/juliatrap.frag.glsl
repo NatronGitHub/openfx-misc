@@ -19,7 +19,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	vec2 z = 1.15*(-iResolution.xy+2.0*fragCoord.xy)/iResolution.y;
 
-	vec2 an = 0.51*cos( vec2(0.0,1.5708) + 0.1*iGlobalTime ) - 0.25*cos( vec2(0.0,1.5708) + 0.2*iGlobalTime );
+	vec2 an = 0.51*cos( vec2(0.0,1.5708) + 0.1*iTime ) - 0.25*cos( vec2(0.0,1.5708) + 0.2*iTime );
 
 	for( int i=0; i<max_iterations; i++ )
 	{

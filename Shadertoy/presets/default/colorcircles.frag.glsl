@@ -17,7 +17,7 @@ float circle(in vec2 pos, in float t, in float mult)
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     vec2 pos = fragCoord.xy / iResolution.x;
-    float t = iGlobalTime * 0.25;
+    float t = iTime * 0.25;
 
     float r = circle(pos, t + 0.0,  100.0 + sin(t * 0.6 + 1.0) * 100.0);
     float g = circle(pos, t + 0.5,  100.0 + sin(t * 0.6 + 2.0) * 100.0);

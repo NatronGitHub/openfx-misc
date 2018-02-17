@@ -22,7 +22,7 @@ vec4 getCol(vec2 pos)
     vec2 uv=pos/Res0;
     
     vec4 c1 = texture2D(iChannel0,uv);
-    uv = uv*vec2(-1,-1)*0.39+0.015*vec2(sin(iGlobalTime*1.1),sin(iGlobalTime*0.271));
+    uv = uv*vec2(-1,-1)*0.39+0.015*vec2(sin(iTime*1.1),sin(iTime*0.271));
     vec4 c2 = vec4(0.5,0.7,1.0,1.0)*1.0*texture2D(iChannel2,uv);
     float d=clamp(dot(c1.xyz,vec3(-0.5,1.0,-0.5)),0.0,1.0);
     return mix(c1,c2,1.8*d);

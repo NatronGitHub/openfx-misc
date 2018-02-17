@@ -1,6 +1,6 @@
 // iChannel0: Source, filter=mipmap, wrap=mirror
 
-float time=iGlobalTime*0.1;
+float time=iTime*0.1;
 const float pi = 3.14159265;
 const float sin_4000 = 0.6427876097;
 const float cos_4000 = 0.7660444431;

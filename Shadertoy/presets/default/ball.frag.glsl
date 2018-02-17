@@ -32,8 +32,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 		fac2 = 25.0;
 	}
 
-	uv.x=uv.x-(iMouse.x/ iResolution.x - 0.5)*fac*500+fac*500.0*sin(speed.x*iGlobalTime);
-	uv.y=uv.y-(iMouse.y/ iResolution.x - 0.5*iResolution.y/iResolution.x)*fac*500+fac*500.0*sin(speed.y*iGlobalTime);
+	uv.x=uv.x-(iMouse.x/ iResolution.x - 0.5)*fac*500+fac*500.0*sin(speed.x*iTime);
+	uv.y=uv.y-(iMouse.y/ iResolution.x - 0.5*iResolution.y/iResolution.x)*fac*500+fac*500.0*sin(speed.y*iTime);
 	col = texture2D(iChannel0, uv/fac2).xyz;
 	col = col*exp(-3.0*(d-R)); // some lighting
 	col = col*(1.1-exp(-8.0*(abs(d-R)))); // and shading

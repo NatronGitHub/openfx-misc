@@ -6,7 +6,7 @@ vec3 calcSine(vec2 uv,
               float frequency, float amplitude, float shift, float offset,
               vec3 color, float width)
 {
-    float y = sin(iGlobalTime * frequency + shift + uv.x) * amplitude + offset;
+    float y = sin(iTime * frequency + shift + uv.x) * amplitude + offset;
     float scale = smoothstep(width, 0.0, distance(y, uv.y));
     return color * scale;
 }

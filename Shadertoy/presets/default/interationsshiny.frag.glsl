@@ -22,7 +22,7 @@ vec3 shape( in vec2 p )
 	for( int i=0; i<8; i++ ) 
 	{
         // transform		
-		z += cos(z.yx + cos(z.yx + cos(z.yx+0.5*iGlobalTime) ) );
+		z += cos(z.yx + cos(z.yx + cos(z.yx+0.5*iTime) ) );
 
         // orbit traps		
 		float d = dot( z-p, z-p ); 
@@ -49,7 +49,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     // color	
 	vec3 col = mix( vec3(0.08,0.02,0.15), vec3(0.6,1.1,1.6), sc.x );
-	col = mix( col, col.zxy, smoothstep(-0.5,0.5,cos(0.5*iGlobalTime)) );
+	col = mix( col, col.zxy, smoothstep(-0.5,0.5,cos(0.5*iTime)) );
 	col *= 0.15*sc.y;
 	col += 0.4*abs(sc.z) - 0.1;
 

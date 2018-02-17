@@ -10,10 +10,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vec2 uv = fragCoord.xy / iResolution.xy;
 	vec2 block = floor(fragCoord.xy / vec2(16));
 	vec2 uv_noise = block / vec2(64);
-	uv_noise += floor(vec2(iGlobalTime) * vec2(1234.0, 3543.0)) / vec2(64);
+	uv_noise += floor(vec2(iTime) * vec2(1234.0, 3543.0)) / vec2(64);
 	
-	float block_thresh = pow(fract(iGlobalTime * 1236.0453), 2.0) * 0.2;
-	float line_thresh = pow(fract(iGlobalTime * 2236.0453), 3.0) * 0.7;
+	float block_thresh = pow(fract(iTime * 1236.0453), 2.0) * 0.2;
+	float line_thresh = pow(fract(iTime * 2236.0453), 3.0) * 0.7;
 	
 	vec2 uv_r = uv, uv_g = uv, uv_b = uv;
 

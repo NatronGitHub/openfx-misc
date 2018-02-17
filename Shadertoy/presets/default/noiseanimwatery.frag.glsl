@@ -13,7 +13,7 @@
 
 //#define CENTERED
 
-#define time iGlobalTime*0.2
+#define time iTime*0.2
 
 mat2 makem2(in float theta){float c = cos(theta);float s = sin(theta);return mat2(c,-s,s,c);}
 float noise( in vec2 x ){return texture2D(iChannel0, x*.01).x;}

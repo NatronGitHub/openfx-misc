@@ -19,14 +19,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	float barHeight = 6.;
 	float barSpeed = 5.6;
 	float barOverflow = 1.2;
-	float blurBar = clamp(sin(uv.y * barHeight + iGlobalTime * barSpeed) + 1.25, 0., 1.);
-	float bar = clamp(floor(sin(uv.y * barHeight + iGlobalTime * barSpeed) + 1.95), 0., barOverflow);
+	float blurBar = clamp(sin(uv.y * barHeight + iTime * barSpeed) + 1.25, 0., 1.);
+	float bar = clamp(floor(sin(uv.y * barHeight + iTime * barSpeed) + 1.95), 0., barOverflow);
 	
 	float noiseIntensity = .75;
 	float pixelDensity = 250.;
 	vec3 color = vec3(clamp(rand(
 		vec2(floor(uv.x * pixelDensity * screenRatio), floor(uv.y * pixelDensity)) *
-		iGlobalTime / 1000.
+		iTime / 1000.
 	) + 1. - noiseIntensity, 0., 1.));
 	
 	color = mix(color - noiseIntensity * vec3(.25), color, blurBar);

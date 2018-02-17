@@ -52,9 +52,9 @@ float fbm6( vec2 p )
 float func( vec2 q, out vec2 o, out vec2 n )
 {
     float ql = length( q );
-    q.x += 0.05*sin(0.11*iGlobalTime+ql*4.0);
-    q.y += 0.05*sin(0.13*iGlobalTime+ql*4.0);
-    q *= 0.7 + 0.2*cos(0.05*iGlobalTime);
+    q.x += 0.05*sin(0.11*iTime+ql*4.0);
+    q.y += 0.05*sin(0.13*iTime+ql*4.0);
+    q *= 0.7 + 0.2*cos(0.05*iTime);
 
     q = (q+1.0)*0.5;
 
@@ -62,8 +62,8 @@ float func( vec2 q, out vec2 o, out vec2 n )
     o.y = 0.5 + 0.5*fbm4( vec2(2.0*q*vec2(1.0,1.0)+vec2(5.2))  );
 
     float ol = length( o );
-    o.x += 0.02*sin(0.11*iGlobalTime*ol)/ol;
-    o.y += 0.02*sin(0.13*iGlobalTime*ol)/ol;
+    o.x += 0.02*sin(0.11*iTime*ol)/ol;
+    o.y += 0.02*sin(0.13*iTime*ol)/ol;
 
 
     n.x = fbm6( vec2(4.0*o*vec2(1.0,1.0)+vec2(9.2))  );

@@ -28,9 +28,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
    
     float max_siz;
     if ( iMouse.z > 0.5 )
-		max_siz = 32.0 * (1.0-iMouse.x / iResolution.x); // * (0.5+0.5*sin(iGlobalTime));
+		max_siz = 32.0 * (1.0-iMouse.x / iResolution.x); // * (0.5+0.5*sin(iTime));
     else
-        max_siz = 32.0 * (0.5+0.5*sin(2.0*uv.x + iGlobalTime));
+        max_siz = 32.0 * (0.5+0.5*sin(2.0*uv.x + iTime));
         
     //fragColor = vec4( vec3(max_siz), 1.0 );
     //return;
@@ -77,7 +77,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec4 sum = vec4(0);
         vec2 seed = uv;
         #if defined( ANIMATE_NOISE )
-        seed += fract( iGlobalTime );
+        seed += fract( iTime );
         #endif
         float rnd = 6.28 * nrand( seed );
 

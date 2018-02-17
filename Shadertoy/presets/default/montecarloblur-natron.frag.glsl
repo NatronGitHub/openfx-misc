@@ -16,7 +16,7 @@ uniform bool perpixel_size = false; // Modulate (Modulate the blur size by multi
 
 void srand(vec2 a, out float r)
 {
-	r=sin(iGlobalTime+dot(a,vec2(1233.224,1743.335)));
+	r=sin(iTime+dot(a,vec2(1233.224,1743.335)));
 }
 
 float rand(inout float r)

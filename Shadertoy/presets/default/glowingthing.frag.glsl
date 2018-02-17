@@ -7,7 +7,7 @@ void mainImage(out vec4 f, vec2 u )
 	u /= iResolution.xy;
     f.xy = .5 - u;
 
-    float t = iGlobalTime,
+    float t = iTime,
           z = atan(f.y,f.x) * 3.,
           v = cos(z + sin(t * .1)) + .5 + sin(u.x * 10. + t * 1.3) * .4;
 

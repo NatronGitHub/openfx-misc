@@ -25,10 +25,10 @@ float noise( in vec2 x )
 
 vec2 map( vec2 p, in float offset )
 {
-	p.x += 0.1*sin( iGlobalTime + 2.0*p.y ) ;
-	p.y += 0.1*sin( iGlobalTime + 2.0*p.x ) ;
+	p.x += 0.1*sin( iTime + 2.0*p.y ) ;
+	p.y += 0.1*sin( iTime + 2.0*p.x ) ;
 	
-	float a = noise(p*1.5 + sin(0.1*iGlobalTime))*6.2831;
+	float a = noise(p*1.5 + sin(0.1*iTime))*6.2831;
 	a -= offset;
 	return vec2( cos(a), sin(a) );
 }
@@ -39,7 +39,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vec2 uv = -1.0 + 2.0*p;
 	uv.x *= iResolution.x / iResolution.y;
 		
-    float offset = iGlobalTime + fragCoord.x/iResolution.x;
+    float offset = iTime + fragCoord.x/iResolution.x;
     
 	float acc = 0.0;
 	vec3  col = vec3(0.0);

@@ -14,7 +14,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	uv.x *= iResolution.x / iResolution.y;
 	
 	vec4 noise = texture2D(iChannel0, floor(uv * float(TILES)) / float(TILES));
-	float p = 1.0 - mod(noise.r + noise.g + noise.b + iGlobalTime * float(TIMESCALE), 1.0);
+	float p = 1.0 - mod(noise.r + noise.g + noise.b + iTime * float(TIMESCALE), 1.0);
 	p = min(max(p * 3.0 - 1.8, 0.1), 2.0);
 	
 	vec2 r = mod(uv * float(TILES), 1.0);

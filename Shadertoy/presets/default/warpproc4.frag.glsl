@@ -45,7 +45,7 @@ vec3 map( vec2 p )
 {   
     p *= 0.7;
 
-    float f = dot( fbm2( 1.0*(0.05*iGlobalTime + p + fbm2(-0.05*iGlobalTime+2.0*(p + fbm2(4.0*p)))) ), vec2(1.0,-1.0) );
+    float f = dot( fbm2( 1.0*(0.05*iTime + p + fbm2(-0.05*iTime+2.0*(p + fbm2(4.0*p)))) ), vec2(1.0,-1.0) );
 
     float bl = smoothstep( -0.8, 0.8, f );
 

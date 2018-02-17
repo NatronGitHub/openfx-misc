@@ -68,7 +68,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	if ( iMouse.z < 0.9 )
 	{		
 		// Set frequency of global effect to 20 variations per second
-		float t = float(int(iGlobalTime * FREQUENCY));
+		float t = float(int(iTime * FREQUENCY));
 		
 		// Get some image movement
 		vec2 suv = uv + 0.002 * vec2( rand(t), rand(t + 23.0));

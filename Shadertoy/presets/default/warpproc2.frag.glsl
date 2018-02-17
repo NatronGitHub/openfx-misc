@@ -40,8 +40,8 @@ float fbm6( vec2 p )
 float func( vec2 q, out vec4 ron )
 {
     float ql = length( q );
-    q.x += 0.05*sin(0.27*iGlobalTime+ql*4.1);
-    q.y += 0.05*sin(0.23*iGlobalTime+ql*4.3);
+    q.x += 0.05*sin(0.27*iTime+ql*4.1);
+    q.y += 0.05*sin(0.23*iTime+ql*4.3);
     q *= 0.5;
 
     vec2 o = vec2(0.0);
@@ -49,8 +49,8 @@ float func( vec2 q, out vec4 ron )
     o.y = 0.5 + 0.5*fbm4( vec2(2.0*q+vec2(5.2))  );
 
     float ol = length( o );
-    o.x += 0.02*sin(0.12*iGlobalTime+ol)/ol;
-    o.y += 0.02*sin(0.14*iGlobalTime+ol)/ol;
+    o.x += 0.02*sin(0.12*iTime+ol)/ol;
+    o.y += 0.02*sin(0.14*iTime+ol)/ol;
 
     vec2 n;
     n.x = fbm6( vec2(4.0*o+vec2(9.2))  );

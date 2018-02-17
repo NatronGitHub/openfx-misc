@@ -134,7 +134,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (-iResolution.xy + 2.0*fragCoord) / iResolution.y;
 
-    float time = iGlobalTime*.15;
+    float time = iTime*.15;
 
 	vec3 light1 = vec3(  0.577, 0.577, -0.577 );
 	vec3 light2 = vec3( -0.707, 0.000,  0.707 );

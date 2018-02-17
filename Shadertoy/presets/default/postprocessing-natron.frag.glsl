@@ -26,11 +26,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     col *= vec3(0.95,1.05,0.95);
 
-    col *= 0.9+0.1*sin(10.0*iGlobalTime+uv.y*1000.0);
+    col *= 0.9+0.1*sin(10.0*iTime+uv.y*1000.0);
 
-    col *= 0.99+0.01*sin(110.0*iGlobalTime);
+    col *= 0.99+0.01*sin(110.0*iTime);
 
-    float comp = smoothstep( 0.2, 0.7, sin(iGlobalTime) );
+    float comp = smoothstep( 0.2, 0.7, sin(iTime) );
     //col = mix( col, oricol, clamp(-2.0+2.0*q.x+3.0*comp,0.0,1.0) );
 
     fragColor = vec4(col,1.0);

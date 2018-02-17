@@ -4,7 +4,7 @@
 
 // http://www.pouet.net/prod.php?which=57245
 
-#define t iGlobalTime
+#define t iTime
 #define r iResolution.xy
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){

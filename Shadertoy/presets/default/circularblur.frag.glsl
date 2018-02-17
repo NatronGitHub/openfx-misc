@@ -16,9 +16,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     float ctrdist = length(vec2(0.5,0.5)-uv);
     
-	uv.x += 0.1*iGlobalTime;
+	uv.x += 0.1*iTime;
 
-	float maxofs = 50.0 * (1.0-iMouse.x / iResolution.x); // n( iGlobalTime ));
+	float maxofs = 50.0 * (1.0-iMouse.x / iResolution.x); // n( iTime ));
 	const int NUM_SAMPLES = 16;
 	const int NUM_SAMPLES2 = NUM_SAMPLES/2;
 	const float NUM_SAMPLES_F = float(NUM_SAMPLES);
@@ -26,7 +26,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	const float MIPBIAS = -8.0; //note: make sure we always pick mip0
 
 	//note: rand
-	float rnd = nrand( 0.01*fragCoord.xy + fract(iGlobalTime) );
+	float rnd = nrand( 0.01*fragCoord.xy + fract(iTime) );
 	
 	//note: ordered dither
 	//float rnd = texture2D( iChannel1, fragCoord.xy / 8.0 ).r;

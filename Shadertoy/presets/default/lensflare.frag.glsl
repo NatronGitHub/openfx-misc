@@ -85,8 +85,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	mouse.x *= iResolution.x/iResolution.y; //fix aspect ratio
 	if (iMouse.z<=0)
 	{
-		mouse.x=sin(iGlobalTime)*.5;
-		mouse.y=sin(iGlobalTime*.913)*.5;
+		mouse.x=sin(iTime)*.5;
+		mouse.y=sin(iTime*.913)*.5;
 	}
 	
 	vec3 color = vec3(1.4,1.2,1.0)*lensflare(uv,mouse.xy);

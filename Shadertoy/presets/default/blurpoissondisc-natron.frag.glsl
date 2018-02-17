@@ -78,7 +78,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec4 sum = vec4(0);
         vec2 seed = uv;
         #if defined( ANIMATE_NOISE )
-        seed += fract( iGlobalTime );
+        seed += fract( iTime );
         #endif
         float rnd = 6.28 * nrand( seed );
 

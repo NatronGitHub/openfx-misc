@@ -15,8 +15,8 @@
 #define SSQ 0.288
 
 vec2 ORIGIN = 0.5 * iResolution.xy;
-float S = MIN_S + (MAX_S-MIN_S) * (0.5 - 0.5*cos(SPEED*iGlobalTime));
-float R = SPEED*0.333 * iGlobalTime;
+float S = MIN_S + (MAX_S-MIN_S) * (0.5 - 0.5*cos(SPEED*iTime));
+float R = SPEED*0.333 * iTime;
 
 vec4 rgb2cmyki(in vec3 c)
 {

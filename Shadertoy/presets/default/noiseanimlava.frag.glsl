@@ -18,7 +18,7 @@
 
 //Sinus ridged fbm is used for better effect.
 
-#define time iGlobalTime*0.1
+#define time iTime*0.1
 
 float hash21(in vec2 n){ return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453); }
 mat2 makem2(in float theta){float c = cos(theta);float s = sin(theta);return mat2(c,-s,s,c);}

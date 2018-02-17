@@ -18,7 +18,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vec2 uv = fragCoord.xy - iResolution.xy * 0.5;
 	uv *= 2.5 / min( iResolution.x, iResolution.y );
 	
-	vec2 c = vec2( 0.37+cos(iGlobalTime*1.23462673423)*0.04, sin(iGlobalTime*1.43472384234)*0.10+0.50);
+	vec2 c = vec2( 0.37+cos(iTime*1.23462673423)*0.04, sin(iTime*1.43472384234)*0.10+0.50);
 	vec2 v = uv;
 	float scale = 0.01;
 	
@@ -33,11 +33,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	}
 	/*
 fragColor = 0.4*(1.0+
-						vec4( sin(smoothcolor*0.05+iGlobalTime*0.63), 
-							 sin(smoothcolor*0.04+iGlobalTime*0.32), 
-							 sin(smoothcolor*0.03+iGlobalTime*0.7),1.0));
+						vec4( sin(smoothcolor*0.05+iTime*0.63), 
+							 sin(smoothcolor*0.04+iTime*0.32), 
+							 sin(smoothcolor*0.03+iTime*0.7),1.0));
 */
-	float r = 0.6+0.4*(sin(smoothcolor*0.1+iGlobalTime*0.63));
+	float r = 0.6+0.4*(sin(smoothcolor*0.1+iTime*0.63));
 	float g = r * r;
 	float b = r * g;
 	fragColor = vec4(r,g,b,0);

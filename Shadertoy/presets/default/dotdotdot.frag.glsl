@@ -56,7 +56,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 #ifdef FAST
 	vec2 UV = (fragCoord.xy - iResolution.xy/2.0) / Ratio;	
 	// Render scene in linear space
-	fragColor = vec4(Render(UV, iGlobalTime), 1.0);
+	fragColor = vec4(Render(UV, iTime), 1.0);
 #else
 	// Render scene in linear space with motion blur and Antialising:
 	vec3 ColorSum = vec3(0.0);
@@ -67,7 +67,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 		vec2 UV = (fragCoord.xy + Off - iResolution.xy/2.0) / Ratio;	
 		
 		// Motion blur:
-		float t = iGlobalTime + F*ShutterSpeed / AaCount;
+		float t = iTime + F*ShutterSpeed / AaCount;
 		
 		// Render:
 		ColorSum += Render(UV, t);

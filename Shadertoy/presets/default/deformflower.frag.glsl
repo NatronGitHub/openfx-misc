@@ -10,10 +10,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vec2 p = (2.0*fragCoord.xy-iResolution.xy)/min(iResolution.y,iResolution.x);
 
     float a = atan(p.x,p.y);
-    float r = length(p)*(0.8+0.2*sin(0.3*iGlobalTime));
+    float r = length(p)*(0.8+0.2*sin(0.3*iTime));
 
-    float w = cos(2.0*iGlobalTime+-r*2.0);
-    float h = 0.5+0.5*cos(12.0*a-w*7.0+r*8.0+ 0.7*iGlobalTime);
+    float w = cos(2.0*iTime+-r*2.0);
+    float h = 0.5+0.5*cos(12.0*a-w*7.0+r*8.0+ 0.7*iTime);
     float d = 0.25+0.75*pow(h,1.0*r)*(0.7+0.3*w);
 
     float f = sqrt(1.0-r/d)*r*2.5;

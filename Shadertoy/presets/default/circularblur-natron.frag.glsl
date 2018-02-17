@@ -34,7 +34,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	float anglestep = 6.28 / NUM_SAMPLES_F;
 
 	//note: rand
-	float rnd = nrand( 0.01*fragCoord.xy + fract(iGlobalTime) );
+	float rnd = nrand( 0.01*fragCoord.xy + fract(iTime) );
 	
 	//note: ordered dither
 	//float rnd = texture2D( iChannel2, fragCoord.xy / 8.0 ).r;

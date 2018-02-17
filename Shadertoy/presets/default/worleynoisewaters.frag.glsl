@@ -31,9 +31,9 @@ float worley(vec2 p) {
 float fworley(vec2 p) {
     //Stack noise layers 
 	return sqrt(sqrt(sqrt(
-		worley(p*5.0 + 0.05*iGlobalTime) *
-		sqrt(worley(p * 50.0 + 0.12 + -0.1*iGlobalTime)) *
-		sqrt(sqrt(worley(p * -10.0 + 0.03*iGlobalTime))))));
+		worley(p*5.0 + 0.05*iTime) *
+		sqrt(worley(p * 50.0 + 0.12 + -0.1*iTime)) *
+		sqrt(sqrt(worley(p * -10.0 + 0.03*iTime))))));
 }
       
 void mainImage( out vec4 fragColor, in vec2 fragCoord )

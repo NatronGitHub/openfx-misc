@@ -10,7 +10,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = fragCoord.xy/iResolution.xy;
 
     // shape (16 points)	
-	float time = iGlobalTime + 47.0;
+	float time = iTime + 47.0;
 	vec2 z = -1.0 + 2.0*uv;
 	vec3 col = vec3(1.0);
 	for( int j=0; j<16; j++ )

@@ -22,7 +22,7 @@ float rand(inout float r)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	vec2 uv = fragCoord.xy / iResolution.xy;
-	float p=SIZE/iResolution.y*(sin(iGlobalTime/2.0)+1.0);
+	float p=SIZE/iResolution.y*(sin(iTime/2.0)+1.0);
 	vec4 c=vec4(0.0);
 	float r;
 	srand(uv, r);

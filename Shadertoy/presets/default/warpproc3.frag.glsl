@@ -37,7 +37,7 @@ float fbm( in vec2 x )
 		float n = noise( p*s );
 		m += w*n;
 
-        p.y -= 1.25*(-1.0+2.0*n) - 0.1*iGlobalTime*w; // warp
+        p.y -= 1.25*(-1.0+2.0*n) - 0.1*iTime*w; // warp
 		
 		w *= 0.5;
 		s *= 2.0;

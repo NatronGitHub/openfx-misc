@@ -8,7 +8,7 @@
 
 void mainImage( out vec4 f, in vec2 w ) {
 	vec2 p = iResolution.xy;
-	float d = length(p = (w.xy*2.-p) / p.y), t = iGlobalTime;
+	float d = length(p = (w.xy*2.-p) / p.y), t = iTime;
     vec4 b = vec4(.8,.4,.2,1)+p.y, c = b+b;
     p = p * asin(d) / d + 5.;    
     p = p * p.y + t;

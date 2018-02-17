@@ -16,7 +16,7 @@
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-  float time = iGlobalTime * .5 + 23.0;
+  float time = iTime * .5 + 23.0;
   // uv should be the 0-1 uv of texture...
   vec2 uv = fragCoord.xy / iResolution.xy;
 
@@ -47,7 +47,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
   vec2 pixel = 2.0 / iResolution.xy;
   uv *= 2.0;
 
-  float f = floor(mod(iGlobalTime*.5, 2.0)); 	// Flash value.
+  float f = floor(mod(iTime*.5, 2.0)); 	// Flash value.
   vec2 first = step(pixel, uv) * f;		   	// Rule out first screen pixels and flash.
   uv = step(fract(uv), pixel);				// Add one line of pixels per tile.
   colour = mix(colour, vec3(1.0, 1.0, 0.0), (uv.x + uv.y) * first.x * first.y); // Yellow line

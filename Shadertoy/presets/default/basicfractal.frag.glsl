@@ -18,14 +18,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 	vec2 uv=iResolution.xy;uv=-.5*(uv-2.0*fragCoord.xy)/uv.x;
 
 	//global rotation and zoom
-	uv=rot(uv,iGlobalTime);
-	uv*=sin(iGlobalTime)*0.5+1.5;
+	uv=rot(uv,iTime);
+	uv*=sin(iTime)*0.5+1.5;
 	
 	//mirror, rotate and scale 6 times...
 	float s=0.3;
 	for(int i=0;i<maxIterations;i++){
 		uv=abs(uv)-s;
-		uv=rot(uv,iGlobalTime);
+		uv=rot(uv,iTime);
 		s=s/2.1;
 	}
 	

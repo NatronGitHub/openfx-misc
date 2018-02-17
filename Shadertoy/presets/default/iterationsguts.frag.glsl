@@ -32,7 +32,7 @@ vec2 map( vec2 p )
 	float a  = 0.7*noise(p)*6.2831*6.0; p = ma*p*3.0;
 	      a += 0.3*noise(p)*6.2831*6.0;
 	
-	a += 0.2*iGlobalTime;
+	a += 0.2*iTime;
 	
 	return vec2( cos(a), sin(a) );
 }

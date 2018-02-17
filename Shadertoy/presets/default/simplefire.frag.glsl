@@ -26,8 +26,8 @@ float noise(vec2 n) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 	vec2 p = fragCoord.xy * SCALE / iResolution.xx;
-	vec2 r = vec2(noise(p + iGlobalTime*PSPEED1 - p.x - p.y), noise(p - iGlobalTime*PSPEED2));
-	vec3 c = mix(color1, color2, noise(p + r - CORESPEED*iGlobalTime));
+	vec2 r = vec2(noise(p + iTime*PSPEED1 - p.x - p.y), noise(p - iTime*PSPEED2));
+	vec3 c = mix(color1, color2, noise(p + r - CORESPEED*iTime));
 	fragColor = vec4(c, 1.0);
 }
 

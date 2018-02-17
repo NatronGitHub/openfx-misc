@@ -42,9 +42,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 	p *= 0.85;
 	
-	p *= 3.0 + 2.0*cos(3.1*iGlobalTime/10.0);	
+	p *= 3.0 + 2.0*cos(3.1*iTime/10.0);	
 
-	vec4 t = 0.15*iGlobalTime*vec4( 1.0, -1.5, 1.2, -1.6 ) + vec4(0.0,2.0,3.0,1.0);
+	vec4 t = 0.15*iTime*vec4( 1.0, -1.5, 1.2, -1.6 ) + vec4(0.0,2.0,3.0,1.0);
 	
     vec2 z = p;
 	vec2 s = vec2(0.0);

@@ -10,7 +10,7 @@
 //The domain is displaced by two fbm calls one for each axis.
 //Turbulent fbm (aka ridged) is used for better effect.
 
-#define time iGlobalTime*0.15
+#define time iTime*0.15
 #define tau 6.2831853
 
 mat2 makem2(in float theta){float c = cos(theta);float s = sin(theta);return mat2(c,-s,s,c);}

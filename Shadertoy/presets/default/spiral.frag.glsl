@@ -12,21 +12,21 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	float turn = (angle + PI) / TAU;
 	float radius = sqrt(p.x*p.x + p.y*p.y);
 	
-	float rotation = 0.04 * TAU * iGlobalTime;
+	float rotation = 0.04 * TAU * iTime;
 	float turn_1 = turn + rotation;
 	
 	float n_sub = 2.0;
 	
 	float turn_sub = mod(float(n_sub) * turn_1, float(n_sub));
 	
-	float k_sine = 0.1 * sin(3.0 * iGlobalTime);
-	float sine = k_sine * sin(50.0 * (pow(radius, 0.1) - 0.4 * iGlobalTime));
+	float k_sine = 0.1 * sin(3.0 * iTime);
+	float sine = k_sine * sin(50.0 * (pow(radius, 0.1) - 0.4 * iTime));
 	float turn_sine = turn_sub + sine;
 
 	int n_colors = 5;
 	int i_turn = int(mod(float(n_colors) * turn_sine, float(n_colors)));
 	
-	int i_radius = int(1.5/pow(radius*0.5, 0.6) + 5.0 * iGlobalTime);
+	int i_radius = int(1.5/pow(radius*0.5, 0.6) + 5.0 * iTime);
 		
 	int i_color = int(mod(float(i_turn + i_radius), float(n_colors)));
 	

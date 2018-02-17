@@ -91,7 +91,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 #if RAMP	
 	//pick a radius to ramp up and down to demo the effect ... sorting networks are fixed size.
-	float r = (sin(iGlobalTime+5.)*0.5+0.5)*float(SORT_SIZE/2)*1.1;
+	float r = (sin(iTime+5.)*0.5+0.5)*float(SORT_SIZE/2)*1.1;
 #endif
 	
 	//do a bunch of 1D sorts on X

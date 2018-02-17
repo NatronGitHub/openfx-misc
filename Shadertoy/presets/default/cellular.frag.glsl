@@ -14,9 +14,9 @@ float disk(vec2 r, vec2 center, float radius) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	float t = iGlobalTime*2.;
+	float t = iTime*2.;
 	vec2 r = (2.0*fragCoord.xy - iResolution.xy) / iResolution.y;
-	r *= 1.0 + 0.05*sin(r.x*5.+iGlobalTime) + 0.05*sin(r.y*3.+iGlobalTime);
+	r *= 1.0 + 0.05*sin(r.x*5.+iTime) + 0.05*sin(r.y*3.+iTime);
 	r *= 1.0 + 0.2*length(r);
 	float side = 0.5;
 	vec2 r2 = mod(r, side);
@@ -35,7 +35,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	pix = mix(pix, col2, disks);
 
 	float speed = 2.0;
-	float tt = iGlobalTime*speed+0.1*i+0.08*j;
+	float tt = iTime*speed+0.1*i+0.08*j;
 	float stopEveryAngle = PI/2.0;
 	float stopRatio = 0.7;
 	float t1 = (floor(tt) + smoothstep(0.0, 1.0-stopRatio, fract(tt)) )*stopEveryAngle;

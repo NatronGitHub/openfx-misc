@@ -19,7 +19,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	ray.xy = 2.0*(fragCoord.xy-iResolution.xy*.5)/iResolution.x;
 	ray.z = 1.0;
 
-	float offset = iGlobalTime*.5;	
+	float offset = iTime*.5;	
 	float speed2 = (cos(offset)+1.0)*2.0;
 	float ispeed = 1.0/(speed2+.1);
 	offset += sin(offset)*.96;

@@ -25,7 +25,7 @@
  * https://shadertoyunofficial.wordpress.com/2016/07/22/compatibility-issues-in-shadertoy-webglsl/#webgl2
  *
  * TODO:
- * - upgrade to Shaderttoy 0.9.1:
+ * - upgrade to Shadertoy 0.9.1:
  *   - support WebGL 2.0 / OpenGL ES 3.0
  *     (https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf
  *      and pages 4 and 5 of

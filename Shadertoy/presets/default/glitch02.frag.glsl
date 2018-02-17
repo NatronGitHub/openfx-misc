@@ -58,7 +58,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vec2 uv = fragCoord.xy / iResolution.xy;
     uv.y = 1.0 - uv.y;
 	
-	float time = mod(iGlobalTime, 32.0); // + modelmat[0].x + modelmat[0].z;
+	float time = mod(iTime, 32.0); // + modelmat[0].x + modelmat[0].z;
 
 	float GLITCH = 0.1 + iMouse.x / iResolution.x;
 	

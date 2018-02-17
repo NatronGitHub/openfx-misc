@@ -49,7 +49,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	vec2 p = 15.*(-iResolution.xy+2.0*fragCoord.xy)/iResolution.y;
 	float f = stars(p);
-	p+=.8*iGlobalTime;	
+	p+=.8*iTime;	
 	vec3 col = vec3(f*f*f,f*f*.8,f*.8);
     f= clamp(fbm(p*.1),0.,1.);
     if(f>.1)col =vec3(f*f*f,f*f,f);
