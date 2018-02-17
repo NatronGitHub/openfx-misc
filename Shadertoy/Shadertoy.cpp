@@ -23,21 +23,6 @@
  * https://www.shadertoy.com (v0.8.8 https://www.shadertoy.com/changelog)
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
  * https://shadertoyunofficial.wordpress.com/2016/07/22/compatibility-issues-in-shadertoy-webglsl/#webgl2
- *
- * TODO:
- * - upgrade to Shadertoy 0.9.1:
- *   - support WebGL 2.0 / OpenGL ES 3.0
- *     (https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf
- *      and pages 4 and 5 of
- *      https://www.khronos.org/files/opengles3-quick-reference-card.pdf )
- *      GLSL 3.30 https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.3.30.pdf
- *      Note that this probably means we have to switch to an OpenGL Core profile,
- *      so the host must give us an OpenGL Core context.
- *      See also: https://shadertoyunofficial.wordpress.com/2017/02/16/webgl-2-0-vs-webgl-1-0/
- * - add multipass support (using tabs for UI as in shadertoys)
- * - synthclipse-compatible comments http://synthclipse.sourceforge.net/user_guide/fragx/commands.html
- * - use .stoy for the presets shaders, and add the default shadertoy uniforms at the beginning, as in http://synthclipse.sourceforge.net/user_guide/shadertoy.html
- * - ShaderToy export as in synthclipse http://synthclipse.sourceforge.net/user_guide/shadertoy.html
  */
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) || defined(HAVE_OSMESA) // at least one is required for this plugin
@@ -826,7 +811,7 @@ presetsFromDir(const string &dir, std::vector<ShadertoyPlugin::Preset>& presets)
             std::fclose(fps);
             // make sure there is no preset with the same filename
             // fixes https://github.com/MrKepzie/Natron/issues/1724
-            if ( filenames.find(filename) != filenames.end() ) {
+            if ( filenames.find(filename) == filenames.end() ) {
                 presets.push_back( ShadertoyPlugin::Preset(description, filename) );
             }
             filenames.insert(filename);

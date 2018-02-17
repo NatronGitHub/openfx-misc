@@ -23,6 +23,18 @@ Should be maskable, so that it can be used to compute statistics over an image a
 - synthclipse-compatible comments http://synthclipse.sourceforge.net/user_guide/fragx/commands.html
 - use .stoy for the presets shaders, and add the default shadertoy uniforms at the beginning, as in http://synthclipse.sourceforge.net/user_guide/shadertoy.html
 - ShaderToy export as in synthclipse http://synthclipse.sourceforge.net/user_guide/shadertoy.html
+- add the following WebGL-compatibility code at the beginning of each shader, and replace `uniform` with `parameter` for all tunable parameters:
+```
+#if __VERSION__ == 300
+#define texture2D texture
+#define textureCube texture
+#define parameter
+#else
+#define in varying
+#define out varying
+#define parameter uniform
+#endif
+```
 
 ### Missing Nuke-like nodes
 
