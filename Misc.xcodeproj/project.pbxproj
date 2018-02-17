@@ -3847,6 +3847,7 @@
 		1EA7BCB21C5AA7820026C46A /* net.sf.openfx.Despill.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Despill.svg; sourceTree = "<group>"; };
 		1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgMedian.cpp; path = Median/CImgMedian.cpp; sourceTree = "<group>"; };
 		1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgExpression.cpp; path = Expression/CImgExpression.cpp; sourceTree = "<group>"; };
+		1EAAA41320382010005A60B3 /* TODO.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = TODO.md; sourceTree = "<group>"; };
 		1EAC82C81E4F7807002994C3 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EAC82C91E4F7807002994C3 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EAC82CA1E4F7818002994C3 /* Card3D.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Card3D.cpp; sourceTree = "<group>"; };
@@ -5315,6 +5316,7 @@
 				1ECACEDB1DD86E3600A33888 /* PyPlugs */,
 				1E9A570F1D781CF70070646A /* Templates */,
 				1E9B5F6C198A54210095C8AA /* README.md */,
+				1EAAA41320382010005A60B3 /* TODO.md */,
 				1E9DD3C01CEE1D9D00B674E9 /* README-hosts.txt */,
 				1E9B5F6A198A54210095C8AA /* LICENSE */,
 				1E9DD3C11CEE200800B674E9 /* gpl-header-c.txt */,
