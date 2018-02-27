@@ -111,6 +111,13 @@ enum ScreenTypeEnum
 #define kParamBrightnessLabel "Brightness"
 #define kParamBrightnessHint "Controls the brightness of the spill while trying to preserve the colors."
 
+#define kParamClampBlack "clampBlack"
+#define kParamClampBlackLabel "Clamp Black"
+#define kParamClampBlackHint "All colors below 0 on output are set to 0."
+
+#define kParamClampWhite "clampWhite"
+#define kParamClampWhiteLabel "Clamp White"
+#define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
 class DespillProcessorBase
     : public ImageProcessor
@@ -124,6 +131,8 @@ protected:
     double _spillExpand;
     double _redScale, _greenScale, _blueScale;
     double _brightness;
+    bool _clampBlack;
+    bool _clampWhite;
     float _mix;
 
 public:
@@ -140,7 +149,9 @@ public:
         , _greenScale(0.)
         , _blueScale(0.)
         , _brightness(0.)
-        , _mix(0.f)
+        , _clampBlack(true)
+        , _clampWhite(false)
+        , _mix(1.f)
     {
     }
 
@@ -162,6 +173,8 @@ public:
                    double green,
                    double blue,
                    double brightness,
+                   bool clampBlack,
+                   bool clampWhite,
                    float mix,
                    bool outputToAlpha)
     {
@@ -171,12 +184,62 @@ public:
         _greenScale = green;
         _blueScale = blue;
         _brightness = brightness;
+        _clampBlack = clampBlack;
+        _clampWhite = clampWhite;
         _mix = mix;
         _outputToAlpha = outputToAlpha;
     }
 
+protected:
+    // clamp for integer PIX types
+    template<class PIX>
+    float clamp(float value,
+                int maxValue) const
+    {
+        return std::max( 0.f, std::min( value, float(maxValue) ) );
+    }
+
+    // clamp for integer PIX types
+    template<class PIX>
+    double clamp(double value,
+                 int maxValue) const
+    {
+        return std::max( 0., std::min( value, double(maxValue) ) );
+    }
+
 private:
 };
+
+// floats don't clamp except if _clampBlack or _clampWhite
+template<>
+float
+DespillProcessorBase::clamp<float>(float value,
+                                   int maxValue) const
+{
+    assert(maxValue == 1.);
+    if ( _clampBlack && (value < 0.) ) {
+        value = 0.f;
+    } else if ( _clampWhite && (value > 1.0) ) {
+        value = 1.0f;
+    }
+
+    return value;
+}
+
+template<>
+double
+DespillProcessorBase::clamp<float>(double value,
+                                   int maxValue) const
+{
+    assert(maxValue == 1.);
+    if ( _clampBlack && (value < 0.) ) {
+        value = 0.f;
+    } else if ( _clampWhite && (value > 1.0) ) {
+        value = 1.0f;
+    }
+
+    return value;
+}
 
 template<class PIX, int maxValue>
 static float
@@ -235,9 +298,9 @@ private:
                         spillmap = std::max(tmpPix[2] - ( tmpPix[0] * _spillMix + tmpPix[1] * (1 - _spillMix) ) * (1 - _spillExpand), 0.);
                     }
 
-                    tmpPix[0] = std::max(tmpPix[0] + spillmap * _redScale + _brightness * spillmap, 0.);
-                    tmpPix[1] = std::max(tmpPix[1] + spillmap * _greenScale + _brightness * spillmap, 0.);
-                    tmpPix[2] = std::max(tmpPix[2] + spillmap * _blueScale + _brightness * spillmap, 0.);
+                    tmpPix[0] = clamp<float>(tmpPix[0] + spillmap * _redScale   + _brightness * spillmap, 1.);
+                    tmpPix[1] = clamp<float>(tmpPix[1] + spillmap * _greenScale + _brightness * spillmap, 1.);
+                    tmpPix[2] = clamp<float>(tmpPix[2] + spillmap * _blueScale  + _brightness * spillmap, 1.);
                 } else {
                     tmpPix[0] = tmpPix[1] = tmpPix[2] = tmpPix[3] = 0.;
                     spillmap = 0.;
@@ -297,6 +360,9 @@ public:
         _greenScale = fetchDoubleParam(kParamScaleGreen);
         _blueScale = fetchDoubleParam(kParamScaleBlue);
         _brightness = fetchDoubleParam(kParamBrightness);
+        _clampBlack = fetchBooleanParam(kParamClampBlack);
+        _clampWhite = fetchBooleanParam(kParamClampWhite);
+        assert(_clampBlack && _clampWhite);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
@@ -334,6 +400,8 @@ private:
     DoubleParam* _greenScale;
     DoubleParam* _blueScale;
     DoubleParam* _brightness;
+    BooleanParam* _clampBlack;
+    BooleanParam* _clampWhite;
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
@@ -351,7 +419,8 @@ void
 DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
                                const RenderArguments &args)
 {
-    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    const double time = args.time;
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         setPersistentMessage(Message::eMessageError, "", "Failed to fetch output image");
@@ -371,7 +440,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                    _srcClip->fetchImage(args.time) : 0 );
+                                    _srcClip->fetchImage(time) : 0 );
 
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -392,8 +461,8 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     }
 
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ||
@@ -407,7 +476,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     // set the images
     if (doMasking) {
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
@@ -427,6 +496,8 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     _greenScale->getValue(greenScale);
     _blueScale->getValue(blueScale);
     _brightness->getValue(brightNess);
+    bool clampBlack = _clampBlack->getValueAtTime(time);
+    bool clampWhite = _clampWhite->getValueAtTime(time);
     _mix->getValue(mix);
 
 
@@ -436,7 +507,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     }
 
 
-    processor.setValues(spillMix, spillExpand, redScale, greenScale, blueScale, brightNess, (float)mix, outputAlpha);
+    processor.setValues(spillMix, spillExpand, redScale, greenScale, blueScale, brightNess, clampBlack, clampWhite, (float)mix, outputAlpha);
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);
@@ -645,8 +716,6 @@ DespillPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-
-
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamScaleRed);
         param->setLabel(kParamScaleRedLabel);
@@ -658,7 +727,6 @@ DespillPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamScaleGreen);
         param->setLabel(kParamScaleGreenLabel);
@@ -695,7 +763,26 @@ DespillPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
+        param->setLabel(kParamClampBlackLabel);
+        param->setHint(kParamClampBlackHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
+        param->setLabel(kParamClampWhiteLabel);
+        param->setHint(kParamClampWhiteHint);
+        param->setDefault(false);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     ofxsMaskMixDescribeParams(desc, page);
 } // DespillPluginFactory::describeInContext
