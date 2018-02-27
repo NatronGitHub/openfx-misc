@@ -1546,8 +1546,10 @@ public:
         _colorspace = fetchChoiceParam(kParamColorspace);
         _outputMode = fetchChoiceParam(kParamOutputMode);
 
-        updateEnabled();
+        // finally
+        syncPrivateData();
     }
+
 
 private:
     /** @brief the get RoI action */
@@ -1560,6 +1562,12 @@ private:
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateEnabled();
+    }
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;

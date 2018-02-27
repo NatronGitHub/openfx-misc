@@ -288,7 +288,8 @@ public:
 
         assert(_rectangleInteractEnable && _btmLeft && _size && _softness && _reformat && _intersect && _blackOutside);
 
-        updateParamsVisibility();
+        // finally
+        syncPrivateData();
     }
 
 private:
@@ -298,6 +299,12 @@ private:
 
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateParamsVisibility();
+    }
 
     template <int nComponents>
     void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);

@@ -92,7 +92,8 @@ public:
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_firstFrame && _increment && _sublabel);
 
-        updateSublabel(0.);
+        // finally
+        syncPrivateData();
     }
 
 private:
@@ -106,6 +107,12 @@ private:
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateSublabel(0.);
+    }
 
 private:
     double getSourceTime(double time) const;

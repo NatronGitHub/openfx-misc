@@ -1445,10 +1445,8 @@ public:
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
-        updateVisibility();
-
         // honor kParamDefaultsNormalised
-        if ( plugin == eDistortionPluginLensDistortion && paramExists(kParamDefaultsNormalised) ) {
+        if ( _plugin == eDistortionPluginLensDistortion && paramExists(kParamDefaultsNormalised) ) {
             // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
             // handle these ourselves!
             BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
@@ -1468,7 +1466,11 @@ public:
                 endEditBlock();
             }
         }
+
+        // finally
+        syncPrivateData();
     }
+
 
 private:
     // override the roi call
@@ -1496,6 +1498,12 @@ private:
 
     /** @brief called when a param has just had its value changed */
     void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateVisibility();
+    }
 
     void updateVisibility();
 

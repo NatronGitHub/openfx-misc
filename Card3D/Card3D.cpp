@@ -1616,7 +1616,8 @@ public:
             }
         }
 
-        updateVisibility();
+        // finally...
+        syncPrivateData();
     }
 
     ~Card3DPlugin()
@@ -1635,6 +1636,8 @@ private:
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL;
 
     void updateVisibility();
 
@@ -1665,6 +1668,11 @@ private:
     PushButtonParam *_recenter;
 };
 
+void
+Card3DPlugin::syncPrivateData()
+{
+    updateVisibility();
+}
 
 // returns true if fixed format (i.e. not the input RoD) and setFormat can be called in getClipPrefs
 bool

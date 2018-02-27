@@ -1058,9 +1058,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     }
     setSupportsOpenGLRender( _enableGPU->getValue() );
 #endif
-    updateExtra();
-    updateVisibility();
-    updateClips();
+
     initOpenGL();
 #if defined(HAVE_OSMESA)
     if ( OSMesaDriverSelectable() ) {
@@ -1075,6 +1073,17 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     // ... but also forbids this, see http://openfx.sourceforge.net/Documentation/1.4/ofxProgrammingReference.html#OfxParameterSuiteV1_paramSetValue
     // TODO: only do if necessary
     _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue() + 1);
+
+    // finally, update the GUI
+    syncPrivateData();
+}
+
+void
+ShadertoyPlugin::syncPrivateData()
+{
+    updateExtra();
+    updateVisibility();
+    updateClips();
 }
 
 ShadertoyPlugin::~ShadertoyPlugin()

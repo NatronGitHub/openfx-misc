@@ -187,6 +187,9 @@ private:
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL;
+
 private:
 
     void updateGUI();
@@ -250,6 +253,13 @@ ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
     _selectionFrame = fetchIntParam(kParamSelectionFrame);
 #endif
 
+    // finally
+    syncPrivateData();
+}
+
+void
+ContactSheetPlugin::syncPrivateData()
+{
     updateGUI();
 }
 

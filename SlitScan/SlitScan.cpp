@@ -256,7 +256,9 @@ public:
         _frameRange = fetchInt2DParam(kParamFrameRange);
         _filter = fetchChoiceParam(kParamFilter);
         assert(_retimeFunction && _retimeOffset && _retimeGain && _retimeAbsolute && _frameRange && _filter);
-        updateVisibility();
+
+        // finally
+        syncPrivateData();
     }
 
 private:
@@ -276,6 +278,12 @@ private:
         if ( (paramName == kParamRetimeFunction) && (args.reason == eChangeUserEdit) ) {
             updateVisibility();
         }
+    }
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateVisibility();
     }
 
     /* set up and run a processor */

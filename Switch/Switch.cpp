@@ -128,6 +128,13 @@ private:
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateRange();
+        _which->setEnabled( !_automatic->getValue() );
+    }
+
 private:
 
     void updateRange()
@@ -188,8 +195,8 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle,
     _automatic = fetchBooleanParam(kParamAutomatic);
     assert(_which && _automatic);
 
-    updateRange();
-    _which->setEnabled( !_automatic->getValue() );
+    // finally
+    syncPrivateData();
 }
 
 void

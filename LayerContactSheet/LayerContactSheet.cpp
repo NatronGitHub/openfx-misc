@@ -152,6 +152,11 @@ private:
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateGUI();
+    }
 
 private:
 
@@ -197,7 +202,8 @@ LayerContactSheetPlugin::LayerContactSheetPlugin(OfxImageEffectHandle handle)
     _colOrder = fetchChoiceParam(kParamColumnOrder);
     _showLayerNames = fetchBooleanParam(kParamShowLayerNames);
 
-    updateGUI();
+    // finally
+    syncPrivateData();
 }
 
 static void

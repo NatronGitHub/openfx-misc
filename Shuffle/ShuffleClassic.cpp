@@ -464,7 +464,8 @@ public:
 
         _outputPremult = fetchChoiceParam(kParamOutputPremultiplication);
 
-        updateVisibility();
+        // finally
+        syncPrivateData();
     }
 
 private:
@@ -484,6 +485,12 @@ private:
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateVisibility();
+    }
 
 private:
     void enableComponents(void);

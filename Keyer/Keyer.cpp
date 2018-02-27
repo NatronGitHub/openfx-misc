@@ -631,7 +631,8 @@ public:
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
         assert(_outputMode && _sourceAlpha);
 
-        updateVisibility();
+        // finally
+        syncPrivateData();
     }
 
 private:
@@ -645,6 +646,12 @@ private:
     void setupAndProcess(KeyerProcessorBase &, const RenderArguments &args);
 
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateVisibility();
+    }
 
     void setThresholdsFromKeyColor(double r, double g, double b, KeyerModeEnum keyerMode, LuminanceMathEnum luminanceMath);
 
@@ -687,7 +694,6 @@ private:
     ChoiceParam* _outputMode;
     ChoiceParam* _sourceAlpha;
 };
-
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */

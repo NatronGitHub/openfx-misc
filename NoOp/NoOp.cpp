@@ -175,8 +175,6 @@ public:
             assert(_setFrameRate && _frameRate);
         }
 
-        updateVisibility();
-
 #ifdef OFX_EXTENSIONS_NATRON
         // honor kParamDefaultsNormalised
         if ( paramExists(kParamDefaultsNormalised) ) {
@@ -200,6 +198,9 @@ public:
             }
         }
 #endif
+
+        // finally
+        syncPrivateData();
     }
 
 private:
@@ -220,6 +221,12 @@ private:
 #endif
 
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        updateVisibility();
+    }
 
     void updateVisibility()
     {
