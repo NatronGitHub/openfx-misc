@@ -169,15 +169,15 @@ public:
         _color2 = color2;
         _color3 = color3;
         _lineColor = lineColor;
-        _lineInfX = std::max(0., lineWidth * renderScale.x / 2 / pixelAspectRatio) + 0.25;
+        _lineInfX = lineWidth > 0. ? (std::max(0., lineWidth * renderScale.x / 2 / pixelAspectRatio) + 0.25) : 0.;
         _lineSupX = lineWidth > 0. ? (std::max(lineWidth, pixelAspectRatio) * renderScale.x / 2 / pixelAspectRatio - 0.25) : 0.;
-        _lineInfY = std::max(0., lineWidth * renderScale.y / 2) + 0.25;
+        _lineInfY = lineWidth > 0. ? (std::max(0., lineWidth * renderScale.y / 2) + 0.25) : 0.;
         _lineSupY = lineWidth > 0. ? (std::max(lineWidth, 1.) * renderScale.y / 2 - 0.25) : 0.;
         // always draw the centerline, whatever the render scale
         _centerlineColor = centerlineColor;
-        _centerlineInfX = std::max(0., centerlineWidth * renderScale.x / 2 / pixelAspectRatio) + 0.25;
+        _centerlineInfX = centerlineWidth > 0. ? (std::max(0., centerlineWidth * renderScale.x / 2 / pixelAspectRatio) + 0.25) : 0.;
         _centerlineSupX = centerlineWidth > 0. ? (std::max(centerlineWidth * renderScale.x, pixelAspectRatio) / 2 / pixelAspectRatio - 0.25) : 0.;
-        _centerlineInfY = std::max(0., centerlineWidth * renderScale.y / 2) + 0.25;
+        _centerlineInfY = centerlineWidth > 0. ? (std::max(0., centerlineWidth * renderScale.y / 2) + 0.25) : 0.;
         _centerlineSupY = centerlineWidth > 0. ? (std::max(centerlineWidth * renderScale.y, 1.)  / 2 - 0.25) : 0.;
         _rod.x1 = rod.x1 * renderScale.x / pixelAspectRatio;
         _rod.x2 = rod.x2 * renderScale.x / pixelAspectRatio;
