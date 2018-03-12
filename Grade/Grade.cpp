@@ -141,7 +141,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamReverse "reverse"
 #define kParamReverseLabel "Reverse"
-#define kParamReverseHint "Apply the inverse correction."
+#define kParamReverseHint "Apply the inverse correction.  Useful to apply the inverse of a Grade downstream: copy-and-paste or clone the upstream node, and invert the downstream one."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
