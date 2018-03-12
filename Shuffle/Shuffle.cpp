@@ -38,8 +38,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Channel"
 #define kPluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types)."
 #define kPluginIdentifier "net.sf.openfx.ShufflePlugin"
+// History:
+// version 1.0: initial version (see ShuffleClassic.cpp)
+// version 2.0: support multiplane
+// version 2.1: add kParamSetGBAFromR
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -103,6 +107,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputALabel "A"
 #define kParamOutputAHint "Input channel for the output alpha channel"
 
+#ifdef OFX_EXTENSIONS_NATRON
+#define kParamSetGBAFromR "setGBAFromR"
+#define kParamSetGBAFromRLabelAndHint "Set GBA From R", "If checked, setting the R output channel from the GUI to the R channel of an input also sets the G, B and A output channels from the same plane."
+#endif
 
 #define kParamClipInfo "clipInfo"
 #define kParamClipInfoLabel "Clip Info..."
@@ -530,6 +538,7 @@ public:
         , _outputBitDepth(NULL)
         , _channelParam()
         , _outputComponents(NULL)
+        , _setGBAFromR(NULL)
     {
         _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -597,6 +606,7 @@ public:
 
         _outputPremult = fetchChoiceParam(kParamOutputPremultiplication);
 
+        _setGBAFromR = fetchBooleanParam(kParamSetGBAFromR);
     }
 
 private:
@@ -667,6 +677,8 @@ private:
     // Components type when the output layer is the color plane (Alpha - RGB - RGBA)
     ChoiceParam *_outputComponents;
     ChoiceParam *_outputPremult;
+
+    BooleanParam* _setGBAFromR;
 };
 
 OfxStatus
@@ -1555,7 +1567,9 @@ ShufflePlugin::changedParam(const InstanceChangedArgs &args,
         sendMessage(Message::eMessageMessage, "", msg);
     } else if (paramName == _channelParam[0]->getName() && (args.reason == eChangeUserEdit)) {
 #ifdef OFX_EXTENSIONS_NATRON
-        setChannelsFromRed(args.time);
+        if ( _setGBAFromR->getValueAtTime(args.time) ) {
+            setChannelsFromRed(args.time);
+        }
 #endif
     } else {
         MultiPlaneEffect::changedParam(args, paramName);
@@ -1963,6 +1977,18 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+#ifdef OFX_EXTENSIONS_NATRON
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSetGBAFromR);
+        param->setLabelAndHint(kParamSetGBAFromRLabelAndHint);
+        param->setDefault(true); // was the default behavior before 2.1
+        param->setEvaluateOnChange(false); // does not affect render
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+#endif
 
     // clipInfo
     {
