@@ -741,6 +741,9 @@ private:
     /// Set the black and white point from the image minimum/maximum from the given image
     void normalize(const Image* srcImg)
     {
+        if (!srcImg) {
+            return;
+        }
         PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
         Results results;
         assert(srcComponents == ePixelComponentAlpha || srcComponents == ePixelComponentRGB || srcComponents == ePixelComponentRGBA);
