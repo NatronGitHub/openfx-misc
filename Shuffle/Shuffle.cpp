@@ -42,8 +42,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version (see ShuffleClassic.cpp)
 // version 2.0: support multiplane
 // version 2.1: add kParamSetGBAFromR
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 3.0: B input is now the default, pass-through when plugin is disabled
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -529,11 +530,13 @@ class ShufflePlugin
 public:
     /** @brief ctor */
     ShufflePlugin(OfxImageEffectHandle handle,
-                  ContextEnum context)
+                  ContextEnum context,
+                  unsigned int majorVersion)
         : MultiPlane::MultiPlaneEffect(handle)
+        , _majorVersion(majorVersion)
         , _dstClip(NULL)
-        , _srcClipA(NULL)
-        , _srcClipB(NULL)
+        , _srcClipDefault(NULL)
+        , _srcClipOther(NULL)
         , _outputLayer(NULL)
         , _outputBitDepth(NULL)
         , _channelParam()
@@ -543,11 +546,11 @@ public:
         _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (1 <= _dstClip->getPixelComponentCount() && _dstClip->getPixelComponentCount() <= 4) );
-        _srcClipA = fetchClip(context == eContextGeneral ? kClipA : kOfxImageEffectSimpleSourceClipName);
-        assert( _srcClipA && (1 <= _srcClipA->getPixelComponentCount() && _srcClipA->getPixelComponentCount() <= 4) );
+        _srcClipDefault = fetchClip(context == eContextGeneral ? (_majorVersion < 3 ? kClipA : kClipB) : kOfxImageEffectSimpleSourceClipName);
+        assert( _srcClipDefault && (1 <= _srcClipDefault->getPixelComponentCount() && _srcClipDefault->getPixelComponentCount() <= 4) );
         if (context == eContextGeneral) {
-            _srcClipB = fetchClip(kClipB);
-            assert( _srcClipB && (1 <= _srcClipB->getPixelComponentCount() && _srcClipB->getPixelComponentCount() <= 4) );
+            _srcClipOther = fetchClip(_majorVersion < 3 ? kClipB : kClipA);
+            assert( _srcClipOther && (1 <= _srcClipOther->getPixelComponentCount() && _srcClipOther->getPixelComponentCount() <= 4) );
         }
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             _outputLayer = fetchChoiceParam(kParamOutputChannels);
@@ -574,8 +577,8 @@ public:
 
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             std::vector<Clip*> abClips(2);
-            abClips[0] = _srcClipA;
-            abClips[1] = _srcClipB;
+            abClips[0] = _majorVersion < 3 ? _srcClipDefault : _srcClipOther;
+            abClips[1] = _majorVersion < 3 ? _srcClipOther : _srcClipDefault;
             {
                 FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
                 args.dependsClips = abClips;
@@ -598,7 +601,7 @@ public:
             }
             {
                 FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForOutputPlane();
-                args.dependsClips.push_back(_srcClipA);
+                args.dependsClips.push_back(_srcClipDefault);
                 fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, args);
             }
             onAllParametersFetched();
@@ -661,10 +664,12 @@ private:
     // @param dstPlaneOut [out] If non null, will be set to the plane written to in output
     void onMetadataChanged(MultiPlane::ImagePlaneDesc* dstPlaneOut);
 
+    unsigned int _majorVersion;
+
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
-    Clip *_srcClipA;
-    Clip *_srcClipB;
+    Clip *_srcClipDefault;
+    Clip *_srcClipOther;
 
     // The output plane selected by the user
     ChoiceParam *_outputLayer;
@@ -687,7 +692,7 @@ ShufflePlugin::getClipComponents(const ClipComponentsArguments& args,
 {
     assert(gIsMultiPlanarV2 || gIsMultiPlanarV1);
     OfxStatus stat = MultiPlaneEffect::getClipComponents(args, clipComponents);
-    clipComponents.setPassThroughClip(_srcClipA, args.time, args.view);
+    clipComponents.setPassThroughClip(_srcClipDefault, args.time, args.view);
     return stat;
 }
 
@@ -710,8 +715,8 @@ bool
 ShufflePlugin::isIdentityInternal(double time,
                                   Clip*& identityClip)
 {
-    PixelComponentEnum srcAComponents = _srcClipA ? _srcClipA->getPixelComponents() : ePixelComponentNone;
-    PixelComponentEnum srcBComponents = _srcClipB ? _srcClipB->getPixelComponents() : ePixelComponentNone;
+    PixelComponentEnum srcDefaultComponents = _srcClipDefault ? _srcClipDefault->getPixelComponents() : ePixelComponentNone;
+    PixelComponentEnum srcOtherComponents = _srcClipOther ? _srcClipOther->getPixelComponents() : ePixelComponentNone;
     PixelComponentEnum dstComponents = _dstClip ? _dstClip->getPixelComponents() : ePixelComponentNone;
 
     if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
@@ -720,13 +725,13 @@ ShufflePlugin::isIdentityInternal(double time,
         InputChannelEnum b = InputChannelEnum( _channelParam[2]->getValueAtTime(time) );
         InputChannelEnum a = InputChannelEnum( _channelParam[3]->getValueAtTime(time) );
 
-        if ( (r == eInputChannelAR) && (g == eInputChannelAG) && (b == eInputChannelAB) && (a == eInputChannelAA) && _srcClipA && (srcAComponents == dstComponents) ) {
-            identityClip = _srcClipA;
+        if ( (r == eInputChannelAR) && (g == eInputChannelAG) && (b == eInputChannelAB) && (a == eInputChannelAA) && _srcClipDefault && (srcDefaultComponents == dstComponents) ) {
+            identityClip = _srcClipDefault;
 
             return true;
         }
-        if ( (r == eInputChannelBR) && (g == eInputChannelBG) && (b == eInputChannelBB) && (a == eInputChannelBA) && _srcClipB && (srcBComponents == dstComponents) ) {
-            identityClip = _srcClipB;
+        if ( (r == eInputChannelBR) && (g == eInputChannelBG) && (b == eInputChannelBB) && (a == eInputChannelBA) && _srcClipOther && (srcOtherComponents == dstComponents) ) {
+            identityClip = _srcClipOther;
 
             return true;
         }
@@ -810,10 +815,10 @@ ShufflePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
         return true;
     }
-    if ( _srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected() ) {
-        OfxRectD rodA = _srcClipA->getRegionOfDefinition(args.time);
-        OfxRectD rodB = _srcClipB->getRegionOfDefinition(args.time);
-        Coords::rectBoundingBox(rodA, rodB, &rod);
+    if ( _srcClipDefault && _srcClipDefault->isConnected() && _srcClipOther && _srcClipOther->isConnected() ) {
+        OfxRectD rodDefault = _srcClipDefault->getRegionOfDefinition(args.time);
+        OfxRectD rodOther = _srcClipOther->getRegionOfDefinition(args.time);
+        Coords::rectBoundingBox(rodDefault, rodOther, &rod);
 
         return true;
     }
@@ -846,37 +851,37 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     InputChannelEnum r, g, b, a;
     // compute the components mapping tables
     std::vector<InputChannelEnum> channelMap;
-    auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
-                                     _srcClipA->fetchImage(args.time) : 0 );
-    auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
-                                     _srcClipB->fetchImage(args.time) : 0 );
+    auto_ptr<const Image> srcDefault( ( _srcClipDefault && _srcClipDefault->isConnected() ) ?
+                                     _srcClipDefault->fetchImage(args.time) : 0 );
+    auto_ptr<const Image> srcOther( ( _srcClipOther && _srcClipOther->isConnected() ) ?
+                                     _srcClipOther->fetchImage(args.time) : 0 );
     BitDepthEnum srcBitDepth = eBitDepthNone;
     PixelComponentEnum srcComponents = ePixelComponentNone;
-    if ( srcA.get() ) {
-        if ( (srcA->getRenderScale().x != args.renderScale.x) ||
-             ( srcA->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
+    if ( srcDefault.get() ) {
+        if ( (srcDefault->getRenderScale().x != args.renderScale.x) ||
+             ( srcDefault->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcDefault->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcDefault->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             throwSuiteStatusException(kOfxStatFailed);
         }
-        srcBitDepth      = srcA->getPixelDepth();
-        srcComponents = srcA->getPixelComponents();
-        assert(_srcClipA->getPixelComponents() == srcComponents);
+        srcBitDepth      = srcDefault->getPixelDepth();
+        srcComponents = srcDefault->getPixelComponents();
+        assert(_srcClipDefault->getPixelComponents() == srcComponents);
     }
 
-    if ( srcB.get() ) {
-        if ( (srcB->getRenderScale().x != args.renderScale.x) ||
-             ( srcB->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcB->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcB->getField() != args.fieldToRender) ) ) {
+    if ( srcOther.get() ) {
+        if ( (srcOther->getRenderScale().x != args.renderScale.x) ||
+             ( srcOther->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcOther->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcOther->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             throwSuiteStatusException(kOfxStatFailed);
         }
-        BitDepthEnum srcBBitDepth      = srcB->getPixelDepth();
-        PixelComponentEnum srcBComponents = srcB->getPixelComponents();
-        assert(_srcClipB->getPixelComponents() == srcBComponents);
+        BitDepthEnum srcOtherBitDepth      = srcOther->getPixelDepth();
+        PixelComponentEnum srcOtherComponents = srcOther->getPixelComponents();
+        assert(_srcClipOther->getPixelComponents() == srcOtherComponents);
         // both input must have the same bit depth and components
-        if ( ( (srcBitDepth != eBitDepthNone) && (srcBitDepth != srcBBitDepth) ) ||
-             ( ( srcComponents != ePixelComponentNone) && ( srcComponents != srcBComponents) ) ) {
+        if ( ( (srcBitDepth != eBitDepthNone) && (srcBitDepth != srcOtherBitDepth) ) ||
+             ( ( srcComponents != ePixelComponentNone) && ( srcComponents != srcOtherComponents) ) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -916,7 +921,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         channelMap.resize(0);
         break;
     }
-    processor.setSrcImg( srcA.get(), srcB.get() );
+    processor.setSrcImg( srcDefault.get(), srcOther.get() );
 
     PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
     assert(dstComponents == outputComponents);
@@ -1123,8 +1128,8 @@ ShufflePlugin::renderInternal(const RenderArguments &args,
 void
 ShufflePlugin::render(const RenderArguments &args)
 {
-    assert (_srcClipA && _srcClipB && _dstClip);
-    if (!_srcClipA || !_srcClipB || !_dstClip) {
+    assert (_srcClipDefault && _srcClipOther && _dstClip);
+    if (!_srcClipDefault || !_srcClipOther || !_dstClip) {
         throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
@@ -1168,10 +1173,10 @@ ShufflePlugin::render(const RenderArguments &args)
 
 
 
-    assert( kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || _srcClipDefault->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || _srcClipDefault->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || _srcClipOther->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || _srcClipOther->getPixelDepth()       == _dstClip->getPixelDepth() );
     // get the components of _dstClip
 
     if (!gIsMultiPlanarV2) {
@@ -1191,10 +1196,10 @@ ShufflePlugin::render(const RenderArguments &args)
         }
     }
 
-    BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
+    BitDepthEnum srcBitDepth = _srcClipDefault->getPixelDepth();
 
-    if ( _srcClipA->isConnected() && _srcClipB->isConnected() ) {
-        BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
+    if ( _srcClipDefault->isConnected() && _srcClipOther->isConnected() ) {
+        BitDepthEnum srcBBitDepth = _srcClipOther->getPixelDepth();
         // both input must have the same bit depth
         if (srcBitDepth != srcBBitDepth) {
             setPersistentMessage(Message::eMessageError, "", "Shuffle: both inputs must have the same bit depth");
@@ -1334,8 +1339,8 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     onMetadataChanged(&dstPlane);
 
     PixelComponentEnum dstPixelComps;
-    PixelComponentEnum srcAComps = _srcClipA->getUnmappedPixelComponents();
-    PixelComponentEnum srcBComps = _srcClipB->getUnmappedPixelComponents();
+    PixelComponentEnum srcDefaultComps = _srcClipDefault->getUnmappedPixelComponents();
+    PixelComponentEnum srcOtherComps = _srcClipOther->getUnmappedPixelComponents();
     if (dstPlane.isColorPlane()) {
         // If the output plane is the color plane, set the pixel components to one of the OpenFX defaults selected by the user
         dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
@@ -1343,11 +1348,11 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // A custom plane is selected, set the color plane number of components to the number of components of the custom plane
         //MultiPlane::ImagePlaneDesc colorPlaneMapped = MultiPlane::ImagePlaneDesc::mapNCompsToColorPlane(dstPlane.getNumComponents());
         //dstPixelComps = mapStrToPixelComponentEnum(MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(colorPlaneMapped));
-        dstPixelComps = srcAComps;
+        dstPixelComps = srcDefaultComps;
     }
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
-    clipPreferences.setClipComponents(*_srcClipA, srcAComps);
-    clipPreferences.setClipComponents(*_srcClipB, srcBComps);
+    clipPreferences.setClipComponents(*_srcClipDefault, srcDefaultComps);
+    clipPreferences.setClipComponents(*_srcClipOther, srcOtherComps);
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         // set the bitDepth of _dstClip
@@ -1541,19 +1546,19 @@ ShufflePlugin::changedParam(const InstanceChangedArgs &args,
        } else*/
     if ( (paramName == kParamClipInfo) && (args.reason == eChangeUserEdit) ) {
         std::string msg;
-        msg += "Input A: ";
-        if (!_srcClipA) {
+        msg += _majorVersion < 3 ? "Input A: " : "Input B: ";
+        if (!_srcClipDefault) {
             msg += "N/A";
         } else {
-            msg += imageFormatString( _srcClipA->getPixelComponents(), _srcClipA->getPixelDepth() );
+            msg += imageFormatString( _srcClipDefault->getPixelComponents(), _srcClipDefault->getPixelDepth() );
         }
         msg += "\n";
         if (getContext() == eContextGeneral) {
-            msg += "Input B: ";
-            if (!_srcClipB) {
+            msg += _majorVersion < 3 ? "Input B: " : "Input A: ";
+            if (!_srcClipOther) {
                 msg += "N/A";
             } else {
-                msg += imageFormatString( _srcClipB->getPixelComponents(), _srcClipB->getPixelDepth() );
+                msg += imageFormatString( _srcClipOther->getPixelComponents(), _srcClipOther->getPixelDepth() );
             }
             msg += "\n";
         }
@@ -1584,11 +1589,11 @@ ShufflePlugin::changedClip(const InstanceChangedArgs & args,
     if ( (getContext() == eContextGeneral) &&
          ( ( clipName == kClipA) || ( clipName == kClipB) ) ) {
         // check that A and B are compatible if they're both connected
-        if ( _srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected() ) {
-            BitDepthEnum srcABitDepth = _srcClipA->getPixelDepth();
-            BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
+        if ( _srcClipDefault && _srcClipDefault->isConnected() && _srcClipOther && _srcClipOther->isConnected() ) {
+            BitDepthEnum srcDefaultBitDepth = _srcClipDefault->getPixelDepth();
+            BitDepthEnum srcOtherBitDepth = _srcClipOther->getPixelDepth();
             // both input must have the same bit depth
-            if (srcABitDepth != srcBBitDepth) {
+            if (srcDefaultBitDepth != srcOtherBitDepth) {
                 setPersistentMessage(Message::eMessageError, "", "Shuffle: both inputs must have the same bit depth");
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
@@ -1638,10 +1643,15 @@ ShufflePlugin::updateInputChannelsVisibility(const MultiPlane::ImagePlaneDesc& p
 
 } // ShufflePlugin::updateInputChannelsVisibility
 
-mDeclarePluginFactory(ShufflePluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(ShufflePluginFactory, {ofxsThreadSuiteCheck();}, {});
+
+template<unsigned int majorVersion>
 void
-ShufflePluginFactory::describe(ImageEffectDescriptor &desc)
+ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -1770,9 +1780,10 @@ ShufflePluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 } // ShufflePluginFactory::describe
 
+template<unsigned int majorVersion>
 void
-ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                        ContextEnum context)
+ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                      ContextEnum context)
 {
 #ifdef OFX_EXTENSIONS_NUKE
     if ( gIsMultiPlanarV2 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2) ) {
@@ -1792,7 +1803,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
 #endif
         srcClipB->setTemporalClipAccess(false);
         srcClipB->setSupportsTiles(kSupportsTiles);
-        srcClipB->setOptional(true);
+        srcClipB->setOptional(this->getMajorVersion() < 3 ? true : false);
 
         ClipDescriptor* srcClipA = desc.defineClip(kClipA);
         srcClipA->addSupportedComponent(ePixelComponentRGBA);
@@ -1803,7 +1814,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
 #endif
         srcClipA->setTemporalClipAccess(false);
         srcClipA->setSupportsTiles(kSupportsTiles);
-        srcClipA->setOptional(false);
+        srcClipA->setOptional(this->getMajorVersion() < 3 ? false : true);
     } else {
         ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -1913,25 +1924,25 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
     std::vector<std::string> clipsForChannels(2);
-    clipsForChannels[0] = kClipA;
-    clipsForChannels[1] = kClipB;
+    clipsForChannels[0] = kClipA; //this->getMajorVersion() < 3 ? kClipA : kClipB;
+    clipsForChannels[1] = kClipB; //this->getMajorVersion() < 3 ? kClipB : kClipA;
 
     if (gSupportsRGB || gSupportsRGBA) {
         // outputR
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             ChoiceParamDescriptor* r = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputR, kParamOutputRLabel, kParamOutputRHint);
-            r->setDefault(eInputChannelAR);
+            r->setDefault(this->getMajorVersion() < 3 ? eInputChannelAR : eInputChannelBR);
             ChoiceParamDescriptor* g = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputG, kParamOutputGLabel, kParamOutputGHint);
-            g->setDefault(eInputChannelAG);
+            g->setDefault(this->getMajorVersion() < 3 ? eInputChannelAG : eInputChannelBG);
             ChoiceParamDescriptor* b = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputB, kParamOutputBLabel, kParamOutputBHint);
-            b->setDefault(eInputChannelAB);
+            b->setDefault(this->getMajorVersion() < 3 ? eInputChannelAB : eInputChannelBB);
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
                 param->setLabel(kParamOutputRLabel);
                 param->setHint(kParamOutputRHint);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, true /*onlyColorPlane*/);
-                param->setDefault(eInputChannelAR);
+                param->setDefault(this->getMajorVersion() < 3 ? eInputChannelAR : eInputChannelBR);
                 if (page) {
                     page->addChild(*param);
                 }
@@ -1941,7 +1952,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 param->setLabel(kParamOutputGLabel);
                 param->setHint(kParamOutputGHint);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, true /*onlyColorPlane*/);
-                param->setDefault(eInputChannelAG);
+                param->setDefault(this->getMajorVersion() < 3 ? eInputChannelAG : eInputChannelBG);
                 if (page) {
                     page->addChild(*param);
                 }
@@ -1951,7 +1962,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 param->setLabel(kParamOutputBLabel);
                 param->setHint(kParamOutputBHint);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, true /*onlyColorPlane*/);
-                param->setDefault(eInputChannelAB);
+                param->setDefault(this->getMajorVersion() < 3 ? eInputChannelAB : eInputChannelBB);
                 if (page) {
                     page->addChild(*param);
                 }
@@ -1962,14 +1973,14 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     if (gSupportsRGBA || gSupportsAlpha) {
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             ChoiceParamDescriptor* a = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputA, kParamOutputALabel, kParamOutputAHint);
-            a->setDefault(eInputChannelAA);
+            a->setDefault(this->getMajorVersion() < 3 ? eInputChannelAA : eInputChannelBA);
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputA);
                 param->setLabel(kParamOutputALabel);
                 param->setHint(kParamOutputAHint);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, true /*onlyColorPlane*/);
-                param->setDefault(eInputChannelAA);
+                param->setDefault(this->getMajorVersion() < 3 ? eInputChannelAA : eInputChannelBA);
                 if (page) {
                     page->addChild(*param);
                 }
@@ -2001,14 +2012,18 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // ShufflePluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-ShufflePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                     ContextEnum context)
+ShufflePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                   ContextEnum context)
 {
-    return new ShufflePlugin(handle, context);
+    return new ShufflePlugin(handle, context, this->getMajorVersion());
 }
 
-static ShufflePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ShufflePluginFactory<2> p2(kPluginIdentifier, 0);
+mRegisterPluginFactoryInstance(p2)
+
+static ShufflePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
