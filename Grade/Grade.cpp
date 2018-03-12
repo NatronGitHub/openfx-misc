@@ -139,6 +139,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamGammaLabel "Gamma"
 #define kParamGammaHint "Final gamma correction. Negative values are not affected by gamma."
 
+#define kParamReverse "reverse"
+#define kParamReverseLabel "Reverse"
+#define kParamReverseHint "Apply the inverse correction."
+
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
 #define kParamClampBlackHint "All colors below 0 on output are set to 0."
@@ -394,8 +398,9 @@ public:
         , _processG(false)
         , _processB(false)
         , _processA(false)
+        , _reverse(false)
         , _clampBlack(true)
-        , _clampWhite(true)
+        , _clampWhite(false)
     {
     }
 
@@ -413,6 +418,7 @@ public:
                    const RGBAValues& multiply,
                    const RGBAValues& offset,
                    const RGBAValues& gamma,
+                   bool reverse,
                    bool clampBlack,
                    bool clampWhite,
                    bool premult,
@@ -430,6 +436,7 @@ public:
         _multiply = multiply;
         _offset = offset;
         _gamma = gamma;
+        _reverse = reverse;
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
         _premult = premult;
@@ -476,6 +483,29 @@ public:
         }
     }
 
+    void invgrade(double* v,
+                  double wp,
+                  double bp,
+                  double white,
+                  double black,
+                  double mutiply,
+                  double offset,
+                  double gamma)
+    {
+        if (gamma != 1. && *v > 0) {
+            *v = std::pow(*v, gamma);
+        }
+
+        double d = wp - bp;
+        double A = d != 0 ? mutiply * (white - black) / d : 0;
+        double B = offset + black - A * bp;
+
+        *v = *v - B;
+        if (A != 0) {
+            *v /= A;
+        }
+     }
+
     template<bool processR, bool processG, bool processB, bool processA>
     void grade(double *r,
                double *g,
@@ -494,6 +524,34 @@ public:
         if (processA) {
             grade(a, _whitePoint.a, _blackPoint.a, _white.a, _black.a, _multiply.a, _offset.a, _gamma.a);
         }
+    }
+
+    template<bool processR, bool processG, bool processB, bool processA>
+    void invgrade(double *r,
+                  double *g,
+                  double *b,
+                  double *a)
+    {
+        if (processR) {
+            invgrade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r);
+        }
+        if (processG) {
+            invgrade(g, _whitePoint.g, _blackPoint.g, _white.g, _black.g, _multiply.g, _offset.g, _gamma.g);
+        }
+        if (processB) {
+            invgrade(b, _whitePoint.b, _blackPoint.b, _white.b, _black.b, _multiply.b, _offset.b, _gamma.b);
+        }
+        if (processA) {
+            invgrade(a, _whitePoint.a, _blackPoint.a, _white.a, _black.a, _multiply.a, _offset.a, _gamma.a);
+        }
+    }
+
+    template<bool processR, bool processG, bool processB, bool processA>
+    void clamp(double *r,
+               double *g,
+               double *b,
+               double *a)
+    {
         if (_clampBlack) {
             if (processR) {
                 *r = std::max(0., *r);
@@ -524,6 +582,8 @@ public:
         }
     }
 
+    bool reverse() const { return _reverse; }
+
 private:
     RGBAValues _blackPoint;
     RGBAValues _whitePoint;
@@ -532,6 +592,7 @@ private:
     RGBAValues _multiply;
     RGBAValues _offset;
     RGBAValues _gamma;
+    bool _reverse;
     bool _clampBlack;
     bool _clampWhite;
 };
@@ -629,6 +690,35 @@ private:
         assert(_dstImg);
         float unpPix[4];
         float tmpPix[4];
+        if ( reverse() ) {
+            for (int y = procWindow.y1; y < procWindow.y2; y++) {
+                if ( _effect.abort() ) {
+                    break;
+                }
+
+                PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+                for (int x = procWindow.x1; x < procWindow.x2; x++) {
+                    const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                    ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                    double t_r = unpPix[0];
+                    double t_g = unpPix[1];
+                    double t_b = unpPix[2];
+                    double t_a = unpPix[3];
+                    invgrade<processR, processG, processB, processA>(&t_r, &t_g, &t_b, &t_a);
+                    clamp<processR, processG, processB, processA>(&t_r, &t_g, &t_b, &t_a);
+                    tmpPix[0] = (float)t_r;
+                    tmpPix[1] = (float)t_g;
+                    tmpPix[2] = (float)t_b;
+                    tmpPix[3] = (float)t_a;
+                    ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+                    // increment the dst pixel
+                    dstPix += nComponents;
+                }
+            }
+
+            return;
+        }
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -644,6 +734,7 @@ private:
                 double t_b = unpPix[2];
                 double t_a = unpPix[3];
                 grade<processR, processG, processB, processA>(&t_r, &t_g, &t_b, &t_a);
+                clamp<processR, processG, processB, processA>(&t_r, &t_g, &t_b, &t_a);
                 tmpPix[0] = (float)t_r;
                 tmpPix[1] = (float)t_g;
                 tmpPix[2] = (float)t_b;
@@ -680,6 +771,7 @@ public:
         , _multiply(NULL)
         , _offset(NULL)
         , _gamma(NULL)
+        , _reverse(NULL)
         , _clampBlack(NULL)
         , _clampWhite(NULL)
         , _premult(NULL)
@@ -705,9 +797,10 @@ public:
         _multiply = fetchRGBAParam(kParamMultiply);
         _offset = fetchRGBAParam(kParamOffset);
         _gamma = fetchRGBAParam(kParamGamma);
+        _reverse = fetchBooleanParam(kParamReverse);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
-        assert(_blackPoint && _whitePoint && _black && _white && _multiply && _offset && _gamma && _clampBlack && _clampWhite);
+        assert(_blackPoint && _whitePoint && _black && _white && _multiply && _offset && _gamma && _reverse && _clampBlack && _clampWhite);
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
@@ -849,6 +942,7 @@ private:
     RGBAParam* _multiply;
     RGBAParam* _offset;
     RGBAParam* _gamma;
+    BooleanParam* _reverse;
     BooleanParam* _clampBlack;
     BooleanParam* _clampWhite;
     BooleanParam* _premult;
@@ -871,12 +965,12 @@ void
 GradePlugin::setupAndProcess(GradeProcessorBase &processor,
                              const RenderArguments &args)
 {
-    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    const double time = args.time;
+    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    const double time = args.time;
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -891,7 +985,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                    _srcClip->fetchImage(args.time) : 0 );
+                                    _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
              ( src->getRenderScale().y != args.renderScale.y) ||
@@ -905,8 +999,8 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
             if ( (mask->getRenderScale().x != args.renderScale.x) ||
@@ -917,7 +1011,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor,
             }
         }
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
@@ -927,22 +1021,23 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor,
     processor.setRenderWindow(args.renderWindow);
 
     RGBAValues blackPoint, whitePoint, black, white, multiply, offset, gamma;
-    _blackPoint->getValueAtTime(args.time, blackPoint.r, blackPoint.g, blackPoint.b, blackPoint.a);
-    _whitePoint->getValueAtTime(args.time, whitePoint.r, whitePoint.g, whitePoint.b, whitePoint.a);
-    _black->getValueAtTime(args.time, black.r, black.g, black.b, black.a);
-    _white->getValueAtTime(args.time, white.r, white.g, white.b, white.a);
-    _multiply->getValueAtTime(args.time, multiply.r, multiply.g, multiply.b, multiply.a);
-    _offset->getValueAtTime(args.time, offset.r, offset.g, offset.b, offset.a);
-    _gamma->getValueAtTime(args.time, gamma.r, gamma.g, gamma.b, gamma.a);
+    _blackPoint->getValueAtTime(time, blackPoint.r, blackPoint.g, blackPoint.b, blackPoint.a);
+    _whitePoint->getValueAtTime(time, whitePoint.r, whitePoint.g, whitePoint.b, whitePoint.a);
+    _black->getValueAtTime(time, black.r, black.g, black.b, black.a);
+    _white->getValueAtTime(time, white.r, white.g, white.b, white.a);
+    _multiply->getValueAtTime(time, multiply.r, multiply.g, multiply.b, multiply.a);
+    _offset->getValueAtTime(time, offset.r, offset.g, offset.b, offset.a);
+    _gamma->getValueAtTime(time, gamma.r, gamma.g, gamma.b, gamma.a);
+    bool reverse = _reverse->getValueAtTime(time);
     bool clampBlack, clampWhite;
-    _clampBlack->getValueAtTime(args.time, clampBlack);
-    _clampWhite->getValueAtTime(args.time, clampWhite);
+    _clampBlack->getValueAtTime(time, clampBlack);
+    _clampWhite->getValueAtTime(time, clampWhite);
     bool premult;
     int premultChannel;
-    _premult->getValueAtTime(args.time, premult);
-    _premultChannel->getValueAtTime(args.time, premultChannel);
+    _premult->getValueAtTime(time, premult);
+    _premultChannel->getValueAtTime(time, premultChannel);
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
 
     bool processR, processG, processB, processA;
     _processR->getValueAtTime(time, processR);
@@ -951,7 +1046,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor,
     _processA->getValueAtTime(time, processA);
 
     processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma,
-                        clampBlack, clampWhite, premult, premultChannel, mix,
+                        reverse, clampBlack, clampWhite, premult, premultChannel, mix,
                         processR, processG, processB, processA);
     processor.process();
 } // GradePlugin::setupAndProcess
@@ -1277,11 +1372,24 @@ GradePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
     {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamReverse);
+        param->setLabel(kParamReverseLabel);
+        param->setHint(kParamReverseHint);
+        param->setDefault(false);
+        param->setAnimates(true);
+        param->setLayoutHint(eLayoutHintNoNewLine, 0);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
+        param->setLayoutHint(eLayoutHintNoNewLine, 0);
+        param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {
             page->addChild(*param);
         }
