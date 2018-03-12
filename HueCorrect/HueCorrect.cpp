@@ -1007,6 +1007,7 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamClampBlackHint);
         param->setDefault(false);
         param->setAnimates(true);
+        param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {
             page->addChild(*param);
         }

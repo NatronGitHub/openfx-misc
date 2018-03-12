@@ -1529,6 +1529,7 @@ ColorCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
+        param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {
             page->addChild(*param);
         }
