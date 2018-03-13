@@ -715,8 +715,10 @@ bool
 ShufflePlugin::isIdentityInternal(double time,
                                   Clip*& identityClip)
 {
-    PixelComponentEnum srcDefaultComponents = _srcClipDefault ? _srcClipDefault->getPixelComponents() : ePixelComponentNone;
-    PixelComponentEnum srcOtherComponents = _srcClipOther ? _srcClipOther->getPixelComponents() : ePixelComponentNone;
+    Clip * srcClipA = _majorVersion < 3 ? _srcClipDefault : _srcClipOther;
+    Clip * srcClipB = _majorVersion < 3 ? _srcClipOther : _srcClipDefault;
+    PixelComponentEnum srcAComponents = srcClipA ? srcClipA->getPixelComponents() : ePixelComponentNone;
+    PixelComponentEnum srcBComponents = srcClipB ? srcClipB->getPixelComponents() : ePixelComponentNone;
     PixelComponentEnum dstComponents = _dstClip ? _dstClip->getPixelComponents() : ePixelComponentNone;
 
     if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
@@ -725,12 +727,12 @@ ShufflePlugin::isIdentityInternal(double time,
         InputChannelEnum b = InputChannelEnum( _channelParam[2]->getValueAtTime(time) );
         InputChannelEnum a = InputChannelEnum( _channelParam[3]->getValueAtTime(time) );
 
-        if ( (r == eInputChannelAR) && (g == eInputChannelAG) && (b == eInputChannelAB) && (a == eInputChannelAA) && _srcClipDefault && (srcDefaultComponents == dstComponents) ) {
+        if ( (r == eInputChannelAR) && (g == eInputChannelAG) && (b == eInputChannelAB) && (a == eInputChannelAA) && srcClipA && (srcAComponents == dstComponents) ) {
             identityClip = _srcClipDefault;
 
             return true;
         }
-        if ( (r == eInputChannelBR) && (g == eInputChannelBG) && (b == eInputChannelBB) && (a == eInputChannelBA) && _srcClipOther && (srcOtherComponents == dstComponents) ) {
+        if ( (r == eInputChannelBR) && (g == eInputChannelBG) && (b == eInputChannelBB) && (a == eInputChannelBA) && srcClipB && (srcBComponents == dstComponents) ) {
             identityClip = _srcClipOther;
 
             return true;
@@ -815,15 +817,62 @@ ShufflePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
         return true;
     }
-    if ( _srcClipDefault && _srcClipDefault->isConnected() && _srcClipOther && _srcClipOther->isConnected() ) {
-        OfxRectD rodDefault = _srcClipDefault->getRegionOfDefinition(args.time);
-        OfxRectD rodOther = _srcClipOther->getRegionOfDefinition(args.time);
-        Coords::rectBoundingBox(rodDefault, rodOther, &rod);
+
+    // compute the union of the RoDs (may be empty if clips are not connected)
+    Clip * srcClipA = _majorVersion < 3 ? _srcClipDefault : _srcClipOther;
+    Clip * srcClipB = _majorVersion < 3 ? _srcClipOther : _srcClipDefault;
+    bool srcClipAConnected = srcClipA && srcClipA->isConnected();
+    bool srcClipBConnected = srcClipB && srcClipB->isConnected();
+    bool useA = false;
+    bool useB = false;
+
+    if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
+        for (int i = 0; i < 4; ++i) {
+            InputChannelEnum c = InputChannelEnum( _channelParam[i]->getValueAtTime(time) );
+
+            if ( (c == eInputChannelAR) || (c == eInputChannelAG) || (c == eInputChannelAB) || (c == eInputChannelAA) ) {
+                useA = true;
+            }
+            if ( (c == eInputChannelBR) || (c == eInputChannelBG) || (c == eInputChannelBB) || (c == eInputChannelBA) ) {
+                useB = true;
+            }
+        }
+    } else {
+        for (int i = 0; i < 4; ++i) {
+            Clip* clip;
+            MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_channelParam[i]->getName(), &clip, NULL, NULL);
+            if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane) {
+                continue;
+            }
+            if (clip == srcClipA) {
+                useA = true;
+            }
+            if (clip == srcClipB) {
+                useB = true;
+            }
+        }
+    }
+
+    if ( (useA && srcClipAConnected) && (useB && srcClipBConnected) ) {
+        OfxRectD rodA = srcClipA->getRegionOfDefinition(args.time);
+        OfxRectD rodB = srcClipB->getRegionOfDefinition(args.time);
+        Coords::rectBoundingBox(rodA, rodB, &rod);
+
+        return true;
+    } else if (useA && srcClipAConnected) {
+        rod = srcClipA->getRegionOfDefinition(args.time);
+
+        return true;
+    } else if (useB && srcClipBConnected) {
+        rod = srcClipB->getRegionOfDefinition(args.time);
 
         return true;
     }
 
-    return false;
+    // empty RoD
+    rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0;
+
+    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1367,6 +1416,27 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         premult = (PreMultiplicationEnum)_outputPremult->getValue();
     }
     clipPreferences.setOutputPremultiplication(premult);
+
+    // the default input has priority over the other input for the format
+    {
+        OfxRectI format;
+        double par;
+        bool setFormat = false;
+        if ( _srcClipDefault && _srcClipDefault->isConnected() ) {
+            _srcClipDefault->getFormat(format);
+            par = _srcClipDefault->getPixelAspectRatio();
+            setFormat = true;
+        } else if ( _srcClipOther && _srcClipOther->isConnected() ) {
+            _srcClipOther->getFormat(format);
+            par = _srcClipOther->getPixelAspectRatio();
+            setFormat = true;
+        }
+        if (setFormat) {
+            clipPreferences.setOutputFormat(format);
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
+    }
+
 } // ShufflePlugin::getClipPreferences
 
 static std::string
@@ -1803,7 +1873,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
 #endif
         srcClipB->setTemporalClipAccess(false);
         srcClipB->setSupportsTiles(kSupportsTiles);
-        srcClipB->setOptional(this->getMajorVersion() < 3 ? true : false);
+        srcClipB->setOptional(this->getMajorVersion() < 3 ? true : true);
 
         ClipDescriptor* srcClipA = desc.defineClip(kClipA);
         srcClipA->addSupportedComponent(ePixelComponentRGBA);
