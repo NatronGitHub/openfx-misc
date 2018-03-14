@@ -58,14 +58,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputComponents "outputComponents"
 #define kParamOutputComponentsLabel "Output Components"
 #define kParamOutputComponentsHint "Select what types of components the plug-in should output, this has an effect only when the Output Layer is set to the Color layer." \
-    " This controls what should be the components for the Color Layer: Alpha, RGB or RGBA"
+    " This controls what should be the components for the Color Layer: Alpha, RGB or RGBA."
 #define kParamOutputComponentsOptionRGBA "RGBA", "Output RGBA components.", "rgba"
 #define kParamOutputComponentsOptionRGB "RGB", "Output RGB components.", "rgb"
 #define kParamOutputComponentsOptionAlpha "Alpha", "Output Alpha component.", "alpha"
 
 #define kParamOutputChannels "outputLayer"
-#define kParamOutputChannelsLabel "Output Plane"
-#define kParamOutputChannelsHint "The plane that will be written to in output"
+#define kParamOutputChannelsLabel "Output Layer"
+#define kParamOutputChannelsHint "The layer where the result of the Shuffle operation is output."
 
 
 #define kParamOutputBitDepth "outputBitDepth"
@@ -87,26 +87,26 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputRChoice kParamOutputR "Choice"
 #define kParamOutputRRefreshButton kParamOutputR "RefreshButton"
 #define kParamOutputRLabel "R"
-#define kParamOutputRHint "Input channel for the output red channel"
+#define kParamOutputRHint "Input channel for the output red channel."
 
 #define kParamOutputG "outputG"
 #define kParamOutputGChoice kParamOutputG "Choice"
 #define kParamOutputGRefreshButton kParamOutputG "RefreshButton"
 #define kParamOutputGLabel "G"
-#define kParamOutputGHint "Input channel for the output green channel"
+#define kParamOutputGHint "Input channel for the output green channel."
 
 #define kParamOutputB "outputB"
 #define kParamOutputBChoice kParamOutputB "Choice"
 #define kParamOutputBRefreshButton kParamOutputB "RefreshButton"
 #define kParamOutputBLabel "B"
-#define kParamOutputBHint "Input channel for the output blue channel"
+#define kParamOutputBHint "Input channel for the output blue channel."
 
 
 #define kParamOutputA "outputA"
 #define kParamOutputAChoice kParamOutputA "Choice"
 #define kParamOutputARefreshButton kParamOutputA "RefreshButton"
 #define kParamOutputALabel "A"
-#define kParamOutputAHint "Input channel for the output alpha channel"
+#define kParamOutputAHint "Input channel for the output alpha channel."
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define kParamSetGBAFromR "setGBAFromR"
@@ -115,7 +115,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamClipInfo "clipInfo"
 #define kParamClipInfoLabel "Clip Info..."
-#define kParamClipInfoHint "Display information about the inputs"
+#define kParamClipInfoHint "Display information about the inputs."
 
 // TODO: sRGB/Rec.709 conversions for byte/short types
 
