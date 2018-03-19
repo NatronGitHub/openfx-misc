@@ -134,6 +134,11 @@ CXXFLAGS += \
 -ISharpenShock \
 -ISmooth \
 
+# openmp
+ifeq ($(OPENMP),1)
+  CXXFLAGS += -Dcimg_use_openmp -fopenmp
+  LDFLAGS += -fopenmp
+endif
 
 # For CImg.h versions,
 # see https://github.com/dtschump/CImg/commits/master/CImg.h
@@ -170,7 +175,8 @@ CXXFLAGS += \
 # commit 345169f58dc550ff60310cdca98a2f8dc36307f1 is CImg 2.1.3
 # commit a233fe412d078837430f283533908d836d959dc8 is CImg 2.1.5
 # commit a1ec46d32e6206f693d02b50353cd08695997681 is CImg 2.1.8
-CIMGVERSION=a1ec46d32e6206f693d02b50353cd08695997681
+# commit 88fab6de7bfc141a1f577e3cf1b17b9fb1e4f438 is CImg 2.2.1
+CIMGVERSION=88fab6de7bfc141a1f577e3cf1b17b9fb1e4f438
 
 CImg.h: Inpaint/inpaint.h
 	curl -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
