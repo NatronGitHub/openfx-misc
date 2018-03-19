@@ -118,7 +118,9 @@
 #define cimg_display 0
 #define cimg_namespace_suffix openfx_misc
 #ifdef _OPENMP
-#define cimg_use_openmp
+#  ifndef cimg_use_openmp
+#    define cimg_use_openmp
+#  endif
 #endif
 #define cimg_verbosity 0
 
