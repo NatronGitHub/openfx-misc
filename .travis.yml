@@ -79,6 +79,7 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
+    - ca-certificates
     - gcc-7
     - g++-7
   coverity_scan:
