@@ -137,7 +137,7 @@ CXXFLAGS += \
 # openmp
 ifeq ($(OPENMP),1)
   CXXFLAGS += -Dcimg_use_openmp -fopenmp
-  LDFLAGS += -fopenmp
+  LINKFLAGS += -fopenmp
 endif
 
 # For CImg.h versions,
