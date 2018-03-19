@@ -915,7 +915,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         }
         srcBitDepth      = srcDefault->getPixelDepth();
         srcComponents = srcDefault->getPixelComponents();
-        assert(_srcClipDefault->getPixelComponents() == srcComponents);
+        assert(_srcClipDefault && _srcClipDefault->getPixelComponents() == srcComponents);
     }
 
     if ( srcOther.get() ) {
@@ -927,7 +927,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         }
         BitDepthEnum srcOtherBitDepth      = srcOther->getPixelDepth();
         PixelComponentEnum srcOtherComponents = srcOther->getPixelComponents();
-        assert(_srcClipOther->getPixelComponents() == srcOtherComponents);
+        assert(_srcClipOther && _srcClipOther->getPixelComponents() == srcOtherComponents);
         // both input must have the same bit depth and components
         if ( ( (srcBitDepth != eBitDepthNone) && (srcBitDepth != srcOtherBitDepth) ) ||
              ( ( srcComponents != ePixelComponentNone) && ( srcComponents != srcOtherComponents) ) ) {
@@ -1399,9 +1399,15 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         //dstPixelComps = mapStrToPixelComponentEnum(MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(colorPlaneMapped));
         dstPixelComps = srcDefaultComps;
     }
-    clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
-    clipPreferences.setClipComponents(*_srcClipDefault, srcDefaultComps);
-    clipPreferences.setClipComponents(*_srcClipOther, srcOtherComps);
+    if (_dstClip) {
+        clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
+    }
+    if (_srcClipDefault) {
+        clipPreferences.setClipComponents(*_srcClipDefault, srcDefaultComps);
+    }
+    if (_srcClipOther) {
+        clipPreferences.setClipComponents(*_srcClipOther, srcOtherComps);
+    }
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         // set the bitDepth of _dstClip
@@ -1873,7 +1879,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
 #endif
         srcClipB->setTemporalClipAccess(false);
         srcClipB->setSupportsTiles(kSupportsTiles);
-        srcClipB->setOptional(this->getMajorVersion() < 3 ? true : true);
+        srcClipB->setOptional(/*this->getMajorVersion() < 3 ? true : */true);
 
         ClipDescriptor* srcClipA = desc.defineClip(kClipA);
         srcClipA->addSupportedComponent(ePixelComponentRGBA);

@@ -137,7 +137,7 @@ public:
         : _effect(effect)
         , _srcClip(srcClip)
     {
-        if (!_srcClip->isConnected()) {
+        if (_srcClip && !_srcClip->isConnected()) {
             _srcClip = NULL;
         }
     }
@@ -762,7 +762,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
                 }
             }
         } else {
-            retimeMap.reset( _retimeMapClip->fetchImage(time) );
+            retimeMap.reset(_retimeMapClip ? _retimeMapClip->fetchImage(time) : NULL);
             assert(retimeMap->getPixelComponents() == ePixelComponentAlpha);
             processor.setRetimeMap( retimeMap.get() );
 

@@ -285,8 +285,11 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     OfxRectD srcFormatCanonical;
     {
         OfxRectI srcFormat;
-        _srcClip->getFormat(srcFormat);
-        double srcPar = _srcClip->getPixelAspectRatio();
+        double srcPar = 1.;
+        if (_srcClip) {
+            _srcClip->getFormat(srcFormat);
+            srcPar = _srcClip->getPixelAspectRatio();
+        }
         if ( OFX::Coords::rectIsEmpty(srcFormat) ) {
             // no format is available, use the RoD instead
             srcFormatCanonical = _srcClip->getRegionOfDefinition(time);
@@ -297,7 +300,9 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     }
 
     std::vector<std::string> planes;
-    _srcClip->getPlanesPresent(&planes);
+    if (_srcClip) {
+        _srcClip->getPlanesPresent(&planes);
+    }
 
     // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
     int rows, columns;

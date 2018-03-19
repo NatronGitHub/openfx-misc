@@ -193,7 +193,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcAPixelData = srcA->getPixelData();
         srcABounds = srcA->getBounds();
         // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        if (_supportsTiles) {
+        if (_supportsTiles && _srcAClip) {
             OFX::Coords::toPixelEnclosing(_srcAClip->getRegionOfDefinition(time), args.renderScale, _srcAClip->getPixelAspectRatio(), &srcARoD);
         } else {
             // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
@@ -241,7 +241,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcBPixelData = srcB->getPixelData();
         srcBBounds = srcB->getBounds();
         // = srcB->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        if (_supportsTiles) {
+        if (_supportsTiles && _srcBClip) {
             OFX::Coords::toPixelEnclosing(_srcBClip->getRegionOfDefinition(time), args.renderScale, _srcBClip->getPixelAspectRatio(), &srcBRoD);
         } else {
             // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.

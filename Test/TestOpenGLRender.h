@@ -1250,7 +1250,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     GLenum srcTarget = GL_TEXTURE_2D;
     GLuint srcIndex = 0;
 # ifdef USE_OPENGL
-    if (args.openGLEnabled) {
+    if (args.openGLEnabled && srcTexture) {
         // (OpenGL direct rendering only)
         srcIndex = (GLuint)srcTexture->getIndex();
         srcTarget = (GLenum)srcTexture->getTarget();

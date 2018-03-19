@@ -227,7 +227,7 @@ public:
         for (int i = 0; i < dim; ++i) {
             for (int j = 0; j < dim; ++j) {
                 bool isIdentityCoeff = false;
-                if (i == (dim-1)/2 && j == (dim-1/2) ) {
+                if (i == (dim-1)/2 && j == (dim-1)/2 ) {
                     if ( (params.coeff[i*dim + j] == 1.) ||
                         (params.coeff[i*dim + j] != 0. && params.normalize) ) {
                         isIdentityCoeff = true;
@@ -327,8 +327,10 @@ CImgMatrixPluginFactory<dim>::describeInContext(ImageEffectDescriptor& desc,
     
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kParamMatrix);
-        group->setLabelAndHint(kParamMatrixLabel);
-        group->setOpen(true);
+        if (group) {
+            group->setLabelAndHint(kParamMatrixLabel);
+            group->setOpen(true);
+        }
         for (int i = 0; i < dim; ++i) {
             for (int j = 0; j < dim; ++j) {
                 DoubleParamDescriptor* param = desc.defineDoubleParam(std::string(kParamMatrix) + (char)('1' + i) + (char)('1' + j));

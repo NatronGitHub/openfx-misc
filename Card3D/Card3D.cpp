@@ -1082,13 +1082,15 @@ PosMatParam::define(ImageEffectDescriptor &desc,
 {
     {
         GroupParamDescriptor* subgroup = desc.defineGroupParam(prefix + kParamPosMatFile);
-        subgroup->setLabelAndHint(kParamPosMatFileLabel);
-        subgroup->setOpen(false);
-        if (group) {
-            subgroup->setParent(*group);
-        }
-        if (page) {
-            page->addChild(*subgroup);
+        if (subgroup) {
+            subgroup->setLabelAndHint(kParamPosMatFileLabel);
+            subgroup->setOpen(false);
+            if (group) {
+                subgroup->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*subgroup);
+            }
         }
         {
             ChoiceParamDescriptor* param = desc.defineChoiceParam(prefix + kParamPosMatImportFormat);
@@ -2074,12 +2076,13 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
         {
             GroupParamDescriptor* group = desc.defineGroupParam(kCameraCam);
-            group->setLabel(kCameraCamLabel);
-            group->setOpen(false);
-            if (page) {
-                page->addChild(*group);
+            if (group) {
+                group->setLabel(kCameraCamLabel);
+                group->setOpen(false);
+                if (page) {
+                    page->addChild(*group);
+                }
             }
-
             {
                 BooleanParamDescriptor* param = desc.defineBooleanParam(kParamCamEnable);
                 param->setLabelAndHint(kParamCamEnableLabel);
