@@ -1370,12 +1370,18 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
         return false;
     }
 
-    if (Coords::rectIsInfinite(args.renderWindow)) {
-        return false;
-    }
+    // Even with an infinite renderwindow, we may have an identity, depending on the mask and the A inputs RoD (see below)
+    //if (Coords::rectIsInfinite(args.renderWindow)) {
+    //    return false;
+    //}
     
     // The region of effect is only the set of the intersections between the A inputs and the mask.
     // If at least one of these regions intersects the renderwindow, the effect is not identity.
+
+    //if (maskRoDValid) {
+    //    printf("maskRoD:%d %d %d %d\n", maskRoD.x1, maskRoD.y1, maskRoD.x2, maskRoD.y2);
+    //}
+    //printf("renderWindow:%d %d %d %d\n", args.renderWindow.x1, args.renderWindow.y1, args.renderWindow.x2, args.renderWindow.y2);
 
     for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
         if ( !_srcClipAs[i]->isConnected() ) {
@@ -1390,6 +1396,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
         OfxRectI srcARoDPixel;
         Coords::toPixelEnclosing(srcARoD, args.renderScale, _srcClipAs[i]->getPixelAspectRatio(), &srcARoDPixel);
         bool srcARoDValid = true;
+        //printf("srcARoD[%d]:%d %d %d %d\n", (int)i, srcARoDPixel.x1, srcARoDPixel.y1, srcARoDPixel.x2, srcARoDPixel.y2);
         if (maskRoDValid) {
             // mask the srcARoD with the mask RoD. The result may be empty
             srcARoDValid = Coords::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
