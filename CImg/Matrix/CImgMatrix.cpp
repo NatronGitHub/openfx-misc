@@ -331,7 +331,7 @@ CImgMatrixPluginFactory<dim>::describeInContext(ImageEffectDescriptor& desc,
             group->setLabelAndHint(kParamMatrixLabel);
             group->setOpen(true);
         }
-        for (int i = 0; i < dim; ++i) {
+        for (int i = dim-1; i >=0; --i) {
             for (int j = 0; j < dim; ++j) {
                 DoubleParamDescriptor* param = desc.defineDoubleParam(std::string(kParamMatrix) + (char)('1' + i) + (char)('1' + j));
                 param->setLabelAndHint(kParamMatrixCoeffLabel);
