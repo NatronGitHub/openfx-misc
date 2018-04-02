@@ -254,9 +254,10 @@ public:
             _scaleUniform->setIsSecretAndDisabled(true);
         }
 
-        refreshVisibility();
-        refreshDynamicProps();
+        // finally
+        syncPrivateData();
     }
+
 
 private:
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
@@ -264,6 +265,14 @@ private:
     virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, Matrix3x3* invtransform) const OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        refreshVisibility();
+        refreshDynamicProps();
+    }
+
 
     void refreshVisibility();
 
