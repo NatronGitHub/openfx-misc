@@ -433,9 +433,8 @@ public:
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
-        // update Visibility
-        InstanceChangedArgs args = {eChangeUserEdit, 0., {0., 0.}};
-        changedParam(args, kParamRampType);
+        // finally
+        syncPrivateData();
     }
 
 private:
@@ -454,6 +453,17 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(RampProcessorBase &, const RenderArguments &args);
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        RampTypeEnum type = (RampTypeEnum)_type->getValue(); // does not animate
+        bool noramp = (type == eRampTypeNone);
+        _color0->setIsSecretAndDisabled(noramp);
+        _point0->setIsSecretAndDisabled(noramp);
+        _point1->setIsSecretAndDisabled(noramp);
+        _interactive->setIsSecretAndDisabled(noramp);
+    }
 
 private:
 
@@ -730,12 +740,7 @@ RampPlugin::changedParam(const InstanceChangedArgs &args,
                          const std::string &paramName)
 {
     if ( (paramName == kParamRampType) && (args.reason == eChangeUserEdit) ) {
-        RampTypeEnum type = (RampTypeEnum)_type->getValueAtTime(args.time);
-        bool noramp = (type == eRampTypeNone);
-        _color0->setIsSecretAndDisabled(noramp);
-        _point0->setIsSecretAndDisabled(noramp);
-        _point1->setIsSecretAndDisabled(noramp);
-        _interactive->setIsSecretAndDisabled(noramp);
+        syncPrivateData();
     }
 }
 

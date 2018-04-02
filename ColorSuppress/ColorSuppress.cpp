@@ -470,22 +470,8 @@ public:
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
 
-        // set visibility
-        OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
-        switch (outputMode) {
-        case eOutputModeImage:
-        case eOutputModeAlphaImage: {
-            _preserveLuma->setIsSecretAndDisabled(false);
-            bool hasLuma = _preserveLuma->getValue();
-            _luminanceMath->setIsSecretAndDisabled(!hasLuma);
-            break;
-        }
-        case eOutputModeAlpha: {
-            _preserveLuma->setIsSecretAndDisabled(true);
-            _luminanceMath->setIsSecretAndDisabled(true);
-            break;
-        }
-        }
+        // finally
+        syncPrivateData();
     }
 
 private:
@@ -504,6 +490,27 @@ private:
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        // set visibility
+        OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
+        switch (outputMode) {
+        case eOutputModeImage:
+        case eOutputModeAlphaImage: {
+            _preserveLuma->setIsSecretAndDisabled(false);
+            bool hasLuma = _preserveLuma->getValue();
+            _luminanceMath->setIsSecretAndDisabled(!hasLuma);
+            break;
+        }
+        case eOutputModeAlpha: {
+            _preserveLuma->setIsSecretAndDisabled(true);
+            _luminanceMath->setIsSecretAndDisabled(true);
+            break;
+        }
+        }
+    }
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us

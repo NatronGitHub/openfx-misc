@@ -1212,12 +1212,6 @@ public:
         _minLumaPix = fetchDouble2DParam(kParamMinLumaPix);
         _minLumaPixVal = fetchRGBAParam(kParamMinLumaPixVal);
         assert(_luminanceMath && _maxLumaPix && _maxLumaPixVal && _minLumaPix && _minLumaPixVal);
-        // update visibility
-        bool restrictToRectangle = _restrictToRectangle->getValue();
-        _btmLeft->setIsSecretAndDisabled(!restrictToRectangle);
-        _size->setIsSecretAndDisabled(!restrictToRectangle);
-        bool doUpdate = _autoUpdate->getValue();
-        _interactive->setIsSecretAndDisabled(!restrictToRectangle || !doUpdate);
 
         // honor kParamDefaultsNormalised
         if ( paramExists(kParamDefaultsNormalised) ) {
@@ -1240,6 +1234,9 @@ public:
                 endEditBlock();
             }
         }
+
+        // finally
+        syncPrivateData();
     }
 
 private:
@@ -1252,6 +1249,17 @@ private:
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD & rod) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
+    virtual void syncPrivateData(void) OVERRIDE FINAL
+    {
+        // update visibility
+        bool restrictToRectangle = _restrictToRectangle->getValue();
+        _btmLeft->setIsSecretAndDisabled(!restrictToRectangle);
+        _size->setIsSecretAndDisabled(!restrictToRectangle);
+        bool doUpdate = _autoUpdate->getValue();
+        _interactive->setIsSecretAndDisabled(!restrictToRectangle || !doUpdate);
+    }
 
     /* set up and run a processor */
     void setupAndProcess(ImageStatisticsProcessorBase &processor, const Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results);
