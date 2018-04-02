@@ -244,15 +244,6 @@ public:
                 _boxFixed->setValue(true);
             }
         }
-        // On Natron, hide the uniform parameter if it is false and not animated,
-        // since uniform scaling is easy through Natron's GUI.
-        // The parameter is kept for backward compatibility.
-        // Fixes https://github.com/MrKepzie/Natron/issues/1204
-        if ( getImageEffectHostDescription()->isNatron &&
-             !_scaleUniform->getValue() &&
-             ( _scaleUniform->getNumKeys() == 0) ) {
-            _scaleUniform->setIsSecretAndDisabled(true);
-        }
 
         // finally
         syncPrivateData();
@@ -269,6 +260,15 @@ private:
     /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
     virtual void syncPrivateData(void) OVERRIDE FINAL
     {
+        // On Natron, hide the uniform parameter if it is false and not animated,
+        // since uniform scaling is easy through Natron's GUI.
+        // The parameter is kept for backward compatibility.
+        // Fixes https://github.com/MrKepzie/Natron/issues/1204
+        if ( getImageEffectHostDescription()->isNatron &&
+            !_scaleUniform->getValue() &&
+            ( _scaleUniform->getNumKeys() == 0) ) {
+            _scaleUniform->setIsSecretAndDisabled(true);
+        }
         refreshVisibility();
         refreshDynamicProps();
     }
@@ -278,7 +278,7 @@ private:
 
     void refreshDynamicProps();
 
-    void setBoxValues(double time);
+    bool getBoxValues(double time, int *w, int *h, double *par, bool *boxFixed) const;
 
     void getInputFormat(const double time,
                         double* par,
@@ -390,27 +390,10 @@ ReformatPlugin::getOutputFormat(const double time,
     int type_i;
 
     _type->getValue(type_i);
-    ReformatTypeEnum typeVal = (ReformatTypeEnum)type_i;
     OfxPointI boxSize;
     double boxPAR;
     bool boxFixed;
-    switch (typeVal) {
-    case eReformatTypeToFormat:
-        boxFixed = true;
-        boxSize = _formatBoxSize->getValueAtTime(time);
-        boxPAR = _formatBoxPAR->getValueAtTime(time);
-        break;
-    case eReformatTypeScale:
-        boxFixed = true;
-        boxSize = _boxSize->getValueAtTime(time);
-        boxPAR = _boxPAR->getValueAtTime(time);
-        break;
-    case eReformatTypeToBox:
-        boxFixed = _boxFixed->getValue();
-        boxSize = _boxSize->getValueAtTime(time);
-        boxPAR = _boxPAR->getValueAtTime(time);
-        break;
-    }
+    getBoxValues(time, &boxSize.x, &boxSize.y, &boxPAR, &boxFixed);
 
     ResizeEnum resize = (ResizeEnum)_resize->getValueAtTime(time);
     bool center = _center->getValueAtTime(time);
@@ -610,39 +593,53 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
     return true;
 } // ReformatPlugin::getInverseTransformCanonical
 
-void
-ReformatPlugin::setBoxValues(const double time)
+bool
+ReformatPlugin::getBoxValues(const double time, int *w, int *h, double *par, bool *boxFixed) const
 {
     ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
+    assert(w && h && par && boxFixed);
 
     switch (type) {
     case eReformatTypeToFormat: {
-        //size & par have been set by natron with the Format choice extension
-        if (!gHostIsNatron) {
+        if (gHostIsNatron) {
+            //size & par have been set by natron with the Format choice extension
+            _formatBoxSize->getValue(*w, *h);
+            *par = _formatBoxPAR->getValue();
+        } else {
             EParamFormat format = (EParamFormat)_format->getValue();
             assert(0 <= (int)format && (int)format < eParamFormatCount);
-            int w = 0, h = 0;
-            double par = -1;
-            getFormatResolution(format, &w, &h, &par);
-            assert(par != -1);
-            _formatBoxSize->setValue(w, h);
-            _formatBoxPAR->setValue(par);
+            getFormatResolution(format, w, h, par);
+            assert(*par != -1);
         }
-
-
-        _boxFixed->setValue(true);
+        *boxFixed = true;
         break;
     }
-    case eReformatTypeToBox:
+    case eReformatTypeToBox: {
+        _formatBoxSize->getValue(*w, *h);
+        *par = _formatBoxPAR->getValue();
+        *boxFixed = _boxFixed->getValue();
         // nothing to do, the user sets the box
+        return false;
         break;
+    }
     case eReformatTypeScale: {
         OfxPointD scale = _scale->getValue();
         if ( _scaleUniform->getValue() ) {
             scale.y = scale.x;
         }
-        double srcPar = _srcClip->getPixelAspectRatio();
-        OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+        OfxRectD srcRod;
+        if (_srcClip && _srcClip->isConnected()) {
+            *par = _srcClip->getPixelAspectRatio();
+            srcRod = _srcClip->getRegionOfDefinition(time);
+        } else {
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            srcRod.x1 = off.x;
+            srcRod.x2 = off.x + siz.x;
+            srcRod.y1 = off.y;
+            srcRod.y2 = off.y + siz.y;
+            *par = getProjectPixelAspectRatio();
+        }
         // scale the RoD
         srcRod.x1 *= scale.x;
         srcRod.x2 *= scale.x;
@@ -651,14 +648,13 @@ ReformatPlugin::setBoxValues(const double time)
         // round to the nearest pixel size
         OfxRectI srcRodPixel;
         OfxPointD rs = {1., 1.};
-        Coords::toPixelNearest(srcRod, rs, srcPar, &srcRodPixel);
-        int w = srcRodPixel.x2 - srcRodPixel.x1;
-        int h = srcRodPixel.y2 - srcRodPixel.y1;
-        _boxSize->setValue(w, h);
-        _boxPAR->setValue(srcPar);
-        _boxFixed->setValue(true);
+        Coords::toPixelNearest(srcRod, rs, *par, &srcRodPixel);
+        *w = srcRodPixel.x2 - srcRodPixel.x1;
+        *h = srcRodPixel.y2 - srcRodPixel.y1;
+        *boxFixed = true;
     }
     }
+    return true; // box was set
 } // ReformatPlugin::setBoxValues
 
 void
@@ -672,8 +668,14 @@ ReformatPlugin::changedParam(const InstanceChangedArgs &args,
         refreshVisibility();
     }
     if ( (paramName == kParamType) || (paramName == kParamFormat) || (paramName == kParamScale) || (paramName == kParamScaleUniform) ) {
-        setBoxValues(args.time);
-
+        int w, h;
+        double par;
+        bool boxFixed;
+        if ( getBoxValues(args.time, &w, &h, &par, &boxFixed) ) {
+            _boxSize->setValue(w, h);
+            _boxPAR->setValue(par);
+            _boxFixed->setValue(boxFixed);
+        }
         return;
     }
 
