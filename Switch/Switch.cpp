@@ -352,10 +352,25 @@ SwitchPlugin::getTransform(const TransformArguments &args,
 
 /* Override the clip preferences */
 void
-SwitchPlugin::getClipPreferences(ClipPreferencesSetter & /*clipPreferences*/)
+SwitchPlugin::getClipPreferences(ClipPreferencesSetter & clipPreferences)
 {
     updateRange();
     // note: Switch handles correctly inputs with different components
+
+    // if which param is not animated, set the output format from the selected input, else
+    // use the default.
+    if (_which->getNumKeys() == 0) {
+        int input = _which->getValue();
+        input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
+        if ( _srcClip[input] && _srcClip[input]->isConnected() ) {
+            OfxRectI format;
+            double par;
+            _srcClip[input]->getFormat(format);
+            par = _srcClip[input]->getPixelAspectRatio();
+            clipPreferences.setOutputFormat(format);
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
+    }
 }
 
 void
@@ -494,6 +509,7 @@ SwitchPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDefault(0);
         param->setRange(0, clipSourceCount - 1);
         param->setDisplayRange(0, clipSourceCount - 1);
+        desc.addClipPreferencesSlaveParam(*param); // setting the output format only works if not animated
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
