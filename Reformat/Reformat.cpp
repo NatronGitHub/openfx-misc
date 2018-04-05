@@ -729,6 +729,8 @@ ReformatPlugin::refreshVisibility()
         _scaleUniform->setIsSecretAndDisabled(false);
         break;
     }
+    _formatBoxSize->setIsSecretAndDisabled(true);
+    _formatBoxPAR->setIsSecretAndDisabled(true);
 }
 
 void
