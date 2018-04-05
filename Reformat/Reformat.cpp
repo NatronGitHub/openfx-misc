@@ -615,8 +615,8 @@ ReformatPlugin::getBoxValues(const double time, int *w, int *h, double *par, boo
         break;
     }
     case eReformatTypeToBox: {
-        _formatBoxSize->getValue(*w, *h);
-        *par = _formatBoxPAR->getValue();
+        _boxSize->getValue(*w, *h);
+        *par = _boxPAR->getValue();
         *boxFixed = _boxFixed->getValue();
         // nothing to do, the user sets the box
         return false;
