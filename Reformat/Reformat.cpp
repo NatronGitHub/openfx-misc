@@ -174,6 +174,8 @@ public:
         : Transform3x3Plugin(handle, false, eTransform3x3ParamsTypeNone)
         , _type(NULL)
         , _format(NULL)
+        , _formatBoxSize(NULL)
+        , _formatBoxPAR(NULL)
         , _boxSize(NULL)
         , _boxFixed(NULL)
         , _boxPAR(NULL)
