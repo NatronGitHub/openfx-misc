@@ -916,7 +916,7 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args,
 
     if (range.min == range.max) {
         identityClip = _srcClip;
-        identityTime = time;
+        identityTime = range.min;
 
         return true;
     }
