@@ -857,7 +857,7 @@ template <class PIX, int nComponents, int maxValue, OperationEnum operation>
 void
 FrameBlendPlugin::renderForOperation(const RenderArguments &args)
 {
-    FrameBlendProcessor<PIX, nComponents, maxValue, eOperationAverage> fred(*this);
+    FrameBlendProcessor<PIX, nComponents, maxValue, operation> fred(*this);
     setupAndProcess(fred, args);
 }
 
