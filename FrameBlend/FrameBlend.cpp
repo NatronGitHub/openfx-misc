@@ -21,8 +21,6 @@
  */
 
 // TODO:
-// - decay parameter for the average and sum operators: last should have weight 1, first should have weight (1-decay)^(abs(last-first)), etc. This should be equivalent to multiplying the accumulator and the sum of weights by decay^interval at the beginning of each operation.
-// - add more operations, eg over from first to last (and multiply by decay^interval after each over operation)
 // - show progress
 
 #include <cmath> // for floor
@@ -40,6 +38,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsMerging.h"
 
 using namespace OFX;
 
@@ -96,7 +95,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFrameRangeName  "frameRange"
 #define kParamFrameRangeLabel "Frame Range"
-#define kParamFrameRangeHint  "Range of frames which are to be blended together. Frame range is absolute if \"absolute\" is checked, else relative."
+#define kParamFrameRangeHint  "Range of frames which are to be blended together. Frame range is absolute if \"absolute\" is checked, else relative. The last frame is always included, and then one frame out of frameInterval within this interval."
 
 #define kParamAbsoluteName  "absolute"
 #define kParamAbsoluteLabel "Absolute"
@@ -119,6 +118,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOperationOptionMax "Max", "Output is the maximum of selected frames.", "max"
 #define kParamOperationOptionSum "Sum", "Output is the sum/addition of selected frames.", "sum"
 #define kParamOperationOptionProduct "Product", "Output is the product/multiplication of selected frames.", "product"
+#define kParamOperationOptionOver "Over", "Output is the 'over' composition of selected frames.", "over"
 #define kParamOperationDefault eOperationAverage
 enum OperationEnum
 {
@@ -127,8 +127,12 @@ enum OperationEnum
     eOperationMax,
     eOperationSum,
     eOperationProduct,
+    eOperationOver,
 };
 
+#define kParamDecayName  "decay"
+#define kParamDecayLabel "Decay"
+#define kParamDecayHint  "Before applying the blending operation, frame t is multiplied by (1-decay)^(last-t)."
 
 #define kParamOutputCountName  "outputCount"
 #define kParamOutputCountLabel "Output Count to Alpha"
@@ -154,12 +158,14 @@ protected:
     std::vector<const Image*> _fgMImgs;
     float *_accumulatorData;
     unsigned short *_countData;
+    float *_sumWeightsData;
     const Image *_maskImg;
     bool _processR;
     bool _processG;
     bool _processB;
     bool _processA;
     bool _lastPass;
+    double _decay;
     bool _outputCount;
     bool _doMasking;
     double _mix;
@@ -180,6 +186,7 @@ public:
         , _processB(true)
         , _processA(false)
         , _lastPass(false)
+        , _decay(0.)
         , _outputCount(false)
         , _doMasking(false)
         , _mix(1.)
@@ -193,8 +200,9 @@ public:
     void setFgMImgs(const std::vector<const Image*> &v) {_fgMImgs = v; }
 
     void setAccumulators(float *accumulatorData,
-                         unsigned short *countData)
-    {_accumulatorData = accumulatorData; _countData = countData; }
+                         unsigned short *countData,
+                         float* sumWeightsData)
+    {_accumulatorData = accumulatorData; _countData = countData; _sumWeightsData = sumWeightsData; }
 
     void setMaskImg(const Image *v,
                     bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
@@ -206,6 +214,7 @@ public:
                    bool processB,
                    bool processA,
                    bool lastPass,
+                   double decay,
                    bool outputCount,
                    double mix)
     {
@@ -214,6 +223,7 @@ public:
         _processB = processB;
         _processA = processA;
         _lastPass = lastPass;
+        _decay = decay;
         _outputCount = outputCount;
         _mix = mix;
     }
@@ -334,6 +344,9 @@ private:
             case eOperationProduct:
                 initVal = 1.;
                 break;
+            case eOperationOver:
+                initVal = 0.;
+                break;
             }
         }
 
@@ -354,6 +367,7 @@ private:
                 size_t renderPix = ( (_renderWindow.x2 - _renderWindow.x1) * (y - _renderWindow.y1) +
                                      (x - _renderWindow.x1) );
                 int count = _countData ? _countData[renderPix] : 0;
+                float sumWeights = _sumWeightsData ? _sumWeightsData[renderPix] : 0;
                 if (_accumulatorData) {
                     std::copy(&_accumulatorData[renderPix * nComponents], &_accumulatorData[renderPix * nComponents + nComponents], tmpPix);
                 } else {
@@ -363,34 +377,62 @@ private:
                 for (unsigned i = 0; i < _srcImgs.size(); ++i) {
                     const PIX *fgMPix = (const PIX *)  (_fgMImgs[i] ? _fgMImgs[i]->getPixelAddress(x, y) : 0);
                     if ( !fgMPix || (*fgMPix <= 0) ) {
+                        if (_decay > 0.) {
+                            for (int c = 0; c < nComponents; ++c) {
+                                tmpPix[c] *= (1. - _decay);
+                            }
+                            sumWeights *= (1. - _decay);
+                        }
                         const PIX *srcPixi = (const PIX *)  (_srcImgs[i] ? _srcImgs[i]->getPixelAddress(x, y) : 0);
                         if (srcPixi) {
+                            PIX a;
+                            float b;
+                            if (operation == eOperationOver) {
+                                // over requires alpha
+                                if (nComponents == 4) {
+                                    a = srcPixi[3];
+                                    b = tmpPix[3];
+                                } else if (nComponents == 1) {
+                                    a = srcPixi[0];
+                                    b = tmpPix[0];
+                                } else {
+                                    a = (PIX)maxValue;
+                                    b = 1.;
+                                }
+                            }
                             for (int c = 0; c < nComponents; ++c) {
                                 switch (operation) {
                                 case eOperationAverage:
-                                    tmpPix[c] += srcPixi[c];
+                                    tmpPix[c] = MergeImages2D::plusFunctor((float)srcPixi[c], tmpPix[c]); // compute average in the end
                                     break;
                                 case eOperationMin:
-                                    tmpPix[c] = std::min(tmpPix[c], (float)srcPixi[c]);
+                                    tmpPix[c] = MergeImages2D::darkenFunctor((float)srcPixi[c], tmpPix[c]);
                                     break;
                                 case eOperationMax:
-                                    tmpPix[c] = std::max(tmpPix[c], (float)srcPixi[c]);
+                                    tmpPix[c] = MergeImages2D::lightenFunctor((float)srcPixi[c], tmpPix[c]);
                                     break;
                                 case eOperationSum:
-                                    tmpPix[c] += srcPixi[c];
+                                    tmpPix[c] = MergeImages2D::plusFunctor((float)srcPixi[c], tmpPix[c]);
                                     break;
                                 case eOperationProduct:
-                                    tmpPix[c] *= srcPixi[c];
+                                    tmpPix[c] = MergeImages2D::multiplyFunctor<float,maxValue>(srcPixi[c], tmpPix[c]);
+                                    break;
+                                case eOperationOver:
+                                    tmpPix[c] = MergeImages2D::overFunctor<PIX, maxValue>(srcPixi[c], tmpPix[c], a, b);
                                     break;
                                 }
                             }
                         }
                         ++count;
+                        sumWeights += 1;
                     }
                 }
                 if (!_lastPass) {
                     if (_countData) {
                         _countData[renderPix] = count;
+                    }
+                    if (_sumWeightsData) {
+                        _sumWeightsData[renderPix] = sumWeights;
                     }
                     if (_accumulatorData) {
                         std::copy(tmpPix, tmpPix + nComponents, &_accumulatorData[renderPix * nComponents]);
@@ -401,12 +443,12 @@ private:
                         if (_outputCount) {
                             tmpPix[c] = count;
                         } else if (operation == eOperationAverage) {
-                            tmpPix[c] =  (count ? (tmpPix[c] / count) : 0);
+                            tmpPix[c] =  (count ? (tmpPix[c] / sumWeights) : 0);
                         }
                     } else if ( (3 <= nComponents) && (nComponents <= 4) ) {
                         if (operation == eOperationAverage) {
                             for (int c = 0; c < 3; ++c) {
-                                tmpPix[c] = (count ? (tmpPix[c] / count) : 0);
+                                tmpPix[c] = (count ? (tmpPix[c] / sumWeights) : 0);
                             }
                         }
                         if (nComponents >= 4) {
@@ -414,7 +456,7 @@ private:
                             if (_outputCount) {
                                 tmpPix[c] = count;
                             } else if (operation == eOperationAverage) {
-                                tmpPix[c] =  (count ? (tmpPix[c] / count) : 0);
+                                tmpPix[c] =  (count ? (tmpPix[c] / sumWeights) : 0);
                             }
                         }
                     }
@@ -472,6 +514,7 @@ public:
         , _inputRange(NULL)
         , _frameInterval(NULL)
         , _operation(NULL)
+        , _decay(NULL)
         , _outputCount(NULL)
         , _mix(NULL)
         , _maskApply(NULL)
@@ -496,8 +539,9 @@ public:
         _inputRange = fetchPushButtonParam(kParamInputRangeName);
         _frameInterval = fetchIntParam(kParamFrameIntervalName);
         _operation = fetchChoiceParam(kParamOperation);
+        _decay = fetchDoubleParam(kParamDecayName);
         _outputCount = fetchBooleanParam(kParamOutputCountName);
-        assert(_frameRange && _absolute && _inputRange && _operation && _outputCount);
+        assert(_frameRange && _absolute && _inputRange && _operation && _decay && _outputCount);
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -545,6 +589,7 @@ private:
     PushButtonParam* _inputRange;
     IntParam* _frameInterval;
     ChoiceParam* _operation;
+    DoubleParam* _decay;
     BooleanParam* _outputCount;
     DoubleParam* _mix;
     BooleanParam* _maskApply;
@@ -576,6 +621,37 @@ struct OptionalImagesHolder_RAII
         }
     }
 };
+
+// Exponentiation by squaring
+// works with positive or negative integer exponents
+template<typename T>
+T
+ipow(T base,
+     int exp)
+{
+    T result = T(1);
+
+    if (exp >= 0) {
+        while (exp) {
+            if (exp & 1) {
+                result *= base;
+            }
+            exp >>= 1;
+            base *= base;
+        }
+    } else {
+        exp = -exp;
+        while (exp) {
+            if (exp & 1) {
+                result /= base;
+            }
+            exp >>= 1;
+            base *= base;
+        }
+    }
+
+    return result;
+}
 
 /* set up and run a processor */
 void
@@ -626,6 +702,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
 
     double mix = 1.;
     _mix->getValueAtTime(time, mix);
+    double decay = _decay->getValueAtTime(time);
     bool outputCount = false;
     if ( (dstComponents == ePixelComponentRGBA) || (dstComponents == ePixelComponentAlpha) ) {
         _outputCount->getValueAtTime(time, outputCount);
@@ -659,23 +736,28 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     float *accumulatorData = NULL;
     auto_ptr<ImageMemory> count;
     unsigned short *countData = NULL;
+    auto_ptr<ImageMemory> sumWeights;
+    float *sumWeightsData = NULL;
 
     // compute range
     bool absolute;
     _absolute->getValueAtTime(time, absolute);
-    int min, max;
-    _frameRange->getValueAtTime(time, min, max);
-    if (min > max) {
-        std::swap(min, max);
-    }
+    int first, last;
+    _frameRange->getValueAtTime(time, first, last);
     int interval;
     _frameInterval->getValueAtTime(time, interval);
     interval = std::max(1, interval);
+    decay = 1. - ipow(1. - decay, interval); // adjust decay so that the final aspect is similar for different values of the interval
 
-    int n = (max + 1 - min) / interval;
+    int n = (std::abs(last - first) + 1) / interval;
+    if (first > last) {
+        interval = -interval;
+    }
+    // last frame should always be in the image set, so first frame must be adjusted if abs(interval) > 1
+    first = last - (n - 1) * interval;
     if (!absolute) {
-        min += time;
-        //max += time; // max is not used anymore
+        first += time;
+        //last += time; // last is not used anymore
     }
 
     const OfxRectI& renderWindow = args.renderWindow;
@@ -700,6 +782,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
                 switch (operation) {
                 case eOperationAverage:
                 case eOperationSum:
+                case eOperationOver:
                     std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 0.);
                     break;
                 case eOperationMin:
@@ -719,6 +802,12 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
                 countData = (unsigned short*)count->lock();
                 std::fill(countData, countData + nPixels, 0);
             }
+            // Initialize sumWeights image if operator is average
+            if ( !sumWeightsData && (operation == eOperationAverage) ) {
+                sumWeights.reset( new ImageMemory(nPixels * sizeof(float), this) );
+                sumWeightsData = (float*)sumWeights->lock();
+                std::fill(sumWeightsData, sumWeightsData + nPixels, 0);
+            }
         }
 
         // fetch the source images
@@ -727,7 +816,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
             if ( abort() ) {
                 return;
             }
-            const Image* src = _srcClip ? _srcClip->fetchImage(min + i * interval) : 0;
+            const Image* src = _srcClip ? _srcClip->fetchImage(first + i * interval) : 0;
             if (src) {
                 if ( (src->getRenderScale().x != args.renderScale.x) ||
                      ( src->getRenderScale().y != args.renderScale.y) ||
@@ -749,7 +838,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
             if ( abort() ) {
                 return;
             }
-            const Image* mask = ( _fgMClip && _fgMClip->isConnected() ) ? _fgMClip->fetchImage(min + i * interval) : 0;
+            const Image* mask = ( _fgMClip && _fgMClip->isConnected() ) ? _fgMClip->fetchImage(first + i * interval) : 0;
             if (mask) {
                 assert( _fgMClip->isConnected() );
                 if ( (mask->getRenderScale().x != args.renderScale.x) ||
@@ -770,10 +859,10 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
         processor.setFgMImgs(fgMImgs.images);
         // set the render window
         processor.setRenderWindow(renderWindow);
-        processor.setAccumulators(accumulatorData, countData);
+        processor.setAccumulators(accumulatorData, countData, sumWeightsData);
 
         processor.setValues(processR, processG, processB, processA,
-                            lastPass, outputCount, mix);
+                            lastPass, decay, outputCount, mix);
 
         // Call the base class process member, this will call the derived templated process code
         processor.process();
@@ -851,6 +940,10 @@ FrameBlendPlugin::renderForBitDepth(const RenderArguments &args)
 
     case eOperationProduct:
         renderForOperation<PIX, nComponents, maxValue, eOperationProduct>(args);
+        break;
+
+    case eOperationOver:
+        renderForOperation<PIX, nComponents, maxValue, eOperationOver>(args);
         break;
     }
 }
@@ -955,23 +1048,26 @@ FrameBlendPlugin::getFramesNeeded(const FramesNeededArguments &args,
 
     _absolute->getValueAtTime(time, absolute);
     OfxRangeD range;
-    int min, max;
-    _frameRange->getValueAtTime(time, min, max);
-    if (min > max) {
-        std::swap(min, max);
-    }
+    int first, last;
+    _frameRange->getValueAtTime(time, first, last);
     if (!absolute) {
-        min += time;
-        max += time;
+        first += time;
+        last += time;
     }
     int interval;
     _frameInterval->getValueAtTime(time, interval);
     if (interval <= 1) {
-        range.min = min;
-        range.max = max;
+        if (first > last) {
+            std::swap(first, last);
+        }
+        range.min = first;
+        range.max = last;
         frames.setFramesNeeded(*_srcClip, range);
     } else {
-        for (int i = min; i <= max; i += interval) {
+        if (first > last) {
+            interval = -interval;
+        }
+        for (int i = first; i <= last; i += interval) {
             range.min = range.max = i;
             frames.setFramesNeeded(*_srcClip, range);
         }
@@ -1207,7 +1303,20 @@ FrameBlendPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamOperationOptionSum);
         assert(param->getNOptions() == (int)eOperationProduct);
         param->appendOption(kParamOperationOptionProduct);
+        assert(param->getNOptions() == (int)eOperationOver);
+        param->appendOption(kParamOperationOptionOver);
         param->setDefault( (int)kParamOperationDefault );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDecayName);
+        param->setLabel(kParamDecayLabel);
+        param->setHint(kParamDecayHint);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
         if (page) {
             page->addChild(*param);
         }
