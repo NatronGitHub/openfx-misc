@@ -21,6 +21,8 @@
  */
 
 // TODO:
+// - decay parameter for the average and sum operators: last should have weight 1, first should have weight (1-decay)^(abs(last-first)), etc. This should be equivalent to multiplying the accumulator and the sum of weights by decay^interval at the beginning of each operation.
+// - add more operations, eg over from first to last (and multiply by decay^interval after each over operation)
 // - show progress
 
 #include <cmath> // for floor
@@ -1148,7 +1150,7 @@ FrameBlendPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         Int2DParamDescriptor *param = desc.defineInt2DParam(kParamFrameRangeName);
         param->setLabel(kParamFrameRangeLabel);
         param->setHint(kParamFrameRangeHint);
-        param->setDimensionLabels("min", "max");
+        param->setDimensionLabels("first", "last");
         param->setDefault(-5, 0);
         param->setAnimates(true); // can animate
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
