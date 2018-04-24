@@ -23,6 +23,32 @@
  * https://www.shadertoy.com (v0.8.8 https://www.shadertoy.com/changelog)
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
  * https://shadertoyunofficial.wordpress.com/2016/07/22/compatibility-issues-in-shadertoy-webglsl/#webgl2
+ *
+ */
+
+/*
+ TODO:
+ - add GLSL Sandbox uniforms (except backbuffer), see doc for GLSL Sandbox uniforms at https://github.com/jolivain/glslsandbox-player/blob/master/README#L112
+
+ FAQ:
+ Q: Can someone else verify for me that the Shadertoy is not rendering at the same grade as the native Shadertoy website? All Shadertoy shaders that I copy and paste from the Shadertoy website render washed out in Natron.
+
+ A:
+ in Natron:
+ - all the processing is done in scene linear space, and then the viewer uses an srgb lut to display it.
+ - when images are read they are converted to scene linear
+ in Shadertoy:
+ - the outout is displayed without the extra linear->srgb LUT conversion
+ - source images are read "as is", no srgb->linear conversion is done
+ - this is why many shaders convert their outout from linear to srgb see https://www.shadertoy.com/view/XsfXzf . This conversion *must* be removed when using the shader in Natron
+
+putting an OCIO colorspace to convert sRGB to linear after each shadertoy node (and linear to sRGB conevrsion on the inputs) is a bad option: removing the srgb2lin and lin2srgb conversions from the shhader source is a much better option (these functions may have different names, or there may simply be operations line pow( c, vec3(2.2) ) and/or pow(c, vec3(1./2.2)) in the GLSL code).
+
+ As an example, take a look at the changes I made from this shadertoy:
+https://www.shadertoy.com/view/XssGz8
+
+ ...to the Natron version:
+https://raw.githubusercontent.com/NatronGitHub/openfx-misc/master/Shadertoy/presets/default/barrelblurchroma-natron.frag.glsl
  */
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) || defined(HAVE_OSMESA) // at least one is required for this plugin
