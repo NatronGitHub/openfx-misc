@@ -180,6 +180,7 @@ public:
         , _fgMImgs()
         , _accumulatorData(NULL)
         , _countData(NULL)
+        , _sumWeightsData(NULL)
         , _maskImg(NULL)
         , _processR(true)
         , _processG(true)

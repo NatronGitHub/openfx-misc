@@ -821,8 +821,9 @@ PosMatParam::importChan()
     }
     std::list<ChanLine> lines;
     char buf[1024];
+    buf[sizeof(buf) - 1] = 0;
 
-    while (std::fgets(buf, sizeof buf, f) != NULL) {
+    while (std::fgets(buf, sizeof(buf) - 1, f) != NULL) {
         const string bufstr( trim(buf) );
         if (bufstr.size() > 0 && bufstr[0] != '#') {
             const char* b = bufstr.c_str();
@@ -904,9 +905,10 @@ PosMatParam::importBoujou()
     double vaperture = 0;
     std::list<ChanLine> lines;
     char buf[1024];
+    buf[sizeof(buf) - 1] = 0;
     int i = 1; // line number
 
-    while (std::fgets(buf, sizeof buf, f) != NULL) {
+    while (std::fgets(buf, sizeof(buf) - 1, f) != NULL) {
         if (i == 1) {
             const string b( trim(buf) );
             const string h("# boujou export: text");

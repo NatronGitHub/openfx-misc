@@ -284,13 +284,13 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
 
     OfxRectD srcFormatCanonical;
     {
-        OfxRectI srcFormat;
+        OfxRectI srcFormat = {0, 0, 0, 0};
         double srcPar = 1.;
         if (_srcClip) {
             _srcClip->getFormat(srcFormat);
             srcPar = _srcClip->getPixelAspectRatio();
         }
-        if ( OFX::Coords::rectIsEmpty(srcFormat) ) {
+        if ( OFX::Coords::rectIsEmpty(srcFormat) && _srcClip) {
             // no format is available, use the RoD instead
             srcFormatCanonical = _srcClip->getRegionOfDefinition(time);
         } else {

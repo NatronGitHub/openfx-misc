@@ -692,8 +692,9 @@ std::string PFBarrelCommon::FileReader::readRawLine(void)
     std::string rv;
 
     char buf[512];
+    buf[sizeof(buf) - 1] = 0;
 
-    char* s = std::fgets(buf, sizeof(buf), f_);
+    char* s = std::fgets(buf, sizeof(buf) - 1, f_);
     if (s != NULL) {
         rv= s;
         rv= rv.erase(rv.length()-1);

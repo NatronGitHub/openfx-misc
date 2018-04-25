@@ -1397,8 +1397,8 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     onMetadataChanged(&dstPlane);
 
     PixelComponentEnum dstPixelComps;
-    PixelComponentEnum srcDefaultComps = _srcClipDefault->getUnmappedPixelComponents();
-    PixelComponentEnum srcOtherComps = _srcClipOther->getUnmappedPixelComponents();
+    PixelComponentEnum srcDefaultComps = _srcClipDefault ? _srcClipDefault->getUnmappedPixelComponents() : ePixelComponentNone;
+    PixelComponentEnum srcOtherComps = _srcClipOther ? _srcClipOther->getUnmappedPixelComponents() : ePixelComponentNone;
     if (dstPlane.isColorPlane()) {
         // If the output plane is the color plane, set the pixel components to one of the OpenFX defaults selected by the user
         dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];

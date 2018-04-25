@@ -789,24 +789,25 @@ void
 presetsFromDir(const string &dir, std::vector<ShadertoyPlugin::Preset>& presets)
 {
     //std::printf( kOfxPluginPropFilePath"= %s", filePath.c_str() );
-    char line[1024];
+    char buf[1024];
+    buf[sizeof(buf) - 1] = 0;
     presets.clear();
     std::set<string> filenames;
     FILE* fp = fopen( (dir + "/Shadertoy.txt").c_str(), "r" );
     if (fp != NULL) {
         //int i = 0;
         while (1) {
-            if (std::fgets(line, sizeof(line), fp) == NULL) {
+            if (std::fgets(buf, sizeof(buf) - 1, fp) == NULL) {
                 break;
             }
             //++i;
             //printf("%3d: %s", i, line);
-            if (line[0] == '#') { // skip comments
+            if (buf[0] == '#') { // skip comments
                 continue;
             }
             // a line looks like
             //    {"Ball",                            "ball.frag.glsl",                 99,-1,-1,-1},
-            const char* desc = std::strchr(line, '"');
+            const char* desc = std::strchr(buf, '"');
             if (desc == NULL) {
                 continue;
             }
