@@ -329,6 +329,20 @@ using std::string;
     "As an example, take a look at the changes made to the [Barrel Blur Chroma](https://www.shadertoy.com/view/XssGz8) Shadertoy: the OpenFX version is available as a preset in the Shadertoy node as \"Effects/Barrel Blur Chroma\". When it was converted to OpenFX, all gamma compression and decompression operations were identified and removed.\n" \
     "\n" \
     "\n" \
+    "Multipass shaders\n" \
+    "\n" \
+    "Most multipass shaders (those using BufA, BufB, BufC, or BufD) can be implemented using the Shadertoy plugin.\n" \
+    "\n" \
+    "The shader sources for two sample multipass shadertoys are available as Natron PyPlugs (but the shader sources are also available separately next to the PyPlugs if you want to use these in another OpenFX host:\n" \
+    "\n" \
+    "- a 3-pass circular bokeh blur https://www.shadertoy.com/view/Xd33Dl (available as https://github.com/NatronGitHub/natron-plugins/tree/master/GLSL/Blur/BokehCircular_GL)\n" \
+    "- a 4-pass octagonal bokeh blur https://www.shadertoy.com/view/lst3Df (available as https://github.com/NatronGitHub/natron-plugins/tree/master/GLSL/Blur/BokehOctagon_GL)\n" \
+    "\n" \
+    "The principle is very simple: since multipass cannot be done using a single Shadertoy, use several Shadertoy nodes, route the textures between them, and link the parameters. You can learn from these two examples. To figure out the route between textures, click on the tab for each shader in shadertoy.com, and check which shader output is connected to the input textures (iChannel0, etc.) for this shader. The connections between nodes should follow these rules.\n" \
+    "\n" \
+    "The only multipass effects that can not be implemented are the shaders that read back the content of a buffer to compute that same buffer, because compositing graphs cannot have loops (the execution of such a graph would cause an infinite recursion). One example is this progressive lightmap render https://www.shadertoy.com/view/MttSWS, where BufB from the previous render is read back as iChannel1 in the BufB shader.\n" \
+    "\n" \
+    "\n" \
     "Default textures and videos\n" \
     "\n" \
     "The default shadertoy textures and videos are avalaible from the Shadertoy web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.\n" \
@@ -604,6 +618,19 @@ using std::string;
     "An alternative solution would be to convert all Shadertoy inputs from linear to sRGB, and convert back all outputs to linear, either inside the Shadertoy node, or using external conversion nodes (such as OCIOColorSpace). But this is a bad option, because this adds useless processing. Removing the srgb2lin and lin2srgb conversions from the shader source is a much better option (these functions may have different names, or there may simply be operations line `pow(c,vec3(2.2))` and/or `pow(c,vec3(1./2.2))` in the GLSL code).\n" \
     "\n" \
     "As an example, take a look at the changes made to the [Barrel Blur Chroma](https://www.shadertoy.com/view/XssGz8) Shadertoy: the OpenFX version is available as a preset in the Shadertoy node as \"Effects/Barrel Blur Chroma\". When it was converted to OpenFX, all gamma compression and decompression operations were identified and removed.\n" \
+    "\n" \
+    "### Multipass shaders\n" \
+    "\n" \
+    "Most multipass shaders (those using BufA, BufB, BufC, or BufD) can be implemented using the Shadertoy plugin.\n" \
+    "\n" \
+    "The shader sources for two sample multipass shadertoys are available as Natron PyPlugs (but the shader sources are also available separately next to the PyPlugs if you want to use these in another OpenFX host:\n" \
+    "\n" \
+    "- a [3-pass circular bokeh blur](https://www.shadertoy.com/view/Xd33Dl) (available as [Community/GLSL/BokehCircular_GL](https://github.com/NatronGitHub/natron-plugins/tree/master/GLSL/Blur/BokehCircular_GL) in natron-plugins)\n" \
+    "- a [4-pass octagonal bokeh blur](https://www.shadertoy.com/view/lst3Df) (available as [Community/GLSL/BokehOctagon_GL](https://github.com/NatronGitHub/natron-plugins/tree/master/GLSL/Blur/BokehOctagon_GL) in natron-plugins)\n" \
+    "\n" \
+    "The principle is very simple: since multipass cannot be done using a single Shadertoy, use several Shadertoy nodes, route the textures between them, and link the parameters. You can learn from these two examples. To figure out the route between textures, click on the tab for each shader in shadertoy.com, and check which shader output is connected to the input textures (iChannel0, etc.) for this shader. The connections between nodes should follow these rules.\n" \
+    "\n" \
+    "The only multipass effects that can not be implemented are the shaders that read back the content of a buffer to compute that same buffer, because compositing graphs cannot have loops (the execution of such a graph would cause an infinite recursion). One example is [this progressive lightmap render](https://www.shadertoy.com/view/MttSWS), where BufB from the previous render is read back as iChannel1 in the BufB shader.\n" \
     "\n" \
     "### Default textures and videos\n" \
     "\n" \

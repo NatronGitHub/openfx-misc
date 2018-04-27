@@ -268,6 +268,19 @@ An alternative solution would be to convert all Shadertoy inputs from linear to 
 
 As an example, take a look at the changes made to the [Barrel Blur Chroma](https://www.shadertoy.com/view/XssGz8) Shadertoy: the OpenFX version is available as a preset in the Shadertoy node as "Effects/Barrel Blur Chroma". When it was converted to OpenFX, all gamma compression and decompression operations were identified and removed.
 
+### Multipass shaders
+
+Most multipass shaders (those using BufA, BufB, BufC, or BufD) can be implemented using the Shadertoy plugin.
+
+The shader sources for two sample multipass shadertoys are available as Natron PyPlugs (but the shader sources are also available separately next to the PyPlugs if you want to use these in another OpenFX host:
+
+- a [3-pass circular bokeh blur](https://www.shadertoy.com/view/Xd33Dl) (available as [Community/GLSL/BokehCircular_GL](https://github.com/NatronGitHub/natron-plugins/tree/master/GLSL/Blur/BokehCircular_GL) in natron-plugins)
+- a [4-pass octagonal bokeh blur](https://www.shadertoy.com/view/lst3Df) (available as [Community/GLSL/BokehOctagon_GL](https://github.com/NatronGitHub/natron-plugins/tree/master/GLSL/Blur/BokehOctagon_GL) in natron-plugins)
+
+The principle is very simple: since multipass cannot be done using a single Shadertoy, use several Shadertoy nodes, route the textures between them, and link the parameters. You can learn from these two examples. To figure out the route between textures, click on the tab for each shader in shadertoy.com, and check which shader output is connected to the input textures (iChannel0, etc.) for this shader. The connections between nodes should follow these rules.
+
+The only multipass effects that can not be implemented are the shaders that read back the content of a buffer to compute that same buffer, because compositing graphs cannot have loops (the execution of such a graph would cause an infinite recursion). One example is [this progressive lightmap render](https://www.shadertoy.com/view/MttSWS), where BufB from the previous render is read back as iChannel1 in the BufB shader.
+
 ### Default textures and videos
 
 The default shadertoy textures and videos are avalaible from the [Shadertoy](http://www.shadertoy.com) web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.
