@@ -1883,6 +1883,21 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 } // TestOpenGLPlugin::RENDERFUNC
 
 static
+std::string
+unsignedToString(unsigned i)
+{
+    if (i == 0) {
+        return "0";
+    }
+    std::string nb;
+    for (unsigned j = i; j != 0; j /= 10) {
+        nb = (char)( '0' + (j % 10) ) + nb;
+    }
+
+    return nb;
+}
+
+static
 void
 getGlVersion(int *major,
              int *minor)
@@ -2030,9 +2045,14 @@ TestOpenGLPlugin::contextAttached(bool createContextData)
     // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
     int major, minor;
     getGlVersion(&major, &minor);
+    std::string glVersion = unsignedToString((unsigned int)major) + '.' + unsignedToString((unsigned int)minor);
+    if (major == 0) {
+        sendMessage(OFX::Message::eMessageError, "", "Can not render: glGetString(GL_VERSION) failed.");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     if (major < 2) {
         if ( !glutExtensionSupported("GL_ARB_texture_non_power_of_two") ) {
-            sendMessage(OFX::Message::eMessageError, "", "Can not render: OpenGL 2.0 or GL_ARB_texture_non_power_of_two is required.");
+            sendMessage(OFX::Message::eMessageError, "", "Can not render: OpenGL 2.0 or GL_ARB_texture_non_power_of_two is required (this is OpenGL " + glVersion + ")");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
