@@ -205,7 +205,7 @@ protected:
     float clamp(float value,
                 int maxValue)
     {
-        return std::max( 0.f, std::min( value, float(maxValue) ) );
+        return (std::max)( 0.f, (std::min)( value, float(maxValue) ) );
     }
 
     // clamp for integer types
@@ -213,7 +213,7 @@ protected:
     double clamp(double value,
                  int maxValue)
     {
-        return std::max( 0., std::min( value, double(maxValue) ) );
+        return (std::max)( 0., (std::min)( value, double(maxValue) ) );
     }
 };
 
@@ -264,7 +264,7 @@ luminance(T r,
         return (r + g + b) / 3;
     case eLuminanceMathMaximum:
 
-        return std::max(std::max(r, g), b);
+        return (std::max)((std::max)(r, g), b);
     }
 }
 
@@ -298,7 +298,7 @@ public:
                 double value = _hueParam->getValue(c, _time, parametricPos);
 
                 // all the values (in HueCorrect) must be positive. We don't care if sat_thrsh goes above 1.
-                value = std::max(0., value);
+                value = (std::max)(0., value);
                 // set that in the lut
                 _hue[c][position] = value;
             }
@@ -350,19 +350,19 @@ private:
 
                 if (r_sup != 1.) {
                     // If r > min(g,b),  r = min(g,b) + r_sup * (r-min(g,b))
-                    float m = std::min(g, b);
+                    float m = (std::min)(g, b);
                     if (r > m) {
                         r = m + r_sup * (r - m);
                     }
                 }
                 if (g_sup != 1.) {
-                    float m = std::min(r, b);
+                    float m = (std::min)(r, b);
                     if (g > m) {
                         g = m + g_sup * (g - m);
                     }
                 }
                 if (b_sup != 1.) {
-                    float m = std::min(r, g);
+                    float m = (std::min)(r, g);
                     if (b > m) {
                         b = m + b_sup * (b - m);
                     }
@@ -425,7 +425,7 @@ private:
             double x = value / 6.;
             int i = (int)(x * nbValues);
             assert(0 <= i && i <= nbValues);
-            double alpha = std::max( 0., std::min(x * nbValues - i, 1.) );
+            double alpha = (std::max)( 0., (std::min)(x * nbValues - i, 1.) );
             double a = _hue[c][i];
             double b = (i  < nbValues) ? _hue[c][i + 1] : 0.f;
 
@@ -1189,7 +1189,7 @@ public:
                 double value = _hueParam->getValue(c, _time, parametricPos);
 
                 // all the values (in HueKeyer) must be positive. We don't care if sat_thrsh goes above 1.
-                value = std::max(0., value);
+                value = (std::max)(0., value);
                 // set that in the lut
                 _hue[c][position] = value;
             }
@@ -1257,7 +1257,7 @@ private:
             double x = value / 6.;
             int i = (int)(x * nbValues);
             assert(0 <= i && i <= nbValues);
-            double alpha = std::max( 0., std::min(x * nbValues - i, 1.) );
+            double alpha = (std::max)( 0., (std::min)(x * nbValues - i, 1.) );
             double a = _hue[c][i];
             double b = (i  < nbValues) ? _hue[c][i + 1] : 0.f;
 

@@ -217,8 +217,8 @@ fitRod(const OfxRectD& srcFormatCanonical,
     double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
     double sh = srcFormatCanonical.y2 - srcFormatCanonical.y1;
     OfxRectD cRoD = { cellRoD.x1 + gap / 2, cellRoD.y1 + gap/2, cellRoD.x2 - (gap + 1) / 2, cellRoD.y2 - (gap + 1) / 2};
-    double cw = std::max(1., cRoD.x2 - cRoD.x1);
-    double ch = std::max(1., cRoD.y2 - cRoD.y1);
+    double cw = (std::max)(1., cRoD.x2 - cRoD.x1);
+    double ch = (std::max)(1., cRoD.y2 - cRoD.y1);
     bool fitwidth = sw * ch > sh * cw;
     *f = fitwidth ? (cw/sw) : (ch / sh);
     if (center) {
@@ -314,7 +314,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
         double h = rod.y2 - rod.y1;
         double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
         double sh = srcFormatCanonical.y2 - srcFormatCanonical.y1;
-        columns = (int)std::max( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) );
+        columns = (int)(std::max)( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) );
         rows = (int)std::ceil( n / (double) columns);
     }
 
@@ -375,7 +375,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
                 const size_t aheight = srcBounds.y2 - srcBounds.y1;
                 const size_t axstride = src->getPixelComponentCount();
                 const size_t aystride = awidth * axstride;
-                const size_t depth = std::min(axstride, bxstride);
+                const size_t depth = (std::min)(axstride, bxstride);
                 const OfxRectD from = {0., 0., (double)awidth, (double)aheight};
                 OfxRectI to;
                 Coords::toPixelEnclosing(imageRoD, args.renderScale, dstPar, &to);
@@ -594,7 +594,7 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
         double h = rod.y2 - rod.y1;
         double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
         double sh = srcFormatCanonical.y2 - srcFormatCanonical.y1;
-        columns = (int)std::max( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) );
+        columns = (int)(std::max)( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) );
         rows = (int)std::ceil( n / (double) columns);
     }
 

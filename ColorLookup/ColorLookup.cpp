@@ -285,7 +285,7 @@ protected:
     float clamp(float value,
                 int maxValue) const
     {
-        return std::max( 0.f, std::min( value, float(maxValue) ) );
+        return (std::max)( 0.f, (std::min)( value, float(maxValue) ) );
     }
 
     // clamp for integer PIX types
@@ -293,7 +293,7 @@ protected:
     double clamp(double value,
                  int maxValue) const
     {
-        return std::max( 0., std::min( value, double(maxValue) ) );
+        return (std::max)( 0., (std::min)( value, double(maxValue) ) );
     }
 };
 
@@ -370,8 +370,8 @@ public:
                          LuminanceMathEnum luminanceMath)
         : ColorLookupProcessorBase(instance, clampBlack, clampWhite)
         , _lookupTableParam(lookupTableParam)
-        , _rangeMin( std::min(rangeMin, rangeMax) )
-        , _rangeMax( std::max(rangeMin, rangeMax) )
+        , _rangeMin( (std::min)(rangeMin, rangeMax) )
+        , _rangeMax( (std::max)(rangeMin, rangeMax) )
         , _luminanceMath( luminanceMath )
     {
         // build the LUT
@@ -519,7 +519,7 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            double l = std::max(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
+                            double l = (std::max)(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
                             // apply the master curve to the luminance, and
                             double coef = interpolate(nComponents, l) / l;
                             tmpPix[0] = clamp<float>(coef * interpolate(0, r), 1) * maxValue;
@@ -608,7 +608,7 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            double l = std::max(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
+                            double l = (std::max)(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
                             // apply the master curve to the luminance, and
                             double coef = interpolate(nComponents, l) / l;
                             tmpPix[0] = clamp<float>(coef * interpolate(0, r), 1);
@@ -656,8 +656,8 @@ private:
             }
             int i = (int)(x * nbValues);
             assert(0 <= i && i < nbValues);
-            i = std::max( 0, std::min(i, nbValues - 1) );
-            double alpha = std::max( 0., std::min(x * nbValues - i, 1.) );
+            i = (std::max)( 0, (std::min)(i, nbValues - 1) );
+            double alpha = (std::max)( 0., (std::min)(x * nbValues - i, 1.) );
             float a = _lookupTable[component][i];
             float b = _lookupTable[component][i + 1];
 
@@ -732,7 +732,7 @@ luminance(T r,
         return (r + g + b) / 3;
     case eLuminanceMathMaximum:
 
-        return std::max(std::max(r, g), b);
+        return (std::max)((std::max)(r, g), b);
     }
 }
 
@@ -865,7 +865,7 @@ private:
                 float unpPix[4];
                 ofxsUnPremult<PIX, nComponents, maxValue>(dstPix, unpPix, _premult, _premultChannel);
 
-                for (int c = 0; c < std::min(nComponents, 3); ++c) {
+                for (int c = 0; c < (std::min)(nComponents, 3); ++c) {
                     int bin = 0;
                     if (unpPix[c] >= _rangemax) {
                         bin = HISTOGRAM_BINS - 1;

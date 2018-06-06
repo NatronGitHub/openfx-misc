@@ -221,7 +221,7 @@ luminance(LuminanceMathEnum luminanceMath,
         return (r + g + b) / 3;
     case eLuminanceMathMaximum:
 
-        return std::max(std::max(r, g), b);
+        return (std::max)((std::max)(r, g), b);
     }
 }
 
@@ -420,14 +420,14 @@ private:
                 float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
                 if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && (nComponents == 4) && srcPix ) {
                     // take the max of inMask and the source Alpha
-                    inMask = std::max( inMask, sampleToFloat<PIX, maxValue>(srcPix[3]) );
+                    inMask = (std::max)( inMask, sampleToFloat<PIX, maxValue>(srcPix[3]) );
                 }
                 float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
                 double Kbg = 0.;
 
                 // clamp inMask and outMask in the [0,1] range
-                inMask = std::max( 0.f, std::min(inMask, 1.f) );
-                outMask = std::max( 0.f, std::min(outMask, 1.f) );
+                inMask = (std::max)( 0.f, (std::min)(inMask, 1.f) );
+                outMask = (std::max)( 0.f, (std::min)(outMask, 1.f) );
 
                 // output of the foreground suppressor
                 double fgr = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[0]) : 0.;
@@ -468,7 +468,7 @@ private:
                     case eKeyerModeScreen: {
                         scalarProd = fgr * _keyColor.r + fgg * _keyColor.g + fgb * _keyColor.b;
                         norm2 = fgr * fgr + fgg * fgg + fgb * fgb;
-                        d = std::sqrt( std::max( 0., norm2 - ( (keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2) ) ) );
+                        d = std::sqrt( (std::max)( 0., norm2 - ( (keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2) ) ) );
                         Kfg = (keyColor111 == 0) ? rgb2luminance(fgr, fgg, fgb) : (scalarProd / keyColor111);
                         Kfg -= d;
                         break;
@@ -476,7 +476,7 @@ private:
                     case eKeyerModeNone: {
                         scalarProd = fgr * _keyColor.r + fgg * _keyColor.g + fgb * _keyColor.b;
                         norm2 = fgr * fgr + fgg * fgg + fgb * fgb;
-                        d = std::sqrt( std::max( 0., norm2 - ( (keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2) ) ) );
+                        d = std::sqrt( (std::max)( 0., norm2 - ( (keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2) ) ) );
                         break;
                     }
                     }
@@ -507,7 +507,7 @@ private:
                             // if despill in [1,2]: inside regions are despilled too
                             assert(0 <= Kbg && Kbg <= 1);
                             assert(0 <= _despill && _despill <= 2);
-                            double maxdespill = Kbg * std::min(_despill, 1.) + (1 - Kbg) * std::max(0., _despill - 1);
+                            double maxdespill = Kbg * (std::min)(_despill, 1.) + (1 - Kbg) * (std::max)(0., _despill - 1);
                             assert(0 <= maxdespill && maxdespill <= 1);
 
                             //// first solution: despill proportionally to the distance to the the despill cone
@@ -515,9 +515,9 @@ private:
                             //double colorshift = maxdespill*(scalarProd/keyColorNorm - d * _despillClosing);
 
                             // second solution: subtract maxdespill * _keyColor, clamping to the despill cone
-                            double colorshift = maxdespill * std::max( keyColorNorm, (scalarProd / keyColorNorm - d * _despillClosing) );
+                            double colorshift = maxdespill * (std::max)( keyColorNorm, (scalarProd / keyColorNorm - d * _despillClosing) );
                             // clamp: don't go beyond the despill cone
-                            colorshift = std::min(colorshift, scalarProd / keyColorNorm - d * _despillClosing);
+                            colorshift = (std::min)(colorshift, scalarProd / keyColorNorm - d * _despillClosing);
                             assert(colorshift >= 0);
                             fgr -= colorshift * _keyColor.r / keyColorNorm;
                             fgg -= colorshift * _keyColor.g / keyColorNorm;
@@ -533,9 +533,9 @@ private:
                     }
 
                     // clamp foreground color to [0,1]
-                    fgr = std::max( 0., std::min(fgr, 1.) );
-                    fgg = std::max( 0., std::min(fgg, 1.) );
-                    fgb = std::max( 0., std::min(fgb, 1.) );
+                    fgr = (std::max)( 0., (std::min)(fgr, 1.) );
+                    fgg = (std::max)( 0., (std::min)(fgg, 1.) );
+                    fgb = (std::max)( 0., (std::min)(fgb, 1.) );
                 }
 
                 // At this point, we have Kbg,

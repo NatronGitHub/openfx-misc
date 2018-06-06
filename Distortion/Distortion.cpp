@@ -1798,7 +1798,7 @@ DistortionPlugin::getDistortionModel(const OfxRectD& format, const OfxPointD& re
         double k2 = _k2->getValueAtTime(time);
         double cx, cy;
         _center->getValueAtTime(time, cx, cy);
-        double squeeze = std::max(0.001, _squeeze->getValueAtTime(time));
+        double squeeze = (std::max)(0.001, _squeeze->getValueAtTime(time));
         double ax, ay;
         _asymmetric->getValueAtTime(time, ax, ay);
         return new DistortionModelNuke(format,
@@ -2907,10 +2907,10 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                 } else {
                     distortionModel->distort(x, y, &xi, &yi); // inverse of getRoD
                 }
-                roiPixel.x1 = std::min(roiPixel.x1, xi);
-                roiPixel.x2 = std::max(roiPixel.x2, xi);
-                roiPixel.y1 = std::min(roiPixel.y1, yi);
-                roiPixel.y2 = std::max(roiPixel.y2, yi);
+                roiPixel.x1 = (std::min)(roiPixel.x1, xi);
+                roiPixel.x2 = (std::max)(roiPixel.x2, xi);
+                roiPixel.y1 = (std::min)(roiPixel.y1, yi);
+                roiPixel.y2 = (std::max)(roiPixel.y2, yi);
             }
         }
         for (int i = 0; i < 2; ++i) {
@@ -2924,10 +2924,10 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                 } else {
                     distortionModel->distort(x, y, &xi, &yi); // inverse of getRoD
                 }
-                roiPixel.x1 = std::min(roiPixel.x1, xi);
-                roiPixel.x2 = std::max(roiPixel.x2, xi);
-                roiPixel.y1 = std::min(roiPixel.y1, yi);
-                roiPixel.y2 = std::max(roiPixel.y2, yi);
+                roiPixel.x1 = (std::min)(roiPixel.x1, xi);
+                roiPixel.x2 = (std::max)(roiPixel.x2, xi);
+                roiPixel.y1 = (std::min)(roiPixel.y1, yi);
+                roiPixel.y2 = (std::max)(roiPixel.y2, yi);
             }
         }
         assert( !OFX::Coords::rectIsEmpty(roiPixel) );
@@ -3035,10 +3035,10 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                 } else {
                     distortionModel->undistort(x, y, &xo, &yo);
                 }
-                rodPixel.x1 = std::min(rodPixel.x1, xo);
-                rodPixel.x2 = std::max(rodPixel.x2, xo);
-                rodPixel.y1 = std::min(rodPixel.y1, yo);
-                rodPixel.y2 = std::max(rodPixel.y2, yo);
+                rodPixel.x1 = (std::min)(rodPixel.x1, xo);
+                rodPixel.x2 = (std::max)(rodPixel.x2, xo);
+                rodPixel.y1 = (std::min)(rodPixel.y1, yo);
+                rodPixel.y2 = (std::max)(rodPixel.y2, yo);
             }
         }
         for (int i = 0; i < 2; ++i) {
@@ -3051,10 +3051,10 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                 } else {
                     distortionModel->undistort(x, y, &xo, &yo);
                 }
-                rodPixel.x1 = std::min(rodPixel.x1, xo);
-                rodPixel.x2 = std::max(rodPixel.x2, xo);
-                rodPixel.y1 = std::min(rodPixel.y1, yo);
-                rodPixel.y2 = std::max(rodPixel.y2, yo);
+                rodPixel.x1 = (std::min)(rodPixel.x1, xo);
+                rodPixel.x2 = (std::max)(rodPixel.x2, xo);
+                rodPixel.y1 = (std::min)(rodPixel.y1, yo);
+                rodPixel.y2 = (std::max)(rodPixel.y2, yo);
             }
         }
         assert( !OFX::Coords::rectIsEmpty(rodPixel) );

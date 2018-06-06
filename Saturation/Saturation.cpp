@@ -230,7 +230,7 @@ public:
             break;
 
         case eLuminanceMathMaximum:
-            l = std::max(std::max(*r, *g), *b);
+            l = (std::max)((std::max)(*r, *g), *b);
             break;
         }
         if (processR) {
@@ -247,30 +247,30 @@ public:
         }
         if (_clampBlack) {
             if (processR) {
-                *r = std::max(0., *r);
+                *r = (std::max)(0., *r);
             }
             if (processG) {
-                *g = std::max(0., *g);
+                *g = (std::max)(0., *g);
             }
             if (processB) {
-                *b = std::max(0., *b);
+                *b = (std::max)(0., *b);
             }
             if (processA) {
-                *a = std::max(0., *a);
+                *a = (std::max)(0., *a);
             }
         }
         if (_clampWhite) {
             if (processR) {
-                *r = std::min(1., *r);
+                *r = (std::min)(1., *r);
             }
             if (processG) {
-                *g = std::min(1., *g);
+                *g = (std::min)(1., *g);
             }
             if (processB) {
-                *b = std::min(1., *b);
+                *b = (std::min)(1., *b);
             }
             if (processA) {
-                *a = std::min(1., *a);
+                *a = (std::min)(1., *a);
             }
         }
     } // grade

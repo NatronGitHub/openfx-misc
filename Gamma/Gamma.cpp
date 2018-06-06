@@ -161,10 +161,10 @@ public:
         _processG = processG;
         _processB = processB;
         _processA = processA;
-        _value.r = invert ? value.r : ( 1. / std::max(1e-8, value.r) );
-        _value.g = invert ? value.g : ( 1. / std::max(1e-8, value.g) );
-        _value.b = invert ? value.b : ( 1. / std::max(1e-8, value.b) );
-        _value.a = invert ? value.a : ( 1. / std::max(1e-8, value.a) );
+        _value.r = invert ? value.r : ( 1. / (std::max)(1e-8, value.r) );
+        _value.g = invert ? value.g : ( 1. / (std::max)(1e-8, value.g) );
+        _value.b = invert ? value.b : ( 1. / (std::max)(1e-8, value.b) );
+        _value.a = invert ? value.a : ( 1. / (std::max)(1e-8, value.a) );
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;

@@ -146,7 +146,7 @@ draw_plasma(CImg<T>&img, const float alpha/*=1*/, const float beta/*=0*/, const 
     const Tfloat M = (Tfloat)cimg::type<T>::max();
     cimg_forZC(img,z,c) {
         CImg<T> ref = img.get_shared_slice(z,c);
-        for (int delta = 1<<std::min(scale,31U); delta>1; delta>>=1) {
+        for (int delta = 1<<(std::min)(scale,31U); delta>1; delta>>=1) {
             const int delta2 = delta>>1;
             const float r = alpha*delta + beta;
 
@@ -250,7 +250,7 @@ public:
                         const CImgPlasmaParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 1 << std::max( 0, params.scale - (int)Coords::mipmapLevelFromScale(renderScale.x) );
+        int delta_pix = 1 << (std::max)( 0, params.scale - (int)Coords::mipmapLevelFromScale(renderScale.x) );
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
@@ -276,11 +276,11 @@ public:
             // set the seed based on the current time, and double it we get difference seeds on different fields
             seed = cimg_hash( *( (unsigned int*)&time_f ) ^ seed );
         }
-        draw_plasma(cimg, (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, std::max( 0, params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) ), seed, x1, y1);
+        draw_plasma(cimg, (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, (std::max)( 0, params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) ), seed, x1, y1);
 #else
         cimg_library::cimg::srand( (unsigned int)args.time + (unsigned int)params.seed );
 
-        cimg.draw_plasma( (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, std::max( 0, params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) ) );
+        cimg.draw_plasma( (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, (std::max)( 0, params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) ) );
 #endif
         if (params.offset != 0.) {
             cimg += params.offset;

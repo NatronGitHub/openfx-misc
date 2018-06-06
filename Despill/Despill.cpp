@@ -196,7 +196,7 @@ protected:
     float clamp(float value,
                 int maxValue) const
     {
-        return std::max( 0.f, std::min( value, float(maxValue) ) );
+        return (std::max)( 0.f, (std::min)( value, float(maxValue) ) );
     }
 
     // clamp for integer PIX types
@@ -204,7 +204,7 @@ protected:
     double clamp(double value,
                  int maxValue) const
     {
-        return std::max( 0., std::min( value, double(maxValue) ) );
+        return (std::max)( 0., (std::min)( value, double(maxValue) ) );
     }
 
 private:
@@ -293,9 +293,9 @@ private:
                         tmpPix[3] = 0.;
                     }
                     if (screen == eScreenTypeGreenScreen) {
-                        spillmap = std::max(tmpPix[1] - ( tmpPix[0] * _spillMix + tmpPix[2] * (1 - _spillMix) ) * (1 - _spillExpand), 0.);
+                        spillmap = (std::max)(tmpPix[1] - ( tmpPix[0] * _spillMix + tmpPix[2] * (1 - _spillMix) ) * (1 - _spillExpand), 0.);
                     } else {
-                        spillmap = std::max(tmpPix[2] - ( tmpPix[0] * _spillMix + tmpPix[1] * (1 - _spillMix) ) * (1 - _spillExpand), 0.);
+                        spillmap = (std::max)(tmpPix[2] - ( tmpPix[0] * _spillMix + tmpPix[1] * (1 - _spillMix) ) * (1 - _spillExpand), 0.);
                     }
 
                     tmpPix[0] = clamp<float>(tmpPix[0] + spillmap * _redScale   + _brightness * spillmap, 1.);

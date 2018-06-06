@@ -260,8 +260,8 @@ protected:
             b = p[2] / (float)maxValue;
             Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
             hsvl[0] *= 360 / OFXS_HUE_CIRCLE;
-            float min = std::min(std::min(r, g), b);
-            float max = std::max(std::max(r, g), b);
+            float min = (std::min)((std::min)(r, g), b);
+            float max = (std::max)((std::max)(r, g), b);
             hsvl[3] = (min + max) / 2;
         } else {
             hsvl[0] = hsvl[1] = hsvl[2] = hsvl[3] = 0.f;
@@ -331,8 +331,8 @@ private:
     {
         AutoMutex l (&_mutex);
         for (int c = 0; c < nComponents; ++c) {
-            _min[c] = std::min(_min[c], min[c]);
-            _max[c] = std::max(_max[c], max[c]);
+            _min[c] = (std::min)(_min[c], min[c]);
+            _max[c] = (std::max)(_max[c], max[c]);
         }
         _count += count;
     }
@@ -357,8 +357,8 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
                     double v = *dstPix;
-                    min[c] = std::min(min[c], v);
-                    max[c] = std::max(max[c], v);
+                    min[c] = (std::min)(min[c], v);
+                    max[c] = (std::max)(max[c], v);
                     ++dstPix;
                 }
             }
@@ -554,30 +554,30 @@ public:
     {
         if (_clampBlack) {
             if (processR) {
-                *r = std::max(0., *r);
+                *r = (std::max)(0., *r);
             }
             if (processG) {
-                *g = std::max(0., *g);
+                *g = (std::max)(0., *g);
             }
             if (processB) {
-                *b = std::max(0., *b);
+                *b = (std::max)(0., *b);
             }
             if (processA) {
-                *a = std::max(0., *a);
+                *a = (std::max)(0., *a);
             }
         }
         if (_clampWhite) {
             if (processR) {
-                *r = std::min(1., *r);
+                *r = (std::min)(1., *r);
             }
             if (processG) {
-                *g = std::min(1., *g);
+                *g = (std::min)(1., *g);
             }
             if (processB) {
-                *b = std::min(1., *b);
+                *b = (std::min)(1., *b);
             }
             if (processA) {
-                *a = std::min(1., *a);
+                *a = (std::min)(1., *a);
             }
         }
     }

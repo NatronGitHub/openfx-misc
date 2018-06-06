@@ -146,12 +146,12 @@ namespace cimg_library_openfx_misc {
         //! Return the maximum between two values.
         template<typename t>
         inline t max(const t& a, const t& b) {
-            return std::max(a,b);
+            return (std::max)(a,b);
         }
         //! Return the minimum between two values.
         template<typename t>
         inline t min(const t& a, const t& b) {
-            return std::min(a,b);
+            return (std::min)(a,b);
         }
     }
 }
@@ -759,7 +759,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     {
         unsigned int ncpus = OFX::MultiThread::getNumCPUs();
-        omp_set_num_threads( std::max(1u, ncpus) );
+        omp_set_num_threads( (std::max)(1u, ncpus) );
         //printf("ncpus=%u\n", ncpus);
     }
 #endif

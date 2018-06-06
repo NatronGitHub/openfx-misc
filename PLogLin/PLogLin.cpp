@@ -193,7 +193,7 @@ protected:
     double lin2log(double xLin,
                    int c)
     {
-        return (_logRef[c] + std::log10(std::max(xLin, 1e-10) / _linRef[c]) * _nGamma[c] / _density[c]) / 1023.;
+        return (_logRef[c] + std::log10((std::max)(xLin, 1e-10) / _linRef[c]) * _nGamma[c] / _density[c]) / 1023.;
     }
 
 public:

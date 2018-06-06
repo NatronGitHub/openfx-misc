@@ -1074,7 +1074,7 @@ inline
 int
 startLevelFromRenderScale(const OfxPointD& renderScale)
 {
-    double s = std::min(renderScale.x, renderScale.y);
+    double s = (std::min)(renderScale.x, renderScale.y);
 
     assert(0. < s && s <= 1.);
     int retval = -(int)std::floor(std::log(s) / M_LN2);
@@ -1187,10 +1187,10 @@ public:
     void process(void)
     {
         // make sure there are at least 4096 pixels per CPU and at least 1 line par CPU
-        unsigned int nCPUs = ( std::min(rows ? _iwidth : _iheight, 4096u) * (rows ? _iheight : _iwidth) ) / 4096u;
+        unsigned int nCPUs = ( (std::min)(rows ? _iwidth : _iheight, 4096u) * (rows ? _iheight : _iwidth) ) / 4096u;
 
         // make sure the number of CPUs is valid (and use at least 1 CPU)
-        nCPUs = std::max( 1u, std::min( nCPUs, MultiThread::getNumCPUs() ) );
+        nCPUs = (std::max)( 1u, (std::min)( nCPUs, MultiThread::getNumCPUs() ) );
 
         // call the base multi threading code, should put a pre & post thread calls in too
         multiThread(nCPUs);
@@ -1374,7 +1374,7 @@ public:
         unsigned int nCPUs = _size / 4096u;
 
         // make sure the number of CPUs is valid (and use at least 1 CPU)
-        nCPUs = std::max( 1u, std::min( nCPUs, MultiThread::getNumCPUs() ) );
+        nCPUs = (std::max)( 1u, (std::min)( nCPUs, MultiThread::getNumCPUs() ) );
 
         // call the base multi threading code, should put a pre & post thread calls in too
         multiThread(nCPUs);
@@ -1453,7 +1453,7 @@ public:
         unsigned int nCPUs = _size / 4096u;
 
         // make sure the number of CPUs is valid (and use at least 1 CPU)
-        nCPUs = std::max( 1u, std::min( nCPUs, MultiThread::getNumCPUs() ) );
+        nCPUs = (std::max)( 1u, (std::min)( nCPUs, MultiThread::getNumCPUs() ) );
 
         // call the base multi threading code, should put a pre & post thread calls in too
         multiThread(nCPUs);
@@ -1513,10 +1513,10 @@ public:
     void process(void)
     {
         // make sure there are at least 4096 pixels per CPU and at least 1 line par CPU
-        unsigned int nCPUs = ( std::min(_iwidth, 4096u) * _iheight ) / 4096u;
+        unsigned int nCPUs = ( (std::min)(_iwidth, 4096u) * _iheight ) / 4096u;
 
         // make sure the number of CPUs is valid (and use at least 1 CPU)
-        nCPUs = std::max( 1u, std::min( nCPUs, MultiThread::getNumCPUs() ) );
+        nCPUs = (std::max)( 1u, (std::min)( nCPUs, MultiThread::getNumCPUs() ) );
 
         // call the base multi threading code, should put a pre & post thread calls in too
         multiThread(nCPUs);
@@ -1581,10 +1581,10 @@ public:
     void process(void)
     {
         // make sure there are at least 4096 pixels per CPU and at least 1 column per CPU
-        unsigned int nCPUs = ( std::min(_iheight, 4096u) * _iwidth ) / 4096u;
+        unsigned int nCPUs = ( (std::min)(_iheight, 4096u) * _iwidth ) / 4096u;
 
         // make sure the number of CPUs is valid (and use at least 1 CPU)
-        nCPUs = std::max( 1u, std::min( nCPUs, MultiThread::getNumCPUs() ) );
+        nCPUs = (std::max)( 1u, (std::min)( nCPUs, MultiThread::getNumCPUs() ) );
 
         // call the base multi threading code, should put a pre & post thread calls in too
         multiThread(nCPUs);
@@ -1655,10 +1655,10 @@ public:
     void process(void)
     {
         // make sure there are at least 4096 pixels per CPU and at least 1 line par CPU
-        unsigned int nCPUs = ( std::min(_iwidth, 4096u) * _iheight ) / 4096u;
+        unsigned int nCPUs = ( (std::min)(_iwidth, 4096u) * _iheight ) / 4096u;
 
         // make sure the number of CPUs is valid (and use at least 1 CPU)
-        nCPUs = std::max( 1u, std::min( nCPUs, MultiThread::getNumCPUs() ) );
+        nCPUs = (std::max)( 1u, (std::min)( nCPUs, MultiThread::getNumCPUs() ) );
 
         // call the base multi threading code, should put a pre & post thread calls in too
         multiThread(nCPUs);
@@ -1681,12 +1681,12 @@ private:
                 return;
             }
             // summed area table (sat) rows
-            int row_sat_up = std::max(row - 1 - _adaptiveRadiusPixel, -1);
-            int row_sat_down = std::min(row + _adaptiveRadiusPixel, (int)_iheight - 1);
+            int row_sat_up = (std::max)(row - 1 - _adaptiveRadiusPixel, -1);
+            int row_sat_down = (std::min)(row + _adaptiveRadiusPixel, (int)_iheight - 1);
             int row_sat_size = row_sat_down - row_sat_up;
             for (unsigned int col = 0; col < _iwidth; ++col) {
-                int col_sat_left = std::max( (int)col - 1 - _adaptiveRadiusPixel, -1 );
-                int col_sat_right = std::min( (int)col + _adaptiveRadiusPixel, (int)_iwidth - 1 );
+                int col_sat_left = (std::max)( (int)col - 1 - _adaptiveRadiusPixel, -1 );
+                int col_sat_right = (std::min)( (int)col + _adaptiveRadiusPixel, (int)_iwidth - 1 );
                 int col_sat_size = col_sat_right - col_sat_left;
                 double sumsq = ( _fimg_sat[row_sat_down * _iwidth + col_sat_right]
                                  - (row_sat_up >= 0 ? _fimg_sat[row_sat_up * _iwidth + col_sat_right] : 0.)
@@ -1697,7 +1697,7 @@ private:
                 float fimg_denoised = _fimg_hpass[i];
 
                 // apply smooth threshold
-                float thold = _sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / sumsqsize - _sigma_n_i_sq) );
+                float thold = _sigma_n_i_sq / std::sqrt( (std::max)(1e-30, sumsq / sumsqsize - _sigma_n_i_sq) );
 
                 if (_fimg_hpass[i] < -thold) {
                     _fimg_hpass[i] += thold * _denoise_amount;
@@ -1944,7 +1944,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
         if (adaptiveRadius <= 0) {
             assert(sumsqsize > 0);
             // use the signal level computed from the whole image
-            float thold = sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / sumsqsize - sigma_n_i_sq) );
+            float thold = sigma_n_i_sq / std::sqrt( (std::max)(1e-30, sumsq / sumsqsize - sigma_n_i_sq) );
 
 #ifdef kUseMultithread
             {
@@ -2035,12 +2035,12 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
             for (unsigned int row = 0; row < iheight; ++row) {
                 abort_test_loop();
                 // summed area table (sat) rows
-                int row_sat_up = std::max( (int)row - 1 - adaptiveRadiusPixel, -1 );
-                int row_sat_down = std::min( (int)row + adaptiveRadiusPixel, (int)iheight - 1 );
+                int row_sat_up = (std::max)( (int)row - 1 - adaptiveRadiusPixel, -1 );
+                int row_sat_down = (std::min)( (int)row + adaptiveRadiusPixel, (int)iheight - 1 );
                 int row_sat_size = row_sat_down - row_sat_up;
                 for (unsigned int col = 0; col < iwidth; ++col) {
-                    int col_sat_left = std::max( (int)col - 1 - adaptiveRadiusPixel, -1 );
-                    int col_sat_right = std::min( (int)col + adaptiveRadiusPixel, (int)iwidth - 1 );
+                    int col_sat_left = (std::max)( (int)col - 1 - adaptiveRadiusPixel, -1 );
+                    int col_sat_right = (std::min)( (int)col + adaptiveRadiusPixel, (int)iwidth - 1 );
                     int col_sat_size = col_sat_right - col_sat_left;
                     double sumsq = ( fimg_sat[row_sat_down * iwidth + col_sat_right]
                                      - (row_sat_up >= 0 ? fimg_sat[row_sat_up * iwidth + col_sat_right] : 0.)
@@ -2051,7 +2051,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
                     float fimg_denoised = fimg[hpass][i];
 
                     // apply smooth threshold
-                    float thold = sigma_n_i_sq / std::sqrt( std::max(1e-30, sumsq / sumsqsize - sigma_n_i_sq) );
+                    float thold = sigma_n_i_sq / std::sqrt( (std::max)(1e-30, sumsq / sumsqsize - sigma_n_i_sq) );
 
                     if (fimg[hpass][i] < -thold) {
                         fimg[hpass][i] += thold * denoise_amount;
@@ -2214,7 +2214,7 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
 #ifdef _OPENMP
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
-    omp_set_num_threads( std::max(1u, MultiThread::getNumCPUs() ) );
+    omp_set_num_threads( (std::max)(1u, MultiThread::getNumCPUs() ) );
 #endif
     DBG(cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n");
 
@@ -2433,7 +2433,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
                                        p.noiseLevel[3][3] > 0) && p.denoise_amount[3] > 0.) || p.sharpen_amount[3] > 0. );
 
     // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
-    int maxLev = std::max( 0, kLevelMax - startLevelFromRenderScale(args.renderScale) );
+    int maxLev = (std::max)( 0, kLevelMax - startLevelFromRenderScale(args.renderScale) );
     int border = borderSize(p.adaptiveRadius, p.b3, maxLev + 1);
     p.srcWindow.x1 = args.renderWindow.x1 - border;
     p.srcWindow.y1 = args.renderWindow.y1 - border;
@@ -2909,7 +2909,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 #ifdef _OPENMP
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
-    omp_set_num_threads( std::max(1u, MultiThread::getNumCPUs() ) );
+    omp_set_num_threads( (std::max)(1u, MultiThread::getNumCPUs() ) );
 #endif
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );

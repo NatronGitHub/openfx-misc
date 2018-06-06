@@ -399,8 +399,8 @@ public:
                 if ( (sigmax < 0.1) && (sigmay < 0.1) ) {
                     return false; // identity
                 }
-                int delta_pixX = std::max( 3, (int)std::ceil(sx * 1.5) );
-                int delta_pixY = std::max( 3, (int)std::ceil(sy * 1.5) );
+                int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
+                int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
                 dstRoD->x1 = srcRoD.x1 - delta_pixX;
                 dstRoD->x2 = srcRoD.x2 + delta_pixX;
                 dstRoD->y1 = srcRoD.y1 - delta_pixY;
@@ -447,8 +447,8 @@ public:
                 return;
             }
 
-            int delta_pixX = std::max( 3, (int)std::ceil(sx * 1.5) );
-            int delta_pixY = std::max( 3, (int)std::ceil(sy * 1.5) );
+            int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
+            int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
             roi->x1 = rect.x1 - delta_pixX;
             roi->x2 = rect.x2 + delta_pixX;
             roi->y1 = rect.y1 - delta_pixY;

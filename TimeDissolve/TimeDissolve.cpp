@@ -193,9 +193,9 @@ TimeDissolvePlugin::getTransition(double time)
     } else if (time >= dissolveOut) {
         which = 1.;
     } else {
-        which = std::max( 0., std::min( (time - dissolveIn) / (dissolveOut - dissolveIn), 1. ) );
+        which = (std::max)( 0., (std::min)( (time - dissolveIn) / (dissolveOut - dissolveIn), 1. ) );
         if (_dissolveCurve) {
-            which = std::max( 0., std::min(_dissolveCurve->getValue(0, time, which), 1.) );
+            which = (std::max)( 0., (std::min)(_dissolveCurve->getValue(0, time, which), 1.) );
         } else {
             // no curve (OFX host does not support it), default to traditional smoothstep
             which = which * which * (3 - 2 * which);

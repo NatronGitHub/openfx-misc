@@ -388,7 +388,7 @@ FrameRangePlugin::getTimeDomain(OfxRangeD &range)
     int min, max;
     _frameRange->getValue(min, max);
     range.min = min;
-    range.max = std::max(min, max);
+    range.max = (std::max)(min, max);
 
     return true;
 }

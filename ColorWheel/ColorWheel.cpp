@@ -284,7 +284,7 @@ private:
 
                         // hue in [0..1]
                         double d = std::sqrt(dsq);
-                        double hue = d > 0. ? OFXS_HUE_CIRCLE * std::acos( std::max( -1., std::min( dx / d, 1. ) ) ) / (2 * M_PI) : 0.;
+                        double hue = d > 0. ? OFXS_HUE_CIRCLE * std::acos( (std::max)( -1., (std::min)( dx / d, 1. ) ) ) / (2 * M_PI) : 0.;
                         assert(hue == hue);
                         if (dy > 0) {
                             hue = OFXS_HUE_CIRCLE - hue;
@@ -446,7 +446,7 @@ ColorWheelPlugin::setupAndProcess(ColorWheelProcessorBase &processor,
     center.y = (rod.y2 + rod.y1) / 2;
     // radius: always leave one black pixel on each side
     double par = _dstClip->getPixelAspectRatio();
-    radius = std::min( (rod.x2 - rod.x1) / 2 - par / args.renderScale.x, (rod.y2 - rod.y1) / 2 - 1 / args.renderScale.y );
+    radius = (std::min)( (rod.x2 - rod.x1) / 2 - par / args.renderScale.x, (rod.y2 - rod.y1) / 2 - 1 / args.renderScale.y );
     processor.setValues(centerSaturation, edgeSaturation, centerValue, edgeValue, gamma, rotate, center, radius);
 
     // Call the base class process member, this will call the derived templated process code

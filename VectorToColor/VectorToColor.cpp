@@ -210,7 +210,7 @@ public:
                 if (_opposite) {
                     h += OFXS_HUE_CIRCLE / 2.;
                 }
-                float norm = std::sqrt( std::max( (double)vec[0] * vec[0] + (double)vec[1] * vec[1], 0. ) );
+                float norm = std::sqrt( (std::max)( (double)vec[0] * vec[0] + (double)vec[1] * vec[1], 0. ) );
                 if (_modulateV) {
                     v = norm;
                 } else {

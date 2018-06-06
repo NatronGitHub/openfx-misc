@@ -181,7 +181,7 @@ DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
 {
     double fx = (format.x2 - format.x1) / 2.;
     double fy = (format.y2 - format.y1) / 2.;
-    _f = std::max(fx, fy); // TODO: distortion scaling param for LensDistortion?
+    _f = (std::max)(fx, fy); // TODO: distortion scaling param for LensDistortion?
     _xSrcCenter = (format.x1 + format.x2) / 2.;
     _ySrcCenter = (format.y1 + format.y2) / 2.;
 }
@@ -265,7 +265,7 @@ DistortionModelPFBarrel::DistortionModelPFBarrel(const OfxRectD& format,
     /*
      double fx = (format.x2 - format.x1) / 2.;
      double fy = (format.y2 - format.y1) / 2.;
-     _f = std::max(fx, fy); // TODO: distortion scaling param for LensDistortion?
+     _f = (std::max)(fx, fy); // TODO: distortion scaling param for LensDistortion?
      _xSrcCenter = (format.x1 + format.x2) / 2.;
      _ySrcCenter = (format.y1 + format.y2) / 2.;
      */
@@ -559,13 +559,13 @@ DistortionModel3DEFishEye8::esa2plain(double x_esa_dn, double y_esa_dn, double *
     }
     double arg = r_esa_dn / (2 * f_dn);
     // Black areas, undefined.
-    double arg_clip = std::min(1., arg);
+    double arg_clip = (std::min)(1., arg);
     double phi = 2 * std::asin(arg_clip);
     double r_plain_dn;
     if (phi >= M_PI / 2.0) {
         r_plain_dn = 5.;
     } else {
-        r_plain_dn = std::min( 5., f_dn * std::tan(phi) );
+        r_plain_dn = (std::min)( 5., f_dn * std::tan(phi) );
     }
     *x_plain_dn = x_esa_dn * r_plain_dn / r_esa_dn;
     *y_plain_dn = y_esa_dn * r_plain_dn / r_esa_dn;
@@ -760,7 +760,7 @@ DistortionModelPanoTools::DistortionModelPanoTools(const OfxRectD& format,
     // Normalized means here that the largest circle that completely fits into an image is said to have radius=1.0 . (In other words, radius=1.0 is half the smaller side of the image.)
     double fx = format.x2 - format.x1;
     double fy = format.y2 - format.y1;
-    _f = std::min(fx, fy)  / 2.;
+    _f = (std::min)(fx, fy)  / 2.;
     _xSrcCenter = (format.x1 + format.x2) / 2.;
     _ySrcCenter = (format.y1 + format.y2) / 2.;
     _g /= fy;

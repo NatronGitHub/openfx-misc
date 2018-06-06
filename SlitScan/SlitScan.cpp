@@ -330,11 +330,11 @@ SlitScanPlugin::getFramesNeededRange(const double time,
         int t1, t2;
         _frameRange->getValueAtTime(time, t1, t2);
         if (retimeAbsolute) {
-            tmin = std::min(t1, t2);
-            tmax = std::max(t1, t2);
+            tmin = (std::min)(t1, t2);
+            tmax = (std::max)(t1, t2);
         } else {
-            tmin = time + std::min(t1, t2);
-            tmax = time + std::max(t1, t2);
+            tmin = time + (std::min)(t1, t2);
+            tmax = time + (std::max)(t1, t2);
         }
     } else {
         double retimeOffset = _retimeOffset->getValueAtTime(time);

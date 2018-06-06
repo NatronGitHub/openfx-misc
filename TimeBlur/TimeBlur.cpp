@@ -314,7 +314,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
     const int n = divisions;
     while (imax < n) {
         imin = imax;
-        imax = std::min(imin + kFrameChunk, n);
+        imax = (std::min)(imin + kFrameChunk, n);
         bool lastPass = (imax == n);
 
         if (!lastPass) {

@@ -213,7 +213,7 @@ SwitchPlugin::render(const RenderArguments &args)
         input = getInputAutomatic(time);
     } else {
         input = _which->getValueAtTime(time);
-        input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
+        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
     }
     Clip *srcClip = _srcClip[input];
     assert( kSupportsMultipleClipPARs   || !srcClip || srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
@@ -263,7 +263,7 @@ SwitchPlugin::isIdentity(const IsIdentityArguments &args,
         input = getInputAutomatic(time);
     } else {
         input = _which->getValueAtTime(time);
-        input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
+        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
     }
     identityClip = _srcClip[input];
 
@@ -285,7 +285,7 @@ SwitchPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         input = getInputAutomatic(time);
     } else {
         input = _which->getValueAtTime(time);
-        input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
+        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
     }
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
@@ -306,7 +306,7 @@ SwitchPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         input = getInputAutomatic(time);
     } else {
         input = _which->getValueAtTime(time);
-        input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
+        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
     }
     if ( _srcClip[input] && _srcClip[input]->isConnected() ) {
         rod = _srcClip[input]->getRegionOfDefinition(args.time);
@@ -331,7 +331,7 @@ SwitchPlugin::getTransform(const TransformArguments &args,
         input = getInputAutomatic(time);
     } else {
         input = _which->getValueAtTime(time);
-        input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
+        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
     }
     transformClip = _srcClip[input];
 
@@ -361,7 +361,7 @@ SwitchPlugin::getClipPreferences(ClipPreferencesSetter & clipPreferences)
     // use the default.
     if (_which->getNumKeys() == 0) {
         int input = _which->getValue();
-        input = std::max( 0, std::min(input, (int)_srcClip.size() - 1) );
+        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
         if ( _srcClip[input] && _srcClip[input]->isConnected() ) {
             OfxRectI format;
             double par;

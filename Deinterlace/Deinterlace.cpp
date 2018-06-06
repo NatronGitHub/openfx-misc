@@ -193,8 +193,8 @@ private:
 //#define FFMIN(a,b) ((a) > (b) ? (b) : (a))
 //#define FFMAX(a,b) ((a) < (b) ? (b) : (a))
 //#define FFABS(a) ((a) > 0 ? (a) : (-(a)))
-#define FFMIN(a, b) std::min(a, b)
-#define FFMAX(a, b) std::max(a, b)
+#define FFMIN(a, b) (std::min)(a, b)
+#define FFMAX(a, b) (std::max)(a, b)
 #define FFABS(a) std::abs(a)
 
 #define FFMIN3(a, b, c) FFMIN(FFMIN(a, b), c)

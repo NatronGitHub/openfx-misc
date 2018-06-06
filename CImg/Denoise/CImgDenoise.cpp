@@ -179,8 +179,8 @@ public:
         // args
         const float sigma_s = (float)(params.sigma_s * args.renderScale.x);
         const float sigma_p = (float)params.sigma_r;
-        const unsigned int patch_size = (unsigned int)std::ceil(std::max(0, params.psize) * args.renderScale.x);
-        const unsigned int lookup_size = (unsigned int)std::ceil(std::max(0, params.lsize) * args.renderScale.x);
+        const unsigned int patch_size = (unsigned int)std::ceil((std::max)(0, params.psize) * args.renderScale.x);
+        const unsigned int lookup_size = (unsigned int)std::ceil((std::max)(0, params.lsize) * args.renderScale.x);
         const float smoothness = (float)(params.smoothness * args.renderScale.x);
         const bool is_fast_approx = params.fast_approx;
 
@@ -323,8 +323,8 @@ public:
 #else // ifdef CIMG_ABORTABLE
         cimg.blur_patch( (float)(params.sigma_s * args.renderScale.x),
                          (float)params.sigma_r,
-                         (unsigned int)std::ceil(std::max(0, params.psize) * args.renderScale.x),
-                         (unsigned int)std::ceil(std::max(0, params.lsize) * args.renderScale.x),
+                         (unsigned int)std::ceil((std::max)(0, params.psize) * args.renderScale.x),
+                         (unsigned int)std::ceil((std::max)(0, params.lsize) * args.renderScale.x),
                          (float)(params.smoothness * args.renderScale.x),
                          params.fast_approx );
 #endif // ifdef CIMG_ABORTABLE

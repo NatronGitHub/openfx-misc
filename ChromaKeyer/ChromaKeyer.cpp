@@ -387,14 +387,14 @@ private:
                 float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
                 if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && (nComponents == 4) && srcPix ) {
                     // take the max of inMask and the source Alpha
-                    inMask = std::max( inMask, sampleToFloat<PIX, maxValue>(srcPix[3]) );
+                    inMask = (std::max)( inMask, sampleToFloat<PIX, maxValue>(srcPix[3]) );
                 }
                 float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
                 float Kbg = 0.f;
 
                 // clamp inMask and outMask in the [0,1] range
-                inMask = std::max( 0.f, std::min(inMask, 1.f) );
-                outMask = std::max( 0.f, std::min(outMask, 1.f) );
+                inMask = (std::max)( 0.f, (std::min)(inMask, 1.f) );
+                outMask = (std::max)( 0.f, (std::min)(outMask, 1.f) );
 
                 // output of the foreground suppressor
                 float fgr = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[0]) : 0.f;
@@ -506,8 +506,8 @@ private:
                         } else {
                             fgcb = fgcb - Kfg * _cosKey / 2;
                             fgcr = fgcr - Kfg * _sinKey / 2;
-                            fgcb = std::max( -0.5f, std::min(fgcb, 0.5f) );
-                            fgcr = std::max( -0.5f, std::min(fgcr, 0.5f) );
+                            fgcb = (std::max)( -0.5f, (std::min)(fgcb, 0.5f) );
+                            fgcr = (std::max)( -0.5f, (std::min)(fgcr, 0.5f) );
                             //assert(-0.5 <= fgcb && fgcb <= 0.5);
                             //assert(-0.5 <= fgcr && fgcr <= 0.5);
                         }
@@ -525,9 +525,9 @@ private:
                             // convert back to r g b
                             // (note: r,g,b is premultiplied since it should be added to the suppressed background)
                             _to_rgb(fgy, fgcb, fgcr, &fgr, &fgg, &fgb);
-                            fgr = std::max( 0.f, std::min(fgr, 1.f) );
-                            fgg = std::max( 0.f, std::min(fgg, 1.f) );
-                            fgb = std::max( 0.f, std::min(fgb, 1.f) );
+                            fgr = (std::max)( 0.f, (std::min)(fgr, 1.f) );
+                            fgg = (std::max)( 0.f, (std::min)(fgg, 1.f) );
+                            fgb = (std::max)( 0.f, (std::min)(fgb, 1.f) );
                             // linearize RGB
                             if (_lut) {
                                 fgr =  _lut->fromColorSpaceFloatToLinearFloat(fgr);

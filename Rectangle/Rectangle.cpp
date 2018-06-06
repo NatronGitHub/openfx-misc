@@ -243,7 +243,7 @@ public:
         _btmLeft = btmLeft;
         _size = size;
         _cornerRadius = cornerRadius;
-        _softness = std::max(0., softness);
+        _softness = (std::max)(0., softness);
         _color0 = color0;
         _color1 = color1;
         _mix = mix;
@@ -370,8 +370,8 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                double dx = std::min(x - btmLeft.x, topRight.x - x);
-                double dy = std::min(y - btmLeft.y, topRight.y - y);
+                double dx = (std::min)(x - btmLeft.x, topRight.x - x);
+                double dy = (std::min)(y - btmLeft.y, topRight.y - y);
 
                 if ( (dx <= -0.5) || (dy <= -0.5) ) {
                     // outside of the rectangle
@@ -470,7 +470,7 @@ private:
                                     double dellipse; // distance to the ellipse along the radius
                                     // compute the point on the ellipse that goes through the ellipse center and the considered point.
                                     if (dsq_closer <= 0) {
-                                        dellipse = std::min(r.x, r.y);
+                                        dellipse = (std::min)(r.x, r.y);
                                     } else {
                                         double radius = std::sqrt(dsq_closer);
                                         // distance must be measured at full scale in canonical coords
@@ -485,7 +485,7 @@ private:
                                     }
 
                                     // take the min of the rectangle softness and the corner softness
-                                    t = std::min(t, tx * ty);
+                                    t = (std::min)(t, tx * ty);
 
                                     if (t >= 1) {
                                         tmpPix[0] = (float)_color1.r;
@@ -511,7 +511,7 @@ private:
                                     // mixed pixel, partly inside / partly outside, center of pixel is outside
                                     assert(dsq_closer < 1 && dsq_farther > 1);
                                     // now mix with the outside pix;
-                                    a = ( 1 - std::sqrt( std::max(dsq_closer, 0.) ) ) / ( std::sqrt( std::max(dsq_farther, 0.) ) - std::sqrt( std::max(dsq_closer, 0.) ) );
+                                    a = ( 1 - std::sqrt( (std::max)(dsq_closer, 0.) ) ) / ( std::sqrt( (std::max)(dsq_farther, 0.) ) - std::sqrt( (std::max)(dsq_closer, 0.) ) );
                                 }
                             } // if (!fully_outside
                         } // if (outside vs. maybe inside)

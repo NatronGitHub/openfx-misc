@@ -247,7 +247,7 @@ protected:
             return (r + g + b) / 3;
         case eLuminanceMathMaximum:
 
-            return std::max(std::max(r, g), b);
+            return (std::max)((std::max)(r, g), b);
         }
     }
 
@@ -355,7 +355,7 @@ private:
                 // Red
                 if (_redSuppress != 0.0) {
                     if ( (output.r > output.g) && (output.r > output.b) ) {
-                        double diff1 = ( output.r - std::max( output.g, output.b ) ) * _redSuppress;
+                        double diff1 = ( output.r - (std::max)( output.g, output.b ) ) * _redSuppress;
                         output.r -= diff1;
                         pixelModified += std::abs(diff1);
                     }
@@ -364,7 +364,7 @@ private:
                 // Green
                 if (_greenSuppress != 0.0) {
                     if ( (output.g > output.b) && (output.g > output.r) ) {
-                        double diff1 = ( output.g - std::max( output.b, output.r ) ) * _greenSuppress;
+                        double diff1 = ( output.g - (std::max)( output.b, output.r ) ) * _greenSuppress;
                         output.g -= diff1;
                         pixelModified += std::abs(diff1);
                     }
@@ -373,7 +373,7 @@ private:
                 // Blue
                 if (_blueSuppress != 0.0) {
                     if ( (output.b > output.g) && (output.b > output.r) ) {
-                        double diff1 = ( output.b - std::max( output.g, output.r ) ) * _blueSuppress;
+                        double diff1 = ( output.b - (std::max)( output.g, output.r ) ) * _blueSuppress;
                         output.b -= diff1;
                         pixelModified += std::abs(diff1);
                     }

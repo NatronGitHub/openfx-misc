@@ -161,13 +161,13 @@ public:
         // PROCESSING.
         // This is the only place where the actual processing takes place
         if ( (params.sx > 0) || (params.sy > 0) ) {
-            cimg.erode( (unsigned int)std::floor(std::max(0, params.sx) * args.renderScale.x) * 2 + 1,
-                        (unsigned int)std::floor(std::max(0, params.sy) * args.renderScale.y) * 2 + 1 );
+            cimg.erode( (unsigned int)std::floor((std::max)(0, params.sx) * args.renderScale.x) * 2 + 1,
+                        (unsigned int)std::floor((std::max)(0, params.sy) * args.renderScale.y) * 2 + 1 );
         }
         if ( abort() ) { return; }
         if ( (params.sx < 0) || (params.sy < 0) ) {
-            cimg.dilate( (unsigned int)std::floor(std::max(0, -params.sx) * args.renderScale.x) * 2 + 1,
-                         (unsigned int)std::floor(std::max(0, -params.sy) * args.renderScale.y) * 2 + 1 );
+            cimg.dilate( (unsigned int)std::floor((std::max)(0, -params.sx) * args.renderScale.x) * 2 + 1,
+                         (unsigned int)std::floor((std::max)(0, -params.sy) * args.renderScale.y) * 2 + 1 );
         }
     }
 

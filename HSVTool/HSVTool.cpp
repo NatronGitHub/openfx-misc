@@ -542,7 +542,7 @@ public:
             if ( angleWithinRange(h, h1, h1prolloff) ) {
                 c1 = angleCoeff10(h, h1, h1prolloff);
             }
-            *hcoeff = (float)std::max(c0, c1);
+            *hcoeff = (float)(std::max)(c0, c1);
         }
         assert(0 <= *hcoeff && *hcoeff <= 1.);
         const double s0 = _values.satRange[0];
@@ -573,7 +573,7 @@ public:
             *vcoeff = 0.f;
         }
         assert(0 <= *vcoeff && *vcoeff <= 1.);
-        float coeff = std::min(std::min(*hcoeff, *scoeff), *vcoeff);
+        float coeff = (std::min)((std::min)(*hcoeff, *scoeff), *vcoeff);
         assert(0 <= coeff && coeff <= 1.);
         if (coeff <= 0.) {
             *rout = r;
@@ -591,14 +591,14 @@ public:
             Color::hsv_to_rgb(h, s, v, rout, gout, bout);
         }
         if (_clampBlack) {
-            *rout = std::max(0.f, *rout);
-            *gout = std::max(0.f, *gout);
-            *bout = std::max(0.f, *bout);
+            *rout = (std::max)(0.f, *rout);
+            *gout = (std::max)(0.f, *gout);
+            *bout = (std::max)(0.f, *bout);
         }
         if (_clampWhite) {
-            *rout = std::min(1.f, *rout);
-            *gout = std::min(1.f, *gout);
-            *bout = std::min(1.f, *bout);
+            *rout = (std::min)(1.f, *rout);
+            *gout = (std::min)(1.f, *gout);
+            *bout = (std::min)(1.f, *bout);
         }
     } // hsvtool
 
@@ -656,16 +656,16 @@ public:
                         a = vcoeff;
                         break;
                     case eOutputAlphaHueSaturation:
-                        a = std::min(hcoeff, scoeff);
+                        a = (std::min)(hcoeff, scoeff);
                         break;
                     case eOutputAlphaHueBrightness:
-                        a = std::min(hcoeff, vcoeff);
+                        a = (std::min)(hcoeff, vcoeff);
                         break;
                     case eOutputAlphaSaturationBrightness:
-                        a = std::min(scoeff, vcoeff);
+                        a = (std::min)(scoeff, vcoeff);
                         break;
                     case eOutputAlphaAll:
-                        a = std::min(std::min(hcoeff, scoeff), vcoeff);
+                        a = (std::min)((std::min)(hcoeff, scoeff), vcoeff);
                         break;
                     }
                     if (_doMasking) {
@@ -681,7 +681,7 @@ public:
                                 maskScale = 1.f - maskScale;
                             }
                         }
-                        a = std::min(a, maskScale);
+                        a = (std::min)(a, maskScale);
                     }
                     dstPix[3] = maxValue * a;
                 }
@@ -739,7 +739,7 @@ public:
 
             // angle mean and sdev from https://en.wikipedia.org/wiki/Directional_statistics#Measures_of_location_and_spread
             return normalizeAngle(std::atan2(meansinh, meancosh) * 180 / M_PI);
-            //*huesdev = std::sqrt(std::max(0., -std::log(meansinh*meansinh+meancosh*meancosh)))*180/M_PI;
+            //*huesdev = std::sqrt((std::max)(0., -std::log(meansinh*meansinh+meancosh*meancosh)))*180/M_PI;
         }
     }
 
@@ -1552,7 +1552,7 @@ HSVToolPlugin::setSrcFromRectangle(const Image* srcImg,
     if (hrange < 0) {
         hrange += 360.;
     }
-    double hrolloff = std::min(hrange * DEFAULT_RECTANGLE_ROLLOFF, (360 - hrange) / 2);
+    double hrolloff = (std::min)(hrange * DEFAULT_RECTANGLE_ROLLOFF, (360 - hrange) / 2);
     _hueRangeRolloff->setValue( ffloor(hrolloff, 2) );
     if (tov != 0.) { // no need to rotate if target color is black
         _hueRotation->setValue( fround(dh, 2) );

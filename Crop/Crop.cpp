@@ -183,8 +183,8 @@ private:
                     p_pixel.x = x - _translation.x;
                     p_pixel.y = y - _translation.y;
                     Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
-                    double dx = std::min(p.x - _cropRectFull.x1, _cropRectFull.x2 - p.x);
-                    double dy = std::min(p.y - _cropRectFull.y1, _cropRectFull.y2 - p.y);
+                    double dx = (std::min)(p.x - _cropRectFull.x1, _cropRectFull.x2 - p.x);
+                    double dy = (std::min)(p.y - _cropRectFull.y1, _cropRectFull.y2 - p.y);
 
                     if ( _blackOutside && ( (dx <= 0) || (dy <= 0) ) ) {
                         // outside of the rectangle

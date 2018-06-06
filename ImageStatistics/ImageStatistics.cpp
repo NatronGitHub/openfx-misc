@@ -372,8 +372,8 @@ protected:
             b = p[2] / (float)maxValue;
             Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
             hsvl[0] *= 360 / OFXS_HUE_CIRCLE;
-            float min = std::min(std::min(r, g), b);
-            float max = std::max(std::max(r, g), b);
+            float min = (std::min)((std::min)(r, g), b);
+            float max = (std::max)((std::max)(r, g), b);
             hsvl[3] = (min + max) / 2;
         } else {
             hsvl[0] = hsvl[1] = hsvl[2] = hsvl[3] = 0.f;
@@ -450,8 +450,8 @@ private:
     {
         AutoMutex l (&_mutex);
         for (int c = 0; c < nComponents; ++c) {
-            _min[c] = std::min(_min[c], min[c]);
-            _max[c] = std::max(_max[c], max[c]);
+            _min[c] = (std::min)(_min[c], min[c]);
+            _max[c] = (std::max)(_max[c], max[c]);
             _sum[c] += sum[c];
         }
         _count += count;
@@ -480,8 +480,8 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
                     double v = *dstPix;
-                    min[c] = std::min(min[c], v);
-                    max[c] = std::max(max[c], v);
+                    min[c] = (std::min)(min[c], v);
+                    max[c] = (std::max)(max[c], v);
                     sumLine[c] += v;
                     ++dstPix;
                 }
@@ -529,7 +529,7 @@ public:
             double sdev[nComponents];
             for (int c = 0; c < nComponents; ++c) {
                 // sdev^2 is an unbiased estimator for the population variance
-                sdev[c] = std::sqrt( std::max( 0., _sum_p2[c] / (_count - 1) ) );
+                sdev[c] = std::sqrt( (std::max)( 0., _sum_p2[c] / (_count - 1) ) );
             }
             toRGBA<double, nComponents, 1>(sdev, &results->sdev);
         }
@@ -747,8 +747,8 @@ private:
     {
         AutoMutex l (&_mutex);
         for (int c = 0; c < nComponentsHSVL; ++c) {
-            _min[c] = std::min(_min[c], min[c]);
-            _max[c] = std::max(_max[c], max[c]);
+            _min[c] = (std::min)(_min[c], min[c]);
+            _max[c] = (std::max)(_max[c], max[c]);
             _sum[c] += sum[c];
         }
         _count += count;
@@ -779,8 +779,8 @@ private:
                 pixToHSVL<PIX, nComponents, maxValue>(dstPix, hsvl);
                 for (int c = 0; c < nComponentsHSVL; ++c) {
                     double v = hsvl[c];
-                    min[c] = std::min(min[c], v);
-                    max[c] = std::max(max[c], v);
+                    min[c] = (std::min)(min[c], v);
+                    max[c] = (std::max)(max[c], v);
                     sumLine[c] += v;
                 }
                 dstPix += nComponents;
@@ -828,7 +828,7 @@ public:
             double sdev[nComponentsHSVL];
             for (int c = 0; c < nComponentsHSVL; ++c) {
                 // sdev^2 is an unbiased estimator for the population variance
-                sdev[c] = std::sqrt( std::max( 0., _sum_p2[c] / (_count - 1) ) );
+                sdev[c] = std::sqrt( (std::max)( 0., _sum_p2[c] / (_count - 1) ) );
             }
             toRGBA<double, nComponentsHSVL, 1>(sdev, &results->sdev);
         }
@@ -1076,7 +1076,7 @@ private:
                 return (r + g + b) / 3;
             case eLuminanceMathMaximum:
 
-                return std::max(std::max(r, g), b);
+                return (std::max)((std::max)(r, g), b);
             }
         }
 

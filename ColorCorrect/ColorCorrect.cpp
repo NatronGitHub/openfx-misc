@@ -214,7 +214,7 @@ luminance(T r,
         return (r + g + b) / 3;
     case eLuminanceMathMaximum:
 
-        return std::max(std::max(r, g), b);
+        return (std::max)((std::max)(r, g), b);
     }
 }
 
@@ -455,7 +455,7 @@ protected:
     float clamp(float value,
                 int maxValue) const
     {
-        return std::max( 0.f, std::min( value, float(maxValue) ) );
+        return (std::max)( 0.f, (std::min)( value, float(maxValue) ) );
     }
 
     // clamp for integer PIX types
@@ -463,7 +463,7 @@ protected:
     double clamp(double value,
                  int maxValue) const
     {
-        return std::max( 0., std::min( value, double(maxValue) ) );
+        return (std::max)( 0., (std::min)( value, double(maxValue) ) );
     }
 
 protected:
@@ -522,8 +522,8 @@ public:
                    bool clampWhite)
         : ColorCorrecterBase(instance, clampBlack, clampWhite, args)
         , _lookupTableParam(lookupTableParam)
-        , _rangeMin( std::min(rangeMin, rangeMax) )
-        , _rangeMax( std::max(rangeMin, rangeMax) )
+        , _rangeMin( (std::min)(rangeMin, rangeMax) )
+        , _rangeMax( (std::max)(rangeMin, rangeMax) )
     {
         _time = args.time;
         // build the LUT
@@ -751,8 +751,8 @@ private:
             }
             int i = (int)(x * nbValues);
             assert(0 <= i && i < nbValues);
-            i = std::max( 0, std::min(i, nbValues - 1) );
-            double alpha = std::max( 0., std::min(x * nbValues - i, 1.) );
+            i = (std::max)( 0, (std::min)(i, nbValues - 1) );
+            double alpha = (std::max)( 0., (std::min)(x * nbValues - i, 1.) );
             float a = _lookupTable[component][i];
             float b = _lookupTable[component][i + 1];
 

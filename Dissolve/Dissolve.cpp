@@ -223,7 +223,7 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
     }
 
     // get the transition value
-    double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
+    double which = (std::max)( 0., (std::min)(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
     int prev = std::floor(which);
     int next = std::ceil(which);
 
@@ -379,10 +379,10 @@ DissolvePlugin::isIdentity(const IsIdentityArguments &args,
                            , int& /*view*/, std::string& /*plane*/)
 {
     // get the transition value
-    double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
+    double which = (std::max)( 0., (std::min)(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
     int prev = (int)which;
 
-    //int next = std::min((int)which+1,(int)_srcClip.size()-1);
+    //int next = (std::min)((int)which+1,(int)_srcClip.size()-1);
 
     identityTime = args.time;
 
@@ -433,7 +433,7 @@ void
 DissolvePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                      RegionOfInterestSetter &rois)
 {
-    double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
+    double which = (std::max)( 0., (std::min)(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
     unsigned prev = (unsigned)std::floor(which);
     unsigned next = (unsigned)std::ceil(which);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
@@ -450,9 +450,9 @@ DissolvePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                       OfxRectD &rod)
 {
     // get the transition value
-    double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
+    double which = (std::max)( 0., (std::min)(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
     int prev = (int)which;
-    int next = std::min( (int)which + 1, (int)_srcClip.size() - 1 );
+    int next = (std::min)( (int)which + 1, (int)_srcClip.size() - 1 );
 
     // at the start?
     if ( (which <= 0.0) && _srcClip[0] && _srcClip[0]->isConnected() ) {

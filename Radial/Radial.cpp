@@ -229,7 +229,7 @@ public:
     {
         _btmLeft = btmLeft;
         _size = size;
-        _softness = std::max( 0., std::min(softness, 1.) );
+        _softness = (std::max)( 0., (std::min)(softness, 1.) );
         _plinear = plinear;
         _color0 = color0;
         _color1 = color1;
@@ -416,7 +416,7 @@ private:
                             tmpPix[3] = (float)_color1.a;
                         } else {
                             // mixed
-                            float t = ( 1.f - (float)std::sqrt( std::max(dsq_closer, 0.) ) ) / (float)_softness;
+                            float t = ( 1.f - (float)std::sqrt( (std::max)(dsq_closer, 0.) ) ) / (float)_softness;
                             if (t >= 1) {
                                 tmpPix[0] = (float)_color1.r;
                                 tmpPix[1] = (float)_color1.g;
@@ -443,7 +443,7 @@ private:
                             // mixed pixel, partly inside / partly outside, center of pixel is outside
                             assert(dsq_closer < 1 && dsq_farther > 1);
                             // now mix with the outside pix;
-                            a = ( 1 - std::sqrt( std::max(dsq_closer, 0.) ) ) / ( std::sqrt( std::max(dsq_farther, 0.) ) - std::sqrt( std::max(dsq_closer, 0.) ) );
+                            a = ( 1 - std::sqrt( (std::max)(dsq_closer, 0.) ) ) / ( std::sqrt( (std::max)(dsq_farther, 0.) ) - std::sqrt( (std::max)(dsq_closer, 0.) ) );
                         }
                         assert(a >= 0. && a <= 1.);
                         if (a != 1.) {

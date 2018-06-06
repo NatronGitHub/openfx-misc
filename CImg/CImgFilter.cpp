@@ -422,8 +422,8 @@ CImgFilterPluginHelperBase::maskLineIsZero(const Image* mask,
             return true;
         }
         // restrict the search to the part of the line which is within the mask
-        x1 = std::max(x1, maskBounds.x1);
-        x2 = std::min(x2, maskBounds.x2);
+        x1 = (std::max)(x1, maskBounds.x1);
+        x2 = (std::min)(x2, maskBounds.x2);
         if (x1 < x2) { // the line is not empty
             const float *p = reinterpret_cast<const float*>( mask->getPixelAddress(x1, y) );
             assert(p);
@@ -474,8 +474,8 @@ CImgFilterPluginHelperBase::maskColumnIsZero(const Image* mask,
             return true;
         }
         // restrict the search to the part of the column which is within the mask
-        y1 = std::max(y1, maskBounds.y1);
-        y2 = std::min(y2, maskBounds.y2);
+        y1 = (std::max)(y1, maskBounds.y1);
+        y2 = (std::min)(y2, maskBounds.y2);
         if (y1 < y2) { // the column is not empty
             const float *p = reinterpret_cast<const float*>( mask->getPixelAddress(x, y1) );
             assert(p);

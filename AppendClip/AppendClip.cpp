@@ -332,7 +332,7 @@ AppendClipPlugin::getSources(int firstFrame,
                 clip1Min = r.min;
                 clip1Max = r.max;
                 clip1OutMin = firstFrame;
-                clip1OutMax = std::max(firstFrame + (int)(r.max - r.min), firstFrame);
+                clip1OutMax = (std::max)(firstFrame + (int)(r.max - r.min), firstFrame);
 
                 continue; // proceed to extract clip1 etc.
             }
@@ -341,9 +341,9 @@ AppendClipPlugin::getSources(int firstFrame,
             int clip2Min = r.min;
             int clip2Max = r.max;
             assert(clip1OutMax >= clip0OutMax);
-            int clip2OutMin = std::max(clip0OutMax + 1, // next clip must start after end of the forelast Clip (never more than 2 clips at the same time)
+            int clip2OutMin = (std::max)(clip0OutMax + 1, // next clip must start after end of the forelast Clip (never more than 2 clips at the same time)
                                        clip1OutMax + 1 - crossDissolve);
-            int clip2OutMax = std::max( clip1OutMax, // clip end should be at least the end of the previous clip
+            int clip2OutMax = (std::max)( clip1OutMax, // clip end should be at least the end of the previous clip
                                         clip2OutMin + (clip2Max - clip2Min) );
 
             // if time is before this clip, we're done
@@ -434,7 +434,7 @@ AppendClipPlugin::getSources(int firstFrame,
         alpha0 = 1. - (time + 1 - clip1OutMin) / (double)(crossDissolve + 1);
         assert(0 < alpha0 && alpha0 < 1.);
         t1 = clip1Min + (time - clip1OutMin);
-        alpha1 = std::max(0., 1. - alpha0);
+        alpha1 = (std::max)(0., 1. - alpha0);
     } else if ( (clip0 != -1) && (clip0OutMin <= time) && (time <= clip0OutMax) ) {
         // clip0 only
         t0 = clip0Min + (time - clip0OutMin);

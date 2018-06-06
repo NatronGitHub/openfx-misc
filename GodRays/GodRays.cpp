@@ -183,7 +183,7 @@ private:
         _color.resize(invtransformsize);
 #ifdef GODRAYS_LINEAR_INTERPOLATION
         // Linear interpolation is usually not whant the user wants, because in real life crepuscular rays have an exponential decrease in intensity.
-        int range = std::max(1, (int)invtransformsize); // works even if invtransformsize = 1
+        int range = (std::max)(1, (int)invtransformsize); // works even if invtransformsize = 1
         // Same as Nuke: toColor is never completely reached.
         for (int i = 0; i < (int)invtransformsize; ++i) {
             double alpha = (i + 1) / (double)range; // alpha is never 0
@@ -191,8 +191,8 @@ private:
                 int ci = (nComponents == 1) ? 3 : c;
                 double g = gamma[ci];
                 if (g != 1.) {
-                    _color[i][c] = std::pow(std::pow(std::max(0., fromColor[ci]), g) * alpha +
-                                            std::pow(std::max(0., toColor[ci]),  g) * (1 - alpha), 1. / g);
+                    _color[i][c] = std::pow(std::pow((std::max)(0., fromColor[ci]), g) * alpha +
+                                            std::pow((std::max)(0., toColor[ci]),  g) * (1 - alpha), 1. / g);
                 } else {
                     _color[i][c] = fromColor[ci] * alpha + toColor[ci] * (1. - alpha);
                 }
@@ -203,8 +203,8 @@ private:
         for (int c = 0; c < nComponents; ++c) {
             int ci = (nComponents == 1) ? 3 : c;
             double g = gamma[ci];
-            double col1 = std::max(0.001, fromColor[ci]);
-            double col2 = std::max(0.001, toColor[ci]);
+            double col1 = (std::max)(0.001, fromColor[ci]);
+            double col2 = (std::max)(0.001, toColor[ci]);
             for (int i = invtransformsize - 1; i >= 0; --i) {
                 double col = col1 * std::pow(col2 / col1, (invtransformsize - 1 - i) / (double)invtransformsize);
                 if ( (g == 1.) || (col1 == col2) ) {
@@ -373,7 +373,7 @@ private:
                             // multiply by color
                             tmpPix[c] *= _color[t][c];
                             if (_max) {
-                                max[c] = std::max(max[c], tmpPix[c]);
+                                max[c] = (std::max)(max[c], tmpPix[c]);
                             }
                             accPix[c] += tmpPix[c];
 #ifndef USE_STEPS
@@ -397,7 +397,7 @@ private:
                             // - the error should be less than motionblur*maxValue/100
                             // - the total number of iterations should be less than motionblur*100
                             if (maxsamples < maxIt) {
-                                maxsamples = std::max( maxsamples, std::min( (int)(var[c] / maxErr2), maxIt ) );
+                                maxsamples = (std::max)( maxsamples, (std::min)( (int)(var[c] / maxErr2), maxIt ) );
                             }
                         }
                     }
@@ -919,7 +919,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         if (_steps) {
             _steps->getValueAtTime(time, steps);
         }
-        invtransformsizealloc = 1 << std::max(0, steps);
+        invtransformsizealloc = 1 << (std::max)(0, steps);
 #else
         invtransformsizealloc = kTransform3x3MotionBlurCount;
 #endif

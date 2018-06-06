@@ -330,7 +330,7 @@ private:
         double score = 0;
         double otherSsq = 0.;
         double otherMean[3];
-        const int scoreComps = std::min(nComponents, 3);
+        const int scoreComps = (std::min)(nComponents, 3);
 
         if (scoreTypeE == eTrackerZNCC) {
             for (int c = 0; c < 3; ++c) {
@@ -346,8 +346,8 @@ private:
                     // take nearest pixel in other image (more chance to get a track than with black)
                     int otherx = x + j;
                     int othery = y + i;
-                    otherx = std::max( _otherImg->getBounds().x1, std::min(otherx, _otherImg->getBounds().x2 - 1) );
-                    othery = std::max( _otherImg->getBounds().y1, std::min(othery, _otherImg->getBounds().y2 - 1) );
+                    otherx = (std::max)( _otherImg->getBounds().x1, (std::min)(otherx, _otherImg->getBounds().x2 - 1) );
+                    othery = (std::max)( _otherImg->getBounds().y1, (std::min)(othery, _otherImg->getBounds().y2 - 1) );
                     const PIX *otherPix = (const PIX *) _otherImg->getPixelAddress(otherx, othery);
                     for (int c = 0; c < scoreComps; ++c) {
                         otherMean[c] += *weightPtr * otherPix[c];
@@ -373,8 +373,8 @@ private:
                 // take nearest pixel in other image (more chance to get a track than with black)
                 int otherx = x + j;
                 int othery = y + i;
-                otherx = std::max( _otherImg->getBounds().x1, std::min(otherx, _otherImg->getBounds().x2 - 1) );
-                othery = std::max( _otherImg->getBounds().y1, std::min(othery, _otherImg->getBounds().y2 - 1) );
+                otherx = (std::max)( _otherImg->getBounds().x1, (std::min)(otherx, _otherImg->getBounds().x2 - 1) );
+                othery = (std::max)( _otherImg->getBounds().y1, (std::min)(othery, _otherImg->getBounds().y2 - 1) );
                 const PIX *otherPix = (const PIX *) _otherImg->getPixelAddress(otherx, othery);
 
                 ///the search window & pattern window have been intersected to the reference image's bounds
@@ -401,7 +401,7 @@ private:
             }
         }
         if ( (scoreTypeE == eTrackerNCC) || (scoreTypeE == eTrackerZNCC) ) {
-            double sdev = std::sqrt( std::max(otherSsq, 0.) );
+            double sdev = std::sqrt( (std::max)(otherSsq, 0.) );
             if (sdev != 0.) {
                 score /= sdev;
             } else {
@@ -426,7 +426,7 @@ private:
         ///that minimize the sum of squared differences between the pattern in the ref image
         ///and the pattern in the other image.
 
-        const int scoreComps = std::min(nComponents, 3);
+        const int scoreComps = (std::min)(nComponents, 3);
         double refMean[3];
         if (scoreTypeE == eTrackerZNCC) {
             for (int c = 0; c < 3; ++c) {

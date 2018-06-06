@@ -143,7 +143,7 @@ private:
                         }
                     }
                     diff = _gain * diff - _offset; // this seems to be the formula used in Nuke
-                    dstPix[nComponents - 1] = (PIX)std::max( 0., std::min(diff, (double)maxValue) );
+                    dstPix[nComponents - 1] = (PIX)(std::max)( 0., (std::min)(diff, (double)maxValue) );
                 } else if (srcPixB && !srcPixA) {
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = srcPixB[c];

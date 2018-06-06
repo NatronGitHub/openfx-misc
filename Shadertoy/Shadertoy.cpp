@@ -1461,7 +1461,7 @@ ShadertoyPlugin::updateVisibility()
     _mouseClick->setIsSecretAndDisabled(!mouseParams);
     _mousePressed->setIsSecretAndDisabled(!mouseParams);
 
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
+    unsigned paramCount = (std::max)( 0, (std::min)(_paramCount->getValue(), (int)_paramType.size()) );
     for (unsigned i = 0; i < _paramType.size(); ++i) {
         updateVisibilityParam(i, i < paramCount);
     }
@@ -1613,7 +1613,7 @@ ShadertoyPlugin::updateExtra()
             if ( _imageShaderHasMouse != _mouseParams->getValue() ) {
                 _mouseParams->setValue(_imageShaderHasMouse);
             }
-            unsigned paramCount = std::min( _imageShaderExtraParameters.size() , _paramType.size() );
+            unsigned paramCount = (std::min)( _imageShaderExtraParameters.size() , _paramType.size() );
             if ( (int)paramCount != _paramCount->getValue() ) {
                 _paramCount->setValue(paramCount);
                 uniformsChanged = true;
@@ -1859,7 +1859,7 @@ ShadertoyPlugin::updateExtra()
     }
 
     // update GUI
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
+    unsigned paramCount = (std::max)( 0, (std::min)(_paramCount->getValue(), (int)_paramType.size()) );
 
     for (unsigned i = 0; i < paramCount; ++i) {
         UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
@@ -2000,7 +2000,7 @@ void
 ShadertoyPlugin::resetParamsValues()
 {
     //beginEditBlock(kParamResetParams);
-    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), (int)_paramType.size()) );
+    unsigned paramCount = (std::max)( 0, (std::min)(_paramCount->getValue(), (int)_paramType.size()) );
     for (unsigned i = 0; i < paramCount; ++i) {
         UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
         if (t == eUniformTypeNone) {

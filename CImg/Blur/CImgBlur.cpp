@@ -1346,9 +1346,9 @@ public:
         }
         if (_blurPlugin == eBlurPluginEdgeExtend) {
             params.edgeExtendPremult = _edgeExtendPremult->getValueAtTime(time);
-            params.edgeExtendSize = std::max( 0., _edgeExtendSize->getValueAtTime(time) );
+            params.edgeExtendSize = (std::max)( 0., _edgeExtendSize->getValueAtTime(time) );
             params.edgeExtendUnpremult = _edgeExtendUnpremult->getValueAtTime(time);
-            params.count = std::max( 1, _edgeExtendCount->getValueAtTime(time) );
+            params.count = (std::max)( 1, _edgeExtendCount->getValueAtTime(time) );
         } else {
             assert(_blurPlugin == eBlurPluginBlur ||
                    _blurPlugin == eBlurPluginLaplacian ||
@@ -1387,8 +1387,8 @@ public:
             params.sizex /= params.par;
         }
         if (_blurPlugin == eBlurPluginBlur) {
-            params.orderX = std::max( 0, _orderX->getValueAtTime(time) );
-            params.orderY = std::max( 0, _orderY->getValueAtTime(time) );
+            params.orderX = (std::max)( 0, _orderX->getValueAtTime(time) );
+            params.orderY = (std::max)( 0, _orderY->getValueAtTime(time) );
         } else {
             assert(_blurPlugin == eBlurPluginLaplacian ||
                    _blurPlugin == eBlurPluginSharpen ||
@@ -1404,7 +1404,7 @@ public:
 
         if (_blurPlugin == eBlurPluginBloom) {
             params.bloomRatio = _bloomRatio->getValueAtTime(time);
-            params.count = std::max( 1, _bloomCount->getValueAtTime(time) );
+            params.count = (std::max)( 1, _bloomCount->getValueAtTime(time) );
             if (params.bloomRatio <= 1.) {
                 params.count = 1;
             }
@@ -1564,8 +1564,8 @@ public:
                 if ( (sigmax < 0.1) && (sigmay < 0.1) && (params.orderX == 0) && (params.orderY == 0) ) {
                     return false; // identity
                 }
-                int delta_pixX = std::max( 3, (int)std::ceil(sx * 1.5) );
-                int delta_pixY = std::max( 3, (int)std::ceil(sy * 1.5) );
+                int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
+                int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
                 dstRoD->x1 -= delta_pixX + params.orderX;
                 dstRoD->x2 += delta_pixX + params.orderX;
                 dstRoD->y1 -= delta_pixY + params.orderY;
@@ -1653,8 +1653,8 @@ public:
                 return;
             }
 
-            int delta_pixX = std::max( 3, (int)std::ceil(sx * 1.5) );
-            int delta_pixY = std::max( 3, (int)std::ceil(sy * 1.5) );
+            int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
+            int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
             roi->x1 = rect.x1 - delta_pixX - params.orderX;
             roi->x2 = rect.x2 + delta_pixX + params.orderX;
             roi->y1 = rect.y1 - delta_pixY - params.orderY;
@@ -2194,7 +2194,7 @@ public:
                 double gy = grad[1](x, y, 0, c);
                 // gradient direction is unchanged
                 double sqe = gx * gx + gy * gy;
-                double e = std::sqrt( std::max(sqe, 0.) );
+                double e = std::sqrt( (std::max)(sqe, 0.) );
                 cimg(x, y, 0, c) = e;
             }
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelRMS) {
@@ -2222,7 +2222,7 @@ public:
                     grady += gy;
                 }
                 double sqe = sumsq / cimg.spectrum();
-                double e = std::sqrt( std::max(sqe, 0.) );
+                double e = std::sqrt( (std::max)(sqe, 0.) );
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
                     grad[0](x, y, 0, c) = gradx;
@@ -2244,7 +2244,7 @@ public:
                         grady = gy;
                     }
                 }
-                double e = std::sqrt( std::max(maxsq, 0.) );
+                double e = std::sqrt( (std::max)(maxsq, 0.) );
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
                     grad[0](x, y, 0, c) = gradx;
@@ -2284,9 +2284,9 @@ public:
                     Jxy += gx * gy;
                 }
                 double sqD = Jx * Jx - 2 * Jx * Jy + Jy * Jy + 4 * Jxy * Jxy;
-                double D = std::sqrt( std::max(sqD, 0.) );
+                double D = std::sqrt( (std::max)(sqD, 0.) );
                 double e1 = (Jx + Jy + D) / 2;
-                double e = std::sqrt( std::max(e1, 0.) );
+                double e = std::sqrt( (std::max)(e1, 0.) );
                 cimg_forC(cimg, c) {
                     cimg(x, y, 0, c) = e;
                     grad[0](x, y, 0, c) = Jxy;
@@ -2298,14 +2298,14 @@ public:
         if ( abort() ) { return; }
 
         if ( params.erodeSize > 0 ) {
-            cimg.erode( (unsigned int)std::floor(std::max(0., params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
-                       (unsigned int)std::floor(std::max(0., params.erodeSize) * args.renderScale.y) * 2 + 1 );
+            cimg.erode( (unsigned int)std::floor((std::max)(0., params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
+                       (unsigned int)std::floor((std::max)(0., params.erodeSize) * args.renderScale.y) * 2 + 1 );
         }
         if ( abort() ) { return; }
 
         if ( params.erodeSize < 0 ) {
-            cimg.dilate( (unsigned int)std::floor(std::max(0., -params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
-                        (unsigned int)std::floor(std::max(0., -params.erodeSize) * args.renderScale.y) * 2 + 1 );
+            cimg.dilate( (unsigned int)std::floor((std::max)(0., -params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
+                        (unsigned int)std::floor((std::max)(0., -params.erodeSize) * args.renderScale.y) * 2 + 1 );
         }
         if (params.edgeDetectNMS) {
             nms(cimg, grad[0], grad[1], separate);

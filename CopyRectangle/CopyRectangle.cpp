@@ -186,7 +186,7 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             // distance to the nearest rectangle area horizontal edge
-            int yDistance =  std::min(y - _rectangle.y1, _rectangle.y2 - 1 - y);
+            int yDistance =  (std::min)(y - _rectangle.y1, _rectangle.y2 - 1 - y);
 
             // handle softness
             bool yInRectangle = y >= _rectangle.y1 && y < _rectangle.y2;
@@ -199,7 +199,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 // distance to the nearest rectangle area vertical edge
-                int xDistance =  std::min(x - _rectangle.x1, _rectangle.x2 - 1 - x);
+                int xDistance =  (std::min)(x - _rectangle.x1, _rectangle.x2 - 1 - x);
                 // handle softness
                 bool xInRectangle = x >= _rectangle.x1 && x < _rectangle.x2;
 

@@ -289,7 +289,7 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor,
     // set the scales
     // noise level depends on the render scale
     // (the following formula is for Gaussian noise only, but we use it as an approximation)
-    double densityRS = std::min( 1., density / (args.renderScale.x * args.renderScale.y) );
+    double densityRS = (std::min)( 1., density / (args.renderScale.x * args.renderScale.y) );
     float noiseLevel = (float)( noise * (density / densityRS) * std::sqrt(args.renderScale.x) );
     float mean = (float)(noise * (density / densityRS) / 2.);
 

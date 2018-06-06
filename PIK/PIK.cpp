@@ -556,16 +556,16 @@ public:
                    OutputModeEnum outputMode)
     {
         // all colors are normalized with unit luminance
-        _alphaBias[0] = (float)std::max(0.0001, alphaBias.r);
-        _alphaBias[1] = (float)std::max(0.0001, alphaBias.g);
-        _alphaBias[2] = (float)std::max(0.0001, alphaBias.b);
+        _alphaBias[0] = (float)(std::max)(0.0001, alphaBias.r);
+        _alphaBias[1] = (float)(std::max)(0.0001, alphaBias.g);
+        _alphaBias[2] = (float)(std::max)(0.0001, alphaBias.b);
         float l = luminance(_colorspace, _alphaBias);
         _alphaBias[0] /= l;
         _alphaBias[1] /= l;
         _alphaBias[2] /= l;
-        _despillBias[0] = (float)std::max(0.0001, despillBias.r);
-        _despillBias[1] = (float)std::max(0.0001, despillBias.g);
-        _despillBias[2] = (float)std::max(0.0001, despillBias.b);
+        _despillBias[0] = (float)(std::max)(0.0001, despillBias.r);
+        _despillBias[1] = (float)(std::max)(0.0001, despillBias.g);
+        _despillBias[2] = (float)(std::max)(0.0001, despillBias.b);
         _despillBias[0] /= l;
         _despillBias[1] /= l;
         _despillBias[2] /= l;
@@ -593,7 +593,7 @@ public:
         _clampAlpha = clampAlpha;
         _rgbal = rgbal;
         _screenClipMin = screenClipMin;
-        _screenClipMax = std::max(screenClipMin + 0.0001, screenClipMax); // avoid divisions by zero
+        _screenClipMax = (std::max)(screenClipMin + 0.0001, screenClipMax); // avoid divisions by zero
         _screenReplace = screenReplace;
         if ( (screenReplace == eReplaceHardColor) || (screenReplace == eReplaceSoftColor) ) {
             _screenReplaceColor[0] = screenReplaceColor.r;
@@ -953,13 +953,13 @@ private:
                 float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
                 if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && (nComponents == 4) && fgPix ) {
                     // take the max of inMask and the source Alpha
-                    inMask = std::max( inMask, sampleToFloat<PIX, maxValue>(fgPix[3]) );
+                    inMask = (std::max)( inMask, sampleToFloat<PIX, maxValue>(fgPix[3]) );
                 }
                 float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
 
                 // clamp inMask and outMask in the [0,1] range
-                inMask = std::max( 0.f, std::min(inMask, 1.f) );
-                outMask = std::max( 0.f, std::min(outMask, 1.f) );
+                inMask = (std::max)( 0.f, (std::min)(inMask, 1.f) );
+                outMask = (std::max)( 0.f, (std::min)(outMask, 1.f) );
 
                 float fg[4] = {0., 0., 0., 1.};
                 float pfg[4] = {0., 0., 0., 1.};
@@ -1037,7 +1037,7 @@ private:
                                         } else {
                                             // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
                                             // the closest I could get to IBK
-                                            alpha = std::max( (double)alpha, std::min( (kmax - kKey) / (50 * kKey), 1. ) );
+                                            alpha = (std::max)( (double)alpha, (std::min)( (kmax - kKey) / (50 * kKey), 1. ) );
                                         }
                                     }
 #endif
@@ -1079,7 +1079,7 @@ private:
                                         } else {
                                             // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
                                             // the closest I could get to IBK
-                                            alpha = std::max( (double)alpha, std::min( (kmax - kKey) / (50 * kKey), 1. ) );
+                                            alpha = (std::max)( (double)alpha, (std::min)( (kmax - kKey) / (50 * kKey), 1. ) );
                                         }
                                     }
 #endif
@@ -1368,7 +1368,7 @@ private:
                     }
 
                     // mix
-                    float a = std::max(0.f, out[3]);
+                    float a = (std::max)(0.f, out[3]);
                     if ( _ubc && (bg_Y > 0.) ) {
                         out_x = a * out_x + (1 - a) * bg_x;
                         out_y = a * out_y + (1 - a) * bg_y;
