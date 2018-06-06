@@ -58,7 +58,7 @@
 // http://msdn.microsoft.com/en-us/library/9w1sdazb%28v=vs.80%29.aspx#1
 // Unfortunately, OFX plugins are loaded using LoadLibrary()
 //#  define thread_local __declspec(thread)
-#  warning "CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
+#pragma message WARN("CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang.")
 /* note that ICC (linux) and Clang are covered by __GNUC__ */
 # elif defined __GNUC__ || \
     defined __SUNPRO_C || \

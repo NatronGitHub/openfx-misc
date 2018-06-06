@@ -77,15 +77,6 @@ install:
   # Dump appveyor build vars for diagnostics
   - "ECHO APPVEYOR_FORCED_BUILD: %APPVEYOR_FORCED_BUILD%"
   - "ECHO APPVEYOR_RE_BUILD: %APPVEYOR_RE_BUILD%"
-  # Make unix-compatible patch.exe available to the build by copying it from
-  # Git\usr\bin (that we remove from PATH) to another directory and adding it to
-  # PATH; the reason we copy it is that logic below removes
-  # C:\Program Files\Git\usr\bin from Path to avoid build issue resulting from
-  # sh.exe being on the path.
-  - mkdir "C:\Program Files\PatchFromGit"
-  - ps: copy "C:\Program Files\Git\usr\bin\patch.exe" "C:\Program Files\PatchFromGit"
-  - ps: copy "C:\Program Files\Git\usr\bin\msys*.dll" "C:\Program Files\PatchFromGit"
-  - set PATH=C:\Program Files\PatchFromGit;%PATH%
   # Verify that patch command is available
   - "where patch"
 
@@ -109,7 +100,7 @@ configuration:
 before_build:
   - mkdir build
   - cd build
-  - cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install" -DCMAKE_BUILD_TYPE=Release
+  - cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install"
 
 # scripts to run after build
 #after_build:
