@@ -473,7 +473,8 @@ TARGET_LINK_LIBRARIES(CImg)
 # env CXX=/usr/local/opt/llvm/bin/clang++ CC=/usr/local/opt/llvm/bin/clang LDFLAGS=-L/usr/local/opt/llvm/lib cmake ..
 find_package(OpenMP)
 # MSVC has issues, see https://github.com/dtschump/CImg/issues/208
-if (OPENMP_FOUND AND NOT MSVC)
+#if (OPENMP_FOUND AND NOT MSVC)
+if (OPENMP_FOUND)
     #include_directories("${OPENMP_INCLUDES}")
     #link_directories("${OPENMP_LIBRARIES}")
     # set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")

@@ -23,6 +23,10 @@
 #include <cfloat> // DBL_EPSILON
 #include <algorithm> // max
 
+#ifndef M_PI
+#define M_PI        3.14159265358979323846264338327950288   /* pi             */
+#endif
+
 OFXS_NAMESPACE_OFX_ENTER
 
 // parameters for Newton method:
