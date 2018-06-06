@@ -472,9 +472,9 @@ TARGET_LINK_LIBRARIES(CImg)
 # To compile on homebrew:
 # env CXX=/usr/local/opt/llvm/bin/clang++ CC=/usr/local/opt/llvm/bin/clang LDFLAGS=-L/usr/local/opt/llvm/lib cmake ..
 find_package(OpenMP)
-# MSVC has issues, see https://github.com/dtschump/CImg/issues/208
-#if (OPENMP_FOUND AND NOT MSVC)
-if (OPENMP_FOUND)
+# MSVC is OpenMP 2.0 and has issues, see https://github.com/dtschump/CImg/issues/208 and https://msdn.microsoft.com/fr-fr/library/ff520162.aspx
+if (OPENMP_FOUND AND NOT MSVC)
+#if (OPENMP_FOUND)
     #include_directories("${OPENMP_INCLUDES}")
     #link_directories("${OPENMP_LIBRARIES}")
     # set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
