@@ -143,42 +143,8 @@ endif
 # For CImg.h versions,
 # see https://github.com/dtschump/CImg/commits/master/CImg.h
 #
-# commit b99c968d1594e52005d60145f11c71b3f5db8679 is CImg 1.6.3
-# commit 852e71429760c2695f6b02b1a49400c31ad60154 is CImg 1.6.4
-# commit d5e8da7bcc594a6df2878d19268c9217689703e6 has the math parser with loops!
-# commit d89fbcf399b3663ce3ebac2ee387642fd64014b6 has abortable functions
-# commit 9e1e9884f3553d84f73dd20a898b4ba53c95af65 is CImg 1.6.5
-# commit bb34c1a7d6a0911cbc80c8310f0508301d58780d is CImg 1.6.7
-# commit 689bf7d839609147d81963032953e385e5de1ab8 is CImg 1.6.8
-# commit 035ae8fb8b90dcaf9e186b3712a2b5a8e4b3a255 is CImg 1.6.9
-# commit 7f84548e5ee0e2eaaf473ad936eb54abb0c72d45 is CImg 1.7.0
-# commit aa2f7451cfa3a881948453cce0be175acbc6ca10 is CImg 1.7.1
-# commit 81e3aebe14544ac975125a50e52dc35130dd6d0d is CImg 1.7.1 + abort fixes
-# commit 4f8f21f3cf1707e8a9b6d2100fc61d3b3768ce34 is CImg 1.7.1 + use macros for openmp
-# commit 72c6b1f8aad6af32f27acbedd07b0ec72475c4c6 is CImg 1.7.2
-# commit 4d607387b95ba7608b5ae451971e1a0528990bd0 is CImg 1.7.2 + windows fixes
-# commit 93d77710300f4ac96aa5bfb0a2d7a5322216fe66 is CImg 1.7.4
-# commit 1d31b3cdb7b7c102183e1e52d6d293c36a88760c is CImg 1.7.5
-# commit 24d8d833b2ae937f87d88da299314b9cd4561e63 is CImg 1.7.6
-# commit 02ec481605f4dd68dec9d8c5b7b4bd763ad31cac is CImg 1.7.7
-# commit 572c12d82b2f59ece21be8f52645c38f1dd407e6 is CImg 1.7.8
-# commit 6cf2f433edd9ef07a9c865282c3fd84cc4e9b327 is CImg 1.7.9
-# commit 0728d3e6833de1dfe16734fdef416b5051d4df7e is CImg pre-2.0.0 with nb_iter argument to boxfilter
-# commit 2067bd0765d23afc4c41b706bc57d094a2dce51d is CImg pre-2.0.0 with precision fix to boxfilter
-# commit 63a4356e9e93ff3cd407e1ae1264a616ea4ba0f2 is CImg pre-2.0.0 with the clamping on sigma_r fixed in blur_bilateral
-# commit 7c83bdad65ab7447220b54851a5a1035976777fa is CImg pre-2.0.0 with a fix to compile inpaint.h
-# commit 79fce46b2b1b54bc44276dccca040139f62835d7 is CImg 2.0.0
-# commit 93862da3655db4a253c35de6754a430fa569b63a is CImg 2.0.2
-# commit 82b7a22b7c343af194245f5389e95c22cab44762 is CImg 2.0.3
-# commit d1949a2b334a4b43625a527760838850ec5dcb74 is CImg 2.0.4
-# commit a954e66a002ae5fc094097992967598d03d8347b is CImg 2.1.1
-# commit 345169f58dc550ff60310cdca98a2f8dc36307f1 is CImg 2.1.3
-# commit a233fe412d078837430f283533908d836d959dc8 is CImg 2.1.5
-# commit a1ec46d32e6206f693d02b50353cd08695997681 is CImg 2.1.8
-# commit 88fab6de7bfc141a1f577e3cf1b17b9fb1e4f438 is CImg 2.2.1
-# commit 8761ce483600ccbbea05a14b18d916744f3580af is CImg 2.2.2
-# commit fcef55e14b1d84513f024c6c0dba9311f4b91272 is CImg 2.2.3
-CIMGVERSION=fcef55e14b1d84513f024c6c0dba9311f4b91272
+# commit f510b430acfa3194ef935a189346ddda012dc68e is CImg 2.2.3+
+CIMGVERSION=f510b430acfa3194ef935a189346ddda012dc68e
 
 CImg.h: Inpaint/inpaint.h
 	curl -L -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
