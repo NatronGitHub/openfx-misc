@@ -74,7 +74,25 @@ clone_folder: c:\dev\openfx-misc
 
 # scripts that run after cloning repository
 install:
+  # Dump appveyor build vars for diagnostics
+  - "ECHO APPVEYOR_FORCED_BUILD: %APPVEYOR_FORCED_BUILD%"
+  - "ECHO APPVEYOR_RE_BUILD: %APPVEYOR_RE_BUILD%"
+  # Make unix-compatible patch.exe available to the build by copying it from
+  # Git\usr\bin (that we remove from PATH) to another directory and adding it to
+  # PATH; the reason we copy it is that logic below removes
+  # C:\Program Files\Git\usr\bin from Path to avoid build issue resulting from
+  # sh.exe being on the path.
+  - mkdir "C:\Program Files\PatchFromGit"
+  - ps: copy "C:\Program Files\Git\usr\bin\patch.exe" "C:\Program Files\PatchFromGit"
+  - ps: copy "C:\Program Files\Git\usr\bin\msys*.dll" "C:\Program Files\PatchFromGit"
+  - set PATH=C:\Program Files\PatchFromGit;%PATH%
+  # Verify that patch command is available
+  - "where patch"
+
   - git submodule -q update --init --recursive
+  - curl -L -s -S -o CImg/CImg.h https://raw.githubusercontent.com/dtschump/CImg/fcef55e14b1d84513f024c6c0dba9311f4b91272/CImg.h
+  - curl -L -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/fcef55e14b1d84513f024c6c0dba9311f4b91272/plugins/inpaint.h
+  - patch -p0 -dCImg < CImg/Inpaint/inpaint.h.patch
 
 #---------------------------------#
 #       build configuration       #
@@ -91,7 +109,7 @@ configuration:
 before_build:
   - mkdir build
   - cd build
-  - cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install/Misc.ofx.bundle"
+  - cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install" -DCMAKE_BUILD_TYPE=Release
 
 # scripts to run after build
 #after_build:
@@ -156,8 +174,8 @@ artifacts:
 deploy:
   - provider: Environment
     name: openfx-misc
-    release: ofxmisc-$(appveyor_repo_branch)-v$(appveyor_build_version)
-    artifact: ofxmisc-$(appveyor_repo_branch).zip
+    release: openfx-misc-$(appveyor_repo_branch)-v$(appveyor_build_version)
+    artifact: openfx-misc-$(appveyor_repo_branch).zip
     draft: false
     prerelease: true
     on:
