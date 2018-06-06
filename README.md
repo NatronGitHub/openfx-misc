@@ -11,6 +11,20 @@ More information about OpenFX Hosts, OpenFX Plugins (commercial or
 free), and OpenFX documentation can be found at
 <http://devernay.free.fr/hacks/openfx/>.
 
+Downloads
+---------
+
+### Source
+
+To compile openfx-misc from source, see the Installation section below. There is no official source release: the openfx-misc source repository is composed of a stable set of plugins, and new plugins are introduced as beta features until they are considered stable.
+
+### Binaries
+
+Windows binaries compiled with Visual Studio 2017 (which should be compatible with most OpenFX hosts including [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve/)) are available as part of the [openfx-misc project on AppVeyor](https://ci.appveyor.com/project/NatronGitHub/openfx-misc/build/artifacts).
+
+Windows binaries compiled with MinGW MinGW-w64 are available as part of the portable Natron binary distributions for Windows.
+
+
 License
 -------
 
@@ -242,7 +256,7 @@ We should take the code from FrameBlend, simplify, and incorporate it in Retime.
 Installation
 ------------
 
-These plugins are included in the binary distributions of [Natron](http://natron.inria.fr).
+These plugins are included in the binary distributions of [Natron](http://natron.fr).
 
 If you want to compile the plugins from source, you may either use the
 provided Unix Makefile, the Xcode project, or the Visual Studio project.
