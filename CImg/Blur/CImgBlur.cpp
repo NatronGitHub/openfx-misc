@@ -1576,8 +1576,8 @@ public:
                 }
                 int iter = ( params.filter == eFilterBox ? 1 :
                              (params.filter == eFilterTriangle ? 2 : 3) );
-                int delta_pixX = iter * std::ceil( (sx - 1) / 2 );
-                int delta_pixY = iter * std::ceil( (sy - 1) / 2 );
+                int delta_pixX = iter * (int)std::ceil( (sx - 1) / 2 );
+                int delta_pixY = iter * (int)std::ceil( (sy - 1) / 2 );
                 dstRoD->x1 -= delta_pixX + (params.orderX > 0);
                 dstRoD->x2 += delta_pixX + (params.orderX > 0);
                 dstRoD->y1 -= delta_pixY + (params.orderY > 0);

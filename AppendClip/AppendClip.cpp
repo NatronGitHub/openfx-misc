@@ -329,8 +329,8 @@ AppendClipPlugin::getSources(int firstFrame,
                     return;
                 }
                 clip1 = i;
-                clip1Min = r.min;
-                clip1Max = r.max;
+                clip1Min = (int)r.min;
+                clip1Max = (int)r.max;
                 clip1OutMin = firstFrame;
                 clip1OutMax = (std::max)(firstFrame + (int)(r.max - r.min), firstFrame);
 
@@ -338,8 +338,8 @@ AppendClipPlugin::getSources(int firstFrame,
             }
             // get info for this clip
             int clip2 = i;
-            int clip2Min = r.min;
-            int clip2Max = r.max;
+            int clip2Min = (int)r.min;
+            int clip2Max = (int)r.max;
             assert(clip1OutMax >= clip0OutMax);
             int clip2OutMin = (std::max)(clip0OutMax + 1, // next clip must start after end of the forelast Clip (never more than 2 clips at the same time)
                                        clip1OutMax + 1 - crossDissolve);

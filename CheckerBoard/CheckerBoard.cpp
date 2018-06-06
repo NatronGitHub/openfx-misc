@@ -228,7 +228,7 @@ private:
 
         if (max == 1) { // implies float, don't clamp
             for (int c = 0; c < nComponents; ++c) {
-                colorPix[c] = colorf[c];
+              colorPix[c] = (PIX)colorf[c];
             }
         } else {
             // color is supposed to be linear: delinearize first
@@ -299,7 +299,7 @@ private:
                     }
                 } else {
                     // draw boxes and vertical lines
-                    int ybox = std::floor( (y - center.y) / _boxSize.y );
+                  int ybox = (int)std::floor( (y - center.y) / _boxSize.y );
                     PIX *c0 = (ybox & 1) ? color3 : color0;
                     PIX *c1 = (ybox & 1) ? color2 : color1;
 
