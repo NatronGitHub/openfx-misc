@@ -386,8 +386,8 @@ private:
                         }
                         const PIX *srcPixi = (const PIX *)  (_srcImgs[i] ? _srcImgs[i]->getPixelAddress(x, y) : 0);
                         if (srcPixi) {
-                            PIX a;
-                            float b;
+                            PIX a = PIX();
+                            float b = 0.;
                             if (operation == eOperationOver) {
                                 // over requires alpha
                                 if (nComponents == 4) {

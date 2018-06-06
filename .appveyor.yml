@@ -50,17 +50,20 @@ pull_requests:
 #---------------------------------#
 
 # Operating system (build VM template)
-os: Visual Studio 2017
+image:
+- Visual Studio 2017
+#- Ubuntu
 
 # scripts that are called at very beginning, before repo cloning
 init:
-  - git config --global core.autocrlf input
+  - cmd: git config --global core.autocrlf input
   - set arch=
   - if "%PLATFORM%" == "x64" (set arch= Win64)
   - if "%PLATFORM%" == "x86" (set arch=)
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2017" (set GENERATOR="Visual Studio 15 2017%arch%")
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2015" (set GENERATOR="Visual Studio 14 2015%arch%")
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2013" (set GENERATOR="Visual Studio 12 2013%arch%")
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Ubuntu" (set GENERATOR="Unix Makefiles")
 
 
 # clone directory
@@ -75,10 +78,10 @@ clone_folder: c:\dev\openfx-misc
 # scripts that run after cloning repository
 install:
   # Dump appveyor build vars for diagnostics
-  - "ECHO APPVEYOR_FORCED_BUILD: %APPVEYOR_FORCED_BUILD%"
-  - "ECHO APPVEYOR_RE_BUILD: %APPVEYOR_RE_BUILD%"
+  - cmd: "ECHO APPVEYOR_FORCED_BUILD: %APPVEYOR_FORCED_BUILD%"
+  - cmd: "ECHO APPVEYOR_RE_BUILD: %APPVEYOR_RE_BUILD%"
   # Verify that patch command is available
-  - "where patch"
+  - cmd: "where patch"
 
   - git submodule -q update --init --recursive
   - curl -L -s -S -o CImg/CImg.h https://raw.githubusercontent.com/dtschump/CImg/fcef55e14b1d84513f024c6c0dba9311f4b91272/CImg.h
@@ -100,7 +103,8 @@ configuration:
 before_build:
   - mkdir build
   - cd build
-  - cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install"
+  - cmd: cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install"
+  - ps: cmake .. -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install" -DCMAKE_BUILD_TYPE=%configuration%
 
 # scripts to run after build
 #after_build:
