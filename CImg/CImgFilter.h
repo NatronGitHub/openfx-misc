@@ -94,10 +94,10 @@
 
 #if !defined(HAVE_THREAD_LOCAL)
 #ifdef WIN32
-#  warning "Most CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
+#pragma message WARN("Most CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang.")
 #else
 // non-Win32 systems should have at least pthread
-#  warning "CImg plugins use pthread-based thread-local storage."
+#pragma message WARN("CImg plugins use pthread-based thread-local storage.")
 #include <assert.h>
 #include <pthread.h>
 #define HAVE_PTHREAD
