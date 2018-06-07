@@ -591,7 +591,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         processR = processG = processB = processA = true;
     }
     bool premult = _premult ? _premult->getValueAtTime(time) : false;
-    int premultChannel = _premultChannel ? _premultChannel->getValueAtTime(time) : 3;
+    int premultChannel = (premult && _premultChannel) ? _premultChannel->getValueAtTime(time) : 3;
     double mix = _mix->getValueAtTime(time);
     bool maskInvert = _maskInvert->getValueAtTime(time);
     if (!processR && !processG && !processB) {

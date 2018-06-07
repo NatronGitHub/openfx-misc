@@ -585,8 +585,8 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor,
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
     bool clampBlack = _clampBlack->getValueAtTime(time);
     bool clampWhite = _clampWhite->getValueAtTime(time);
-    bool premult = _premult->getValueAtTime(time);
-    int premultChannel = _premultChannel->getValueAtTime(time);
+    bool premult = _premult ? _premult->getValueAtTime(time) : false;
+    int premultChannel = (premult && _premultChannel) ? _premultChannel->getValueAtTime(time) : 3;
     double mix = _mix->getValueAtTime(time);
     bool processR = _processR->getValueAtTime(time);
     bool processG = _processG->getValueAtTime(time);

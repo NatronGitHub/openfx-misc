@@ -613,8 +613,8 @@ ColorSuppressPlugin::setupAndProcess(ColorSuppressProcessorBase &processor,
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     bool preserveLuma = (outputMode != eOutputModeAlpha) && _preserveLuma->getValueAtTime(time);
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
-    bool premult = _premult->getValueAtTime(time);
-    int premultChannel = _premultChannel->getValueAtTime(time);
+    bool premult = _premult ? _premult->getValueAtTime(time) : false;
+    int premultChannel = (premult && _premultChannel) ? _premultChannel->getValueAtTime(time) : 3;
     double mix = _mix->getValueAtTime(time);
     processor.setValues(redSuppress, blueSuppress, greenSuppress,
                         cyanSuppress, magentaSuppress, yellowSuppress,

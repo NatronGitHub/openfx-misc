@@ -604,8 +604,8 @@ HueCorrectPlugin::setupAndProcess(HueCorrectProcessorBase &processor,
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
     bool luminanceMixEnable = _luminanceMixEnable->getValueAtTime(time);
     double luminanceMix = luminanceMixEnable ? _luminanceMix->getValueAtTime(time) : 0;
-    bool premult = _premult->getValueAtTime(time);
-    int premultChannel = _premultChannel->getValueAtTime(time);
+    bool premult = _premult ? _premult->getValueAtTime(time) : false;
+    int premultChannel = (premult && _premultChannel) ? _premultChannel->getValueAtTime(time) : 3;
     double mix = _mix->getValueAtTime(time);
     processor.setValues(luminanceMath, luminanceMix, premult, premultChannel, mix);
     processor.process();

@@ -466,8 +466,8 @@ GammaPlugin::setupAndProcess(GammaProcessorBase &processor,
     bool processA = _processA->getValueAtTime(time);
     RGBAValues value;
     _value->getValueAtTime(time, value.r, value.g, value.b, value.a);
-    bool premult = _premult->getValueAtTime(time);
-    int premultChannel = _premultChannel->getValueAtTime(time);
+    bool premult = _premult ? _premult->getValueAtTime(time) : false;
+    int premultChannel = (premult && _premultChannel) ? _premultChannel->getValueAtTime(time) : 3;
     double mix = _mix->getValueAtTime(time);
     bool invert = _invert->getValueAtTime(time);
     processor.setValues(processR, processG, processB, processA,
