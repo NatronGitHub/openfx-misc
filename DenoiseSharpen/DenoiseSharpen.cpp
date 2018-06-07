@@ -71,6 +71,7 @@
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsCopier.h"
+#include "ofxOld.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef MultiThread::Mutex Mutex;
@@ -2361,8 +2362,8 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
         return;
 
     }
-    p.premult = _premult->getValueAtTime(time);
-    p.premultChannel = _premultChannel->getValueAtTime(time);
+    p.premult = _premult ? _premult->getValueAtTime(time) : false;
+    p.premultChannel = (p.premult && _premultChannel) ? _premultChannel->getValueAtTime(time) : 3;
     p.mix = _mix->getValueAtTime(time);
 
     p.process[0] = _processR->getValueAtTime(time);
@@ -2899,6 +2900,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
 
     progressStartAnalysis(kPluginName " (noise analysis)");
+# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
+    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+# endif
     beginEditBlock(kParamAnalyzeNoiseLevels);
 
     // instantiate the render code based on the pixel depth of the dst clip
@@ -2944,6 +2948,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     _analysisLock->setValue(true);
     endEditBlock();
     progressEndAnalysis();
+# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
+    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+# endif
 
     DBG(cout << "analysis! OK\n");
 }
@@ -3012,8 +3019,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     }
 
     bool maskInvert = doMasking ? _maskInvert->getValueAtTime(time) : false;
-    bool premult = _premult->getValueAtTime(time);
-    int premultChannel = _premultChannel->getValueAtTime(time);
+    bool premult = _premult ? _premult->getValueAtTime(time) : false;
+    int premultChannel = (premult && _premultChannel) ? _premultChannel->getValueAtTime(time) : 3;
     ColorModelEnum colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
     bool b3 = _b3->getValueAtTime(time);
     OfxRectD cropRect;
@@ -3416,6 +3423,9 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setDefault(false);
             param->setEvaluateOnChange(true); // changes the output mode
             param->setAnimates(false);
+#     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
+            param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
+#     endif
             if (group) {
                 param->setParent(*group);
             }
@@ -3497,6 +3507,9 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setEnabled(false);
             param->setAnimates(false);
             param->setEvaluateOnChange(false);
+#     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
+            param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
+#     endif
             param->setDefault(-1);
             if (group) {
                 param->setParent(*group);
@@ -3539,6 +3552,9 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 param->setRange(0, DBL_MAX);
                 param->setDisplayRange(0, kParamNoiseLevelMax);
                 param->setAnimates(true);
+#     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
+                param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
+#     endif
                 if (group) {
                     param->setParent(*group);
                 }
