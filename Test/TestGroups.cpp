@@ -142,7 +142,11 @@ public:
 
 private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime
+#ifdef OFX_EXTENSIONS_NUKE
+                            , int& view, std::string& plane
+#endif
+                            ) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
@@ -225,7 +229,10 @@ bool
 TestGroupsPlugin::isIdentity(const IsIdentityArguments &args,
                              Clip * &identityClip,
                              double & /*identityTime*/
-                             , int& /*view*/, std::string& /*plane*/)
+#ifdef OFX_EXTENSIONS_NUKE
+                             , int& /*view*/, std::string& /*plane*/
+#endif
+                             )
 {
     if (!_srcClip || !_srcClip->isConnected()) {
         return false;
@@ -540,11 +547,15 @@ TestGroupsPlugin::changedParam(const InstanceChangedArgs &args,
     } else if (paramName == kParamOptionalClipLabel) {
         std::string s;
         _optionalClipLabel->getValueAtTime(time, s);
+#ifdef OFX_EXTENSIONS_NATRON
         _optionalClip->setLabel(s);
+#endif
     } else if (paramName == kParamOptionalClipHint) {
         std::string s;
         _optionalClipHint->getValueAtTime(time, s);
+#ifdef OFX_EXTENSIONS_NATRON
         _optionalClip->setHint(s);
+#endif
     }
 } // TestGroupsPlugin::changedParam
 
@@ -665,7 +676,9 @@ TestGroupsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel("");
         param->setDefault("The label");
         param->setStringType(eStringTypeLabel);
+#ifdef OFX_EXTENSIONS_NUKE
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -797,7 +810,9 @@ TestGroupsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         {
             GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup2AsTab");
             if (subgroup) {
+#ifdef OFX_EXTENSIONS_NUKE
                 subgroup->setAsTab();
+#endif
                 if (group) {
                     subgroup->setParent(*group);
                 }
@@ -818,7 +833,9 @@ TestGroupsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         {
             GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup3AsTab");
             if (subgroup) {
+#ifdef OFX_EXTENSIONS_NUKE
                 subgroup->setAsTab();
+#endif
                 if (group) {
                     subgroup->setParent(*group);
                 }
@@ -842,8 +859,10 @@ TestGroupsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     formatGroup->setLabel( "Format" );
     videoGroup->setLabel( "Video" );
 
+#ifdef OFX_EXTENSIONS_NUKE
     formatGroup->setAsTab( );
     videoGroup->setAsTab( );
+#endif
 
     /// FORMAT PARAMETERS
     //avtranscoder::FormatContext formatContext( AV_OPT_FLAG_DECODING_PARAM );
@@ -870,7 +889,9 @@ TestGroupsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     GroupParamDescriptor* formatDetailledGroup = desc.defineGroupParam( "kParamFormatDetailledGroup" );
     formatDetailledGroup->setLabel( "Detailled" );
+#ifdef OFX_EXTENSIONS_NUKE
     formatDetailledGroup->setAsTab( );
+#endif
     formatDetailledGroup->setParent( *formatGroup );
 
     //avtranscoder::OptionArrayMap formatDetailledGroupOptions = avtranscoder::getOutputFormatOptions();
@@ -910,7 +931,9 @@ TestGroupsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     GroupParamDescriptor* videoDetailledGroup  = desc.defineGroupParam( "kParamVideoDetailledGroup" );
     videoDetailledGroup->setLabel( "Detailled" );
+#ifdef OFX_EXTENSIONS_NUKE
     videoDetailledGroup->setAsTab( );
+#endif
     videoDetailledGroup->setParent( *videoGroup );
 
     //avtranscoder::OptionArrayMap videoDetailledGroupOptions =  avtranscoder::getVideoCodecOptions();

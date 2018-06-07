@@ -1366,6 +1366,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
 #ifdef USE_OPENGL
     OpenGLContextData* contextData = &_openGLContextData;
+#ifdef OFX_EXTENSIONS_NATRON
     if (OFX::getImageEffectHostDescription()->isNatron && !args.openGLContextData) {
         DPRINT( ("ERROR: Natron did not provide the contextData pointer to the OpenGL render func.\n") );
     }
@@ -1374,7 +1375,9 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         // host provided kNatronOfxImageEffectPropOpenGLContextData,
         // which was returned by kOfxActionOpenGLContextAttached
         contextData = (OpenGLContextData*)args.openGLContextData;
-    } else if (!_openGLContextAttached) {
+    } else
+#endif
+    if (!_openGLContextAttached) {
         // Sony Catalyst Edit never calls kOfxActionOpenGLContextAttached
         DPRINT( ("ERROR: OpenGL render() called without calling contextAttached() first. Calling it now.\n") );
         contextAttached(false);

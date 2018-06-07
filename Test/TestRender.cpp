@@ -242,7 +242,11 @@ private:
     /* set up and run a processor */
     void setupAndProcess(TestRenderBase &, const RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime
+#ifdef OFX_EXTENSIONS_NUKE
+                            , int& view, std::string& plane
+#endif
+                            ) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     // override the rod call
@@ -454,7 +458,10 @@ bool
 TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::isIdentity(const IsIdentityArguments &args,
                                                                                           Clip * &identityClip,
                                                                                           double & /*identityTime*/
-                                                                                          , int& /*view*/, std::string& /*plane*/)
+#ifdef OFX_EXTENSIONS_NUKE
+                                                                                          , int& /*view*/, std::string& /*plane*/
+#endif
+                                                                                          )
 {
     if ( !supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         throwSuiteStatusException(kOfxStatFailed);

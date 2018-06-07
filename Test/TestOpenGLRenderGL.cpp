@@ -20,5 +20,7 @@
  * OFX TestOpenGL plugin.
  */
 
+#ifdef OFX_SUPPORTS_OPENGLRENDER
 #define USE_OPENGL
 #include "TestOpenGLRender.h"
+#endif
