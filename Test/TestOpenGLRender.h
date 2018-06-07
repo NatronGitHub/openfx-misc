@@ -1419,7 +1419,11 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     GLuint dstTarget = GL_TEXTURE_2D;
     GLuint dstIndex = 0;
 #endif
-    if (!args.openGLEnabled) {
+    bool openGLEnabled = false;
+#ifdef OFX_SUPPORTS_OPENGLRENDER
+    openGLEnabled = args.openGLEnabled;
+#endif
+    if (!openGLEnabled) {
         // (OpenGL off-screen rendering or OSMesa)
         // load the source image into a texture
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -1832,7 +1836,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     // END of the actual OpenGL rendering code
     //--------------------------------------------
 
-    if (!args.openGLEnabled) {
+    if (!openGLEnabled) {
         // (OpenGL off-screen rendering or OSMesa)
         /* This is very important!!!
          * Make sure buffered commands are finished!!!

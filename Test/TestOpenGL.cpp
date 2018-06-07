@@ -311,7 +311,7 @@ TestOpenGLPlugin::changedParam(const InstanceChangedArgs &args,
         } else {
             sendMessage(Message::eMessageMessage, "", message);
         }
-#if defined(HAVE_OSMESA)
+#if defined(HAVE_OSMESA) && defined(OFX_SUPPORTS_OPENGLRENDER)
     } else if (paramName == kParamEnableGPU) {
         setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
         {
