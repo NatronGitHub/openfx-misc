@@ -383,6 +383,7 @@ enum ColorModelEnum
 #endif
 
 static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
+static bool gHostIsResolve = false;
 
 // those are the noise levels on HHi subands that correspond to a
 // Gaussian noise, with the dcraw "a trous" wavelets.
@@ -2309,9 +2310,10 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
+    if ( !gHostIsResolve && /* DaVinci Resolve always gives rs=1 & field=None on fetched images */
+        ( (dst->getRenderScale().x != args.renderScale.x) ||
+          (dst->getRenderScale().y != args.renderScale.y) ||
+          (dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -2321,9 +2323,10 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
         throwSuiteStatusException(kOfxStatFailed);
     }
     if ( src.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
+        if ( !gHostIsResolve && /* DaVinci Resolve always gives rs=1 & field=None on fetched images */
+            ( (src->getRenderScale().x != args.renderScale.x) ||
+              (src->getRenderScale().y != args.renderScale.y) ||
+              (src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             throwSuiteStatusException(kOfxStatFailed);
         }
@@ -2336,9 +2339,10 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     p.doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     mask.reset(p.doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
-        if ( (mask->getRenderScale().x != args.renderScale.x) ||
-             ( mask->getRenderScale().y != args.renderScale.y) ||
-             ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
+        if ( !gHostIsResolve && /* DaVinci Resolve always gives rs=1 & field=None on fetched images */
+            ( (mask->getRenderScale().x != args.renderScale.x) ||
+              (mask->getRenderScale().y != args.renderScale.y) ||
+              (mask->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             throwSuiteStatusException(kOfxStatFailed);
         }
@@ -3005,7 +3009,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
         }
     }
     bool doMasking = _analysisMaskClip && _analysisMaskClip->isConnected();
-    mask.reset(doMasking ? _analysisMaskClip->fetchImage(time) : 0);
+    mask.reset(doMasking ? _analysisMaskClip->fetchImage(time, cropRect) : 0);
     if ( mask.get() ) {
         if ( (mask->getRenderScale().x != args.renderScale.x) ||
              ( mask->getRenderScale().y != args.renderScale.y) ) {
@@ -3240,6 +3244,9 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                                ContextEnum context)
 {
     DBG(cout << "describeInContext!\n");
+
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+    gHostIsResolve = (gHostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
     // Source clip only in the filter context
     // create the mandated source clip
