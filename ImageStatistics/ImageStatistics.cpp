@@ -1597,6 +1597,7 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         doAnalyzeLuma = (k != -1);
     }
     // RGBA analysis
+#pragma message WARN("TODO: only fetchImage() the required region.")
     if ( (doAnalyzeRGBA || doAnalyzeHSVL || doAnalyzeLuma) && _srcClip && _srcClip->isConnected() ) {
         auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                   _srcClip->fetchImage(args.time) : 0 );

@@ -2992,14 +2992,21 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
     const double time = args.time;
 
+    OfxRectD cropRect;
+    _btmLeft->getValueAtTime(time, cropRect.x1, cropRect.y1);
+    double w, h;
+    _size->getValueAtTime(time, w, h);
+    cropRect.x2 = cropRect.x1 + w;
+    cropRect.y2 = cropRect.y1 + h;
+
     auto_ptr<const Image> src;
     auto_ptr<const Image> mask;
 
     if ( _analysisSrcClip && _analysisSrcClip->isConnected() ) {
-        src.reset( _analysisSrcClip->fetchImage(time) );
+        src.reset( _analysisSrcClip->fetchImage(time, cropRect) );
     } else {
         src.reset( ( _srcClip && _srcClip->isConnected() ) ?
-                   _srcClip->fetchImage(time) : 0 );
+                   _srcClip->fetchImage(time, cropRect) : 0 );
     }
     if ( src.get() ) {
         if ( (src->getRenderScale().x != args.renderScale.x) ||
@@ -3027,12 +3034,6 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     int premultChannel = (premult && _premultChannel) ? _premultChannel->getValueAtTime(time) : 3;
     ColorModelEnum colorModel = (ColorModelEnum)_colorModel->getValueAtTime(time);
     bool b3 = _b3->getValueAtTime(time);
-    OfxRectD cropRect;
-    _btmLeft->getValueAtTime(time, cropRect.x1, cropRect.y1);
-    double w, h;
-    _size->getValueAtTime(time, w, h);
-    cropRect.x2 = cropRect.x1 + w;
-    cropRect.y2 = cropRect.y1 + h;
 
     OfxRectI cropRectI;
     cropRectI.x1 = std::ceil(cropRect.x1);
