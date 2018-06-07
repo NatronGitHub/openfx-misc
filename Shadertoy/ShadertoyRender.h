@@ -366,6 +366,17 @@ typedef void (APIENTRYP PFNGLDRAWBUFFERSPROC) (GLsizei n, const GLenum *bufs);
 #endif
 static PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 
+#ifdef USE_DEPTH
+typedef void (APIENTRYP PFNGLGENRENDERBUFFERSPROC)(GLsizei n, GLuint* renderbuffers);
+typedef void (APIENTRYP PFNGLBINDRENDERBUFFERPROC)(GLenum target, GLuint renderbuffer);
+typedef void (APIENTRYP PFNGLRENDERBUFFERSTORAGEPROC)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+typedef void (APIENTRYP PFNGLDELETERENDERBUFFERSPROC)(GLsizei n, const GLuint* renderbuffers);
+static PFNGLGENRENDERBUFFERSPROC glGenRenderbuffers;
+static PFNGLBINDRENDERBUFFERPROC glBindRenderbuffer;
+static PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage;
+static PFNGLDELETERENDERBUFFERSPROC glDeleteRenderbuffers;
+#endif
+
 // Sync Objects https://www.opengl.org/wiki/Sync_Object
 #ifndef GL_ARB_sync
 //typedef GLsync (APIENTRYP PFNGLFENCESYNCPROC)(GLenum condition, GLbitfield flags);
@@ -2477,6 +2488,17 @@ ShadertoyPlugin::contextAttached(bool createContextData)
         //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)getProcAddress("glGetFramebufferAttachmentParameteriv", "glGetFramebufferAttachmentParameterivEXT", "glGetFramebufferAttachmentParameterivARB"); // EXT_framebuffer_object or ARB_framebuffer_object
         glGenerateMipmap = (PFNGLGENERATEMIPMAPPROC)getProcAddress("glGenerateMipmap", "glGenerateMipmapEXT", "glGenerateMipmapARB"); // EXT_framebuffer_object or ARB_framebuffer_object
         glDrawBuffers = (PFNGLDRAWBUFFERSPROC)getProcAddress("glDrawBuffers", "glDrawBuffersEXT", "glDrawBuffersARB"); // EXT_framebuffer_object or ARB_framebuffer_object
+
+#ifdef USE_DEPTH
+        typedef void (APIENTRYP PFNGLGENRENDERBUFFERSPROC)(GLsizei n, GLuint* renderbuffers);
+        typedef void (APIENTRYP PFNGLBINDRENDERBUFFERPROC)(GLenum target, GLuint renderbuffer);
+        typedef void (APIENTRYP PFNGLRENDERBUFFERSTORAGEPROC)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+        typedef void (APIENTRYP PFNGLDELETERENDERBUFFERSPROC)(GLsizei n, const GLuint* renderbuffers);
+        glGenRenderbuffers= (PFNGLGENRENDERBUFFERSPROC)getProcAddress("glGenRenderbuffers", "glGenRenderbuffersEXT", "glGenRenderbuffersARB");
+        glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC)getProcAddress("glBindRenderbuffer", "glBindRenderbufferEXT", "glBindRenderbufferARB");
+        glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC)getProcAddress("glRenderbufferStorage", "glRenderbufferStorageEXT", "glRenderbufferStorageARB");
+        glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC)getProcAddress("glDeleteRenderbuffers", "glDeleteRenderbuffersEXT", "glDeleteRenderbuffersARB");
+#endif
 
         // GL_VERSION_3_2 or GL_ARB_sync or GL_EXT_sync
         // Sync Objects https://www.opengl.org/wiki/Sync_Object

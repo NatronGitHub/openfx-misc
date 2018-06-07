@@ -260,7 +260,7 @@ typedef void (APIENTRYP PFNGLACTIVETEXTUREARBPROC)(GLenum texture);
 typedef void (APIENTRYP PFNGLCLIENTACTIVETEXTUREPROC)(GLenum texture);
 typedef void (APIENTRYP PFNGLMULTITEXCOORD2FROC)(GLenum target, GLfloat s, GLfloat t);
 #endif
-// static PFNGLACTIVETEXTUREARBPROC glActiveTexture = NULL;
+static PFNGLACTIVETEXTUREARBPROC glActiveTexture = NULL;
 // static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = NULL;
 // static PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f = NULL;
 
@@ -293,6 +293,17 @@ static PFNGLGENERATEMIPMAPPROC glGenerateMipmap = NULL;
 typedef void (APIENTRYP PFNGLDRAWBUFFERSPROC) (GLsizei n, const GLenum *bufs);
 #endif
 static PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
+
+#ifdef USE_DEPTH
+typedef void (APIENTRYP PFNGLGENRENDERBUFFERSPROC)(GLsizei n, GLuint* renderbuffers);
+typedef void (APIENTRYP PFNGLBINDRENDERBUFFERPROC)(GLenum target, GLuint renderbuffer);
+typedef void (APIENTRYP PFNGLRENDERBUFFERSTORAGEPROC)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+typedef void (APIENTRYP PFNGLDELETERENDERBUFFERSPROC)(GLsizei n, const GLuint* renderbuffers);
+static PFNGLGENRENDERBUFFERSPROC glGenRenderbuffers;
+static PFNGLBINDRENDERBUFFERPROC glBindRenderbuffer;
+static PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage;
+static PFNGLDELETERENDERBUFFERSPROC glDeleteRenderbuffers;
+#endif
 
 // Sync Objects https://www.opengl.org/wiki/Sync_Object
 #ifndef GL_ARB_sync
@@ -1583,7 +1594,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
 
         OfxRectI srcBounds = src->getBounds();
-        glActiveTextureARB(GL_TEXTURE0_ARB);
+        glActiveTexture(GL_TEXTURE0);
         assert(srcIndex > 0);
         glBindTexture(srcTarget, srcIndex);
         // legacy mipmap generation was replaced by glGenerateMipmap from GL_ARB_framebuffer_object (see below)
@@ -2156,7 +2167,7 @@ TestOpenGLPlugin::contextAttached(bool createContextData)
 
         // Multitexture
         // GL_VERSION_1_3
-        // glActiveTexture = (PFNGLACTIVETEXTUREARBPROC)getProcAddress("glActiveTexture", "glActiveTextureARB");
+        glActiveTexture = (PFNGLACTIVETEXTUREARBPROC)getProcAddress("glActiveTexture", "glActiveTextureARB");
         // GL_VERSION_1_3_DEPRECATED
         //glClientActiveTexture = (PFNGLCLIENTACTIVETEXTUREPROC)getProcAddress("glClientActiveTexture");
         //glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FPROC)getProcAddress("glMultiTexCoord2f");
@@ -2175,6 +2186,17 @@ TestOpenGLPlugin::contextAttached(bool createContextData)
         //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)getProcAddress("glGetFramebufferAttachmentParameteriv", "glGetFramebufferAttachmentParameterivEXT", "glGetFramebufferAttachmentParameterivARB");
         glGenerateMipmap = (PFNGLGENERATEMIPMAPPROC)getProcAddress("glGenerateMipmap", "glGenerateMipmapEXT", "glGenerateMipmapARB");
         glDrawBuffers = (PFNGLDRAWBUFFERSPROC)getProcAddress("glDrawBuffers", "glDrawBuffersEXT", "glDrawBuffersARB");
+
+#ifdef USE_DEPTH
+        typedef void (APIENTRYP PFNGLGENRENDERBUFFERSPROC)(GLsizei n, GLuint* renderbuffers);
+        typedef void (APIENTRYP PFNGLBINDRENDERBUFFERPROC)(GLenum target, GLuint renderbuffer);
+        typedef void (APIENTRYP PFNGLRENDERBUFFERSTORAGEPROC)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+        typedef void (APIENTRYP PFNGLDELETERENDERBUFFERSPROC)(GLsizei n, const GLuint* renderbuffers);
+        glGenRenderbuffers= (PFNGLGENRENDERBUFFERSPROC)getProcAddress("glGenRenderbuffers", "glGenRenderbuffersEXT", "glGenRenderbuffersARB");
+        glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC)getProcAddress("glBindRenderbuffer", "glBindRenderbufferEXT", "glBindRenderbufferARB");
+        glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC)getProcAddress("glRenderbufferStorage", "glRenderbufferStorageEXT", "glRenderbufferStorageARB");
+        glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC)getProcAddress("glDeleteRenderbuffers", "glDeleteRenderbuffersEXT", "glDeleteRenderbuffersARB");
+#endif
 
         // GL_ARB_sync
         // Sync Objects https://www.opengl.org/wiki/Sync_Object
