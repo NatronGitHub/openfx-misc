@@ -32,29 +32,29 @@ using namespace OFX;
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginRGBToHSVName "RGBToHSV"
-#define kPluginRGBToHSVDescription "Convert from linear RGB to HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978). H is in degrees, S and V are in the same units as RGB. RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion."
+#define kPluginRGBToHSVDescription "Convert from linear RGB to HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978). H is in degrees, S and V are in the same units as RGB. No gamma correction is pplied to RGB before conversion."
 #define kPluginRGBToHSVIdentifier "net.sf.openfx.RGBToHSV"
 
 #define kPluginHSVToRGBName "HSVToRGB"
-#define kPluginHSVToRGBDescription "Convert from HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to linear RGB. H is in degrees, S and V are in the same units as RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion."
+#define kPluginHSVToRGBDescription "Convert from HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to linear RGB. H is in degrees, S and V are in the same units as RGB. No gamma correction is pplied to RGB after conversion."
 #define kPluginHSVToRGBIdentifier "net.sf.openfx.HSVToRGB"
 
 #define kPluginRGBToHSLName "RGBToHSL"
-#define kPluginRGBToHSLDescription "Convert from RGB to HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978). H is in degrees, S and L are in the same units as RGB. RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion."
+#define kPluginRGBToHSLDescription "Convert from RGB to HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978). H is in degrees, S and L are in the same units as RGB. No gamma correction is pplied to RGB before conversion."
 #define kPluginRGBToHSLIdentifier "net.sf.openfx.RGBToHSL"
 
 #define kPluginHSLToRGBName "HSLToRGB"
-#define kPluginHSLToRGBDescription "Convert from HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to linear RGB. H is in degrees, S and L are in the same units as RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion."
+#define kPluginHSLToRGBDescription "Convert from HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to linear RGB. H is in degrees, S and L are in the same units as RGB. No gamma correction is pplied to RGB after conversion."
 #define kPluginHSLToRGBIdentifier "net.sf.openfx.HSLToRGB"
 
 #define kPluginRGBToHSIName "RGBToHSI"
-#define kPluginRGBToHSIDescription "Convert from linear RGB to HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992). H is in degrees, S and I are in the same units as RGB. RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion.\n" \
+#define kPluginRGBToHSIDescription "Convert from linear RGB to HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992). H is in degrees, S and I are in the same units as RGB. No gamma correction is pplied to RGB before conversion.\n" \
     "The HSI colour space (hue, saturation and intensity) attempts to produce a more intuitive representation of colour. The I axis represents the luminance information. The H and S axes are polar coordinates on the plane orthogonal to I. H is the angle, specified such that red is at zero, green at 120 degrees, and blue at 240 degrees. Hue thus represents what humans implicitly understand as colour. S is the magnitude of the colour vector projected in the plane orthogonal to I, and so represents the difference between pastel colours (low saturation) and vibrant colours (high saturation). The main drawback of this colour space is that hue is undefined if saturation is zero, making error propagation in transformations from the RGB colour space more complicated.\n" \
     "It should also be noted that, although the HSI colour space may be more intuitive, is not \"perceptual\", in the sense that small displacements of equal size in different parts of the colour space will be perceived by human observers as changes of different magnitude. Attempts have been made to define such colour spaces: CIE-LAB and CIE-LUV are two examples."
 #define kPluginRGBToHSIIdentifier "net.sf.openfx.RGBToHSI"
 
 #define kPluginHSIToRGBName "HSIToRGB"
-#define kPluginHSIToRGBDescription "Convert from HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992) to linear RGB. H is in degrees, S and I are in the same units as RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion.\n" \
+#define kPluginHSIToRGBDescription "Convert from HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992) to linear RGB. H is in degrees, S and I are in the same units as RGB. No gamma correction is pplied to RGB after conversion.\n" \
     "The HSI colour space (hue, saturation and intensity) attempts to produce a more intuitive representation of colour. The I axis represents the luminance information. The H and S axes are polar coordinates on the plane orthogonal to I. H is the angle, specified such that red is at zero, green at 120 degrees, and blue at 240 degrees. Hue thus represents what humans implicitly understand as colour. S is the magnitude of the colour vector projected in the plane orthogonal to I, and so represents the difference between pastel colours (low saturation) and vibrant colours (high saturation). The main drawback of this colour space is that hue is undefined if saturation is zero, making error propagation in transformations from the RGB colour space more complicated.\n" \
     "It should also be noted that, although the HSI colour space may be more intuitive, is not \"perceptual\", in the sense that small displacements of equal size in different parts of the colour space will be perceived by human observers as changes of different magnitude. Attempts have been made to define such colour spaces: CIE-LAB and CIE-LUV are two examples."
 #define kPluginHSIToRGBIdentifier "net.sf.openfx.HSIToRGB"
@@ -276,45 +276,59 @@ public:
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, dounpremult, _premultChannel);
                 switch (transform) {
                 case eColorTransformRGBToHSV:
-                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
-                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
-                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    // Nuke 5-8 version used sRGB colors to compute HSV
+                    // However, as Alvin Ray Smith said in his paper,
+                    // "We shall assume that an RGB monitor is a linear device"
+                    // We thus use linear values (same as Nuke 9 and later).
+                    // Fixes https://github.com/NatronGitHub/Natron/issues/286
+                    // Reference:
+                    // "Color gamut transform pairs", Alvy Ray Smith, Proceeding SIGGRAPH '78
+                    // https://doi.org/10.1145/800248.807361
+                    // http://www.icst.pku.edu.cn/F/course/ImageProcessing/2018/resource/Color78.pdf
+                    //unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    //unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    //unpPix[2] = Color::to_func_srgb(unpPix[2]);
                     Color::rgb_to_hsv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSVToRGB:
                     Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
-                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
-                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
+                    // Use linear color values, see comment above
+                    //tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    //tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    //tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToHSL:
-                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
-                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
-                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    // Use linear color values, see comment above
+                    //unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    //unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    //unpPix[2] = Color::to_func_srgb(unpPix[2]);
                     Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSLToRGB:
                     Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
-                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
-                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
+                    // Use linear color values, see comment above
+                    //tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    //tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    //tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToHSI:
-                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
-                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
-                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    // Use linear color values, see comment above
+                    //unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    //unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    //unpPix[2] = Color::to_func_srgb(unpPix[2]);
                     Color::rgb_to_hsi(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSIToRGB:
                     Color::hsi_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
-                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
-                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
+                    // Use linear color values, see comment above
+                    //tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    //tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    //tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
 
