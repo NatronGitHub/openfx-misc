@@ -1015,6 +1015,7 @@ TrackerPMPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamTrackingReferenceFrameLabel);
         param->setHint(kParamTrackingReferenceFrameHint);
         param->setEvaluateOnChange(false); // The tracker is identity always
+        param->setDefault(1);
         param->setLayoutHint(eLayoutHintNoNewLine);
         if (page) {
             page->addChild(*param);
