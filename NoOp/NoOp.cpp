@@ -65,6 +65,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamForceCopyLabel "Force Copy"
 #define kParamForceCopyHint "Force copy from input to output"
 
+#define kParamSupportsTiles "supportsTiles"
+#define kParamSupportsTilesLabel "Supports Tiles"
+#define kParamSupportsTilesHint "Does the plugin support image tiling, i.e. rendering only a subset of the full region of definition? Only supported on OpenFX 1.4 hosts."
+
 #define kParamSetPremult "setPremult"
 #define kParamSetPremultLabel "Set Premultiplication"
 #define kParamSetPremultHint "Set the premultiplication state of the output clip, without modifying the raw content. Use the Premult or UnPremult plu-gins to affect the content."
@@ -120,6 +124,7 @@ public:
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _forceCopy(NULL)
+        , _supportsTiles(NULL)
         , _setPremult(NULL)
         , _premult(NULL)
         , _setFieldOrder(NULL)
@@ -139,14 +144,18 @@ public:
         , _setFrameRate(NULL)
         , _frameRate(NULL)
     {
+        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _forceCopy = fetchBooleanParam(kParamForceCopy);
+        if ( gHostDescription.APIVersionMajor > 1 || (gHostDescription.APIVersionMajor == 1 && gHostDescription.APIVersionMinor >= 4) ) {
+            _supportsTiles = fetchBooleanParam(kParamSupportsTiles);
+        }
         _setPremult = fetchBooleanParam(kParamSetPremult);
         _premult = fetchChoiceParam(kParamOutputPremult);
         assert(_forceCopy && _setPremult && _premult);
 
-        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
         if (gHostDescription.supportsSetableFielding) {
             _setFieldOrder = fetchBooleanParam(kParamSetFieldOrder);
             _fieldOrder = fetchChoiceParam(kParamOutputFieldOrder);
@@ -268,6 +277,7 @@ private:
     Clip *_dstClip;
     Clip *_srcClip;
     BooleanParam *_forceCopy;
+    BooleanParam *_supportsTiles;
     BooleanParam *_setPremult;
     ChoiceParam *_premult;
     BooleanParam *_setFieldOrder;
@@ -586,7 +596,10 @@ void
 NoOpPlugin::changedParam(const InstanceChangedArgs &args,
                          const std::string &paramName)
 {
-    if (paramName == kParamSetPremult) {
+    if (paramName == kParamSupportsTiles) {
+        bool supportsTiles = _supportsTiles->getValueAtTime(args.time);
+        setSupportsTiles(supportsTiles);
+    } else if (paramName == kParamSetPremult) {
         updateVisibility();
     } else if (paramName == kParamSetFieldOrder) {
         updateVisibility();
@@ -913,6 +926,8 @@ void
 NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                      ContextEnum /*context*/)
 {
+    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -957,6 +972,18 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    // supportsTiles
+    if ( gHostDescription.APIVersionMajor > 1 || (gHostDescription.APIVersionMajor == 1 && gHostDescription.APIVersionMinor >= 4) ) {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSupportsTiles);
+        param->setLabel(kParamSupportsTilesLabel);
+        param->setHint(kParamSupportsTilesHint);
+        param->setDefault(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
     //// setPremult
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetPremult);
@@ -988,7 +1015,6 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
 
     if (gHostDescription.supportsSetableFielding) {
         //// setFieldOrder
