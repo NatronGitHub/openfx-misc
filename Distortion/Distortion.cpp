@@ -604,7 +604,7 @@ PFBarrelCommon::FileReader::FileReader(const std::string &filename)
     } else if (ln=="#PFBarrel 2011 v2") {
         version_= 2;
     } else {
-        error_= "Bad header";
+        error_= "Bad header: " + ln;
         return;
     }
 
@@ -697,11 +697,12 @@ std::string PFBarrelCommon::FileReader::readRawLine(void)
     char* s = std::fgets(buf, sizeof(buf) - 1, f_);
     if (s != NULL) {
         rv= s;
-        rv= rv.erase(rv.length()-1);
+        // trim \r and \n from the end of line
+        while (!rv.empty() && (rv[rv.size() - 1] == '\r' || rv[rv.size() - 1] == '\n'))
+            rv.erase(rv.size() - 1);
     } else {
         error_= "Parse error";
     }
-
     return rv;
 }
 
@@ -3257,8 +3258,13 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
         } else if ( (paramName == kParamPFFileReload) ||
             ( (paramName == kParamPFFile) && (args.reason == eChangeUserEdit) ) ) {
             std::string filename;
+            _pfFile->getValueAtTime(args.time, filename);
             PFBarrelCommon::FileReader f(filename);
-
+            if ( !f.error_.empty() ) {
+                // no persistent message, since this is triggered by a used action
+                sendMessage(Message::eMessageError, "", "Error reading file \"" + filename + "\": " + f.error_);
+                throwSuiteStatusException(kOfxStatFailed);
+            }
             beginEditBlock(kParamPFFile);
             _pfC3->deleteAllKeys();
             _pfC5->deleteAllKeys();
