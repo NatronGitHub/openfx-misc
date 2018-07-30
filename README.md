@@ -256,7 +256,7 @@ We should take the code from FrameBlend, simplify, and incorporate it in Retime.
 Installation
 ------------
 
-These plugins are included in the binary distributions of [Natron](http://natron.fr).
+These plugins are included in the binary distributions of [Natron](https://natrongithub.github.io/).
 
 If you want to compile the plugins from source, you may either use the
 provided Unix Makefile, the Xcode project, or the Visual Studio project.
