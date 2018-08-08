@@ -402,3 +402,8 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Transform \
 -I$(TOP_SRCDIR)/VectorToColor
 
+# openmp
+ifeq ($(OPENMP),1)
+  CXXFLAGS += -fopenmp
+  LINKFLAGS += -fopenmp
+endif

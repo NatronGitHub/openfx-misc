@@ -46,12 +46,13 @@
    - as an estimate of sigma_n, we can use the
  */
 
-#define kUseMultithread // define to use the multithread suite
 //#define DEBUG_STDOUT // output debugging messages on stdout (for Resolve)
 
 #if defined(_OPENMP)
 #include <omp.h>
 #define _GLIBCXX_PARALLEL // enable libstdc++ parallel STL algorithm (eg nth_element, sort...)
+#else
+#define kUseMultithread // define to use the multithread suite
 #endif
 #include <cmath>
 #include <cfloat> // DBL_MAX
@@ -72,10 +73,11 @@
 #include "ofxsMultiThread.h"
 #include "ofxsCopier.h"
 #include "ofxOld.h"
+
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
-typedef MultiThread::Mutex Mutex;
-typedef MultiThread::AutoMutex AutoMutex;
+typedef OFX::MultiThread::Mutex Mutex;
+typedef OFX::MultiThread::AutoMutex AutoMutex;
 }
 #else
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
