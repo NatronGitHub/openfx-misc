@@ -2572,11 +2572,12 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-    for (int y = procWindow.y1; y < procWindow.y2; y++) {
+    for (int y = p.srcWindow.y1; y < p.srcWindow.y2; y++) {
         abort_test_loop();
 
-        PIX *dstPix = (PIX *) dst->getPixelAddress(procWindow.x1, y);
-        for (int x = procWindow.x1; x < procWindow.x2; x++) {
+        // Note: we suppose that srcWindow is bound inside procWindow bound
+        PIX *dstPix = (PIX *) dst->getPixelAddress(procWindow.x1 + p.srcWindow.x1, procWindow.y1 + y);
+        for (int x = p.srcWindow.x1; x < p.srcWindow.x2; x++, dstPix += nComponents) {
             const PIX *srcPix = (const PIX *)  (src.get() ? src->getPixelAddress(x, y) : 0);
             unsigned int pix = (x - p.srcWindow.x1) + (y - p.srcWindow.y1) * iwidth;
             float tmpPix[4] = {0., 0., 0., 1.};
@@ -2647,8 +2648,6 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
                     }
                 }
             }
-            // increment the dst pixel
-            dstPix += nComponents;
         }
     }
 } // DenoiseSharpenPlugin::renderForBitDepth
