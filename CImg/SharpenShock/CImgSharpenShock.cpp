@@ -99,7 +99,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamIterationsDefault 1
 
 #undef cimg_abort_test
-#ifdef cimg_use_openmp
+#if cimg_use_openmp==1
 #define cimg_abort_test if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
 #else
 #define cimg_abort_test if (abort()) throw CImgAbortException("")

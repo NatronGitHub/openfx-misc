@@ -67,7 +67,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
-#ifdef cimg_use_openmp
+#if cimg_use_openmp==1
 #define kHostFrameThreading false
 #else
 #define kHostFrameThreading true
@@ -190,7 +190,7 @@ public:
 #undef _cimg_blur_patch2d
 
 #undef cimg_abort_test
-#ifdef cimg_use_openmp
+#if cimg_use_openmp==1
 #define cimg_abort_test if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
 #else
 #define cimg_abort_test if (abort()) throw CImgAbortException("")

@@ -119,7 +119,11 @@
 #define cimg_namespace_suffix openfx_misc
 #ifdef _OPENMP
 #  ifndef cimg_use_openmp
-#    define cimg_use_openmp
+#    define cimg_use_openmp 1
+#  endif
+#else
+#  ifndef cimg_use_openmp
+#    define cimg_use_openmp 0
 #  endif
 #endif
 #define cimg_verbosity 0
@@ -179,7 +183,7 @@ struct tls
 inline void
 gImageEffectAbort()
 {
-#  ifdef cimg_use_openmp
+#  if cimg_use_openmp==1
     if ( omp_get_thread_num() ) {
         return;
     }
@@ -212,7 +216,7 @@ struct tls
 inline void
 gImageEffectAbort()
 {
-#  ifdef cimg_use_openmp
+#  if cimg_use_openmp==1
     if ( omp_get_thread_num() ) {
         return;
     }
@@ -754,7 +758,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     }
 #endif
 
-#ifdef cimg_use_openmp
+#if cimg_use_openmp==1
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
     {
