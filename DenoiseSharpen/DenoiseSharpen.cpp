@@ -2587,7 +2587,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
                 // In release mode, don't crash, just add black pixels.
                 assert(false);
             } else {
-                assert(p.srcWindow.x1 <= x && x < p.srcWindow.x2 && p.srcWindow.y1 < y && y < p.srcWindow.y2);
+                assert(p.srcWindow.x1 <= x && x < p.srcWindow.x2 && p.srcWindow.y1 <= y && y < p.srcWindow.y2);
                 unsigned int pix = (x - p.srcWindow.x1) + (y - p.srcWindow.y1) * iwidth;
                 // get values from tmpPixelData
                 if (nComponents != 3) {
