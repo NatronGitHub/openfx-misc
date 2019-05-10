@@ -63,6 +63,13 @@
 #else
 #define DBG(x) (void)0
 #endif
+#ifdef DEBUG
+#include <iostream>
+#include <cstdio>
+#define DBG_(x) (x)
+#else
+#define DBG_(x) (void)0
+#endif
 
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
@@ -930,6 +937,9 @@ private:
         updateLabels();
         updateSecret();
         analysisLock();
+        // if adaptiveRadius <= 0, we need to render the whole image anyway, so disable tiles support
+        int adaptiveRadius = _adaptiveRadius->getValue();
+        setSupportsTiles(adaptiveRadius > 0); // normally allowed only in instancechanged()
     }
 
     void analyzeNoiseLevels(const InstanceChangedArgs &args);
@@ -2469,8 +2479,19 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
     }
 
     const OfxRectI& procWindow = args.renderWindow;
-
-
+    if (p.srcWindow.x1 > procWindow.x1 || p.srcWindow.x2 < procWindow.x2 ||
+        p.srcWindow.y1 > procWindow.y1 || p.srcWindow.y2 < procWindow.y2) {
+        // Impossible to render, since we do not have the src window
+        // that corresponds to the render window.
+        // This is most probably a host bug.
+        // Check the previous call to DenoiseSharpenPlugin::getRegionsOfInterest(),
+        // it should set the right window.
+        //DBG_(printf("procWindow %d,%d - %d,%d\n", procWindow.x1, procWindow.y1, procWindow.x2, procWindow.y2));
+        //DBG_(printf("p.srcWindow %d,%d - %d,%d\n", p.srcWindow.x1, p.srcWindow.y1, p.srcWindow.x2, p.srcWindow.y2));
+        //DBG_(printf("src->bounds %d,%d - %d,%d\n", src->getBounds().x1, src->getBounds().y1, src->getBounds().x2, src->getBounds().y2));
+        DBG_(printf("DenoiseSharpen: Error: host did not give the right region of the source image.\n"));
+        throwSuiteStatusException(kOfxStatErrBadIndex);
+    }
     // temporary buffers: one for each channel plus 2 for processing
     unsigned int iwidth = p.srcWindow.x2 - p.srcWindow.x1;
     unsigned int iheight = p.srcWindow.y2 - p.srcWindow.y1;
@@ -2585,6 +2606,9 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
                 // contain procWindow.
                 // see DenoiseSharphenPlugin::getRegionsOfInterest() and DenoiseSharphenPlugin::setup()
                 // In release mode, don't crash, just add black pixels.
+                //DBG_(printf("procWindow %d,%d - %d,%d\n", procWindow.x1, procWindow.y1, procWindow.x2, procWindow.y2));
+                //DBG_(printf("p.srcWindow %d,%d - %d,%d\n", p.srcWindow.x1, p.srcWindow.y1, p.srcWindow.x2, p.srcWindow.y2));
+                //DBG_(printf("src->bounds %d,%d - %d,%d\n", src->getBounds().x1, src->getBounds().y1, src->getBounds().x2, src->getBounds().y2));
                 assert(false);
             } else {
                 assert(p.srcWindow.x1 <= x && x < p.srcWindow.x2 && p.srcWindow.y1 <= y && y < p.srcWindow.y2);
@@ -2681,7 +2705,12 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &arg
     }
 
     int adaptiveRadius = _adaptiveRadius->getValueAtTime(time);
-    if (adaptiveRadius <= 0) {
+    bool supportsTiles = getSupportsTiles();
+    if ( supportsTiles != (adaptiveRadius>0) ) {
+        // This warning probably corresponds to a host bug
+        DBG_(printf("DenoiseSharpen: Warning: effect should support tiles (adaptiveRadius>0) but getSupportsTiles returns false (host issue).\n"));
+    }
+    if (adaptiveRadius <= 0 || !supportsTiles) {
         // requires the full image to compute standard deviation of the signal
         rois.setRegionOfInterest(*_srcClip, srcRod);
 
@@ -2691,6 +2720,9 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &arg
     double par = _srcClip->getPixelAspectRatio();
     OfxRectI roiPixel;
     Coords::toPixelEnclosing(args.regionOfInterest, args.renderScale, par, &roiPixel);
+    //DBG_(printf("render canonical ROI %g,%g - %g,%g\n", args.regionOfInterest.x1, args.regionOfInterest.y1, args.regionOfInterest.x2, args.regionOfInterest.y2));
+    //DBG_(printf("render scale %g,%g\n", args.renderScale.x, args.renderScale.y));
+    //DBG_(printf("render pixel ROI %d,%d - %d,%d\n", roiPixel.x1, roiPixel.y1, roiPixel.x2, roiPixel.y2));
 
     // Note: the following must be consistent with the end of DenoiseSharpenPlugin::setup()
     // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
@@ -2711,9 +2743,13 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &arg
     }
 #endif
     OfxRectD roi;
+    //DBG_(printf("border size %d\n", border));
+    //DBG_(printf("src pixel ROI %d,%d - %d,%d\n", roiPixel.x1, roiPixel.y1, roiPixel.x2, roiPixel.y2));
     Coords::toCanonical(roiPixel, args.renderScale, par, &roi);
+    //DBG_(printf("src canonical ROI %g,%g - %g,%g\n", roi.x1, roi.y1, roi.x2, roi.y2));
 
     Coords::rectIntersection<OfxRectD>(roi, srcRod, &roi);
+    //DBG_(printf("src canonical ROI (cropped) %g,%g - %g,%g\n", roi.x1, roi.y1, roi.x2, roi.y2));
     rois.setRegionOfInterest(*_srcClip, roi);
 
     // if analysis is locked, we do not need the analysis inputs
