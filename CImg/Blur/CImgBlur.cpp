@@ -101,7 +101,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescriptionInline "" // don't know (maybe not gcc or clang)
 #endif
 
-#ifdef cimg_use_openmp
+#if cimg_use_openmp!=0
 #define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_(_OPENMP)
 #else
 #define kPluginDescriptionOpenMP ", without OpenMP"
@@ -237,7 +237,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
-#ifdef cimg_use_openmp
+#if cimg_use_openmp!=0
 #define kHostFrameThreading false
 #else
 #define kHostFrameThreading true

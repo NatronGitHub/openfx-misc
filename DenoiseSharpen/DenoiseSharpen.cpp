@@ -63,6 +63,13 @@
 #else
 #define DBG(x) (void)0
 #endif
+#ifdef DEBUG
+#include <iostream>
+#include <cstdio>
+#define DBG_(x) (x)
+#else
+#define DBG_(x) (void)0
+#endif
 
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
@@ -930,6 +937,9 @@ private:
         updateLabels();
         updateSecret();
         analysisLock();
+        // if adaptiveRadius <= 0, we need to render the whole image anyway, so disable tiles support
+        int adaptiveRadius = _adaptiveRadius->getValue();
+        setSupportsTiles(adaptiveRadius > 0); // normally allowed only in instancechanged()
     }
 
     void analyzeNoiseLevels(const InstanceChangedArgs &args);
@@ -1966,10 +1976,10 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
                 // apply smooth threshold
                 if (fimg[hpass][i] < -thold) {
                     fimg[hpass][i] += thold * denoise_amount;
-                    fimg_denoised += _thold;
+                    fimg_denoised += thold;
                 } else if (fimg[hpass][i] >  thold) {
                     fimg[hpass][i] -= thold * denoise_amount;
-                    fimg_denoised -= _thold;
+                    fimg_denoised -= thold;
                 } else {
                     fimg[hpass][i] *= 1. - denoise_amount;
                     fimg_denoised = 0.;
@@ -2439,6 +2449,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
                                        p.noiseLevel[3][2] > 0 ||
                                        p.noiseLevel[3][3] > 0) && p.denoise_amount[3] > 0.) || p.sharpen_amount[3] > 0. );
 
+    // Note: the following must be consistent with DenoiseSharpenPlugin::getRegionsOfInterest()
     // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
     int maxLev = (std::max)( 0, kLevelMax - startLevelFromRenderScale(args.renderScale) );
     int border = borderSize(p.adaptiveRadius, p.b3, maxLev + 1);
@@ -2468,8 +2479,19 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
     }
 
     const OfxRectI& procWindow = args.renderWindow;
-
-
+    if (p.srcWindow.x1 > procWindow.x1 || p.srcWindow.x2 < procWindow.x2 ||
+        p.srcWindow.y1 > procWindow.y1 || p.srcWindow.y2 < procWindow.y2) {
+        // Impossible to render, since we do not have the src window
+        // that corresponds to the render window.
+        // This is most probably a host bug.
+        // Check the previous call to DenoiseSharpenPlugin::getRegionsOfInterest(),
+        // it should set the right window.
+        //DBG_(printf("procWindow %d,%d - %d,%d\n", procWindow.x1, procWindow.y1, procWindow.x2, procWindow.y2));
+        //DBG_(printf("p.srcWindow %d,%d - %d,%d\n", p.srcWindow.x1, p.srcWindow.y1, p.srcWindow.x2, p.srcWindow.y2));
+        //DBG_(printf("src->bounds %d,%d - %d,%d\n", src->getBounds().x1, src->getBounds().y1, src->getBounds().x2, src->getBounds().y2));
+        DBG_(printf("DenoiseSharpen: Error: host did not give the right region of the source image.\n"));
+        throwSuiteStatusException(kOfxStatErrBadIndex);
+    }
     // temporary buffers: one for each channel plus 2 for processing
     unsigned int iwidth = p.srcWindow.x2 - p.srcWindow.x1;
     unsigned int iheight = p.srcWindow.y2 - p.srcWindow.y1;
@@ -2578,44 +2600,56 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
         PIX *dstPix = (PIX *) dst->getPixelAddress(procWindow.x1, y);
         for (int x = procWindow.x1; x < procWindow.x2; x++) {
             const PIX *srcPix = (const PIX *)  (src.get() ? src->getPixelAddress(x, y) : 0);
-            unsigned int pix = (x - p.srcWindow.x1) + (y - p.srcWindow.y1) * iwidth;
             float tmpPix[4] = {0., 0., 0., 1.};
-            // get values from tmpPixelData
-            if (nComponents != 3) {
-                assert(fimgalpha);
-                tmpPix[3] = fimgalpha[pix];
-            }
-            if (nComponents != 1) {
-                // store in tmpPixelData
-                for (int c = 0; c < 3; ++c) {
-                    tmpPix[c] = fimgcolor[c][pix];
+            if (!srcPix) {
+                // Ne should never reach this point, because srcWindow should always
+                // contain procWindow.
+                // see DenoiseSharphenPlugin::getRegionsOfInterest() and DenoiseSharphenPlugin::setup()
+                // In release mode, don't crash, just add black pixels.
+                //DBG_(printf("procWindow %d,%d - %d,%d\n", procWindow.x1, procWindow.y1, procWindow.x2, procWindow.y2));
+                //DBG_(printf("p.srcWindow %d,%d - %d,%d\n", p.srcWindow.x1, p.srcWindow.y1, p.srcWindow.x2, p.srcWindow.y2));
+                //DBG_(printf("src->bounds %d,%d - %d,%d\n", src->getBounds().x1, src->getBounds().y1, src->getBounds().x2, src->getBounds().y2));
+                assert(false);
+            } else {
+                assert(p.srcWindow.x1 <= x && x < p.srcWindow.x2 && p.srcWindow.y1 <= y && y < p.srcWindow.y2);
+                unsigned int pix = (x - p.srcWindow.x1) + (y - p.srcWindow.y1) * iwidth;
+                // get values from tmpPixelData
+                if (nComponents != 3) {
+                    assert(fimgalpha);
+                    tmpPix[3] = fimgalpha[pix];
                 }
-
-                if (p.colorModel == eColorModelLab) {
-                    // back from 0..1 range to normal Lab
-                    //tmpPix[0] = (tmpPix[0] - 0 * 16 * 27 / 24389.0) * 116;
-                    //tmpPix[1] = (tmpPix[1] - 0.5) * 500 * 2;
-                    //tmpPix[2] = (tmpPix[2] - 0.5) * 200 * 2.2;
-
-                    Color::lab_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    if (sizeof(PIX) == 1.) {
-                        // convert from linear
-                        for (int c = 0; c < 3; ++c) {
-                            tmpPix[c] = _lut->toColorSpaceFloatFromLinearFloat(tmpPix[c]);
-                        }
+                if (nComponents != 1) {
+                    // store in tmpPixelData
+                    for (int c = 0; c < 3; ++c) {
+                        tmpPix[c] = fimgcolor[c][pix];
                     }
-                } else {
-                    if (p.colorModel == eColorModelYCbCr) {
-                        // bring from 0..1 to the -0.5-0.5 range
-                        //tmpPix[1] -= 0.5;
-                        //tmpPix[2] -= 0.5;
-                        Color::ypbpr_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    }
-                    if (p.colorModel != eColorModelLinearRGB) {
-                        if (sizeof(PIX) != 1) {
-                            // convert from rec709
+
+                    if (p.colorModel == eColorModelLab) {
+                        // back from 0..1 range to normal Lab
+                        //tmpPix[0] = (tmpPix[0] - 0 * 16 * 27 / 24389.0) * 116;
+                        //tmpPix[1] = (tmpPix[1] - 0.5) * 500 * 2;
+                        //tmpPix[2] = (tmpPix[2] - 0.5) * 200 * 2.2;
+
+                        Color::lab_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        if (sizeof(PIX) == 1.) {
+                            // convert from linear
                             for (int c = 0; c < 3; ++c) {
-                                tmpPix[c] = _lut->fromColorSpaceFloatToLinearFloat(tmpPix[c]);
+                                tmpPix[c] = _lut->toColorSpaceFloatFromLinearFloat(tmpPix[c]);
+                            }
+                        }
+                    } else {
+                        if (p.colorModel == eColorModelYCbCr) {
+                            // bring from 0..1 to the -0.5-0.5 range
+                            //tmpPix[1] -= 0.5;
+                            //tmpPix[2] -= 0.5;
+                            Color::ypbpr_to_rgb709(tmpPix[0], tmpPix[1], tmpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        }
+                        if (p.colorModel != eColorModelLinearRGB) {
+                            if (sizeof(PIX) != 1) {
+                                // convert from rec709
+                                for (int c = 0; c < 3; ++c) {
+                                    tmpPix[c] = _lut->fromColorSpaceFloatToLinearFloat(tmpPix[c]);
+                                }
                             }
                         }
                     }
@@ -2671,7 +2705,12 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &arg
     }
 
     int adaptiveRadius = _adaptiveRadius->getValueAtTime(time);
-    if (adaptiveRadius <= 0) {
+    bool supportsTiles = getSupportsTiles();
+    if ( supportsTiles != (adaptiveRadius>0) ) {
+        // This warning probably corresponds to a host bug
+        DBG_(printf("DenoiseSharpen: Warning: effect should support tiles (adaptiveRadius>0) but getSupportsTiles returns false (host issue).\n"));
+    }
+    if (adaptiveRadius <= 0 || !supportsTiles) {
         // requires the full image to compute standard deviation of the signal
         rois.setRegionOfInterest(*_srcClip, srcRod);
 
@@ -2681,14 +2720,20 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &arg
     double par = _srcClip->getPixelAspectRatio();
     OfxRectI roiPixel;
     Coords::toPixelEnclosing(args.regionOfInterest, args.renderScale, par, &roiPixel);
-    int levels = kLevelMax - startLevelFromRenderScale(args.renderScale);
-    int radiusPixel = borderSize(adaptiveRadius, b3, levels);
-    roiPixel.x1 -= radiusPixel;
-    roiPixel.x2 += radiusPixel;
-    roiPixel.y1 -= radiusPixel;
-    roiPixel.y2 += radiusPixel;
+    //DBG_(printf("render canonical ROI %g,%g - %g,%g\n", args.regionOfInterest.x1, args.regionOfInterest.y1, args.regionOfInterest.x2, args.regionOfInterest.y2));
+    //DBG_(printf("render scale %g,%g\n", args.renderScale.x, args.renderScale.y));
+    //DBG_(printf("render pixel ROI %d,%d - %d,%d\n", roiPixel.x1, roiPixel.y1, roiPixel.x2, roiPixel.y2));
+
+    // Note: the following must be consistent with the end of DenoiseSharpenPlugin::setup()
+    // compute the number of levels (max is 4, which adds 1<<4 = 16 pixels on each side)
+    int maxLev = (std::max)( 0, kLevelMax - startLevelFromRenderScale(args.renderScale) );
+    int border = borderSize(adaptiveRadius, b3, maxLev + 1);
+    roiPixel.x1 -= border;
+    roiPixel.x2 += border;
+    roiPixel.y1 -= border;
+    roiPixel.y2 += border;
 #ifndef NDEBUG
-    int sc = 1 << levels;
+    int sc = 1 << (maxLev + 1);
     if (b3) {
         assert( (2 * sc - 1 + 2 * sc) < (roiPixel.x2 - roiPixel.x1) );
         assert( (2 * sc - 1 + 2 * sc) < (roiPixel.y2 - roiPixel.y1) );
@@ -2698,9 +2743,13 @@ DenoiseSharpenPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &arg
     }
 #endif
     OfxRectD roi;
+    //DBG_(printf("border size %d\n", border));
+    //DBG_(printf("src pixel ROI %d,%d - %d,%d\n", roiPixel.x1, roiPixel.y1, roiPixel.x2, roiPixel.y2));
     Coords::toCanonical(roiPixel, args.renderScale, par, &roi);
+    //DBG_(printf("src canonical ROI %g,%g - %g,%g\n", roi.x1, roi.y1, roi.x2, roi.y2));
 
     Coords::rectIntersection<OfxRectD>(roi, srcRod, &roi);
+    //DBG_(printf("src canonical ROI (cropped) %g,%g - %g,%g\n", roi.x1, roi.y1, roi.x2, roi.y2));
     rois.setRegionOfInterest(*_srcClip, roi);
 
     // if analysis is locked, we do not need the analysis inputs

@@ -79,7 +79,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
-#ifdef cimg_use_openmp
+#if cimg_use_openmp!=0
 #define kHostFrameThreading false
 #else
 #define kHostFrameThreading true
