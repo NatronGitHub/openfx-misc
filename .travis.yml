@@ -48,10 +48,8 @@ before_install:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 90;
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90;
     fi
-  - if [ ${TRAVIS_OS_NAME} = "windows" ]; then
-      choco install curl make cmake patch;
-    fi
- 
+  - if [ ${TRAVIS_OS_NAME} = "windows" ]; then choco install curl; fi
+  - if [ ${TRAVIS_OS_NAME} = "windows" ]; then choco install patch; fi
 
 install:
   - if [[ ${COVERITY_BUILD_DISABLED} == 1 ]];
@@ -70,8 +68,8 @@ script:
     fi
   - make -C CImg CImg.h
   - if [ ${TRAVIS_OS_NAME} = "linux" -o ${TRAVIS_OS_NAME} = "osx" ]; then
-      make $J CONFIG=debug
-      make $J nomulti CONFIG=debug
+      make $J CONFIG=debug;
+      make $J nomulti CONFIG=debug;
       if [ "$CC" = "gcc" ]; then
         make -C CImg clean;
         make -C CImg CONFIG=debug OPENMP=1;
