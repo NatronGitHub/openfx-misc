@@ -18,22 +18,25 @@ os:
 
 language: cpp
 
-compiler:
-  - gcc
-  - clang
-
 matrix:
-  exclude:
-    - os: osx
+  include:
+    - os: linux
       compiler: gcc
+    - os: linux
+      compiler: clang
+    - os: osx
+      compiler: clang
+    - os: windows
   fast_finish: true
 
 before_install:
-  - env
-  - df
-  - date -u
-  - uname -a
-  - export J='-j3'
+  - if [ ${TRAVIS_OS_NAME} = "linux" -o ${TRAVIS_OS_NAME} = "osx" ]; then
+      env;
+      df;
+      date -u;
+      uname -a;
+      export J='-j3';
+    fi
   - if [ ${TRAVIS_OS_NAME} = "linux" ]; then
       echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca- ;
     fi
@@ -49,6 +52,10 @@ before_install:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 90;
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90;
     fi
+  - if [ ${TRAVIS_OS_NAME} = "windows" ]; then
+      choco install curl make cmake patch
+    fi
+ 
 
 install:
   - if [[ ${COVERITY_BUILD_DISABLED} == 1 ]];
@@ -66,11 +73,17 @@ script:
       exit 0;
     fi
   - make -C CImg CImg.h
-  - make $J CONFIG=debug
-  - make $J nomulti CONFIG=debug
-  - if [ "$CC" = "gcc" ]; then
-      make -C CImg clean;
-      make -C CImg CONFIG=debug OPENMP=1;
+  - if [ ${TRAVIS_OS_NAME} = "linux" -o ${TRAVIS_OS_NAME} = "osx" ]; then
+      make $J CONFIG=debug
+      make $J nomulti CONFIG=debug
+      if [ "$CC" = "gcc" ]; then
+        make -C CImg clean;
+        make -C CImg CONFIG=debug OPENMP=1;
+      fi
+  - if [ ${TRAVIS_OS_NAME} = "windows" ]; then
+      mkdir build && cd build;
+      cmake .. ;
+      cmake --build . ; 
     fi
 
 # ubuntu-toolchain-r/test contains recent versions of gcc
