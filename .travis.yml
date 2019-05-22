@@ -71,7 +71,7 @@ script:
       make $J CONFIG=debug;
       make $J nomulti CONFIG=debug;
       if [ "$CC" = "gcc" ]; then
-        make -C CImg clean;
+        make -C CImg CONFIG=debug clean;
         make -C CImg CONFIG=debug OPENMP=1;
       fi
     fi
