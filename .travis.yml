@@ -23,6 +23,7 @@ matrix:
     - os: osx
       compiler: clang
     - os: windows
+      filter_secrets: false # https://travis-ci.community/t/choco-install-hangs-forever/307/22
   fast_finish: true
 
 before_install:
