@@ -12,10 +12,6 @@ env:
    # Travis CI has 1.5 cores per VM, take advantage of it
    - MAKEFLAGS="-j 2"
 
-os:
-  - linux
-  - osx
-
 language: cpp
 
 matrix:
@@ -53,7 +49,7 @@ before_install:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90;
     fi
   - if [ ${TRAVIS_OS_NAME} = "windows" ]; then
-      choco install curl make cmake patch
+      choco install curl make cmake patch;
     fi
  
 
