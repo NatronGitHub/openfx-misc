@@ -1,5 +1,5 @@
 # ***** BEGIN LICENSE BLOCK *****
-# This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
+# This file is part of openfx-misc <https://github.com/NatronGitHub/openfx-misc>,
 # Copyright (C) 2013-2018 INRIA
 #
 # openfx-misc is free software: you can redistribute it and/or modify
