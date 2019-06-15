@@ -500,7 +500,7 @@ private:
                         // [FD] there is an error in the paper, which doesn't take into account chrominance denormalization:
                         // (X,Z) was computed from twice the chrominance, so subtracting Kfg from X means to
                         // subtract Kfg/2 from (Cb,Cr).
-                        if ( (fgx_scaled > 0) && ( (_suppressionAngle >= 180.) || (fgx_scaled - std::abs(fgz) / _tan__suppressionAngle2 > 0.) ) ) {
+                        if ( (fgx_scaled > 0) && ( (_suppressionAngle <= 0.) || (_suppressionAngle >= 180.) || (fgx_scaled - std::abs(fgz) / _tan__suppressionAngle2 > 0.) ) ) {
                             fgcb = 0;
                             fgcr = 0;
                         } else {
