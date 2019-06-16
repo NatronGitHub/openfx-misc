@@ -109,7 +109,7 @@ endif
 
 all: subdirs
 
-.PHONY: nomulti subdirs clean install install-nomulti uninstall uninstall-nomulti $(SUBDIRS)
+.PHONY: nomulti subdirs clean distclean install install-nomulti uninstall uninstall-nomulti $(SUBDIRS)
 
 nomulti:
 	$(MAKE) $(MFLAGS) SUBDIRS="$(SUBDIRS_NOMULTI)"
@@ -121,6 +121,12 @@ $(SUBDIRS):
 
 clean:
 	@for i in $(SUBDIRS) $(SUBDIRS_NOMULTI); do \
+	  echo "(cd $$i && $(MAKE) $(MFLAGS) $@)"; \
+	  (cd $$i && $(MAKE) $(MFLAGS) $@); \
+	done
+
+distclean: clean
+	@for i in CImg; do \
 	  echo "(cd $$i && $(MAKE) $(MFLAGS) $@)"; \
 	  (cd $$i && $(MAKE) $(MFLAGS) $@); \
 	done
