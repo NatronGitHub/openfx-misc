@@ -84,8 +84,8 @@ install:
   - cmd: "where patch"
 
   - git submodule -q update --init --recursive
-  - curl -L -s -S -o CImg/CImg.h https://raw.githubusercontent.com/dtschump/CImg/bd64cb5415f127e62f390ed57e22bc752a77a549/CImg.h
-  - curl -L -s -S -o CImg/Inpaint/inpaint.h https://raw.githubusercontent.com/dtschump/CImg/bd64cb5415f127e62f390ed57e22bc752a77a549/plugins/inpaint.h
+  - curl -L -s -S -o CImg/CImg.h https://raw.githubusercontent.com/dtschump/CImg/54779282070f1e2e38b5b9c2c652822f9f74412b/CImg.h
+  - curl -L -s -S -o CImg/Inpaint/inpaint.h https://raw.githubusercontent.com/dtschump/CImg/54779282070f1e2e38b5b9c2c652822f9f74412b/plugins/inpaint.h
   - patch -p0 -dCImg < CImg/Inpaint/inpaint.h.patch
 
 #---------------------------------#
