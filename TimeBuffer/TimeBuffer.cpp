@@ -961,7 +961,11 @@ public:
 
     virtual ~TimeBufferWritePlugin()
     {
-        setName("");
+        try {
+            setName("");
+        } catch (OFX::Exception::Suite&) {
+            // ignore
+        }
     }
 
 private:

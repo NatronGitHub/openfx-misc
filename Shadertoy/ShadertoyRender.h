@@ -795,7 +795,7 @@ compileAndLinkProgram(const char *vertexShader,
         for (i = 0; i < count; i++) {
             glGetActiveAttrib(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
             glCheckError();
-            DPRINT( ("Attribute #%d Type: %s Name: %s\n", i, glGetEnumString(type), &name[0]) );
+            DPRINT( ("Attribute #%d Type: %s Name: %s\n", i, glGetEnumString(type), (const char*)&name[0]) );
         }
 
         // Uniforms
@@ -809,7 +809,7 @@ compileAndLinkProgram(const char *vertexShader,
         for (i = 0; i < count; i++) {
             glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
             glCheckError();
-            DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), &name[0]) );
+            DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), (const char*)&name[0]) );
             GLint loc = glGetUniformLocation(program, &name[0]);
             if (loc >= 0) {
                 switch (type) {
@@ -1411,7 +1411,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                         glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
                         glCheckError();
                         name.resize((unsigned)length);
-                        //DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), &name[0]) );
+                        //DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), (const char*)&name[0]) );
                         GLint loc = glGetUniformLocation(program, &name[0]);
 
                         if (loc >= 0) {
@@ -1483,7 +1483,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                                 break;
                             }
                             if (t == eUniformTypeNone) {
-                                DPRINT( ("Uniform #%d Type: %s Name: %s NOT SUPPORTED\n", i, glGetEnumString(type), &name[0]) );
+                                DPRINT( ("Uniform #%d Type: %s Name: %s NOT SUPPORTED\n", i, glGetEnumString(type), (const char*)&name[0]) );
                                 continue;
                             }
 
