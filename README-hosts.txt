@@ -205,3 +205,38 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 
 - the OFX Log is "/Applications/ofxTestLog.txt"
 - the OFX plugin cache is in "~/Library/Application Support/Sony/Catalyst Edit/2015.1/plugincache.xml
+
+* Sony Vegas 12
+
+OFX API version 1.1
+hostName=com.sonycreativesoftware.vegas
+hostLabel=Vegas Pro 12.0
+hostVersion=12.726.0 ()
+hostIsBackground=0
+supportsOverlays=0
+supportsMultiResolution=0
+supportsTiles=0
+temporalClipAccess=1
+supportedComponents=OfxImageComponentNone,OfxImageComponentRGBA,OfxImageComponentAlpha
+supportedContexts=OfxImageEffectContextGeneral,OfxImageEffectContextGenerator,OfxImageEffectContextFilter,OfxImageEffectContextTransition,OfxImageEffectContextRetimer,OfxImageEffectContextPaint
+supportedPixelDepths=OfxBitDepthByte,OfxBitDepthFloat
+supportsMultipleClipDepths=0
+supportsMultipleClipPARs=0
+supportsSetableFrameRate=0
+supportsSetableFielding=0
+supportsStringAnimation=1
+supportsCustomInteract=0
+supportsChoiceAnimation=1
+supportsBooleanAnimation=1
+supportsCustomAnimation=0
+supportsParametricAnimation=0
+canTransform=0
+maxParameters=1000
+pageRowCount=0
+pageColumnCount=0
+isNatron=0
+supportsDynamicChoices=0
+supportsCascadingChoices=0
+supportsChannelSelector=0
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxImageEffectOpenGLRenderSuite,OfxVegasProgressSuite,OfxVegasStereoscopicImageEffectSuite,OfxVegasKeyframeSuite,OfxOpenCLProgramSuite,
+OFX DebugProxy: host description finished
