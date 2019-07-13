@@ -68,6 +68,7 @@
 #endif
 
 #if !defined(USE_OSMESA) && defined(__APPLE__)
+#  define GL_SILENCE_DEPRECATION // Yes, we are still doing OpenGL 2.1
 #  include <OpenGL/gl.h>
 #  include <OpenGL/glext.h>
 //#  include <OpenGL/glu.h>

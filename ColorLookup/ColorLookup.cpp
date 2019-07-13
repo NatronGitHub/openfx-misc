@@ -28,6 +28,7 @@
 #define GL_GLEXT_PROTOTYPES
 #endif
 #ifdef __APPLE__
+#define GL_SILENCE_DEPRECATION // Yes, we are still doing OpenGL 2.1
 #include <OpenGL/gl.h>
 #include <OpenGL/glext.h>
 #else

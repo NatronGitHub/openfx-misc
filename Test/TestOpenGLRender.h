@@ -61,6 +61,7 @@
 #endif
 
 #ifdef __APPLE__
+#  define GL_SILENCE_DEPRECATION // Yes, we are still doing OpenGL 2.1
 #  include <OpenGL/gl.h>
 #  include <OpenGL/glext.h>
 //#  include <OpenGL/glu.h>
@@ -1286,12 +1287,12 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         return;
     }
     GLenum type = GL_NONE;
+#ifdef USE_OSMESA
 # ifdef USE_DEPTH
     GLint depthBits = 24;
 # else
     GLint depthBits = 0;
 # endif
-#ifdef USE_OSMESA
     GLint stencilBits = 0;
     GLint accumBits = 0;
 #endif
