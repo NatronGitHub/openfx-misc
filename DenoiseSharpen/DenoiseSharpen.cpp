@@ -1769,7 +1769,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
                                       float b) // progress increment
 {
     //
-    // BayesShrink (as describred in <https://jo.dreggn.org/home/2011_atrous.pdf>):
+    // BayesShrink (as described in <https://jo.dreggn.org/home/2011_atrous.pdf>):
     // compute sigma_n using the MAD (median absolute deviation at the finest level:
     // sigma_n = median(|d_0|)/0.6745 (could be computed in an analysis step from the first detail subband)
     // The soft shrinkage threshold is
@@ -2498,17 +2498,20 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
     unsigned int isize = iwidth * iheight;
     auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * ( nComponents + 2 + ( (p.adaptiveRadius > 0) ? 1 : 0 ) ), this) );
     float* tmpPixelData = tmpData.get() ? (float*)tmpData->lock() : NULL;
+    if (!tmpPixelData) {
+        throwSuiteStatusException(kOfxStatErrMemory);
+    }
     float* fimgcolor[3] = { NULL, NULL, NULL };
     float* fimgalpha = NULL;
     float *fimgtmp[3] = { NULL, NULL, NULL };
-    fimgcolor[0] = (nComponents != 1) ? tmpPixelData : NULL;
-    fimgcolor[1] = (nComponents != 1) ? tmpPixelData + isize : NULL;
-    fimgcolor[2] = (nComponents != 1) ? tmpPixelData + 2 * isize : NULL;
-    fimgalpha = (nComponents == 1) ? tmpPixelData : ( (nComponents == 4) ? tmpPixelData + 3 * isize : NULL );
-    fimgtmp[0] = tmpPixelData + nComponents * isize;
-    fimgtmp[1] = tmpPixelData + (nComponents + 1) * isize;
+    fimgcolor[0] = (nComponents != 1 && tmpPixelData) ? tmpPixelData : NULL;
+    fimgcolor[1] = (nComponents != 1 && tmpPixelData) ? tmpPixelData + isize : NULL;
+    fimgcolor[2] = (nComponents != 1 && tmpPixelData) ? tmpPixelData + 2 * isize : NULL;
+    fimgalpha = (nComponents == 1 && tmpPixelData) ? tmpPixelData : ( (nComponents == 4 && tmpPixelData) ? tmpPixelData + 3 * isize : NULL );
+    fimgtmp[0] = tmpPixelData ? tmpPixelData + nComponents * isize : NULL;
+    fimgtmp[1] = tmpPixelData ? tmpPixelData + (nComponents + 1) * isize : NULL;
     if (p.adaptiveRadius > 0) {
-        fimgtmp[2] = tmpPixelData + (nComponents + 2) * isize;
+        fimgtmp[2] = tmpPixelData ? tmpPixelData + (nComponents + 2) * isize : NULL;
     }
     // - extract the color components and convert them to the appropriate color model
     //
@@ -2557,7 +2560,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
                 // store in tmpPixelData
                 for (int c = 0; c < 3; ++c) {
                     if (!( (p.colorModel == eColorModelRGB) || (p.colorModel == eColorModelLinearRGB) ) || p.process[c]) {
-                        if (fimgcolor && fimgcolor[c]) {
+                        if (fimgcolor[c]) {
                             fimgcolor[c][pix] = unpPix[c];
                         }
                     }
@@ -2623,7 +2626,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
                 if (nComponents != 1) {
                     // store in tmpPixelData
                     for (int c = 0; c < 3; ++c) {
-                        if (fimgcolor && fimgcolor[c]) {
+                        if (fimgcolor[c]) {
                             tmpPix[c] = fimgcolor[c][pix];
                         }
                     }
@@ -3109,7 +3112,10 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     unsigned int iheight = srcWindow.y2 - srcWindow.y1;
     unsigned int isize = iwidth * iheight;
     auto_ptr<ImageMemory> tmpData( new ImageMemory(sizeof(float) * isize * (nComponents + 3), this) );
-    float* tmpPixelData = (float*)tmpData->lock();
+    float* tmpPixelData = tmpData.get() ? (float*)tmpData->lock() : NULL;
+    if (!tmpPixelData) {
+        throwSuiteStatusException(kOfxStatErrMemory);
+    }
     float* fimgcolor[3] = { NULL, NULL, NULL };
     float* fimgalpha = NULL;
     float *fimgtmp[3] = { NULL, NULL, NULL };
@@ -3122,6 +3128,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     fimgtmp[2] = tmpPixelData + (nComponents + 2) * isize;
     auto_ptr<ImageMemory> maskData( doMasking ? new ImageMemory(sizeof(bool) * isize, this) : NULL );
     bool* bimgmask = doMasking ? (bool*)maskData->lock() : NULL;
+    if (doMasking && !bimgmask) {
+        throwSuiteStatusException(kOfxStatErrMemory);
+    }
 
 
     // - extract the color components and convert them to the appropriate color model
