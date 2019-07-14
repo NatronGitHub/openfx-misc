@@ -628,7 +628,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         }
         srcBitDepth      = srcA->getPixelDepth();
         srcComponents = srcA->getPixelComponents();
-        assert(_srcClipA->getPixelComponents() == srcComponents);
+        assert(_srcClipA && _srcClipA->getPixelComponents() == srcComponents);
     }
 
     if ( srcB.get() ) {
@@ -640,7 +640,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         }
         BitDepthEnum srcBBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcBComponents = srcB->getPixelComponents();
-        assert(_srcClipB->getPixelComponents() == srcBComponents);
+        assert(_srcClipB && _srcClipB->getPixelComponents() == srcBComponents);
         // both input must have the same bit depth and components
         if ( ( (srcBitDepth != eBitDepthNone) && (srcBitDepth != srcBBitDepth) ) ||
              ( ( srcComponents != ePixelComponentNone) && ( srcComponents != srcBComponents) ) ) {
@@ -1260,7 +1260,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         desc.addClipPreferencesSlaveParam(*param);
     }
 
-    // ouputBitDepth
+    // outputBitDepth
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputBitDepth);
         param->setLabel(kParamOutputBitDepthLabel);
@@ -1330,7 +1330,7 @@ ShufflePluginFactory::describeInContext(ImageEffectDescriptor &desc,
             }
         }
     }
-    // ouputA
+    // outputA
     if (gSupportsRGBA || gSupportsAlpha) {
         {
             {

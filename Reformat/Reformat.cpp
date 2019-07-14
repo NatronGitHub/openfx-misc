@@ -415,6 +415,9 @@ ReformatPlugin::getOutputFormat(const double time,
         //probably scale is 0
         rect->x1 = rect->y1 = rect->x2 = rect->y2 = 0;
         *par = 1.;
+        if (format) {
+            format->x1 = format->y1 = format->x2 = format->y2 = 0;
+        }
 
         return;
     }
@@ -432,6 +435,9 @@ ReformatPlugin::getOutputFormat(const double time,
         // degenerate case
         rect->x1 = rect->y1 = rect->x2 = rect->y2 = 0;
         *par = 1.;
+        if (format) {
+            format->x1 = format->y1 = format->x2 = format->y2 = 0;
+        }
 
         return;
     }

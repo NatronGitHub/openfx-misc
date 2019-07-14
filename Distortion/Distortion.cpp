@@ -310,7 +310,7 @@ enum DistortionModelEnum
 
 
 #define kParamDistortionDirection "direction"
-#define kParamDistortionDirectionLabel "Direction", "Should the output corrspond to applying or to removing distortion."
+#define kParamDistortionDirectionLabel "Direction", "Should the output correspond to applying or to removing distortion."
 #define kParamDistortionDirectionOptionDistort "Distort", "The output corresponds to applying distortion."
 #define kParamDistortionDirectionOptionUndistort "Undistort", "The output corresponds to removing distortion."
 

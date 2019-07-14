@@ -37,7 +37,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "ColorCorrectOFX"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Adjusts the saturation, constrast, gamma, gain and offset of an image.\n" \
+#define kPluginDescription "Adjusts the saturation, contrast, gamma, gain and offset of an image.\n" \
     "The ranges of the shadows, midtones and highlights are controlled by the curves " \
     "in the \"Ranges\" tab.\n" \
     "The Contrast adjustment works using the formula: Output = (Input/0.18)^Contrast*0.18.\n" \
@@ -424,7 +424,7 @@ public:
     void setColorControlValues(const ColorControlGroup& master,
                                const ColorControlGroup& shadow,
                                const ColorControlGroup& midtone,
-                               const ColorControlGroup& hightlights,
+                               const ColorControlGroup& highlights,
                                LuminanceMathEnum luminanceMath,
                                bool premult,
                                int premultChannel,
@@ -437,7 +437,7 @@ public:
         _masterValues = master;
         _shadowValues = shadow;
         _midtoneValues = midtone;
-        _highlightsValues = hightlights;
+        _highlightsValues = highlights;
         _luminanceMath = luminanceMath;
         _premult = premult;
         _premultChannel = premultChannel;

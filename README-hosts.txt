@@ -42,7 +42,7 @@ Caveats/Bugs:
 - in Generators, even if the source clip is defined, it can not be fetched by the plug-in (the source clip should always be fetchable, it is mandatory in OpenFX)
 - all defined clips will appear connected (property kOfxImageClipPropConnected = 1) but give black and transparent (NULL) images. This is a problem for Mask clips, so a "Mask" boolean param must be added specifically for Resolve (see kParamMaskApply in openfx-misc)
 - kOfxImagePropField property is always kOfxImageFieldNone on OFX images, regardless of the clip properties
-- OfxParameterSuiteV1::paramCopy does nothing, keys and values have to be copied explicitely (see CornerPin)
+- OfxParameterSuiteV1::paramCopy does nothing, keys and values have to be copied explicitly (see CornerPin)
 - even though OfxImageEffectOpenGLRenderSuite exists, the render action is never called with OpenGL enabled (is Resolve supposed to support OpenGL rendering?)
 - The range AND display range has to be defined for all Double params (kOfxParamTypeDouble, kOfxParamTypeDouble2D, kOfxParamTypeDouble3D), or a default range of (-1,1) is used, and values cannot lie outsideof this range !
 - The range AND display range has to be defined for Int params (kOfxParamTypeInteger), or a default range of (0,0) is used, and values cannot lie outside of this range !

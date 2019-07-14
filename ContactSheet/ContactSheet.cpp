@@ -78,9 +78,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamResolutionHint \
     "Resolution of the output image, in pixels."
 
-#define kParamRowsColums "rowsColumns"
-#define kParamRowsColumsLabel "Rows/Columns"
-#define kParamRowsColumsHint \
+#define kParamRowsColumns "rowsColumns"
+#define kParamRowsColumnsLabel "Rows/Columns"
+#define kParamRowsColumnsHint \
     "How many rows and columns in the grid where the input images or frames are arranged."
 
 #define kParamGap "gap"
@@ -240,7 +240,7 @@ ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
         assert(_srcClip[i]);
     }
     _resolution  = fetchInt2DParam(kParamResolution);
-    _rowsColumns = fetchInt2DParam(kParamRowsColums);
+    _rowsColumns = fetchInt2DParam(kParamRowsColumns);
     assert(_resolution && _rowsColumns);
     _gap = fetchIntParam(kParamGap);
     _center = fetchBooleanParam(kParamCenter);
@@ -685,7 +685,7 @@ public:
         _dstClip = effect->fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
         _resolution  = effect->fetchInt2DParam(kParamResolution);
-        _rowsColumns = effect->fetchInt2DParam(kParamRowsColums);
+        _rowsColumns = effect->fetchInt2DParam(kParamRowsColumns);
         assert(_resolution && _rowsColumns);
         _gap = effect->fetchIntParam(kParamGap);
         _center = effect->fetchBooleanParam(kParamCenter);
@@ -1015,9 +1015,9 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // rowsColumns
     {
-        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamRowsColums);
-        param->setLabel(kParamRowsColumsLabel);
-        param->setHint(kParamRowsColumsHint);
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamRowsColumns);
+        param->setLabel(kParamRowsColumnsLabel);
+        param->setHint(kParamRowsColumnsHint);
         param->setDefault(3, 4);
         param->setRange(1, 1, INT_MAX, INT_MAX);
         param->setDisplayRange(1, 1, 32, 32);

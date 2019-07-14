@@ -59,7 +59,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescriptionMidRGB \
     "Note that if an input with only RGB components is connected to A or B, its alpha channel " \
     "is considered to be transparent (zero) by default, and the \"A\" checkbox for the given " \
-    "input is automatically unchecked, unless it is set explicitely by the user.  In fact, " \
+    "input is automatically unchecked, unless it is set explicitly by the user.  In fact, " \
     "most of the time, RGB images without an alpha channel are only used as background images " \
     "in the B input, and should be considered as transparent, since they should not occlude " \
     "anything. That way, the alpha channel on output only contains the opacity of elements " \
@@ -197,8 +197,8 @@ enum BBoxEnum
 #define kParamOutputChannelsALabel "A"
 #define kParamOutputChannelsAHint  "Write alpha component to output."
 
-#define kParamAChannelsAChanged "aChannelsChanged" // did the user explicitely change the "A" checkbox for A input?
-#define kParamBChannelsAChanged "bChannelsChanged" // did the user explicitely change the "A" checkbox for B input?
+#define kParamAChannelsAChanged "aChannelsChanged" // did the user explicitly change the "A" checkbox for A input?
+#define kParamBChannelsAChanged "bChannelsChanged" // did the user explicitly change the "A" checkbox for B input?
 
 #define kRotoMaskPlaneID "RotoMask"
 
@@ -1003,7 +1003,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     }
 
     const Image* rotoMaskImgB = 0;
-    if (_pluginType == eMergePluginRoto) {
+    if (_pluginType == eMergePluginRoto && _srcClipB) {
 #ifdef OFX_EXTENSIONS_NUKE
         rotoMaskImgB = _srcClipB->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
 #endif
@@ -1924,7 +1924,7 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
 
 
     if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
-        // two hidden parameters to keep track of the fact that the user explicitely checked or unchecked tha "A" checkbox
+        // two hidden parameters to keep track of the fact that the user explicitly checked or unchecked tha "A" checkbox
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsAChanged);
             param->setDefault(false);

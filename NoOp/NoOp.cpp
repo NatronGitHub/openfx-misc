@@ -40,7 +40,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "NoOpOFX"
 #define kPluginGrouping "Other"
-#define kPluginDescription "Copies the input to the ouput.\n" \
+#define kPluginDescription "Copies the input to the output.\n" \
     "This effect does not modify the actual content of the image, but can be used to modify the metadata associated with the clip (premultiplication, field order, format, pixel aspect ratio, frame rate).\n" \
     "This plugin concatenates transforms."
 #define kPluginIdentifier "net.sf.openfx.NoOpPlugin"

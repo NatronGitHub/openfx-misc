@@ -65,7 +65,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "Card3DOFX"
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Card3D.\n" \
-    "This effect applies a transform that corresponds to projection the source image onto a 3D card in space. The 3D card is positionned with relative to the Axis position, and the Camera position may also be given. The Axis may be used to apply the same global motion to several cards.\n" \
+    "This effect applies a transform that corresponds to projection the source image onto a 3D card in space. The 3D card is positioned with relative to the Axis position, and the Camera position may also be given. The Axis may be used to apply the same global motion to several cards.\n" \
     "This plugin concatenates transforms.\n" \
     "http://opticalenquiry.com/nuke/index.php?title=Card3D"
 

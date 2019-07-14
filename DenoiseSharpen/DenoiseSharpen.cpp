@@ -118,7 +118,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This plugin allows the separate denoising of image channels in multiple color spaces using wavelets, using the BayesShrink algorithm, and can also sharpen the image details.\n" \
     "\n" \
     "Noise levels for each channel may be either set manually, or analyzed from the image data in each wavelet subband using the MAD (median absolute deviation) estimator.\n" \
-    "Noise analysis is based on the assuption that the noise is Gaussian and additive (it is not intensity-dependent). If there is speckle or salt-and-pepper noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
+    "Noise analysis is based on the assumption that the noise is Gaussian and additive (it is not intensity-dependent). If there is speckle or salt-and-pepper noise in the images, the Median or SmoothPatchBased filters may be more appropriate.\n" \
     "The color model specifies the channels and the transforms used. Noise levels have to be re-adjusted or re-analyzed when changing the color model.\n" \
     "\n" \
     "## Basic Usage\n" \
@@ -135,7 +135,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, \"Lock Noise Analysis\" is checked in order to avoid modifying the essential parameters by mistake.\n" \
     "\n" \
-    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or hightlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero..\n" \
+    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or highlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero..\n" \
     "\n" \
     "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, and noise analysis can only be performed on areas which also contain details, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
     "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it commes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
@@ -961,7 +961,7 @@ private:
                          const double noiselevels[4], //!< noise levels for high/medium/low/very low frequencies
                          int adaptiveRadius,
                          double denoise_amount, //!< amount parameter
-                         double sharpen_amount, //!< constrast boost amount
+                         double sharpen_amount, //!< contrast boost amount
                          double sharpen_radius, //!< contrast boost radius
                          int startLevel,
                          float a, // progress amount at start
@@ -1762,7 +1762,7 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
                                       const double noiselevels[4], //!< noise levels for high/medium/low/very low frequencies
                                       int adaptiveRadius,
                                       double denoise_amount, //!< amount parameter
-                                      double sharpen_amount, //!< constrast boost amount
+                                      double sharpen_amount, //!< contrast boost amount
                                       double sharpen_radius, //!< contrast boost radius
                                       int startLevel,
                                       float a, // progress amount at start
@@ -2557,7 +2557,9 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
                 // store in tmpPixelData
                 for (int c = 0; c < 3; ++c) {
                     if (!( (p.colorModel == eColorModelRGB) || (p.colorModel == eColorModelLinearRGB) ) || p.process[c]) {
-                        fimgcolor[c][pix] = unpPix[c];
+                        if (fimgcolor && fimgcolor[c]) {
+                            fimgcolor[c][pix] = unpPix[c];
+                        }
                     }
                 }
             }
@@ -2621,7 +2623,9 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
                 if (nComponents != 1) {
                     // store in tmpPixelData
                     for (int c = 0; c < 3; ++c) {
-                        tmpPix[c] = fimgcolor[c][pix];
+                        if (fimgcolor && fimgcolor[c]) {
+                            tmpPix[c] = fimgcolor[c][pix];
+                        }
                     }
 
                     if (p.colorModel == eColorModelLab) {

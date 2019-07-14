@@ -87,7 +87,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
-#define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No filter is applied if size < 1.2. Negative values correspond to dilation, positive valies to erosion. Both values should have the same sign."
+#define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No filter is applied if size < 1.2. Negative values correspond to dilation, positive values to erosion. Both values should have the same sign."
 #define kParamSizeDefault 0.
 
 #define kParamUniform "uniform"

@@ -1418,7 +1418,7 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         clipPreferences.setClipComponents(*_srcClipOther, srcOtherComps);
     }
 
-    if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
+    if (getImageEffectHostDescription()->supportsMultipleClipDepths && _dstClip) {
         // set the bitDepth of _dstClip
         BitDepthEnum outputBitDepth = gOutputBitDepthMap[_outputBitDepth->getValue()];
         clipPreferences.setClipBitDepth(*_dstClip, outputBitDepth);
@@ -1446,7 +1446,7 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             par = _srcClipOther->getPixelAspectRatio();
             setFormat = true;
         }
-        if (setFormat) {
+        if (setFormat && _dstClip) {
             clipPreferences.setOutputFormat(format);
             clipPreferences.setPixelAspectRatio(*_dstClip, par);
         }
@@ -1974,7 +1974,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
         desc.addClipPreferencesSlaveParam(*param);
     }
 
-    // ouputBitDepth
+    // outputBitDepth
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputBitDepth);
         param->setLabel(kParamOutputBitDepthLabel);
@@ -2054,7 +2054,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             }
         }
     }
-    // ouputA
+    // outputA
     if (gSupportsRGBA || gSupportsAlpha) {
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             ChoiceParamDescriptor* a = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputA, kParamOutputALabel, kParamOutputAHint);

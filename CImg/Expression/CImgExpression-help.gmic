@@ -30,7 +30,7 @@
 \n       . '"${c}"round(value,rounding_value,direction)"$n"' returns a rounded value. '"${g}"direction"$n"' can be
 \n          "${g}"{ -1=to-lowest | 0=to-nearest | 1=to-highest }"$n".
 \n
-\n    _ "${g}"Variable names"$n" below are pre-defined. They can be overrided.
+\n    _ "${g}"Variable names"$n" below are pre-defined. They can be overridden.
 \n
 \n       . '"${c}"l"$n"': length of the associated list of images.
 \n       . '"${c}"w"$n"': width of the associated image, if any ("${g}"0"$n" otherwise).
@@ -195,7 +195,7 @@
 \n          from the cropped region of image "${g}"[ind]"$n" (or from default image selected if '"${c}"ind"$n"' is not
 \n          specified). Cropped region starts from point "${g}"(x,y,z,c)"$n" and has a size of
 \n          "${g}"dx x dy x dz x dc"$n". Arguments for coordinates and sizes can be omitted if they are not
-\n          ambiguous (e.g. '"${c}"crop(#ind,x,y,dx,dy)"$n"' is a valid invokation of this function).
+\n          ambiguous (e.g. '"${c}"crop(#ind,x,y,dx,dy)"$n"' is a valid invocation of this function).
 \n       . '"${c}"draw(_#ind,S,x,y,z,c,dx,_dy,_dz,_dc,_opacity,_M,_max_M)"$n"' draws a sprite "${g}"S"$n" in image "${g}"[ind]"$n"
 \n          (or in default image selected if '"${c}"ind"$n"' is not specified) at coordinates "${g}"(x,y,z,c)"$n".
 \n          The size of the sprite "${g}"dx x dy x dz x dc"$n" must be specified. You can also specify a

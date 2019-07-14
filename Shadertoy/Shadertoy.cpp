@@ -84,7 +84,7 @@ using std::string;
     "\n" \
     "Image shaders\n" \
     "\n" \
-    "Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsability of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:\n" \
+    "Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsibility of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:\n" \
     "\n" \
     "`void mainImage( out vec4 fragColor, in vec2 fragCoord );`\n" \
     "\n" \
@@ -249,7 +249,7 @@ using std::string;
     "\n" \
     "* Expose shader parameters as uniforms, which are presented as OpenFX parameters.\n" \
     "* Provide the description and help for these parameters directly in the GLSL code.\n" \
-    "* Add a default uniform containing the render scale. In OpenFX, a render scale of 1 means that the image is rendered at full resolution, 0.5 at half resolution, etc. This can be used to scale parameter values so that the final aspect does not depend on the render scale. For example, a blur size parameter given in pixels at full resultion would have to be multiplied by the render scale.\n" \
+    "* Add a default uniform containing the render scale. In OpenFX, a render scale of 1 means that the image is rendered at full resolution, 0.5 at half resolution, etc. This can be used to scale parameter values so that the final aspect does not depend on the render scale. For example, a blur size parameter given in pixels at full resolution would have to be multiplied by the render scale.\n" \
     "* Add a default uniform containing the offset of the processed texture with respect to the position of the origin.\n" \
     "\n" \
     "The extensions are:\n" \
@@ -266,7 +266,7 @@ using std::string;
     "  `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`\n" \
     "* This one also sets the filter and wrap parameters:\n" \
     "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`\n" \
-    "* And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):\n" \
+    "* And this one sets the output bounding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):\n" \
     "  `// BBox: iChannel0`\n" \
     "\n" \
     "\n" \
@@ -296,7 +296,7 @@ using std::string;
     "uniform float size = 10.; // Size (Size of the filter kernel in pixel units. The standard deviation of the corresponding Gaussian is size/2.4.), min=0., max=21.\n" \
     "uniform bool perpixel_size = false; // Modulate (Modulate the blur size by multiplying it by the first channel of the Modulate input)\n" \
     "\n" \
-    "In the `mainImage` function, which does the processing, we compute the `mSize` and `kSize` variables, which are the kernel size and mask size for that particular algorithm, from the \"Size\" parameter, multiplied by the render scale to get a scale-invariant effect. If the \"Modulate\" check box is on, we also multiply the size by the value found in the first channel (which is red, not alpha) of the \"Modulate\" input, wich is in the iChannel1 texture according to the comments at the beginning of the source code. This can be use to modulate the blur size depending on the position in the image. The \"Modulate\" input may be for example connected to the output of a Roto node (with the \"R\" checkbox checked in the Roto node). Since the Roto output may not have the same size and origin as the Source image, we take care of these by using the iChannelOffset and iChannelResolution values for input 1.\n" \
+    "In the `mainImage` function, which does the processing, we compute the `mSize` and `kSize` variables, which are the kernel size and mask size for that particular algorithm, from the \"Size\" parameter, multiplied by the render scale to get a scale-invariant effect. If the \"Modulate\" check box is on, we also multiply the size by the value found in the first channel (which is red, not alpha) of the \"Modulate\" input, which is in the iChannel1 texture according to the comments at the beginning of the source code. This can be use to modulate the blur size depending on the position in the image. The \"Modulate\" input may be for example connected to the output of a Roto node (with the \"R\" checkbox checked in the Roto node). Since the Roto output may not have the same size and origin as the Source image, we take care of these by using the iChannelOffset and iChannelResolution values for input 1.\n" \
     "\n" \
     "    float fSize = size * iRenderScale.x;\n" \
     "    if (perpixel_size) {\n" \
@@ -322,7 +322,7 @@ using std::string;
     "\n" \
     "However, many OpenGL applications, including Shadertoy and most games, skip steps 1 and 3 (mainly for performance issue): they process gamma-compressed textures as if they were linear, and sometimes have to boost their output by gamma compression so that it looks nice on a standard display (which usually accepts a sRGB-compressed framebuffer).\n" \
     "\n" \
-    "This is why many shaders from Shadertoy convert their outout from linear to sRGB or gamma=2.2, see for example the `srgb2lin` and `lin2srgb` functions in https://www.shadertoy.com/view/XsfXzf . These conversions *must* be removed when using the shader in OpenFX.\n" \
+    "This is why many shaders from Shadertoy convert their output from linear to sRGB or gamma=2.2, see for example the `srgb2lin` and `lin2srgb` functions in https://www.shadertoy.com/view/XsfXzf . These conversions *must* be removed when using the shader in OpenFX.\n" \
     "\n" \
     "An alternative solution would be to convert all Shadertoy inputs from linear to sRGB, and convert back all outputs to linear, either inside the Shadertoy node, or using external conversion nodes (such as OCIOColorSpace). But this is a bad option, because this adds useless processing. Removing the srgb2lin and lin2srgb conversions from the shader source is a much better option (these functions may have different names, or there may simply be operations line `pow(c,vec3(2.2))` and/or `pow(c,vec3(1./2.2))` in the GLSL code).\n" \
     "\n" \
@@ -345,7 +345,7 @@ using std::string;
     "\n" \
     "Default textures and videos\n" \
     "\n" \
-    "The default shadertoy textures and videos are avalaible from the Shadertoy web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.\n" \
+    "The default shadertoy textures and videos are available from the Shadertoy web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.\n" \
     "\n" \
     "- Textures: https://www.shadertoy.com/presets/tex00.jpg https://www.shadertoy.com/presets/tex01.jpg https://www.shadertoy.com/presets/tex02.jpg https://www.shadertoy.com/presets/tex03.jpg https://www.shadertoy.com/presets/tex04.jpg https://www.shadertoy.com/presets/tex05.jpg https://www.shadertoy.com/presets/tex06.jpg https://www.shadertoy.com/presets/tex07.jpg https://www.shadertoy.com/presets/tex08.jpg https://www.shadertoy.com/presets/tex09.jpg https://www.shadertoy.com/presets/tex10.png https://www.shadertoy.com/presets/tex11.png https://www.shadertoy.com/presets/tex12.png ttps://www.shadertoy.com/presets/tex14.png https://www.shadertoy.com/presets/tex15.png https://www.shadertoy.com/presets/tex16.png https://www.shadertoy.com/presets/tex17.jpg https://www.shadertoy.com/presets/tex18.jpg https://www.shadertoy.com/presets/tex19.png https://www.shadertoy.com/presets/tex20.jpg https://www.shadertoy.com/presets/tex21.png\n" \
     "- Videos: https://www.shadertoy.com/presets/vid00.ogv https://www.shadertoy.com/presets/vid01.webm https://www.shadertoy.com/presets/vid02.ogv https://www.shadertoy.com/presets/vid03.webm\n" \
@@ -367,7 +367,7 @@ using std::string;
     "\n" \
     "### Image shaders\n" \
     "\n" \
-    "Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsability of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:\n" \
+    "Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsibility of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:\n" \
     "\n" \
     "`void mainImage( out vec4 fragColor, in vec2 fragCoord );`\n" \
     "\n" \
@@ -541,7 +541,7 @@ using std::string;
     "\n" \
     "* Expose shader parameters as uniforms, which are presented as OpenFX parameters.\n" \
     "* Provide the description and help for these parameters directly in the GLSL code.\n" \
-    "* Add a default uniform containing the render scale. In OpenFX, a render scale of 1 means that the image is rendered at full resolution, 0.5 at half resolution, etc. This can be used to scale parameter values so that the final aspect does not depend on the render scale. For example, a blur size parameter given in pixels at full resultion would have to be multiplied by the render scale.\n" \
+    "* Add a default uniform containing the render scale. In OpenFX, a render scale of 1 means that the image is rendered at full resolution, 0.5 at half resolution, etc. This can be used to scale parameter values so that the final aspect does not depend on the render scale. For example, a blur size parameter given in pixels at full resolution would have to be multiplied by the render scale.\n" \
     "* Add a default uniform containing the offset of the processed texture with respect to the position of the origin.\n" \
     "\n" \
     "The extensions are:\n" \
@@ -558,7 +558,7 @@ using std::string;
     "  `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`\n" \
     "* This one also sets the filter and wrap parameters:\n" \
     "  `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`\n" \
-    "* And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):\n" \
+    "* And this one sets the output bounding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):\n" \
     "  `// BBox: iChannel0`\n" \
     "\n" \
     "### Converting a Shadertoy for use in OpenFX\n" \
@@ -588,7 +588,7 @@ using std::string;
     "    uniform bool perpixel_size = false; // Modulate (Modulate the blur size by multiplying it by the first channel of the Modulate input)\n" \
     "\n" \
     "\n" \
-    "In the `mainImage` function, which does the processing, we compute the `mSize` and `kSize` variables, which are the kernel size and mask size for that particular algorithm, from the \"Size\" parameter, multiplied by the render scale to get a scale-invariant effect. If the \"Modulate\" check box is on, we also multiply the size by the value found in the first channel (which is red, not alpha) of the \"Modulate\" input, wich is in the iChannel1 texture according to the comments at the beginning of the source code. This can be use to modulate the blur size depending on the position in the image. The \"Modulate\" input may be for example connected to the output of a Roto node (with the \"R\" checkbox checked in the Roto node). Since the Roto output may not have the same size and origin as the Source image, we take care of these by using the iChannelOffset and iChannelResolution values for input 1.\n" \
+    "In the `mainImage` function, which does the processing, we compute the `mSize` and `kSize` variables, which are the kernel size and mask size for that particular algorithm, from the \"Size\" parameter, multiplied by the render scale to get a scale-invariant effect. If the \"Modulate\" check box is on, we also multiply the size by the value found in the first channel (which is red, not alpha) of the \"Modulate\" input, which is in the iChannel1 texture according to the comments at the beginning of the source code. This can be use to modulate the blur size depending on the position in the image. The \"Modulate\" input may be for example connected to the output of a Roto node (with the \"R\" checkbox checked in the Roto node). Since the Roto output may not have the same size and origin as the Source image, we take care of these by using the iChannelOffset and iChannelResolution values for input 1.\n" \
     "\n" \
     "    float fSize = size * iRenderScale.x;\n" \
     "    if (perpixel_size) {\n" \
@@ -613,7 +613,7 @@ using std::string;
     "\n" \
     "However, many OpenGL applications, including Shadertoy and most games, skip steps 1 and 3 (mainly for performance issue): they process gamma-compressed textures as if they were linear, and sometimes have to boost their output by gamma compression so that it looks nice on a standard display (which usually accepts a sRGB-compressed framebuffer).\n" \
     "\n" \
-    "This is why many shaders from Shadertoy convert their outout from linear to sRGB or gamma=2.2, see for example the `srgb2lin` and `lin2srgb` functions in https://www.shadertoy.com/view/XsfXzf . These conversions *must* be removed when using the shader in OpenFX.\n" \
+    "This is why many shaders from Shadertoy convert their output from linear to sRGB or gamma=2.2, see for example the `srgb2lin` and `lin2srgb` functions in https://www.shadertoy.com/view/XsfXzf . These conversions *must* be removed when using the shader in OpenFX.\n" \
     "\n" \
     "An alternative solution would be to convert all Shadertoy inputs from linear to sRGB, and convert back all outputs to linear, either inside the Shadertoy node, or using external conversion nodes (such as OCIOColorSpace). But this is a bad option, because this adds useless processing. Removing the srgb2lin and lin2srgb conversions from the shader source is a much better option (these functions may have different names, or there may simply be operations line `pow(c,vec3(2.2))` and/or `pow(c,vec3(1./2.2))` in the GLSL code).\n" \
     "\n" \
@@ -634,7 +634,7 @@ using std::string;
     "\n" \
     "### Default textures and videos\n" \
     "\n" \
-    "The default shadertoy textures and videos are avalaible from the [Shadertoy](http://www.shadertoy.com) web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.\n" \
+    "The default shadertoy textures and videos are available from the [Shadertoy](http://www.shadertoy.com) web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.\n" \
     "\n" \
     "- Textures: [tex00](https://www.shadertoy.com/presets/tex00.jpg),  [tex01](https://www.shadertoy.com/presets/tex01.jpg),  [tex02](https://www.shadertoy.com/presets/tex02.jpg),  [tex03](https://www.shadertoy.com/presets/tex03.jpg),  [tex04](https://www.shadertoy.com/presets/tex04.jpg),  [tex05](https://www.shadertoy.com/presets/tex05.jpg),  [tex06](https://www.shadertoy.com/presets/tex06.jpg),  [tex07](https://www.shadertoy.com/presets/tex07.jpg),  [tex08](https://www.shadertoy.com/presets/tex08.jpg),  [tex09](https://www.shadertoy.com/presets/tex09.jpg),  [tex10](https://www.shadertoy.com/presets/tex10.png),  [tex11](https://www.shadertoy.com/presets/tex11.png),  [tex12](https://www.shadertoy.com/presets/tex12.png),  [tex14](https://www.shadertoy.com/presets/tex14.png),  [tex15](https://www.shadertoy.com/presets/tex15.png),  [tex16](https://www.shadertoy.com/presets/tex16.png),  [tex17](https://www.shadertoy.com/presets/tex17.jpg),  [tex18](https://www.shadertoy.com/presets/tex18.jpg),  [tex19](https://www.shadertoy.com/presets/tex19.png),  [tex20](https://www.shadertoy.com/presets/tex20.jpg),  [tex21](https://www.shadertoy.com/presets/tex21.png).\n" \
     "- Videos: [vid00](https://www.shadertoy.com/presets/vid00.ogv),  [vid01](https://www.shadertoy.com/presets/vid01.webm),  [vid02](https://www.shadertoy.com/presets/vid02.ogv),  [vid03](https://www.shadertoy.com/presets/vid03.webm).\n" \
@@ -774,7 +774,7 @@ using std::string;
 
 #define kGroupExtraParameters "extraParametersGroup"
 #define kGroupExtraParametersLabel "Extra Parameters"
-#define kGroupExtraParametersHint "Description of extra parameters (a.k.a. uniforms) used by the shader source. Note that these parameters must be explicitely declared as uniforms in the shader (to keep compatibility with shadertoy, they may also have a default value set in the shader source)."
+#define kGroupExtraParametersHint "Description of extra parameters (a.k.a. uniforms) used by the shader source. Note that these parameters must be explicitly declared as uniforms in the shader (to keep compatibility with shadertoy, they may also have a default value set in the shader source)."
 
 #define kGroupParameter "extraParameterGroup"
 #define kGroupParameterLabel "Param "

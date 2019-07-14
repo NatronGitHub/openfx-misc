@@ -11,7 +11,7 @@ See also the [Shadertoy/GLSL tutorial](https://www.shadertoy.com/view/Md23DV).
 
 ### Image shaders
 
-Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsability of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:
+Image shaders implement the `mainImage()` function in order to generate the procedural images by computing a color for each pixel. This function is expected to be called once per pixel, and it is responsibility of the host application to provide the right inputs to it and get the output color from it and assign it to the screen pixel. The prototype is:
 
 `void mainImage( out vec4 fragColor, in vec2 fragCoord );`
 
@@ -188,7 +188,7 @@ Shadertoy was extended to:
 
 * Expose shader parameters as uniforms, which are presented as OpenFX parameters.
 * Provide the description and help for these parameters directly in the GLSL code.
-* Add a default uniform containing the render scale. In OpenFX, a render scale of 1 means that the image is rendered at full resolution, 0.5 at half resolution, etc. This can be used to scale parameter values so that the final aspect does not depend on the render scale. For example, a blur size parameter given in pixels at full resultion would have to be multiplied by the render scale.
+* Add a default uniform containing the render scale. In OpenFX, a render scale of 1 means that the image is rendered at full resolution, 0.5 at half resolution, etc. This can be used to scale parameter values so that the final aspect does not depend on the render scale. For example, a blur size parameter given in pixels at full resolution would have to be multiplied by the render scale.
 * Add a default uniform containing the offset of the processed texture with respect to the position of the origin.
 
 The extensions are:
@@ -205,7 +205,7 @@ The extensions are:
   `// iChannel1: Noise (A noise texture to be used for random number calculations. The texture should not be frame-varying.)`
 * This one also sets the filter and wrap parameters:
   `// iChannel0: Source (Source image.), filter=linear, wrap=clamp`
-* And this one sets the output bouding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):
+* And this one sets the output bounding box (possible values are Default, Union, Intersection, and iChannel0 to iChannel3):
   `// BBox: iChannel0`
 
 ### Converting a Shadertoy for use in OpenFX
@@ -237,7 +237,7 @@ Then the uniform section gives the list of what will appear as OpenFX parameters
     uniform bool perpixel_size = false; // Modulate (Modulate the blur size by multiplying it by the first channel of the Modulate input)
 
 
-In the `mainImage` function, which does the processing, we compute the `mSize` and `kSize` variables, which are the kernel size and mask size for that particular algorithm, from the "Size" parameter, multiplied by the render scale to get a scale-invariant effect. If the "Modulate" check box is on, we also multiply the size by the value found in the first channel (which is red, not alpha) of the "Modulate" input, wich is in the iChannel1 texture according to the comments at the beginning of the source code. This can be use to modulate the blur size depending on the position in the image. The "Modulate" input may be for example connected to the output of a Roto node (with the "R" checkbox checked in the Roto node). Since the Roto output may not have the same size and origin as the Source image, we take care of these by using the iChannelOffset and iChannelResolution values for input 1.
+In the `mainImage` function, which does the processing, we compute the `mSize` and `kSize` variables, which are the kernel size and mask size for that particular algorithm, from the "Size" parameter, multiplied by the render scale to get a scale-invariant effect. If the "Modulate" check box is on, we also multiply the size by the value found in the first channel (which is red, not alpha) of the "Modulate" input, which is in the iChannel1 texture according to the comments at the beginning of the source code. This can be use to modulate the blur size depending on the position in the image. The "Modulate" input may be for example connected to the output of a Roto node (with the "R" checkbox checked in the Roto node). Since the Roto output may not have the same size and origin as the Source image, we take care of these by using the iChannelOffset and iChannelResolution values for input 1.
 
     float fSize = size * iRenderScale.x;
     if (perpixel_size) {
@@ -262,7 +262,7 @@ When processing floating-point buffers in OpenFX, the color representation is us
 
 However, many OpenGL applications, including Shadertoy and most games, skip steps 1 and 3 (mainly for performance issue): they process gamma-compressed textures as if they were linear, and sometimes have to boost their output by gamma compression so that it looks nice on a standard display (which usually accepts a sRGB-compressed framebuffer).
 
-This is why many shaders from Shadertoy convert their outout from linear to sRGB or gamma=2.2, see for example the `srgb2lin` and `lin2srgb` functions in https://www.shadertoy.com/view/XsfXzf . These conversions *must* be removed when using the shader in OpenFX.
+This is why many shaders from Shadertoy convert their output from linear to sRGB or gamma=2.2, see for example the `srgb2lin` and `lin2srgb` functions in https://www.shadertoy.com/view/XsfXzf . These conversions *must* be removed when using the shader in OpenFX.
 
 An alternative solution would be to convert all Shadertoy inputs from linear to sRGB, and convert back all outputs to linear, either inside the Shadertoy node, or using external conversion nodes (such as OCIOColorSpace). But this is a bad option, because this adds useless processing. Removing the srgb2lin and lin2srgb conversions from the shader source is a much better option (these functions may have different names, or there may simply be operations line `pow(c,vec3(2.2))` and/or `pow(c,vec3(1./2.2))` in the GLSL code).
 
@@ -283,7 +283,7 @@ The only multipass effects that can not be implemented are the shaders that read
 
 ### Default textures and videos
 
-The default shadertoy textures and videos are avalaible from the [Shadertoy](http://www.shadertoy.com) web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.
+The default shadertoy textures and videos are available from the [Shadertoy](http://www.shadertoy.com) web site. In order to mimic the behavior of each shader, download the corresponding textures or videos and connect them to the proper input.
 
 - Textures: [tex00](https://www.shadertoy.com/presets/tex00.jpg),  [tex01](https://www.shadertoy.com/presets/tex01.jpg),  [tex02](https://www.shadertoy.com/presets/tex02.jpg),  [tex03](https://www.shadertoy.com/presets/tex03.jpg),  [tex04](https://www.shadertoy.com/presets/tex04.jpg),  [tex05](https://www.shadertoy.com/presets/tex05.jpg),  [tex06](https://www.shadertoy.com/presets/tex06.jpg),  [tex07](https://www.shadertoy.com/presets/tex07.jpg),  [tex08](https://www.shadertoy.com/presets/tex08.jpg),  [tex09](https://www.shadertoy.com/presets/tex09.jpg),  [tex10](https://www.shadertoy.com/presets/tex10.png),  [tex11](https://www.shadertoy.com/presets/tex11.png),  [tex12](https://www.shadertoy.com/presets/tex12.png),  [tex14](https://www.shadertoy.com/presets/tex14.png),  [tex15](https://www.shadertoy.com/presets/tex15.png),  [tex16](https://www.shadertoy.com/presets/tex16.png),  [tex17](https://www.shadertoy.com/presets/tex17.jpg),  [tex18](https://www.shadertoy.com/presets/tex18.jpg),  [tex19](https://www.shadertoy.com/presets/tex19.png),  [tex20](https://www.shadertoy.com/presets/tex20.jpg),  [tex21](https://www.shadertoy.com/presets/tex21.png).
 - Videos: [vid00](https://www.shadertoy.com/presets/vid00.ogv),  [vid01](https://www.shadertoy.com/presets/vid01.webm),  [vid02](https://www.shadertoy.com/presets/vid02.ogv),  [vid03](https://www.shadertoy.com/presets/vid03.webm).
