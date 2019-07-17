@@ -194,6 +194,9 @@ public:
         , _swap(NULL)
         , _offset(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -221,6 +224,7 @@ private:
     DoubleParam  *_amtcolour;
     BooleanParam *_swap;
     IntParam     *_offset;
+    bool _hostIsResolve;
 };
 
 
@@ -249,33 +253,18 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     // fetch main input image
     auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
                                         _srcClip->fetchImagePlane(args.time, 0, kFnOfxImagePlaneColour) : 0 );
     if ( srcLeft.get() ) {
-        if ( (srcLeft->getRenderScale().x != args.renderScale.x) ||
-             ( srcLeft->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcLeft->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcLeft->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcLeft, args);
     }
     auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchImagePlane(args.time, 1, kFnOfxImagePlaneColour) : 0 );
     if ( srcRight.get() ) {
-        if ( (srcRight->getRenderScale().x != args.renderScale.x) ||
-             ( srcRight->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcRight->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcRight->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcRight, args);
     }
 
     // make sure bit depths are sane

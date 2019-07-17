@@ -900,6 +900,8 @@ public:
         , _luminanceMath(NULL)
         , _premultChanged(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -1101,6 +1103,7 @@ private:
     BooleanParam* _premultChanged; // set to true the first time the user connects src
     Mutex _histogramMutex; //< this is used so we can multi-thread the analysis and protect the shared results
     Results _histogram;
+    bool _hostIsResolve;
 };
 
 void
@@ -1121,21 +1124,11 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -1146,12 +1139,7 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
-            if ( (mask->getRenderScale().x != args.renderScale.x) ||
-                 ( mask->getRenderScale().y != args.renderScale.y) ||
-                 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
-            }
+            checkBadRenderScaleOrField(_hostIsResolve, mask, args);
         }
         bool maskInvert;
         _maskInvert->getValueAtTime(time, maskInvert);
@@ -1368,11 +1356,7 @@ ColorLookupPlugin::updateHistogram(const InstanceChangedArgs &args)
     auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                              _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-            ( src->getRenderScale().y != args.renderScale.y) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScale(_hostIsResolve, src, args);
 #     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #     endif
@@ -1746,10 +1730,10 @@ void
 ColorLookupPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                             ContextEnum context)
 {
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
-                                               !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                 8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
+                                               !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                 8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
 
     if (!supportsParametricParameter) {
         throwHostMissingSuiteException(kOfxParametricParameterSuite);

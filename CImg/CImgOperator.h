@@ -147,12 +147,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != renderScale.x) ||
-         ( dst->getRenderScale().y != renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     const OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
     const int dstPixelComponentCount = dst->getPixelComponentCount();
@@ -166,12 +161,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         if ( (srcABitDepth != dstBitDepth) || (srcAPixelComponents != dstPixelComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        if ( (srcA->getRenderScale().x != renderScale.x) ||
-             ( srcA->getRenderScale().y != renderScale.y) ||
-             ( ( srcA->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcA, args);
     }
 
     const void *srcAPixelData;
@@ -214,12 +204,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         if ( (srcBBitDepth != dstBitDepth) || (srcBPixelComponents != dstPixelComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        if ( (srcB->getRenderScale().x != renderScale.x) ||
-             ( srcB->getRenderScale().y != renderScale.y) ||
-             ( ( srcB->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcB->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcB, args);
     }
 
     const void *srcBPixelData;

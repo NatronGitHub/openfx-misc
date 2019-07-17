@@ -543,6 +543,9 @@ public:
         , _outputComponents(NULL)
         , _setGBAFromR(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (1 <= _dstClip->getPixelComponentCount() && _dstClip->getPixelComponentCount() <= 4) );
@@ -693,6 +696,7 @@ private:
     ChoiceParam *_outputPremult;
 
     BooleanParam* _setGBAFromR;
+    bool _hostIsResolve;
 };
 
 OfxStatus
@@ -898,12 +902,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     const double time = args.time;
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
 
     InputChannelEnum r, g, b, a;
@@ -916,24 +915,14 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     BitDepthEnum srcBitDepth = eBitDepthNone;
     PixelComponentEnum srcComponents = ePixelComponentNone;
     if ( srcDefault.get() ) {
-        if ( (srcDefault->getRenderScale().x != args.renderScale.x) ||
-             ( srcDefault->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcDefault->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcDefault->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcDefault, args);
         srcBitDepth      = srcDefault->getPixelDepth();
         srcComponents = srcDefault->getPixelComponents();
         assert(_srcClipDefault && _srcClipDefault->getPixelComponents() == srcComponents);
     }
 
     if ( srcOther.get() ) {
-        if ( (srcOther->getRenderScale().x != args.renderScale.x) ||
-             ( srcOther->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcOther->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcOther->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcOther, args);
         BitDepthEnum srcOtherBitDepth      = srcOther->getPixelDepth();
         PixelComponentEnum srcOtherComponents = srcOther->getPixelComponents();
         assert(_srcClipOther && _srcClipOther->getPixelComponents() == srcOtherComponents);
@@ -1029,12 +1018,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
 {
     const double time = args.time;
     
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
 
     InputImagesHolder_RAII imagesHolder;
@@ -1075,12 +1059,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
         }
 
         if (p.img) {
-            if ( (p.img->getRenderScale().x != args.renderScale.x) ||
-                 ( p.img->getRenderScale().y != args.renderScale.y) ||
-                 ( ( p.img->getField() != eFieldNone) /* for DaVinci Resolve */ && ( p.img->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
-            }
+            checkBadRenderScaleOrField(_hostIsResolve, p.img, args);
             if (srcBitDepth == eBitDepthNone) {
                 srcBitDepth = p.img->getPixelDepth();
             } else {

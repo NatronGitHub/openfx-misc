@@ -1497,6 +1497,9 @@ public:
         , _ubc(NULL)
         , _colorspace(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _fgClip = fetchClip(kClipFg);
@@ -1671,6 +1674,7 @@ private:
     BooleanParam* _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
     ChoiceParam* _colorspace;
     ChoiceParam* _outputMode;
+    bool _hostIsResolve;
 };
 
 
@@ -1699,12 +1703,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValueAtTime(time);
     OfxRGBColourD color = {0., 0., 1.};
@@ -1836,12 +1835,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     auto_ptr<const Image> outMask( ( getoutm && ( _outMaskClip && _outMaskClip->isConnected() ) ) ?
                                         _outMaskClip->fetchImage(time) : 0 );
     if ( fg.get() ) {
-        if ( (fg->getRenderScale().x != args.renderScale.x) ||
-             ( fg->getRenderScale().y != args.renderScale.y) ||
-             ( ( fg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( fg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, fg, args);
         BitDepthEnum fgBitDepth      = fg->getPixelDepth();
         //PixelComponentEnum fgComponents = fg->getPixelComponents();
         if (fgBitDepth != dstBitDepth /* || fgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
@@ -1853,12 +1847,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     }
 
     if ( pfg.get() ) {
-        if ( (pfg->getRenderScale().x != args.renderScale.x) ||
-             ( pfg->getRenderScale().y != args.renderScale.y) ||
-             ( ( pfg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( pfg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, pfg, args);
         BitDepthEnum pfgBitDepth      = pfg->getPixelDepth();
         //PixelComponentEnum pfgComponents = pfg->getPixelComponents();
         if (pfgBitDepth != dstBitDepth /* || pfgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
@@ -1867,12 +1856,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     }
 
     if ( c.get() ) {
-        if ( (c->getRenderScale().x != args.renderScale.x) ||
-             ( c->getRenderScale().y != args.renderScale.y) ||
-             ( ( c->getField() != eFieldNone) /* for DaVinci Resolve */ && ( c->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, c, args);
         BitDepthEnum cBitDepth      = c->getPixelDepth();
         //PixelComponentEnum cComponents = c->getPixelComponents();
         if (cBitDepth != dstBitDepth /* || cComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
@@ -1884,12 +1868,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     }
 
     if ( bg.get() ) {
-        if ( (bg->getRenderScale().x != args.renderScale.x) ||
-             ( bg->getRenderScale().y != args.renderScale.y) ||
-             ( ( bg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( bg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, bg, args);
         BitDepthEnum srcBitDepth      = bg->getPixelDepth();
         //PixelComponentEnum srcComponents = bg->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) {  // Keyer outputs RGBA but may have RGB input
@@ -1901,20 +1880,10 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     }
 
     if ( inMask.get() ) {
-        if ( (inMask->getRenderScale().x != args.renderScale.x) ||
-             ( inMask->getRenderScale().y != args.renderScale.y) ||
-             ( ( inMask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( inMask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, inMask, args);
     }
     if ( outMask.get() ) {
-        if ( (outMask->getRenderScale().x != args.renderScale.x) ||
-             ( outMask->getRenderScale().y != args.renderScale.y) ||
-             ( ( outMask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( outMask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, outMask, args);
     }
 
     processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal,

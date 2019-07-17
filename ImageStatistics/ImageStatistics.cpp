@@ -1173,6 +1173,9 @@ public:
         , _interactive(NULL)
         , _restrictToRectangle(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -1366,6 +1369,7 @@ private:
     RGBAParam* _maxLumaPixVal;
     Double2DParam* _minLumaPix;
     RGBAParam* _minLumaPixVal;
+    bool _hostIsResolve;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1387,23 +1391,13 @@ ImageStatisticsPlugin::render(const RenderArguments &args)
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -1605,11 +1599,7 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                   _srcClip->fetchImage(args.time) : 0 );
         if ( src.get() ) {
-            if ( (src->getRenderScale().x != args.renderScale.x) ||
-                 ( src->getRenderScale().y != args.renderScale.y) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
-            }
+            checkBadRenderScale(_hostIsResolve, src, args);
             bool intersect = computeWindow(src.get(), args.time, &analysisWindow);
             if (intersect) {
 #             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
@@ -1646,11 +1636,7 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
             auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                       _srcClip->fetchImage(t) : 0 );
             if ( src.get() ) {
-                if ( (src->getRenderScale().x != args.renderScale.x) ||
-                     ( src->getRenderScale().y != args.renderScale.y) ) {
-                    setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                    throwSuiteStatusException(kOfxStatFailed);
-                }
+                checkBadRenderScale(_hostIsResolve, src, args);
                 bool intersect = computeWindow(src.get(), t, &analysisWindow);
                 if (intersect) {
                     if (doAnalyzeSequenceRGBA) {

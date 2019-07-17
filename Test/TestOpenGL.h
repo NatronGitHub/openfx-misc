@@ -146,6 +146,7 @@ private:
     std::list<OSMesaPrivate *> _osmesa;
     OFX::auto_ptr<Mutex> _osmesaMutex;
 #endif
+    bool _hostIsResolve;
 };
 
 #endif // Misc_TestOpenGL_h

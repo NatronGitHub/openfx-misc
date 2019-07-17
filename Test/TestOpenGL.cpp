@@ -145,6 +145,8 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
     , _openGLContextData()
     , _openGLContextAttached(false)
 {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
     try {
         _rendererInfoMutex.reset(new Mutex);
 #if defined(HAVE_OSMESA)
@@ -180,8 +182,7 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
     assert(_enableGPU);
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    if (!gHostDescription.supportsOpenGLRender) {
+    if (!hostDescription.supportsOpenGLRender) {
         _enableGPU->setEnabled(false);
     }
     setSupportsOpenGLRender(true);
@@ -335,8 +336,8 @@ TestOpenGLPluginFactory::load()
     // we can't be used on hosts that don't support the stereoscopic suite
     // returning an error here causes a blank menu entry in Nuke
     //#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    //const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    //if (!gHostDescription.supportsOpenGLRender) {
+    //const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    //if (!hostDescription.supportsOpenGLRender) {
     //    throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     //}
     //#endif
@@ -348,8 +349,8 @@ TestOpenGLPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // returning an error here crashes Nuke
     //#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    //const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    //if (!gHostDescription.supportsOpenGLRender) {
+    //const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    //if (!hostDescription.supportsOpenGLRender) {
     //    throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     //}
     //#endif
@@ -395,8 +396,8 @@ TestOpenGLPluginFactory::describe(ImageEffectDescriptor &desc)
      * ::kOfxActionDescribe action and return a ::kOfxStatErrMissingHostFeature
      * status flag if it is not set to "true".
      */
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    if (!gHostDescription.supportsOpenGLRender) {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    if (!hostDescription.supportsOpenGLRender) {
         throwSuiteStatusException(kOfxStatErrMissingHostFeature);
     }
 #endif
@@ -410,8 +411,8 @@ TestOpenGLPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                            ContextEnum /*context*/)
 {
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    if (!gHostDescription.supportsOpenGLRender) {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    if (!hostDescription.supportsOpenGLRender) {
         throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     }
 #endif
@@ -569,11 +570,11 @@ TestOpenGLPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnableGPU);
         param->setLabel(kParamEnableGPULabel);
         param->setHint(kParamEnableGPUHint);
-        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
         // Resolve advertises OpenGL support in its host description, but never calls render with OpenGL enabled
-        if ( gHostDescription.supportsOpenGLRender && (gHostDescription.hostName.compare(0, 14, "DaVinciResolve") != 0) ) {
+        if ( hostDescription.supportsOpenGLRender && (hostDescription.hostName.compare(0, 14, "DaVinciResolve") != 0) ) {
             param->setDefault(true);
-            if (gHostDescription.APIVersionMajor * 100 + gHostDescription.APIVersionMinor < 104) {
+            if (hostDescription.APIVersionMajor * 100 + hostDescription.APIVersionMinor < 104) {
                 // Switching OpenGL render from the plugin was introduced in OFX 1.4
                 param->setEnabled(false);
             }

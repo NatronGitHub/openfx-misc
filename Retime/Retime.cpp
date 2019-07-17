@@ -108,7 +108,7 @@ enum FilterEnum
 class RetimePlugin
     : public ImageEffect
 {
-protected:
+private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;            /**< @brief Mandated output clips */
     Clip *_srcClip;            /**< @brief Mandated input clips */
@@ -118,6 +118,7 @@ protected:
     ParametricParam  *_warp;      /**< @brief only used in the filter or general context. */
     DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only. */
     ChoiceParam  *_filter;   /**< @brief how images are interpolated (or not). */
+    bool _hostIsResolve;
 
 public:
     /** @brief ctor */
@@ -133,6 +134,9 @@ public:
         , _duration(NULL)
         , _filter(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
 
@@ -262,24 +266,14 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
         // should have been caught by isIdentity...
         auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                         _srcClip->fetchImage(sourceTime) : 0 );
         if ( src.get() ) {
-            if ( (src->getRenderScale().x != args.renderScale.x) ||
-                 ( src->getRenderScale().y != args.renderScale.y) ||
-                 ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
-            }
+            checkBadRenderScaleOrField(_hostIsResolve, src, args);
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
             PixelComponentEnum srcComponents = src->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -304,21 +298,11 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
 
     // make sure bit depths are sane
     if ( fromImg.get() ) {
-        if ( (fromImg->getRenderScale().x != args.renderScale.x) ||
-             ( fromImg->getRenderScale().y != args.renderScale.y) ||
-             ( ( fromImg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( fromImg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, fromImg, args);
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if ( toImg.get() ) {
-        if ( (toImg->getRenderScale().x != args.renderScale.x) ||
-             ( toImg->getRenderScale().y != args.renderScale.y) ||
-             ( ( toImg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( toImg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, toImg, args);
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
@@ -697,10 +681,10 @@ RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
             }
         }
 
-        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-        const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
-                                                   !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                     8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
+                                                   !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                     8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
         if (supportsParametricParameter) {
             PageParamDescriptor* page = desc.definePageParam(kPageTimeWarp);
             if (page) {
@@ -780,10 +764,10 @@ ImageEffect*
 RetimePluginFactory::createInstance(OfxImageEffectHandle handle,
                                     ContextEnum /*context*/)
 {
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    const bool supportsParametricParameter = ( gHostDescription.supportsParametricParameter &&
-                                               !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                 8 <= gHostDescription.versionMajor && gHostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
+                                               !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                 8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
 
     return new RetimePlugin(handle, supportsParametricParameter);
 }

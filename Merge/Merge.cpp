@@ -598,6 +598,9 @@ public:
     , _aChannelAChanged(NULL)
     , _bChannelAChanged(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
         _srcClipAs.push_back( fetchClip(kClipA) );
@@ -704,6 +707,7 @@ private:
     BooleanParam* _outputChannels[4];
     BooleanParam* _aChannelAChanged;
     BooleanParam* _bChannelAChanged;
+    bool _hostIsResolve;
 };
 
 
@@ -913,12 +917,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
             throwSuiteStatusException(kOfxStatFailed);
         }
-        if ( (dst->getRenderScale().x != args.renderScale.x) ||
-            ( dst->getRenderScale().y != args.renderScale.y) ||
-            ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     }
     auto_ptr<const Image> srcB( ( !renderRotoMask && _srcClipB && _srcClipB->isConnected() ) ?
                                     _srcClipB->fetchImage(time) : 0 );
@@ -937,12 +936,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
                 if (srcA) {
                     srcAs.images.push_back(srcA);
 
-                    if ( (srcA->getRenderScale().x != args.renderScale.x) ||
-                        ( srcA->getRenderScale().y != args.renderScale.y) ||
-                        ( ( srcA->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
-                        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                        throwSuiteStatusException(kOfxStatFailed);
-                    }
+                    checkBadRenderScaleOrField(_hostIsResolve, srcA, args);
                     BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
                     PixelComponentEnum srcComponents = srcA->getPixelComponents();
                     if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -962,12 +956,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     }
 
     if ( srcB.get() ) {
-        if ( (srcB->getRenderScale().x != args.renderScale.x) ||
-             ( srcB->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcB->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcB->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcB, args);
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {

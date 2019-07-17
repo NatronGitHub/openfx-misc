@@ -200,6 +200,8 @@
 		1E235FFE18369E4C0019C45F /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E23600018369E4C0019C45F /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E23600718369E890019C45F /* TimeOffset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E23600618369E890019C45F /* TimeOffset.cpp */; };
+		1E2460EC22DEE0CD008E8153 /* ofxsMultiPlane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */; };
+		1E2460ED22DEE1E2008E8153 /* ofxsMultiPlane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */; };
 		1E2678A71DAE96E50047D737 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E2678A81DAE96E50047D737 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E2678A91DAE96E50047D737 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -8332,6 +8334,7 @@
 				1E52FFC01955CE120000FB79 /* ofxsInteract.cpp in Sources */,
 				1EF77BC91E4B6429005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1E52FFC11955CE120000FB79 /* ofxsLog.cpp in Sources */,
+				1E2460EC22DEE0CD008E8153 /* ofxsMultiPlane.cpp in Sources */,
 				1E52FFC21955CE120000FB79 /* ofxsMultiThread.cpp in Sources */,
 				1E52FFC31955CE120000FB79 /* ofxsParams.cpp in Sources */,
 				1E52FFC41955CE120000FB79 /* ofxsProperty.cpp in Sources */,
@@ -9581,6 +9584,7 @@
 				D74121D818F9CF3D00A81F8B /* ofxsInteract.cpp in Sources */,
 				1EF77BBE1E4B641F005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				D74121D918F9CF3D00A81F8B /* ofxsLog.cpp in Sources */,
+				1E2460ED22DEE1E2008E8153 /* ofxsMultiPlane.cpp in Sources */,
 				D74121DC18F9CF3D00A81F8B /* ofxsMultiThread.cpp in Sources */,
 				D74121DD18F9CF3D00A81F8B /* ofxsParams.cpp in Sources */,
 				D74121DE18F9CF3D00A81F8B /* ofxsProperty.cpp in Sources */,
@@ -10428,7 +10432,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
@@ -10474,7 +10477,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;

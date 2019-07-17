@@ -1273,6 +1273,9 @@ public:
         , _maskInvert(NULL)
         , _plugin(plugin)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA ||
@@ -1641,6 +1644,7 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     DistortionPluginEnum _plugin;
+    bool _hostIsResolve;
 };
 
 
@@ -2239,24 +2243,14 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
 
     auto_ptr<const Image> src( ( (outputMode == eOutputModeImage) && _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-            ( src->getRenderScale().y != args.renderScale.y) ||
-            ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -2309,12 +2303,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                 }
 
                 if (p.img) {
-                    if ( (p.img->getRenderScale().x != args.renderScale.x) ||
-                        ( p.img->getRenderScale().y != args.renderScale.y) ||
-                        ( ( p.img->getField() != eFieldNone) /* for DaVinci Resolve */ && ( p.img->getField() != args.fieldToRender) ) ) {
-                        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                        throwSuiteStatusException(kOfxStatFailed);
-                    }
+                    checkBadRenderScaleOrField(_hostIsResolve, p.img, args);
                     if (srcBitDepth == eBitDepthNone) {
                         srcBitDepth = p.img->getPixelDepth();
                     } else {
@@ -2360,12 +2349,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             PixelComponentEnum uvComponents = ePixelComponentNone;
             if (uv) {
                 imagesHolder.appendImage(uv);
-                if ( (uv->getRenderScale().x != args.renderScale.x) ||
-                    ( uv->getRenderScale().y != args.renderScale.y) ||
-                    ( ( uv->getField() != eFieldNone) /* for DaVinci Resolve */ && ( uv->getField() != args.fieldToRender) ) ) {
-                    setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                    throwSuiteStatusException(kOfxStatFailed);
-                }
+                checkBadRenderScaleOrField(_hostIsResolve, uv, args);
                 BitDepthEnum uvBitDepth      = uv->getPixelDepth();
                 uvComponents = uv->getPixelComponents();
                 // only eBitDepthFloat is supported for now (other types require special processing for uv values)
@@ -2408,12 +2392,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     // do we do masking
     if (doMasking) {
         if ( mask.get() ) {
-            if ( (mask->getRenderScale().x != args.renderScale.x) ||
-                 ( mask->getRenderScale().y != args.renderScale.y) ||
-                 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
-            }
+            checkBadRenderScaleOrField(_hostIsResolve, mask, args);
         }
         bool maskInvert = _maskInvert->getValueAtTime(time);
         processor.doMasking(true);

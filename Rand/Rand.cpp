@@ -204,6 +204,7 @@ private:
     DoubleParam  *_density;
     IntParam  *_seed;
     BooleanParam* _staticSeed;
+    bool _hostIsResolve;
 
 public:
     /** @brief ctor */
@@ -214,6 +215,9 @@ public:
         , _seed(NULL)
         , _staticSeed(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _noise   = fetchDoubleParam(kParamNoiseLevel);
         _density = fetchDoubleParam(kParamNoiseDensity);
         _seed   = fetchIntParam(kParamSeed);
@@ -260,12 +264,7 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );

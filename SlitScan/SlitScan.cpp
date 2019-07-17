@@ -219,7 +219,7 @@ class SlitScanProcessorBase;
 class SlitScanPlugin
     : public ImageEffect
 {
-protected:
+private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;            /**< @brief Mandated output clips */
     Clip *_srcClip;            /**< @brief Mandated input clips */
@@ -230,6 +230,7 @@ protected:
     BooleanParam *_retimeAbsolute;
     Int2DParam *_frameRange;
     ChoiceParam *_filter;   /**< @brief how images are interpolated (or not). */
+    bool _hostIsResolve;
 
 public:
     /** @brief ctor */
@@ -245,6 +246,9 @@ public:
         , _frameRange(NULL)
         , _filter(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         _retimeMapClip = fetchClip(kClipRetimeMap);
@@ -668,12 +672,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     double retimeGain = _retimeGain->getValueAtTime(time);
     RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
@@ -698,12 +697,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
             auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                             _srcClip->fetchImage(identityTime) : 0 );
             if ( src.get() ) {
-                if ( (src->getRenderScale().x != args.renderScale.x) ||
-                     ( src->getRenderScale().y != args.renderScale.y) ||
-                     ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-                    setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                    throwSuiteStatusException(kOfxStatFailed);
-                }
+                checkBadRenderScaleOrField(_hostIsResolve, src, args);
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 PixelComponentEnum srcComponents = src->getPixelComponents();
                 if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {

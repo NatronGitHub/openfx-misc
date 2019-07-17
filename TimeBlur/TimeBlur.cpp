@@ -76,7 +76,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
 #endif
 
-
 class TimeBlurProcessorBase
     : public PixelProcessor
 {
@@ -191,6 +190,9 @@ public:
         , _shutteroffset(NULL)
         , _shuttercustomoffset(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -231,6 +233,7 @@ private:
     DoubleParam* _shutter;
     ChoiceParam* _shutteroffset;
     DoubleParam* _shuttercustomoffset;
+    bool _hostIsResolve;
 };
 
 
@@ -278,12 +281,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     // accumulator image
     auto_ptr<ImageMemory> accumulator;
@@ -336,12 +334,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
             const Image* src = _srcClip ? _srcClip->fetchImage(range.min + i * interval) : 0;
             //std::printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
             if (src) {
-                if ( (src->getRenderScale().x != args.renderScale.x) ||
-                     ( src->getRenderScale().y != args.renderScale.y) ||
-                     ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-                    setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                    throwSuiteStatusException(kOfxStatFailed);
-                }
+                checkBadRenderScaleOrField(_hostIsResolve, src, args);
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 PixelComponentEnum srcComponents = src->getPixelComponents();
                 if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {

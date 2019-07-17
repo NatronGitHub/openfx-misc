@@ -186,6 +186,9 @@ public:
         , _color(NULL)
         , _colorRGB(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         if (solid) {
             _colorRGB   = fetchRGBParam(kParamColor);
         } else {
@@ -209,6 +212,7 @@ private:
 private:
     RGBAParam  *_color;
     RGBParam *_colorRGB;
+    bool _hostIsResolve;
 };
 
 
@@ -237,12 +241,7 @@ ConstantPlugin::setupAndProcess(ConstantProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );

@@ -353,6 +353,9 @@ public:
         , _gamma(NULL)
         , _rotate(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) );
         _centerSaturation = fetchDoubleParam(kParamCenterSaturation);
@@ -383,6 +386,7 @@ private:
     DoubleParam* _gamma;
     DoubleParam* _rotate;
     Clip* _srcClip;
+    bool _hostIsResolve;
 };
 
 
@@ -413,12 +417,7 @@ ColorWheelPlugin::setupAndProcess(ColorWheelProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );

@@ -108,6 +108,9 @@ public:
         , _outerBtmLeft(NULL)
         , _outerTopRight(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kParamScore);
@@ -171,6 +174,7 @@ private:
     Double2DParam* _innerTopRight;
     Double2DParam* _outerBtmLeft;
     Double2DParam* _outerTopRight;
+    bool _hostIsResolve;
 };
 
 
@@ -867,18 +871,10 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
         return;
     }
     if ( srcRef.get() ) {
-        if ( (srcRef->getRenderScale().x != args.renderScale.x) ||
-             ( srcRef->getRenderScale().y != args.renderScale.y) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScale(_hostIsResolve, srcRef, args);
     }
     if ( srcOther.get() ) {
-        if ( (srcOther->getRenderScale().x != args.renderScale.x) ||
-             ( srcOther->getRenderScale().y != args.renderScale.y) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScale(_hostIsResolve, srcOther, args);
     }
     // renderScale should never be something else than 1 when called from ActionInstanceChanged
     if ( ( srcRef->getPixelDepth() != srcOther->getPixelDepth() ) ||
@@ -895,11 +891,7 @@ TrackerPMPlugin::trackInternal(OfxTime refTime,
     auto_ptr<const Image> mask( ( _maskClip && _maskClip->isConnected() ) ?
                                      _maskClip->fetchImage(refTime) : 0 );
     if ( mask.get() ) {
-        if ( (mask->getRenderScale().x != args.renderScale.x) ||
-             ( mask->getRenderScale().y != args.renderScale.y) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScale(_hostIsResolve, mask, args);
     }
 
     OfxRectD trackSearchBounds;

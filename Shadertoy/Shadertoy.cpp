@@ -1097,6 +1097,9 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _openGLContextAttached(false)
     , _presets(gPresetsDefault)
 {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
     try {
         _imageShaderMutex.reset(new Mutex);
         _rendererInfoMutex.reset(new Mutex);
@@ -1166,8 +1169,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _groupExtra = fetchGroupParam(kGroupExtraParameters);
     _paramCount = fetchIntParam(kParamCount);
     assert(_groupExtra && _paramCount);
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke" && gHostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
+    const unsigned int nbuniforms = (hostDescription.hostName == "uk.co.thefoundry.nuke" && hostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
     _paramGroup.resize(nbuniforms);
     _paramType.resize(nbuniforms);
     _paramName.resize(nbuniforms);
@@ -1222,7 +1224,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
     assert(_enableGPU);
-    if (!gHostDescription.supportsOpenGLRender) {
+    if (!hostDescription.supportsOpenGLRender) {
         _enableGPU->setEnabled(false);
     }
     setSupportsOpenGLRender( _enableGPU->getValue() );
@@ -2248,8 +2250,8 @@ ShadertoyPluginFactory::load()
     // we can't be used on hosts that don't support the OpenGL suite
     // returning an error here causes a blank menu entry in Nuke
     //#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    //const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    //if (!gHostDescription.supportsOpenGLRender) {
+    //const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    //if (!hostDescription.supportsOpenGLRender) {
     //    throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     //}
     //#endif
@@ -2261,8 +2263,8 @@ ShadertoyPluginFactory::describe(ImageEffectDescriptor &desc)
 {
     // returning an error here crashes Nuke
     //#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    //const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    //if (!gHostDescription.supportsOpenGLRender) {
+    //const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    //if (!hostDescription.supportsOpenGLRender) {
     //    throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     //}
     //#endif
@@ -2314,8 +2316,8 @@ ShadertoyPluginFactory::describe(ImageEffectDescriptor &desc)
      * ::kOfxActionDescribe action and return a ::kOfxStatErrMissingHostFeature
      * status flag if it is not set to "true".
      */
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    if (!gHostDescription.supportsOpenGLRender) {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    if (!hostDescription.supportsOpenGLRender) {
         throwSuiteStatusException(kOfxStatErrMissingHostFeature);
     }
 #endif
@@ -2570,9 +2572,9 @@ void
 ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum context)
 {
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    if (!gHostDescription.supportsOpenGLRender) {
+    if (!hostDescription.supportsOpenGLRender) {
         throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     }
 #endif
@@ -2650,7 +2652,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    const unsigned int nbuniforms = (gHostDescription.hostName == "uk.co.thefoundry.nuke" && gHostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
+    const unsigned int nbuniforms = (hostDescription.hostName == "uk.co.thefoundry.nuke" && hostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
     for (unsigned i = 0; i < nbuniforms; ++i) {
         // generate the number string
         string nb = unsignedToString(i);
@@ -3204,11 +3206,11 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnableGPU);
         param->setLabel(kParamEnableGPULabel);
         param->setHint(kParamEnableGPUHint);
-        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
         // Resolve advertises OpenGL support in its host description, but never calls render with OpenGL enabled
-        if ( gHostDescription.supportsOpenGLRender && (gHostDescription.hostName.compare(0, 14, "DaVinciResolve") != 0) ) {
+        if ( hostDescription.supportsOpenGLRender && (hostDescription.hostName.compare(0, 14, "DaVinciResolve") != 0) ) {
             param->setDefault(true);
-            if (gHostDescription.APIVersionMajor * 100 + gHostDescription.APIVersionMinor < 104) {
+            if (hostDescription.APIVersionMajor * 100 + hostDescription.APIVersionMinor < 104) {
                 // Switching OpenGL render from the plugin was introduced in OFX 1.4
                 param->setEnabled(false);
             }

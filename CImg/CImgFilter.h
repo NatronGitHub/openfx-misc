@@ -348,6 +348,7 @@ protected:
     bool _supportsRenderScale;
     bool _defaultUnpremult; //!< unpremult by default
     OFX::BooleanParam* _premultChanged; // set to true the when user changes premult
+    bool _hostIsResolve;
 };
 
 template <class Params, bool sourceIsOptional>
@@ -441,12 +442,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != renderScale.x) ||
-         ( dst->getRenderScale().y != renderScale.y) ||
-         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     const OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
     const int dstPixelComponentCount = dst->getPixelComponentCount();
@@ -460,12 +456,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         if ( (srcBitDepth != dstBitDepth) || (srcPixelComponents != dstPixelComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        if ( (src->getRenderScale().x != renderScale.x) ||
-             ( src->getRenderScale().y != renderScale.y) ||
-             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src, args);
 #if 0
     } else {
         // src is considered black and transparent, just fill black to dst and return
@@ -613,12 +604,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         processWindow.y2 = processWindow.y1;
     }
     if ( mask.get() ) {
-        if ( (mask->getRenderScale().x != renderScale.x) ||
-             ( mask->getRenderScale().y != renderScale.y) ||
-             ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, mask, args);
 
         if (_supportsTiles) {
             // shrink the processWindow at much as possible

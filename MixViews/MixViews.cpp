@@ -128,6 +128,9 @@ public:
         , _srcClip(NULL)
         , _mix(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -156,6 +159,7 @@ private:
     Clip *_dstClip;
     Clip *_srcClip;
     DoubleParam *_mix;
+    bool _hostIsResolve;
 };
 
 
@@ -184,12 +188,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     // fetch main input image
     auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
@@ -199,12 +198,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
 
     // make sure bit depths are sane
     if ( srcLeft.get() ) {
-        if ( (srcLeft->getRenderScale().x != args.renderScale.x) ||
-             ( srcLeft->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcLeft->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcLeft->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcLeft, args);
         BitDepthEnum srcBitDepth      = srcLeft->getPixelDepth();
         PixelComponentEnum srcComponents = srcLeft->getPixelComponents();
 
@@ -214,12 +208,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
         }
     }
     if ( srcRight.get() ) {
-        if ( (srcRight->getRenderScale().x != args.renderScale.x) ||
-             ( srcRight->getRenderScale().y != args.renderScale.y) ||
-             ( ( srcRight->getField() != eFieldNone) /* for DaVinci Resolve */ && ( srcRight->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, srcRight, args);
         BitDepthEnum srcBitDepth      = srcRight->getPixelDepth();
         PixelComponentEnum srcComponents = srcRight->getPixelComponents();
 

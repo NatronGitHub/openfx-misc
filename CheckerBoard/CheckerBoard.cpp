@@ -358,6 +358,9 @@ public:
         , _centerlineColor(NULL)
         , _centerlineWidth(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _boxSize = fetchDouble2DParam(kParamBoxSize);
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
@@ -392,6 +395,7 @@ private:
     DoubleParam *_lineWidth;
     RGBAParam  *_centerlineColor;
     DoubleParam *_centerlineWidth;
+    bool _hostIsResolve;
 };
 
 
@@ -422,12 +426,7 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );

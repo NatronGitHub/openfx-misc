@@ -159,6 +159,9 @@ public:
         , view1_(NULL)
         , view2_(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -199,6 +202,7 @@ private:
     BooleanParam *vertical_;
     ChoiceParam *view1_;
     ChoiceParam *view2_;
+    bool _hostIsResolve;
 };
 
 
@@ -229,12 +233,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     // fetch main input image
     int view1;
@@ -253,12 +252,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
 
     // make sure bit depths are sane
     if ( src1.get() ) {
-        if ( (src1->getRenderScale().x != args.renderScale.x) ||
-             ( src1->getRenderScale().y != args.renderScale.y) ||
-             ( ( src1->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src1->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src1, args);
         BitDepthEnum srcBitDepth      = src1->getPixelDepth();
         PixelComponentEnum srcComponents = src1->getPixelComponents();
 
@@ -268,12 +262,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
         }
     }
     if ( src2.get() ) {
-        if ( (src2->getRenderScale().x != args.renderScale.x) ||
-             ( src2->getRenderScale().y != args.renderScale.y) ||
-             ( ( src2->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src2->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src2, args);
         BitDepthEnum srcBitDepth      = src2->getPixelDepth();
         PixelComponentEnum srcComponents = src2->getPixelComponents();
 

@@ -392,8 +392,6 @@ enum ColorModelEnum
 #endif
 
 static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
-static bool gHostIsResolve = false;
-
 // those are the noise levels on HHi subands that correspond to a
 // Gaussian noise, with the dcraw "a trous" wavelets.
 // dcraw's version:
@@ -797,6 +795,9 @@ public:
         , _maskInvert(NULL)
         , _premultChanged(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA ||
@@ -1081,6 +1082,7 @@ private:
     BooleanParam* _maskInvert;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
     BooleanParam* _b3;
+    bool _hostIsResolve;
 };
 
 // compute the maximum level used in wavelet_denoise (not the number of levels)
@@ -2322,26 +2324,14 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( !gHostIsResolve && /* DaVinci Resolve always gives rs=1 & field=None on fetched images */
-        ( (dst->getRenderScale().x != args.renderScale.x) ||
-          (dst->getRenderScale().y != args.renderScale.y) ||
-          (dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     src.reset( ( _srcClip && _srcClip->isConnected() ) ?
                _srcClip->fetchImage(time) : 0 );
     if ( !src.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
     if ( src.get() ) {
-        if ( !gHostIsResolve && /* DaVinci Resolve always gives rs=1 & field=None on fetched images */
-            ( (src->getRenderScale().x != args.renderScale.x) ||
-              (src->getRenderScale().y != args.renderScale.y) ||
-              (src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -2351,13 +2341,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     p.doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     mask.reset(p.doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
-        if ( !gHostIsResolve && /* DaVinci Resolve always gives rs=1 & field=None on fetched images */
-            ( (mask->getRenderScale().x != args.renderScale.x) ||
-              (mask->getRenderScale().y != args.renderScale.y) ||
-              (mask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, mask, args);
     }
     clearPersistentMessage();
 
@@ -3067,20 +3051,12 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
                    _srcClip->fetchImage(time, cropRect) : 0 );
     }
     if ( src.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScale(_hostIsResolve, src, args);
     }
     bool doMasking = _analysisMaskClip && _analysisMaskClip->isConnected();
     mask.reset(doMasking ? _analysisMaskClip->fetchImage(time, cropRect) : 0);
     if ( mask.get() ) {
-        if ( (mask->getRenderScale().x != args.renderScale.x) ||
-             ( mask->getRenderScale().y != args.renderScale.y) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScale(_hostIsResolve, mask, args);
     }
     if ( !src.get() ) {
         setPersistentMessage(Message::eMessageError, "", "No Source image to analyze");
@@ -3309,9 +3285,6 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                                ContextEnum context)
 {
     DBG(cout << "describeInContext!\n");
-
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
-    gHostIsResolve = (gHostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
     // Source clip only in the filter context
     // create the mandated source clip

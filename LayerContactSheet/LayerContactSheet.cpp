@@ -176,6 +176,7 @@ private:
     ChoiceParam* _rowOrder;
     ChoiceParam* _colOrder;
     BooleanParam* _showLayerNames;
+    bool _hostIsResolve;
 };
 
 LayerContactSheetPlugin::LayerContactSheetPlugin(OfxImageEffectHandle handle)
@@ -191,6 +192,9 @@ LayerContactSheetPlugin::LayerContactSheetPlugin(OfxImageEffectHandle handle)
     , _colOrder(NULL)
     , _showLayerNames(NULL)
 {
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
     _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -247,12 +251,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-        ( dst->getRenderScale().y != args.renderScale.y) ||
-        ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     //PixelComponentEnum dstComponents  = dst->getPixelComponents();
     const OfxRectI& dstBounds = dst->getBounds();
@@ -358,12 +357,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
                 // nothing to do
                 return;
             } else {
-                if ( (src->getRenderScale().x != args.renderScale.x) ||
-                    ( src->getRenderScale().y != args.renderScale.y) ||
-                    ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-                    setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                    throwSuiteStatusException(kOfxStatFailed);
-                }
+                checkBadRenderScaleOrField(_hostIsResolve, src, args);
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 //PixelComponentEnum srcComponents = src->getPixelComponents();
                 if ( (srcBitDepth != dstBitDepth) /*|| (srcComponents != dstComponents)*/ ) {

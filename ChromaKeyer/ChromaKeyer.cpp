@@ -173,7 +173,6 @@ enum SourceAlphaEnum
 
 static Color::LutManager<Mutex>* gLutManager;
 
-
 class ChromaKeyerProcessorBase
     : public ImageProcessor
 {
@@ -639,6 +638,9 @@ public:
         , _outputMode(NULL)
         , _sourceAlpha(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -690,6 +692,7 @@ private:
     DoubleParam* _keyGain;
     ChoiceParam* _outputMode;
     ChoiceParam* _sourceAlpha;
+    bool _hostIsResolve;
 };
 
 
@@ -718,12 +721,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     auto_ptr<const Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
@@ -734,12 +732,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // ChromaKeyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src, args);
     }
 
     if ( bg.get() ) {
@@ -748,34 +741,19 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // ChromaKeyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        if ( (bg->getRenderScale().x != args.renderScale.x) ||
-             ( bg->getRenderScale().y != args.renderScale.y) ||
-             ( ( bg->getField() != eFieldNone) /* for DaVinci Resolve */ && ( bg->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, bg, args);
     }
 
     // auto ptr for the masks.
     auto_ptr<const Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
                                        _inMaskClip->fetchImage(time) : 0 );
     if ( inMask.get() ) {
-        if ( (inMask->getRenderScale().x != args.renderScale.x) ||
-             ( inMask->getRenderScale().y != args.renderScale.y) ||
-             ( ( inMask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( inMask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, inMask, args);
     }
     auto_ptr<const Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
                                         _outMaskClip->fetchImage(time) : 0 );
     if ( outMask.get() ) {
-        if ( (outMask->getRenderScale().x != args.renderScale.x) ||
-             ( outMask->getRenderScale().y != args.renderScale.y) ||
-             ( ( outMask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( outMask->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, outMask, args);
     }
 
     OfxRGBColourD keyColor;

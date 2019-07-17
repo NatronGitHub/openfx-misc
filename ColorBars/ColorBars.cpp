@@ -250,6 +250,9 @@ public:
     ColorBarsPlugin(OfxImageEffectHandle handle)
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) );
         _barIntensity = fetchDoubleParam(kParamBarIntensity);
@@ -273,6 +276,7 @@ private:
     DoubleParam* _barIntensity;
     BooleanParam* _outputIRE;
     Clip* _srcClip;
+    bool _hostIsResolve;
 };
 
 
@@ -303,12 +307,7 @@ ColorBarsPlugin::setupAndProcess(ColorBarsProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );

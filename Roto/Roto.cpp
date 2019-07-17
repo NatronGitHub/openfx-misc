@@ -307,6 +307,9 @@ public:
         , _srcClip(NULL)
         , _rotoClip(NULL)
     {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
+
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -351,6 +354,7 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
+    bool _hostIsResolve;
 };
 
 
@@ -379,21 +383,11 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatErrFormat);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatErrFormat);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() && dst.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatErrFormat);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src, args);
         BitDepthEnum srcBitDepth = src->getPixelDepth();
         if (srcBitDepth != dstBitDepth) {
             throwSuiteStatusException(kOfxStatErrFormat);
@@ -410,14 +404,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
             setPersistentMessage(Message::eMessageError, "", "Error while rendering the roto mask");
             throwSuiteStatusException(kOfxStatFailed);
         }
-        if ( mask.get() ) {
-            if ( (mask->getRenderScale().x != args.renderScale.x) ||
-                 ( mask->getRenderScale().y != args.renderScale.y) ||
-                 ( ( mask->getField() != eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
-                setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                throwSuiteStatusException(kOfxStatFailed);
-            }
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, mask, args);
         assert(OFX_COMPONENTS_OK(mask->getPixelComponents()));
         if ( mask->getPixelComponents() != dst->getPixelComponents() ) {
             throwSuiteStatusException(kOfxStatErrFormat);

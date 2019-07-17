@@ -144,25 +144,26 @@ public:
         , _setFrameRate(NULL)
         , _frameRate(NULL)
     {
-        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _forceCopy = fetchBooleanParam(kParamForceCopy);
-        if ( gHostDescription.APIVersionMajor > 1 || (gHostDescription.APIVersionMajor == 1 && gHostDescription.APIVersionMinor >= 4) ) {
+        if ( hostDescription.APIVersionMajor > 1 || (hostDescription.APIVersionMajor == 1 && hostDescription.APIVersionMinor >= 4) ) {
             _supportsTiles = fetchBooleanParam(kParamSupportsTiles);
         }
         _setPremult = fetchBooleanParam(kParamSetPremult);
         _premult = fetchChoiceParam(kParamOutputPremult);
         assert(_forceCopy && _setPremult && _premult);
 
-        if (gHostDescription.supportsSetableFielding) {
+        if (hostDescription.supportsSetableFielding) {
             _setFieldOrder = fetchBooleanParam(kParamSetFieldOrder);
             _fieldOrder = fetchChoiceParam(kParamOutputFieldOrder);
             assert(_setFieldOrder && _fieldOrder);
         }
 #ifdef OFX_EXTENSIONS_NATRON
-        if (gHostDescription.isNatron) {
+        if (hostDescription.isNatron) {
             _setFormat = fetchBooleanParam(kParamSetFormat);
             _extent = fetchChoiceParam(kParamGeneratorExtent);
             _format = fetchChoiceParam(kParamGeneratorFormat);
@@ -173,12 +174,12 @@ public:
             _recenter = fetchPushButtonParam(kParamGeneratorCenter);
         }
 #endif
-        if (gHostDescription.supportsMultipleClipPARs) {
+        if (hostDescription.supportsMultipleClipPARs) {
             _setPixelAspectRatio = fetchBooleanParam(kParamSetPixelAspectRatio);
             _pixelAspectRatio = fetchDoubleParam(kParamOutputPixelAspectRatio);
             assert(_setPixelAspectRatio && _pixelAspectRatio);
         }
-        if (gHostDescription.supportsSetableFrameRate) {
+        if (hostDescription.supportsSetableFrameRate) {
             _setFrameRate = fetchBooleanParam(kParamSetFrameRate);
             _frameRate = fetchDoubleParam(kParamOutputFrameRate);
             assert(_setFrameRate && _frameRate);
@@ -239,14 +240,14 @@ private:
 
     void updateVisibility()
     {
-        const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
 
         _premult->setEnabled( _setPremult->getValue() );
-        if (gHostDescription.supportsSetableFielding) {
+        if (hostDescription.supportsSetableFielding) {
             _fieldOrder->setEnabled( _setFieldOrder->getValue() );
         }
 #ifdef OFX_EXTENSIONS_NATRON
-        if (gHostDescription.isNatron) {
+        if (hostDescription.isNatron) {
             GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
             bool hasFormat = (extent == eGeneratorExtentFormat);
             bool hasSize = (extent == eGeneratorExtentSize);
@@ -264,10 +265,10 @@ private:
             _btmLeft->setEnabled(setFormat);
         }
 #endif
-        if (gHostDescription.supportsMultipleClipPARs) {
+        if (hostDescription.supportsMultipleClipPARs) {
             _pixelAspectRatio->setEnabled( _setPixelAspectRatio->getValue() );
         }
-        if (gHostDescription.supportsSetableFrameRate) {
+        if (hostDescription.supportsSetableFrameRate) {
             _frameRate->setEnabled( _setFrameRate->getValue() );
         }
     }
@@ -296,6 +297,7 @@ private:
     DoubleParam *_pixelAspectRatio;
     BooleanParam *_setFrameRate;
     DoubleParam *_frameRate;
+    bool _hostIsResolve;
 };
 
 
@@ -400,23 +402,13 @@ NoOpPlugin::render(const RenderArguments &args)
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    if ( (dst->getRenderScale().x != args.renderScale.x) ||
-         ( dst->getRenderScale().y != args.renderScale.y) ||
-         ( ( dst->getField() != eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
+    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
-        if ( (src->getRenderScale().x != args.renderScale.x) ||
-             ( src->getRenderScale().y != args.renderScale.y) ||
-             ( ( src->getField() != eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
-            setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            throwSuiteStatusException(kOfxStatFailed);
-        }
+        checkBadRenderScaleOrField(_hostIsResolve, src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -926,7 +918,7 @@ void
 NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                      ContextEnum /*context*/)
 {
-    const ImageEffectHostDescription &gHostDescription = *getImageEffectHostDescription();
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
 
     // Source clip only in the filter context
     // create the mandated source clip
@@ -973,7 +965,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
     // supportsTiles
-    if ( gHostDescription.APIVersionMajor > 1 || (gHostDescription.APIVersionMajor == 1 && gHostDescription.APIVersionMinor >= 4) ) {
+    if ( hostDescription.APIVersionMajor > 1 || (hostDescription.APIVersionMajor == 1 && hostDescription.APIVersionMinor >= 4) ) {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSupportsTiles);
         param->setLabel(kParamSupportsTilesLabel);
         param->setHint(kParamSupportsTilesHint);
@@ -1016,7 +1008,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    if (gHostDescription.supportsSetableFielding) {
+    if (hostDescription.supportsSetableFielding) {
         //// setFieldOrder
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFieldOrder);
@@ -1057,7 +1049,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
 #ifdef OFX_EXTENSIONS_NATRON
-    if (gHostDescription.isNatron) {
+    if (hostDescription.isNatron) {
         //// setFormat
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFormat);
@@ -1233,7 +1225,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 #endif // OFX_EXTENSIONS_NATRON
 
-    if (gHostDescription.supportsMultipleClipPARs) {
+    if (hostDescription.supportsMultipleClipPARs) {
         //// setPixelAspectRatio
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetPixelAspectRatio);
@@ -1260,7 +1252,7 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    if (gHostDescription.supportsSetableFrameRate) {
+    if (hostDescription.supportsSetableFrameRate) {
         //// setFrameRate
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFrameRate);
