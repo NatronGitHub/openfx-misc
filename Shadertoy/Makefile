@@ -11,12 +11,14 @@ net.sf.openfx.Shadertoy.svg \
 OSMESA_PATH ?= /opt/osmesa
 LLVM_PATH ?= /opt/llvm
 
-## Enable these if you installed a mangled OSMesa (preferably with 32 bits FP support)
-#CXXFLAGS_MESA += -DHAVE_OSMESA
-#LDFLAGS_MESA += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
+ifeq ($(OSMESA),1)
+  ## Enable these if you installed a mangled OSMesa (preferably with 32 bits FP support)
+  CXXFLAGS_MESA += -DHAVE_OSMESA
+  LDFLAGS_MESA += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
+endif
 
-CXXFLAGS_EXTRA = $(CXXFLAGS_MESA)
-LDFLAGS_EXTRA = $(LDFLAGS_MESA)
+CXXFLAGS_EXTRA += $(CXXFLAGS_MESA)
+LDFLAGS_EXTRA += $(LDFLAGS_MESA)
 
 TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.master
