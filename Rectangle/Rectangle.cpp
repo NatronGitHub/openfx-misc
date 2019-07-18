@@ -27,7 +27,7 @@
 #include <cfloat> // DBL_MAX
 #include <algorithm>
 
-#define DEBUG_HOSTDESCRIPTION
+//#define DEBUG_HOSTDESCRIPTION
 #ifdef DEBUG_HOSTDESCRIPTION
 #include <iostream> // for host description printing code
 #include "ofxOpenGLRender.h"
@@ -852,7 +852,6 @@ RectanglePlugin::renderInternal(const RenderArguments &args,
 void
 RectanglePlugin::render(const RenderArguments &args)
 {
-    printf("render!\n");
     assert( _dstClip && _dstClip->isConnected() );
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
@@ -881,7 +880,6 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
                             double &identityTime
                             , int& view, std::string& plane)
 {
-    printf("isIdentity!\n");
     if ( GeneratorPlugin::isIdentity(args, identityClip, identityTime, view, plane) ) {
         return true;
     }
@@ -946,7 +944,6 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
 void
 RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    printf("getClipPreferences!\n");
     if (_srcClip) {
         // set the premultiplication of _dstClip if alpha is affected and source is Opaque
         bool processA = _processA->getValue();
@@ -972,7 +969,6 @@ bool
 RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                        OfxRectD &rod)
 {
-    printf("getRegionOfDefinition!\n");
     const double time = args.time;
     double mix;
 
@@ -1053,7 +1049,6 @@ mDeclarePluginFactory(RectanglePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 RectanglePluginFactory::describe(ImageEffectDescriptor &desc)
 {
-    printf("descibe!\n");
 #ifdef DEBUG_HOSTDESCRIPTION
     {
         const ImageEffectHostDescription& hostDesc = *getImageEffectHostDescription();
@@ -1226,7 +1221,6 @@ ImageEffect*
 RectanglePluginFactory::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    printf("createInst!\n");
     return new RectanglePlugin(handle);
 }
 
@@ -1234,7 +1228,6 @@ void
 RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum context)
 {
-    printf("descinctx!\n");
     // Source clip only in the filter context
     // create the mandated source clip
     // always declare the source clip first, because some hosts may consider
