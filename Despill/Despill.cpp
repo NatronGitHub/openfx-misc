@@ -260,8 +260,9 @@ public:
 
 private:
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         float tmpPix[4];
 
         assert(nComponents == 3 || nComponents == 4);
@@ -342,8 +343,6 @@ public:
         , _blueScale(NULL)
         , _brightness(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -408,7 +407,6 @@ private:
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
-    bool _hostIsResolve;
 };
 
 
@@ -437,12 +435,12 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
 
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents  = src->getPixelComponents();
         //PixelComponentEnum srcComponents = src->getPixelComponents();
@@ -458,7 +456,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, mask, args);
+        checkBadRenderScaleOrField(mask, args);
     }
 
 
@@ -499,7 +497,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     processor.setValues(spillMix, spillExpand, redScale, greenScale, blueScale, brightNess, clampBlack, clampWhite, (float)mix, outputAlpha);
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();

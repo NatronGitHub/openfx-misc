@@ -1,7 +1,9 @@
 Host-specific OpenFX bugs and caveats:
 
 
-* DaVinci Resolve Lite
+* Blackmagic DaVinci Resolve Lite
+
+Version 12.5:
 
 OFX API version 1.3
 hostName=DaVinciResolveLite
@@ -34,6 +36,40 @@ supportsDynamicChoices=0
 supportsCascadingChoices=0
 supportsChannelSelector=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxImageEffectOpenGLRenderSuite
+
+Version 16:
+
+OFX API version 1.4
+hostName=DaVinciResolveLite
+hostLabel=DaVinci Resolve Lite
+hostVersion=16.0.0 (16.0)
+hostIsBackground=0
+supportsOverlays=1
+supportsMultiResolution=0
+supportsTiles=0
+temporalClipAccess=1
+supportedComponents=OfxImageComponentRGBA,OfxImageComponentAlpha
+supportedContexts=OfxImageEffectContextFilter,OfxImageEffectContextGeneral,OfxImageEffectContextTransition,OfxImageEffectContextGenerator
+supportedPixelDepths=OfxBitDepthFloat,OfxBitDepthShort,OfxBitDepthByte
+supportsMultipleClipDepths=0
+supportsMultipleClipPARs=0
+supportsSetableFrameRate=0
+supportsSetableFielding=0
+supportsStringAnimation=0
+supportsCustomInteract=0
+supportsChoiceAnimation=1
+supportsBooleanAnimation=1
+supportsCustomAnimation=0
+supportsParametricAnimation=0
+canTransform=0
+maxParameters=-1
+pageRowCount=0
+pageColumnCount=0
+isNatron=0
+supportsDynamicChoices=0
+supportsCascadingChoices=0
+supportsChannelSelector=0
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxProgressSuite,OfxTimeLineSuite
 
 Caveats/Bugs:
 - Resolve 14: claims it has OpenFX message suite V2, but setPersistentMessage is NULL and clearPersistentMessage is garbage.
@@ -240,3 +276,41 @@ supportsCascadingChoices=0
 supportsChannelSelector=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxImageEffectOpenGLRenderSuite,OfxVegasProgressSuite,OfxVegasStereoscopicImageEffectSuite,OfxVegasKeyframeSuite,OfxOpenCLProgramSuite,
 OFX DebugProxy: host description finished
+
+* Blackmagic Fusion
+
+OFX API version 1.0
+hostName=com.blackmagicdesign.Fusion
+hostLabel=Fusion
+hostVersion=9.0.2 ()
+hostIsBackground=0
+supportsOverlays=1
+supportsMultiResolution=1
+supportsTiles=0
+temporalClipAccess=1
+supportedComponents=OfxImageComponentRGBA
+supportedContexts=OfxImageEffectContextGeneral,OfxImageEffectContextRetimer,OfxImageEffectContextTransition,OfxImageEffectContextFilter,OfxImageEffectContextGenerator
+supportedPixelDepths=OfxBitDepthByte,OfxBitDepthShort,OfxBitDepthFloat
+supportsMultipleClipDepths=1
+supportsMultipleClipPARs=1
+supportsSetableFrameRate=0
+supportsSetableFielding=0
+supportsStringAnimation=1
+supportsCustomInteract=0
+supportsChoiceAnimation=1
+supportsBooleanAnimation=1
+supportsCustomAnimation=0
+supportsParametricAnimation=0
+canTransform=0
+maxParameters=-1
+pageRowCount=-1
+pageColumnCount=1
+isNatron=0
+supportsDynamicChoices=0
+supportsCascadingChoices=0
+supportsChannelSelector=0
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxProgressSuite,OfxTimeLineSuite
+
+- kOfxPropAPIVersion kOfxPropVersionLabel kOfxImageEffectInstancePropSequentialRender are not set on the host
+- unconnected clips have prop kOfxImageEffectPropPixelDepth=kOfxBitDepthNone
+- when scrubbing parameters (changing values fast), the renderScale in the inArgs is 1/3. but the renderScale on images is 3.

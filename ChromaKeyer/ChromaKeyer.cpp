@@ -368,8 +368,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
                 break;
@@ -638,8 +639,6 @@ public:
         , _outputMode(NULL)
         , _sourceAlpha(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -692,7 +691,6 @@ private:
     DoubleParam* _keyGain;
     ChoiceParam* _outputMode;
     ChoiceParam* _sourceAlpha;
-    bool _hostIsResolve;
 };
 
 
@@ -721,7 +719,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     auto_ptr<const Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
@@ -732,7 +730,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // ChromaKeyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
     }
 
     if ( bg.get() ) {
@@ -741,19 +739,19 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // ChromaKeyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        checkBadRenderScaleOrField(_hostIsResolve, bg, args);
+        checkBadRenderScaleOrField(bg, args);
     }
 
     // auto ptr for the masks.
     auto_ptr<const Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
                                        _inMaskClip->fetchImage(time) : 0 );
     if ( inMask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, inMask, args);
+        checkBadRenderScaleOrField(inMask, args);
     }
     auto_ptr<const Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
                                         _outMaskClip->fetchImage(time) : 0 );
     if ( outMask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, outMask, args);
+        checkBadRenderScaleOrField(outMask, args);
     }
 
     OfxRGBColourD keyColor;
@@ -769,7 +767,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
     processor.setValues(keyColor, colorspace, linear, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     processor.process();
 } // ChromaKeyerPlugin::setupAndProcess
@@ -782,8 +780,8 @@ ChromaKeyerPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     if (dstComponents != ePixelComponentRGBA) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host dit not take into account output components");

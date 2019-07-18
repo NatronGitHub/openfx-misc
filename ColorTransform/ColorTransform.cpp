@@ -255,8 +255,9 @@ public:
     {
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         float unpPix[4];
@@ -500,8 +501,6 @@ public:
         , _premultChannel(NULL)
         , _premultChanged(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -540,7 +539,6 @@ private:
     BooleanParam* _premult;
     ChoiceParam* _premultChannel;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
-    bool _hostIsResolve;
 };
 
 
@@ -568,11 +566,11 @@ ColorTransformPlugin<transform>::setupAndProcess(ColorTransformProcessorBase &pr
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -582,7 +580,7 @@ ColorTransformPlugin<transform>::setupAndProcess(ColorTransformProcessorBase &pr
 
     processor.setDstImg( dst.get() );
     processor.setSrcImg( src.get() );
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     bool premult = false;
     if (_premult) {
@@ -606,8 +604,8 @@ ColorTransformPlugin<transform>::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentRGBA);
     if (dstComponents == ePixelComponentRGBA) {
         switch (dstBitDepth) {

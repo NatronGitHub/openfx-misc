@@ -393,8 +393,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         // for Color and Screen modes, how much the scalar product between RGB and the keyColor must be
         // multiplied by to get the foreground key value 1, which corresponds to the maximum
         // possible value, e.g. for (R,G,B)=(1,1,1)
@@ -603,8 +604,6 @@ public:
         , _outputMode(NULL)
         , _sourceAlpha(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -696,7 +695,6 @@ private:
     DoubleParam* _despillAngle;
     ChoiceParam* _outputMode;
     ChoiceParam* _sourceAlpha;
-    bool _hostIsResolve;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -724,13 +722,13 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     auto_ptr<const Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
                                    _bgClip->fetchImage(time) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         //PixelComponentEnum srcComponents = src->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
@@ -739,7 +737,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     }
 
     if ( bg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, bg, args);
+        checkBadRenderScaleOrField(bg, args);
         BitDepthEnum srcBitDepth      = bg->getPixelDepth();
         //PixelComponentEnum srcComponents = bg->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) {  // Keyer outputs RGBA but may have RGB input
@@ -751,12 +749,12 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     auto_ptr<const Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
                                        _inMaskClip->fetchImage(time) : 0 );
     if ( inMask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, inMask, args);
+        checkBadRenderScaleOrField(inMask, args);
     }
     auto_ptr<const Image> outMask( ( _outMaskClip && _outMaskClip->isConnected() ) ?
                                         _outMaskClip->fetchImage(time) : 0 );
     if ( outMask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, outMask, args);
+        checkBadRenderScaleOrField(outMask, args);
     }
 
     OfxRGBColourD keyColor;
@@ -775,7 +773,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     processor.setValues(keyColor, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     processor.process();
 } // KeyerPlugin::setupAndProcess
@@ -788,8 +786,8 @@ KeyerPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     if (dstComponents != ePixelComponentRGBA) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host dit not take into account output components");
         throwSuiteStatusException(kOfxStatErrImageFormat);

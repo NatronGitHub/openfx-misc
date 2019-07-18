@@ -931,13 +931,14 @@ private:
         }
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow);
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL;
 };
 
 template <class PIX, int nComponents, int maxValue, DistortionPluginEnum plugin, FilterEnum filter, bool clamp>
 void
-DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThreadProcessImages(OfxRectI procWindow)
+DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs)
 {
+    unused(rs);
     assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
     assert(_dstImg);
     assert(!(plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) || _planeChannels.size() == 3);
@@ -1273,8 +1274,6 @@ public:
         , _maskInvert(NULL)
         , _plugin(plugin)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -1644,7 +1643,6 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     DistortionPluginEnum _plugin;
-    bool _hostIsResolve;
 };
 
 
@@ -2243,14 +2241,14 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
 
     auto_ptr<const Image> src( ( (outputMode == eOutputModeImage) && _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -2303,7 +2301,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                 }
 
                 if (p.img) {
-                    checkBadRenderScaleOrField(_hostIsResolve, p.img, args);
+                    checkBadRenderScaleOrField(p.img, args);
                     if (srcBitDepth == eBitDepthNone) {
                         srcBitDepth = p.img->getPixelDepth();
                     } else {
@@ -2349,7 +2347,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             PixelComponentEnum uvComponents = ePixelComponentNone;
             if (uv) {
                 imagesHolder.appendImage(uv);
-                checkBadRenderScaleOrField(_hostIsResolve, uv, args);
+                checkBadRenderScaleOrField(uv, args);
                 BitDepthEnum uvBitDepth      = uv->getPixelDepth();
                 uvComponents = uv->getPixelComponents();
                 // only eBitDepthFloat is supported for now (other types require special processing for uv values)
@@ -2392,7 +2390,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     // do we do masking
     if (doMasking) {
         if ( mask.get() ) {
-            checkBadRenderScaleOrField(_hostIsResolve, mask, args);
+            checkBadRenderScaleOrField(mask, args);
         }
         bool maskInvert = _maskInvert->getValueAtTime(time);
         processor.doMasking(true);
@@ -2403,7 +2401,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get() );
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     bool processR = _processR->getValueAtTime(time);
     bool processG = _processG->getValueAtTime(time);
@@ -2617,8 +2615,8 @@ DistortionPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         switch (_plugin) {
@@ -4571,13 +4569,13 @@ DistortionPluginFactory<plugin, majorVersion>::createInstance(OfxImageEffectHand
 
 static DistortionPluginFactory<eDistortionPluginIDistort,kPluginVersionMajor> pIDistort(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static DistortionPluginFactory<eDistortionPluginSTMap,kPluginVersionMajor> pSTMap(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion,2> pLensDistortion2(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion,3> pLensDistortion3(kPluginLensDistortionIdentifier, 3, kPluginVersionMinor);
+//static DistortionPluginFactory<eDistortionPluginLensDistortion,2> pLensDistortion2(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
+//static DistortionPluginFactory<eDistortionPluginLensDistortion,3> pLensDistortion3(kPluginLensDistortionIdentifier, 3, kPluginVersionMinor);
 static DistortionPluginFactory<eDistortionPluginLensDistortion,kPluginVersionLensDistortionMajor> pLensDistortion4(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
 mRegisterPluginFactoryInstance(pIDistort)
 mRegisterPluginFactoryInstance(pSTMap)
-mRegisterPluginFactoryInstance(pLensDistortion2)
-mRegisterPluginFactoryInstance(pLensDistortion3)
+//mRegisterPluginFactoryInstance(pLensDistortion2)
+//mRegisterPluginFactoryInstance(pLensDistortion3)
 mRegisterPluginFactoryInstance(pLensDistortion4)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

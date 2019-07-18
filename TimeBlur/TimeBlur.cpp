@@ -119,8 +119,9 @@ public:
 
 private:
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         assert(1 <= nComponents && nComponents <= 4);
         assert(!_divisions || _dstPixelData);
         float tmpPix[nComponents];
@@ -190,8 +191,6 @@ public:
         , _shutteroffset(NULL)
         , _shuttercustomoffset(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
@@ -233,7 +232,6 @@ private:
     DoubleParam* _shutter;
     ChoiceParam* _shutteroffset;
     DoubleParam* _shuttercustomoffset;
-    bool _hostIsResolve;
 };
 
 
@@ -281,7 +279,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // accumulator image
     auto_ptr<ImageMemory> accumulator;
@@ -334,7 +332,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
             const Image* src = _srcClip ? _srcClip->fetchImage(range.min + i * interval) : 0;
             //std::printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
             if (src) {
-                checkBadRenderScaleOrField(_hostIsResolve, src, args);
+                checkBadRenderScaleOrField(src, args);
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 PixelComponentEnum srcComponents = src->getPixelComponents();
                 if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -350,7 +348,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
         }
         processor.setSrcImgs(srcImgs.images);
         // set the render window
-        processor.setRenderWindow(renderWindow);
+        processor.setRenderWindow(renderWindow, args.renderScale);
         processor.setAccumulator(accumulatorData);
 
         processor.setValues(lastPass ? divisions : 0);
@@ -366,8 +364,8 @@ TimeBlurPlugin::render(const RenderArguments &args)
 {
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         renderForComponents<4>(args);

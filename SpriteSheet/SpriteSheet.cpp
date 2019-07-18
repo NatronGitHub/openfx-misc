@@ -101,8 +101,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
                 break;
@@ -150,8 +151,6 @@ public:
         , _spriteRange(NULL)
         , _frameOffset(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -227,7 +226,6 @@ private:
     Int2DParam* _spriteSize;
     Int2DParam* _spriteRange;
     IntParam* _frameOffset;
-    bool _hostIsResolve;
 };
 
 
@@ -256,14 +254,14 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( !src.get() || !( _srcClip && _srcClip->isConnected() ) ) {
         // nothing to do
         return;
     } else {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         PixelComponentEnum dstComponents  = dst->getPixelComponents();
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -278,7 +276,7 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
     processor.setSrcImg( src.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
 
     // get the input format (Natron only) or the input RoD (others)
@@ -397,8 +395,8 @@ SpriteSheetPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);

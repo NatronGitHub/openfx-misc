@@ -253,8 +253,6 @@ public:
         , _buffer(NULL)
         , _name()
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         setSequentialRender(true); // must also be set here, since it is missing from the plugin descriptor in Resolve
         if ( !gTimeBufferMapMutex.get() ) {
@@ -462,7 +460,6 @@ private:
     std::string _name; // name of the TimeBuffer
     std::string _projectId; // identifier for the project the instance lives in
     std::string _groupId; // identifier for the group (or subproject) the instance lives in
-    bool _hostIsResolve;
 };
 
 
@@ -476,14 +473,14 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
     //std::cout << "render!\n";
     const double time = args.time;
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
@@ -505,7 +502,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
     //   - if t == startTime, the buffer is locked and marked as dirty, with date t+1, then unlocked
     if (time <= startFrame) {
         clearPersistentMessage();
-        fillBlack( *this, args.renderWindow, dst.get() );
+        fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
         if (time == startFrame) {
             AutoMutex guard(timeBuffer->mutex);
             timeBuffer->dirty = true;
@@ -527,7 +524,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
 
             return;
         case eUnorderedRenderBlack:
-            fillBlack( *this, args.renderWindow, dst.get() );
+            fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
             timeBuffer->dirty = true;
             timeBuffer->time = time + 1;
 
@@ -557,7 +554,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
 
                 return;
             case eUnorderedRenderBlack:
-                fillBlack( *this, args.renderWindow, dst.get() );
+                fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
                 timeBuffer->dirty = true;
                 timeBuffer->time = time + 1;
 
@@ -576,7 +573,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
 
             return;
         case eUnorderedRenderBlack:
-            fillBlack( *this, args.renderWindow, dst.get() );
+            fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
             timeBuffer->dirty = true;
             timeBuffer->time = time + 1;
 
@@ -584,7 +581,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
         }
     }
     //   - when the buffer is locked and clean, it is copied to output and unlocked
-    copyPixels( *this, args.renderWindow,
+    copyPixels( *this, args.renderWindow, args.renderScale,
                 (void*)&timeBuffer->pixelData.front(),
                 timeBuffer->bounds,
                 timeBuffer->pixelComponents,
@@ -927,8 +924,6 @@ public:
         , _buffer(NULL)
         , _name()
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         if ( !gTimeBufferMapMutex.get() ) {
             gTimeBufferMapMutex.reset(new Mutex);
@@ -1133,7 +1128,6 @@ private:
     std::string _name; // name of the TimeBuffer
     std::string _projectId; // identifier for the project the instance lives in
     std::string _groupId; // identifier for the group (or subproject) the instance lives in
-    bool _hostIsResolve;
 };
 
 
@@ -1152,8 +1146,8 @@ TimeBufferWritePlugin::render(const RenderArguments &args)
         return;
     }
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     // get a dst image
     auto_ptr<Image>  dst( _dstClip->fetchImage(args.time) );
@@ -1168,13 +1162,13 @@ TimeBufferWritePlugin::render(const RenderArguments &args)
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     const double time = args.time;
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -1208,12 +1202,12 @@ TimeBufferWritePlugin::render(const RenderArguments &args)
         timeBuffer->renderScale = args.renderScale;
         timeBuffer->par = src->getPixelAspectRatio();
         timeBuffer->pixelData.resize( (size_t)timeBuffer->rowBytes * (args.renderWindow.y2 - args.renderWindow.y1) );
-        copyPixels(*this, args.renderWindow, src.get(), &timeBuffer->pixelData.front(), timeBuffer->bounds, timeBuffer->pixelComponents, timeBuffer->pixelComponentCount, timeBuffer->bitDepth, timeBuffer->rowBytes);
+        copyPixels(*this, args.renderWindow, args.renderScale, src.get(), &timeBuffer->pixelData.front(), timeBuffer->bounds, timeBuffer->pixelComponents, timeBuffer->pixelComponentCount, timeBuffer->bitDepth, timeBuffer->rowBytes);
         timeBuffer->dirty = false;
     }
     // - src is also copied to output.
 
-    copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+    copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
     clearPersistentMessage();
     //std::cout << "render! OK\n";
 } // TimeBufferWritePlugin::render

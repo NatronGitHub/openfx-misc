@@ -288,6 +288,7 @@ protected:
 
     void setupAndFill(OFX::PixelProcessorFilterBase & processor,
                       const OfxRectI &renderWindow,
+                      const OfxPointD &renderScale,
                       void *dstPixelData,
                       const OfxRectI& dstBounds,
                       OFX::PixelComponentEnum dstPixelComponents,
@@ -298,6 +299,7 @@ protected:
     void setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                       double time,
                       const OfxRectI &renderWindow,
+                      const OfxPointD &renderScale,
                       const OFX::Image* orig,
                       const OFX::Image* mask,
                       const void *srcPixelData,
@@ -348,7 +350,6 @@ protected:
     bool _supportsRenderScale;
     bool _defaultUnpremult; //!< unpremult by default
     OFX::BooleanParam* _premultChanged; // set to true the when user changes premult
-    bool _hostIsResolve;
 };
 
 template <class Params, bool sourceIsOptional>
@@ -442,7 +443,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     const OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
     const int dstPixelComponentCount = dst->getPixelComponentCount();
@@ -456,7 +457,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         if ( (srcBitDepth != dstBitDepth) || (srcPixelComponents != dstPixelComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
 #if 0
     } else {
         // src is considered black and transparent, just fill black to dst and return
@@ -604,7 +605,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         processWindow.y2 = processWindow.y1;
     }
     if ( mask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, mask, args);
+        checkBadRenderScaleOrField(mask, args);
 
         if (_supportsTiles) {
             // shrink the processWindow at much as possible
@@ -668,19 +669,19 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         }
         assert( fred.get() );
         if ( fred.get() ) {
-            setupAndCopy(*fred, time, copyWindowN, src.get(), mask.get(),
+            setupAndCopy(*fred, time, copyWindowN, renderScale, src.get(), mask.get(),
                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
                          premult, premultChannel, mix, maskInvert);
-            setupAndCopy(*fred, time, copyWindowS, src.get(), mask.get(),
+            setupAndCopy(*fred, time, copyWindowS, renderScale, src.get(), mask.get(),
                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
                          premult, premultChannel, mix, maskInvert);
-            setupAndCopy(*fred, time, copyWindowW, src.get(), mask.get(),
+            setupAndCopy(*fred, time, copyWindowW, renderScale, src.get(), mask.get(),
                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
                          premult, premultChannel, mix, maskInvert);
-            setupAndCopy(*fred, time, copyWindowE, src.get(), mask.get(),
+            setupAndCopy(*fred, time, copyWindowE, renderScale, src.get(), mask.get(),
                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
                          premult, premultChannel, mix, maskInvert);
@@ -800,7 +801,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         }
         assert( fred.get() );
         if ( fred.get() ) {
-            setupAndCopy(*fred, time, srcRoI, src.get(), mask.get(),
+            setupAndCopy(*fred, time, srcRoI, renderScale, src.get(), mask.get(),
                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary,
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
                          premult, premultChannel, mix, maskInvert);
@@ -905,7 +906,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
                 maskcimg.fill(1.);
             } else {
                 copyPixels(*this,
-                           srcRoI,
+                           srcRoI, renderScale,
                            mask.get(),
                            maskcimg.data(),
                            srcRoI,
@@ -1012,7 +1013,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         }
         assert( fred.get() );
         if ( fred.get() ) {
-            setupAndCopy(*fred, time, processWindow, src.get(), mask.get(),
+            setupAndCopy(*fred, time, processWindow, renderScale, src.get(), mask.get(),
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes, 0,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
                          premult, premultChannel, mix, maskInvert);

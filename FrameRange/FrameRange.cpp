@@ -103,8 +103,6 @@ public:
         , _after(NULL)
         , _sublabel(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -148,7 +146,6 @@ private:
     ChoiceParam *_before;
     ChoiceParam *_after;
     StringParam *_sublabel;
-    bool _hostIsResolve;
 };
 
 
@@ -200,20 +197,20 @@ FrameRangePlugin::render(const RenderArguments &args)
         }
     }
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     auto_ptr<const Image> src( (_srcClip && _srcClip->isConnected() && !black) ?
                                     _srcClip->fetchImage(srcTime) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -221,9 +218,9 @@ FrameRangePlugin::render(const RenderArguments &args)
         }
     }
     if (black) {
-        fillBlack( *this, args.renderWindow, dst.get() );
+        fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
     } else {
-        copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+        copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
     }
 } // FrameRangePlugin::render
 

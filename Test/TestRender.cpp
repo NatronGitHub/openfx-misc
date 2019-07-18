@@ -149,8 +149,9 @@ public:
 
 private:
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
 #pragma message WARN("TODO: write the render function as described in the plugin help")
         float tmpPix[nComponents];
         //const OfxRectI srcRoD = _srcImg->getRegionOfDefinition();
@@ -201,8 +202,6 @@ public:
         , _srcClip(NULL)
         , _maskClip(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -267,7 +266,6 @@ private:
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
-    bool _hostIsResolve;
 };
 
 
@@ -297,7 +295,7 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::s
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // fetch main input image
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
@@ -306,7 +304,7 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::s
     // make sure bit depths are sane
     if ( src.get() ) {
         assert(_srcClip);
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
 
@@ -357,7 +355,7 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::s
 
     // do we do masking
     if (doMasking) {
-        checkBadRenderScaleOrField(_hostIsResolve, mask, args);
+        checkBadRenderScaleOrField(mask, args);
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         // say we are masking
@@ -376,7 +374,7 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::s
     processor.setSrcImg( src.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -419,8 +417,8 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::r
         throwSuiteStatusException(kOfxStatFailed);
     }
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();

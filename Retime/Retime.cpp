@@ -118,7 +118,6 @@ private:
     ParametricParam  *_warp;      /**< @brief only used in the filter or general context. */
     DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only. */
     ChoiceParam  *_filter;   /**< @brief how images are interpolated (or not). */
-    bool _hostIsResolve;
 
 public:
     /** @brief ctor */
@@ -134,8 +133,6 @@ public:
         , _duration(NULL)
         , _filter(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -266,21 +263,21 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
         // should have been caught by isIdentity...
         auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                         _srcClip->fetchImage(sourceTime) : 0 );
         if ( src.get() ) {
-            checkBadRenderScaleOrField(_hostIsResolve, src, args);
+            checkBadRenderScaleOrField(src, args);
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
             PixelComponentEnum srcComponents = src->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
-        copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+        copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
         return;
     }
@@ -298,11 +295,11 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
 
     // make sure bit depths are sane
     if ( fromImg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, fromImg, args);
+        checkBadRenderScaleOrField(fromImg, args);
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if ( toImg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, toImg, args);
+        checkBadRenderScaleOrField(toImg, args);
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
@@ -312,7 +309,7 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     processor.setToImg( toImg.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // set the blend between
     processor.setBlend( (float)blend );
@@ -510,8 +507,8 @@ RetimePlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     // figure the frame we should be retiming from
     double sourceTime = time;

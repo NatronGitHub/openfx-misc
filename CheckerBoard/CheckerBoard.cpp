@@ -251,8 +251,9 @@ private:
     }
 
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         PIX color0[nComponents];
         PIX color1[nComponents];
         PIX color2[nComponents];
@@ -358,8 +359,6 @@ public:
         , _centerlineColor(NULL)
         , _centerlineWidth(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _boxSize = fetchDouble2DParam(kParamBoxSize);
         _color0 = fetchRGBAParam(kParamColor0);
@@ -395,7 +394,6 @@ private:
     DoubleParam *_lineWidth;
     RGBAParam  *_centerlineColor;
     DoubleParam *_centerlineWidth;
-    bool _hostIsResolve;
 };
 
 
@@ -426,13 +424,13 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     OfxPointD boxSize;
     _boxSize->getValueAtTime(time, boxSize.x, boxSize.y);

@@ -120,8 +120,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -173,8 +174,6 @@ public:
         , _srcClipA(NULL)
         , _srcClipB(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
@@ -206,7 +205,6 @@ private:
     Clip *_srcClipB;
     DoubleParam *_offset;
     DoubleParam *_gain;
-    bool _hostIsResolve;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -229,13 +227,13 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
                                      _srcClipA->fetchImage(args.time) : 0 );
     auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(args.time) : 0 );
     if ( srcA.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcA, args);
+        checkBadRenderScaleOrField(srcA, args);
         BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
         PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -244,7 +242,7 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor,
     }
 
     if ( srcB.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcB, args);
+        checkBadRenderScaleOrField(srcB, args);
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -259,7 +257,7 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor,
     processor.setValues(offset, gain);
     processor.setDstImg( dst.get() );
     processor.setSrcImg( srcA.get(), srcB.get() );
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     processor.process();
 } // DifferencePlugin::setupAndProcess

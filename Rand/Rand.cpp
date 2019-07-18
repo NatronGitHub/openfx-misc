@@ -146,8 +146,9 @@ public:
     {}
 
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         float noiseLevel = _noiseLevel;
 
         // set up a random number generator and set the seed
@@ -204,7 +205,6 @@ private:
     DoubleParam  *_density;
     IntParam  *_seed;
     BooleanParam* _staticSeed;
-    bool _hostIsResolve;
 
 public:
     /** @brief ctor */
@@ -215,8 +215,6 @@ public:
         , _seed(NULL)
         , _staticSeed(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _noise   = fetchDoubleParam(kParamNoiseLevel);
         _density = fetchDoubleParam(kParamNoiseDensity);
@@ -264,13 +262,13 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     double noise;
     _noise->getValueAtTime(time, noise);

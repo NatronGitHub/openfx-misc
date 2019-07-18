@@ -377,8 +377,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         float tmpPix[nComponents];
         float tmpA[nComponents];
         float tmpB[nComponents];
@@ -598,8 +599,6 @@ public:
     , _aChannelAChanged(NULL)
     , _bChannelAChanged(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
@@ -707,7 +706,6 @@ private:
     BooleanParam* _outputChannels[4];
     BooleanParam* _aChannelAChanged;
     BooleanParam* _bChannelAChanged;
-    bool _hostIsResolve;
 };
 
 
@@ -917,7 +915,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
             throwSuiteStatusException(kOfxStatFailed);
         }
-        checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+        checkBadRenderScaleOrField(dst, args);
     }
     auto_ptr<const Image> srcB( ( !renderRotoMask && _srcClipB && _srcClipB->isConnected() ) ?
                                     _srcClipB->fetchImage(time) : 0 );
@@ -936,7 +934,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
                 if (srcA) {
                     srcAs.images.push_back(srcA);
 
-                    checkBadRenderScaleOrField(_hostIsResolve, srcA, args);
+                    checkBadRenderScaleOrField(srcA, args);
                     BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
                     PixelComponentEnum srcComponents = srcA->getPixelComponents();
                     if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -956,7 +954,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     }
 
     if ( srcB.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcB, args);
+        checkBadRenderScaleOrField(srcB, args);
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -1022,7 +1020,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         outputChannels[c] = _outputChannels[c]->getValueAtTime(time);
     }
     processor.setValues(alphaMasking, mix, aChannels, bChannels, outputChannels);
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     processor.process();
 } // MergePlugin::setupAndProcess

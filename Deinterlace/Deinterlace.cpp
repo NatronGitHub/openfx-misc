@@ -128,8 +128,6 @@ class DeinterlacePlugin
 public:
     DeinterlacePlugin(OfxImageEffectHandle handle) : ImageEffect(handle), _dstClip(NULL), _srcClip(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -159,7 +157,6 @@ private:
     Clip *_dstClip;
     Clip *_srcClip;
     ChoiceParam *fieldOrder, *mode, *parity;
-    bool _hostIsResolve;
 };
 
 
@@ -447,13 +444,13 @@ DeinterlacePlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
@@ -462,17 +459,17 @@ DeinterlacePlugin::render(const RenderArguments &args)
     auto_ptr<const Image> srcn( ( _srcClip && _srcClip->isConnected() ) ?
                                      _srcClip->fetchImage(args.time + 1) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
     } else {
         //All the code below expects src to be valid
         setPersistentMessage(Message::eMessageError, "", "Failed to fetch input image");
         throwSuiteStatusException(kOfxStatFailed);
     }
     if ( srcp.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcp, args);
+        checkBadRenderScaleOrField(srcp, args);
     }
     if ( srcn.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcn, args);
+        checkBadRenderScaleOrField(srcn, args);
     }
 
     const OfxRectI rect = dst->getBounds();

@@ -119,8 +119,9 @@ public:
 
 private:
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         float ire[3];
 
         // push pixels
@@ -250,8 +251,6 @@ public:
     ColorBarsPlugin(OfxImageEffectHandle handle)
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) );
@@ -276,7 +275,6 @@ private:
     DoubleParam* _barIntensity;
     BooleanParam* _outputIRE;
     Clip* _srcClip;
-    bool _hostIsResolve;
 };
 
 
@@ -307,13 +305,13 @@ ColorBarsPlugin::setupAndProcess(ColorBarsProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     OfxRectD rod = {0., 0., 0., 0.};
     if ( !getRegionOfDefinition(time, rod) ) {

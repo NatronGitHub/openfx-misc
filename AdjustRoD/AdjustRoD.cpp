@@ -93,8 +93,6 @@ public:
         , _srcClip(NULL)
         , _size(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() ||
@@ -133,7 +131,6 @@ private:
     Clip *_srcClip;
     Double2DParam* _size;
     ChoiceParam* _boundary;
-    bool _hostIsResolve;
 };
 
 
@@ -154,7 +151,7 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() && dst.get() ) {
@@ -172,7 +169,7 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
     processor.setSrcImg( src.get(), _boundary->getValueAtTime(time) );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -266,8 +263,8 @@ AdjustRoDPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);

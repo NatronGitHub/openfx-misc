@@ -149,8 +149,9 @@ private:
     }
 
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         PIX color[nComponents];
 
         colorToPIX(_color, color);
@@ -186,8 +187,6 @@ public:
         , _color(NULL)
         , _colorRGB(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         if (solid) {
             _colorRGB   = fetchRGBParam(kParamColor);
@@ -212,7 +211,6 @@ private:
 private:
     RGBAParam  *_color;
     RGBParam *_colorRGB;
-    bool _hostIsResolve;
 };
 
 
@@ -241,13 +239,13 @@ ConstantPlugin::setupAndProcess(ConstantProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     OfxRGBAColourD color;
     if (_colorRGB) {

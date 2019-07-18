@@ -1208,7 +1208,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
         return;
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 # if defined(USE_OPENGL) && defined(DEBUG)
     if (args.openGLEnabled) {
         // (OpenGL direct rendering only)

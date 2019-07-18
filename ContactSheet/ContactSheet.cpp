@@ -211,7 +211,6 @@ private:
     BooleanParam* _selection;
     IntParam* _selectionInput;
     IntParam* _selectionFrame;
-    bool _hostIsResolve;
 };
 
 ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
@@ -231,9 +230,6 @@ ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
     , _selectionInput(NULL)
     , _selectionFrame(NULL)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
-
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
@@ -307,7 +303,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     //PixelComponentEnum dstComponents  = dst->getPixelComponents();
     const OfxRectI& dstBounds = dst->getBounds();
@@ -318,7 +314,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
     const size_t bxstride = dst->getPixelComponentCount();
     const size_t bystride = bwidth * bxstride;
     // clear the renderWindow
-    fillBlack( *this, args.renderWindow, dst.get() );
+    fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
 
     int first, last;
     _frameRange->getValueAtTime(time, first, last);
@@ -405,7 +401,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
                 auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
                                                srcClip->fetchImage(srcTime) : 0 );
                 if ( src.get() ) {
-                    checkBadRenderScaleOrField(_hostIsResolve, src, args);
+                    checkBadRenderScaleOrField(src, args);
                     BitDepthEnum srcBitDepth      = src->getPixelDepth();
                     //PixelComponentEnum srcComponents = src->getPixelComponents();
                     if ( (srcBitDepth != dstBitDepth) /*|| (srcComponents != dstComponents)*/ ) {

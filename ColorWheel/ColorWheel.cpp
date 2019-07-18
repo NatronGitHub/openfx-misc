@@ -214,9 +214,8 @@ private:
     }
 
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-        OfxPointD rs = _dstImg->getRenderScale();
         double par = _dstImg->getPixelAspectRatio();
         OfxPointD c; // center position in pixel
 
@@ -353,8 +352,6 @@ public:
         , _gamma(NULL)
         , _rotate(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) );
@@ -386,7 +383,6 @@ private:
     DoubleParam* _gamma;
     DoubleParam* _rotate;
     Clip* _srcClip;
-    bool _hostIsResolve;
 };
 
 
@@ -417,13 +413,13 @@ ColorWheelPlugin::setupAndProcess(ColorWheelProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // set the images
     processor.setDstImg( dst.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     double centerSaturation = _centerSaturation->getValueAtTime(time);
     double edgeSaturation = _edgeSaturation->getValueAtTime(time);

@@ -460,8 +460,9 @@ private:
         _count += count;
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         double min[nComponents], max[nComponents], sum[nComponents];
 
         std::fill( min, min + nComponents, +std::numeric_limits<double>::infinity() );
@@ -550,8 +551,9 @@ private:
         _count += count;
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         double sum_p2[nComponents];
 
         std::fill(sum_p2, sum_p2 + nComponents, 0.);
@@ -657,8 +659,9 @@ private:
         _count += count;
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         double sum_p3[nComponents];
         double sum_p4[nComponents];
 
@@ -757,8 +760,9 @@ private:
         _count += count;
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         double min[nComponentsHSVL], max[nComponentsHSVL], sum[nComponentsHSVL];
 
         std::fill( min, min + nComponentsHSVL, +std::numeric_limits<double>::infinity() );
@@ -849,8 +853,9 @@ private:
         _count += count;
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         double sum_p2[nComponentsHSVL];
 
         std::fill(sum_p2, sum_p2 + nComponentsHSVL, 0.);
@@ -954,8 +959,9 @@ private:
         _count += count;
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         double sum_p3[nComponentsHSVL];
         double sum_p4[nComponentsHSVL];
 
@@ -1110,8 +1116,9 @@ private:
         }
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         OfxPointD maxPos = {0., 0.};
         double maxVal[nComponents] = {0.};
         double maxLuma = -std::numeric_limits<double>::infinity();
@@ -1173,8 +1180,6 @@ public:
         , _interactive(NULL)
         , _restrictToRectangle(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -1268,31 +1273,33 @@ private:
     }
 
     /* set up and run a processor */
-    void setupAndProcess(ImageStatisticsProcessorBase &processor, const Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results);
+    void setupAndProcess(ImageStatisticsProcessorBase &processor, const Image* srcImg, double time, const OfxRectI &analysisWindow, const OfxPointD& renderScale, const Results &prevResults, Results *results);
 
     // compute computation window in srcImg
-    bool computeWindow(const Image* srcImg, double time, OfxRectI *analysisWindow);
+    bool computeWindow(const Image* srcImg, const OfxPointD& renderScale, double time, OfxRectI *analysisWindow);
 
     // update image statistics
-    void update(const Image* srcImg, double time, const OfxRectI& analysisWindow);
-    void updateHSVL(const Image* srcImg, double time, const OfxRectI& analysisWindow);
-    void updateLuma(const Image* srcImg, double time, const OfxRectI& analysisWindow);
+    void update(const Image* srcImg, double time, const OfxRectI& analysisWindow, const OfxPointD& renderScale);
+    void updateHSVL(const Image* srcImg, double time, const OfxRectI& analysisWindow, const OfxPointD& renderScale);
+    void updateLuma(const Image* srcImg, double time, const OfxRectI& analysisWindow, const OfxPointD& renderScale);
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, class PIX, int nComponents, int maxValue>
     void updateSubComponentsDepth(const Image* srcImg,
                                   double time,
                                   const OfxRectI &analysisWindow,
+                                  const OfxPointD& renderScale,
                                   const Results& prevResults,
                                   Results* results)
     {
         Processor<PIX, nComponents, maxValue> fred(*this);
-        setupAndProcess(fred, srcImg, time, analysisWindow, prevResults, results);
+        setupAndProcess(fred, srcImg, time, analysisWindow, renderScale, prevResults, results);
     }
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, int nComponents>
     void updateSubComponents(const Image* srcImg,
                              double time,
                              const OfxRectI &analysisWindow,
+                             const OfxPointD& renderScale,
                              const Results& prevResults,
                              Results* results)
     {
@@ -1300,15 +1307,15 @@ private:
 
         switch (srcBitDepth) {
         case eBitDepthUByte: {
-            updateSubComponentsDepth<Processor, unsigned char, nComponents, 255>(srcImg, time, analysisWindow, prevResults, results);
+            updateSubComponentsDepth<Processor, unsigned char, nComponents, 255>(srcImg, time, analysisWindow, renderScale, prevResults, results);
             break;
         }
         case eBitDepthUShort: {
-            updateSubComponentsDepth<Processor, unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, prevResults, results);
+            updateSubComponentsDepth<Processor, unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, renderScale, prevResults, results);
             break;
         }
         case eBitDepthFloat: {
-            updateSubComponentsDepth<Processor, float, nComponents, 1>(srcImg, time, analysisWindow, prevResults, results);
+            updateSubComponentsDepth<Processor, float, nComponents, 1>(srcImg, time, analysisWindow, renderScale, prevResults, results);
             break;
         }
         default:
@@ -1320,6 +1327,7 @@ private:
     void updateSub(const Image* srcImg,
                    double time,
                    const OfxRectI &analysisWindow,
+                   const OfxPointD& renderScale,
                    const Results& prevResults,
                    Results* results)
     {
@@ -1327,11 +1335,11 @@ private:
 
         assert(srcComponents == ePixelComponentAlpha || srcComponents == ePixelComponentRGB || srcComponents == ePixelComponentRGBA);
         if (srcComponents == ePixelComponentAlpha) {
-            updateSubComponents<Processor, 1>(srcImg, time, analysisWindow, prevResults, results);
+            updateSubComponents<Processor, 1>(srcImg, time, analysisWindow, renderScale, prevResults, results);
         } else if (srcComponents == ePixelComponentRGBA) {
-            updateSubComponents<Processor, 4>(srcImg, time, analysisWindow, prevResults, results);
+            updateSubComponents<Processor, 4>(srcImg, time, analysisWindow, renderScale, prevResults, results);
         } else if (srcComponents == ePixelComponentRGB) {
-            updateSubComponents<Processor, 3>(srcImg, time, analysisWindow, prevResults, results);
+            updateSubComponents<Processor, 3>(srcImg, time, analysisWindow, renderScale, prevResults, results);
         } else {
             // coverity[dead_error_line]
             throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -1369,7 +1377,6 @@ private:
     RGBAParam* _maxLumaPixVal;
     Double2DParam* _minLumaPix;
     RGBAParam* _minLumaPixVal;
-    bool _hostIsResolve;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1384,20 +1391,20 @@ ImageStatisticsPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -1405,7 +1412,7 @@ ImageStatisticsPlugin::render(const RenderArguments &args)
         }
     }
 
-    copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+    copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
     if ( src.get() ) {
         bool autoUpdate = _autoUpdate->getValueAtTime(args.time);
@@ -1414,18 +1421,18 @@ ImageStatisticsPlugin::render(const RenderArguments &args)
             // check if there is already a Keyframe, if yes update it
             int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
             OfxRectI analysisWindow;
-            bool intersect = computeWindow(src.get(), args.time, &analysisWindow);
+            bool intersect = computeWindow(src.get(), args.renderScale, args.time, &analysisWindow);
             if (intersect) {
                 if (k != -1) {
-                    update(src.get(), args.time, analysisWindow);
+                    update(src.get(), args.time, analysisWindow, args.renderScale);
                 }
                 k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
                 if (k != -1) {
-                    updateHSVL(src.get(), args.time, analysisWindow);
+                    updateHSVL(src.get(), args.time, analysisWindow, args.renderScale);
                 }
                 k = _maxLumaPix->getKeyIndex(args.time, eKeySearchNear);
                 if (k != -1) {
-                    updateLuma(src.get(), args.time, analysisWindow);
+                    updateLuma(src.get(), args.time, analysisWindow, args.renderScale);
                 }
             }
         }
@@ -1599,21 +1606,21 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                   _srcClip->fetchImage(args.time) : 0 );
         if ( src.get() ) {
-            checkBadRenderScale(_hostIsResolve, src, args);
-            bool intersect = computeWindow(src.get(), args.time, &analysisWindow);
+            checkBadRenderScale(src, args);
+            bool intersect = computeWindow(src.get(), args.renderScale, args.time, &analysisWindow);
             if (intersect) {
 #             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
                 getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #             endif
                 beginEditBlock("analyzeFrame");
                 if (doAnalyzeRGBA) {
-                    update(src.get(), args.time, analysisWindow);
+                    update(src.get(), args.time, analysisWindow, args.renderScale);
                 }
                 if (doAnalyzeHSVL) {
-                    updateHSVL(src.get(), args.time, analysisWindow);
+                    updateHSVL(src.get(), args.time, analysisWindow, args.renderScale);
                 }
                 if (doAnalyzeLuma) {
-                    updateLuma(src.get(), args.time, analysisWindow);
+                    updateLuma(src.get(), args.time, analysisWindow, args.renderScale);
                 }
                 endEditBlock();
 #             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
@@ -1636,17 +1643,17 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
             auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                       _srcClip->fetchImage(t) : 0 );
             if ( src.get() ) {
-                checkBadRenderScale(_hostIsResolve, src, args);
-                bool intersect = computeWindow(src.get(), t, &analysisWindow);
+                checkBadRenderScale(src, args);
+                bool intersect = computeWindow(src.get(), args.renderScale, t, &analysisWindow);
                 if (intersect) {
                     if (doAnalyzeSequenceRGBA) {
-                        update(src.get(), t, analysisWindow);
+                        update(src.get(), t, analysisWindow, args.renderScale);
                     }
                     if (doAnalyzeSequenceHSVL) {
-                        updateHSVL(src.get(), t, analysisWindow);
+                        updateHSVL(src.get(), t, analysisWindow, args.renderScale);
                     }
                     if (doAnalyzeSequenceLuma) {
-                        updateLuma(src.get(), t, analysisWindow);
+                        updateLuma(src.get(), t, analysisWindow, args.renderScale);
                     }
                 }
             }
@@ -1670,6 +1677,7 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor,
                                        const Image* srcImg,
                                        double time,
                                        const OfxRectI &analysisWindow,
+                                       const OfxPointD& renderScale,
                                        const Results &prevResults,
                                        Results *results)
 {
@@ -1677,7 +1685,7 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor,
     processor.setDstImg( const_cast<Image*>(srcImg) ); // not a bug: we only set dst
 
     // set the render window
-    processor.setRenderWindow(analysisWindow);
+    processor.setRenderWindow(analysisWindow, renderScale);
 
     processor.setPrevResults(time, prevResults);
 
@@ -1691,6 +1699,7 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor,
 
 bool
 ImageStatisticsPlugin::computeWindow(const Image* srcImg,
+                                     const OfxPointD& renderScale,
                                      double time,
                                      OfxRectI *analysisWindow)
 {
@@ -1721,7 +1730,7 @@ ImageStatisticsPlugin::computeWindow(const Image* srcImg,
         regionOfInterest.y2 += regionOfInterest.y1;
     }
     Coords::toPixelEnclosing(regionOfInterest,
-                             srcImg->getRenderScale(),
+                             renderScale,
                              srcImg->getPixelAspectRatio(),
                              analysisWindow);
 
@@ -1732,19 +1741,20 @@ ImageStatisticsPlugin::computeWindow(const Image* srcImg,
 void
 ImageStatisticsPlugin::update(const Image* srcImg,
                               double time,
-                              const OfxRectI &analysisWindow)
+                              const OfxRectI &analysisWindow,
+                              const OfxPointD& renderScale)
 {
     // TODO: CHECK if checkDoubleAnalysis param is true and analysisWindow is the same as btmLeft/sizeAnalysis
     Results results;
 
     if ( !abort() ) {
-        updateSub<ImageMinMaxMeanProcessor>(srcImg, time, analysisWindow, results, &results);
+        updateSub<ImageMinMaxMeanProcessor>(srcImg, time, analysisWindow, renderScale, results, &results);
     }
     if ( !abort() ) {
-        updateSub<ImageSDevProcessor>(srcImg, time, analysisWindow, results, &results);
+        updateSub<ImageSDevProcessor>(srcImg, time, analysisWindow, renderScale, results, &results);
     }
     if ( !abort() ) {
-        updateSub<ImageSkewnessKurtosisProcessor>(srcImg, time, analysisWindow, results, &results);
+        updateSub<ImageSkewnessKurtosisProcessor>(srcImg, time, analysisWindow, renderScale, results, &results);
     }
     if ( abort() ) {
         return;
@@ -1761,18 +1771,19 @@ ImageStatisticsPlugin::update(const Image* srcImg,
 void
 ImageStatisticsPlugin::updateHSVL(const Image* srcImg,
                                   double time,
-                                  const OfxRectI &analysisWindow)
+                                  const OfxRectI &analysisWindow,
+                                  const OfxPointD& renderScale)
 {
     Results results;
 
     if ( !abort() ) {
-        updateSub<ImageHSVLMinMaxMeanProcessor>(srcImg, time, analysisWindow, results, &results);
+        updateSub<ImageHSVLMinMaxMeanProcessor>(srcImg, time, analysisWindow, renderScale, results, &results);
     }
     if ( !abort() ) {
-        updateSub<ImageHSVLSDevProcessor>(srcImg, time, analysisWindow, results, &results);
+        updateSub<ImageHSVLSDevProcessor>(srcImg, time, analysisWindow, renderScale, results, &results);
     }
     if ( !abort() ) {
-        updateSub<ImageHSVLSkewnessKurtosisProcessor>(srcImg, time, analysisWindow, results, &results);
+        updateSub<ImageHSVLSkewnessKurtosisProcessor>(srcImg, time, analysisWindow, renderScale, results, &results);
     }
     if ( abort() ) {
         return;
@@ -1788,12 +1799,13 @@ ImageStatisticsPlugin::updateHSVL(const Image* srcImg,
 void
 ImageStatisticsPlugin::updateLuma(const Image* srcImg,
                                   double time,
-                                  const OfxRectI &analysisWindow)
+                                  const OfxRectI &analysisWindow,
+                                  const OfxPointD& renderScale)
 {
     Results results;
 
     if ( !abort() ) {
-        updateSub<ImageLumaProcessor>(srcImg, time, analysisWindow, results, &results);
+        updateSub<ImageLumaProcessor>(srcImg, time, analysisWindow, renderScale, results, &results);
     }
     if ( abort() ) {
         return;

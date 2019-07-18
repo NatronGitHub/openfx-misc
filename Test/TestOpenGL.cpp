@@ -145,8 +145,6 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
     , _openGLContextData()
     , _openGLContextAttached(false)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
     try {
         _rendererInfoMutex.reset(new Mutex);
 #if defined(HAVE_OSMESA)
@@ -182,6 +180,7 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _enableGPU = fetchBooleanParam(kParamEnableGPU);
     assert(_enableGPU);
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
     if (!hostDescription.supportsOpenGLRender) {
         _enableGPU->setEnabled(false);
     }
@@ -216,8 +215,8 @@ TestOpenGLPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     bool openGLRender = false;
 #if defined(OFX_SUPPORTS_OPENGLRENDER)

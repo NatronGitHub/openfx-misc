@@ -1097,9 +1097,6 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _openGLContextAttached(false)
     , _presets(gPresetsDefault)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
-
     try {
         _imageShaderMutex.reset(new Mutex);
         _rendererInfoMutex.reset(new Mutex);
@@ -1169,6 +1166,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _groupExtra = fetchGroupParam(kGroupExtraParameters);
     _paramCount = fetchIntParam(kParamCount);
     assert(_groupExtra && _paramCount);
+    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
     const unsigned int nbuniforms = (hostDescription.hostName == "uk.co.thefoundry.nuke" && hostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
     _paramGroup.resize(nbuniforms);
     _paramType.resize(nbuniforms);

@@ -122,8 +122,9 @@ public:
 
 private:
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -171,8 +172,6 @@ public:
         , _offset(NULL)
         , _convergemode(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -216,7 +215,6 @@ private:
     Double2DParam *_convergepoint;
     IntParam     *_offset;
     ChoiceParam  *_convergemode;
-    bool _hostIsResolve;
 };
 
 
@@ -245,7 +243,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // fetch main input image
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
@@ -253,7 +251,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
 
     // make sure bit depths are sane
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
 
@@ -272,7 +270,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
     processor.setSrcImg( src.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
 #pragma message WARN("TODO")
     (void)offset;
@@ -350,8 +348,8 @@ ReConvergePlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);

@@ -62,8 +62,6 @@ public:
         , _srcLeftClip(NULL)
         , _srcRightClip(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -97,7 +95,6 @@ private:
     Clip *_dstClip;
     Clip *_srcLeftClip;
     Clip *_srcRightClip;
-    bool _hostIsResolve;
 };
 
 bool
@@ -188,7 +185,7 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // fetch main input image
     auto_ptr<const Image> src( args.renderView == 0 ?
@@ -205,7 +202,7 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         }
     } else {
         // make sure bit depths are sane
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
 
@@ -220,7 +217,7 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
     processor.setSrcImg( src.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();

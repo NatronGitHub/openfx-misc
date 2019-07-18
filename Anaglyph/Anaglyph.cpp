@@ -115,8 +115,9 @@ public:
 
 private:
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         const Image *srcRedImg = _srcLeftImg;
         const Image *srcCyanImg = _srcRightImg;
 
@@ -194,8 +195,6 @@ public:
         , _swap(NULL)
         , _offset(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -224,7 +223,6 @@ private:
     DoubleParam  *_amtcolour;
     BooleanParam *_swap;
     IntParam     *_offset;
-    bool _hostIsResolve;
 };
 
 
@@ -253,18 +251,18 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // fetch main input image
     auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
                                         _srcClip->fetchImagePlane(args.time, 0, kFnOfxImagePlaneColour) : 0 );
     if ( srcLeft.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcLeft, args);
+        checkBadRenderScaleOrField(srcLeft, args);
     }
     auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchImagePlane(args.time, 1, kFnOfxImagePlaneColour) : 0 );
     if ( srcRight.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcRight, args);
+        checkBadRenderScaleOrField(srcRight, args);
     }
 
     // make sure bit depths are sane
@@ -297,7 +295,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
     processor.setSrcRightImg( srcRight.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // set the parameters
     processor.setAmtColour(amtcolour);
@@ -324,8 +322,8 @@ AnaglyphPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args,
 void
 AnaglyphPlugin::render(const RenderArguments &args)
 {
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();

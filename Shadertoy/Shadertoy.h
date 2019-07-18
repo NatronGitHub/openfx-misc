@@ -513,7 +513,6 @@ private:
     std::list<OSMesaPrivate *> _osmesa;
     OFX::auto_ptr<Mutex> _osmesaMutex;
 #endif
-    bool _hostIsResolve;
 };
 
 void getChannelInfo(const char* fragmentShader, unsigned channel, std::string& label, std::string& hint, ShadertoyPlugin::FilterEnum& filter, ShadertoyPlugin::WrapEnum& wrap);

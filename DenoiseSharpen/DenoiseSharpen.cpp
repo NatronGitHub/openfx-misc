@@ -795,8 +795,6 @@ public:
         , _maskInvert(NULL)
         , _premultChanged(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -1082,7 +1080,6 @@ private:
     BooleanParam* _maskInvert;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
     BooleanParam* _b3;
-    bool _hostIsResolve;
 };
 
 // compute the maximum level used in wavelet_denoise (not the number of levels)
@@ -2230,7 +2227,7 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
 #ifdef _OPENMP
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
-    omp_set_num_threads( (std::max)(1u, MultiThread::getNumCPUs() ) );
+    //omp_set_num_threads( (std::max)(1u, MultiThread::getNumCPUs() ) );
 #endif
     DBG(cout << "render! with " << MultiThread::getNumCPUs() << " CPUs\n");
 
@@ -2239,8 +2236,8 @@ DenoiseSharpenPlugin::render(const RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB /*|| dstComponents == ePixelComponentXY*/ || dstComponents == ePixelComponentAlpha);
     // do the rendering
     switch (dstComponents) {
@@ -2324,14 +2321,14 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     src.reset( ( _srcClip && _srcClip->isConnected() ) ?
                _srcClip->fetchImage(time) : 0 );
     if ( !src.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -2341,7 +2338,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     p.doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     mask.reset(p.doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, mask, args);
+        checkBadRenderScaleOrField(mask, args);
     }
     clearPersistentMessage();
 
@@ -2357,6 +2354,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
         DBG(cout << "render called although analysis not locked and isidentity=true\n");
         copyPixels(*this,
                    args.renderWindow,
+                   args.renderScale,
                    src.get(),
                    dst.get());
         return;
@@ -2962,8 +2960,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     omp_set_num_threads( (std::max)(1u, MultiThread::getNumCPUs() ) );
 #endif
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB /*|| dstComponents == ePixelComponentXY*/ || dstComponents == ePixelComponentAlpha);
     // do the rendering
     switch (dstComponents) {
@@ -3051,12 +3049,12 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
                    _srcClip->fetchImage(time, cropRect) : 0 );
     }
     if ( src.get() ) {
-        checkBadRenderScale(_hostIsResolve, src, args);
+        checkBadRenderScale(src, args);
     }
     bool doMasking = _analysisMaskClip && _analysisMaskClip->isConnected();
     mask.reset(doMasking ? _analysisMaskClip->fetchImage(time, cropRect) : 0);
     if ( mask.get() ) {
-        checkBadRenderScale(_hostIsResolve, mask, args);
+        checkBadRenderScale(mask, args);
     }
     if ( !src.get() ) {
         setPersistentMessage(Message::eMessageError, "", "No Source image to analyze");

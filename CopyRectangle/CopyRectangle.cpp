@@ -170,8 +170,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         float yMultiplier, xMultiplier;
         float tmpPix[nComponents];
@@ -256,8 +257,6 @@ public:
         , _processB(NULL)
         , _processA(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -339,7 +338,6 @@ private:
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
-    bool _hostIsResolve;
 };
 
 void
@@ -376,11 +374,11 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
                                      _srcClipA->fetchImage(args.time) : 0 );
     if ( srcA.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcA, args);
+        checkBadRenderScaleOrField(srcA, args);
         BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
         PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -390,7 +388,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
     auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(args.time) : 0 );
     if ( srcB.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcB, args);
+        checkBadRenderScaleOrField(srcB, args);
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -400,7 +398,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if ( mask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, mask, args);
+        checkBadRenderScaleOrField(mask, args);
     }
     if (doMasking) {
         bool maskInvert;
@@ -414,7 +412,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
     processor.setSrcImgs( srcA.get(), srcB.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     OfxRectD rectangle;
     getRectanglecanonical(args.time, rectangle);

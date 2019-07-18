@@ -89,9 +89,6 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     , _defaultUnpremult(defaultUnpremult)
     , _premultChanged(NULL)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
-
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
                          _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -305,6 +302,7 @@ CImgFilterPluginHelperBase::describeInContextEnd(ImageEffectDescriptor &desc,
 void
 CImgFilterPluginHelperBase::setupAndFill(PixelProcessorFilterBase & processor,
                                          const OfxRectI &renderWindow,
+                                         const OfxPointD &renderScale,
                                          void *dstPixelData,
                                          const OfxRectI& dstBounds,
                                          PixelComponentEnum dstPixelComponents,
@@ -319,7 +317,7 @@ CImgFilterPluginHelperBase::setupAndFill(PixelProcessorFilterBase & processor,
     processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstPixelDepth, dstRowBytes);
 
     // set the render window
-    processor.setRenderWindow(renderWindow);
+    processor.setRenderWindow(renderWindow, renderScale);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -330,6 +328,7 @@ void
 CImgFilterPluginHelperBase::setupAndCopy(PixelProcessorFilterBase & processor,
                                          double time,
                                          const OfxRectI &renderWindow,
+                                         const OfxPointD &renderScale,
                                          const Image* orig,
                                          const Image* mask,
                                          const void *srcPixelData,
@@ -380,7 +379,7 @@ CImgFilterPluginHelperBase::setupAndCopy(PixelProcessorFilterBase & processor,
     processor.setSrcImg(srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary);
 
     // set the render window
-    processor.setRenderWindow(renderWindow);
+    processor.setRenderWindow(renderWindow, renderScale);
 
     processor.setPremultMaskMix(premult, premultChannel, mix);
 

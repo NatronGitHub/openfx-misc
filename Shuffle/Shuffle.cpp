@@ -294,8 +294,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         const Image* channelMapImg[nComponentsDst];
         int channelMapComp[nComponentsDst]; // channel component, or value if no image
         int srcMapComp[4]; // R,G,B,A components for src
@@ -474,8 +475,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         assert(_inputPlanes.size() == nComponentsDst);
         // now compute the transformed image, component by component
 
@@ -543,8 +545,6 @@ public:
         , _outputComponents(NULL)
         , _setGBAFromR(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -696,7 +696,6 @@ private:
     ChoiceParam *_outputPremult;
 
     BooleanParam* _setGBAFromR;
-    bool _hostIsResolve;
 };
 
 OfxStatus
@@ -902,7 +901,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     const double time = args.time;
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
 
     InputChannelEnum r, g, b, a;
@@ -915,14 +914,14 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     BitDepthEnum srcBitDepth = eBitDepthNone;
     PixelComponentEnum srcComponents = ePixelComponentNone;
     if ( srcDefault.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcDefault, args);
+        checkBadRenderScaleOrField(srcDefault, args);
         srcBitDepth      = srcDefault->getPixelDepth();
         srcComponents = srcDefault->getPixelComponents();
         assert(_srcClipDefault && _srcClipDefault->getPixelComponents() == srcComponents);
     }
 
     if ( srcOther.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcOther, args);
+        checkBadRenderScaleOrField(srcOther, args);
         BitDepthEnum srcOtherBitDepth      = srcOther->getPixelDepth();
         PixelComponentEnum srcOtherComponents = srcOther->getPixelComponents();
         assert(_srcClipOther && _srcClipOther->getPixelComponents() == srcOtherComponents);
@@ -982,7 +981,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     processor.setValues(outputComponents, outputComponentCount, outputBitDepth, channelMap);
 
     processor.setDstImg(dst);
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     processor.process();
 } // ShufflePlugin::setupAndProcess
@@ -1018,7 +1017,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
 {
     const double time = args.time;
     
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
 
     InputImagesHolder_RAII imagesHolder;
@@ -1059,7 +1058,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
         }
 
         if (p.img) {
-            checkBadRenderScaleOrField(_hostIsResolve, p.img, args);
+            checkBadRenderScaleOrField(p.img, args);
             if (srcBitDepth == eBitDepthNone) {
                 srcBitDepth = p.img->getPixelDepth();
             } else {
@@ -1083,7 +1082,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
     processor.setValues(dstNComps, outputBitDepth, planes);
 
     processor.setDstImg(dst);
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     processor.process();
 } // ShufflePlugin::setupAndProcessMultiPlane

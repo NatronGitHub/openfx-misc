@@ -176,7 +176,6 @@ private:
     ChoiceParam* _rowOrder;
     ChoiceParam* _colOrder;
     BooleanParam* _showLayerNames;
-    bool _hostIsResolve;
 };
 
 LayerContactSheetPlugin::LayerContactSheetPlugin(OfxImageEffectHandle handle)
@@ -192,9 +191,6 @@ LayerContactSheetPlugin::LayerContactSheetPlugin(OfxImageEffectHandle handle)
     , _colOrder(NULL)
     , _showLayerNames(NULL)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
-
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
     _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -251,7 +247,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     //PixelComponentEnum dstComponents  = dst->getPixelComponents();
     const OfxRectI& dstBounds = dst->getBounds();
@@ -262,7 +258,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     const size_t bxstride = dst->getPixelComponentCount();
     const size_t bystride = bwidth * bxstride;
     // clear the renderWindow
-    fillBlack( *this, args.renderWindow, dst.get() );
+    fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
 
     OfxRectD rod;
     {
@@ -281,8 +277,8 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     OfxRectD renderWindowCanonical;
     Coords::toCanonical(args.renderWindow, args.renderScale, dstPar, &renderWindowCanonical);
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     OfxRectD srcFormatCanonical;
     {
@@ -357,7 +353,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
                 // nothing to do
                 return;
             } else {
-                checkBadRenderScaleOrField(_hostIsResolve, src, args);
+                checkBadRenderScaleOrField(src, args);
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 //PixelComponentEnum srcComponents = src->getPixelComponents();
                 if ( (srcBitDepth != dstBitDepth) /*|| (srcComponents != dstComponents)*/ ) {

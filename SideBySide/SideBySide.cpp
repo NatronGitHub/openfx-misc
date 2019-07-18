@@ -106,8 +106,9 @@ public:
 
 private:
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         assert(_srcOffset.max != 0);
         double offset = _srcOffset.max - _srcOffset.min;
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -159,8 +160,6 @@ public:
         , view1_(NULL)
         , view2_(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -202,7 +201,6 @@ private:
     BooleanParam *vertical_;
     ChoiceParam *view1_;
     ChoiceParam *view2_;
-    bool _hostIsResolve;
 };
 
 
@@ -233,7 +231,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // fetch main input image
     int view1;
@@ -252,7 +250,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
 
     // make sure bit depths are sane
     if ( src1.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src1, args);
+        checkBadRenderScaleOrField(src1, args);
         BitDepthEnum srcBitDepth      = src1->getPixelDepth();
         PixelComponentEnum srcComponents = src1->getPixelComponents();
 
@@ -262,7 +260,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
         }
     }
     if ( src2.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src2, args);
+        checkBadRenderScaleOrField(src2, args);
         BitDepthEnum srcBitDepth      = src2->getPixelDepth();
         PixelComponentEnum srcComponents = src2->getPixelComponents();
 
@@ -286,7 +284,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
     processor.setSrcImg2( src2.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // set the parameters
     processor.setVerticalAndOffset(vertical, offset);
@@ -406,8 +404,8 @@ SideBySidePlugin::render(const RenderArguments &args)
         throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     }
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();

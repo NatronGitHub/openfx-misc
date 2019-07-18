@@ -147,7 +147,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     const OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
     const int dstPixelComponentCount = dst->getPixelComponentCount();
@@ -161,7 +161,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         if ( (srcABitDepth != dstBitDepth) || (srcAPixelComponents != dstPixelComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        checkBadRenderScaleOrField(_hostIsResolve, srcA, args);
+        checkBadRenderScaleOrField(srcA, args);
     }
 
     const void *srcAPixelData;
@@ -204,7 +204,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         if ( (srcBBitDepth != dstBitDepth) || (srcBPixelComponents != dstPixelComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        checkBadRenderScaleOrField(_hostIsResolve, srcB, args);
+        checkBadRenderScaleOrField(srcB, args);
     }
 
     const void *srcBPixelData;
@@ -397,7 +397,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         }
         assert( fred.get() );
         if ( fred.get() ) {
-            setupAndCopy(*fred, time, srcRoI,
+            setupAndCopy(*fred, time, srcRoI, renderScale,
                          NULL, NULL,
                          srcAPixelData, srcABounds, srcAPixelComponents, srcAPixelComponentCount, srcABitDepth, srcARowBytes, srcBoundary,
                          tmpAPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
@@ -440,7 +440,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         }
         assert( fred.get() );
         if ( fred.get() ) {
-            setupAndCopy(*fred, time, srcRoI,
+            setupAndCopy(*fred, time, srcRoI, renderScale,
                          NULL, NULL,
                          srcBPixelData, srcBBounds, srcBPixelComponents, srcBPixelComponentCount, srcBBitDepth, srcBRowBytes, srcBoundary,
                          tmpBPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
@@ -529,7 +529,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         }
         assert( fred.get() );
         if ( fred.get() ) {
-            setupAndCopy(*fred, time, renderWindow,
+            setupAndCopy(*fred, time, renderWindow, renderScale,
                          NULL, NULL,
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes, 0,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,

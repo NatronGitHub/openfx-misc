@@ -90,8 +90,9 @@ public:
 
 private:
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -128,8 +129,6 @@ public:
         , _srcClip(NULL)
         , _mix(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -159,7 +158,6 @@ private:
     Clip *_dstClip;
     Clip *_srcClip;
     DoubleParam *_mix;
-    bool _hostIsResolve;
 };
 
 
@@ -188,7 +186,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // fetch main input image
     auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
@@ -198,7 +196,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
 
     // make sure bit depths are sane
     if ( srcLeft.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcLeft, args);
+        checkBadRenderScaleOrField(srcLeft, args);
         BitDepthEnum srcBitDepth      = srcLeft->getPixelDepth();
         PixelComponentEnum srcComponents = srcLeft->getPixelComponents();
 
@@ -208,7 +206,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
         }
     }
     if ( srcRight.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcRight, args);
+        checkBadRenderScaleOrField(srcRight, args);
         BitDepthEnum srcBitDepth      = srcRight->getPixelDepth();
         PixelComponentEnum srcComponents = srcRight->getPixelComponents();
 
@@ -226,7 +224,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
     processor.setSrcRightImg( srcRight.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // set the parameters
     processor.setMix( (float)mix );
@@ -270,8 +268,8 @@ MixViewsPlugin::render(const RenderArguments &args)
         throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     }
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();

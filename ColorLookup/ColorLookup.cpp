@@ -428,8 +428,9 @@ public:
 
 private:
     // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         float tmpPix[4];
@@ -851,8 +852,9 @@ private:
         _count += count;
     }
 
-    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         std::vector<unsigned long> histogram(HISTOGRAM_BINS * nComponents);
         unsigned long count = 0;
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
@@ -900,8 +902,6 @@ public:
         , _luminanceMath(NULL)
         , _premultChanged(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -982,13 +982,14 @@ private:
     setupAndProcess(HistogramProcessorBase &processor,
                     const Image* srcImg,
                     const OfxRectI &analysisWindow,
+                    const OfxPointD& rs,
                     Results *results)
     {
         // set the images
         processor.setDstImg( const_cast<Image*>(srcImg) ); // not a bug: we only set dst
 
         // set the render window
-        processor.setRenderWindow(analysisWindow);
+        processor.setRenderWindow(analysisWindow, rs);
 
         // Call the base class process member, this will call the derived templated process code
         processor.process();
@@ -1002,13 +1003,14 @@ private:
     void
     update(const Image* srcImg,
            double time,
-           const OfxRectI &analysisWindow)
+           const OfxRectI &analysisWindow,
+           const OfxPointD& renderScale)
     {
         // TODO: CHECK if checkDoubleAnalysis param is true and analysisWindow is the same as btmLeft/sizeAnalysis
         Results results;
 
         if ( !abort() ) {
-            updateSub<HistogramProcessor>(srcImg, time, analysisWindow, &results);
+            updateSub<HistogramProcessor>(srcImg, time, analysisWindow, renderScale, &results);
         }
         {
             AutoMutex l (&_histogramMutex);
@@ -1020,6 +1022,7 @@ private:
     void updateSubComponentsDepth(const Image* srcImg,
                                   double time,
                                   const OfxRectI &analysisWindow,
+                                  const OfxPointD& renderScale,
                                   Results* results)
     {
         double rangemin, rangemax;
@@ -1029,28 +1032,29 @@ private:
         _premult->getValueAtTime(time, premult);
         _premultChannel->getValueAtTime(time, premultChannel);
         Processor<PIX, nComponents, maxValue> fred(*this, rangemin, rangemax, premult, premultChannel);
-        setupAndProcess(fred, srcImg, analysisWindow, results);
+        setupAndProcess(fred, srcImg, analysisWindow, renderScale, results);
     }
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, int nComponents>
     void updateSubComponents(const Image* srcImg,
                              double time,
                              const OfxRectI &analysisWindow,
+                             const OfxPointD& renderScale,
                              Results* results)
     {
         BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
 
         switch (srcBitDepth) {
             case eBitDepthUByte: {
-                updateSubComponentsDepth<Processor, unsigned char, nComponents, 255>(srcImg, time, analysisWindow, results);
+                updateSubComponentsDepth<Processor, unsigned char, nComponents, 255>(srcImg, time, analysisWindow, renderScale, results);
                 break;
             }
             case eBitDepthUShort: {
-                updateSubComponentsDepth<Processor, unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, results);
+                updateSubComponentsDepth<Processor, unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, renderScale, results);
                 break;
             }
             case eBitDepthFloat: {
-                updateSubComponentsDepth<Processor, float, nComponents, 1>(srcImg, time, analysisWindow, results);
+                updateSubComponentsDepth<Processor, float, nComponents, 1>(srcImg, time, analysisWindow, renderScale, results);
                 break;
             }
             default:
@@ -1062,17 +1066,18 @@ private:
     void updateSub(const Image* srcImg,
                    double time,
                    const OfxRectI &analysisWindow,
+                   const OfxPointD& renderScale,
                    Results* results)
     {
         PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
 
         assert(srcComponents == ePixelComponentAlpha || srcComponents == ePixelComponentRGB || srcComponents == ePixelComponentRGBA);
         if (srcComponents == ePixelComponentAlpha) {
-            updateSubComponents<Processor, 1>(srcImg, time, analysisWindow, results);
+            updateSubComponents<Processor, 1>(srcImg, time, analysisWindow, renderScale, results);
         } else if (srcComponents == ePixelComponentRGBA) {
-            updateSubComponents<Processor, 4>(srcImg, time, analysisWindow, results);
+            updateSubComponents<Processor, 4>(srcImg, time, analysisWindow, renderScale, results);
         } else if (srcComponents == ePixelComponentRGB) {
-            updateSubComponents<Processor, 3>(srcImg, time, analysisWindow, results);
+            updateSubComponents<Processor, 3>(srcImg, time, analysisWindow, renderScale, results);
         } else {
             // coverity[dead_error_line]
             throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -1103,7 +1108,6 @@ private:
     BooleanParam* _premultChanged; // set to true the first time the user connects src
     Mutex _histogramMutex; //< this is used so we can multi-thread the analysis and protect the shared results
     Results _histogram;
-    bool _hostIsResolve;
 };
 
 void
@@ -1124,11 +1128,11 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -1139,7 +1143,7 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if ( mask.get() ) {
-            checkBadRenderScaleOrField(_hostIsResolve, mask, args);
+            checkBadRenderScaleOrField(mask, args);
         }
         bool maskInvert;
         _maskInvert->getValueAtTime(time, maskInvert);
@@ -1161,7 +1165,7 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
 
     processor.setDstImg( dst.get() );
     processor.setSrcImg( src.get() );
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(time, premult);
@@ -1277,8 +1281,8 @@ ColorLookupPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     if (dstComponents == ePixelComponentRGBA) {
         renderForComponents<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
@@ -1356,12 +1360,12 @@ ColorLookupPlugin::updateHistogram(const InstanceChangedArgs &args)
     auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                              _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
-        checkBadRenderScale(_hostIsResolve, src, args);
+        checkBadRenderScale(src, args);
 #     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #     endif
         beginEditBlock("analyzeFrame");
-        update(src.get(), args.time, src->getBounds());
+        update(src.get(), args.time, src->getBounds(), args.renderScale);
         endEditBlock();
 #     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);

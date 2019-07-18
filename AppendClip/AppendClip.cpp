@@ -122,8 +122,6 @@ public:
         , _firstFrame(NULL)
         , _lastFrame(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
@@ -199,7 +197,6 @@ private:
     IntParam* _crossDissolve;
     IntParam* _firstFrame;
     IntParam* _lastFrame;
-    bool _hostIsResolve;
 };
 
 
@@ -566,7 +563,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     const double time = args.time;
     int firstFrame;
@@ -587,7 +584,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
 
     if ( ( (clip0 == -1) && (clip1 == -1) ) || ( (alpha0 == 0.) && (alpha1 == 0.) ) ) {
         // no clip, just fill with black
-        fillBlack( *this, args.renderWindow, dst.get() );
+        fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
 
         return;
     }
@@ -598,14 +595,14 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
         auto_ptr<const Image> src( ( _srcClip[clip0] && _srcClip[clip0]->isConnected() ) ?
                                         _srcClip[clip0]->fetchImage(t0) : 0 );
         if ( src.get() ) {
-            checkBadRenderScaleOrField(_hostIsResolve, src, args);
+            checkBadRenderScaleOrField(src, args);
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
             PixelComponentEnum srcComponents = src->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
-        copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+        copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
         return;
     }
@@ -618,11 +615,11 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
 
     // make sure bit depths are sane
     if ( fromImg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, fromImg, args);
+        checkBadRenderScaleOrField(fromImg, args);
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if ( toImg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, toImg, args);
+        checkBadRenderScaleOrField(toImg, args);
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
@@ -632,7 +629,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
     processor.setToImg( toImg.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // set the scales
     assert(0 < alpha0 && alpha0 <= 1 && 0 <= alpha1 && alpha1 < 1);
@@ -652,8 +649,8 @@ AppendClipPlugin::render(const RenderArguments &args)
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        assert( kSupportsMultipleClipPARs   || _srcClip[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-        assert( kSupportsMultipleClipDepths || _srcClip[i]->getPixelDepth()       == _dstClip->getPixelDepth() );
+        assert( kSupportsMultipleClipPARs   || !_srcClip[i] || !_srcClip[i]->isConnected() || _srcClip[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+        assert( kSupportsMultipleClipDepths || !_srcClip[i] || !_srcClip[i]->isConnected() || _srcClip[i]->getPixelDepth()       == _dstClip->getPixelDepth() );
     }
     // do the rendering
     if (dstComponents == ePixelComponentRGBA) {

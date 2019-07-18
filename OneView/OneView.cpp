@@ -65,8 +65,6 @@ public:
         , _srcClip(NULL)
         , _view(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -104,7 +102,6 @@ private:
     Clip *_srcClip;
     ChoiceParam     *_view;
     std::vector<std::string> _knownViews;
-    bool _hostIsResolve;
 };
 
 void
@@ -179,7 +176,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     int view;
     _view->getValueAtTime(args.time, view);
@@ -189,7 +186,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
 
     // make sure bit depths are sane
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
 
@@ -209,7 +206,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
     processor.setSrcImg( src.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -250,8 +247,8 @@ OneViewPlugin::render(const RenderArguments &args)
         throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     }
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();

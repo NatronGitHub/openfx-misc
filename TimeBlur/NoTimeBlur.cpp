@@ -61,8 +61,6 @@ public:
         , _srcClip(NULL)
         , _rounding(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -81,7 +79,6 @@ private:
     Clip *_dstClip;
     Clip *_srcClip;
     ChoiceParam *_rounding;
-    bool _hostIsResolve;
 };
 
 
@@ -103,14 +100,14 @@ NoTimeBlurPlugin::render(const RenderArguments &args)
 
     const double time = args.time;
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     auto_ptr<Image> dst( _dstClip->fetchImage(time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
@@ -131,14 +128,14 @@ NoTimeBlurPlugin::render(const RenderArguments &args)
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(srcTime) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+    copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 } // NoTimeBlurPlugin::render
 
 bool

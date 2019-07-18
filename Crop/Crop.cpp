@@ -159,7 +159,7 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
@@ -182,7 +182,7 @@ private:
                     OfxPointD p;
                     p_pixel.x = x - _translation.x;
                     p_pixel.y = y - _translation.y;
-                    Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
+                    Coords::toCanonical(p_pixel, rs, _dstImg->getPixelAspectRatio(), &p);
                     double dx = (std::min)(p.x - _cropRectFull.x1, _cropRectFull.x2 - p.x);
                     double dy = (std::min)(p.y - _cropRectFull.y1, _cropRectFull.y2 - p.y);
 
@@ -262,8 +262,6 @@ public:
         , _intersect(NULL)
         , _blackOutside(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -351,7 +349,6 @@ private:
     BooleanParam* _reformat;
     BooleanParam* _intersect;
     BooleanParam* _blackOutside;
-    bool _hostIsResolve;
 };
 
 void
@@ -492,11 +489,11 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, src, args);
+        checkBadRenderScaleOrField(src, args);
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         PixelComponentEnum dstComponents  = dst->getPixelComponents();
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -511,7 +508,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor,
     processor.setSrcImg( src.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     bool reformat = _reformat->getValueAtTime(args.time);
     bool blackOutside = _blackOutside->getValueAtTime(args.time);
@@ -601,8 +598,8 @@ CropPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);

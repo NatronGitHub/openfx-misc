@@ -97,8 +97,6 @@ public:
         , _dissolveOut(NULL)
         , _dissolveCurve(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
@@ -153,7 +151,6 @@ private:
     IntParam* _dissolveIn;
     IntParam* _dissolveOut;
     ParametricParam* _dissolveCurve;
-    bool _hostIsResolve;
 };
 
 
@@ -228,7 +225,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     // get the transition value
     double which = getTransition(time);
@@ -239,14 +236,14 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
                                         ( which == 1. && _srcClipB && _srcClipB->isConnected() ) ?
                                         _srcClipB->fetchImage(time) : 0 );
         if ( src.get() ) {
-            checkBadRenderScaleOrField(_hostIsResolve, src, args);
+            checkBadRenderScaleOrField(src, args);
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
             PixelComponentEnum srcComponents = src->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
-        copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+        copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
         return;
     }
@@ -259,11 +256,11 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
 
     // make sure bit depths are sane
     if ( fromImg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, fromImg, args);
+        checkBadRenderScaleOrField(fromImg, args);
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if ( toImg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, toImg, args);
+        checkBadRenderScaleOrField(toImg, args);
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
@@ -273,7 +270,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
     processor.setToImg( toImg.get() );
 
     // set the render window
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // set the scales
     processor.setBlend(which);

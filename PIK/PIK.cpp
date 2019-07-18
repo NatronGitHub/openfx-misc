@@ -688,8 +688,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         assert(nComponents == 4);
         assert(!_fgImg || _fgImg->getPixelComponents() == ePixelComponentRGBA || _fgImg->getPixelComponents() == ePixelComponentRGB);
         assert(!_pfgImg || _pfgImg->getPixelComponents() == ePixelComponentRGBA || _pfgImg->getPixelComponents() == ePixelComponentRGB);
@@ -1497,8 +1498,6 @@ public:
         , _ubc(NULL)
         , _colorspace(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
@@ -1674,7 +1673,6 @@ private:
     BooleanParam* _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
     ChoiceParam* _colorspace;
     ChoiceParam* _outputMode;
-    bool _hostIsResolve;
 };
 
 
@@ -1703,7 +1701,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
 
     ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValueAtTime(time);
     OfxRGBColourD color = {0., 0., 1.};
@@ -1835,7 +1833,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     auto_ptr<const Image> outMask( ( getoutm && ( _outMaskClip && _outMaskClip->isConnected() ) ) ?
                                         _outMaskClip->fetchImage(time) : 0 );
     if ( fg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, fg, args);
+        checkBadRenderScaleOrField(fg, args);
         BitDepthEnum fgBitDepth      = fg->getPixelDepth();
         //PixelComponentEnum fgComponents = fg->getPixelComponents();
         if (fgBitDepth != dstBitDepth /* || fgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
@@ -1847,7 +1845,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     }
 
     if ( pfg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, pfg, args);
+        checkBadRenderScaleOrField(pfg, args);
         BitDepthEnum pfgBitDepth      = pfg->getPixelDepth();
         //PixelComponentEnum pfgComponents = pfg->getPixelComponents();
         if (pfgBitDepth != dstBitDepth /* || pfgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
@@ -1856,7 +1854,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     }
 
     if ( c.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, c, args);
+        checkBadRenderScaleOrField(c, args);
         BitDepthEnum cBitDepth      = c->getPixelDepth();
         //PixelComponentEnum cComponents = c->getPixelComponents();
         if (cBitDepth != dstBitDepth /* || cComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
@@ -1868,7 +1866,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     }
 
     if ( bg.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, bg, args);
+        checkBadRenderScaleOrField(bg, args);
         BitDepthEnum srcBitDepth      = bg->getPixelDepth();
         //PixelComponentEnum srcComponents = bg->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) {  // Keyer outputs RGBA but may have RGB input
@@ -1880,10 +1878,10 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     }
 
     if ( inMask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, inMask, args);
+        checkBadRenderScaleOrField(inMask, args);
     }
     if ( outMask.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, outMask, args);
+        checkBadRenderScaleOrField(outMask, args);
     }
 
     processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal,
@@ -1891,7 +1889,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
                         sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( /*!noKey &&*/ !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     processor.process();
 } // PIKPlugin::setupAndProcess

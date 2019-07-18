@@ -166,8 +166,9 @@ public:
     }
 
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
+        unused(rs);
         float tmpPix[4];
         for (int c = 0; c < 4; ++c) {
             tmpPix[c] = 0;
@@ -245,8 +246,6 @@ public:
         , _srcClipB(NULL)
         , _maskClip(NULL)
     {
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        _hostIsResolve = (hostDescription.hostName.substr(0, 14) == "DaVinciResolve");  // Resolve gives bad image properties
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
@@ -299,7 +298,6 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     BooleanParam* _aChannels[4];
-    bool _hostIsResolve;
 };
 
 
@@ -360,14 +358,14 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    checkBadRenderScaleOrField(_hostIsResolve, dst, args);
+    checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
                                      _srcClipA->fetchImage(time) : 0 );
     auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(time) : 0 );
 
     if ( srcA.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcA, args);
+        checkBadRenderScaleOrField(srcA, args);
         BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
         PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -376,7 +374,7 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
     }
 
     if ( srcB.get() ) {
-        checkBadRenderScaleOrField(_hostIsResolve, srcB, args);
+        checkBadRenderScaleOrField(srcB, args);
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -405,7 +403,7 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
     processor.setValues(mix, aChannels);
     processor.setDstImg( dst.get() );
     processor.setSrcImg( srcA.get(), srcB.get() );
-    processor.setRenderWindow(args.renderWindow);
+    processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     processor.process();
 } // KeyMixPlugin::setupAndProcess
