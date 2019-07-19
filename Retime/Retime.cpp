@@ -190,6 +190,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+#ifndef NDEBUG
 // make sure components are sane
 static void
 checkComponents(const Image &src,
@@ -204,6 +205,7 @@ checkComponents(const Image &src,
         throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 }
+#endif
 
 static void
 framesNeeded(double sourceTime,
@@ -256,6 +258,7 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -264,12 +267,14 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
         // should have been caught by isIdentity...
         auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                         _srcClip->fetchImage(sourceTime) : 0 );
-        if ( src.get() ) {
+#    ifndef NDEBUG
+       if ( src.get() ) {
             checkBadRenderScaleOrField(src, args);
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
             PixelComponentEnum srcComponents = src->getPixelComponents();
@@ -277,6 +282,7 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
+#     endif
         copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
         return;
@@ -293,6 +299,7 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     auto_ptr<Image> toImg( ( _srcClip && _srcClip->isConnected() ) ?
                                 _srcClip->fetchImage(toTime) : 0 );
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( fromImg.get() ) {
         checkBadRenderScaleOrField(fromImg, args);
@@ -302,6 +309,7 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
         checkBadRenderScaleOrField(toImg, args);
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
+# endif
 
     // set the images
     processor.setDstImg( dst.get() );

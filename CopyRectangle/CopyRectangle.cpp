@@ -367,6 +367,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -375,8 +376,10 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
     auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
                                      _srcClipA->fetchImage(args.time) : 0 );
+# ifndef NDEBUG
     if ( srcA.get() ) {
         checkBadRenderScaleOrField(srcA, args);
         BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
@@ -385,8 +388,10 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
+# endif
     auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(args.time) : 0 );
+# ifndef NDEBUG
     if ( srcB.get() ) {
         checkBadRenderScaleOrField(srcB, args);
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
@@ -395,6 +400,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
+# endif
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if ( mask.get() ) {

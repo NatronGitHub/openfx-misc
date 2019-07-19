@@ -597,15 +597,16 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
-    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
+# ifndef NDEBUG
+    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-
+# endif
 
     InputChannelEnum r, g, b, a;
     // compute the components mapping tables
@@ -615,6 +616,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(args.time) : 0 );
     BitDepthEnum srcBitDepth = eBitDepthNone;
+# ifndef NDEBUG
     PixelComponentEnum srcComponents = ePixelComponentNone;
     if ( srcA.get() ) {
         checkBadRenderScaleOrField(srcA, args);
@@ -634,6 +636,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     r = (InputChannelEnum)_channelParam[0]->getValueAtTime(time);
     g = (InputChannelEnum)_channelParam[1]->getValueAtTime(time);
@@ -744,10 +747,8 @@ ShufflePlugin::render(const RenderArguments &args)
     if (!_srcClipA || !_srcClipB || !_dstClip) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    const double time = args.time;
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     int dstComponentCount  = _dstClip->getPixelComponentCount();
     assert(1 <= dstComponentCount && dstComponentCount <= 4);
 
@@ -757,6 +758,10 @@ ShufflePlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
     // get the components of _dstClip
 
+    BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
+# ifndef NDEBUG
+    const double time = args.time;
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     {
         PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
         if (dstComponents != outputComponents) {
@@ -774,7 +779,6 @@ ShufflePlugin::render(const RenderArguments &args)
         }
     }
 
-    BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
 
     if ( _srcClipA->isConnected() && _srcClipB->isConnected() ) {
         BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
@@ -784,6 +788,7 @@ ShufflePlugin::render(const RenderArguments &args)
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     switch (dstComponentCount) {
     case 4:
@@ -955,6 +960,7 @@ void
 ShufflePlugin::changedClip(const InstanceChangedArgs & /*args*/,
                            const std::string &clipName)
 {
+# ifndef NDEBUG
     if ( (getContext() == eContextGeneral) &&
          ( ( clipName == kClipA) || ( clipName == kClipB) ) ) {
         // check that A and B are compatible if they're both connected
@@ -968,6 +974,9 @@ ShufflePlugin::changedClip(const InstanceChangedArgs & /*args*/,
             }
         }
     }
+# else
+    unused(clipName);
+# endif
     updateVisibility();
 }
 

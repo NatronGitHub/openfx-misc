@@ -349,6 +349,7 @@ CImgFilterPluginHelperBase::setupAndCopy(PixelProcessorFilterBase & processor,
                                          double mix,
                                          bool maskInvert)
 {
+# ifndef NDEBUG
     // src may not be valid over the renderWindow
     //assert(srcPixelData &&
     //       srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
@@ -361,6 +362,7 @@ CImgFilterPluginHelperBase::setupAndCopy(PixelProcessorFilterBase & processor,
     if ( srcPixelData && (srcBitDepth != dstPixelDepth) ) {
         throwSuiteStatusException(kOfxStatErrFormat);
     }
+# endif
 
     if ( Coords::rectIsEmpty(renderWindow) ) {
         return;

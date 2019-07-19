@@ -1694,6 +1694,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -1702,6 +1703,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValueAtTime(time);
     OfxRGBColourD color = {0., 0., 1.};
@@ -1833,56 +1835,66 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     auto_ptr<const Image> outMask( ( getoutm && ( _outMaskClip && _outMaskClip->isConnected() ) ) ?
                                         _outMaskClip->fetchImage(time) : 0 );
     if ( fg.get() ) {
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(fg, args);
         BitDepthEnum fgBitDepth      = fg->getPixelDepth();
         //PixelComponentEnum fgComponents = fg->getPixelComponents();
         if (fgBitDepth != dstBitDepth /* || fgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+#     endif
     } else if (getfg) {
         // Nuke sometimes returns NULL when render is interrupted
         throwSuiteStatusException(kOfxStatFailed);
     }
 
     if ( pfg.get() ) {
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(pfg, args);
         BitDepthEnum pfgBitDepth      = pfg->getPixelDepth();
         //PixelComponentEnum pfgComponents = pfg->getPixelComponents();
         if (pfgBitDepth != dstBitDepth /* || pfgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+#     endif
     }
 
     if ( c.get() ) {
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(c, args);
         BitDepthEnum cBitDepth      = c->getPixelDepth();
         //PixelComponentEnum cComponents = c->getPixelComponents();
         if (cBitDepth != dstBitDepth /* || cComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+#     endif
     } else if (getc) {
         setPersistentMessage(Message::eMessageError, "", "Clean plate (C input) is required but not available or not connected");
         throwSuiteStatusException(kOfxStatFailed);
     }
 
     if ( bg.get() ) {
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(bg, args);
         BitDepthEnum srcBitDepth      = bg->getPixelDepth();
         //PixelComponentEnum srcComponents = bg->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) {  // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+#     endif
     } else if (getbg) {
         setPersistentMessage(Message::eMessageError, "", "Backgroung (Bg input) is required but not available or not connected");
         throwSuiteStatusException(kOfxStatFailed);
     }
 
+# ifndef NDEBUG
     if ( inMask.get() ) {
         checkBadRenderScaleOrField(inMask, args);
     }
     if ( outMask.get() ) {
         checkBadRenderScaleOrField(outMask, args);
     }
+# endif
 
     processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal,
                         screenClipMin, screenClipMax, screenReplace, screenReplaceColor,
@@ -1900,7 +1912,6 @@ PIKPlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert( kSupportsMultipleClipPARs   || !_fgClip || !_fgClip->isConnected() || _fgClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_fgClip || !_fgClip->isConnected() || _fgClip->getPixelDepth()       == _dstClip->getPixelDepth() );
@@ -1910,12 +1921,15 @@ PIKPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || !_cClip || !_cClip->isConnected() || _cClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert( kSupportsMultipleClipPARs   || !_bgClip || !_bgClip->isConnected() || _bgClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_bgClip || !_bgClip->isConnected() || _bgClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+# ifndef NDEBUG
+    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     if (dstComponents != ePixelComponentRGBA) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host dit not take into account output components");
         throwSuiteStatusException(kOfxStatErrImageFormat);
 
         return;
     }
+# endif
 
     clearPersistentMessage();
     

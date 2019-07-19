@@ -200,10 +200,11 @@ TestGroupsPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
+# ifndef NDEBUG
+    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -212,6 +213,7 @@ TestGroupsPlugin::render(const RenderArguments &args)
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
     copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 }
 

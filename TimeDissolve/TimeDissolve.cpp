@@ -160,6 +160,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+#ifndef NDEBUG
 // make sure components are sane
 static void
 checkComponents(const Image &src,
@@ -174,6 +175,7 @@ checkComponents(const Image &src,
         throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 }
+#endif
 
 double
 TimeDissolvePlugin::getTransition(double time)
@@ -218,6 +220,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -226,6 +229,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // get the transition value
     double which = getTransition(time);
@@ -235,6 +239,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
                                         _srcClipA->fetchImage(time) :
                                         ( which == 1. && _srcClipB && _srcClipB->isConnected() ) ?
                                         _srcClipB->fetchImage(time) : 0 );
+#     ifndef NDEBUG
         if ( src.get() ) {
             checkBadRenderScaleOrField(src, args);
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -243,6 +248,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
+#     endif
         copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
         return;
@@ -254,6 +260,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
     auto_ptr<const Image> toImg( ( _srcClipB && _srcClipB->isConnected() ) ?
                                       _srcClipB->fetchImage(time) : 0 );
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( fromImg.get() ) {
         checkBadRenderScaleOrField(fromImg, args);
@@ -263,6 +270,7 @@ TimeDissolvePlugin::setupAndProcess(ImageBlenderBase &processor,
         checkBadRenderScaleOrField(toImg, args);
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
+# endif
 
     // set the images
     processor.setDstImg( dst.get() );

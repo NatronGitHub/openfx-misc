@@ -559,6 +559,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
 {
     // get a dst image
 
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -567,6 +568,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // fetch main input image
 
@@ -581,6 +583,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
 
 
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( src ) {
         checkBadRenderScaleOrField(src, args);
@@ -592,6 +595,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     bool processR, processG, processB, processA;
     _processR->getValueAtTime(args.time, processR);

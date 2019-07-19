@@ -169,6 +169,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -177,6 +178,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     int view;
     _view->getValueAtTime(args.time, view);
@@ -186,6 +188,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
 
     // make sure bit depths are sane
     if ( src.get() ) {
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
@@ -194,6 +197,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+#     endif
     } else {
         setPersistentMessage(Message::eMessageError, "", "Failed to fetch source image");
         throwSuiteStatusException(kOfxStatFailed);

@@ -224,18 +224,20 @@ SwitchPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
                                     srcClip->fetchImage(time) : 0 );
+# ifndef DEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
+        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
     copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 }
 

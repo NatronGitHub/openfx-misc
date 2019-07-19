@@ -432,9 +432,11 @@ template <class Params, bool sourceIsOptional>
 void
 CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArguments &args)
 {
+# ifndef NDEBUG
     if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+# endif
 
     const double time = args.time;
     const OfxPointD& renderScale = args.renderScale;
@@ -452,12 +454,14 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     OFX::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
+#     ifndef NDEBUG
         OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcPixelComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcPixelComponents != dstPixelComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
         checkBadRenderScaleOrField(src, args);
+#     endif
 #if 0
     } else {
         // src is considered black and transparent, just fill black to dst and return
@@ -1032,9 +1036,11 @@ void
 CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
                                                                        OFX::RegionOfInterestSetter &rois)
 {
+# ifndef NDEBUG
     if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+# endif
     const double time = args.time;
     const OfxRectD& regionOfInterest = args.regionOfInterest;
     OfxRectD srcRoI;
@@ -1076,9 +1082,11 @@ bool
 CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
                                                                         OfxRectD &rod)
 {
+# ifndef NDEBUG
     if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+# endif
     Params params;
     getValuesAtTime(args.time, params);
 
@@ -1108,9 +1116,11 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::isIdentity(const OFX::IsIdenti
                                                              double & /*identityTime*/
                                                              , int& /*view*/, std::string& /*plane*/)
 {
+# ifndef NDEBUG
     if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+# endif
     const double time = args.time;
     double mix;
     _mix->getValueAtTime(time, mix);

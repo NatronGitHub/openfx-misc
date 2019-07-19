@@ -179,6 +179,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -187,6 +188,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // fetch main input image
     auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
@@ -194,6 +196,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
     auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchStereoscopicImage(args.time, 1) : 0 );
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( srcLeft.get() ) {
         checkBadRenderScaleOrField(srcLeft, args);
@@ -215,6 +218,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     double mix = _mix->getValueAtTime(args.time);
 

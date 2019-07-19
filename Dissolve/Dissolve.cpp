@@ -183,6 +183,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+#ifndef NDEBUG
 // make sure components are sane
 static void
 checkComponents(const Image &src,
@@ -197,6 +198,7 @@ checkComponents(const Image &src,
         throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 }
+#endif
 
 /* set up and run a processor */
 void
@@ -209,6 +211,7 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -217,7 +220,8 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-
+# endif
+    
     // get the transition value
     double which = (std::max)( 0., (std::min)(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
     int prev = std::floor(which);
@@ -226,6 +230,7 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
     if (prev == next) {
         auto_ptr<const Image> src( ( _srcClip[prev] && _srcClip[prev]->isConnected() ) ?
                                         _srcClip[prev]->fetchImage(args.time) : 0 );
+#     ifndef NDEBUG
         if ( src.get() ) {
             checkBadRenderScaleOrField(src, args);
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -234,6 +239,7 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
+#     endif
         copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
         return;
@@ -245,6 +251,7 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
     auto_ptr<const Image> toImg( ( _srcClip[next] && _srcClip[next]->isConnected() ) ?
                                       _srcClip[next]->fetchImage(args.time) : 0 );
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( fromImg.get() ) {
         checkBadRenderScaleOrField(fromImg, args);
@@ -254,6 +261,7 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
         checkBadRenderScaleOrField(toImg, args);
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
+# endif
 
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);

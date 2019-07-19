@@ -1201,6 +1201,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+# ifndef NDEBUG
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
@@ -1209,6 +1210,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         return;
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 # if defined(USE_OPENGL) && defined(DEBUG)
     if (args.openGLEnabled) {
         // (OpenGL direct rendering only)
@@ -1248,12 +1250,14 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
     OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+# ifndef NDEBUG
     if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
         DPRINT( ( "render: (srcBitDepth=%s != dstBitDepth=%s) || (srcComponents=%s != dstComponents=%s)\n", mapBitDepthEnumToStr(srcBitDepth), mapBitDepthEnumToStr(dstBitDepth), mapPixelComponentEnumToStr(srcComponents), mapPixelComponentEnumToStr(dstComponents) ) );
         OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
 
         return;
     }
+# endif
     GLenum srcTarget = GL_TEXTURE_2D;
     GLuint srcIndex = 0;
 # ifdef USE_OPENGL
@@ -2100,6 +2104,7 @@ TestOpenGLPlugin::contextAttached(bool createContextData)
 #else
     assert(!createContextData); // context data is handled differently in CPU rendering
 #endif
+    unused(createContextData);
 
 
 #if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )

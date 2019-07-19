@@ -108,8 +108,6 @@ NoTimeBlurPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
     double srcTime = time;
     switch (rounding) {
@@ -127,14 +125,18 @@ NoTimeBlurPlugin::render(const RenderArguments &args)
     }
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(srcTime) : 0 );
+# ifndef NDEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
+        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
     copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 } // NoTimeBlurPlugin::render
 

@@ -389,12 +389,14 @@ MirrorPlugin::render(const RenderArguments &args)
     auto_ptr<const Image> src(_srcClip->isConnected() ?
                                    _srcClip->fetchImage(args.time) : 0);
     if ( src.get() ) {
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+#     endif
     } else {
         setPersistentMessage(Message::eMessageError, "", "Failed to fetch source image");
         throwSuiteStatusException(kOfxStatFailed);
@@ -429,8 +431,9 @@ MirrorPlugin::render(const RenderArguments &args)
         }
     }
 
+# ifndef NDEBUG
     const OfxRectI& renderWindow = args.renderWindow;
-    // these things should never happens
+    // these things should never happen
     if ( !src.get() ||
          ( flip  &&
            !( ( srcBounds.y1 <= (yoff + 1 - renderWindow.y2) ) && ( renderWindow.y1 <= renderWindow.y2) && ( (yoff + 1 - renderWindow.y1) <= srcBounds.y2 ) ) ) ||
@@ -443,6 +446,7 @@ MirrorPlugin::render(const RenderArguments &args)
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave source image with wrong dimensions");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# endif
     mirrorPixels(*this, args.renderWindow, args.renderScale, srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, dstPixelData, dstBounds, dstComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
 } // MirrorPlugin::render
 

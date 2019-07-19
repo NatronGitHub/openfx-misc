@@ -205,18 +205,20 @@ FrameRangePlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    PixelComponentEnum dstComponents  = dst->getPixelComponents();
     auto_ptr<const Image> src( (_srcClip && _srcClip->isConnected() && !black) ?
                                     _srcClip->fetchImage(srcTime) : 0 );
+# ifndef NDEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
+        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        PixelComponentEnum dstComponents  = dst->getPixelComponents();
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
     if (black) {
         fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
     } else {

@@ -228,6 +228,7 @@ HueCorrectProcessorBase::clamp<float>(float value,
                                       int maxValue)
 {
     assert(maxValue == 1.);
+    unused(maxValue);
     if ( _clampBlack && (value < 0.) ) {
         value = 0.f;
     } else if ( _clampWhite && (value > 1.0) ) {
@@ -546,6 +547,7 @@ HueCorrectPlugin::setupAndProcess(HueCorrectProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -554,8 +556,10 @@ HueCorrectPlugin::setupAndProcess(HueCorrectProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
+# ifndef NDEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -564,6 +568,7 @@ HueCorrectPlugin::setupAndProcess(HueCorrectProcessorBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
@@ -576,6 +581,7 @@ HueCorrectPlugin::setupAndProcess(HueCorrectProcessorBase &processor,
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
+# ifndef NDEBUG
     if ( src.get() && dst.get() ) {
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
@@ -587,6 +593,7 @@ HueCorrectPlugin::setupAndProcess(HueCorrectProcessorBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     processor.setDstImg( dst.get() );
     processor.setSrcImg( src.get() );
@@ -1308,6 +1315,7 @@ HueKeyerPlugin::setupAndProcess(HueKeyerProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -1316,8 +1324,10 @@ HueKeyerPlugin::setupAndProcess(HueKeyerProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
+# ifndef NDEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -1338,6 +1348,7 @@ HueKeyerPlugin::setupAndProcess(HueKeyerProcessorBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     processor.setDstImg( dst.get() );
     processor.setSrcImg( src.get() );

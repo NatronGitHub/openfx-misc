@@ -244,6 +244,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -252,6 +253,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // fetch main input image
     auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
@@ -265,6 +267,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
         checkBadRenderScaleOrField(srcRight, args);
     }
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( srcLeft.get() ) {
         BitDepthEnum srcBitDepth      = srcLeft->getPixelDepth();
@@ -284,6 +287,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     double amtcolour = _amtcolour->getValueAtTime(args.time);
     bool swap = _swap->getValueAtTime(args.time);
@@ -326,11 +330,13 @@ AnaglyphPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+#ifndef NDEBUG
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
     assert(dstComponents == ePixelComponentRGBA);
-
+#endif
+    
     switch (dstBitDepth) {
     case eBitDepthUByte: {
         ImageAnaglypher<unsigned char, 255> fred(*this);

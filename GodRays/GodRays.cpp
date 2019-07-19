@@ -850,6 +850,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -858,6 +859,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     size_t invtransformsizealloc = 0;
@@ -885,6 +887,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         invtransform[0](2,1) = 0.;
         invtransform[0](2,2) = 1.;
     } else {
+#     ifndef NDEBUG
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         PixelComponentEnum dstComponents  = dst->getPixelComponents();
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -892,7 +895,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
-
+#     endif
         bool invert = false;
         if (_invert) {
             _invert->getValueAtTime(time, invert);

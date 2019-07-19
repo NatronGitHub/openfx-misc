@@ -206,6 +206,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+#ifndef NDEBUG
 // make sure components are sane
 static void
 checkComponents(const Image &src,
@@ -220,6 +221,7 @@ checkComponents(const Image &src,
         throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 }
+#endif
 
 void
 AppendClipPlugin::getSources(int firstFrame,
@@ -556,6 +558,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -564,7 +567,8 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-
+# endif
+    
     const double time = args.time;
     int firstFrame;
     _firstFrame->getValueAtTime(time, firstFrame);
@@ -594,6 +598,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
         //assert(0);
         auto_ptr<const Image> src( ( _srcClip[clip0] && _srcClip[clip0]->isConnected() ) ?
                                         _srcClip[clip0]->fetchImage(t0) : 0 );
+#     ifndef NDEBUG
         if ( src.get() ) {
             checkBadRenderScaleOrField(src, args);
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -602,6 +607,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
+#     endif
         copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
         return;
@@ -613,6 +619,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
     auto_ptr<const Image> toImg( ( clip1 != -1 && _srcClip[clip1] && _srcClip[clip1]->isConnected() ) ?
                                       _srcClip[clip1]->fetchImage(t1) : 0 );
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( fromImg.get() ) {
         checkBadRenderScaleOrField(fromImg, args);
@@ -622,6 +629,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
         checkBadRenderScaleOrField(toImg, args);
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
+# endif
 
     // set the images
     processor.setDstImg( dst.get() );

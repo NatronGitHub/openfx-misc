@@ -507,6 +507,7 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -515,8 +516,10 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
+# ifndef NDEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -525,6 +528,7 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
@@ -538,6 +542,7 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor,
     }
 
     if ( src.get() && dst.get() ) {
+#     ifndef NDEBUG
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
@@ -547,6 +552,7 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+#     endif
     }
 
     // set the images

@@ -304,8 +304,6 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    //PixelComponentEnum dstComponents  = dst->getPixelComponents();
     const OfxRectI& dstBounds = dst->getBounds();
     assert(dst->getPixelDepth() == eBitDepthFloat);
     float* b = (float*)dst->getPixelData();
@@ -401,13 +399,16 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
                 auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
                                                srcClip->fetchImage(srcTime) : 0 );
                 if ( src.get() ) {
+#                 ifndef NDEBUG
                     checkBadRenderScaleOrField(src, args);
+                    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+                    //PixelComponentEnum dstComponents  = dst->getPixelComponents();
                     BitDepthEnum srcBitDepth      = src->getPixelDepth();
                     //PixelComponentEnum srcComponents = src->getPixelComponents();
                     if ( (srcBitDepth != dstBitDepth) /*|| (srcComponents != dstComponents)*/ ) {
                         throwSuiteStatusException(kOfxStatErrImageFormat);
                     }
-
+#                 endif
                     //- draw it at the right place
                     const OfxRectI& srcBounds = src->getBounds();
                     assert(src->getPixelDepth() == eBitDepthFloat);

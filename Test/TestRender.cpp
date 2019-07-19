@@ -288,6 +288,7 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::s
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -296,15 +297,16 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::s
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // fetch main input image
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
-
     // make sure bit depths are sane
     if ( src.get() ) {
         assert(_srcClip);
         checkBadRenderScaleOrField(src, args);
+#     ifndef NDEBUG
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
 
@@ -312,6 +314,7 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::s
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+#     endif
         OfxRectI srcRod; // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
         Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(args.time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRod);
         const OfxRectI& srcBounds = src->getBounds();
@@ -413,9 +416,11 @@ template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderSc
 void
 TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::render(const RenderArguments &args)
 {
+# ifndef NDEBUG
     if ( !supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# endif
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
@@ -448,9 +453,11 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::i
 #endif
                                                                                           )
 {
+# ifndef NDEBUG
     if ( !supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# endif
 
     bool forceCopy;
     _forceCopy->getValueAtTime(args.time, forceCopy);
@@ -639,9 +646,11 @@ void
 TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::changedParam(const InstanceChangedArgs &args,
                                                                                             const std::string &paramName)
 {
+# ifndef NDEBUG
     if ( !supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# endif
 
     if (paramName == kParamClipInfo) {
         std::ostringstream oss;
@@ -775,10 +784,12 @@ bool
 TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                                                                                      OfxRectD & /*rod*/)
 {
+# ifndef NDEBUG
     if ( !supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-
+# endif
+    
     // use the default RoD
     return false;
 }

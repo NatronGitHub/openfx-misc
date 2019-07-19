@@ -2314,6 +2314,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -2322,11 +2323,13 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
     src.reset( ( _srcClip && _srcClip->isConnected() ) ?
                _srcClip->fetchImage(time) : 0 );
     if ( !src.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -2335,6 +2338,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
     p.doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     mask.reset(p.doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {

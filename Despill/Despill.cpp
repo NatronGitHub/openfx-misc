@@ -217,6 +217,7 @@ DespillProcessorBase::clamp<float>(float value,
                                    int maxValue) const
 {
     assert(maxValue == 1.);
+    unused(maxValue);
     if ( _clampBlack && (value < 0.) ) {
         value = 0.f;
     } else if ( _clampWhite && (value > 1.0) ) {
@@ -232,6 +233,7 @@ DespillProcessorBase::clamp<float>(double value,
                                    int maxValue) const
 {
     assert(maxValue == 1.);
+    unused(maxValue);
     if ( _clampBlack && (value < 0.) ) {
         value = 0.f;
     } else if ( _clampWhite && (value > 1.0) ) {
@@ -428,6 +430,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "Failed to fetch output image");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -436,10 +439,11 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
-
     if ( src.get() ) {
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents  = src->getPixelComponents();
@@ -447,6 +451,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) { // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+#     endif
     } else {
         setPersistentMessage(Message::eMessageError, "", "Failed to fetch source image");
         throwSuiteStatusException(kOfxStatFailed);
@@ -488,10 +493,12 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     _mix->getValue(mix);
 
 
+# ifndef NDEBUG
     if ( outputAlpha && (dst->getPixelComponentCount() != 4) ) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# endif
 
 
     processor.setValues(spillMix, spillExpand, redScale, greenScale, blueScale, brightNess, clampBlack, clampWhite, (float)mix, outputAlpha);

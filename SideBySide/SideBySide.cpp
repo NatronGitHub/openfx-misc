@@ -224,6 +224,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
 
         return;
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -232,6 +233,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // fetch main input image
     int view1;
@@ -248,6 +250,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
     auto_ptr<const Image> src2( ( _srcClip && _srcClip->isConnected() ) ?
                                      _srcClip->fetchImagePlane(args.time, view2, kFnOfxImagePlaneColour) : 0 );
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( src1.get() ) {
         checkBadRenderScaleOrField(src1, args);
@@ -269,6 +272,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     bool vertical = vertical_->getValueAtTime(args.time);
 

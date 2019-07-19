@@ -298,6 +298,7 @@ ColorBarsPlugin::setupAndProcess(ColorBarsProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -306,7 +307,8 @@ ColorBarsPlugin::setupAndProcess(ColorBarsProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-
+# endif
+    
     // set the images
     processor.setDstImg( dst.get() );
 

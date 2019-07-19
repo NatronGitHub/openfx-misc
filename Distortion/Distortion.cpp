@@ -2234,6 +2234,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -2242,11 +2243,13 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
 
     auto_ptr<const Image> src( ( (outputMode == eOutputModeImage) && _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
+# ifndef NDEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -2255,6 +2258,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     InputImagesHolder_RAII imagesHolder;
     std::vector<InputPlaneChannel> planeChannels;
@@ -2305,10 +2309,12 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                     if (srcBitDepth == eBitDepthNone) {
                         srcBitDepth = p.img->getPixelDepth();
                     } else {
+#                     ifndef NDEBUG
                         // both input must have the same bit depth and components
                         if ( (srcBitDepth != eBitDepthNone) && ( srcBitDepth != p.img->getPixelDepth() ) ) {
                             throwSuiteStatusException(kOfxStatErrImageFormat);
                         }
+#                     endif
                     }
                     // If the channel is unavailabe in the image, fill with 0 (1 for Alpha)
                     // This may happen if the user selected  the hard-coded Alpha channel and the input is RGB

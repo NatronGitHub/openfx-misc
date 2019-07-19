@@ -372,6 +372,7 @@ InvertPlugin::setupAndProcess(InvertBase &processor,
         //std::cout << "setupAndProcess! can' fetch dst\n";
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -381,11 +382,13 @@ InvertPlugin::setupAndProcess(InvertBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // fetch main input image
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
@@ -397,6 +400,7 @@ InvertPlugin::setupAndProcess(InvertBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );

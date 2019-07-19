@@ -1034,6 +1034,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+# ifndef NDEBUG
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
@@ -1042,6 +1043,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         return;
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 # if defined(USE_OPENGL) && defined(DEBUG)
     if (args.openGLEnabled) {
         // (OpenGL direct rendering only)
@@ -1102,6 +1104,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         if ( src[i].get() ) {
+#         ifndef NDEBUG
             srcBitDepth[i] = src[i]->getPixelDepth();
             srcComponents[i] = src[i]->getPixelComponents();
             if ( (srcBitDepth[i] != dstBitDepth) || (srcComponents[i] != dstComponents) ) {
@@ -1109,6 +1112,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
                 return;
             }
+#         endif
             // filter for each texture (nearest, linear, mipmap [default])
             // nearest = GL_NEAREST/GL_NEAREST
             // linear = GL_LINEAR/GL_LINEAR

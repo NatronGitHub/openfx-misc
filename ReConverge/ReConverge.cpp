@@ -236,6 +236,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -244,11 +245,13 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // fetch main input image
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
 
+# ifndef NDEBUG
     // make sure bit depths are sane
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
@@ -260,6 +263,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+# endif
 
     int offset = _offset->getValueAtTime(args.time);
     int convergemode;

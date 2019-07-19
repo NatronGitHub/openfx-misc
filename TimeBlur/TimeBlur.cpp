@@ -272,6 +272,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -280,6 +281,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // accumulator image
     auto_ptr<ImageMemory> accumulator;
@@ -331,6 +333,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
             }
             const Image* src = _srcClip ? _srcClip->fetchImage(range.min + i * interval) : 0;
             //std::printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
+#         ifndef NDEBUG
             if (src) {
                 checkBadRenderScaleOrField(src, args);
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -339,6 +342,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
                     throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
             }
+#         endif
             srcImgs.images.push_back(src);
         }
 

@@ -178,6 +178,7 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -186,6 +187,7 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     // fetch main input image
     auto_ptr<const Image> src( args.renderView == 0 ?
@@ -195,13 +197,12 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
                                       _srcRightClip->fetchStereoscopicImage(args.time, 0) : 0 ) );
 
     if ( !src.get() ) {
-        if ( !abort() ) {
-            throwSuiteStatusException(kOfxStatFailed);
-        } else {
-            return;
-        }
+        assert(false);
+        throwSuiteStatusException(kOfxStatFailed);
+        return;
     } else {
-        // make sure bit depths are sane
+# ifndef NDEBUG
+       // make sure bit depths are sane
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
@@ -210,6 +211,7 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+# endif
     }
 
     // set the images

@@ -374,6 +374,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -382,14 +383,17 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
         throwSuiteStatusException(kOfxStatErrFormat);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() && dst.get() ) {
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth = src->getPixelDepth();
         if (srcBitDepth != dstBitDepth) {
             throwSuiteStatusException(kOfxStatErrFormat);
         }
+#     endif
     }
 
     // auto ptr for the mask.
@@ -402,11 +406,13 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
             setPersistentMessage(Message::eMessageError, "", "Error while rendering the roto mask");
             throwSuiteStatusException(kOfxStatFailed);
         }
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(mask, args);
         assert(OFX_COMPONENTS_OK(mask->getPixelComponents()));
         if ( mask->getPixelComponents() != dst->getPixelComponents() ) {
             throwSuiteStatusException(kOfxStatErrFormat);
         }
+#     endif
         // Set it in the processor
         processor.setRotoImg( mask.get() );
     }

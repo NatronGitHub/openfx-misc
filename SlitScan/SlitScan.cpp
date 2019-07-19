@@ -663,6 +663,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -671,6 +672,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+# endif
 
     double retimeGain = _retimeGain->getValueAtTime(time);
     RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
@@ -694,7 +696,8 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
             // should have been caught by isIdentity...
             auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                             _srcClip->fetchImage(identityTime) : 0 );
-            if ( src.get() ) {
+#        ifndef NDEBUG
+           if ( src.get() ) {
                 checkBadRenderScaleOrField(src, args);
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 PixelComponentEnum srcComponents = src->getPixelComponents();
@@ -702,6 +705,7 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
                     throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
             }
+#         endif
             copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
             return;

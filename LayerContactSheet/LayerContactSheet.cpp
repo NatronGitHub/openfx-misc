@@ -248,7 +248,6 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     //PixelComponentEnum dstComponents  = dst->getPixelComponents();
     const OfxRectI& dstBounds = dst->getBounds();
     assert(dst->getPixelDepth() == eBitDepthFloat);
@@ -353,12 +352,15 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
                 // nothing to do
                 return;
             } else {
+#             ifndef NDEBUG
                 checkBadRenderScaleOrField(src, args);
+                BitDepthEnum dstBitDepth       = dst->getPixelDepth();
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 //PixelComponentEnum srcComponents = src->getPixelComponents();
                 if ( (srcBitDepth != dstBitDepth) /*|| (srcComponents != dstComponents)*/ ) {
                     throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
+#             endif
 
                 //- draw it at the right place
                 const OfxRectI& srcBounds = src->getBounds();
