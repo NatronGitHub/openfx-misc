@@ -2117,6 +2117,7 @@ DistortionPlugin::getDistortionModel(const OfxRectD& format, const OfxPointD& re
 
     }
     assert(false);
+    return NULL;
 }
 
 // returns true if fixed format (i.e. not the input RoD) and setFormat can be called in getClipPrefs

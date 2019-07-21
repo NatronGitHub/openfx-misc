@@ -913,6 +913,7 @@ private:
             return _highlightsParamsGroup;
         default:
             assert(false);
+            return _masterParamsGroup;
             break;
         }
     }
