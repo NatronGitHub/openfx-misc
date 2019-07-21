@@ -13,8 +13,8 @@ LLVM_PATH ?= /opt/llvm
 
 ifeq ($(OSMESA),1)
   ## Enable these if you installed a mangled OSMesa (preferably with 32 bits FP support)
-  CXXFLAGS_MESA += -DHAVE_OSMESA
-  LDFLAGS_MESA += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
+  CXXFLAGS_MESA += -DHAVE_OSMESA -I$(OSMESA_PATH)/include
+  LDFLAGS_MESA += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
 endif
 
 CXXFLAGS_EXTRA += $(CXXFLAGS_MESA)
@@ -32,7 +32,7 @@ $(OBJECTPATH)/ShadertoyRenderGL.o: ShadertoyRenderGL.cpp ShadertoyRender.h Shade
 
 $(OBJECTPATH)/ShadertoyRenderMesa.o: ShadertoyRenderMesa.cpp ShadertoyRender.h Shadertoy.h
 	@mkdir -p $(OBJECTPATH)
-	$(AM_V_CXX)$(CXX) -c -I$(OSMESA_PATH)/include $(CXXFLAGS) $< -o $@
+	$(AM_V_CXX)$(CXX) -c $(CXXFLAGS) $< -o $@
 
 presets/tex00.jpg:
 	$(MAKE) -C presets
