@@ -17,7 +17,7 @@ ifeq ($(OSMESA),1)
   LDFLAGS_MESA += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
 endif
 
-CXXFLAGS_EXTRA += $(CXXFLAGS_MESA)
+#CXXFLAGS_EXTRA += $(CXXFLAGS_MESA) # only added when building ShadertoyRenderMesa.o
 LDFLAGS_EXTRA += $(LDFLAGS_MESA)
 
 TOP_SRCDIR = ..
@@ -32,7 +32,7 @@ $(OBJECTPATH)/ShadertoyRenderGL.o: ShadertoyRenderGL.cpp ShadertoyRender.h Shade
 
 $(OBJECTPATH)/ShadertoyRenderMesa.o: ShadertoyRenderMesa.cpp ShadertoyRender.h Shadertoy.h
 	@mkdir -p $(OBJECTPATH)
-	$(AM_V_CXX)$(CXX) -c $(CXXFLAGS) $< -o $@
+	$(AM_V_CXX)$(CXX) -c $(CXXFLAGS) $(CXXFLAGS_MESA) $< -o $@
 
 presets/tex00.jpg:
 	$(MAKE) -C presets
