@@ -64,6 +64,8 @@ using namespace OFX;
 
 using std::string;
 
+namespace Shadertoy {
+
 //OFXS_NAMESPACE_ANONYMOUS_ENTER // defines external classes
 #define NBINPUTS SHADERTOY_NBINPUTS
 #define NBUNIFORMS SHADERTOY_NBUNIFORMS
@@ -3271,3 +3273,5 @@ static ShadertoyPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginV
 mRegisterPluginFactoryInstance(p)
 
 #endif // OFX_SUPPORTS_OPENGLRENDER
+
+} // namespace Shadertoy

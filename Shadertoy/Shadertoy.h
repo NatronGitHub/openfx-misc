@@ -41,6 +41,8 @@
 #define SHADERTOY_NBUNIFORMS 20 // number of additional uniforms (if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group)
 #define SHADERTOY_NBUNIFORMS_NUKE7 7
 
+namespace Shadertoy {
+
 void getShadertoyPluginID(OFX::PluginFactoryArray &ids);
 
 struct ShadertoyShaderOpenGL;
@@ -520,5 +522,7 @@ void getChannelInfo(const char* fragmentShader, unsigned channel, std::string& l
 void getBboxInfo(const char* fragmentShader, ShadertoyPlugin::BBoxEnum& bbox);
 
 void getExtraParameterInfo(const char* fragmentShader, ShadertoyPlugin::ExtraParameter &p);
+
+} // namespace Shadertoy
 
 #endif // Misc_Shadertoy_h

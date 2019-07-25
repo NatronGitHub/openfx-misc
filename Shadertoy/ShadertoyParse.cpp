@@ -31,6 +31,8 @@
 
 using namespace std;
 
+namespace Shadertoy {
+
 /*
    static inline
    bool
@@ -492,3 +494,4 @@ main(int argc,
 
 #endif
 
+} // namespace Shadertoy

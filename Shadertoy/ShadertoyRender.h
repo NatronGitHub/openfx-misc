@@ -82,9 +82,7 @@
 
 #include "ofxsOGLDebug.h"
 
-#ifndef DEBUG
-#define DPRINT(args) (void)0
-#else
+#ifdef DEBUG
 #include <cstdarg> // ...
 #include <iostream>
 #include <stdio.h> // for snprintf & _snprintf
@@ -94,6 +92,13 @@
 #    define snprintf _snprintf
 #  endif
 #endif // defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#endif
+
+namespace Shadertoy {
+
+#ifndef DEBUG
+#define DPRINT(args) (void)0
+#else
 
 #define DPRINT(args) print_dbg args
 static
@@ -2559,5 +2564,7 @@ ShadertoyPlugin::OSMesaDriverSelectable()
 #endif
 }
 
-#endif
+#endif // USE_OSMESA
+
+} // namespace Shadertoy
 
