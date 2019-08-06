@@ -4576,13 +4576,13 @@ DistortionPluginFactory<plugin, majorVersion>::createInstance(OfxImageEffectHand
 
 static DistortionPluginFactory<eDistortionPluginIDistort,kPluginVersionMajor> pIDistort(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static DistortionPluginFactory<eDistortionPluginSTMap,kPluginVersionMajor> pSTMap(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-//static DistortionPluginFactory<eDistortionPluginLensDistortion,2> pLensDistortion2(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
-//static DistortionPluginFactory<eDistortionPluginLensDistortion,3> pLensDistortion3(kPluginLensDistortionIdentifier, 3, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,2> pLensDistortion2(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,3> pLensDistortion3(kPluginLensDistortionIdentifier, 3, kPluginVersionMinor);
 static DistortionPluginFactory<eDistortionPluginLensDistortion,kPluginVersionLensDistortionMajor> pLensDistortion4(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
 mRegisterPluginFactoryInstance(pIDistort)
 mRegisterPluginFactoryInstance(pSTMap)
-//mRegisterPluginFactoryInstance(pLensDistortion2)
-//mRegisterPluginFactoryInstance(pLensDistortion3)
+mRegisterPluginFactoryInstance(pLensDistortion2)
+mRegisterPluginFactoryInstance(pLensDistortion3)
 mRegisterPluginFactoryInstance(pLensDistortion4)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
