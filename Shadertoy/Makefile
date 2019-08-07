@@ -13,7 +13,8 @@ LLVM_PATH ?= /opt/llvm
 
 ifeq ($(OSMESA),1)
   ## Enable these if you installed a mangled OSMesa (preferably with 32 bits FP support)
-  CXXFLAGS_MESA += -DHAVE_OSMESA -I$(OSMESA_PATH)/include
+  CXXFLAGS_MESA += -I$(OSMESA_PATH)/include
+  CXXFLAGS_EXTRA += -DHAVE_OSMESA
   LDFLAGS_MESA += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
 endif
 
