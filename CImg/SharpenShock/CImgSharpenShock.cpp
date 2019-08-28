@@ -193,11 +193,11 @@ public:
             if (sigma > 0) {
                 G.blur(sigma);
             }
-            _cimg_abort_init_omp;
+            _cimg_abort_init_openmp;
             cimg_abort_init;
             cimg_pragma_openmp(parallel for if (G.width()>=32 && G.height()>=16))
             cimg_forY(G, y) {
-                _cimg_abort_try_omp {
+                _cimg_abort_try_openmp {
                     CImg<Tfloat> val, vec;
                     Tfloat *ptrG0 = G.data(0, y, 0, 0), *ptrG1 = G.data(0, y, 0, 1), *ptrG2 = G.data(0, y, 0, 2);
                     cimg_abort_test;
@@ -209,12 +209,12 @@ public:
                         *(ptrG1++) = vec(0, 1);
                         *(ptrG2++) = 1 - (Tfloat)std::pow(1 + val[0] + val[1], -(Tfloat)nedge);
                     }
-                } _cimg_abort_catch_omp
+                } _cimg_abort_catch_openmp
             }
             cimg_abort_test;
             cimg_pragma_openmp(parallel for if (cimg.width()*cimg.height()>=512 && cimg.spectrum()>=2))
             cimg_forC(cimg, c) {
-                _cimg_abort_try_omp {
+                _cimg_abort_try_openmp {
                     Tfloat *ptrd = velocity.data(0, 0, 0, c), veloc_max = 0;
 
                     CImg_3x3(I, Tfloat);
@@ -257,7 +257,7 @@ public:
                                 }
                             }
                     _veloc_max[c] = veloc_max;
-                } _cimg_abort_catch_omp
+                } _cimg_abort_catch_openmp
             }
             cimg_abort_test;
 

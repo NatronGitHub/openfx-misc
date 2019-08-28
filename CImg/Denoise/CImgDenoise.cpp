@@ -262,12 +262,12 @@ public:
             //case 9 : if (is_fast_approx) _cimg_blur_patch2d_fast(9) else _cimg_blur_patch2d(9) break;
             default : { // Fast
                 const int psize2 = (int)patch_size/2, psize1 = (int)patch_size - psize2 - 1;
-                _cimg_abort_init_omp;
+                _cimg_abort_init_openmp;
                 cimg_abort_init;
                 if (is_fast_approx) {
                     cimg_pragma_openmp(parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q))
                     cimg_forY(res,y) {
-                        _cimg_abort_try_omp {
+                        _cimg_abort_try_openmp {
                             cimg_abort_test;
                             cimg_forX(res,x) { // 2d fast approximation.
                                 P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
@@ -285,12 +285,12 @@ public:
                                 if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
                                 else cimg_forC(res,c) res(x,y,c) = (Tfloat)(cimg(x,y,c));
                             }
-                        } _cimg_abort_catch_omp
+                        } _cimg_abort_catch_openmp
                     }
                 } else {
                     cimg_pragma_openmp(parallel for cimg_openmp_if(res._width>=32 && res._height>=4) firstprivate(P,Q))
                     cimg_forY(res,y) {
-                        _cimg_abort_try_omp {
+                        _cimg_abort_try_openmp {
                             cimg_abort_test;
                             cimg_forX(res,x) { // 2d exact algorithm.
                                 P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
@@ -310,7 +310,7 @@ public:
                                 if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
                                 else cimg_forC(res,c) res(x,y,0,c) = (Tfloat)(cimg(x,y,c));
                             }
-                        } _cimg_abort_catch_omp
+                        } _cimg_abort_catch_openmp
                     }
                 }
                 cimg_abort_test;

@@ -85,8 +85,8 @@ install:
 
   # 17c15abb5b49208731e2dd5cd45958dc13603779 is CImg 2.6.7
   - git submodule -q update --init --recursive
-  - curl -L -s -S -o CImg/CImg.h https://raw.githubusercontent.com/dtschump/CImg/17c15abb5b49208731e2dd5cd45958dc13603779/CImg.h
-  - curl -L -s -S -o CImg/Inpaint/inpaint.h https://raw.githubusercontent.com/dtschump/CImg/17c15abb5b49208731e2dd5cd45958dc13603779/plugins/inpaint.h
+  - curl -L -s -S -o CImg/CImg.h https://raw.githubusercontent.com/dtschump/CImg/81a66d06d29763641ae533451543fa60d07f3a66/CImg.h
+  - curl -L -s -S -o CImg/Inpaint/inpaint.h https://raw.githubusercontent.com/dtschump/CImg/81a66d06d29763641ae533451543fa60d07f3a66/plugins/inpaint.h
   - patch -p0 -dCImg < CImg/Inpaint/inpaint.h.patch
 
 #---------------------------------#

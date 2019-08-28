@@ -12,7 +12,7 @@
    weights.draw_gaussian((float)p1,(float)p1,patch_size/15.0f,&one)/=patch_size2;
    unsigned int target_index = 0;
  
-+  _cimg_abort_init_omp;
++  _cimg_abort_init_openmp;
 +  cimg_abort_init;
    while (true) {
 +    cimg_abort_test;
