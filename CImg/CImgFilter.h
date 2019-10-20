@@ -52,13 +52,17 @@
     defined __ICL || \
     defined __DMC__ || \
     defined __BORLANDC__ )
-// For DLLs that are loaded dynamically after the process has started (delay load, COM objects,
+// "For DLLs that are loaded dynamically after the process has started (delay load, COM objects,
 // explicit LoadLibrary, etc) __declspec(thread) does not work on Windows XP, 2003 Server and
-// earlier OSes, but does work on Vista and 2008 Server.
-// http://msdn.microsoft.com/en-us/library/9w1sdazb%28v=vs.80%29.aspx#1
+// earlier OSes, but does work on Vista and 2008 Server."
+// https://web.archive.org/web/20121022172711/http://msdn.microsoft.com:80/en-US/library/9w1sdazb(v=vs.80).aspx#1
 // Unfortunately, OFX plugins are loaded using LoadLibrary()
-//#  define thread_local __declspec(thread)
-#pragma message WARN("CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang.")
+// _WIN32_WINNT = 0x0600 for Windows Server 2008 and Windows Vista.
+#  if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
+#    define thread_local __declspec(thread)
+#  else
+#    pragma message WARN("CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang.")
+#  endif
 /* note that ICC (linux) and Clang are covered by __GNUC__ */
 # elif defined __GNUC__ || \
     defined __SUNPRO_C || \
