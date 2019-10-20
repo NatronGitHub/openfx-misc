@@ -28,6 +28,26 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 PROJECT(OpenFXMisc CXX)
 ENABLE_TESTING()
 
+# ========================== build platform ==========================
+status("")
+status("  Platform:")
+status("    Host:"             ${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_VERSION} ${CMAKE_HOST_SYSTEM_PROCESSOR})
+if(CMAKE_CROSSCOMPILING)
+  status("    Target:"         ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION} ${CMAKE_SYSTEM_PROCESSOR})
+endif()
+status("    CMake:"            ${CMAKE_VERSION})
+status("    CMake generator:"  ${CMAKE_GENERATOR})
+status("    CMake build tool:" ${CMAKE_BUILD_TOOL})
+if(MSVC)
+  status("    MSVC:"           ${MSVC_VERSION})
+endif()
+if(CMAKE_GENERATOR MATCHES Xcode)
+  status("    Xcode:"          ${XCODE_VERSION})
+endif()
+if(NOT CMAKE_GENERATOR MATCHES "Xcode|Visual Studio")
+  status("    Configuration:"  ${CMAKE_BUILD_TYPE})
+endif()
+
 include(FindOpenGL REQUIRED)
 
 set (CMAKE_CXX_STANDARD 11)
@@ -489,12 +509,9 @@ endif(OPENMP_FOUND AND NOT MSVC)
 IF (MSVC)
   # Some files require this option. This breaks compatibility with older linkers.
   SET_TARGET_PROPERTIES(Misc PROPERTIES COMPILE_FLAGS "/bigobj")
-ENDIF ()
-
-IF (WIN32)
   # If the build system is at least Windows Vista (6.0),
   # compile for Windows Vista, to get interruptible CImg plugins (see CImgFilter.h)
-  IF (${CMAKE_SYSTEM_VERSION} VERSION_GREATER 5.1) # Windows XP
+  IF (NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 6.0) # Windows Vista
     ADD_DEFINITIONS(-D_WIN32_WINNT=0x0600 -DWINVER=0x0600)
   ENDIF ()
 ENDIF ()
