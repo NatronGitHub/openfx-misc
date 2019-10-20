@@ -107,7 +107,7 @@ configuration:
 before_build:
   - mkdir build
   - cd build
-  - cmd: cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install" "-DCMAKE_CXX_FLAGS=/D_WIN32_WINNT=0x0600 /DWINVER=0x600"
+  - cmd: cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install" "-DCMAKE_CXX_FLAGS=/D_WIN32_WINNT=0x0600 /DWINVER=0x600 /EHsc"
   - sh: cmake .. -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install" -DCMAKE_BUILD_TYPE=%configuration%
 
 # scripts to run after build
