@@ -60,6 +60,7 @@
 // _WIN32_WINNT = 0x0600 for Windows Server 2008 and Windows Vista.
 #  if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
 #    define thread_local __declspec(thread)
+#    define HAVE_THREAD_LOCAL
 #  else
 #    pragma message WARN("CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang.")
 #  endif
