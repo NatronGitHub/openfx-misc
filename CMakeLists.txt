@@ -513,6 +513,9 @@ IF (MSVC)
   # compile for Windows Vista, to get interruptible CImg plugins (see CImgFilter.h)
   IF (NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 6.0) # Windows Vista
     ADD_DEFINITIONS(-D_WIN32_WINNT=0x0600 -DWINVER=0x0600)
+    MESSAGE(STATUS "CImg plugins should be interruptible")
+  ELSE ()
+    MESSAGE(STATUS "CImg plugins may not be interruptible")
   ENDIF ()
 ENDIF ()
 
