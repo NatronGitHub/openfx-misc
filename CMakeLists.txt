@@ -491,6 +491,14 @@ IF (MSVC)
   SET_TARGET_PROPERTIES(Misc PROPERTIES COMPILE_FLAGS "/bigobj")
 ENDIF ()
 
+IF (WIN32)
+  # If the build system is at least Windows Vista (6.0),
+  # compile for Windows Vista, to get interruptible CImg plugins (see CImgFilter.h)
+  IF (${CMAKE_SYSTEM_VERSION} VERSION_GREATER 5.1) # Windows XP
+    ADD_DEFINITIONS(-D_WIN32_WINNT=0x0600 -DWINVER=0x0600)
+  ENDIF ()
+ENDIF ()
+
 # Find and set the arch name.
 # http://openeffects.org/documentation/reference/ch02s02.html
 SET(OFX_ARCH UNKNOWN)
