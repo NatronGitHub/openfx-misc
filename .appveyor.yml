@@ -102,10 +102,12 @@ configuration:
   - RelWithDebInfo
 
 # scripts to run before build
+# In the Visual Studio build, we set _WIN32_WINNT and WINVER to 0x0600
+# to get interruptible CImg plugins (see CImgFilte.h), but they require at least Windows Vista to run.
 before_build:
   - mkdir build
   - cd build
-  - cmd: cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install"
+  - cmd: cmake .. -G %GENERATOR% -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install" "-DCMAKE_CXX_FLAGS=/D_WIN32_WINNT=0x0600 /DWINVER=0x600"
   - sh: cmake .. -DCMAKE_INSTALL_PREFIX="c:/dev/openfx-misc/install" -DCMAKE_BUILD_TYPE=%configuration%
 
 # scripts to run after build
