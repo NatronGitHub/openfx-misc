@@ -27,23 +27,27 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -411,6 +415,8 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Card3D\Card3D.cpp" />
+    <ClCompile Include="..\Distortion\DistortionModel.cpp" />
     <ClCompile Include="..\TimeBuffer\TimeBuffer.cpp" />
     <ClCompile Include="..\Add\Add.cpp" />
     <ClCompile Include="..\AdjustRoD\AdjustRoD.cpp" />
@@ -441,7 +447,6 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="..\GodRays\GodRays.cpp" />
     <ClCompile Include="..\Grade\Grade.cpp" />
     <ClCompile Include="..\HSVTool\HSVTool.cpp" />
-    <ClCompile Include="..\Distortion\Distortion.cpp" />
     <ClCompile Include="..\ImageStatistics\ImageStatistics.cpp" />
     <ClCompile Include="..\Invert\Invert.cpp" />
     <ClCompile Include="..\JoinViews\JoinViews.cpp" />
@@ -452,7 +457,6 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="..\Mirror\Mirror.cpp" />
     <ClCompile Include="..\MixViews\MixViews.cpp" />
     <ClCompile Include="..\Multiply\Multiply.cpp" />
-    <ClCompile Include="..\Noise\Noise.cpp" />
     <ClCompile Include="..\NoOp\NoOp.cpp" />
     <ClCompile Include="..\OneView\OneView.cpp" />
     <ClCompile Include="..\Position\Position.cpp" />
@@ -465,7 +469,6 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="..\Roto\Roto.cpp" />
     <ClCompile Include="..\Saturation\Saturation.cpp" />
     <ClCompile Include="..\Shuffle\Shuffle.cpp" />
-    <ClCompile Include="..\SideBySide\SideBySide.cpp" />
     <ClCompile Include="..\SlitScan\SlitScan.cpp" />
     <ClCompile Include="..\SpriteSheet\SpriteSheet.cpp" />
     <ClCompile Include="..\Switch\Switch.cpp" />
@@ -478,7 +481,6 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="..\TrackerPM\TrackerPM.cpp" />
     <ClCompile Include="..\Transform\Transform.cpp" />
     <ClCompile Include="..\VectorToColor\VectorToColor.cpp" />
-    <ClCompile Include="PluginRegistrationCombined.cpp" />
     <ClCompile Include="randomGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
