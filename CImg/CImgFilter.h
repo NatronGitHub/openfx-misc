@@ -812,7 +812,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         if ( fred.get() ) {
             setupAndCopy(*fred, time, srcRoI, renderScale, src.get(), mask.get(),
                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary,
-                         tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
+                         tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, static_cast<int>(tmpRowBytes),
                          premult, premultChannel, mix, maskInvert);
         }
     }

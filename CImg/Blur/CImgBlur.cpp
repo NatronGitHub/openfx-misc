@@ -1599,14 +1599,14 @@ public:
             OfxRectI srcFormat;
             _srcClip->getFormat(srcFormat);
             OfxRectI srcFormatEnclosing;
-            srcFormatEnclosing.x1 = std::floor(srcFormat.x1 * renderScale.x);
-            srcFormatEnclosing.x2 = std::ceil(srcFormat.x2 * renderScale.x);
-            srcFormatEnclosing.y1 = std::floor(srcFormat.y1 * renderScale.y);
-            srcFormatEnclosing.y2 = std::ceil(srcFormat.y2 * renderScale.y);
-            srcFormat.x1 = std::ceil(srcFormat.x1 * renderScale.x);
-            srcFormat.x2 = std::floor(srcFormat.x2 * renderScale.x);
-            srcFormat.y1 = std::ceil(srcFormat.y1 * renderScale.y);
-            srcFormat.y2 = std::floor(srcFormat.y2 * renderScale.y);
+            srcFormatEnclosing.x1 = static_cast<int>( std::floor(srcFormat.x1 * renderScale.x) );
+            srcFormatEnclosing.x2 = static_cast<int>( std::ceil(srcFormat.x2 * renderScale.x) );
+            srcFormatEnclosing.y1 = static_cast<int>( std::floor(srcFormat.y1 * renderScale.y) );
+            srcFormatEnclosing.y2 = static_cast<int>( std::ceil(srcFormat.y2 * renderScale.y) );
+            srcFormat.x1 = static_cast<int>( std::ceil(srcFormat.x1 * renderScale.x) );
+            srcFormat.x2 = static_cast<int>( std::floor(srcFormat.x2 * renderScale.x) );
+            srcFormat.y1 = static_cast<int>( std::ceil(srcFormat.y1 * renderScale.y) );
+            srcFormat.y2 = static_cast<int>( std::floor(srcFormat.y2 * renderScale.y) );
             if ( !Coords::rectIsEmpty(srcFormat) ) {
                 if (dstRoD->x1 < srcFormat.x1 && srcRoD.x1 >= srcFormatEnclosing.x1) {
                     dstRoD->x1 = srcFormat.x1;
@@ -1666,8 +1666,8 @@ public:
         } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
             int iter = ( params.filter == eFilterBox ? 1 :
                          (params.filter == eFilterTriangle ? 2 : 3) );
-            int delta_pixX = iter * (std::floor( (sx - 1) / 2 ) + 1);
-            int delta_pixY = iter * (std::floor( (sy - 1) / 2 ) + 1);
+            int delta_pixX = iter * static_cast<int>(std::floor( (sx - 1) / 2 ) + 1);
+            int delta_pixY = iter * static_cast<int>(std::floor( (sy - 1) / 2 ) + 1);
             roi->x1 = rect.x1 - delta_pixX - (params.orderX > 0);
             roi->x2 = rect.x2 + delta_pixX + (params.orderX > 0);
             roi->y1 = rect.y1 - delta_pixY - (params.orderY > 0);
@@ -1747,7 +1747,7 @@ public:
                         float X, Y, Z;
                         Color::rgb709_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
                         float XYZ = X + Y + Z;
-                        float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        float invXYZ = XYZ <= 0 ? 0.f : (1.f / XYZ);
                         *px = X * invXYZ;
                         *pr = Y;
                         *py = Y * invXYZ;
@@ -1764,7 +1764,7 @@ public:
                         float X, Y, Z;
                         Color::rgb2020_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
                         float XYZ = X + Y + Z;
-                        float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        float invXYZ = XYZ <= 0 ? 0.f : (1.f / XYZ);
                         *px = X * invXYZ;
                         *pr = Y;
                         *py = Y * invXYZ;
@@ -1781,7 +1781,7 @@ public:
                         float X, Y, Z;
                         Color::rgbACESAP0_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
                         float XYZ = X + Y + Z;
-                        float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        float invXYZ = XYZ <= 0 ? 0.f : (1.f / XYZ);
                         *px = X * invXYZ;
                         *pr = Y;
                         *py = Y * invXYZ;
@@ -1798,7 +1798,7 @@ public:
                         float X, Y, Z;
                         Color::rgbACESAP1_to_xyz(*pr, *pg, *pb, &X, &Y, &Z);
                         float XYZ = X + Y + Z;
-                        float invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        float invXYZ = XYZ <= 0 ? 0.f : (1.f / XYZ);
                         *px = X * invXYZ;
                         *pr = Y;
                         *py = Y * invXYZ;
@@ -1878,7 +1878,7 @@ public:
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
                         float X = *px * Y / *py;
-                        float Z = (1. - *px - *py) * Y / *py;
+                        float Z = (1.f - *px - *py) * Y / *py;
                         float r, g, b;
                         Color::xyz_to_rgb709(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1896,7 +1896,7 @@ public:
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
                         float X = *px * Y / *py;
-                        float Z = (1. - *px - *py) * Y / *py;
+                        float Z = (1.f - *px - *py) * Y / *py;
                         float r, g, b;
                         Color::xyz_to_rgb2020(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1914,7 +1914,7 @@ public:
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
                         float X = *px * Y / *py;
-                        float Z = (1. - *px - *py) * Y / *py;
+                        float Z = (1.f - *px - *py) * Y / *py;
                         float r, g, b;
                         Color::xyz_to_rgbACESAP0(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1932,7 +1932,7 @@ public:
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
                         float X = *px * Y / *py;
-                        float Z = (1. - *px - *py) * Y / *py;
+                        float Z = (1.f - *px - *py) * Y / *py;
                         float r, g, b;
                         Color::xyz_to_rgbACESAP1(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1962,7 +1962,7 @@ public:
              - the second threshold is the value of the blurred step edge at erodeSize + 0.5, which is mapped to 1
              */
             cimg_for(cimg, ptr, float) {
-                *ptr = (*ptr < t0) ? 0. : ((*ptr > t1) ? 1. : (*ptr - t0) / (t1 - t0) );
+                *ptr = (*ptr < t0) ? 0.f : ((*ptr > t1) ? 1.f : static_cast<float>((*ptr - t0) / (t1 - t0)) );
             }
         }
         if (params.alphaThreshold > 0. && alphaChannel != -1) {
@@ -2060,13 +2060,13 @@ public:
                         (filter == eFilterTriangle ? 2 : 3) );
 
 #         ifdef cimgblur_internal_boxfilter
-            boxfilter(cimg_blur, /*cimg_blur.boxfilter(*/ sx * scale, orderX, 'x', boundary, iter);
+            boxfilter(cimg_blur, /*cimg_blur.boxfilter(*/ static_cast<float>(sx * scale), orderX, 'x', boundary, iter);
             if ( abort() ) { return false; }
-            boxfilter(cimg_blur, /*cimg_blur.boxfilter(*/ sy * scale,orderY, 'y', boundary, iter);
+            boxfilter(cimg_blur, /*cimg_blur.boxfilter(*/ static_cast<float>(sy * scale), orderY, 'y', boundary, iter);
 #         else
-            cimg_blur.boxfilter(sx * scale, orderX, 'x', boundary, iter);
+            cimg_blur.boxfilter(static_cast<float>(sx * scale), orderX, 'x', boundary, iter);
             if ( abort() ) { return false; }
-            cimg_blur.boxfilter(sy * scale, orderY, 'y', boundary, iter);
+            cimg_blur.boxfilter(static_cast<float>(sy * scale), orderY, 'y', boundary, iter);
 #         endif
 
             return true;
@@ -2199,7 +2199,7 @@ public:
                 // gradient direction is unchanged
                 double sqe = gx * gx + gy * gy;
                 double e = std::sqrt( (std::max)(sqe, 0.) );
-                cimg(x, y, 0, c) = e;
+                cimg(x, y, 0, c) = static_cast<T>(e);
             }
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelRMS) {
             cimg_forXY(cimg, x, y) {
@@ -2228,9 +2228,9 @@ public:
                 double sqe = sumsq / cimg.spectrum();
                 double e = std::sqrt( (std::max)(sqe, 0.) );
                 cimg_forC(cimg, c) {
-                    cimg(x, y, 0, c) = e;
-                    grad[0](x, y, 0, c) = gradx;
-                    grad[1](x, y, 0, c) = grady;
+                    cimg(x, y, 0, c) = static_cast<T>(e);
+                    grad[0](x, y, 0, c) = static_cast<T>(gradx);
+                    grad[1](x, y, 0, c) = static_cast<T>(grady);
                 }
             }
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelMax) {
@@ -2250,9 +2250,9 @@ public:
                 }
                 double e = std::sqrt( (std::max)(maxsq, 0.) );
                 cimg_forC(cimg, c) {
-                    cimg(x, y, 0, c) = e;
-                    grad[0](x, y, 0, c) = gradx;
-                    grad[1](x, y, 0, c) = grady;
+                    cimg(x, y, 0, c) = static_cast<T>(e);
+                    grad[0](x, y, 0, c) = static_cast<T>(gradx);
+                    grad[1](x, y, 0, c) = static_cast<T>(grady);
                 }
             }
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelTensor) {
@@ -2292,9 +2292,9 @@ public:
                 double e1 = (Jx + Jy + D) / 2;
                 double e = std::sqrt( (std::max)(e1, 0.) );
                 cimg_forC(cimg, c) {
-                    cimg(x, y, 0, c) = e;
-                    grad[0](x, y, 0, c) = Jxy;
-                    grad[1](x, y, 0, c) = e1 - Jx;
+                    cimg(x, y, 0, c) = static_cast<T>(e);
+                    grad[0](x, y, 0, c) = static_cast<T>(Jxy);
+                    grad[1](x, y, 0, c) = static_cast<T>(e1 - Jx);
                 }
             }
         }
@@ -2415,10 +2415,10 @@ public:
                     // compute maximum value
                     double Imax = parabola_maxval(Ip, Ic, In);
                     if (separate) {
-                        cimg(x,y,0,c) = Imax;
+                        cimg(x,y,0,c) = static_cast<T>(Imax);
                     } else {
                         cimg_forC(cimg, c1) {
-                            cimg(x,y,0,c1) = Imax;
+                            cimg(x,y,0,c1) = static_cast<T>(Imax);
                         }
                     }
                 } else {

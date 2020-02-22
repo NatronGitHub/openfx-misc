@@ -233,7 +233,7 @@ protected:
     const Image *_bgImg;
     const Image *_inMaskImg;
     const Image *_outMaskImg;
-    OfxRGBColourD _keyColor;
+    OfxRGBColourF _keyColor;
     KeyerModeEnum _keyerMode;
     LuminanceMathEnum _luminanceMath;
     double _softnessLower;
@@ -280,7 +280,7 @@ public:
         _outMaskImg = outMaskImg;
     }
 
-    void setValues(const OfxRGBColourD& keyColor,
+    void setValues(const OfxRGBColourF& keyColor,
                    KeyerModeEnum keyerMode,
                    LuminanceMathEnum luminanceMath,
                    double softnessLower,
@@ -400,10 +400,10 @@ private:
         // multiplied by to get the foreground key value 1, which corresponds to the maximum
         // possible value, e.g. for (R,G,B)=(1,1,1)
         // Kfg = 1 = colorKeyFactor * (1,1,1)._keyColor (where "." is the scalar product)
-        const double keyColor111 = _keyColor.r + _keyColor.g + _keyColor.b;
+        const float keyColor111 = _keyColor.r + _keyColor.g + _keyColor.b;
         // const double keyColorFactor = (keyColor111 == 0.) ? 1. : 1./keyColor111;
         // squared norm of keyColor, used for Screen mode
-        const double keyColorNorm2 = (_keyColor.r * _keyColor.r) + (_keyColor.g * _keyColor.g) + (_keyColor.b * _keyColor.b);
+        const float keyColorNorm2 = (_keyColor.r * _keyColor.r) + (_keyColor.g * _keyColor.g) + (_keyColor.b * _keyColor.b);
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -761,8 +761,12 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
         checkBadRenderScaleOrField(outMask, args);
     }
 
-    OfxRGBColourD keyColor;
-    _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
+    double keyColorr, keyColorg, keyColorb;
+    _keyColor->getValueAtTime(time, keyColorr, keyColorg, keyColorb);
+    OfxRGBColourF keyColorF;
+    keyColorF.r = static_cast<float>(keyColorr);
+    keyColorF.g = static_cast<float>(keyColorg);
+    keyColorF.b = static_cast<float>(keyColorb);
     KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
     double softnessLower = _softnessLower->getValueAtTime(time);
@@ -774,7 +778,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     double despillAngle = _despillAngle->getValueAtTime(time);
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
-    processor.setValues(keyColor, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
+    processor.setValues(keyColorF, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);

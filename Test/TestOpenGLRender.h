@@ -31,6 +31,9 @@
 #ifdef DEBUG_TIME
 #include <sys/time.h>
 #endif
+#if defined(_MSC_VER) || defined(__STDC_LIB_EXT1__)
+#include <stdio.h> // sscanf_s
+#endif
 
 #include "ofxsMacros.h"
 #include "ofxsLog.h"
@@ -1917,15 +1920,27 @@ unsignedToString(unsigned i)
 
 static
 void
-getGlVersion(int *major,
-             int *minor)
+scan_version(const char* verstr, int *major, int *minor)
 {
-    const char *verstr = (const char *) glGetString(GL_VERSION);
-
+#if defined(_MSC_VER) || defined(__STDC_LIB_EXT1__)
+    if ( (verstr == NULL) || (sscanf_s(verstr, "%d.%d", major, minor) != 2) ) {
+        *major = *minor = 0;
+        //fprintf(stderr, "Invalid GL_VERSION format!!!\n");
+    }
+#else
     if ( (verstr == NULL) || (std::sscanf(verstr, "%d.%d", major, minor) != 2) ) {
         *major = *minor = 0;
         //fprintf(stderr, "Invalid GL_VERSION format!!!\n");
     }
+#endif
+}
+
+static
+void
+getGlVersion(int *major,
+             int *minor)
+{
+    scan_version((const char *) glGetString(GL_VERSION), major, minor);
 }
 
 #if 0
@@ -1949,14 +1964,7 @@ getGlslVersion(int *major,
         }
     } else if (gl_major >= 2) {
         /* GL v2.0 and greater must parse the version string */
-        const char *verstr =
-            (const char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
-
-        if ( (verstr == NULL) ||
-             (std::sscanf(verstr, "%d.%d", major, minor) != 2) ) {
-            *major = *minor = 0;
-            //fprintf(stderr, "Invalid GL_SHADING_LANGUAGE_VERSION format!!!\n");
-        }
+        scan_version((const char *) glGetString(GL_SHADING_LANGUAGE_VERSION), major, minor);
     }
 }
 

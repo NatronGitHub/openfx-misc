@@ -181,7 +181,7 @@ protected:
     const Image *_bgImg;
     const Image *_inMaskImg;
     const Image *_outMaskImg;
-    OfxRGBColourD _keyColor;
+    OfxRGBColourF _keyColor;
     const Color::Lut* _lut;
     void (*_to_ypbpr)(float r,
                       float g,
@@ -246,7 +246,7 @@ public:
         _outMaskImg = outMaskImg;
     }
 
-    void setValues(const OfxRGBColourD& keyColor,
+    void setValues(const OfxRGBColourF& keyColor,
                    YPbPrColorspaceEnum colorspace,
                    bool linear,
                    double acceptanceAngle,
@@ -759,8 +759,12 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         checkBadRenderScaleOrField(outMask, args);
     }
 
-    OfxRGBColourD keyColor;
-    _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
+    double keyColorr, keyColorg, keyColorb;
+    _keyColor->getValueAtTime(time, keyColorr, keyColorg, keyColorb);
+    OfxRGBColourF keyColorF;
+    keyColorF.r = static_cast<float>(keyColorr);
+    keyColorF.g = static_cast<float>(keyColorg);
+    keyColorF.b = static_cast<float>(keyColorb);
     double acceptanceAngle = _acceptanceAngle->getValueAtTime(time);
     double suppressionAngle = _suppressionAngle->getValueAtTime(time);
     double keyLift = _keyLift->getValueAtTime(time);
@@ -769,7 +773,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
     YPbPrColorspaceEnum colorspace = (YPbPrColorspaceEnum)_colorspace->getValueAtTime(time);
     bool linear = _linear->getValueAtTime(time);
-    processor.setValues(keyColor, colorspace, linear, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
+    processor.setValues(keyColorF, colorspace, linear, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
