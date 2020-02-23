@@ -518,9 +518,9 @@ private:
                                     RGBTone (g, b, r);    // Case 7: g >= b >  r
                                 }
                             }
-                            tmpPix[0] = clamp<float>(rcoef * r, 1) * maxValue;
-                            tmpPix[1] = clamp<float>(gcoef * g, 1) * maxValue;
-                            tmpPix[2] = clamp<float>(bcoef * b, 1) * maxValue;
+                            tmpPix[0] = static_cast<float>( clamp<float>(rcoef * r, 1) * maxValue );
+                            tmpPix[1] = static_cast<float>( clamp<float>(gcoef * g, 1) * maxValue );
+                            tmpPix[2] = static_cast<float>( clamp<float>(bcoef * b, 1) * maxValue );
                             break;
                         }
                         case eMasterCurveModeLuminance: {
@@ -606,9 +606,9 @@ private:
                                     RGBTone (g, b, r);    // Case 7: g >= b >  r
                                 }
                             }
-                            tmpPix[0] = clamp<float>(rcoef * r, 1);
-                            tmpPix[1] = clamp<float>(gcoef * g, 1);
-                            tmpPix[2] = clamp<float>(bcoef * b, 1);
+                            tmpPix[0] = static_cast<float>( clamp<float>(rcoef * r, 1) );
+                            tmpPix[1] = static_cast<float>( clamp<float>(gcoef * g, 1) );
+                            tmpPix[2] = static_cast<float>( clamp<float>(bcoef * b, 1) );
                             tmpPix[3] = interpolate(3, unpPix[3]);
                             break;
                         }
@@ -617,9 +617,9 @@ private:
                             double l = (std::max)(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
                             // apply the master curve to the luminance, and
                             double coef = interpolate(nComponents, l) / l;
-                            tmpPix[0] = clamp<float>(coef * interpolate(0, r), 1);
-                            tmpPix[1] = clamp<float>(coef * interpolate(1, g), 1);
-                            tmpPix[2] = clamp<float>(coef * interpolate(2, b), 1);
+                            tmpPix[0] = static_cast<float>( clamp<float>(coef * interpolate(0, r), 1) );
+                            tmpPix[1] = static_cast<float>( clamp<float>(coef * interpolate(1, g), 1) );
+                            tmpPix[2] = static_cast<float>( clamp<float>(coef * interpolate(2, b), 1) );
                             tmpPix[3] = interpolate(3, unpPix[3]);
                             break;
                         }
@@ -652,7 +652,7 @@ private:
                 ret += _lookupTableParam->getValue(kCurveMaster, _time, value) - value;
             }
 
-            return clamp<float>(ret, 1);;
+            return static_cast<float>( clamp<float>(ret, 1) );
         } else {
             double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
             if (x <= 0.) {
@@ -667,7 +667,7 @@ private:
             float a = _lookupTable[component][i];
             float b = _lookupTable[component][i + 1];
 
-            return a * (1.f - alpha) + b * alpha;
+            return static_cast<float>(a * (1. - alpha) + b * alpha);
         }
     }
 
@@ -681,7 +681,7 @@ private:
             if (b < a) {
                 b1 = b + a2 *      b  /     a ;
             } else       {
-                b1 = b + a2 * (1. - b) / (1. - a);
+                b1 = b + a2 * (1.f - b) / (1.f - a);
             }
 
             return b1;
@@ -877,7 +877,7 @@ private:
                     if (unpPix[c] >= _rangemax) {
                         bin = HISTOGRAM_BINS - 1;
                     } else if (unpPix[c] >= _rangemin) {
-                        bin = std::floor(HISTOGRAM_BINS * (unpPix[c] - _rangemin) / (_rangemax - _rangemin));
+                        bin = static_cast<int>( std::floor(HISTOGRAM_BINS * (unpPix[c] - _rangemin) / (_rangemax - _rangemin)) );
                     }
                     ++histogram[c * HISTOGRAM_BINS + bin];
                 }
@@ -1565,7 +1565,7 @@ public:
         if ( display == eDisplayColorRamp  ) {
             OfxStatus stat = kOfxStatOK;
             const int sliceWidth = 8;
-            int nbValues = args.pixelScale.x > 0 ? std::ceil( (rangeMax - rangeMin) / (sliceWidth * args.pixelScale.x) ) : 1;
+            int nbValues = args.pixelScale.x > 0 ? static_cast<int>( std::ceil( (rangeMax - rangeMin) / (sliceWidth * args.pixelScale.x) ) ) : 1;
             if (nbValues > 0) {
                 // let us draw one slice every 8 pixels
                 const int nComponents = 3;
@@ -1585,8 +1585,8 @@ public:
                             color[component] = (GLfloat)value;
                         }
                         glColor3f(color[0], color[1], color[2]);
-                        glVertex2f(parametricPos, rangeMin);
-                        glVertex2f(parametricPos, rangeMax);
+                        glVertex2d(parametricPos, rangeMin);
+                        glVertex2d(parametricPos, rangeMax);
                     }
                 } catch (...) {
                     stat = kOfxStatFailed;
@@ -1622,13 +1622,13 @@ public:
                     // we divide by two to get 50% white.
                     switch (c) {
                         case 0:
-                            glColor3f(0.711519527404004/2, 0.164533420851110/2, 0.164533420851110/2);
+                            glColor3f(0.711519527404004f/2, 0.164533420851110f/2, 0.164533420851110f/2);
                             break;
                         case 1:
-                            glColor3f(0./2, 0.546986106552894/2, 0./2);
+                            glColor3f(0.f/2, 0.546986106552894f/2, 0.f/2);
                             break;
                         case 2:
-                            glColor3f(0.288480472595996/2, 0.288480472595996/2, 0.835466579148890/2);
+                            glColor3f(0.288480472595996f/2, 0.288480472595996f/2, 0.835466579148890f/2);
                             break;
                     }
                     for (unsigned int i = 0; i < HISTOGRAM_BINS; ++i) {
@@ -1657,18 +1657,18 @@ public:
                 const OfxRGBColourD green = {0., 0.546986106552894, 0.};        //set green color to green curve
                 const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};      //set blue color to blue curve
                 const OfxRGBColourD alpha  = {0.398979, 0.398979, 0.398979};
-                glColor3f(red.r, red.g, red.b);
-                glVertex2f(args.pickerColour.r, rangeMin);
-                glVertex2f(args.pickerColour.r, rangeMax);
-                glColor3f(green.r, green.g, green.b);
-                glVertex2f(args.pickerColour.g, rangeMin);
-                glVertex2f(args.pickerColour.g, rangeMax);
-                glColor3f(blue.r, blue.g, blue.b);
-                glVertex2f(args.pickerColour.b, rangeMin);
-                glVertex2f(args.pickerColour.b, rangeMax);
-                glColor3f(alpha.r, alpha.g, alpha.b);
-                glVertex2f(args.pickerColour.a, rangeMin);
-                glVertex2f(args.pickerColour.a, rangeMax);
+                glColor3d(red.r, red.g, red.b);
+                glVertex2d(args.pickerColour.r, rangeMin);
+                glVertex2d(args.pickerColour.r, rangeMax);
+                glColor3d(green.r, green.g, green.b);
+                glVertex2d(args.pickerColour.g, rangeMin);
+                glVertex2d(args.pickerColour.g, rangeMax);
+                glColor3d(blue.r, blue.g, blue.b);
+                glVertex2d(args.pickerColour.b, rangeMin);
+                glVertex2d(args.pickerColour.b, rangeMax);
+                glColor3d(alpha.r, alpha.g, alpha.b);
+                glVertex2d(args.pickerColour.a, rangeMin);
+                glVertex2d(args.pickerColour.a, rangeMax);
             }
             glEnd();
         }

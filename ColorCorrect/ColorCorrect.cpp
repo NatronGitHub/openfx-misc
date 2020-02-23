@@ -744,7 +744,7 @@ private:
             // slow version
             double ret = lookupTableValue(component, value);
 
-            return clamp<float>(ret, 1);;
+            return static_cast<float>( clamp<float>(ret, 1) );
         } else {
             double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
             if (x <= 0.) {
@@ -759,7 +759,7 @@ private:
             float a = _lookupTable[component][i];
             float b = _lookupTable[component][i + 1];
 
-            return a * (1.f - alpha) + b * alpha;
+            return static_cast<float>(a * (1.f - alpha) + b * alpha);
         }
     }
 

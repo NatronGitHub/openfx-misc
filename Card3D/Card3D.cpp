@@ -819,10 +819,11 @@ strerror_string(int err)
 #if defined(_MSC_VER) || defined(__STDC_LIB_EXT1__)
 #ifdef __STDC_LIB_EXT1__
     size_t errmsglen = strerrorlen_s(err) + 1;
-#else
-    size_t errmsglen = 128;
-#endif
     char errmsg[errmsglen];
+#else
+    char errmsg[128];
+    size_t errmsglen = sizeof(errmsg);
+#endif
     strerror_s(errmsg, errmsglen, err);
     return std::string(errmsg);
 #else
@@ -1729,8 +1730,8 @@ Card3DPlugin::getOutputFormat(double /*time*/,
             _formatSize->getValue(w, h);
             *par = _formatPar->getValue();
             format->x1 = format->y1 = 0;
-            format->x2 = std::ceil(w * renderScale.x);
-            format->y2 = std::ceil(h * renderScale.y);
+            format->x2 = static_cast<int>( std::ceil(w * renderScale.x) );
+            format->y2 = static_cast<int>( std::ceil(h * renderScale.y) );
 
             return true;
             break;

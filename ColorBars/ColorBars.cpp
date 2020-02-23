@@ -209,25 +209,25 @@ private:
                 if (_outputIRE) {
                     if (max > 1) {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = static_cast<PIX>( Color::floatToInt<max + 1>(ire[c] / 100.) );
+                            dstPix[c] = static_cast<PIX>( Color::floatToInt<max + 1>(ire[c] / 100.f) );
                         }
                     } else {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = static_cast<PIX>( ire[c] / 100. );
+                            dstPix[c] = static_cast<PIX>(ire[c] / 100.f);
                         }
                     }
                 } else {
                     if (max == 65535) {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = static_cast<PIX>( 4096 + Color::floatToInt<60160 - 4096>(ire[c] / 100.) );
+                            dstPix[c] = static_cast<PIX>( 4096 + Color::floatToInt<60160 - 4096>(ire[c] / 100.f) );
                         }
                     } else if (max == 255) {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = static_cast<PIX>( 16 + Color::floatToInt<235 - 16>(ire[c] / 100.) );
+                            dstPix[c] = static_cast<PIX>( 16 + Color::floatToInt<235 - 16>(ire[c] / 100.f) );
                         }
                     } else {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = static_cast<PIX>( 0.0625 + (0.91796875 - 0.0625) * (ire[c] / 100.) );
+                            dstPix[c] = static_cast<PIX>( 0.0625 + (0.91796875 - 0.0625) * (ire[c] / 100.f) );
                         }
                     }
                 }
