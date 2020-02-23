@@ -3515,6 +3515,7 @@
 		1E44B0321DEDD019006602AD /* fr.inria.PIKColor.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = fr.inria.PIKColor.svg; sourceTree = "<group>"; };
 		1E44B0331DEDD019006602AD /* net.sf.openfx.PIK.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.PIK.png; sourceTree = "<group>"; };
 		1E44B0341DEDD019006602AD /* net.sf.openfx.PIK.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.PIK.svg; sourceTree = "<group>"; };
+		1E4B0DDE240304CF005F41F4 /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		1E511D451D8AC9890037C61F /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E511D461D8AC9890037C61F /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E511D471D8AC9890037C61F /* PIK.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PIK.cpp; sourceTree = "<group>"; };
@@ -5322,6 +5323,7 @@
 				1E9DD3C01CEE1D9D00B674E9 /* README-hosts.txt */,
 				1E9B5F6A198A54210095C8AA /* LICENSE */,
 				1E9DD3C11CEE200800B674E9 /* gpl-header-c.txt */,
+				1E4B0DDE240304CF005F41F4 /* CMakeLists.txt */,
 				1EDE1BE8182D8B18002392CB /* Makefile */,
 				1E9B5F6B198A54210095C8AA /* Makefile.master */,
 				1EF2A8091AB1CF8B00CC0D10 /* CImg.vcxproj */,
