@@ -683,7 +683,7 @@ private:
                         double *b,
                         double *a)
     {
-        double l = luminance(*r, *g, *b, _luminanceMath);
+        float l = static_cast<float>( luminance(*r, *g, *b, _luminanceMath) );
         double s_scale = interpolate(0, l);
         double h_scale = interpolate(1, l);
         double m_scale = 1.f - s_scale - h_scale;

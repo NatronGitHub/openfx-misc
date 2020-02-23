@@ -138,7 +138,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.blur_median( (unsigned int)std::floor((std::max)(1, params.size) * args.renderScale.x) * 2 + 1, params.threshold );
+        cimg.blur_median( static_cast<unsigned int>( std::floor((std::max)(1, params.size) * args.renderScale.x) ) * 2 + 1, static_cast<float>(params.threshold) );
     }
 
     virtual bool isIdentity(const IsIdentityArguments &args,

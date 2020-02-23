@@ -241,7 +241,7 @@ public:
                         int ymax = (int)ceil(min((cimgpix_t)cimg.height(), max_y + r));
                         // loop on all pixels in the bounding box
                         cimg_for_inXY(cimg, xmin, ymin, xmax, ymax, x, y) {
-                            cimgpix_t pr2 = (x - max_x)*(x - max_x) + (y - max_y)*(y - max_y);
+                            cimgpix_t pr2 = static_cast<cimgpix_t>((x - max_x)*(x - max_x) + (y - max_y)*(y - max_y));
                             if (pr2 < r2) {
                                 // draw the Z-sphere point
                                 cimgpix_t z = r2 - pr2;
@@ -272,7 +272,7 @@ public:
                     for (const cimgpix_t *ptrs = cimg_save.data(), *ptrs_end = ptrs + cimg_save.size();
                          ptrs < ptrs_end;
                          ++ptrd, ++ptrs) {
-                        *ptrd = *ptrd > 0 ? (*ptrd - 0.5) : (0.5 - *ptrs);
+                        *ptrd = static_cast<cimgpix_t>(*ptrd > 0 ? (*ptrd - 0.5) : (0.5 - *ptrs));
 
                     }
 

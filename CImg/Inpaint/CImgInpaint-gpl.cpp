@@ -203,14 +203,14 @@ public:
             *ptrd = (*ptrd > 0);
         }
         cimg.inpaint_patch(mask,
-                           (int)std::ceil(params.patch_size * args.renderScale.x),
-                           (int)std::ceil(params.patch_size * params.lookup_size * args.renderScale.x),
-                           params.lookup_factor,
+                           static_cast<int>( std::ceil(params.patch_size * args.renderScale.x) ),
+                           static_cast<int>( std::ceil(params.patch_size * params.lookup_size * args.renderScale.x) ),
+                           static_cast<float>(params.lookup_factor),
                            /*params.lookup_increment=*/1,
-                           (int)(params.blend_size * params.patch_size * args.renderScale.x),
-                           (float)params.blend_threshold,
-                           (float)params.blend_decay,
-                           params.blend_scales,
+                           static_cast<int>(params.blend_size * params.patch_size * args.renderScale.x),
+                           static_cast<float>(params.blend_threshold),
+                           static_cast<float>(params.blend_decay),
+                           static_cast<unsigned int>(params.blend_scales),
                            params.is_blend_outer);
     }
 

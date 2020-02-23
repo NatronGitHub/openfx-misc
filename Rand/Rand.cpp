@@ -280,7 +280,7 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor,
     bool staticSeed = _staticSeed->getValueAtTime(time);
     uint32_t seed = hash( (unsigned int)_seed->getValueAtTime(time) );
     if (!staticSeed) {
-        float time_f = args.time;
+        float time_f = static_cast<float>(args.time);
 
         // set the seed based on the current time, and double it we get difference seeds on different fields
         seed = hash( *( (uint32_t*)&time_f ) ^ seed );

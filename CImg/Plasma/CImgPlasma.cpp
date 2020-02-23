@@ -271,12 +271,12 @@ public:
 #ifdef cimg_noise_internal
         unsigned int seed = cimg_hash(params.seed);
         if (!params.staticSeed) {
-            float time_f = args.time;
+            float time_f = static_cast<float>(args.time);
 
             // set the seed based on the current time, and double it we get difference seeds on different fields
             seed = cimg_hash( *( (unsigned int*)&time_f ) ^ seed );
         }
-        draw_plasma(cimg, (float)params.alpha / args.renderScale.x, (float)params.beta / args.renderScale.x, (std::max)( 0, params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) ), seed, x1, y1);
+        draw_plasma(cimg, static_cast<float>(params.alpha / args.renderScale.x), static_cast<float>(params.beta / args.renderScale.x), (std::max)( 0, params.scale - (int)Coords::mipmapLevelFromScale(args.renderScale.x) ), seed, x1, y1);
 #else
         cimg_library::cimg::srand( (unsigned int)args.time + (unsigned int)params.seed );
 

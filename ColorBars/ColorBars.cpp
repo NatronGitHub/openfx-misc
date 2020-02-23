@@ -92,7 +92,7 @@ public:
         , _outputIRE(false)
         , _rod()
     {
-        _rod.x1 = _rod.y1 = _rod.x2 = _rod.y2 = 0.;
+        _rod.x1 = _rod.y1 = _rod.x2 = _rod.y2 = 0;
     }
 
     void setValues(const double barIntensity,
@@ -164,7 +164,7 @@ private:
                     } else if (xhd < 446) {  //      0 IRE (black)
                         ire[0] = ire[1] = ire[2] =   0;
                     } else if (xhd < 1474) { //      gradient from 0 to 100 IRE
-                        ire[0] = ire[1] = ire[2] = 100. * (xhd - 446) / float(1474 - 446);
+                        ire[0] = ire[1] = ire[2] = 100.f * (xhd - 446) / float(1474 - 446);
                     } else if (xhd < 1680) {    // 100 IRE (white)
                         ire[0] = ire[1] = ire[2] = 100;
                     } else {                    // 100,0,0 IRE (red)
@@ -201,33 +201,33 @@ private:
                         ire[0] = ire[1] = ire[2] =  40;
                     }
                     if (_barIntensity != 75) {
-                        ire[0] *= _barIntensity / 75.;
-                        ire[1] *= _barIntensity / 75.;
-                        ire[2] *= _barIntensity / 75.;
+                        ire[0] *= static_cast<float>(_barIntensity / 75.);
+                        ire[1] *= static_cast<float>(_barIntensity / 75.);
+                        ire[2] *= static_cast<float>(_barIntensity / 75.);
                     }
                 }
                 if (_outputIRE) {
                     if (max > 1) {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = Color::floatToInt<max + 1>(ire[c] / 100.);
+                            dstPix[c] = static_cast<PIX>( Color::floatToInt<max + 1>(ire[c] / 100.) );
                         }
                     } else {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = ire[c] / 100.;
+                            dstPix[c] = static_cast<PIX>( ire[c] / 100. );
                         }
                     }
                 } else {
                     if (max == 65535) {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = 4096 + Color::floatToInt<60160 - 4096>(ire[c] / 100.);
+                            dstPix[c] = static_cast<PIX>( 4096 + Color::floatToInt<60160 - 4096>(ire[c] / 100.) );
                         }
                     } else if (max == 255) {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = 16 + Color::floatToInt<235 - 16>(ire[c] / 100.);
+                            dstPix[c] = static_cast<PIX>( 16 + Color::floatToInt<235 - 16>(ire[c] / 100.) );
                         }
                     } else {
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = 0.0625 + (0.91796875 - 0.0625) * (ire[c] / 100.);
+                            dstPix[c] = static_cast<PIX>( 0.0625 + (0.91796875 - 0.0625) * (ire[c] / 100.) );
                         }
                     }
                 }

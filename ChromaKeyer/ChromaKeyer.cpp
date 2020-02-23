@@ -504,8 +504,8 @@ private:
                             fgcb = 0;
                             fgcr = 0;
                         } else {
-                            fgcb = fgcb - Kfg * _cosKey / 2;
-                            fgcr = fgcr - Kfg * _sinKey / 2;
+                            fgcb = static_cast<float>(fgcb - Kfg * _cosKey / 2);
+                            fgcr = static_cast<float>(fgcr - Kfg * _sinKey / 2);
                             fgcb = (std::max)( -0.5f, (std::min)(fgcb, 0.5f) );
                             fgcr = (std::max)( -0.5f, (std::min)(fgcr, 0.5f) );
                             //assert(-0.5 <= fgcb && fgcb <= 0.5);
@@ -518,7 +518,7 @@ private:
                         // [FD] the luminance is already normalized
 
                         // Y' = Y - y*Kfg, where y is such that Y' = 0 for the key color.
-                        fgy = fgy - _ys * Kfg;
+                        fgy = static_cast<float>(fgy - _ys * Kfg);
                         if (fgy < 0) {
                             fgy = fgr = fgg = fgb = 0;
                         } else {

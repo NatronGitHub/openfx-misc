@@ -302,7 +302,7 @@ public:
 #ifdef cimg_noise_internal
         unsigned int seed = cimg_hash(params.seed);
         if (!params.staticSeed) {
-            float time_f = args.time;
+            float time_f = static_cast<float>(args.time);
 
             // set the seed based on the current time, and double it we get difference seeds on different fields
             seed = cimg_hash( *( (unsigned int*)&time_f ) ^ seed );

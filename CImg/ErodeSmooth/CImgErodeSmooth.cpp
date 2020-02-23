@@ -199,7 +199,7 @@ _cimg_box_apply(T *data,
                 // add partial pixels
                 double sum2 = sum + frac * (prev + next);
                 // fill result
-                data[x * off] = sum2 / width;
+                data[x * off] = static_cast<T>(sum2 / width);
                 // advance for next iteration
                 prev = win[ifirst];
                 sum -= prev;
@@ -214,7 +214,7 @@ _cimg_box_apply(T *data,
             // add partial pixels
             double sum2 = sum + frac * (prev + next);
             // fill result
-            data[(N - 1) * off] = sum2 / width;
+            data[(N - 1) * off] = static_cast<T>(sum2 / width);
         }
     }
     // derive
@@ -227,14 +227,14 @@ _cimg_box_apply(T *data,
         T c = get_data(data, N, off, boundary_conditions, 0);
         T n = get_data(data, N, off, boundary_conditions, +1);
         for (int x = 0; x < N - 1; ++x) {
-            data[x * off] = (n - p) / 2.;
+            data[x * off] = static_cast<T>((n - p) / 2.);
             // advance
             p = c;
             c = n;
             n = get_data(data, N, off, boundary_conditions, x + 2);
         }
         // last pixel
-        data[(N - 1) * off] = (n - p) / 2.;
+        data[(N - 1) * off] = static_cast<T>((n - p) / 2.);
     }
     break;
     case 2: {
@@ -249,7 +249,7 @@ _cimg_box_apply(T *data,
             n = get_data(data, N, off, boundary_conditions, x + 2);
         }
         // last pixel
-        data[(N - 1) * off] = n - 2 * c + p;
+        data[(N - 1) * off] = static_cast<T>(n - 2 * c + p);
     }
     break;
     }
@@ -411,8 +411,8 @@ public:
                 }
                 int iter = ( params.filter == eFilterBox ? 1 :
                              (params.filter == eFilterTriangle ? 2 : 3) );
-                int delta_pixX = iter * std::ceil( (sx - 1) / 2 );
-                int delta_pixY = iter * std::ceil( (sy - 1) / 2 );
+                int delta_pixX = iter * static_cast<int>( std::ceil( (sx - 1) / 2 ) );
+                int delta_pixY = iter * static_cast<int>( std::ceil( (sy - 1) / 2 ) );
                 dstRoD->x1 = srcRoD.x1 - delta_pixX;
                 dstRoD->x2 = srcRoD.x2 + delta_pixX;
                 dstRoD->y1 = srcRoD.y1 - delta_pixY;
@@ -456,8 +456,8 @@ public:
         } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
             int iter = ( params.filter == eFilterBox ? 1 :
                          (params.filter == eFilterTriangle ? 2 : 3) );
-            int delta_pixX = iter * (std::floor( (sx - 1) / 2 ) + 1);
-            int delta_pixY = iter * (std::floor( (sy - 1) / 2 ) + 1);
+            int delta_pixX = iter * static_cast<int>(std::floor( (sx - 1) / 2 ) + 1);
+            int delta_pixY = iter * static_cast<int>(std::floor( (sy - 1) / 2 ) + 1);
             roi->x1 = rect.x1 - delta_pixX;
             roi->x2 = rect.x2 + delta_pixX;
             roi->y1 = rect.y1 - delta_pixY;

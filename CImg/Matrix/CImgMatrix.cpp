@@ -178,11 +178,11 @@ public:
                 cimgpix_t *ptrd = res.data() + cimg.width() * cimg.height() * c;
                 CImg_5x5(I,cimgpix_t);
                 cimg_for5x5(cimg,x,y,0,c,I,cimgpix_t) {
-                    *(ptrd++) = (Mbb * Ibb + Mpb * Ipb + Mcb * Icb + Mnb * Inb + Mab * Iab +
-                                 Mbp * Ibp + Mpp * Ipp + Mcp * Icp + Mnp * Inp + Map * Iap +
-                                 Mbc * Ibc + Mpc * Ipc + Mcc * Icc + Mnc * Inc + Mac * Iac +
-                                 Mbn * Ibn + Mpn * Ipn + Mcn * Icn + Mnn * Inn + Man * Ian +
-                                 Mba * Iba + Mpa * Ipa + Mca * Ica + Mna * Ina + Maa * Iaa);
+                    *(ptrd++) = static_cast<cimgpix_t>(Mbb * Ibb + Mpb * Ipb + Mcb * Icb + Mnb * Inb + Mab * Iab +
+                                                       Mbp * Ibp + Mpp * Ipp + Mcp * Icp + Mnp * Inp + Map * Iap +
+                                                       Mbc * Ibc + Mpc * Ipc + Mcc * Icc + Mnc * Inc + Mac * Iac +
+                                                       Mbn * Ibn + Mpn * Ipn + Mcn * Icn + Mnn * Inn + Man * Ian +
+                                                       Mba * Iba + Mpa * Ipa + Mca * Ica + Mna * Ina + Maa * Iaa);
                 }
             }
             cimg = res;
@@ -203,9 +203,9 @@ public:
                 cimgpix_t *ptrd = res.data() + cimg.width() * cimg.height() * c;
                 CImg_3x3(I,cimgpix_t);
                 cimg_for3x3(cimg,x,y,0,c,I,cimgpix_t) {
-                    *(ptrd++) = (Mpp * Ipp + Mcp * Icp + Mnp * Inp +
-                                 Mpc * Ipc + Mcc * Icc + Mnc * Inc +
-                                 Mpn * Ipn + Mcn * Icn + Mnn * Inn);
+                    *(ptrd++) = static_cast<cimgpix_t>(Mpp * Ipp + Mcp * Icp + Mnp * Inp +
+                                                       Mpc * Ipc + Mcc * Icc + Mnc * Inc +
+                                                       Mpn * Ipn + Mcn * Icn + Mnn * Inn);
                 }
             }
             cimg = res;

@@ -145,7 +145,7 @@ public:
             }
 #ifdef CIMG_ABORTABLE
             // args
-            const float amplitude = params.amplitude;
+            const float amplitude = static_cast<float>(params.amplitude);
 
 #define Tfloat float
 #define T float

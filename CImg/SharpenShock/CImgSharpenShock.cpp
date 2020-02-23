@@ -189,9 +189,9 @@ public:
 
             // 2d.
             // Shock filters.
-            CImg<Tfloat> G = ( alpha > 0 ? cimg.get_blur(alpha).get_structure_tensors() : cimg.get_structure_tensors() );
+            CImg<Tfloat> G = ( alpha > 0 ? cimg.get_blur(static_cast<float>(alpha)).get_structure_tensors() : cimg.get_structure_tensors() );
             if (sigma > 0) {
-                G.blur(sigma);
+                G.blur(static_cast<float>(sigma));
             }
             _cimg_abort_init_openmp;
             cimg_abort_init;

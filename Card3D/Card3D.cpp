@@ -817,7 +817,11 @@ std::string
 strerror_string(int err)
 {
 #if defined(_MSC_VER) || defined(__STDC_LIB_EXT1__)
+#ifdef __STDC_LIB_EXT1__
     size_t errmsglen = strerrorlen_s(err) + 1;
+#else
+    size_t errmsglen = 128;
+#endif
     char errmsg[errmsglen];
     strerror_s(errmsg, errmsglen, err);
     return std::string(errmsg);

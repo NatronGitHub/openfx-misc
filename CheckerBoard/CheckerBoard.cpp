@@ -228,7 +228,7 @@ private:
 
         if (max == 1) { // implies float, don't clamp
             for (int c = 0; c < nComponents; ++c) {
-              colorPix[c] = (PIX)colorf[c];
+              colorPix[c] = static_cast<PIX>(colorf[c]);
             }
         } else {
             // color is supposed to be linear: delinearize first
@@ -245,7 +245,7 @@ private:
             }
             // clamp and convert to the destination type
             for (int c = 0; c < nComponents; ++c) {
-                colorPix[c] = Color::floatToInt<max + 1>(colorf[c]);
+                colorPix[c] = static_cast<PIX>( Color::floatToInt<max + 1>(colorf[c]) );
             }
         }
     }
@@ -320,7 +320,7 @@ private:
                                 }
                             } else {
                                 // draw box
-                                int xbox = std::floor( (x - center.x) / _boxSize.x );
+                                int xbox = static_cast<int>( std::floor( (x - center.x) / _boxSize.x ) );
                                 if (xbox & 1) {
                                     for (int c = 0; c < nComponents; ++c) {
                                         dstPix[c] = c1[c];
