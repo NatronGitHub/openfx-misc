@@ -779,7 +779,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     const OFX::BitDepthEnum tmpBitDepth = OFX::eBitDepthFloat;
     const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
-    const size_t tmpRowBytes = (size_t)tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
+    const int tmpRowBytes = tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
     size_t tmpSize = tmpRowBytes * tmpHeight;
     OFX::auto_ptr<OFX::ImageMemory> tmpData;
     float *tmpPixelData = NULL;
@@ -812,7 +812,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         if ( fred.get() ) {
             setupAndCopy(*fred, time, srcRoI, renderScale, src.get(), mask.get(),
                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary,
-                         tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, static_cast<int>(tmpRowBytes),
+                         tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
                          premult, premultChannel, mix, maskInvert);
         }
     }

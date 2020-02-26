@@ -256,7 +256,7 @@ AppendClipPlugin::getSources(int firstFrame,
     int clip1Max = -1;
     int clip1OutMin = firstFrame;
     int clip1OutMax = firstFrame - 1;
-    int lastClip = _srcClip.size() - 1;
+    int lastClip = static_cast<int>( _srcClip.size() ) - 1;
     while ( lastClip >= 0 && !_srcClip[lastClip]->isConnected() ) {
         --lastClip;
     }
