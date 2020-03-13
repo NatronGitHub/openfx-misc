@@ -1112,9 +1112,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         if ( src[i].get() ) {
-#         ifndef NDEBUG
             srcBitDepth[i] = src[i]->getPixelDepth();
             srcComponents[i] = src[i]->getPixelComponents();
+#         ifndef NDEBUG
             if ( (srcBitDepth[i] != dstBitDepth) || (srcComponents[i] != dstComponents) ) {
                 OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
 
