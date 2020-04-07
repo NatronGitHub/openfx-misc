@@ -2,6 +2,8 @@
 
 // A simple Worley noise shader. Full tutorial at ibreakdownshaders.blogspot.com. Original shader from  http://glslsandbox.com/e#23237.0
 
+const vec2 iRenderScale = vec2(1.,1.);
+
 //Calculate the squared length of a vector
 float length2(vec2 p){
     return dot(p,p);
@@ -40,11 +42,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	vec2 uv = fragCoord.xy / iResolution.xy;
     //Calculate an intensity
-    float t = fworley(uv * iResolution.xy / 1500.0);
+    float t = fworley(uv * iResolution.xy / iRenderScale.x / 1500.0);
     //Add some gradient
     t*=exp(-length2(abs(0.7*uv - 1.0)));	
     //Make it blue!
     fragColor = vec4(t * vec3(0.1, 1.1*t, pow(t, 0.5-t)), 1.0);
 }
-
-
