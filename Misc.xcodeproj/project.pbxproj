@@ -578,7 +578,6 @@
 		1E738B821DF41E30000F582E /* spiral.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B4A1DF41DD3000F582E /* spiral.frag.glsl */; };
 		1E738B831DF41E30000F582E /* startunnel.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B4B1DF41DD3000F582E /* startunnel.frag.glsl */; };
 		1E738B841DF41E30000F582E /* stellar.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B4C1DF41DD3000F582E /* stellar.frag.glsl */; };
-		1E738B851DF41E30000F582E /* test.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B4D1DF41DD3000F582E /* test.frag.glsl */; };
 		1E738B861DF41E30000F582E /* venus.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B4E1DF41DD3000F582E /* venus.frag.glsl */; };
 		1E738B871DF41E30000F582E /* warp.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B4F1DF41DD3000F582E /* warp.frag.glsl */; };
 		1E738B881DF41E30000F582E /* watercaustic.frag.glsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E738B501DF41DD3000F582E /* watercaustic.frag.glsl */; };
@@ -2605,7 +2604,6 @@
 				1E738B821DF41E30000F582E /* spiral.frag.glsl in CopyFiles */,
 				1E738B831DF41E30000F582E /* startunnel.frag.glsl in CopyFiles */,
 				1E738B841DF41E30000F582E /* stellar.frag.glsl in CopyFiles */,
-				1E738B851DF41E30000F582E /* test.frag.glsl in CopyFiles */,
 				1E738B861DF41E30000F582E /* venus.frag.glsl in CopyFiles */,
 				1E738B871DF41E30000F582E /* warp.frag.glsl in CopyFiles */,
 				1E738B881DF41E30000F582E /* watercaustic.frag.glsl in CopyFiles */,
@@ -3652,7 +3650,6 @@
 		1E738B4A1DF41DD3000F582E /* spiral.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = spiral.frag.glsl; sourceTree = "<group>"; };
 		1E738B4B1DF41DD3000F582E /* startunnel.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = startunnel.frag.glsl; sourceTree = "<group>"; };
 		1E738B4C1DF41DD3000F582E /* stellar.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = stellar.frag.glsl; sourceTree = "<group>"; };
-		1E738B4D1DF41DD3000F582E /* test.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test.frag.glsl; sourceTree = "<group>"; };
 		1E738B4E1DF41DD3000F582E /* venus.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = venus.frag.glsl; sourceTree = "<group>"; };
 		1E738B4F1DF41DD3000F582E /* warp.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = warp.frag.glsl; sourceTree = "<group>"; };
 		1E738B501DF41DD3000F582E /* watercaustic.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = watercaustic.frag.glsl; sourceTree = "<group>"; };
@@ -3744,6 +3741,16 @@
 		1E8B5D4718B769CA00C31FDC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E8B5D4818B769CA00C31FDC /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E8B5D5B18B76A7500C31FDC /* Misc.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Misc.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E8E4542243C050700B74E4F /* mergeover.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergeover.frag.glsl; sourceTree = "<group>"; };
+		1E8E4543243C0C2B00B74E4F /* mergematte.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergematte.frag.glsl; sourceTree = "<group>"; };
+		1E8E4544243C0C2B00B74E4F /* mergemultiply.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergemultiply.frag.glsl; sourceTree = "<group>"; };
+		1E8E4545243C0C2B00B74E4F /* mergeout.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergeout.frag.glsl; sourceTree = "<group>"; };
+		1E8E4546243C0C2B00B74E4F /* mergemin.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergemin.frag.glsl; sourceTree = "<group>"; };
+		1E8E4547243C0C2B00B74E4F /* mergemax.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergemax.frag.glsl; sourceTree = "<group>"; };
+		1E8E4548243C0C2B00B74E4F /* mergeplus.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergeplus.frag.glsl; sourceTree = "<group>"; };
+		1E8E4549243C0C2B00B74E4F /* mergeabsminus.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergeabsminus.frag.glsl; sourceTree = "<group>"; };
+		1E8E454A243C0C2C00B74E4F /* mergein.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergein.frag.glsl; sourceTree = "<group>"; };
+		1E8E454B243C0C2C00B74E4F /* mergescreen.frag.glsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mergescreen.frag.glsl; sourceTree = "<group>"; };
 		1E92573319EC1DB80018F19A /* Clamp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Clamp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E92573519EC1E140018F19A /* Clamp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Clamp.cpp; sourceTree = "<group>"; };
 		1E92573B19EC1E260018F19A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -5628,6 +5635,16 @@
 				1EA70F8C1DF5AD490039BC64 /* mandelbrottrap.frag.glsl */,
 				1E618ABE1F4C6B7000DCECEE /* medianfilter-natron.frag.glsl */,
 				1EA70F9F1DF5C0500039BC64 /* medianfilter.frag.glsl */,
+				1E8E4549243C0C2B00B74E4F /* mergeabsminus.frag.glsl */,
+				1E8E454A243C0C2C00B74E4F /* mergein.frag.glsl */,
+				1E8E4543243C0C2B00B74E4F /* mergematte.frag.glsl */,
+				1E8E4547243C0C2B00B74E4F /* mergemax.frag.glsl */,
+				1E8E4546243C0C2B00B74E4F /* mergemin.frag.glsl */,
+				1E8E4544243C0C2B00B74E4F /* mergemultiply.frag.glsl */,
+				1E8E4545243C0C2B00B74E4F /* mergeout.frag.glsl */,
+				1E8E4542243C050700B74E4F /* mergeover.frag.glsl */,
+				1E8E4548243C0C2B00B74E4F /* mergeplus.frag.glsl */,
+				1E8E454B243C0C2C00B74E4F /* mergescreen.frag.glsl */,
 				1E5460351F41E02A008D6932 /* mipmapblur-natron.frag.glsl */,
 				1E5460361F41E02A008D6932 /* mipmapblur.frag.glsl */,
 				1E618ABF1F4C6B7000DCECEE /* moneyfilter-natron.frag.glsl */,
@@ -5663,7 +5680,6 @@
 				1E738B4B1DF41DD3000F582E /* startunnel.frag.glsl */,
 				1E738B4C1DF41DD3000F582E /* stellar.frag.glsl */,
 				1E618AC61F4C6B7000DCECEE /* stripes-natron.frag.glsl */,
-				1E738B4D1DF41DD3000F582E /* test.frag.glsl */,
 				1EA70FA51DF5C0500039BC64 /* tvsnow.frag.glsl */,
 				1EA70FA61DF5C0500039BC64 /* vangogh.frag.glsl */,
 				1E738B4E1DF41DD3000F582E /* venus.frag.glsl */,

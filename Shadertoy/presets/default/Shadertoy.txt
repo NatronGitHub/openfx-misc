@@ -62,6 +62,16 @@
 "Effect/TV Snow" "tvsnow.frag.glsl"
 "Effect/Van Gogh" "vangogh.frag.glsl"
 "Effect/Vignette" "vignette-natron.frag.glsl"
+"Merge/MergeOver" "mergeover.frag.glsl"
+"Merge/MergePlus" "mergeplus.frag.glsl"
+"Merge/MergeMatte" "mergematte.frag.glsl"
+"Merge/MergeMultiply" "mergemultiply.frag.glsl"
+"Merge/MergeIn" "mergein.frag.glsl"
+"Merge/MergeOut" "mergeout.frag.glsl"
+"Merge/MergeMax" "mergemax.frag.glsl"
+"Merge/MergeMin" "mergemin.frag.glsl"
+"Merge/MergeAbsminus" "mergeabsminus.frag.glsl"
+"Merge/MergeScreen" "mergescreen.frag.glsl"
 "Noise Blur" "noiseblur.frag.glsl"
 "Notebook Drawings" "notebook.frag.glsl"
 "Plasma2" "plasma2.frag.glsl"
@@ -115,11 +125,8 @@
 "Source/Warping/Procedural 2" "warpproc2.frag.glsl"
 "Source/Warping/Procedural 3" "warpproc3.frag.glsl"
 "Source/Warping/Procedural 4" "warpproc4.frag.glsl"
+"Source/Water Caustic" "watercaustic.frag.glsl"
+"Source/Worley Noise Waters" "worleynoisewaters.frag.glsl"
 "Star Tunnel" "startunnel.frag.glsl"
 "Warping/Warp" "warp.frag.glsl"
 "Warping/Texture" "warptex.frag.glsl"
-   {"Source/Water Caustic",                   "watercaustic.frag.glsl",         -1,-1,-1,-1},
-
-# for some reason, the following are not in the screensaver.shadertoy list
-   {"Source/Worley Noise Waters",             "worleynoisewaters.frag.glsl",    -1,-1,-1,-1},
-   {"Test",                            "test.frag.glsl",                 99,-1,-1,-1},
