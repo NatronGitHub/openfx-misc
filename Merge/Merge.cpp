@@ -48,13 +48,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescriptionStart \
     "Pixel-by-pixel merge operation between two or more inputs.\n" \
     "Input A is first merged with B (or with a black and transparent background if B is not connected), then A2, if connected, is merged with the intermediary result, then A3, etc.\n\n" \
-    "A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
+    "A description of most operators is available in the W3C Compositing and Blending Level 1 Recommendation https://www.w3.org/TR/compositing-1/ and a complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "\n"
 #define kPluginDescriptionStartRoto \
     "Pixel-by-pixel merge operation between two inputs using and external alpha component for input A.\n" \
     "All channels from input A arge merged with those from B, using RotoMask as the alpha component for input A: the alpha channel from A is thus merged onto the alpha channel from B using the RotoMask as the alpha value (\"a\" in the formulas).\n" \
     "This may be useful, for example, to \"paint\" alpha values from A onto the alpha channel of B using a given operation with an external alpha mask (which may be opaque even where the alpha channel of A is zero).\n\n" \
-    "A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
+    "A description of most operators is available in the W3C Compositing and Blending Level 1 Recommendation https://www.w3.org/TR/compositing-1/ and a complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "\n"
 #define kPluginDescriptionMidRGB \
     "Note that if an input with only RGB components is connected to A or B, its alpha channel " \
@@ -71,6 +71,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also:\n" \
     "\n" \
     "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
+    "- \"Compositing and Blending Level 1\" https://www.w3.org/TR/compositing-1/\n" \
     "- \"SVG Compositing Specification\" https://www.w3.org/TR/SVGCompositing/\n" \
     "- \"ISO 32000-1:2008: Portable Document Format (July 2008)\", Sec. 11.3 \"Basic Compositing Operations\"  http://www.adobe.com/devnet/pdf/pdf_reference.html\n" \
     "- \"Merge\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge\n" \
