@@ -11,8 +11,10 @@
 // Redefine below to see the tiling...
 //#define SHOW_TILING
 
+uniform vec3 water_color = vec3(0.0, 0.35, 0.5); // Water Color
+uniform vec3 light_color = vec3(1., 1., 1.); // Light Color
+uniform int iter = 5; // Iterations, min=1, max=10
 #define TAU 6.28318530718
-#define MAX_ITER 5
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
@@ -29,17 +31,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
   float c = 1.0;
   float inten = .005;
 
-  for (int n = 0; n < MAX_ITER; n++)
+  for (int n = 0; n < iter; n++)
   {
     float t = time * (1.0 - (3.5 / float(n + 1)));
     i = p + vec2(cos(t - i.x) + sin(t + i.y), sin(t - i.y) + cos(t + i.x));
     c += 1.0 / length(vec2(p.x / (sin(i.x + t) / inten), p.y / (cos(i.y + t) / inten)));
   }
-  c /= float(MAX_ITER);
+  c /= float(iter);
   c = 1.17 - pow(c, 1.4);
   float tmp = pow(abs(c), 8.0);
-  vec3 colour = vec3(tmp, tmp, tmp);
-  colour = clamp(colour + vec3(0.0, 0.35, 0.5), 0.0, 1.0);
+  vec3 colour = tmp * light_color;
+  colour = clamp(colour + water_color, 0.0, 1.0);
 
 
 #ifdef SHOW_TILING
