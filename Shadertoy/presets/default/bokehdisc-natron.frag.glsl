@@ -15,7 +15,7 @@
 // The compiler is a dunce I tells-ya!!
 #define GOLDEN_ANGLE 2.39996
 
-const vec2 iRenderScale = vec2(1.,1.);).
+const vec2 iRenderScale = vec2(1.,1.);
 const vec2 iChannelOffset[4] = vec2[4]( vec2(0.,0.), vec2(0.,0.), vec2(0.,0.), vec2(0.,0.) );
 uniform float size = 10.; // Blur Size (Blur size in pixels), min=0., max=200.
 uniform int ITERATIONS = 150; // Samples (Number of samples - higher is better and slower), min=2, max=1024

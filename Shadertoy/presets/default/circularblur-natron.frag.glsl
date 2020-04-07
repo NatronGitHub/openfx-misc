@@ -9,7 +9,7 @@
 // iChannel2: Dither (The tex15.png texture), filter=mipmap, wrap=repeat
 // BBox: iChannel0
 
-const vec2 iRenderScale = vec2(1.,1.);).
+const vec2 iRenderScale = vec2(1.,1.);
 const vec2 iChannelOffset[4] = vec2[4]( vec2(0.,0.), vec2(0.,0.), vec2(0.,0.), vec2(0.,0.) );
 uniform float size = 10.; // Blur Size (Blur size in pixels), min=0., max=20.
 uniform int samples = 16; // Samples (Number of samples - higher is better and slower), min=2, max=64
