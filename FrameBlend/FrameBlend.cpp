@@ -405,22 +405,22 @@ private:
                             for (int c = 0; c < nComponents; ++c) {
                                 switch (operation) {
                                 case eOperationAverage:
-                                    tmpPix[c] = MergeImages2D::plusFunctor((float)srcPixi[c], tmpPix[c]); // compute average in the end
+                                    tmpPix[c] = MergeImages2D::plusFunc((float)srcPixi[c], tmpPix[c]); // compute average in the end
                                     break;
                                 case eOperationMin:
-                                    tmpPix[c] = MergeImages2D::darkenFunctor((float)srcPixi[c], tmpPix[c]);
+                                    tmpPix[c] = MergeImages2D::darkenFunc((float)srcPixi[c], tmpPix[c]);
                                     break;
                                 case eOperationMax:
-                                    tmpPix[c] = MergeImages2D::lightenFunctor((float)srcPixi[c], tmpPix[c]);
+                                    tmpPix[c] = MergeImages2D::lightenFunc((float)srcPixi[c], tmpPix[c]);
                                     break;
                                 case eOperationSum:
-                                    tmpPix[c] = MergeImages2D::plusFunctor((float)srcPixi[c], tmpPix[c]);
+                                    tmpPix[c] = MergeImages2D::plusFunc((float)srcPixi[c], tmpPix[c]);
                                     break;
                                 case eOperationProduct:
-                                    tmpPix[c] = MergeImages2D::multiplyFunctor<float,maxValue>(srcPixi[c], tmpPix[c]);
+                                    tmpPix[c] = MergeImages2D::multiplyFunc<float,maxValue>(srcPixi[c], tmpPix[c]);
                                     break;
                                 case eOperationOver:
-                                    tmpPix[c] = MergeImages2D::overFunctor<PIX, maxValue>(srcPixi[c], tmpPix[c], a, b);
+                                    tmpPix[c] = MergeImages2D::overFunc<PIX, maxValue>(srcPixi[c], tmpPix[c], a, b);
                                     break;
                                 }
                             }
