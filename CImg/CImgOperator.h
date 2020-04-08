@@ -373,7 +373,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
     const int tmpRowBytes = tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
-    size_t tmpSize = tmpRowBytes * tmpHeight;
+    size_t tmpSize = (size_t)tmpRowBytes * tmpHeight;
 
     assert(tmpSize > 0);
     OFX::auto_ptr<OFX::ImageMemory> tmpAData( new OFX::ImageMemory(tmpSize, this) );
@@ -464,7 +464,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const int cimgSpectrum = srcNComponents;
     const int cimgWidth = srcRoI.x2 - srcRoI.x1;
     const int cimgHeight = srcRoI.y2 - srcRoI.y1;
-    const size_t cimgSize = cimgWidth * cimgHeight * cimgSpectrum * sizeof(cimgpix_t);
+    const size_t cimgSize = (size_t)cimgWidth * cimgHeight * cimgSpectrum * sizeof(cimgpix_t);
 
 
     if (cimgSize) { // may be zero if no channel is processed

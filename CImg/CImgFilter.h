@@ -780,7 +780,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
     const int tmpRowBytes = tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
-    size_t tmpSize = tmpRowBytes * tmpHeight;
+    size_t tmpSize = (size_t)tmpRowBytes * tmpHeight;
     OFX::auto_ptr<OFX::ImageMemory> tmpData;
     float *tmpPixelData = NULL;
     if (tmpSize > 0) {
@@ -847,7 +847,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     }
     const int cimgWidth = srcRoI.x2 - srcRoI.x1;
     const int cimgHeight = srcRoI.y2 - srcRoI.y1;
-    const size_t cimgSize = cimgWidth * cimgHeight * cimgSpectrum * sizeof(cimgpix_t);
+    const size_t cimgSize = (size_t)cimgWidth * cimgHeight * cimgSpectrum * sizeof(cimgpix_t);
     std::vector<int> srcChannel(cimgSpectrum, -1);
 
     int alphaChannel = -1;

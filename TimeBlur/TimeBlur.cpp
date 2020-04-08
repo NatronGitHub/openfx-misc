@@ -140,7 +140,7 @@ private:
             }
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                size_t renderPix = ( (_renderWindow.x2 - _renderWindow.x1) * (y - _renderWindow.y1) +
+                size_t renderPix = ( (size_t)(_renderWindow.x2 - _renderWindow.x1) * (y - _renderWindow.y1) +
                                      (x - _renderWindow.x1) );
                 if (_accumulatorData) {
                     std::copy(&_accumulatorData[renderPix * nComponents], &_accumulatorData[renderPix * nComponents + nComponents], tmpPix);
@@ -296,7 +296,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
     int divisions = _divisions->getValueAtTime(time);
     double interval = divisions >= 1 ? (range.max - range.min) / divisions : 1.;
     const OfxRectI& renderWindow = args.renderWindow;
-    size_t nPixels = (renderWindow.y2 - renderWindow.y1) * (renderWindow.x2 - renderWindow.x1);
+    size_t nPixels = (size_t)(renderWindow.y2 - renderWindow.y1) * (renderWindow.x2 - renderWindow.x1);
 
     // Main processing loop.
     // We process the frame range by chunks, to avoid using too much memory.
