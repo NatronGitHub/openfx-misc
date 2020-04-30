@@ -120,11 +120,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamWhitePointHint "Set the color of the brightest pixels in the image."
 
 #define kParamBlack "black"
-#define kParamBlackLabel "Black"
+#define kParamBlackLabel "Lift"
 #define kParamBlackHint "Colors corresponding to the blackpoint are set to this value."
 
 #define kParamWhite "white"
-#define kParamWhiteLabel "White"
+#define kParamWhiteLabel "Gain"
 #define kParamWhiteHint "Colors corresponding to the whitepoint are set to this value."
 
 #define kParamMultiply "multiply"
