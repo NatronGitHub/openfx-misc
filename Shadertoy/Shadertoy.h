@@ -433,6 +433,7 @@ private:
     OFX::StringParam *_imageShaderFileName;
     OFX::StringParam *_imageShaderPresetDir;
     OFX::ChoiceParam *_imageShaderPreset;
+    OFX::StringParam *_imageShaderPresetString;
     OFX::StringParam *_imageShaderSource;
     OFX::PushButtonParam *_imageShaderCompile;
     OFX::IntParam *_imageShaderTriggerRender;

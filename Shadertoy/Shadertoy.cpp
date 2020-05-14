@@ -1047,6 +1047,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderFileName(NULL)
     , _imageShaderPresetDir(NULL)
     , _imageShaderPreset(NULL)
+    , _imageShaderPresetString(NULL)
     , _imageShaderSource(NULL)
     , _imageShaderCompile(NULL)
     , _imageShaderTriggerRender(NULL)
@@ -1151,6 +1152,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     if ( paramExists(kParamImageShaderPresetDir) ) {
         _imageShaderPresetDir = fetchStringParam(kParamImageShaderPresetDir);
         _imageShaderPreset = fetchChoiceParam(kParamImageShaderPreset);
+        _imageShaderPresetString = fetchStringParam(kNatronOfxParamStringSublabelName);
     }
     _imageShaderSource = fetchStringParam(kParamImageShaderSource);
     _imageShaderCompile = fetchPushButtonParam(kParamImageShaderCompile);
@@ -2098,6 +2100,7 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
         for (std::vector<ShadertoyPlugin::Preset>::iterator it = _presets.begin(); it != _presets.end(); ++it) {
             _imageShaderPreset->appendOption(it->description, it->filename);
         }
+        _imageShaderPresetString->setValue("");
     } else if (paramName == kParamImageShaderPreset) {
         int preset = _imageShaderPreset->getValue() - 1;
         if ( preset >= 0 && preset < (int)_presets.size() ) {
@@ -2116,6 +2119,14 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
                                std::istreambuf_iterator<char>() );
                     _imageShaderSource->setValue(str);
                 }
+                std::string label;
+                _imageShaderPreset->getOption(preset + 1, label);
+                // keep only the preset name
+                std::size_t found = label.rfind('/');
+                if (found != std::string::npos) {
+                    label = label.substr(found+1);
+                }
+                _imageShaderPresetString->setValue(label);
             }
             // same as kParamImageShaderCompile below, except ask for param update
             {
@@ -2177,6 +2188,9 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
         _imageShaderCompile->setEnabled(true);
         if (args.reason == eChangeUserEdit) {
             _imageShaderPreset->setValue(0);
+            if (_imageShaderPresetString) {
+                _imageShaderPresetString->setValue("");
+            }
         }
     } else if ( ( (paramName == kParamCount) ||
                   starts_with(paramName, kParamName) ) && (args.reason == eChangeUserEdit) ) {
@@ -2741,6 +2755,16 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             }
             if (group) {
                 param->setParent(*group);
+            }
+        }
+        // imageShaderPresetString
+        if ( !gPresetsDefault.empty() ) {
+            StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
+            param->setIsSecretAndDisabled(true); // always secret
+            param->setIsPersistent(false);
+            param->setEvaluateOnChange(false);
+            if (page) {
+                page->addChild(*param);
             }
         }
 
