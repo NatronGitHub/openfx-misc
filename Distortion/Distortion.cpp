@@ -537,8 +537,6 @@ enum OutputModeEnum {
 #define kParamUseRoD "useRoD"
 #define kParamUseRoDLabel "Use Source RoD"
 #define kParamUseRoDHint "Use the region of definition of the source as the source format."
-#warning affects croptoformat (becomes croptorod)
-#warning only for idistort and stmap
 
 static bool gHostIsNatron = false;
 static bool gHostSupportsFormat = false;
