@@ -1842,6 +1842,24 @@ public:
                                 sy, params.orderY,
                                 scale, (bool)params.boundary_i,
                                 cimg_blur);
+            // df(a*x)/dx = a*f'(a*x) (fixes https://github.com/NatronGitHub/Natron/issues/496)
+            if ( (params.orderX > 0 && args.renderScale.x != 1) ||
+                 (params.orderY > 0 && args.renderScale.y != 1) ) {
+                double scale = 1.;
+                if (params.orderX > 0) {
+                    scale *= args.renderScale.x;
+                    if (params.orderX > 1) {
+                        scale *= args.renderScale.x;
+                    }
+                }
+                if (params.orderY > 0) {
+                    scale *= args.renderScale.y;
+                    if (params.orderY > 1) {
+                        scale *= args.renderScale.y;
+                    }
+                }
+                cimg_blur *= scale;
+            }
 
             if ( !blurred && (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) ) {
                 return;
