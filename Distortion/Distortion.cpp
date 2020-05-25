@@ -2201,22 +2201,21 @@ DistortionPlugin::getLensDistortionFormat(double time,
                 if (_majorVersion >= 3) {
                     // before version 3, LensDistortion was only using RoD
                     getInputClipFormatI(_srcClip, time, par, &formatI);
-                } else {
+                }
+                if ( OFX::Coords::rectIsEmpty(formatI) ) {
                     *par = _srcClip->getPixelAspectRatio();
-                    if ( OFX::Coords::rectIsEmpty(formatI) ) {
-                        // no format is available, use the RoD instead
-                        const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
-                        // Coords::toPixelNearest(srcRod, renderScale, *par, format);
-                        format->x1 = srcRod.x1 * renderScale.x / *par;
-                        format->y1 = srcRod.y1 * renderScale.y;
-                        format->x2 = srcRod.x2 * renderScale.x / *par;
-                        format->y2 = srcRod.y2 * renderScale.y;
-                    } else {
-                        format->x1 = formatI.x1 * renderScale.x;
-                        format->y1 = formatI.y1 * renderScale.y;
-                        format->x2 = formatI.x2 * renderScale.x;
-                        format->y2 = formatI.y2 * renderScale.y;
-                    }
+                    // no format is available, use the RoD instead
+                    const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+                    // Coords::toPixelNearest(srcRod, renderScale, *par, format);
+                    format->x1 = srcRod.x1 * renderScale.x / *par;
+                    format->y1 = srcRod.y1 * renderScale.y;
+                    format->x2 = srcRod.x2 * renderScale.x / *par;
+                    format->y2 = srcRod.y2 * renderScale.y;
+                } else {
+                    format->x1 = formatI.x1 * renderScale.x;
+                    format->y1 = formatI.y1 * renderScale.y;
+                    format->x2 = formatI.x2 * renderScale.x;
+                    format->y2 = formatI.y2 * renderScale.y;
                 }
             } else {
                 // default to Project Size
@@ -2531,6 +2530,21 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         formatI.x1 = formatI.y1 = formatI.x2 = formatI.y2 = 0; // default value
         double par;
         getInputClipFormatI(_srcClip, time, &par, &formatI);
+        if ( OFX::Coords::rectIsEmpty(formatI) ) {
+            par = _srcClip->getPixelAspectRatio();
+            // no format is available, use the RoD instead
+            const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+            // Coords::toPixelNearest(srcRod, renderScale, *par, format);
+            format.x1 = srcRod.x1 * args.renderScale.x / par;
+            format.y1 = srcRod.y1 * args.renderScale.y;
+            format.x2 = srcRod.x2 * args.renderScale.x / par;
+            format.y2 = srcRod.y2 * args.renderScale.y;
+        } else {
+            format.x1 = formatI.x1 * args.renderScale.x;
+            format.y1 = formatI.y1 * args.renderScale.y;
+            format.x2 = formatI.x2 * args.renderScale.x;
+            format.y2 = formatI.y2 * args.renderScale.y;
+        }
     }
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
