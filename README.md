@@ -1,4 +1,4 @@
-OpenFX-Misc [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/devernay/openfx-misc/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-misc/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-misc?ref=Thin+badge) [![Build Status](https://api.travis-ci.org/devernay/openfx-misc.png?branch=master)](https://travis-ci.org/devernay/openfx-misc) [![Coverity Scan Build Status](https://scan.coverity.com/projects/2945/badge.svg)](https://scan.coverity.com/projects/2945 "Coverity Badge")
+OpenFX-Misc [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/NatronGitHub/openfx-misc/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-misc/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-misc?ref=Thin+badge) [![Build Status](https://api.travis-ci.org/devernay/openfx-misc.png?branch=master)](https://travis-ci.org/devernay/openfx-misc) [![Coverity Scan Build Status](https://scan.coverity.com/projects/2945/badge.svg)](https://scan.coverity.com/projects/2945 "Coverity Badge")
 ===========
 
 Miscellaneous OFX / OpenFX / Open Effects plugins.
@@ -243,7 +243,7 @@ Parametric parameters work in older versions of Nuke (at least in Nuke 6 & 7).
 
 DaVinci Resolve does not support parametric parameters.
 
-Please [file an issue](https://github.com/devernay/openfx-misc/issues) if you think openfx-misc is doing something wrong, or you know of other hosts which have problems with parametric paremeters.
+Please [file an issue](https://github.com/NatronGitHub/openfx-misc/issues) if you think openfx-misc is doing something wrong, or you know of other hosts which have problems with parametric paremeters.
 
 Although ColorCorrect uses parametric parameters, it can still be instanciated on Nuke 8 & 9 and on DaVinci Resolve, but the curve ranges are not adjustable (shadows are decreasing linearly from 0 to 0.09, and highlights are increasing linearly from 0.5 to 1.0).
 
@@ -265,7 +265,7 @@ provided Unix Makefile, the Xcode project, or the Visual Studio project.
 
 To fetch the latest sources from github, execute the following commands:
 
-	git clone https://github.com/devernay/openfx-misc.git
+	git clone https://github.com/NatronGitHub/openfx-misc.git
 	cd openfx-misc
 	git submodule update -i -r
 

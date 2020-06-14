@@ -1,6 +1,7 @@
 /* ***** BEGIN LICENSE BLOCK *****
- * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
- * Copyright (C) 2013-2018 INRIA
+ * This file is part of openfx-misc <https://github.com/NatronGitHub/openfx-misc>,
+ * (C) 2018-2020 The Natron Developers
+ * (C) 2013-2018 INRIA
  *
  * openfx-misc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -954,7 +955,7 @@ RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // set the premultiplication of _dstClip if alpha is affected and source is Opaque
         bool processA = _processA->getValue();
         // Unfortunately, we cannot check the output components as was done in
-        // https://github.com/devernay/openfx-misc/commit/844a442b5baeef4b1e1a0fd4d5e957707f4465ca
+        // https://github.com/NatronGitHub/openfx-misc/commit/844a442b5baeef4b1e1a0fd4d5e957707f4465ca
         // since it would call getClipPrefs recursively.
         // We just set the output components.
         if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
