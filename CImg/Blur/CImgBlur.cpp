@@ -2077,6 +2077,15 @@ public:
         } else if ( (filter == eFilterBox) || (filter == eFilterTriangle) || (filter == eFilterQuadratic) ) {
             int iter = ( filter == eFilterBox ? 1 :
                         (filter == eFilterTriangle ? 2 : 3) );
+            // CImg::boxfilter has the following check:
+            // if (is_empty() || !boxsize || (boxsize<=1 && !order)) return *this;
+            // but we still want size <= 0 to compute derivatives.
+            if (orderX && sx <= 0.) {
+                sx = 1e-8 / scale; // make sure sx*scale << 1
+            }
+            if (orderY && sy <= 0.) {
+                sy = 1e-8 / scale; // make sure sx*scale << 1
+            }
 
 #         ifdef cimgblur_internal_boxfilter
             boxfilter(cimg_blur, /*cimg_blur.boxfilter(*/ static_cast<float>(sx * scale), orderX, 'x', boundary, iter);
