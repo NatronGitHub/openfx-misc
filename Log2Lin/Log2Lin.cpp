@@ -82,14 +82,23 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #endif
 
 /*
-   Following the formula:
+   Following the formula [1]:
    offset = pow(10,(whitepoint - blackpoint) * 0.002 / gamma)
    gain = 1/(1-offset)
-   linear = gain * pow(10,(1023*v - whitepoint)*0.002/gamma)
+
+   Log2Lin [1, Sec. 5.3 and 6.3]:
+   linear = gain * pow(10,(1023*v - whitepoint)*0.002/gamma) - offset
+
+   Lin2Log [1, Sec. 7.0]:
    cineon = (log10((v + offset) /gain)/ (0.002 / gamma) + whitepoint)/1023
+ 
    Here we're using: blackpoint = 95.0
    whitepoint = 685.0
    gammasensito = 0.6
+
+   Ref:
+   [1] Glenn Kennel (1995-07-26). "Conversion of 10-bit Log Film data to 8-bit Linear or Video
+   Data for The Cineon Digital Film System Version 2.1" http://www.dotcsw.com/doc/cineon1.pdf
  */
 
 #define kParamOperation "operation"
@@ -138,21 +147,10 @@ protected:
     double _whitepoint[3];
     double _gamma[3];
 
-    /*
-       Following the formula:
-       offset = pow(10,(blackpoint - whitepoint) * 0.002 / gamma)
-       gain = 1/(1-offset)
-       linear = gain * (pow(10,(1023*v - whitepoint)*0.002/gamma) - offset)
-       cineon = (log10((v + offset) /gain)/ (0.002 / gamma) + whitepoint)/1023
-       Here we're using: blackpoint = 95.0
-       whitepoint = 685.0
-       gammasensito = 0.6
-     */
-
     double log2lin(double xLog,
                    int c)
     {
-        double retval = _gain[c] * (std::pow(10., (1023. * xLog - _whitepoint[c]) * 0.002 / _gamma[c]) - _offset[c]);
+        double retval = _gain[c] * std::pow(10., (1023. * xLog - _whitepoint[c]) * 0.002 / _gamma[c]) - _offset[c];
 
         return retval;
     }
