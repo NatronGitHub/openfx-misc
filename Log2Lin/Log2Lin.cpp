@@ -82,14 +82,48 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #endif
 
 /*
-   Following the formula:
+   # The Log2Lin/Lin3Log formulas: which one is right?
+
+   ## From the Sony source code: good formula!
+
+   The reference Sony code [2] as well as the Colour Python package [3] and the ACES
+   code [4] use the following formula, which also seems to be used by Nuke's plugins:
+
+   cineonBlackOffset = 10.0 ** ((95.0 - 685.0)/300.0)
+
+   def fromCineon(x):
+     return (10.0**((1023.0 * x - 685.0) / 300.0) - cineonBlackOffset) / (1.0 - cineonBlackOffset)
+
+   equivalent to:
+   linear = gain * (pow(10,(1023*v - whitepoint)*0.002/gamma) - offset)
+   cineon = (log10(v/gain + offset)/ (0.002 / gamma) + whitepoint)/1023
+
+   ## From the Cineon doc: most probably a wrong Formula
+
+   The original Cineon doc [1] gives the following formulas:
+
    offset = pow(10,(whitepoint - blackpoint) * 0.002 / gamma)
    gain = 1/(1-offset)
-   linear = gain * pow(10,(1023*v - whitepoint)*0.002/gamma)
+
+   Log2Lin [1, Sec. 5.3 and 6.3]:
+   linear = gain * pow(10,(1023*v - whitepoint)*0.002/gamma) - offset
+
+   Lin2Log [1, Sec. 7.0]:
    cineon = (log10((v + offset) /gain)/ (0.002 / gamma) + whitepoint)/1023
+ 
    Here we're using: blackpoint = 95.0
    whitepoint = 685.0
    gammasensito = 0.6
+
+   Ref:
+   [1] Glenn Kennel (1995-07-26). "Conversion of 10-bit Log Film data to 8-bit Linear or Video
+   Data for The Cineon Digital Film System Version 2.1" http://www.dotcsw.com/doc/cineon1.pdf
+   [2] Sony Imageworks. (2012). make.py. Retrieved Feb 9, 2021, from
+   https://github.com/imageworks/OpenColorIO-Configs/blob/master/nuke-default/make.py#L163 
+   [3] NumFocus. Colour Python package. Retrieved Feb 9, 2021, from
+   https://github.com/colour-science/colour/blob/master/colour/models/rgb/transfer_functions/cineon.py
+   [4] Sony Imageworks. red.py. Retrieved Feb 9, 2021, from
+   https://github.com/imageworks/OpenColorIO-Configs/blob/master/aces_1.0.3/python/aces_ocio/colorspaces/red.py#L79
  */
 
 #define kParamOperation "operation"
@@ -138,17 +172,6 @@ protected:
     double _whitepoint[3];
     double _gamma[3];
 
-    /*
-       Following the formula:
-       offset = pow(10,(blackpoint - whitepoint) * 0.002 / gamma)
-       gain = 1/(1-offset)
-       linear = gain * (pow(10,(1023*v - whitepoint)*0.002/gamma) - offset)
-       cineon = (log10((v + offset) /gain)/ (0.002 / gamma) + whitepoint)/1023
-       Here we're using: blackpoint = 95.0
-       whitepoint = 685.0
-       gammasensito = 0.6
-     */
-
     double log2lin(double xLog,
                    int c)
     {
@@ -160,7 +183,7 @@ protected:
     double lin2log(double xLin,
                    int c)
     {
-        double retval = (std::log10( (xLin + _offset[c]) / _gain[c] ) / (0.002 / _gamma[c]) + _whitepoint[c]) / 1023.;
+        double retval = (std::log10(xLin / _gain[c] + _offset[c]) / (0.002 / _gamma[c]) + _whitepoint[c]) / 1023.;
 
         return retval;
     }
