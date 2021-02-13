@@ -53,20 +53,18 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n"
 #define kPluginDescriptionStartRoto \
     "Pixel-by-pixel merge operation between two inputs using and external alpha component for input A.\n" \
-    "All channels from input A arge merged with those from B, using RotoMask as the alpha component for input A: the alpha channel from A is thus merged onto the alpha channel from B using the RotoMask as the alpha value (\"a\" in the formulas).\n" \
+    "All channels from input A are merged with those from B, using RotoMask as the alpha component for input A: the alpha channel from A is thus merged onto the alpha channel from B using the RotoMask as the alpha value (\"a\" in the formulas).\n" \
     "This may be useful, for example, to \"paint\" alpha values from A onto the alpha channel of B using a given operation with an external alpha mask (which may be opaque even where the alpha channel of A is zero).\n\n" \
     "A description of most operators is available in the W3C Compositing and Blending Level 1 Recommendation https://www.w3.org/TR/compositing-1/ and a complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "\n"
 #define kPluginDescriptionMidRGB \
     "Note that if an input with only RGB components is connected to A or B, its alpha channel " \
-    "is considered to be transparent (zero) by default, and the \"A\" checkbox for the given " \
-    "input is automatically unchecked, unless it is set explicitly by the user.  In fact, " \
-    "most of the time, RGB images without an alpha channel are only used as background images " \
-    "in the B input, and should be considered as transparent, since they should not occlude " \
-    "anything. That way, the alpha channel on output only contains the opacity of elements " \
-    "that are merged with this background.  In some rare cases, though, one may want the RGB " \
-    "image to actually be opaque, and can check the \"A\" checkbox for the given input to do " \
-    "so.\n" \
+    "is considered to be opaque (one) by default, thus the output will be completely opaque if " \
+    "the checkbox for channel A of input B is checked. One reason for this behaviour is that " \
+    "non-zero RGB values with a zero A value are not valid alpha-premultiplied RGBA values. " \
+    "If the user wishes to keep the background fully transparent, it can only be black, which " \
+    "is equivalent to not using the merge operator. Non-black fully transparent pixels should " \
+    "never appear anywhere in a proper compositing graph.\n" \
     "\n"
 #define kPluginDescriptionEnd \
     "See also:\n" \
@@ -598,8 +596,6 @@ public:
     , _srcClipAs()
     , _srcClipB(NULL)
     , _maskClip(NULL)
-    , _aChannelAChanged(NULL)
-    , _bChannelAChanged(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -651,11 +647,6 @@ public:
         _outputChannels[3] = fetchBooleanParam(kParamOutputChannelsA);
         assert(_outputChannels[0] && _outputChannels[1] && _outputChannels[2] && _outputChannels[3]);
 
-        if ( getImageEffectHostDescription()->supportsPixelComponent(ePixelComponentRGB) ) {
-            _aChannelAChanged = fetchBooleanParam(kParamAChannelsAChanged);
-            _bChannelAChanged = fetchBooleanParam(kParamBChannelsAChanged);
-        }
-
         {
             MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValue();
             // depending on the operation, enable/disable alpha masking
@@ -679,7 +670,6 @@ private:
     /* set up and run a processor */
     void setupAndProcess(MergeProcessorBase &, const RenderArguments &args, bool renderRotoMask);
 
-    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
@@ -706,8 +696,6 @@ private:
     BooleanParam* _aChannels[4];
     BooleanParam* _bChannels[4];
     BooleanParam* _outputChannels[4];
-    BooleanParam* _aChannelAChanged;
-    BooleanParam* _bChannelAChanged;
 };
 
 
@@ -1265,40 +1253,9 @@ MergePlugin::changedParam(const InstanceChangedArgs &args,
         // depending on the operation, enable/disable alpha masking
         _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
         _operationString->setValue( MergeImages2D::getOperationString(operation) );
-    } else if ( _aChannelAChanged && (paramName == kParamAChannelsA) && (args.reason == eChangeUserEdit) ) {
-        _aChannelAChanged->setValue(true);
-    } else if ( _bChannelAChanged && (paramName == kParamBChannelsA) && (args.reason == eChangeUserEdit) ) {
-        _bChannelAChanged->setValue(true);
     }
 }
 
-void
-MergePlugin::changedClip(const InstanceChangedArgs &args,
-                         const std::string &clipName)
-{
-    if ( _bChannelAChanged && !_bChannelAChanged->getValue() && (clipName == kClipB) && _srcClipB && _srcClipB->isConnected() && ( args.reason == eChangeUserEdit) ) {
-        PixelComponentEnum unmappedComps = _srcClipB->getUnmappedPixelComponents();
-        // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
-        // If before the clip preferences pass the input is RGB then don't consider the alpha channel for the clip B and use 0 instead.
-        if (unmappedComps == ePixelComponentRGB) {
-            _bChannels[3]->setValue(false);
-        }
-        if ( (unmappedComps == ePixelComponentRGBA) || (unmappedComps == ePixelComponentAlpha) ) {
-            _bChannels[3]->setValue(true);
-        }
-    } else if ( _aChannelAChanged && !_aChannelAChanged->getValue() && (clipName == kClipA) && _srcClipAs[0] && _srcClipAs[0]->isConnected() && ( args.reason == eChangeUserEdit) ) {
-        // Note: we do not care about clips A2, A3, ...
-        PixelComponentEnum unmappedComps = _srcClipAs[0]->getUnmappedPixelComponents();
-        // If A is RGBA and B is RGB, getClipPreferences will remap B to RGBA.
-        // If before the clip preferences pass the input is RGB then don't consider the alpha channel for the clip B and use 0 instead.
-        if (unmappedComps == ePixelComponentRGB) {
-            _aChannels[3]->setValue(false);
-        }
-        if ( (unmappedComps == ePixelComponentRGBA) || (unmappedComps == ePixelComponentAlpha) ) {
-            _aChannels[3]->setValue(true);
-        }
-    }
-}
 
 bool
 MergePlugin::isIdentity(const IsIdentityArguments &args,
