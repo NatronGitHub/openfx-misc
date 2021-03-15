@@ -60,7 +60,7 @@ init:
   - set arch=
   - if "%PLATFORM%" == "x64" (set arch= Win64)
   - if "%PLATFORM%" == "x86" (set arch=)
-  - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2019" (set GENERATOR="Visual Studio 16 2019%arch%")
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2019" (set GENERATOR="Visual Studio 16 2019")
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2017" (set GENERATOR="Visual Studio 15 2017%arch%")
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2015" (set GENERATOR="Visual Studio 14 2015%arch%")
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2013" (set GENERATOR="Visual Studio 12 2013%arch%")
