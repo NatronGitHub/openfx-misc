@@ -990,6 +990,11 @@ public:
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _maskClip(NULL)
+        , _btmLeft(NULL)
+        , _size(NULL)
+        , _enableRectangle(NULL)
+        , _setSrcFromRectangle(NULL)
+        , _hiDPI(NULL)
         , _srcColor(NULL)
         , _dstColor(NULL)
         , _hueRange(NULL)
@@ -1031,6 +1036,10 @@ public:
         assert(_btmLeft && _size && _enableRectangle);
         _setSrcFromRectangle = fetchPushButtonParam(kParamSetSrcFromRectangle);
         assert(_setSrcFromRectangle);
+        if ( paramExists(kParamHiDPI) ) {
+            _hiDPI = fetchBooleanParam(kParamHiDPI);
+            assert(_hiDPI);
+        }
         _srcColor = fetchRGBParam(kParamSrcColor);
         _dstColor = fetchRGBParam(kParamDstColor);
         _hueRange = fetchDouble2DParam(kParamHueRange);
@@ -1113,6 +1122,9 @@ private:
         _btmLeft->setIsSecretAndDisabled(!enableRectangle);
         _size->setIsSecretAndDisabled(!enableRectangle);
         _setSrcFromRectangle->setIsSecretAndDisabled(!enableRectangle);
+        if (_hiDPI) {
+            _hiDPI->setIsSecretAndDisabled(!enableRectangle);
+        }
         _srcColor->setEnabled(!enableRectangle);
     }
 
@@ -1178,6 +1190,7 @@ private:
     Double2DParam* _size;
     BooleanParam* _enableRectangle;
     PushButtonParam* _setSrcFromRectangle;
+    BooleanParam* _hiDPI;
     RGBParam *_srcColor;
     RGBParam *_dstColor;
     Double2DParam *_hueRange;
@@ -1960,6 +1973,10 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
+
+        // HiDPI
+        hiDPIDescribeParams(desc, group, page);
+
         {
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamSetSrcFromRectangle);
             param->setLabel(kParamSetSrcFromRectangleLabel);

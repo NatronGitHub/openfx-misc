@@ -60,6 +60,7 @@
 #include "ofxsOGLTextRenderer.h"
 #include "ofxsTransform3x3.h"
 #include "ofxsThreadSuite.h"
+#include "ofxsOGLHiDPI.h"
 
 using namespace OFX;
 
@@ -557,6 +558,7 @@ public:
         , _invert(NULL)
         , _overlayPoints(NULL)
         , _interactive(NULL)
+        , _hiDPI(NULL)
         , _dragging(-1)
         , _hovering(-1)
         , _lastMousePos()
@@ -576,7 +578,13 @@ public:
         _overlayPoints = _plugin->fetchChoiceParam(kParamOverlayPoints);
         addParamToSlaveTo(_overlayPoints);
         _interactive = _plugin->fetchBooleanParam(kParamTransformInteractive);
-        assert(_invert && _overlayPoints && _interactive);
+
+        if ( effect->paramExists(kParamHiDPI) ) {
+            _hiDPI = effect->fetchBooleanParam(kParamHiDPI);
+            assert(_hiDPI);
+            addParamToSlaveTo(_hiDPI);
+        }
+        assert(_invert && _overlayPoints && _interactive && _hiDPI);
 
         for (int i = 0; i < 4; ++i) {
             _toDrag[i].x = _toDrag[i].y = 0;
@@ -617,6 +625,7 @@ private:
     BooleanParam* _invert;
     ChoiceParam* _overlayPoints;
     BooleanParam* _interactive;
+    BooleanParam* _hiDPI;
     int _dragging; // -1: idle, else dragging point number
     int _hovering; // -1: idle, else hovering point number
     OfxPointD _lastMousePos;
@@ -708,6 +717,10 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
         useFrom = _useFromDrag;
     }
 
+    bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
+    int scaleFactor = hiDPI ? 2 : 1;
+    TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
+
     OfxPointD p[4];
     OfxPointD q[4];
     int enableBegin = 4;
@@ -737,10 +750,10 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
     //glEnable(GL_POINT_SMOOTH);
     glEnable(GL_BLEND);
     glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
-    glLineWidth(1.5f);
+    glLineWidth(1.5f * scaleFactor);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glPointSize(POINT_SIZE);
+    glPointSize(POINT_SIZE * scaleFactor);
     // Draw everything twice
     // l = 0: shadow
     // l = 1: drawing
@@ -784,7 +797,7 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
         glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
-                TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kParamFrom[i] : kParamTo[i]);
+                TextRenderer::bitmapString(p[i].x, p[i].y + POINT_SIZE * scaleFactor, useFrom ? kParamFrom[i] : kParamTo[i], font);
             }
         }
     }
@@ -1278,6 +1291,9 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    // HiDPI
+    hiDPIDescribeParams(desc, NULL, page);
 
     // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
     if (!gHostSupportsDefaultCoordinateSystem) {

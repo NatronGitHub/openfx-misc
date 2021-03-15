@@ -257,6 +257,7 @@ public:
         , _btmLeft(NULL)
         , _size(NULL)
         , _interactive(NULL)
+        , _hiDPI(NULL)
         , _recenter(NULL)
         , _softness(NULL)
         , _reformat(NULL)
@@ -283,6 +284,10 @@ public:
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _recenter = fetchPushButtonParam(kParamGeneratorCenter);
         _interactive = fetchBooleanParam(kParamRectangleInteractInteractive);
+        if ( paramExists(kParamHiDPI) ) {
+            _hiDPI = fetchBooleanParam(kParamHiDPI);
+            assert(_hiDPI);
+        }
         _softness = fetchDoubleParam(kParamSoftness);
         _reformat = fetchBooleanParam(kParamReformat);
         _intersect = fetchBooleanParam(kParamIntersect);
@@ -345,6 +350,7 @@ private:
     Double2DParam* _btmLeft;
     Double2DParam* _size;
     BooleanParam* _interactive;
+    BooleanParam* _hiDPI;
     PushButtonParam *_recenter;
     DoubleParam* _softness;
     BooleanParam* _reformat;
@@ -632,6 +638,9 @@ CropPlugin::updateParamsVisibility()
     _recenter->setIsSecretAndDisabled(!hasSize);
     _btmLeft->setIsSecretAndDisabled(!hasSize);
     _interactive->setIsSecretAndDisabled(!hasSize);
+    if (_hiDPI) {
+        _hiDPI->setIsSecretAndDisabled(!hasSize);
+    }
 }
 
 void

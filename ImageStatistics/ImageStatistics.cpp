@@ -1179,6 +1179,7 @@ public:
         , _btmLeft(NULL)
         , _size(NULL)
         , _interactive(NULL)
+        , _hiDPI(NULL)
         , _restrictToRectangle(NULL)
     {
 
@@ -1195,6 +1196,10 @@ public:
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _interactive = fetchBooleanParam(kParamRectangleInteractInteractive);
+        if ( paramExists(kParamHiDPI) ) {
+            _hiDPI = fetchBooleanParam(kParamHiDPI);
+            assert(_hiDPI);
+        }
         _restrictToRectangle = fetchBooleanParam(kParamRestrictToRectangle);
         _autoUpdate = fetchBooleanParam(kParamAutoUpdate);
         assert(_btmLeft && _size && _interactive && _restrictToRectangle && _autoUpdate);
@@ -1271,6 +1276,9 @@ private:
         _size->setIsSecretAndDisabled(!restrictToRectangle);
         bool doUpdate = _autoUpdate->getValue();
         _interactive->setIsSecretAndDisabled(!restrictToRectangle || !doUpdate);
+        if (_hiDPI) {
+            _hiDPI->setIsSecretAndDisabled(!restrictToRectangle);
+        }
     }
 
     /* set up and run a processor */
@@ -1355,6 +1363,7 @@ private:
     Double2DParam* _btmLeft;
     Double2DParam* _size;
     BooleanParam* _interactive;
+    BooleanParam* _hiDPI;
     BooleanParam* _restrictToRectangle;
     BooleanParam* _autoUpdate;
     RGBAParam* _statMin;
@@ -1520,6 +1529,9 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         _btmLeft->setIsSecretAndDisabled(!restrictToRectangle);
         _size->setIsSecretAndDisabled(!restrictToRectangle);
         _interactive->setIsSecretAndDisabled(!restrictToRectangle);
+        if (_hiDPI) {
+            _hiDPI->setIsSecretAndDisabled(!restrictToRectangle);
+        }
         doUpdate = true;
     }
     if (paramName == kParamAutoUpdate) {
@@ -2024,6 +2036,9 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    // HiDPI
+    hiDPIDescribeParams(desc, NULL, page);
 
     // autoUpdate
     {

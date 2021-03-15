@@ -50,6 +50,7 @@
 #include "ofxsCoords.h"
 #include "ofxsFilter.h"
 #include "ofxsOGLTextRenderer.h"
+#include "ofxsOGLHiDPI.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -506,6 +507,7 @@ public:
     , _rowOrder(NULL)
     , _colOrder(NULL)
     , _showLayerNames(NULL)
+    , _hiDPI(NULL)
     {
         _srcClip = effect->fetchClip(kOfxImageEffectSimpleSourceClipName);
         _dstClip = effect->fetchClip(kOfxImageEffectOutputClipName);
@@ -518,6 +520,11 @@ public:
         _rowOrder = effect->fetchChoiceParam(kParamRowOrder);
         _colOrder = effect->fetchChoiceParam(kParamColumnOrder);
         _showLayerNames = effect->fetchBooleanParam(kParamShowLayerNames);
+        if ( effect->paramExists(kParamHiDPI) ) {
+            _hiDPI = effect->fetchBooleanParam(kParamHiDPI);
+            assert(_hiDPI);
+            addParamToSlaveTo(_hiDPI);
+        }
     }
 
 private:
@@ -535,6 +542,7 @@ private:
     ChoiceParam* _rowOrder;
     ChoiceParam* _colOrder;
     BooleanParam* _showLayerNames;
+    BooleanParam* _hiDPI;
 
 };
 
@@ -593,6 +601,10 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
         columns = (int)(std::max)( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) );
         rows = (int)std::ceil( n / (double) columns);
     }
+
+    bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
+    //int scaleFactor = hiDPI ? 2 : 1;
+    TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
 
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
@@ -666,7 +678,7 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
 
             glColor3f(color.r * l, color.g * l, color.b * l);
 
-            TextRenderer::bitmapString( imageRoD.x1, imageRoD.y1, name.c_str() );
+            TextRenderer::bitmapString(imageRoD.x1, imageRoD.y1, name.c_str(), font);
         }
     }
 
@@ -869,7 +881,9 @@ LayerContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
             page->addChild(*param);
         }
     }
-    
+
+    // HiDPI
+    hiDPIDescribeParams(desc, NULL, page);
 } // LayerContactSheetPluginFactory::describeInContext
 
 OFX::ImageEffect*

@@ -766,6 +766,8 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    hiDPIDescribeParams(desc, NULL, page);
+    
     defineComponentParam(desc, page, kParamProcessR, kParamProcessRLabel, false);
     defineComponentParam(desc, page, kParamProcessG, kParamProcessGLabel, false);
     defineComponentParam(desc, page, kParamProcessB, kParamProcessBLabel, false);

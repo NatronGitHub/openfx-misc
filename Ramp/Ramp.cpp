@@ -403,6 +403,7 @@ public:
         , _color1(NULL)
         , _type(NULL)
         , _interactive(NULL)
+        , _hiDPI(NULL)
         , _mix(NULL)
         , _maskApply(NULL)
         , _maskInvert(NULL)
@@ -431,6 +432,10 @@ public:
         _color1 = fetchRGBAParam(kParamRampColor1Old);
         _type = fetchChoiceParam(kParamRampTypeOld);
         _interactive = fetchBooleanParam(kParamRampInteractiveOld);
+        if ( paramExists(kParamHiDPI) ) {
+            _hiDPI = fetchBooleanParam(kParamHiDPI);
+            assert(_hiDPI);
+        }
         assert(_point0 && _point1 && _color0 && _color1 && _type && _interactive);
 
         _mix = fetchDoubleParam(kParamMix);
@@ -468,6 +473,9 @@ private:
         _point0->setIsSecretAndDisabled(noramp);
         _point1->setIsSecretAndDisabled(noramp);
         _interactive->setIsSecretAndDisabled(noramp);
+        if (_hiDPI) {
+            _hiDPI->setIsSecretAndDisabled(noramp);
+        }
     }
 
 private:
@@ -486,6 +494,7 @@ private:
     RGBAParam* _color1;
     ChoiceParam* _type;
     BooleanParam* _interactive;
+    BooleanParam* _hiDPI;
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;

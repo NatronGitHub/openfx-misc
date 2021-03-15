@@ -49,6 +49,7 @@
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
 #include "ofxsFilter.h"
+#include "ofxsOGLHiDPI.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -674,6 +675,7 @@ public:
     , _selection(NULL)
     , _selectionInput(NULL)
     , _selectionFrame(NULL)
+    , _hiDPI(NULL)
     {
         _dstClip = effect->fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
@@ -689,6 +691,9 @@ public:
         _selection = effect->fetchBooleanParam(kParamSelection);
         _selectionInput = effect->fetchIntParam(kParamSelectionInput);
         _selectionFrame = effect->fetchIntParam(kParamSelectionFrame);
+        if ( effect->paramExists(kParamHiDPI) ) {
+            _hiDPI = effect->fetchBooleanParam(kParamHiDPI);
+        }
     }
 
 private:
@@ -709,7 +714,7 @@ private:
     BooleanParam* _selection;
     IntParam* _selectionInput;
     IntParam* _selectionFrame;
-
+    BooleanParam* _hiDPI;
 };
 
 // draw the interact
@@ -754,6 +759,10 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
     double cellw = (rod.x2 - rod.x1) / columns;
     double cellh = (rod.y2 - rod.y1) / rows;
 
+    bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
+    int scaleFactor = hiDPI ? 2 : 1;
+    //TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
+
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
     //const OfxPointD& pscale = args.pixelScale;
@@ -771,7 +780,7 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
     glDisable(GL_POINT_SMOOTH);
     glEnable(GL_BLEND);
     glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
-    glLineWidth(3.f);
+    glLineWidth(3.f * scaleFactor);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     double x1 = rod.x1 + cellw * c;
@@ -1144,6 +1153,8 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    hiDPIDescribeParams(desc, NULL, page);
 #endif
 } // ContactSheetPluginFactory::describeInContext
 

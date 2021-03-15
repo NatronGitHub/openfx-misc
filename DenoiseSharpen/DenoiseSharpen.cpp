@@ -3551,6 +3551,10 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 page->addChild(*param);
             }
         }
+
+        // HiDPI
+        hiDPIDescribeParams(desc, group, page);
+
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamB3);
             param->setLabel(kParamB3Label);
