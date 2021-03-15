@@ -51,7 +51,7 @@ pull_requests:
 
 # Operating system (build VM template)
 image:
-- Visual Studio 2017
+- Visual Studio 2019
 #- Ubuntu
 
 # scripts that are called at very beginning, before repo cloning
