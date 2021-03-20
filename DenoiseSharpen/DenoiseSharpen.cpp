@@ -797,13 +797,32 @@ public:
         , _processG(NULL)
         , _processB(NULL)
         , _processA(NULL)
+        , _outputMode(NULL)
         , _colorModel(NULL)
+        , _analysisLock(NULL)
+        , _btmLeft(NULL)
+        , _size(NULL)
+        , _hiDPI(NULL)
+        , _analysisFrame(NULL)
+        , _analyze(NULL)
+        , _noiseLevel()
+        , _adaptiveRadius(NULL)
+        , _noiseLevelGain(NULL)
+        , _denoiseAmount(NULL)
+        , _enableFreq()
+        , _gainFreq()
+        , _channelGain()
+        , _amount()
+        , _sharpenAmount(NULL)
+        , _sharpenSize(NULL)
+        , _sharpenLuminance(NULL)
         , _premult(NULL)
         , _premultChannel(NULL)
         , _mix(NULL)
         , _maskApply(NULL)
         , _maskInvert(NULL)
         , _premultChanged(NULL)
+        , _b3(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -845,6 +864,7 @@ public:
         _analysisLock = fetchBooleanParam(kParamAnalysisLock);
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
+        _hiDPI = paramExists(kParamHiDPI) ? fetchBooleanParam(kParamHiDPI) : NULL;
         _analysisFrame = fetchIntParam(kParamAnalysisFrame);
         _analyze = fetchPushButtonParam(kParamAnalyzeNoiseLevels);
 
@@ -997,6 +1017,9 @@ private:
         // disable the interact
         _btmLeft->setEnabled( !locked );
         _size->setEnabled( !locked );
+        if (_hiDPI) {
+            _hiDPI->setEnabled( !locked );
+        }
         // lock the noise levels
         for (unsigned f = 0; f < 4; ++f) {
             for (unsigned c = 0; c < 4; ++c) {
@@ -1070,6 +1093,7 @@ private:
     BooleanParam* _analysisLock;
     Double2DParam* _btmLeft;
     Double2DParam* _size;
+    BooleanParam* _hiDPI;
     IntParam* _analysisFrame;
     PushButtonParam* _analyze;
     DoubleParam* _noiseLevel[4][4];
@@ -3086,10 +3110,10 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     bool b3 = _b3->getValueAtTime(time);
 
     OfxRectI cropRectI;
-    cropRectI.x1 = std::ceil(cropRect.x1);
-    cropRectI.x2 = std::floor(cropRect.x2);
-    cropRectI.y1 = std::ceil(cropRect.y1);
-    cropRectI.y2 = std::floor(cropRect.y2);
+    cropRectI.x1 = int(std::ceil(cropRect.x1));
+    cropRectI.x2 = int(std::floor(cropRect.x2));
+    cropRectI.y1 = int(std::ceil(cropRect.y1));
+    cropRectI.y2 = int(std::floor(cropRect.y2));
 
     OfxRectI srcWindow;
     bool intersect = Coords::rectIntersection(src->getBounds(), cropRectI, &srcWindow);
