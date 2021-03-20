@@ -951,10 +951,10 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
 
     // required for STMap and LensDistortion
     //if (plugin == eDistortionPluginSTMap || _outputMode == eOutputModeSTMap) {
-    int srcx1 = _format.x1;
-    int srcx2 = _format.x2;
-    int srcy1 = _format.y1;
-    int srcy2 = _format.y2;
+    int srcx1 = int(std::ceil(_format.x1));
+    int srcx2 = int(std::floor(_format.x2));
+    int srcy1 = int(std::ceil(_format.y1));
+    int srcy2 = int(std::floor(_format.y2));
     //}
     float tmpPix[4];
     for (int y = procWindow.y1; y < procWindow.y2; y++) {

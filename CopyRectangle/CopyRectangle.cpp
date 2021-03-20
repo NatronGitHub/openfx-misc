@@ -123,7 +123,7 @@ public:
         , _maskInvert(false)
     {
         _process[0] = _process[1] = _process[2] = _process[3] = false;
-        _rectangle.x1 = _rectangle.y1 = _rectangle.x2 = _rectangle.y2 = 0.f;
+        _rectangle.x1 = _rectangle.y1 = _rectangle.x2 = _rectangle.y2 = 0;
     }
 
     /** @brief set the src image */

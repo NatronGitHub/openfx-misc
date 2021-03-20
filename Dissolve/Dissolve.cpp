@@ -225,8 +225,8 @@ DissolvePlugin::setupAndProcess(ImageBlenderMaskedBase &processor,
     
     // get the transition value
     double which = (std::max)( 0., (std::min)(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
-    int prev = std::floor(which);
-    int next = std::ceil(which);
+    int prev = int(std::floor(which));
+    int next = int(std::ceil(which));
 
     if (prev == next) {
         auto_ptr<const Image> src( ( _srcClip[prev] && _srcClip[prev]->isConnected() ) ?
