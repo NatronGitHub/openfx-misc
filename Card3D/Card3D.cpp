@@ -263,7 +263,7 @@ public:
     static void define(ImageEffectDescriptor &desc,
                        PageParamDescriptor *page,
                        GroupParamDescriptor *group,
-                       const std::string prefix);
+                       const std::string &prefix);
 
     void setEnabled(bool enabled) { _enabled = enabled; update(); }
     
@@ -301,7 +301,7 @@ void
 CameraParam::define(ImageEffectDescriptor &desc,
                     PageParamDescriptor *page,
                     GroupParamDescriptor *group,
-                    const std::string prefix)
+                    const std::string &prefix)
 {
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(prefix + kParamCameraProjectionMode);
@@ -726,7 +726,7 @@ public:
     static void define(ImageEffectDescriptor &desc,
                        PageParamDescriptor *page,
                        GroupParamDescriptor *group,
-                       const std::string prefix,
+                       const std::string &prefix,
                        PosMatTypeEnum type);
 
     void setEnabled(bool enabled) { _enabled = enabled; update(); }
@@ -1117,13 +1117,17 @@ void
 PosMatParam::define(ImageEffectDescriptor &desc,
                     PageParamDescriptor *page,
                     GroupParamDescriptor *group,
-                    const std::string prefix,
+                    const std::string &prefix,
                     PosMatTypeEnum type)
 {
+    std::string labelPrefix;
+    if (type == ePosMatCamera) {
+        labelPrefix = kCameraCamLabel " ";
+    }
     {
         GroupParamDescriptor* subgroup = desc.defineGroupParam(prefix + kParamPosMatFile);
         if (subgroup) {
-            subgroup->setLabelAndHint(kParamPosMatFileLabel);
+            subgroup->setLabelAndHint(labelPrefix + kParamPosMatFileLabel);
             subgroup->setOpen(false);
             if (group) {
                 subgroup->setParent(*group);
@@ -1134,7 +1138,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         }
         {
             ChoiceParamDescriptor* param = desc.defineChoiceParam(prefix + kParamPosMatImportFormat);
-            param->setLabelAndHint(kParamPosMatImportFormatLabel);
+            param->setLabelAndHint(labelPrefix + kParamPosMatImportFormatLabel);
             assert(param->getNOptions() == eImportFormatChan);
             param->appendOption(kParamPosMatImportFormatOptionChan);
             assert(param->getNOptions() == eImportFormatBoujou);
@@ -1148,7 +1152,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         }
         {
             StringParamDescriptor* param = desc.defineStringParam(prefix + kParamPosMatImportFile);
-            param->setLabelAndHint(kParamPosMatImportFileLabel);
+            param->setLabelAndHint(labelPrefix + kParamPosMatImportFileLabel);
             param->setStringType(eStringTypeFilePath);
             param->setFilePathExists(true);
             param->setAnimates(false);
@@ -1166,7 +1170,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         }
         if (!OFX::getImageEffectHostDescription()->isNatron) { // Natron already has a reload button
             PushButtonParamDescriptor* param = desc.definePushButtonParam(prefix + kParamPosMatImportFileReload);
-            param->setLabelAndHint(kParamPosMatImportFileReloadLabel);
+            param->setLabelAndHint(labelPrefix + kParamPosMatImportFileReloadLabel);
             if (subgroup) {
                 param->setParent(*subgroup);
             }
@@ -1177,7 +1181,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         }
         {
             StringParamDescriptor* param = desc.defineStringParam(prefix + kParamPosMatExportChan);
-            param->setLabelAndHint(kParamPosMatExportChanLabel);
+            param->setLabelAndHint(labelPrefix + kParamPosMatExportChanLabel);
             param->setStringType(eStringTypeFilePath);
             param->setFilePathExists(false);
             param->setAnimates(false);
@@ -1195,7 +1199,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         }
         if (!OFX::getImageEffectHostDescription()->isNatron) { // Natron already has a rewrite button
             PushButtonParamDescriptor* param = desc.definePushButtonParam(prefix + kParamPosMatExportChanRewrite);
-            param->setLabelAndHint(kParamPosMatExportChanRewriteLabel);
+            param->setLabelAndHint(labelPrefix + kParamPosMatExportChanRewriteLabel);
             if (subgroup) {
                 param->setParent(*subgroup);
             }
@@ -1207,7 +1211,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(prefix + kParamPosMatTransformOrder);
-        param->setLabelAndHint(kParamPosMatTransformOrderLabel);
+        param->setLabelAndHint(labelPrefix + kParamPosMatTransformOrderLabel);
         assert(param->getNOptions() == ePosMatTransformOrderSRT);
         param->appendOption(kParamPosMatTransformOrderOptionSRT);
         assert(param->getNOptions() == ePosMatTransformOrderSTR);
@@ -1230,7 +1234,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(prefix + kParamPosMatRotationOrder);
-        param->setLabelAndHint(kParamPosMatRotationOrderLabel);
+        param->setLabelAndHint(labelPrefix + kParamPosMatRotationOrderLabel);
         assert(param->getNOptions() == ePosMatRotationOrderXYZ);
         param->appendOption(kParamPosMatRotationOrderOptionXYZ);
         assert(param->getNOptions() == ePosMatRotationOrderXZY);
@@ -1253,7 +1257,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatTranslate);
-        param->setLabelAndHint(kParamPosMatTranslateLabel);
+        param->setLabelAndHint(labelPrefix + kParamPosMatTranslateLabel);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-10., -10., -10., 10., 10., 10.);
         param->setDefault(0, 0, (type == ePosMatCard) ? -1 : 0.);
@@ -1266,7 +1270,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatRotate);
-        param->setLabelAndHint(kParamPosMatRotateLabel);
+        param->setLabelAndHint(labelPrefix + kParamPosMatRotateLabel);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., -180., -180., 180., 180., 180.);
         param->setDefault(0., 0., 0.);
@@ -1280,7 +1284,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatScale);
-        param->setLabelAndHint(kParamPosMatScaleLabel);
+        param->setLabelAndHint(labelPrefix + kParamPosMatScaleLabel);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.01, 0.01, 0.01, 10., 10., 10.);
         param->setDefault(1., 1., 1.);
@@ -1294,7 +1298,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamPosMatUniformScale);
-        param->setLabelAndHint(kParamPosMatUniformScaleLabel);
+        param->setLabelAndHint(labelPrefix + kParamPosMatUniformScaleLabel);
         param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.01, 10.);
         param->setDefault(1.);
@@ -1308,7 +1312,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatSkew);
-        param->setLabelAndHint(kParamPosMatSkewLabel);
+        param->setLabelAndHint(labelPrefix + kParamPosMatSkewLabel);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-1., -1., -1., 1., 1., 1.);
         param->setDefault(0., 0., 0.);
@@ -1321,7 +1325,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     }
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatPivot);
-        param->setLabelAndHint(kParamPosMatPivotLabel);
+        param->setLabelAndHint(labelPrefix + kParamPosMatPivotLabel);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-10., -10., -10., 10., 10., 10.);
         param->setDefault(0., 0., 0.);
@@ -1335,7 +1339,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     {
         GroupParamDescriptor* subgroup = desc.defineGroupParam(prefix + kGroupPosMatLocalMatrix);
         if (subgroup) {
-            subgroup->setLabel(kGroupPosMatLocalMatrixLabel);
+            subgroup->setLabel(labelPrefix + kGroupPosMatLocalMatrixLabel);
             subgroup->setOpen(false);
             if (group) {
                 subgroup->setParent(*group);
@@ -1346,7 +1350,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         }
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(prefix + kParamPosMatUseMatrix);
-            param->setLabelAndHint(kParamPosMatUseMatrixLabel);
+            param->setLabelAndHint(labelPrefix + kParamPosMatUseMatrixLabel);
             param->setAnimates(false);
             param->setEvaluateOnChange(false);
             if (subgroup) {
@@ -1359,7 +1363,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamPosMatMatrix + (char)('1' + i) + (char)('1' + j));
-                param->setLabelAndHint(kParamPosMatMatrixLabel);
+                param->setLabelAndHint(labelPrefix + kParamPosMatMatrixLabel);
                 param->setRange(-DBL_MAX, DBL_MAX);
                 param->setDisplayRange(-1., 1.);
                 param->setDefault(i == j ? 1. : (i == 2 && j == 3) ? -1. : 0.);
@@ -1378,7 +1382,7 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     if (type == ePosMatCamera) {
         GroupParamDescriptor* subgroup = desc.defineGroupParam(kCameraCam kParamCameraProjectionGroup);
         if (subgroup) {
-            subgroup->setLabel(kCameraCamLabel " " kParamCameraProjectionGroupLabel);
+            subgroup->setLabel(labelPrefix + kParamCameraProjectionGroupLabel);
             subgroup->setOpen(false);
             if (group) {
                 subgroup->setParent(*group);
