@@ -56,8 +56,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: fix https://github.com/MrKepzie/Natron/issues/1397
 // version 1.2: add useRoD parameter for Natron
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 2.0: add eReformatTypeToProjectFormat
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kParamUseRoD "useRoD"
 #define kParamUseRoDLabel "Use Source RoD"
@@ -65,18 +66,18 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamType "reformatType"
 #define kParamTypeLabel "Type"
-#define kParamTypeHint "To Format: Converts between formats, the image is resized to fit in the target format. " \
-    "To Box: Scales to fit into a box of a given width and height. " \
-    "Scale: Scales the image (rounding to integer pixel sizes)."
+#define kParamTypeHint "Selects how the output format is computed."
 #define kParamTypeOptionToFormat "To Format", "Resize to predefined format.", "format"
-#define kParamTypeOptionToBox "To Box", "Resize to given bounding box.", "box"
-#define kParamTypeOptionScale "Scale", "Apply scale.", "scale"
+#define kParamTypeOptionToBox "To Box", "Resize to fit into a box of a given width and height.", "box"
+#define kParamTypeOptionScale "Scale", "Apply scale (rounding to integer pixel sizes).", "scale"
+#define kParamTypeOptionToProjectFormat "To Project Format", "Resize to project format.", "project"
 
 enum ReformatTypeEnum
 {
     eReformatTypeToFormat = 0,
     eReformatTypeToBox,
     eReformatTypeScale,
+    eReformatTypeToProjectFormat
 };
 
 #define kParamFormat kNatronParamFormatChoice
@@ -211,42 +212,6 @@ public:
         _flop = fetchBooleanParam(kParamFlop);
         _turn = fetchBooleanParam(kParamTurn);
         assert(_useRoD && _type && _format && _boxSize && _boxFixed && _boxPAR && _scale && _scaleUniform && _preserveBB && _resize && _center && _flip && _flop && _turn);
-
-
-        if (!gHostIsNatron) {
-            // try to guess the output format from the project size
-            // do it only if not Natron otherwise this will override what the host has set in the format when loading
-            double projectPAR = getProjectPixelAspectRatio();
-            OfxPointD projectSize = getProjectSize();
-
-            ///Try to find a format matching the project format in which case we switch to format mode otherwise
-            ///switch to size mode and set the size accordingly
-            bool foundFormat = false;
-            for (int i = 0; i < (int)eParamFormatCount; ++i) {
-                int width = 0, height = 0;
-                double par = -1.;
-                getFormatResolution( (EParamFormat)i, &width, &height, &par );
-                assert(par != -1);
-                if ( (width * par == projectSize.x) && (height == projectSize.y) && (std::abs(par - projectPAR) < 0.01) ) {
-                    _type->setValue( (int)eReformatTypeToFormat );
-                    _format->setValue( (EParamFormat)i );
-                    _boxSize->setValue(width, height);
-                    _formatBoxSize->setValue(width, height);
-                    _boxPAR->setValue(par);
-                    _formatBoxPAR->setValue(par);
-                    foundFormat = true;
-                    break;
-                }
-            }
-            if (!foundFormat) {
-                _type->setValue( (int)eReformatTypeToBox );
-                _boxSize->setValue(projectSize.x / projectPAR, projectSize.y);
-                _formatBoxSize->setValue(projectSize.x / projectPAR, projectSize.y);
-                _boxPAR->setValue(projectPAR);
-                _formatBoxPAR->setValue(projectPAR);
-                _boxFixed->setValue(true);
-            }
-        }
 
         // finally
         syncPrivateData();
@@ -662,6 +627,14 @@ ReformatPlugin::getBoxValues(const double time, int *w, int *h, double *par, boo
         *h = srcRodPixel.y2 - srcRodPixel.y1;
         *boxFixed = true;
     }
+    case eReformatTypeToProjectFormat: {
+        double projectPAR = getProjectPixelAspectRatio();
+        OfxPointD projectSize = getProjectSize();
+        *w = projectSize.x / projectPAR;
+        *h = projectSize.y;
+        *par = projectPAR;
+        *boxFixed = true;
+    }
     }
     return true; // box was set
 } // ReformatPlugin::setBoxValues
@@ -735,6 +708,16 @@ ReformatPlugin::refreshVisibility()
         _scale->setIsSecretAndDisabled(false);
         _scaleUniform->setIsSecretAndDisabled(false);
         break;
+
+    case eReformatTypeToProjectFormat:
+        _format->setIsSecretAndDisabled(true);
+        _boxSize->setIsSecretAndDisabled(true);
+        _boxPAR->setIsSecretAndDisabled(true);
+        _boxFixed->setIsSecretAndDisabled(true);
+        _scale->setIsSecretAndDisabled(true);
+        _scaleUniform->setIsSecretAndDisabled(true);
+        break;
+
     }
     _formatBoxSize->setIsSecretAndDisabled(true);
     _formatBoxPAR->setIsSecretAndDisabled(true);
@@ -752,7 +735,8 @@ ReformatPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 
     switch (type) {
     case eReformatTypeToFormat:
-    case eReformatTypeToBox: {
+    case eReformatTypeToBox:
+    case eReformatTypeToProjectFormat: {
         //specific output PAR
         clipPreferences.setPixelAspectRatio(*_dstClip, par);
         break;
@@ -767,10 +751,13 @@ ReformatPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 #endif
 }
 
-mDeclarePluginFactory(ReformatPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(ReformatPluginFactory, {ofxsThreadSuiteCheck();}, {});
+
+template<unsigned int majorVersion>
 void
-ReformatPluginFactory::describe(ImageEffectDescriptor &desc)
+ReformatPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    desc.setIsDeprecated(majorVersion <= 1);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -796,8 +783,9 @@ ReformatPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+ReformatPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                          ContextEnum context)
 {
     // make some pages and to things in
@@ -827,7 +815,14 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamTypeOptionToBox);
         assert(param->getNOptions() == eReformatTypeScale);
         param->appendOption(kParamTypeOptionScale);
-        param->setDefault(0);
+        if (majorVersion > 1) {
+            assert(param->getNOptions() == eReformatTypeToProjectFormat);
+            param->appendOption(kParamTypeOptionToProjectFormat);
+        }
+        // eReformatTypeToProjectFormat appeared with v1.3, and there was never a v1.2
+        param->setDefault((majorVersion <= 1) ?
+                          int(eReformatTypeToFormat) :
+                          int(eReformatTypeToProjectFormat));
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
@@ -1088,14 +1083,17 @@ ReformatPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ofxsFilterDescribeParamsInterpolate2D(desc, page, /*blackOutsideDefault*/ false);
 } // ReformatPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-ReformatPluginFactory::createInstance(OfxImageEffectHandle handle,
+ReformatPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                       ContextEnum /*context*/)
 {
     return new ReformatPlugin(handle);
 }
 
-static ReformatPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ReformatPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+static ReformatPluginFactory<1> p_old(kPluginIdentifier, 1);
+mRegisterPluginFactoryInstance(p_old)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
