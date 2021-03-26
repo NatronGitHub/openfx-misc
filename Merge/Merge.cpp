@@ -154,48 +154,48 @@ enum BBoxEnum
 #define kParamAChannelsHint   "Channels to use from A input(s) (other channels are set to zero)."
 #define kParamAChannelsR      "AChannelsR"
 #define kParamAChannelsRLabel "R"
-#define kParamAChannelsRHint  "Use red component from A input(s)."
+#define kParamAChannelsRHint  "Use red channel from A input(s)."
 #define kParamAChannelsG      "AChannelsG"
 #define kParamAChannelsGLabel "G"
-#define kParamAChannelsGHint  "Use green component from A input(s)."
+#define kParamAChannelsGHint  "Use green channel from A input(s)."
 #define kParamAChannelsB      "AChannelsB"
 #define kParamAChannelsBLabel "B"
-#define kParamAChannelsBHint  "Use blue component from A input(s)."
+#define kParamAChannelsBHint  "Use blue channel from A input(s)."
 #define kParamAChannelsA      "AChannelsA"
 #define kParamAChannelsALabel "A"
-#define kParamAChannelsAHint  "Use alpha component from A input(s)."
+#define kParamAChannelsAHint  "Use alpha channel from A input(s)."
 
 #define kParamBChannels       "BChannels"
 #define kParamBChannelsLabel  "B Channels"
 #define kParamBChannelsHint   "Channels to use from B input (other channels are set to zero)."
 #define kParamBChannelsR      "BChannelsR"
 #define kParamBChannelsRLabel "R"
-#define kParamBChannelsRHint  "Use red component from B input."
+#define kParamBChannelsRHint  "Use red channel from B input."
 #define kParamBChannelsG      "BChannelsG"
 #define kParamBChannelsGLabel "G"
-#define kParamBChannelsGHint  "Use green component from B input."
+#define kParamBChannelsGHint  "Use green channel from B input."
 #define kParamBChannelsB      "BChannelsB"
 #define kParamBChannelsBLabel "B"
-#define kParamBChannelsBHint  "Use blue component from B input."
+#define kParamBChannelsBHint  "Use blue channel from B input."
 #define kParamBChannelsA      "BChannelsA"
 #define kParamBChannelsALabel "A"
-#define kParamBChannelsAHint  "Use alpha component from B input."
+#define kParamBChannelsAHint  "Use alpha channel from B input."
 
 #define kParamOutputChannels       "OutputChannels"
 #define kParamOutputChannelsLabel  "Output"
 #define kParamOutputChannelsHint   "Channels from result to write to output (other channels are taken from B input)."
 #define kParamOutputChannelsR      "OutputChannelsR"
 #define kParamOutputChannelsRLabel "R"
-#define kParamOutputChannelsRHint  "Write red component to output."
+#define kParamOutputChannelsRHint  "Write red channel to output."
 #define kParamOutputChannelsG      "OutputChannelsG"
 #define kParamOutputChannelsGLabel "G"
-#define kParamOutputChannelsGHint  "Write green component to output."
+#define kParamOutputChannelsGHint  "Write green channel to output."
 #define kParamOutputChannelsB      "OutputChannelsB"
 #define kParamOutputChannelsBLabel "B"
-#define kParamOutputChannelsBHint  "Write blue component to output."
+#define kParamOutputChannelsBHint  "Write blue channel to output."
 #define kParamOutputChannelsA      "OutputChannelsA"
 #define kParamOutputChannelsALabel "A"
-#define kParamOutputChannelsAHint  "Write alpha component to output."
+#define kParamOutputChannelsAHint  "Write alpha channel to output."
 
 #define kParamAChannelsAChanged "aChannelsChanged" // did the user explicitly change the "A" checkbox for A input?
 #define kParamBChannelsAChanged "bChannelsChanged" // did the user explicitly change the "A" checkbox for B input?
@@ -548,7 +548,7 @@ private:
                             }
 
                             mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
-                            
+
 #                         ifdef DEBUG
                             // check for NaN
                             for (int c = 0; c < nComponents; ++c) {
@@ -572,7 +572,7 @@ private:
                         }
                     }
                 }
-                
+
                 dstPix += nComponents;
             }
         }
@@ -1318,7 +1318,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     MergingFunctionEnum blendingOperator = (MergingFunctionEnum)_operation->getValueAtTime(args.time);
     if ( !isIdentityForBOnly(blendingOperator) ) {
         // For most operators, we cannot be identity on regions where the A RoD does not intersect the render window.
-        // E.g: multiply should produce black and transparent in B regions that do not intersect A 
+        // E.g: multiply should produce black and transparent in B regions that do not intersect A
         return false;
     }
 
@@ -1326,7 +1326,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     //if (Coords::rectIsInfinite(args.renderWindow)) {
     //    return false;
     //}
-    
+
     // The region of effect is only the set of the intersections between the A inputs and the mask.
     // If at least one of these regions intersects the renderwindow, the effect is not identity.
 
