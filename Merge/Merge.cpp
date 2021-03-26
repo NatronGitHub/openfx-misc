@@ -52,8 +52,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "A description of most operators is available in the W3C Compositing and Blending Level 1 Recommendation https://www.w3.org/TR/compositing-1/ and a complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "\n"
 #define kPluginDescriptionStartRoto \
-    "Pixel-by-pixel merge operation between two inputs using and external alpha component for input A.\n" \
-    "All channels from input A are merged with those from B, using RotoMask as the alpha component for input A: the alpha channel from A is thus merged onto the alpha channel from B using the RotoMask as the alpha value (\"a\" in the formulas).\n" \
+    "Pixel-by-pixel merge operation between two inputs using and external alpha channel for input A.\n" \
+    "All channels from input A are merged with those from B, using RotoMask as the alpha channel for input A: the alpha channel from A is thus merged onto the alpha channel from B using the RotoMask as the alpha value (\"a\" in the formulas).\n" \
     "This may be useful, for example, to \"paint\" alpha values from A onto the alpha channel of B using a given operation with an external alpha mask (which may be opaque even where the alpha channel of A is zero).\n\n" \
     "A description of most operators is available in the W3C Compositing and Blending Level 1 Recommendation https://www.w3.org/TR/compositing-1/ and a complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "\n"
@@ -123,7 +123,7 @@ enum MergePluginEnum
 #define kParamOperationLabel "Operation"
 #define kParamOperationHint \
     "The operation used to merge the input A and B images.\n" \
-    "The operator formula is applied to each component: A and B represent the input component (Red, Green, Blue, or Alpha) of each input, and a and b represent the Alpha component of each input.\n" \
+    "The operator formula is applied to each component: A and B represent the input component (Red, Green, Blue, or Alpha) of each input, and a and b represent the alpha channel of each input.\n" \
     "If Alpha masking is checked, the output alpha is computed using a different formula (a+b - a*b).\n" \
     "Alpha masking is always enabled for HSL modes (hue, saturation, color, luminosity)."
 
@@ -1229,7 +1229,7 @@ MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
-    // The output of Merge should always have an Alpha component.
+    // The output of Merge should always have an alpha channel.
     // For example, if B is RGB, B is considered transparent, so
     // that outside of A the output should be transparent.
     // Thus, if A and B are RGB, output should be RGBA.

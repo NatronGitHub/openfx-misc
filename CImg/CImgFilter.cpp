@@ -49,16 +49,16 @@ pthread_once_t tls::gImageEffect_once = PTHREAD_ONCE_INIT;
 #else
 #define kParamProcessR      "processR"
 #define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Process red component."
+#define kParamProcessRHint  "Process red channel."
 #define kParamProcessG      "processG"
 #define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Process green component."
+#define kParamProcessGHint  "Process green channel."
 #define kParamProcessB      "processB"
 #define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Process blue component."
+#define kParamProcessBHint  "Process blue channel."
 #define kParamProcessA      "processA"
 #define kParamProcessALabel "A"
-#define kParamProcessAHint  "Process alpha component."
+#define kParamProcessAHint  "Process alpha channel."
 #endif
 
 CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle handle,

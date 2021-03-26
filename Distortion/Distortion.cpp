@@ -171,13 +171,13 @@ enum DistortionPluginEnum
 #define kParamProcessALabel kNatronOfxParamProcessALabel, kNatronOfxParamProcessAHint
 #else
 #define kParamProcessR      "processR"
-#define kParamProcessRLabel "R", "Process red component."
+#define kParamProcessRLabel "R", "Process red channel."
 #define kParamProcessG      "processG"
-#define kParamProcessGLabel "G", "Process green component."
+#define kParamProcessGLabel "G", "Process green channel."
 #define kParamProcessB      "processB"
-#define kParamProcessBLabel "B", "Process blue component."
+#define kParamProcessBLabel "B", "Process blue channel."
 #define kParamProcessA      "processA"
-#define kParamProcessALabel "A", "Process alpha component."
+#define kParamProcessALabel "A", "Process alpha channel."
 #endif
 
 #define kParamChannelU "channelU"
