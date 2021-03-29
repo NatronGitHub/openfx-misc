@@ -62,7 +62,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     " This controls what should be the components for the Color Layer: Alpha, RGB or RGBA."
 #define kParamOutputComponentsOptionRGBA "RGBA", "Output RGBA components.", "rgba"
 #define kParamOutputComponentsOptionRGB "RGB", "Output RGB components.", "rgb"
-#define kParamOutputComponentsOptionAlpha "Alpha", "Output Alpha component.", "alpha"
+#define kParamOutputComponentsOptionAlpha "Alpha", "Output alpha channel.", "alpha"
 
 #define kParamOutputChannels "outputLayer"
 #define kParamOutputChannelsLabel "Output Layer"

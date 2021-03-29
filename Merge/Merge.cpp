@@ -52,8 +52,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "A description of most operators is available in the W3C Compositing and Blending Level 1 Recommendation https://www.w3.org/TR/compositing-1/ and a complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "\n"
 #define kPluginDescriptionStartRoto \
-    "Pixel-by-pixel merge operation between two inputs using and external alpha component for input A.\n" \
-    "All channels from input A are merged with those from B, using RotoMask as the alpha component for input A: the alpha channel from A is thus merged onto the alpha channel from B using the RotoMask as the alpha value (\"a\" in the formulas).\n" \
+    "Pixel-by-pixel merge operation between two inputs using and external alpha channel for input A.\n" \
+    "All channels from input A are merged with those from B, using RotoMask as the alpha channel for input A: the alpha channel from A is thus merged onto the alpha channel from B using the RotoMask as the alpha value (\"a\" in the formulas).\n" \
     "This may be useful, for example, to \"paint\" alpha values from A onto the alpha channel of B using a given operation with an external alpha mask (which may be opaque even where the alpha channel of A is zero).\n\n" \
     "A description of most operators is available in the W3C Compositing and Blending Level 1 Recommendation https://www.w3.org/TR/compositing-1/ and a complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
     "\n"
@@ -123,7 +123,7 @@ enum MergePluginEnum
 #define kParamOperationLabel "Operation"
 #define kParamOperationHint \
     "The operation used to merge the input A and B images.\n" \
-    "The operator formula is applied to each component: A and B represent the input component (Red, Green, Blue, or Alpha) of each input, and a and b represent the Alpha component of each input.\n" \
+    "The operator formula is applied to each component: A and B represent the input component (Red, Green, Blue, or Alpha) of each input, and a and b represent the alpha channel of each input.\n" \
     "If Alpha masking is checked, the output alpha is computed using a different formula (a+b - a*b).\n" \
     "Alpha masking is always enabled for HSL modes (hue, saturation, color, luminosity)."
 
@@ -154,48 +154,48 @@ enum BBoxEnum
 #define kParamAChannelsHint   "Channels to use from A input(s) (other channels are set to zero)."
 #define kParamAChannelsR      "AChannelsR"
 #define kParamAChannelsRLabel "R"
-#define kParamAChannelsRHint  "Use red component from A input(s)."
+#define kParamAChannelsRHint  "Use red channel from A input(s)."
 #define kParamAChannelsG      "AChannelsG"
 #define kParamAChannelsGLabel "G"
-#define kParamAChannelsGHint  "Use green component from A input(s)."
+#define kParamAChannelsGHint  "Use green channel from A input(s)."
 #define kParamAChannelsB      "AChannelsB"
 #define kParamAChannelsBLabel "B"
-#define kParamAChannelsBHint  "Use blue component from A input(s)."
+#define kParamAChannelsBHint  "Use blue channel from A input(s)."
 #define kParamAChannelsA      "AChannelsA"
 #define kParamAChannelsALabel "A"
-#define kParamAChannelsAHint  "Use alpha component from A input(s)."
+#define kParamAChannelsAHint  "Use alpha channel from A input(s)."
 
 #define kParamBChannels       "BChannels"
 #define kParamBChannelsLabel  "B Channels"
 #define kParamBChannelsHint   "Channels to use from B input (other channels are set to zero)."
 #define kParamBChannelsR      "BChannelsR"
 #define kParamBChannelsRLabel "R"
-#define kParamBChannelsRHint  "Use red component from B input."
+#define kParamBChannelsRHint  "Use red channel from B input."
 #define kParamBChannelsG      "BChannelsG"
 #define kParamBChannelsGLabel "G"
-#define kParamBChannelsGHint  "Use green component from B input."
+#define kParamBChannelsGHint  "Use green channel from B input."
 #define kParamBChannelsB      "BChannelsB"
 #define kParamBChannelsBLabel "B"
-#define kParamBChannelsBHint  "Use blue component from B input."
+#define kParamBChannelsBHint  "Use blue channel from B input."
 #define kParamBChannelsA      "BChannelsA"
 #define kParamBChannelsALabel "A"
-#define kParamBChannelsAHint  "Use alpha component from B input."
+#define kParamBChannelsAHint  "Use alpha channel from B input."
 
 #define kParamOutputChannels       "OutputChannels"
 #define kParamOutputChannelsLabel  "Output"
 #define kParamOutputChannelsHint   "Channels from result to write to output (other channels are taken from B input)."
 #define kParamOutputChannelsR      "OutputChannelsR"
 #define kParamOutputChannelsRLabel "R"
-#define kParamOutputChannelsRHint  "Write red component to output."
+#define kParamOutputChannelsRHint  "Write red channel to output."
 #define kParamOutputChannelsG      "OutputChannelsG"
 #define kParamOutputChannelsGLabel "G"
-#define kParamOutputChannelsGHint  "Write green component to output."
+#define kParamOutputChannelsGHint  "Write green channel to output."
 #define kParamOutputChannelsB      "OutputChannelsB"
 #define kParamOutputChannelsBLabel "B"
-#define kParamOutputChannelsBHint  "Write blue component to output."
+#define kParamOutputChannelsBHint  "Write blue channel to output."
 #define kParamOutputChannelsA      "OutputChannelsA"
 #define kParamOutputChannelsALabel "A"
-#define kParamOutputChannelsAHint  "Write alpha component to output."
+#define kParamOutputChannelsAHint  "Write alpha channel to output."
 
 #define kParamAChannelsAChanged "aChannelsChanged" // did the user explicitly change the "A" checkbox for A input?
 #define kParamBChannelsAChanged "bChannelsChanged" // did the user explicitly change the "A" checkbox for B input?
@@ -548,7 +548,7 @@ private:
                             }
 
                             mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
-                            
+
 #                         ifdef DEBUG
                             // check for NaN
                             for (int c = 0; c < nComponents; ++c) {
@@ -572,7 +572,7 @@ private:
                         }
                     }
                 }
-                
+
                 dstPix += nComponents;
             }
         }
@@ -1229,7 +1229,7 @@ MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
-    // The output of Merge should always have an Alpha component.
+    // The output of Merge should always have an alpha channel.
     // For example, if B is RGB, B is considered transparent, so
     // that outside of A the output should be transparent.
     // Thus, if A and B are RGB, output should be RGBA.
@@ -1318,7 +1318,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     MergingFunctionEnum blendingOperator = (MergingFunctionEnum)_operation->getValueAtTime(args.time);
     if ( !isIdentityForBOnly(blendingOperator) ) {
         // For most operators, we cannot be identity on regions where the A RoD does not intersect the render window.
-        // E.g: multiply should produce black and transparent in B regions that do not intersect A 
+        // E.g: multiply should produce black and transparent in B regions that do not intersect A
         return false;
     }
 
@@ -1326,7 +1326,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     //if (Coords::rectIsInfinite(args.renderWindow)) {
     //    return false;
     //}
-    
+
     // The region of effect is only the set of the intersections between the A inputs and the mask.
     // If at least one of these regions intersects the renderwindow, the effect is not identity.
 
