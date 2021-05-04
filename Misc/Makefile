@@ -47,6 +47,7 @@ GodRays.o \
 Grade.o \
 HSVTool.o \
 HueCorrect.o \
+HueCorrect1.o \
 Distortion.o \
 DistortionModel.o \
 ImageStatistics.o \

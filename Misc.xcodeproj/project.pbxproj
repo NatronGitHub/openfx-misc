@@ -921,6 +921,7 @@
 		1EB0A4901AA21B1300F9C93E /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EB0A4991AA21B3700F9C93E /* Mirror.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A4801AA21AF100F9C93E /* Mirror.cpp */; };
 		1EB0A49B1AA21B4200F9C93E /* Mirror.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A4801AA21AF100F9C93E /* Mirror.cpp */; };
+		1EB7E29E264208DE003637A0 /* HueCorrect1.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB7E2842641FAD9003637A0 /* HueCorrect1.cpp */; };
 		1EB9C073196DD64E003C1849 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EB9C074196DD64E003C1849 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EB9C075196DD64E003C1849 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -3890,6 +3891,7 @@
 		1EB0A4801AA21AF100F9C93E /* Mirror.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Mirror.cpp; sourceTree = "<group>"; };
 		1EB0A4971AA21B1300F9C93E /* Mirror.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Mirror.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EB0C41E180DCAB500C25D1E /* ColorLookup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorLookup.cpp; sourceTree = "<group>"; };
+		1EB7E2842641FAD9003637A0 /* HueCorrect1.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = HueCorrect1.cpp; sourceTree = "<group>"; };
 		1EB9C080196DD64E003C1849 /* NoOp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoOp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EB9C082196DD697003C1849 /* NoOp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NoOp.cpp; sourceTree = "<group>"; };
 		1EB9C088196DD6AD003C1849 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -4971,6 +4973,7 @@
 		1E2678A01DAE95CE0047D737 /* HueCorrect */ = {
 			isa = PBXGroup;
 			children = (
+				1EB7E2842641FAD9003637A0 /* HueCorrect1.cpp */,
 				1E2678A11DAE95F50047D737 /* HueCorrect.cpp */,
 				AC5C09161EC73E4E00F319C7 /* net.sf.openfx.HueCorrect.png */,
 				AC5C09171EC73E4E00F319C7 /* net.sf.openfx.HueCorrect.svg */,
@@ -8163,6 +8166,7 @@
 			files = (
 				1EF77C081E4B6466005C4845 /* tinythread.cpp in Sources */,
 				1E2678B91DAE97120047D737 /* HueCorrect.cpp in Sources */,
+				1EB7E29E264208DE003637A0 /* HueCorrect1.cpp in Sources */,
 				1E2678A71DAE96E50047D737 /* ofxsCore.cpp in Sources */,
 				1E2678A81DAE96E50047D737 /* ofxsImageEffect.cpp in Sources */,
 				1E2678A91DAE96E50047D737 /* ofxsInteract.cpp in Sources */,
@@ -10386,7 +10390,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "Keyer.ofx copy-Info.plist";
+				INFOPLIST_FILE = "Keyer/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -10397,7 +10401,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "Keyer.ofx copy-Info.plist";
+				INFOPLIST_FILE = "Keyer/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -10430,7 +10434,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "ColorWheel.ofx copy-Info.plist";
+				INFOPLIST_FILE = "ColorWheel/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -10441,7 +10445,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "ColorWheel.ofx copy-Info.plist";
+				INFOPLIST_FILE = "ColorWheel/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -10753,7 +10757,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "PLogLin.ofx copy-Info.plist";
+				INFOPLIST_FILE = "PLogLin/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -10764,7 +10768,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "PLogLin.ofx copy-Info.plist";
+				INFOPLIST_FILE = "PLogLin/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -11215,7 +11219,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "Merge.ofx copy-Info.plist";
+				INFOPLIST_FILE = "Merge/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -11226,7 +11230,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "Merge.ofx copy-Info.plist";
+				INFOPLIST_FILE = "Merge/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;

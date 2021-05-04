@@ -50,6 +50,7 @@ GodRays/GodRays.cpp
 Grade/Grade.cpp
 HSVTool/HSVTool.cpp
 HueCorrect/HueCorrect.cpp
+HueCorrect/HueCorrect1.cpp
 ImageStatistics/ImageStatistics.cpp
 Invert/Invert.cpp
 JoinViews/JoinViews.cpp

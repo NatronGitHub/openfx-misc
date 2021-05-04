@@ -57,7 +57,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Apply hue-dependent color adjustments using lookup curves.\n" \
     "Hue and saturation are computed from the the source RGB values. Depending on the hue value, the various adjustment values are computed, and then applied:\n" \
-    "hue: hue shift.\n" \
     "sat: saturation gain. This modification is applied last.\n" \
     "lum: luminance gain\n" \
     "red: red gain\n" \
@@ -74,9 +73,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier "net.sf.openfx.HueCorrect"
 // History:
-// version 1.0 (deprecated, in HueCorrect1.cpp): initial version
-// version 2.0: add Hue vs Hue support
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// version 1.0 (deprecated): initial version
+// version 2.0 (in HueCorrect.cpp): add Hue vs Hue support
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -89,7 +88,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamHue "hue"
 #define kParamHueLabel "Hue Curves"
 #define kParamHueHint "Hue-dependent adjustment lookup curves:\n" \
-    "hue: hue shift.\n" \
     "sat: saturation gain. This modification is applied last.\n" \
     "lum: luminance gain\n" \
     "red: red gain\n" \
@@ -100,9 +98,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "b_sup: blue suppression\n" \
     "sat_thrsh: if source saturation is below this value, do not apply the lum, red, green, blue gains. Above this value, apply gain progressively."
 
-#define kParamHueVsHue "huevshue"
-#define kParamHueVsHueLabel "Hue Vs Hue Guide"
-#define kParamHueVsHueHint "Display a curve background guide designed for hue vs. hue tuning."
 
 #define kParamLuminanceMath "luminanceMath"
 #define kParamLuminanceMathLabel "Luminance Math"
@@ -144,17 +139,16 @@ enum LuminanceMathEnum
 
 #define kParamPremultChanged "premultChanged"
 
-#define kCurveHue 0
-#define kCurveSat 1
-#define kCurveLum 2
-#define kCurveRed 3
-#define kCurveGreen 4
-#define kCurveBlue 5
-#define kCurveRSup 6
-#define kCurveGSup 7
-#define kCurveBSup 8
-#define kCurveSatThrsh 9
-#define kCurveNb 10
+#define kCurveSat 0
+#define kCurveLum 1
+#define kCurveRed 2
+#define kCurveGreen 3
+#define kCurveBlue 4
+#define kCurveRSup 5
+#define kCurveGSup 6
+#define kCurveBSup 7
+#define kCurveSatThrsh 8
+#define kCurveNb 9
 
 
 class HueCorrectProcessorBase
@@ -347,13 +341,12 @@ private:
                 if (_luminanceMix > 0.) {
                     l_in = luminance(r, g, b, _luminanceMath);
                 }
-                float h0, h, s, v;
-                Color::rgb_to_hsv( r, g, b, &h0, &s, &v );
-                h = h0 * 6 + 1;
+                float h, s, v;
+                Color::rgb_to_hsv( r, g, b, &h, &s, &v );
+                h = h * 6 + 1;
                 if (h > 6) {
                     h -= 6;
                 }
-                float hue = interpolate(kCurveHue, h);
                 double sat = interpolate(kCurveSat, h);
                 double lum = interpolate(kCurveLum, h);
                 double red = interpolate(kCurveRed, h);
@@ -364,11 +357,6 @@ private:
                 double b_sup = interpolate(kCurveBSup, h);
                 float sat_thrsh = interpolate(kCurveSatThrsh, h);
 
-                if (hue != 1.f) {
-                    float h1 = h0 + (hue - 1.f) / 2;
-                    h1 = h1 - std::floor(h1);
-                    Color::hsv_to_rgb( h1, s, v, &r, &g, &b );
-                }
                 if (r_sup != 1.) {
                     // If r > min(g,b),  r = min(g,b) + r_sup * (r-min(g,b))
                     float m = (std::min)(g, b);
@@ -745,17 +733,12 @@ public:
                        const std::string& paramName)
         : ParamInteract(handle, effect)
         , _hueParam(NULL)
-        , _hueVsHue(NULL)
         , _xMin(0.)
         , _xMax(0.)
         , _yMin(0.)
         , _yMax(0.)
     {
         _hueParam = effect->fetchParametricParam(paramName);
-        if (effect->paramExists(kParamHueVsHue)) {
-            _hueVsHue = effect->fetchBooleanParam(kParamHueVsHue);
-            addParamToSlaveTo(_hueVsHue);
-        }
         setColourPicking(true);
         _hueParam->getRange(_xMin, _xMax);
         _hueParam->getDimensionDisplayRange(0, _yMin, _yMax);
@@ -766,54 +749,6 @@ public:
 
     virtual bool draw(const DrawArgs &args) OVERRIDE FINAL
     {
-        if ( _hueVsHue && _hueVsHue->getValue() ) {
-            // let us draw one slice every 8 pixels
-            const int sliceWidth = 8;
-            const float s = 1.;
-            const float v = 0.3;
-            int nbValues = args.pixelScale.x > 0 ? std::ceil( (_xMax - _xMin) / (sliceWidth * args.pixelScale.x) ) : 1;
-
-            glBegin (GL_TRIANGLE_STRIP);
-
-            for (int position = -nbValues; position <= 2 * nbValues; ++position) {
-                // position to evaluate the param at
-                double parametricPos = _xMin + (_xMax - _xMin) * double(position) / nbValues;
-
-                // red is at parametricPos = 1
-                float h = (parametricPos - 1) / 6;
-                float r, g, b;
-                Color::hsv_to_rgb( h, s, v, &r, &g, &b );
-                glColor3f(r, g, b);
-                glVertex2f(parametricPos+3, _yMin);
-                glVertex2f(parametricPos-3, _yMax);
-            }
-
-            glEnd();
-
-            if (args.hasPickerColour) {
-                glLineWidth(1.5);
-                glBegin(GL_LINES);
-                {
-                    float h, s, v;
-                    Color::rgb_to_hsv( args.pickerColour.r, args.pickerColour.g, args.pickerColour.b, &h, &s, &v );
-                    const OfxRGBColourD yellow   = {1, 1, 0};
-                    glColor3f(yellow.r, yellow.g, yellow.b);
-                    // map [0,1] to [0,6]
-                    h = _xMin + h * (_xMax - _xMin) + 1;
-                    if (h > 6) {
-                        h -= 6;
-                    }
-                    glVertex2f(h-6+3, _yMin);
-                    glVertex2f(h-6-3, _yMax);
-                    glVertex2f(h+3, _yMin);
-                    glVertex2f(h-3, _yMax);
-                    glVertex2f(h+6+3, _yMin);
-                    glVertex2f(h+6-3, _yMax);
-                }
-                glEnd();
-            }
-            return true;
-        }
         //const double time = args.time;
 
         // let us draw one slice every 8 pixels
@@ -869,7 +804,6 @@ public:
 
 protected:
     ParametricParam* _hueParam;
-    BooleanParam* _hueVsHue;
     double _xMin, _xMax;
     double _yMin, _yMax;
 };
@@ -895,6 +829,8 @@ HueCorrectPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+
+    desc.setIsDeprecated(true); // replaced by HueCorrect 2.0
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextPaint);
@@ -980,6 +916,7 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setInteractDescriptor(interact);
         }
 
+        // define it as three dimensional
         param->setDimension(kCurveNb);
 
         // label our dimensions are r/g/b
@@ -992,7 +929,6 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDimensionLabel("g_sup", kCurveGSup);
         param->setDimensionLabel("b_sup", kCurveBSup);
         param->setDimensionLabel("sat_thrsh", kCurveSatThrsh);
-        param->setDimensionLabel("hue", kCurveHue);
 
         // set the UI colour for each dimension
         //const OfxRGBColourD master  = {0.9, 0.9, 0.9};
@@ -1010,17 +946,26 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setUIColour( kCurveGSup, green );
         param->setUIColour( kCurveBSup, blue );
         param->setUIColour( kCurveSatThrsh, alpha );
-        param->setUIColour( kCurveHue, alpha );
 
         // set the min/max parametric range to 0..6
         param->setRange(0.0, 6.0);
+        // set the default Y range to 0..1 for all dimensions
+        param->setDimensionDisplayRange(0., 1., kCurveSat);
+        param->setDimensionDisplayRange(0., 1., kCurveLum);
+        param->setDimensionDisplayRange(0., 1., kCurveRed);
+        param->setDimensionDisplayRange(0., 1., kCurveGreen);
+        param->setDimensionDisplayRange(0., 1., kCurveBlue);
+        param->setDimensionDisplayRange(0., 1., kCurveRSup);
+        param->setDimensionDisplayRange(0., 1., kCurveGSup);
+        param->setDimensionDisplayRange(0., 1., kCurveBSup);
+        param->setDimensionDisplayRange(0., 1., kCurveSatThrsh);
 
 
         int plast = param->supportsPeriodic() ? 5 : 6;
         // set a default curve
         for (int c = 0; c < kCurveNb; ++c) {
             // minimum/maximum: are these supported by OpenFX?
-            param->setDimensionRange(c == kCurveHue ? -DBL_MAX : 0., c == kCurveSatThrsh ? 1. : DBL_MAX, c);
+            param->setDimensionRange(0., c == kCurveSatThrsh ? 1. : DBL_MAX, c);
             param->setDimensionDisplayRange(0., 2., c);
             for (int p = 0; p <= plast; ++p) {
                 // add a control point at p
@@ -1032,18 +977,6 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             }
         }
 
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamHueVsHue);
-        param->setLabel(kParamHueVsHueLabel);
-        param->setHint(kParamHueVsHueHint);
-        param->setDefault(false);
-        param->setEvaluateOnChange(false);
-        param->setIsPersistent(false);
-        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
@@ -1142,474 +1075,5 @@ HueCorrectPluginFactory::createInstance(OfxImageEffectHandle handle,
 static HueCorrectPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
-
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
-//
-// HueKeyer
-//
-//////////////////////////////////////////////////////////////////////////////////
-
-#define kPluginKeyerName "HueKeyerOFX"
-#define kPluginKeyerGrouping "Keyer"
-#define kPluginKeyerDescription \
-    "Compute a key depending on hue value.\n" \
-    "Hue and saturation are computed from the the source RGB values. Depending on the hue value, the various adjustment values are computed, and then applied:\n" \
-    "amount: output transparency for the given hue (amount=1 means alpha=0).\n" \
-    "sat_thrsh: if source saturation is below this value, the output transparency is gradually decreased."
-
-#define kPluginKeyerIdentifier "net.sf.openfx.HueKeyer"
-
-#define kParamKeyerHue "hue"
-#define kParamKeyerHueLabel "Hue Curves"
-#define kParamKeyerHueHint "Hue-dependent alpha lookup curves:\n" \
-    "amount: transparency (1-alpha) amount for the given hue\n" \
-    "sat_thrsh: if source saturation is below this value, transparency is decreased progressively."
-
-#define kCurveKeyerAmount 0
-#define kCurveKeyerSatThrsh 1
-#define kCurveKeyerNb 2
-
-
-class HueKeyerProcessorBase
-    : public ImageProcessor
-{
-protected:
-    const Image *_srcImg;
-
-public:
-    HueKeyerProcessorBase(ImageEffect &instance)
-        : ImageProcessor(instance)
-        , _srcImg(NULL)
-    {
-    }
-
-    void setSrcImg(const Image *v) {_srcImg = v; }
-};
-
-template<class PIX, int maxValue>
-static float
-sampleToFloat(PIX value)
-{
-    return (maxValue == 1) ? value : (value / (float)maxValue);
-}
-
-template<class PIX, int maxValue>
-static PIX
-floatToSample(float value)
-{
-    if (maxValue == 1) {
-        return PIX(value);
-    }
-    if (value <= 0) {
-        return 0;
-    } else if (value >= 1.) {
-        return maxValue;
-    }
-
-    return PIX(value * maxValue + 0.5f);
-}
-
-template<class PIX, int maxValue>
-static PIX
-floatToSample(double value)
-{
-    if (maxValue == 1) {
-        return PIX(value);
-    }
-    if (value <= 0) {
-        return 0;
-    } else if (value >= 1.) {
-        return maxValue;
-    }
-
-    return PIX(value * maxValue + 0.5);
-}
-
-template <class PIX, int nComponents, int maxValue, int nbValues>
-class HueKeyerProcessor
-    : public HueKeyerProcessorBase
-{
-private:
-    std::vector<double> _hue[kCurveKeyerNb];
-    ParametricParam*  _hueParam;
-    double _time;
-
-public:
-    // ctor
-    HueKeyerProcessor(ImageEffect &instance,
-                      const RenderArguments &args,
-                      ParametricParam  *hueParam)
-        : HueKeyerProcessorBase(instance)
-        , _hueParam(hueParam)
-    {
-        assert(nComponents == 4);
-        // build the LUT
-        assert(_hueParam);
-        _time = args.time;
-        for (int c = 0; c < kCurveKeyerNb; ++c) {
-            _hue[c].resize(nbValues + 1);
-            for (int position = 0; position <= nbValues; ++position) {
-                // position to evaluate the param at
-                double parametricPos = 6 * double(position) / nbValues;
-
-                // evaluate the parametric param
-                double value = _hueParam->getValue(c, _time, parametricPos);
-
-                // all the values (in HueKeyer) must be positive. We don't care if sat_thrsh goes above 1.
-                value = (std::max)(0., value);
-                // set that in the lut
-                _hue[c][position] = value;
-            }
-        }
-    }
-
-private:
-    // and do some processing
-    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
-    {
-        unused(rs);
-        assert(nComponents == 4);
-        assert(_dstImg);
-        for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if ( _effect.abort() ) {
-                break;
-            }
-
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
-            for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if (!srcPix) {
-                    std::fill( dstPix, dstPix + 3, PIX() );
-                    dstPix[3] = maxValue;
-                } else {
-                    std::copy(srcPix, srcPix + 3, dstPix);
-                    float r = sampleToFloat<PIX, maxValue>(srcPix[0]);
-                    float g = sampleToFloat<PIX, maxValue>(srcPix[1]);
-                    float b = sampleToFloat<PIX, maxValue>(srcPix[2]);
-                    float h, s, v;
-                    Color::rgb_to_hsv( r, g, b, &h, &s, &v );
-                    h = h * 6 + 1;
-                    if (h > 6) {
-                        h -= 6;
-                    }
-                    double amount = interpolate(kCurveKeyerAmount, h);
-                    double sat_thrsh = interpolate(kCurveKeyerSatThrsh, h);
-                    float a = 0.;
-                    if (s == 0) {
-                        // saturation is 0, hue is undetermined
-                        a = 0.;
-                    } else if (s >= sat_thrsh) {
-                        a = amount;
-                    } else {
-                        a = amount * s / sat_thrsh;
-                    }
-                    std::copy(srcPix, srcPix + 3, dstPix);
-                    dstPix[3] = floatToSample<PIX, maxValue>(1. - a);
-                }
-                // increment the dst pixel
-                dstPix += nComponents;
-            }
-        }
-    }
-
-    double interpolate(int c, // the curve number
-                       double value)
-    {
-        if ( (value < 0.) || (6. < value) ) {
-            // slow version
-            double ret = _hueParam->getValue(c, _time, value);
-
-            return ret;
-        } else {
-            double x = value / 6.;
-            int i = (int)(x * nbValues);
-            assert(0 <= i && i <= nbValues);
-            double alpha = (std::max)( 0., (std::min)(x * nbValues - i, 1.) );
-            double a = _hue[c][i];
-            double b = (i  < nbValues) ? _hue[c][i + 1] : 0.f;
-
-            return a * (1.f - alpha) + b * alpha;
-        }
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-/** @brief The plugin that does our work */
-class HueKeyerPlugin
-    : public ImageEffect
-{
-public:
-    HueKeyerPlugin(OfxImageEffectHandle handle)
-        : ImageEffect(handle)
-        , _dstClip(NULL)
-        , _srcClip(NULL)
-    {
-
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
-                             _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
-
-        _hue = fetchParametricParam(kParamKeyerHue);
-    }
-
-private:
-    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-
-    template <int nComponents>
-    void renderForComponents(const RenderArguments &args, BitDepthEnum dstBitDepth);
-
-    void setupAndProcess(HueKeyerProcessorBase &, const RenderArguments &args);
-
-private:
-    Clip *_dstClip;
-    Clip *_srcClip;
-    ParametricParam  *_hue;
-};
-
-
-void
-HueKeyerPlugin::setupAndProcess(HueKeyerProcessorBase &processor,
-                                const RenderArguments &args)
-{
-    const double time = args.time;
-
-    assert(_dstClip);
-    auto_ptr<Image> dst( _dstClip->fetchImage(time) );
-    if ( !dst.get() ) {
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-# ifndef NDEBUG
-    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-         ( dstComponents != _dstClip->getPixelComponents() ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-    checkBadRenderScaleOrField(dst, args);
-# endif
-    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                    _srcClip->fetchImage(time) : 0 );
-# ifndef NDEBUG
-    if ( src.get() ) {
-        checkBadRenderScaleOrField(src, args);
-        BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        PixelComponentEnum srcComponents = src->getPixelComponents();
-        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            throwSuiteStatusException(kOfxStatErrImageFormat);
-        }
-    }
-
-    if ( src.get() && dst.get() ) {
-        BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        PixelComponentEnum srcComponents = src->getPixelComponents();
-        BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        PixelComponentEnum dstComponents  = dst->getPixelComponents();
-
-        // see if they have the same depths and bytes and all
-        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-            throwSuiteStatusException(kOfxStatErrImageFormat);
-        }
-    }
-# endif
-
-    processor.setDstImg( dst.get() );
-    processor.setSrcImg( src.get() );
-    processor.setRenderWindow(args.renderWindow, args.renderScale);
-    processor.process();
-} // HueKeyerPlugin::setupAndProcess
-
-// the internal render function
-template <int nComponents>
-void
-HueKeyerPlugin::renderForComponents(const RenderArguments &args,
-                                    BitDepthEnum dstBitDepth)
-{
-    switch (dstBitDepth) {
-    case eBitDepthUByte: {
-        HueKeyerProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _hue);
-        setupAndProcess(fred, args);
-        break;
-    }
-    case eBitDepthUShort: {
-        HueKeyerProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _hue);
-        setupAndProcess(fred, args);
-        break;
-    }
-    case eBitDepthFloat: {
-        HueKeyerProcessor<float, nComponents, 1, 1023> fred(*this, args, _hue);
-        setupAndProcess(fred, args);
-        break;
-    }
-    default:
-        throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
-}
-
-void
-HueKeyerPlugin::render(const RenderArguments &args)
-{
-    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
-
-    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    if (dstComponents == ePixelComponentRGBA) {
-        renderForComponents<4>(args, dstBitDepth);
-    } else {
-        throwSuiteStatusException(kOfxStatErrFormat);
-    }
-}
-
-mDeclarePluginFactory(HueKeyerPluginFactory, {ofxsThreadSuiteCheck();}, {});
-void
-HueKeyerPluginFactory::describe(ImageEffectDescriptor &desc)
-{
-    desc.setLabel(kPluginKeyerName);
-    desc.setPluginGrouping(kPluginKeyerGrouping);
-    desc.setPluginDescription(kPluginKeyerDescription);
-
-    desc.addSupportedContext(eContextFilter);
-    //desc.addSupportedContext(eContextPaint);
-    desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthFloat);
-
-    desc.setSingleInstance(false);
-    desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setSupportsTiles(kSupportsTiles);
-    desc.setTemporalClipAccess(false);
-    desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
-    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
-    desc.setRenderThreadSafety(kRenderThreadSafety);
-    // returning an error here crashes Nuke
-    //if (!getImageEffectHostDescription()->supportsParametricParameter) {
-    //  throwHostMissingSuiteException(kOfxParametricParameterSuite);
-    //}
-#ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(ePixelComponentNone);
-#endif
-}
-
-void
-HueKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                         ContextEnum /*context*/)
-{
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
-                                               !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                 8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
-
-    if (!supportsParametricParameter) {
-        throwHostMissingSuiteException(kOfxParametricParameterSuite);
-    }
-
-    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
-    //srcClip->addSupportedComponent(ePixelComponentRGB);
-#ifdef OFX_EXTENSIONS_NATRON
-    //srcClip->addSupportedComponent(ePixelComponentXY);
-#endif
-    //srcClip->addSupportedComponent(ePixelComponentAlpha);
-    srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(kSupportsTiles);
-    srcClip->setIsMask(false);
-
-    ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    assert(dstClip);
-    dstClip->addSupportedComponent(ePixelComponentRGBA);
-    //dstClip->addSupportedComponent(ePixelComponentRGB);
-#ifdef OFX_EXTENSIONS_NATRON
-    //dstClip->addSupportedComponent(ePixelComponentXY);
-#endif
-    //dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(kSupportsTiles);
-
-
-    // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam("Controls");
-
-    // define it
-    {
-        ParametricParamDescriptor* param = desc.defineParametricParam(kParamKeyerHue);
-        assert(param);
-        param->setPeriodic(true);
-        param->setLabel(kParamKeyerHueLabel);
-        param->setHint(kParamKeyerHueHint);
-        {
-            HueCorrectInteractDescriptor* interact = new HueCorrectInteractDescriptor;
-            param->setInteractDescriptor(interact);
-        }
-
-        // define it as three dimensional
-        param->setDimension(kCurveKeyerNb);
-
-        // label our dimensions are r/g/b
-        param->setDimensionLabel("amount", kCurveKeyerAmount);
-        param->setDimensionLabel("sat_thrsh", kCurveKeyerSatThrsh);
-
-        // set the UI colour for each dimension
-        //const OfxRGBColourD master  = {0.9, 0.9, 0.9};
-        // the following are magic colors, they all have the same Rec709 luminance
-        //const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};      //set red color to red curve
-        //const OfxRGBColourD green = {0., 0.546986106552894, 0.};        //set green color to green curve
-        //const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};      //set blue color to blue curve
-        const OfxRGBColourD alpha  = {0.398979, 0.398979, 0.398979};
-        const OfxRGBColourD yellow  = {0.711519527404004, 0.711519527404004, 0.164533420851110};
-        param->setUIColour( kCurveKeyerAmount, alpha );
-        param->setUIColour( kCurveKeyerSatThrsh, yellow );
-
-        // set the min/max parametric range to 0..6
-        param->setRange(0.0, 6.0);
-        // set the default Y range to 0..1 for all dimensions
-        param->setDimensionDisplayRange(0., 1., kCurveKeyerAmount);
-        param->setDimensionDisplayRange(0., 1., kCurveKeyerSatThrsh);
-
-
-        int plast = param->supportsPeriodic() ? 5 : 6;
-        // set a default curve
-        for (int c = 0; c < kCurveKeyerNb; ++c) {
-            // minimum/maximum: are these supported by OpenFX?
-            param->setDimensionRange(0., 1., c);
-            param->setDimensionDisplayRange(0., 1., c);
-            for (int p = 0; p <= plast; ++p) {
-                // add a control point at p
-                param->addControlPoint(c, // curve to set
-                                       0.0,   // time, ignored in this case, as we are not adding a key
-                                       p,   // parametric position, zero
-                                       (c == kCurveKeyerSatThrsh) ? 0.1 : (double)(p == 3 || p == 4),   // value to be
-                                       false);   // don't add a key
-            }
-        }
-
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-} // HueKeyerPluginFactory::describeInContext
-
-ImageEffect*
-HueKeyerPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                      ContextEnum /*context*/)
-{
-    return new HueKeyerPlugin(handle);
-}
-
-static HueKeyerPluginFactory p1(kPluginKeyerIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
