@@ -2248,7 +2248,7 @@ DistortionPlugin::getInputClipFormat(Clip* clip,
                                      double* par,
                                      OfxRectD* rect) const
 {
-    *par = _srcClip->getPixelAspectRatio();
+    *par = clip->getPixelAspectRatio();
 #ifdef OFX_EXTENSIONS_NATRON
     if (gHostSupportsFormat && !_useRoD->getValueAtTime(time)) {
         OfxRectI format = {0, 0, 0, 0};
