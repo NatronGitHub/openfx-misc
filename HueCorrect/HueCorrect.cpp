@@ -784,8 +784,8 @@ public:
                 float r, g, b;
                 Color::hsv_to_rgb( h, s, v, &r, &g, &b );
                 glColor3f(r, g, b);
-                glVertex2f(parametricPos+3, _yMin);
-                glVertex2f(parametricPos-3, _yMax);
+                glVertex2f(parametricPos+9, _yMin-(_yMax-_yMin));
+                glVertex2f(parametricPos-9, _yMax+(_yMax-_yMin));
             }
 
             glEnd();
