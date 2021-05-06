@@ -422,8 +422,7 @@ private:
                 tmpPix[2] = clamp<float>(b, 1.);
                 tmpPix[3] = unpPix[3]; // alpha is left unchanged
                 for (int c = 0; c < nComponents; ++c) {
-                    assert( !OFX::IsNaN(unpPix[c]) && !OFX::IsNaN(unpPix[c]) &&
-                            !OFX::IsNaN(tmpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
+                    assert( !OFX::IsNaN(unpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
                 }
 
                 // ofxsPremultMaskMixPix expects normalized input

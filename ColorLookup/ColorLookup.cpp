@@ -452,7 +452,7 @@ private:
                     float a = srcPix ? (srcPix[0] / (float)maxValue) : 0.f;
                     tmpPix[0] = interpolate(0, a) * maxValue;
                     for (int c = 0; c < nComponents; ++c) {
-                        assert( ( !srcPix || ( !OFX::IsNaN(srcPix[c]) && !OFX::IsNaN(srcPix[c]) ) ) && !OFX::IsNaN(tmpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
+                        assert( ( !srcPix || !OFX::IsNaN(srcPix[c]) ) && !OFX::IsNaN(tmpPix[c]) );
                     }
                     // ofxsMaskMix expects denormalized input
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -536,7 +536,7 @@ private:
                         }
                     }
                     for (int c = 0; c < nComponents; ++c) {
-                        assert( ( !srcPix || ( !OFX::IsNaN(srcPix[c]) && !OFX::IsNaN(srcPix[c]) ) ) && !OFX::IsNaN(tmpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
+                        assert( ( !srcPix || !OFX::IsNaN(srcPix[c]) ) && !OFX::IsNaN(tmpPix[c]) );
                     }
                     // ofxsMaskMix expects denormalized input
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -626,7 +626,7 @@ private:
                         }
                     }
                     for (int c = 0; c < nComponents; ++c) {
-                        assert( !OFX::IsNaN(unpPix[c]) && !OFX::IsNaN(unpPix[c]) && !OFX::IsNaN(tmpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
+                        assert( !OFX::IsNaN(unpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
                     }
                     // ofxsPremultMaskMixPix expects normalized input
                     ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
