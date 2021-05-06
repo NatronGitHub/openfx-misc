@@ -932,10 +932,11 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         // set the UI colour for each dimension
         //const OfxRGBColourD master  = {0.9, 0.9, 0.9};
         // the following are magic colors, they all have the same Rec709 luminance
-        const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};      //set red color to red curve
-        const OfxRGBColourD green = {0., 0.546986106552894, 0.};        //set green color to green curve
-        const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};      //set blue color to blue curve
-        const OfxRGBColourD alpha  = {0.398979, 0.398979, 0.398979};
+        const OfxRGBColourD red   = {1, (0.7152-0.2126)/(0.7152+0.0722),(0.7152-0.2126)/(0.7152+0.0722)};      //set red color to red curve
+        const OfxRGBColourD green = {0., 1, 0.};        //set green color to green curve
+        const OfxRGBColourD blue  = {(0.7152-0.0722)/(0.7152+0.2126),(0.7152-0.0722)/(0.7152+0.2126), 1};      //set blue color to blue curve
+        const OfxRGBColourD alpha  = {0.7152,0.7152,0.7152};
+        // const OfxRGBColourD yellow  = {0.7152/(0.7152+0.2126),0.7152/(0.7152+0.2126),0};
         param->setUIColour( kCurveSat, alpha );
         param->setUIColour( kCurveLum, alpha );
         param->setUIColour( kCurveRed, red );
