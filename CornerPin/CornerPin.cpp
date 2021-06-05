@@ -108,6 +108,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define POINT_SIZE 5
 #define POINT_TOLERANCE 6
+#define BEZIER_STEPS 8
 
 #define kGroupTo "to"
 #define kGroupToLabel "To"
@@ -764,6 +765,43 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
         // translate (1,-1) pixels
         glTranslated(direction * shadow.x, -direction * shadow.y, 0);
         glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+
+        // Draw the motion curve a bit darker
+        const double darken = 0.8;
+        glColor3d(color.r * darken * l, color.g * darken * l, color.b * darken * l);
+
+        for (int i = enableBegin; i < enableEnd; ++i) {
+            if (enable[i]) {
+                Double2DParam* p = useFrom ? _from[i] : _to[i];
+                int numKeys = p->getNumKeys();
+                
+                if (numKeys > 0) {
+                    glPointSize(POINT_SIZE * scaleFactor);
+                    glBegin(GL_POINTS);
+                    for (int i=0; i < numKeys; ++i) {
+                        double time = p->getKeyTime(i);
+                        OfxPointD pt;
+                        p->getValueAtTime(time, pt.x, pt.y);
+                        glVertex2d(pt.x, pt.y);
+                        
+                    }
+                    glEnd();
+                    glBegin(GL_LINE_STRIP);
+                    double time = p->getKeyTime(0);
+                    for (int i = 1; i < numKeys; ++i) {
+                        double timeNext = p->getKeyTime(i);
+                        for (int j = (i == 1 ? 0 : 1); j <= BEZIER_STEPS; ++j) {
+                            double timeStep = time + j * (timeNext - time) / BEZIER_STEPS;
+                            OfxPointD pt;
+                            p->getValueAtTime(timeStep, pt.x, pt.y);
+                            glVertex2d(pt.x, pt.y);
+                        }
+                        time = timeNext;
+                    }
+                    glEnd();
+                }
+            }
+        }
 
         glColor3f( (float)(color.r / 2) * l, (float)(color.g / 2) * l, (float)(color.b / 2) * l );
         glBegin(GL_LINES);
