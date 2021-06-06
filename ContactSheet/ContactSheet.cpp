@@ -760,9 +760,9 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
     double cellh = (rod.y2 - rod.y1) / rows;
 
     bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
-    double scaleFactor = hiDPI ? 2 : 1;
+    double screenPixelRatio = hiDPI ? 2 : 1;
 #ifdef OFX_EXTENSIONS_NATRON
-    scaleFactor *= args.screenPixelRatio;
+    screenPixelRatio *= args.screenPixelRatio;
     //hiDPI |= args.screenPixelRatio > 1;
 #endif
     //TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
@@ -784,7 +784,7 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
     glDisable(GL_POINT_SMOOTH);
     glEnable(GL_BLEND);
     glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
-    glLineWidth(3.f * scaleFactor);
+    glLineWidth(3.f * screenPixelRatio);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     double x1 = rod.x1 + cellw * c;

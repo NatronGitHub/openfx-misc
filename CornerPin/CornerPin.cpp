@@ -61,6 +61,7 @@
 #include "ofxsTransform3x3.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsOGLHiDPI.h"
+#include "ofxsPositionInteract.h"
 
 using namespace OFX;
 
@@ -108,7 +109,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define POINT_SIZE 5
 #define POINT_TOLERANCE 6
-#define BEZIER_STEPS 8
 
 #define kGroupTo "to"
 #define kGroupToLabel "To"
@@ -719,9 +719,9 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
     }
 
     bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
-    double scaleFactor = hiDPI ? 2 : 1;
+    double screenPixelRatio = hiDPI ? 2 : 1;
 #ifdef OFX_EXTENSIONS_NATRON
-    scaleFactor *= args.screenPixelRatio;
+    screenPixelRatio *= args.screenPixelRatio;
     hiDPI |= args.screenPixelRatio > 1;
 #endif
     TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
@@ -755,10 +755,10 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
     //glEnable(GL_POINT_SMOOTH);
     glEnable(GL_BLEND);
     glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
-    glLineWidth(1.5f * scaleFactor);
+    glLineWidth(1.5f * screenPixelRatio);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glPointSize(POINT_SIZE * scaleFactor);
+    glPointSize(POINT_SIZE * screenPixelRatio);
     // Draw everything twice
     // l = 0: shadow
     // l = 1: drawing
@@ -773,37 +773,12 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
         // Draw the motion curve a bit darker
         const double darken = 0.8;
         glColor3d(color.r * darken * l, color.g * darken * l, color.b * darken * l);
+        glPointSize(POINT_SIZE * screenPixelRatio);
 
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
                 Double2DParam* p = useFrom ? _from[i] : _to[i];
-                int numKeys = p->getNumKeys();
-                
-                if (numKeys > 0) {
-                    glPointSize(POINT_SIZE * scaleFactor);
-                    glBegin(GL_POINTS);
-                    for (int i=0; i < numKeys; ++i) {
-                        double time = p->getKeyTime(i);
-                        OfxPointD pt;
-                        p->getValueAtTime(time, pt.x, pt.y);
-                        glVertex2d(pt.x, pt.y);
-                        
-                    }
-                    glEnd();
-                    glBegin(GL_LINE_STRIP);
-                    double time = p->getKeyTime(0);
-                    for (int i = 1; i < numKeys; ++i) {
-                        double timeNext = p->getKeyTime(i);
-                        for (int j = (i == 1 ? 0 : 1); j <= BEZIER_STEPS; ++j) {
-                            double timeStep = time + j * (timeNext - time) / BEZIER_STEPS;
-                            OfxPointD pt;
-                            p->getValueAtTime(timeStep, pt.x, pt.y);
-                            glVertex2d(pt.x, pt.y);
-                        }
-                        time = timeNext;
-                    }
-                    glEnd();
-                }
+                drawPointTrajectory(p);
             }
         }
 
@@ -839,7 +814,7 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
         glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
-                TextRenderer::bitmapString(p[i].x, p[i].y + POINT_SIZE * scaleFactor, useFrom ? kParamFrom[i] : kParamTo[i], font);
+                TextRenderer::bitmapString(p[i].x, p[i].y + POINT_SIZE * screenPixelRatio, useFrom ? kParamFrom[i] : kParamTo[i], font);
             }
         }
     }
