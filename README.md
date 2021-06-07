@@ -29,6 +29,8 @@ License
 -------
 
 <!-- BEGIN LICENSE BLOCK -->
+Copyright (C) 2018-2020 The Natron Developers
+
 Copyright (C) 2013-2018 INRIA
 
 openfx-misc is free software: you can redistribute it and/or modify
