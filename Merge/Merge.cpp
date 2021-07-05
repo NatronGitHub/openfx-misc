@@ -395,7 +395,9 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                if (_srcImgAs.size() == 0) {
+                // If the operator is not identity when B only is connected, still process
+                // one A input, even if none is connected.
+                if (_srcImgAs.size() == 0 && isIdentityForBOnly(f)) {
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = (_outputChannels[nComponents > 1 ? c : 3] && srcPixB) ? srcPixB[c] : 0;
@@ -404,7 +406,7 @@ private:
                     // process the first connected A input first
 
                     std::size_t i = 0;
-                    const PIX *srcPixA = (const PIX *)  (_srcImgAs[i] ? _srcImgAs[i]->getPixelAddress(x, y) : 0);
+                    const PIX *srcPixA = (const PIX *)  ((_srcImgAs.size() && _srcImgAs[i]) ? _srcImgAs[i]->getPixelAddress(x, y) : 0);
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
 
 
