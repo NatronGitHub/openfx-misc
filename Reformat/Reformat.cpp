@@ -407,12 +407,14 @@ ReformatPlugin::getOutputFormat(const double time,
 
         return;
     }
-    double srcw = srcRod.x2 - srcRod.x1;
-    double srch = srcRod.y2 - srcRod.y1;
     // if turn, inverse both dimensions
     if (turn) {
-        std::swap(srcw, srch);
+        std::swap(srcRod.x1, srcRod.y1);
+        std::swap(srcRod.x2, srcRod.y2);
     }
+
+    double srcw = srcRod.x2 - srcRod.x1;
+    double srch = srcRod.y2 - srcRod.y1;
     // if fit or fill, determine if it should be fit to width or height
     if (resize == eResizeFit) {
         if (boxRod.x2 * srch > boxRod.y2 * srcw) {
@@ -431,7 +433,7 @@ ReformatPlugin::getOutputFormat(const double time,
     OfxRectD dstRod;
     dstRod.x1 = dstRod.y1 = dstRod.x2 = dstRod.y2 = 0.;
     if (resize == eResizeNone) {
-        if (center && boxFixed) {
+        if (center) {
             // translate the source
             double xoff = ( (boxRod.x1 + boxRod.x2) - (srcRod.x1 + srcRod.x2) ) / 2;
             double yoff = ( (boxRod.y1 + boxRod.y2) - (srcRod.y1 + srcRod.y2) ) / 2;
@@ -441,7 +443,7 @@ ReformatPlugin::getOutputFormat(const double time,
             dstRod.y2 = srcRod.y2 + yoff;
         } else {
             // identity, with RoD = dstRod for flip/flop/turn
-            srcRod = dstRod = boxRod;
+            dstRod = srcRod;
         }
     } else if (resize == eResizeDistort) {
         // easy case
