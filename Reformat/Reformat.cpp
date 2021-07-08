@@ -616,6 +616,11 @@ ReformatPlugin::getBoxValues(const double time, int *w, int *h, double *par, boo
             srcRod.y2 = off.y + siz.y;
             *par = getProjectPixelAspectRatio();
         }
+        // if turn, inverse both dimensions
+        if (_turn->getValueAtTime(time)) {
+            std::swap(srcRod.x1, srcRod.y1);
+            std::swap(srcRod.x2, srcRod.y2);
+        }
         // scale the RoD
         srcRod.x1 *= scale.x;
         srcRod.x2 *= scale.x;
@@ -628,6 +633,7 @@ ReformatPlugin::getBoxValues(const double time, int *w, int *h, double *par, boo
         *w = srcRodPixel.x2 - srcRodPixel.x1;
         *h = srcRodPixel.y2 - srcRodPixel.y1;
         *boxFixed = true;
+        break;
     }
     case eReformatTypeToProjectFormat: {
         double projectPAR = getProjectPixelAspectRatio();
@@ -636,6 +642,7 @@ ReformatPlugin::getBoxValues(const double time, int *w, int *h, double *par, boo
         *h = projectSize.y;
         *par = projectPAR;
         *boxFixed = true;
+        break;
     }
     }
     return true; // box was set
