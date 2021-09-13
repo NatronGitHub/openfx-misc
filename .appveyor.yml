@@ -50,9 +50,11 @@ pull_requests:
 #---------------------------------#
 
 # Operating system (build VM template)
+# Example of a multi-platform appveyor.yml can be found at https://github.com/cdcseacave/openMVS/blob/master/.appveyor.yml
 image:
 - Visual Studio 2019
-#- Ubuntu
+- Ubuntu
+- macOS
 
 # scripts that are called at very beginning, before repo cloning
 init:
@@ -65,6 +67,12 @@ init:
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2015" (set GENERATOR="Visual Studio 14 2015%arch%")
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2013" (set GENERATOR="Visual Studio 12 2013%arch%")
   - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Ubuntu" (set GENERATOR="Unix Makefiles")
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "macOS" (set GENERATOR="Unix Makefiles")
+  - cmd: ver
+  - if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Ubuntu" (lsb_release -a)
+  - cmake --version
+  - cmd: msbuild /version
+  - sh: gcc -v
 
 
 # clone directory
@@ -91,9 +99,10 @@ install:
   # 9e01d8868613bf31e305044d8e2e9d9f0217f030 is CImg 2.8.4
   # 89b9d062ec472df3d33989e6d5d2a8b50ba0775c is CImg 2.9.0
   # c0becdf881b0f3e2445975cac01c2422170d1fd9 is CImg 2.9.7
+  # b33dcc8f9f1acf1f276ded92c04f8231f6c23fcd is CImg 2.9.9
   - git submodule -q update --init --recursive
-  - curl -L -s -S -o CImg/CImg.h https://raw.githubusercontent.com/dtschump/CImg/c0becdf881b0f3e2445975cac01c2422170d1fd9/CImg.h
-  - curl -L -s -S -o CImg/Inpaint/inpaint.h https://raw.githubusercontent.com/dtschump/CImg/c0becdf881b0f3e2445975cac01c2422170d1fd9/plugins/inpaint.h
+  - curl -L -s -S -o CImg/CImg.h https://raw.githubusercontent.com/dtschump/CImg/b33dcc8f9f1acf1f276ded92c04f8231f6c23fcd/CImg.h
+  - curl -L -s -S -o CImg/Inpaint/inpaint.h https://raw.githubusercontent.com/dtschump/CImg/b33dcc8f9f1acf1f276ded92c04f8231f6c23fcd/plugins/inpaint.h
   - patch -p0 -dCImg < CImg/Inpaint/inpaint.h.patch
 
 #---------------------------------#
@@ -101,7 +110,8 @@ install:
 #---------------------------------#
 
 # build platform, i.e. x86, x64, Any CPU. This setting is optional.
-platform: x64
+platform:
+  - x64
 
 # build Configuration, i.e. Debug, Release, etc.
 configuration:

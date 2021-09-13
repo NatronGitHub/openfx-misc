@@ -162,7 +162,8 @@ endif
 # commit 9e01d8868613bf31e305044d8e2e9d9f0217f030 is CImg 2.8.4
 # commit 89b9d062ec472df3d33989e6d5d2a8b50ba0775c is CImg 2.9.0
 # commit c0becdf881b0f3e2445975cac01c2422170d1fd9 is CImg 2.9.7
-CIMGVERSION=c0becdf881b0f3e2445975cac01c2422170d1fd9
+# commit b33dcc8f9f1acf1f276ded92c04f8231f6c23fcd is CImg 2.9.9
+CIMGVERSION=b33dcc8f9f1acf1f276ded92c04f8231f6c23fcd
 
 CImg.h: Inpaint/inpaint.h
 	curl -L -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
