@@ -98,6 +98,9 @@ public:
 
             PIX *dstPix = (PIX *) getDstPixelAddress(procWindow.x1, dsty);
             assert(dstPix);
+            if (!dstPix) {
+                continue;
+            }
 
             int srcy = flip ? (_yoff - dsty) : dsty;
 
@@ -105,7 +108,9 @@ public:
 
             const PIX *srcPix = (const PIX *) getSrcPixelAddress(srcx1, srcy);
             assert(srcPix);
-            if (flop) {
+            if (!srcPix) {
+                std::memset( dstPix, 0, sizeof(PIX) * nComponents * (procWindow.x2 - procWindow.x1) );
+            } else if (flop) {
                 for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents, srcPix -= nComponents) {
                     std::copy(srcPix, srcPix + nComponents, dstPix);
                 }
