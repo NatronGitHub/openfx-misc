@@ -382,8 +382,8 @@ private:
         assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
         assert( !processA || (nComponents == 1 || nComponents == 4) );
         assert(nComponents == 3 || nComponents == 4);
-        float unpPix[4];
-        float tmpPix[4];
+        float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         // set up a random number generator and set the seed
 #ifdef USE_RANDOMGENERATOR
         RandomGenerator randy;

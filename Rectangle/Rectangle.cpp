@@ -349,8 +349,11 @@ private:
         assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
         assert( !processA || (nComponents == 1 || nComponents == 4) );
 
-        float tmpPix[4];
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         double par = _dstImg->getPixelAspectRatio();
+        if (par <= 0.) {
+            par = 1.;
+        }
         OfxPointD btmLeft_canonical = { _btmLeft.x, _btmLeft.y };
         OfxPointD topRight_canonical = { _btmLeft.x + _size.x, _btmLeft.y + _size.y };
         OfxPointD btmLeft; // btmLeft position in pixel
@@ -449,7 +452,7 @@ private:
                                 tmpPix[3] = (float)_color0.a;
                             } else {
                                 // always consider the value closest top the center to avoid discontinuities/artifacts
-                                if (_softness == 0) {
+                                if (_softness <= 0) {
                                     // solid color
                                     tmpPix[0] = (float)_color1.r;
                                     tmpPix[1] = (float)_color1.g;

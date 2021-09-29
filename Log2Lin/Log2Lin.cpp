@@ -299,8 +299,8 @@ private:
         unused(rs);
         assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
         assert(nComponents == 3 || nComponents == 4);
-        float unpPix[4];
-        float tmpPix[4];
+        float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -403,8 +403,8 @@ private:
         unused(rs);
         assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
         assert(nComponents == 3 || nComponents == 4);
-        float unpPix[4];
-        float tmpPix[4];
+        float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;

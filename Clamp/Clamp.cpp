@@ -361,8 +361,8 @@ private:
     void processClampTo(const OfxRectI& procWindow, const OfxPointD& rs)
     {
         unused(rs);
-        float unpPix[4];
-        float tmpPix[4];
+        float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
 
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {

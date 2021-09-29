@@ -629,8 +629,8 @@ public:
         unused(rs);
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float unpPix[4];
-        float tmpPix[4];
+        float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         // only premultiply output if keeping the source alpha
         const bool premultOut = _premult && (_outputAlpha == eOutputAlphaSource);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {

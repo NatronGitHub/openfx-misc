@@ -2545,7 +2545,7 @@ DenoiseSharpenPlugin::renderForBitDepth(const RenderArguments &args)
 
         for (int x = p.srcWindow.x1; x < p.srcWindow.x2; x++) {
             const PIX *srcPix = (const PIX *)  (src.get() ? src->getPixelAddress(x, y) : 0);
-            float unpPix[4] = {0., 0., 0., 0.};
+            float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
             ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, p.premult, p.premultChannel);
             unsigned int pix = (x - p.srcWindow.x1) + (y - p.srcWindow.y1) * iwidth;
             // convert to the appropriate color model and store in tmpPixelData
@@ -3159,7 +3159,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
 
         for (int x = srcWindow.x1; x < srcWindow.x2; x++) {
             const PIX *srcPix = (const PIX *)  (src.get() ? src->getPixelAddress(x, y) : 0);
-            float unpPix[4] = {0., 0., 0., 0.};
+            float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
             ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, premult, premultChannel);
             unsigned int pix = (x - srcWindow.x1) + (y - srcWindow.y1) * iwidth;
             // convert to the appropriate color model and store in tmpPixelData

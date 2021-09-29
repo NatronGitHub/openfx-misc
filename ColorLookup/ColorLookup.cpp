@@ -436,7 +436,7 @@ private:
         unused(rs);
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float tmpPix[4];
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -542,7 +542,7 @@ private:
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 } else {
                     //assert(nComponents == 4);
-                    float unpPix[4];
+                    float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
                     ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
                     float r = unpPix[0];
                     float g = unpPix[1];
@@ -870,7 +870,7 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                float unpPix[4];
+                float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
                 ofxsUnPremult<PIX, nComponents, maxValue>(dstPix, unpPix, _premult, _premultChannel);
 
                 for (int c = 0; c < (std::min)(nComponents, 3); ++c) {

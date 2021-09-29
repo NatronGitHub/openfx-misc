@@ -311,7 +311,7 @@ private:
     template<bool processR, bool processG, bool processB, bool processA, RampTypeEnum type>
     void processForType(const OfxRectI& procWindow, const OfxPointD& rs)
     {
-        float tmpPix[4];
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         const double norm2 = (_point1.x - _point0.x) * (_point1.x - _point0.x) + (_point1.y - _point0.y) * (_point1.y - _point0.y);
         const double nx = norm2 == 0. ? 0. : (_point1.x - _point0.x) / norm2;
         const double ny = norm2 == 0. ? 0. : (_point1.y - _point0.y) / norm2;

@@ -336,8 +336,11 @@ private:
         assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
         assert( !processA || (nComponents == 1 || nComponents == 4) );
 
-        float tmpPix[4];
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         double par = _dstImg->getPixelAspectRatio();
+        if (par <= 0.) {
+            par = 1.;
+        }
 
         // center of the ellipse
         OfxPointD c_canonical = { ( _btmLeft.x + (_btmLeft.x + _size.x) ) / 2, ( _btmLeft.y + (_btmLeft.y + _size.y) ) / 2 };

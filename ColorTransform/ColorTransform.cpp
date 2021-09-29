@@ -261,8 +261,8 @@ public:
         unused(rs);
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float unpPix[4];
-        float tmpPix[4];
+        float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         const bool dounpremult = _premult && fromRGB(transform);
         const bool dopremult = _premult && toRGB(transform);
 

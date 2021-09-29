@@ -170,7 +170,7 @@ private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
-        float tmpPix[4];
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         for (int c = 0; c < 4; ++c) {
             tmpPix[c] = 0;
         }

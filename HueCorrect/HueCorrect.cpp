@@ -326,7 +326,7 @@ private:
         unused(rs);
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float tmpPix[4];
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
                 break;
@@ -336,7 +336,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                float unpPix[4];
+                float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
                 // ofxsUnPremult outputs normalized data
 

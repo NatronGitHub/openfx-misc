@@ -219,6 +219,9 @@ private:
     {
         double par = _dstImg->getPixelAspectRatio();
         OfxPointD c; // center position in pixel
+        if (par <= 0.) {
+            par = 1.;
+        }
 
         Coords::toPixelSub(_center, rs, par, &c);
         OfxPointD r; // radius in pixel

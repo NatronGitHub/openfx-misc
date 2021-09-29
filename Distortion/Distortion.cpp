@@ -956,7 +956,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
     int srcy1 = int(std::ceil(_format.y1));
     int srcy2 = int(std::floor(_format.y2));
     //}
-    float tmpPix[4];
+    float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
     for (int y = procWindow.y1; y < procWindow.y2; y++) {
         if ( _effect.abort() ) {
             break;

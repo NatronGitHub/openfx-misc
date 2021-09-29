@@ -266,7 +266,7 @@ private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
-        float tmpPix[4];
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
 
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
