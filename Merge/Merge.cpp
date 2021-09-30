@@ -44,6 +44,32 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
+// A helper class that adds version numbers to the ImageEffect class.
+// Why wasn't it there in the first place?
+class ImageEffectVersioned
+    : public OFX::ImageEffect
+{
+public:
+      /** @brief ctor */
+    ImageEffectVersioned(OfxImageEffectHandle handle,
+                         unsigned int majorVersion,
+                         unsigned int minorVersion)
+    : OFX::ImageEffect(handle)
+    , _maj(majorVersion)
+    , _min(minorVersion)
+    {}
+
+    /** @brief dtor */
+    virtual ~ImageEffectVersioned() {}
+
+    unsigned int getMajorVersion() { return _maj; }
+    unsigned int getMinorVersion() { return _min; }
+
+private:
+    unsigned int _maj;
+    unsigned int _min;
+};
+
 #define kPluginName "MergeOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescriptionStart \
@@ -109,8 +135,11 @@ enum MergePluginEnum
 
 #define kPluginIdentifier "net.sf.openfx.MergePlugin"
 #define kPluginIdentifierSub "net.sf.openfx.Merge"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+// History:
+// 1.0: Original version
+// 2.0: After fixing https://github.com/NatronGitHub/Natron/issues/647
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -297,6 +326,7 @@ class MergeProcessorBase
     : public ImageProcessor
 {
 protected:
+    ImageEffectVersioned& _effect;
     std::vector<const Image*> _srcImgAs;
     const Image *_srcImgB;
     const Image* _rotoMaskImgB;
@@ -312,8 +342,9 @@ protected:
 
 public:
 
-    MergeProcessorBase(ImageEffect &instance)
+    MergeProcessorBase(ImageEffectVersioned &instance)
         : ImageProcessor(instance)
+        , _effect(instance)
         , _srcImgAs()
         , _srcImgB(NULL)
         , _rotoMaskImgB(NULL)
@@ -371,7 +402,7 @@ class MergeProcessor
     : public MergeProcessorBase
 {
 public:
-    MergeProcessor(ImageEffect &instance)
+    MergeProcessor(ImageEffectVersioned &instance)
         : MergeProcessorBase(instance)
     {
     }
@@ -397,7 +428,8 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 // If the operator is not identity when B only is connected, still process
                 // one A input, even if none is connected.
-                if (_srcImgAs.size() == 0 && isIdentityForBOnly(f)) {
+                // This behavior was introduced in version 2.0.
+                if ( _srcImgAs.size() == 0 && ( isIdentityForBOnly(f) || _effect.getMajorVersion() == 1 ) ) {
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = (_outputChannels[nComponents > 1 ? c : 3] && srcPixB) ? srcPixB[c] : 0;
@@ -585,14 +617,16 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class MergePlugin
-    : public ImageEffect
+    : public ImageEffectVersioned
 {
 public:
     /** @brief ctor */
     MergePlugin(OfxImageEffectHandle handle,
+                int majorVersion,
+                int minorVersion,
                 MergePluginEnum plugin,
                 bool numerousInputs)
-    : ImageEffect(handle)
+    : ImageEffectVersioned(handle, majorVersion, minorVersion)
     , _pluginType(plugin)
     , _dstClip(NULL)
     , _srcClipAs()
@@ -1368,12 +1402,12 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
 } // MergePlugin::isIdentity
 
 //mDeclarePluginFactory(MergePluginFactory, {ofxsThreadSuiteCheck();}, {});
-template<MergePluginEnum plugin>
+template<unsigned int majorVersion, MergePluginEnum plugin>
 class MergePluginFactory
-: public PluginFactoryHelper<MergePluginFactory<plugin> >
+: public PluginFactoryHelper<MergePluginFactory<majorVersion,plugin> >
 {
 public:
-    MergePluginFactory<plugin>(const std::string & id, unsigned int verMaj, unsigned int verMin)
+    MergePluginFactory<majorVersion,plugin>(const std::string & id, unsigned int verMaj, unsigned int verMin)
     : PluginFactoryHelper<MergePluginFactory>(id, verMaj, verMin)
     {
     }
@@ -1384,9 +1418,9 @@ public:
     virtual ImageEffect* createInstance(OfxImageEffectHandle handle, ContextEnum context) OVERRIDE FINAL;
 };
 
-template<MergePluginEnum plugin>
+template<unsigned int majorVersion, MergePluginEnum plugin>
 void
-MergePluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
+MergePluginFactory<majorVersion,plugin>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
 
@@ -1525,6 +1559,11 @@ MergePluginFactory<plugin>::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+
+    // Deprecate old versions of this plugin.
+    if (this->getMajorVersion() < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 } // >::describe
 
 static void
@@ -1540,10 +1579,10 @@ addMergeOption(ChoiceParamDescriptor* param,
     }
 }
 
-template<MergePluginEnum plugin>
+template<unsigned int majorVersion, MergePluginEnum plugin>
 void
-MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
-                                              ContextEnum context)
+MergePluginFactory<majorVersion,plugin>::describeInContext(ImageEffectDescriptor &desc,
+                                                           ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
@@ -1904,10 +1943,10 @@ MergePluginFactory<plugin>::describeInContext(ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 } // >::describeInContext
 
-template<MergePluginEnum plugin>
+template<unsigned int majorVersion, MergePluginEnum plugin>
 ImageEffect*
-MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
-                                           ContextEnum /*context*/)
+MergePluginFactory<majorVersion,plugin>::createInstance(OfxImageEffectHandle handle,
+                                                        ContextEnum /*context*/)
 {
     assert(unsignedToString(12345) == "12345");
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
@@ -1916,21 +1955,21 @@ MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
                             getImageEffectHostDescription()->isNatron &&
                             getImageEffectHostDescription()->versionMajor >= 2);
 
-    return new MergePlugin(handle, plugin, numerousInputs);
+    return new MergePlugin(handle, this->getMajorVersion(), this->getMinorVersion(), plugin, numerousInputs);
 }
 
 
-static MergePluginFactory<eMergePluginMerge>        p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginPlus>        p2(kPluginIdentifierSub "Plus", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginMatte>       p3(kPluginIdentifierSub "Matte", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginMultiply>    p4(kPluginIdentifierSub "Multiply", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginIn>          p5(kPluginIdentifierSub "In", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginOut>         p6(kPluginIdentifierSub "Out", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginScreen>      p7(kPluginIdentifierSub "Screen", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginMax>         p8(kPluginIdentifierSub "Max", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginMin>         p9(kPluginIdentifierSub "Min", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginAbsMinus>   p10(kPluginIdentifierSub "Difference", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePluginRoto>       p11(kPluginIdentifierSub "Roto", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginMerge>        p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginPlus>        p2(kPluginIdentifierSub "Plus", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginMatte>       p3(kPluginIdentifierSub "Matte", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginMultiply>    p4(kPluginIdentifierSub "Multiply", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginIn>          p5(kPluginIdentifierSub "In", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginOut>         p6(kPluginIdentifierSub "Out", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginScreen>      p7(kPluginIdentifierSub "Screen", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginMax>         p8(kPluginIdentifierSub "Max", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginMin>         p9(kPluginIdentifierSub "Min", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginAbsMinus>   p10(kPluginIdentifierSub "Difference", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginRoto>       p11(kPluginIdentifierSub "Roto", kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
@@ -1942,5 +1981,30 @@ mRegisterPluginFactoryInstance(p8)
 mRegisterPluginFactoryInstance(p9)
 mRegisterPluginFactoryInstance(p10)
 mRegisterPluginFactoryInstance(p11)
+
+// Keep backward compatibility following the change introduced in
+// https://github.com/NatronGitHub/Natron/issues/647
+static MergePluginFactory<1,eMergePluginMerge>       q1(kPluginIdentifier, 1, 0);
+static MergePluginFactory<1,eMergePluginPlus>        q2(kPluginIdentifierSub "Plus", 1, 0);
+static MergePluginFactory<1,eMergePluginMatte>       q3(kPluginIdentifierSub "Matte", 1, 0);
+static MergePluginFactory<1,eMergePluginMultiply>    q4(kPluginIdentifierSub "Multiply", 1, 0);
+static MergePluginFactory<1,eMergePluginIn>          q5(kPluginIdentifierSub "In", 1, 0);
+static MergePluginFactory<1,eMergePluginOut>         q6(kPluginIdentifierSub "Out", 1, 0);
+static MergePluginFactory<1,eMergePluginScreen>      q7(kPluginIdentifierSub "Screen", 1, 0);
+static MergePluginFactory<1,eMergePluginMax>         q8(kPluginIdentifierSub "Max", 1, 0);
+static MergePluginFactory<1,eMergePluginMin>         q9(kPluginIdentifierSub "Min", 1, 0);
+static MergePluginFactory<1,eMergePluginAbsMinus>   q10(kPluginIdentifierSub "Difference", 1, 0);
+static MergePluginFactory<1,eMergePluginRoto>       q11(kPluginIdentifierSub "Roto", 1, 0);
+mRegisterPluginFactoryInstance(q1)
+mRegisterPluginFactoryInstance(q2)
+mRegisterPluginFactoryInstance(q3)
+mRegisterPluginFactoryInstance(q4)
+mRegisterPluginFactoryInstance(q5)
+mRegisterPluginFactoryInstance(q6)
+mRegisterPluginFactoryInstance(q7)
+mRegisterPluginFactoryInstance(q8)
+mRegisterPluginFactoryInstance(q9)
+mRegisterPluginFactoryInstance(q10)
+mRegisterPluginFactoryInstance(q11)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
