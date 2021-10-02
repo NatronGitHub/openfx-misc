@@ -257,7 +257,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
-#define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No filter is applied if size < 1.2."
+#define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No blur is applied if size < 0.24 (Gaussian and quasi-Gaussian) or <= 1 (box, triangle and quadratic)."
 #define kParamSizeDefault 0.
 #define kParamSizeDefaultLaplacian 3.
 
@@ -2022,6 +2022,10 @@ public:
         }
         bool ret = false;
         if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
+            // Note that before commit https://github.com/dtschump/CImg/commit/2e01be63
+            // the Gaussian filter still returned identity for size < 1.2 (nsigma < 0.5).
+            // Now it uses  the Deriche filter, which is a good approximation.
+            // Deriche works for size >= 0.24 (nsigma >= 0.1).
             float sigmax = (float)(sx / 2.4);
             float sigmay = (float)(sy / 2.4);
             ret = (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0);
