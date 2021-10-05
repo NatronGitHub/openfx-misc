@@ -191,7 +191,7 @@ enum DistortionPluginEnum
 #define kParamChannelVChoice kParamChannelV "Choice"
 
 #define kParamChannelA "channelA"
-#define kParamChannelALabel "Alpha Channel", "Input Alpha channel from UV. The Output alpha is set to this value. If \"Unpremult UV\" is checked, the UV values are divided by alpha."
+#define kParamChannelALabel "Alpha Channel", "Input Alpha channel from UV. The Output alpha is multiplied by this value. If \"Unpremult UV\" is checked, the UV values are divided by alpha."
 
 #define kParamChannelAChoice kParamChannelA "Choice"
 
@@ -238,10 +238,10 @@ enum WrapEnum
 
 
 #define kParamUVOffset "uvOffset"
-#define kParamUVOffsetLabel "UV Offset", "Offset to apply to the U and V channel (useful if these were stored in a file that cannot handle negative numbers)"
+#define kParamUVOffsetLabel "UV Offset", "Offset to subtract from the U and V channel (useful if these were stored in a file that cannot handle negative numbers)"
 
 #define kParamUVScale "uvScale"
-#define kParamUVScaleLabel "UV Scale", "Scale factor to apply to the U and V channel (useful if these were stored in a file that can only store integer values)"
+#define kParamUVScaleLabel "UV Scale", "Scale factor to apply to the U and V channel after subtracting the offset (useful if these were stored in a file that can only store integer values)"
 
 #define kParamFormat kParamGeneratorExtent
 #define kParamFormatLabel "Format", "Reference format for lens distortion."
@@ -2749,12 +2749,9 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
 {
     const double time = args.time;
 
-    if ( (_plugin == eDistortionPluginIDistort) || (_plugin == eDistortionPluginSTMap) ) {
-        if ( !_uvClip || !_uvClip->isConnected() ) {
-            identityClip = _srcClip;
-
-            return true;
-        }
+    if (_plugin == eDistortionPluginSTMap) {
+        // output has geometry from UV and colors from srcClip.
+        return false;
     }
     if (_plugin == eDistortionPluginLensDistortion) {
         OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
@@ -3022,7 +3019,7 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     switch (_plugin) {
     case eDistortionPluginSTMap: {
-        if (_uvClip) {
+        if (_uvClip && _srcClip->isConnected()) {
             // IDistort: RoD is the same as uv map
             rod = _uvClip->getRegionOfDefinition(time);
 
@@ -3031,7 +3028,7 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         break;
     }
     case eDistortionPluginIDistort: {
-        if (_srcClip) {
+        if (_srcClip && _srcClip->isConnected()) {
             // IDistort: RoD is the same as srcClip
             rod = _srcClip->getRegionOfDefinition(time);
 
