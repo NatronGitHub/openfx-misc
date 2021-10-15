@@ -286,11 +286,11 @@ static const char* help_string =
     "  Plugin cache in the host, or modify the date of the DebugProxy binary.\n"
 #if defined(__linux__)
     "  On Linux, this can be done using the following command:\n"
-    "  touch "OFX_PATH "DebugProxy.ofx.bundle/Contents/Linux-x86*/DebugProxy.ofx\n"
+    "  touch " OFX_PATH "DebugProxy.ofx.bundle/Contents/Linux-x86*/DebugProxy.ofx\n"
 #endif
 #if defined(__FreeBSD__)
     "  On FreeBSD, this can be done using the following command:\n"
-    "  touch "OFX_PATH "DebugProxy.ofx.bundle/Contents/FreeBSD-x86*/DebugProxy.ofx\n"
+    "  touch " OFX_PATH "DebugProxy.ofx.bundle/Contents/FreeBSD-x86*/DebugProxy.ofx\n"
 #endif
 #if defined(__APPLE__)
     "  On OS X, this can be done using the following command:\n"
