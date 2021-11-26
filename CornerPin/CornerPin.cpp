@@ -230,7 +230,7 @@ public:
                 OfxPointD origin = getProjectOffset();
                 OfxPointD p;
                 // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //beginEditBlock(kParamDefaultsNormalised);
+                //EditBlock(*this, kParamDefaultsNormalised);
                 for (int i = 0; i < 4; ++i) {
                     p = _to[i]->getValue();
                     _to[i]->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
@@ -238,7 +238,6 @@ public:
                     _from[i]->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                 }
                 param->setValue(false);
-                //endEditBlock();
             }
         }
     }
@@ -441,7 +440,7 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
     //printf("srcClipChanged=%s\n", _srcClipChanged->getValue() ? "true" : "false");
     if (paramName == kParamCopyInputRoD) {
         if ( _srcClip && _srcClip->isConnected() ) {
-            beginEditBlock(paramName);
+            EditBlock eb(*this, paramName);
             const OfxRectD & srcRoD = _srcClip->getRegionOfDefinition(time);
             _from[0]->setValue(srcRoD.x1, srcRoD.y1);
             _from[1]->setValue(srcRoD.x2, srcRoD.y1);
@@ -451,10 +450,9 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
             if ( (args.reason == eChangeUserEdit) && !_srcClipChanged->getValue() ) {
                 _srcClipChanged->setValue(true);
             }
-            endEditBlock();
         }
     } else if (paramName == kParamCopyFrom) {
-        beginEditBlock(paramName);
+        EditBlock eb(*this, paramName);
         for (int i = 0; i < 4; ++i) {
             copyPoint(_from[i], _to[i]);
         }
@@ -462,9 +460,8 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
         if ( (args.reason == eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
-        endEditBlock();
     } else if (paramName == kParamCopyFromSingle) {
-        beginEditBlock(paramName);
+        EditBlock eb(*this, paramName);
         for (int i = 0; i < 4; ++i) {
             _to[i]->setValue( _from[i]->getValueAtTime(time) );
         }
@@ -472,9 +469,8 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
         if ( (args.reason == eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
-        endEditBlock();
     } else if (paramName == kParamCopyTo) {
-        beginEditBlock(paramName);
+        EditBlock eb(*this, paramName);
         for (int i = 0; i < 4; ++i) {
             copyPoint(_to[i], _from[i]);
         }
@@ -482,9 +478,8 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
         if ( (args.reason == eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
-        endEditBlock();
     } else if (paramName == kParamCopyToSingle) {
-        beginEditBlock(paramName);
+        EditBlock eb(*this, paramName);
         for (int i = 0; i < 4; ++i) {
             _from[i]->setValue( _to[i]->getValueAtTime(time) );
         }
@@ -492,7 +487,6 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
         if ( (args.reason == eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
-        endEditBlock();
     } else if ( (paramName == kParamTo[0]) ||
                 ( paramName == kParamTo[1]) ||
                 ( paramName == kParamTo[2]) ||
@@ -508,12 +502,11 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
                 ( paramName == kParamExtraMatrixRow1) ||
                 ( paramName == kParamExtraMatrixRow2) ||
                 ( paramName == kParamExtraMatrixRow3) ) {
-        beginEditBlock(paramName);
+        EditBlock eb(*this, paramName);
         changedTransform(args);
         if ( (args.reason == eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
-        endEditBlock();
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
     }
@@ -530,7 +523,7 @@ CornerPinPlugin::changedClip(const InstanceChangedArgs &args,
          !_srcClipChanged->getValue() &&
          ( args.reason == eChangeUserEdit) ) {
         const OfxRectD & srcRoD = _srcClip->getRegionOfDefinition(time);
-        beginEditBlock(clipName);
+        EditBlock eb(*this, clipName);
         _from[0]->setValue(srcRoD.x1, srcRoD.y1);
         _from[1]->setValue(srcRoD.x2, srcRoD.y1);
         _from[2]->setValue(srcRoD.x2, srcRoD.y2);
@@ -543,7 +536,6 @@ CornerPinPlugin::changedClip(const InstanceChangedArgs &args,
         if ( (args.reason == eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
-        endEditBlock();
     }
 }
 

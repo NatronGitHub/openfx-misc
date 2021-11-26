@@ -1373,9 +1373,8 @@ ColorLookupPlugin::updateHistogram(const InstanceChangedArgs &args)
 #     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #     endif
-        beginEditBlock("analyzeFrame");
+        EditBlock eb(*this, "analyzeFrame");
         update(src.get(), args.time, src->getBounds(), args.renderScale);
-        endEditBlock();
 #     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
 #     endif

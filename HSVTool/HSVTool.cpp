@@ -1086,13 +1086,12 @@ public:
                 OfxPointD origin = getProjectOffset();
                 OfxPointD p;
                 // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //beginEditBlock(kParamDefaultsNormalised);
+                //EditBlock eb(*this, kParamDefaultsNormalised);
                 p = _btmLeft->getValue();
                 _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                 p = _size->getValue();
                 _size->setValue(p.x * size.x, p.y * size.y);
                 param->setValue(false);
-                //endEditBlock();
             }
         }
 
@@ -1564,7 +1563,7 @@ HSVToolPlugin::setSrcFromRectangle(const Image* srcImg,
     Color::rgb_to_hsv( (float)tor, (float)tog, (float)tob, &toh, &tos, &tov );
     double dh = normalizeAngleSigned(toh * 360. / OFXS_HUE_CIRCLE - h);
     // range is from mean+sdev*(GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF) to mean+sdev*(GAUSSIAN_RANGE+GAUSSIAN_ROLLOFF)
-    beginEditBlock("setSrcFromRectangle");
+    EditBlock eb(*this, "setSrcFromRectangle");
     _srcColor->setValue( fround(r, 4), fround(g, 4), fround(b, 4) );
     _hueRange->setValue( ffloor(hsvmin.h, 2), fceil(hsvmax.h, 2) );
     double hrange = hsvmax.h - hsvmin.h;
@@ -1584,7 +1583,6 @@ HSVToolPlugin::setSrcFromRectangle(const Image* srcImg,
     _brightnessRange->setValue( ffloor(hsvmin.v, 4), fceil(hsvmax.v, 4) );
     _brightnessRangeRolloff->setValue( ffloor( (hsvmax.v - hsvmin.v) * DEFAULT_RECTANGLE_ROLLOFF, 4 ) );
     _brightnessAdjustment->setValue( fround(tov - v, 4) );
-    endEditBlock();
 } // HSVToolPlugin::setSrcFromRectangle
 
 /* set up and run a processor */
@@ -1650,7 +1648,7 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
         Color::rgb_to_hsv( (float)tor, (float)tog, (float)tob, &toh, &tos, &tov );
         toh *= 360. / OFXS_HUE_CIRCLE;
         double dh = normalizeAngleSigned(toh - h);
-        beginEditBlock("setSrc");
+        EditBlock eb(*this, "setSrc");
         _hueRange->setValue(h, h);
         _hueRangeRolloff->setValue(50.);
         if (tov != 0.) { // no need to rotate if target color is black
@@ -1664,7 +1662,6 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
         _brightnessRange->setValue(v, v);
         _brightnessRangeRolloff->setValue(0.3);
         _brightnessAdjustment->setValue(tov - v);
-        endEditBlock();
     } else if (paramName == kParamEnableRectangle) {
         // update visibility
         bool enableRectangle = _enableRectangle->getValueAtTime(time);
@@ -1702,13 +1699,12 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
         Color::rgb_to_hsv( (float)tor, (float)tog, (float)tob, &toh, &tos, &tov );
         toh *= 360. / OFXS_HUE_CIRCLE;
         double dh = normalizeAngleSigned(toh - h);
-        beginEditBlock("setDst");
+        EditBlock eb(*this, "setDst");
         if (tov != 0.) { // no need to adjust hue or saturation if target color is black
             _hueRotation->setValue(dh);
             _saturationAdjustment->setValue(tos - s);
         }
         _brightnessAdjustment->setValue(tov - v);
-        endEditBlock();
     } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }

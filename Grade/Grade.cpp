@@ -855,10 +855,9 @@ private:
             // coverity[dead_error_line]
             throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-        beginEditBlock(kParamNormalize);
+        EditBlock eb(*this, kParamNormalize);
         _blackPoint->setValue(results.min.r, results.min.g, results.min.b, results.min.a);
         _whitePoint->setValue(results.max.r, results.max.g, results.max.b, results.max.a);
-        endEditBlock();
     }
 
     template <class PIX, int nComponents, int maxValue>

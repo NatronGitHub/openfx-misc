@@ -1477,13 +1477,12 @@ public:
                 OfxPointD origin = getProjectOffset();
                 OfxPointD p;
                 // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //beginEditBlock(kParamDefaultsNormalised);
+                //EditBlock eb(*this, kParamDefaultsNormalised);
                 p = _btmLeft->getValue();
                 _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                 p = _size->getValue();
                 _size->setValue(p.x * size.x, p.y * size.y);
                 param->setValue(false);
-                //endEditBlock();
             }
         }
 
@@ -3312,7 +3311,7 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
                 sendMessage(Message::eMessageError, "", "Error reading file \"" + filename + "\": " + f.error_);
                 throwSuiteStatusException(kOfxStatFailed);
             }
-            beginEditBlock(kParamPFFile);
+            EditBlock eb(*this, kParamPFFile);
             _pfC3->deleteAllKeys();
             _pfC5->deleteAllKeys();
             _pfP->deleteAllKeys();
@@ -3332,7 +3331,6 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args,
                     _pfP->setValueAtTime(f.frame_[i], f.xp_[0], f.yp_[0]);
                 }
             }
-            endEditBlock();
         } else if (paramName == kParamGeneratorExtent) {
             updateVisibility();
         } else if (paramName == kParamGeneratorFormat) {

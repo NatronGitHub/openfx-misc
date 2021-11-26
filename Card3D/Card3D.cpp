@@ -893,7 +893,7 @@ PosMatParam::importChan()
         }
     }
     std::fclose(f);
-    _effect->beginEditBlock(kParamPosMatImportFile);
+    ImageEffect::EditBlock(*_effect, kParamPosMatImportFile);
     _translate->deleteAllKeys();
     _rotate->deleteAllKeys();
     if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
@@ -909,7 +909,6 @@ PosMatParam::importChan()
             _projection->_camFocalLength->setValueAtTime(it->frame, focal);
         }
     }
-    _effect->endEditBlock();
 }
 
 // importBoujou.
@@ -1048,7 +1047,7 @@ PosMatParam::importBoujou()
         ++i;
     }
     std::fclose(f);
-    _effect->beginEditBlock(kParamPosMatImportFile);
+    ImageEffect::EditBlock eb(*_effect, kParamPosMatImportFile);
     _translate->deleteAllKeys();
     _rotate->deleteAllKeys();
     if (_type == ePosMatCamera && _projection) {
@@ -1076,7 +1075,6 @@ PosMatParam::importBoujou()
             _projection->_camFocalLength->setValueAtTime(it->frame, focal);
         }
     }
-    _effect->endEditBlock();
 }
 
 void
@@ -1652,13 +1650,12 @@ public:
                 OfxPointD origin = getProjectOffset();
                 OfxPointD p;
                 // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //beginEditBlock(kParamDefaultsNormalised);
+                //EditBlock eb(*this, kParamDefaultsNormalised);
                 p = _btmLeft->getValue();
                 _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                 p = _size->getValue();
                 _size->setValue(p.x * size.x, p.y * size.y);
                 param->setValue(false);
-                //endEditBlock();
             }
         }
 

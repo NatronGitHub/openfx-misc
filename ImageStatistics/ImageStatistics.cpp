@@ -1242,13 +1242,12 @@ public:
                 OfxPointD origin = getProjectOffset();
                 OfxPointD p;
                 // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //beginEditBlock(kParamDefaultsNormalised);
+                //EditBlock eb(*this, kParamDefaultsNormalised);
                 p = _btmLeft->getValue();
                 _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                 p = _size->getValue();
                 _size->setValue(p.x * size.x, p.y * size.y);
                 param->setValue(false);
-                //endEditBlock();
             }
         }
 
@@ -1627,7 +1626,7 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
 #             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
                 getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #             endif
-                beginEditBlock("analyzeFrame");
+                EditBlock eb(*this, "analyzeFrame");
                 if (doAnalyzeRGBA) {
                     update(src.get(), args.time, analysisWindow, args.renderScale);
                 }
@@ -1637,7 +1636,6 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
                 if (doAnalyzeLuma) {
                     updateLuma(src.get(), args.time, analysisWindow, args.renderScale);
                 }
-                endEditBlock();
 #             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
                 getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
 #             endif
@@ -1649,7 +1647,7 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #     endif
         progressStart("Analyzing sequence...");
-        beginEditBlock("analyzeSequence");
+        EditBlock eb(*this, "analyzeSequence");
         OfxRangeD range = _srcClip->getFrameRange();
         //timeLineGetBounds(range.min, range.max); // wrong: we want the input frame range only
         int tmin = (int)std::ceil(range.min);
@@ -1679,7 +1677,6 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
             }
         }
         progressEnd();
-        endEditBlock();
 #     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
 #     endif

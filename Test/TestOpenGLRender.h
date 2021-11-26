@@ -64,7 +64,7 @@
 #  define RENDERFUNC renderGL
 #endif
 
-#ifdef __APPLE__
+#if !defined(USE_OSMESA) && defined(__APPLE__)
 #  ifndef GL_SILENCE_DEPRECATION
 #  define GL_SILENCE_DEPRECATION // Yes, we are still doing OpenGL 2.1
 #  endif

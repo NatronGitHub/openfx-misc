@@ -1593,7 +1593,7 @@ ShadertoyPlugin::updateExtra()
         if (_imageShaderUpdateParams) {
             _imageShaderUpdateParams = false;
             bool uniformsChanged = false;
-            beginEditBlock(kParamAuto);
+            EditBlock eb(*this, kParamAuto);
             // Try to avoid setting parameters to the same value, since this maytrigger an unnecessary instancechanged on some hosts
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 if ( _imageShaderInputEnabled[i] != _inputEnable[i]->getValue() ) {
@@ -1855,7 +1855,6 @@ ShadertoyPlugin::updateExtra()
             }
             _bbox->setValue( (int)_imageShaderBBox );
             resetParamsValues();
-            endEditBlock();
             if (uniformsChanged) {
                 // mark that image shader must be recompiled on next render
                 ++_imageShaderUniformsID;
@@ -2004,7 +2003,7 @@ ShadertoyPlugin::updateExtra()
 void
 ShadertoyPlugin::resetParamsValues()
 {
-    //beginEditBlock(kParamResetParams);
+    //EditBlock eb(*this, kParamResetParams);
     unsigned paramCount = (std::max)( 0, (std::min)(_paramCount->getValue(), (int)_paramType.size()) );
     for (unsigned i = 0; i < paramCount; ++i) {
         UniformTypeEnum t = (UniformTypeEnum)_paramType[i]->getValue();
@@ -2053,7 +2052,6 @@ ShadertoyPlugin::resetParamsValues()
             break;
         }
     }
-    //endEditBlock();
 } // ShadertoyPlugin::resetParamsValues
 
 void
@@ -2182,9 +2180,8 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
             updateClips();
         }
     } else if (paramName == kParamResetParams) {
-        beginEditBlock(kParamResetParams);
+        EditBlock eb(*this, kParamResetParams);
         resetParamsValues();
-        endEditBlock();
     } else if (paramName == kParamImageShaderSource) {
         _imageShaderCompile->setEnabled(true);
         if (args.reason == eChangeUserEdit) {

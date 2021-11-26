@@ -773,13 +773,12 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
             //Commented-out for Natron compat: Natron does beginEditBlock in the main-thread, hence
             //since the instanceChanged action is executed in multiple separated thread by Natron when tracking, there's no
             //telling that the actual setting of the value will be done when the next frame is tracked
-            //beginEditBlock("trackerUpdate");
+            //EditBlock eb(*this, "trackerUpdate");
             // create a keyframe at starting point
             _center->setValueAtTime(refTime, refCenter.x, refCenter.y);
             // create a keyframe at end point
             _center->setValueAtTime(otherTime, newCenter.x - otherOffset.x, newCenter.y - otherOffset.y);
             _correlationScore->setValueAtTime( otherTime, processor.getBestScore() );
-            // endEditBlock();
         }
     }
 } // TrackerPMPlugin::setupAndProcess

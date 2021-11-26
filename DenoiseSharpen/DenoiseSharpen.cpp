@@ -921,13 +921,12 @@ public:
                 OfxPointD origin = getProjectOffset();
                 OfxPointD p;
                 // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //beginEditBlock(kParamDefaultsNormalised);
+                //EditBlock eb(*this, kParamDefaultsNormalised);
                 p = _btmLeft->getValue();
                 _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
                 p = _size->getValue();
                 _size->setValue(p.x * size.x, p.y * size.y);
                 param->setValue(false);
-                //endEditBlock();
             }
         }
 
@@ -2959,13 +2958,12 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
     } else if ( (paramName == kParamColorModel) || (paramName == kParamB3) ) {
         updateLabels();
         if (args.reason == eChangeUserEdit) {
-            beginEditBlock(kParamColorModel);
+            EditBlock eb(*this, kParamColorModel);
             for (unsigned int c = 0; c < 4; ++c) {
                 for (unsigned int f = 0; f < 4; ++f) {
                     _noiseLevel[c][f]->setValue(0.);
                 }
             }
-            endEditBlock();
         }
     } else if (paramName == kParamAnalysisLock) {
         analysisLock();
@@ -2989,7 +2987,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 # ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
     getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 # endif
-    beginEditBlock(kParamAnalyzeNoiseLevels);
+    EditBlock eb(*this, kParamAnalyzeNoiseLevels);
 
     // instantiate the render code based on the pixel depth of the dst clip
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
