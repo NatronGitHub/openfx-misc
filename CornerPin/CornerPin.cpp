@@ -866,13 +866,12 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
         }
     }
 
-    bool didSomething = false;
     bool valuesChanged = false;
     OfxPointD delta;
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
 
-    _hovering = -1;
+    int newHovering = -1;
 
     for (int i = enableBegin; i < enableEnd; ++i) {
         if (enable[i]) {
@@ -888,11 +887,12 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
                 }
                 valuesChanged = true;
             } else if ( isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale) ) {
-                _hovering = i;
-                didSomething = true;
+                newHovering = i;
             }
         }
     }
+    bool redraw = _hovering != newHovering;
+    _hovering = newHovering;
 
     if ( (_dragging != -1) && _interactiveDrag && valuesChanged ) {
         // no need to redraw overlay since it is slave to the paramaters
@@ -901,13 +901,13 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
         } else {
             _to[_dragging]->setValue(to[_dragging].x, to[_dragging].y);
         }
-    } else if (didSomething || valuesChanged) {
+    } else if (redraw || valuesChanged) {
         _effect->redrawOverlays();
     }
 
     _lastMousePos = args.penPosition;
 
-    return didSomething || valuesChanged;
+    return valuesChanged;
 } // CornerPinTransformInteract::penMotion
 
 bool
