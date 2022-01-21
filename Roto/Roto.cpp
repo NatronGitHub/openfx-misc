@@ -261,7 +261,7 @@ private:
                 } else {
                     maskAlpha = 1;
                 }
-#             ifdef DEBUG
+#             ifdef DEBUG_NAN
                 assert( !OFX::IsNaN(srcAlpha) ); // check for NaN
                 assert( !OFX::IsNaN(maskAlpha) ); // check for NaN
 #             endif
@@ -283,8 +283,11 @@ private:
 
                 // merge/over
                 for (int c = 0; c < nComponents; ++c) {
+#                 ifdef DEBUG_NAN
+                    assert( !OFX::IsNaN(maskPix[c]) ); // check for NaN
+#                 endif
                     dstPix[c] = MergeImages2D::overFunc<PIX, maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha);
-#                 ifdef DEBUG
+#                 ifdef DEBUG_NAN
                     assert( !OFX::IsNaN(srcVal[c]) ); // check for NaN
                     assert( !OFX::IsNaN(dstPix[c]) ); // check for NaN
 #                 endif
