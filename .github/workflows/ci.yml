@@ -1,0 +1,40 @@
+name: Continous Integration tests
+
+on:
+  push:
+    paths-ignore:
+      - LICENSE
+      - README.md
+      - README-hosts.txt
+  pull_request:
+    paths-ignore:
+      - LICENSE
+      - README.md
+      - README-hosts.txt
+
+jobs:
+  build:
+    name: Build Ubuntu 22.04
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install Ubuntu system packages
+        run: |
+          sudo apt update
+          sudo apt-get install libglu1-mesa-dev libgl-dev
+      - name: Build (release)
+        run: |
+          make -j2 CONFIG=release TESTS=1
+          mkdir -p Bundle
+          mv {CImg,Misc,Shadertoy,Test}/Linux-64-release/*.ofx.bundle Bundle
+      - name: Build (debug)
+        run: |
+          make -j2 CONFIG=debug
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: openfx-misc-build-ubuntu_22-release
+          path: Bundle
