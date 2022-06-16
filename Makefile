@@ -76,9 +76,14 @@ TrackerPM \
 Transform \
 VectorToColor
 
+TESTS ?= 0
 ifeq ($(CONFIG),debug)
   # DebugProxy is only useful to debug the communication between a host and a plugin
-  SUBDIRS += DebugProxy Test
+  SUBDIRS += DebugProxy
+  TESTS = 1
+endif
+ifeq ($(TESTS),1)
+  SUBDIRS += Test
 endif
 
 HAVE_CIMG ?= 1
