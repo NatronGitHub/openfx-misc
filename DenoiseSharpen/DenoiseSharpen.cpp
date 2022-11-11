@@ -3030,7 +3030,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 
     // lock values
     _analysisLock->setValue(true);
-    endEditBlock();
+
     progressEndAnalysis();
 # ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
     getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);

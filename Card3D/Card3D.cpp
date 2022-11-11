@@ -893,7 +893,7 @@ PosMatParam::importChan()
         }
     }
     std::fclose(f);
-    ImageEffect::EditBlock(*_effect, kParamPosMatImportFile);
+    ImageEffect::EditBlock eb(*_effect, kParamPosMatImportFile);
     _translate->deleteAllKeys();
     _rotate->deleteAllKeys();
     if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
