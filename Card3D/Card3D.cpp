@@ -2001,7 +2001,10 @@ Card3DPlugin::changedParam(const InstanceChangedArgs &args,
 {
     //const double time = args.time;
     if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
-        _srcClipChanged->setValue(true);
+        // Only set if necessary
+        if (!_srcClipChanged->getValue()) {
+            _srcClipChanged->setValue(true);
+        }
     } else if (paramName == kParamCamEnable) {
         updateVisibility();
     } else if (paramName == kParamOutputFormat) {

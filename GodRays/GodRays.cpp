@@ -713,6 +713,7 @@ GodRaysPlugin::getInverseTransformCanonical(double time,
 void
 GodRaysPlugin::resetCenter(double time)
 {
+    // Note: same code as TransformPlugin::resetCenter()
     if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
@@ -774,28 +775,36 @@ GodRaysPlugin::resetCenter(double time)
     OfxPointD newCenter;
     newCenter.x = (rod.x1 + rod.x2) / 2;
     newCenter.y = (rod.y1 + rod.y2) / 2;
-    EditBlock eb(*this, "resetCenter");
-    if (_center) {
-        _center->setValue(newCenter.x, newCenter.y);
-    }
-    if (_translate) {
-        double dxrot = newCenter.x - center.x;
-        double dyrot = newCenter.y - center.y;
-        Point3D dRot;
-        dRot.x = dxrot;
-        dRot.y = dyrot;
-        dRot.z = 1;
-        dRot = Rinv * dRot;
-        if (dRot.z != 0) {
-            dRot.x /= dRot.z;
-            dRot.y /= dRot.z;
+    if (newCenter.x != center.x || newCenter.y != center.y) {
+        bool editBlockNecessary = false;
+        OfxPointD newTranslate = {0., 0.};
+        if (_translate) {
+            double dxrot = newCenter.x - center.x;
+            double dyrot = newCenter.y - center.y;
+            Point3D dRot;
+            dRot.x = dxrot;
+            dRot.y = dyrot;
+            dRot.z = 1;
+            dRot = Rinv * dRot;
+            if (dRot.z != 0) {
+                dRot.x /= dRot.z;
+                dRot.y /= dRot.z;
+            }
+            double dx = dRot.x;
+            double dy = dRot.y;
+            newTranslate.x = translate.x + dx - dxrot;
+            newTranslate.y = translate.y + dy - dyrot;
+            if (newTranslate.x != translate.x || newTranslate.y != translate.y) {
+                editBlockNecessary = true;
+            }
         }
-        double dx = dRot.x;
-        double dy = dRot.y;
-        OfxPointD newTranslate;
-        newTranslate.x = translate.x + dx - dxrot;
-        newTranslate.y = translate.y + dy - dyrot;
-        _translate->setValue(newTranslate.x, newTranslate.y);
+        EditBlock eb(*this, "resetCenter", editBlockNecessary);
+        if (_center) {
+            _center->setValue(newCenter.x, newCenter.y);
+        }
+        if (_translate) {
+            _translate->setValue(newTranslate.x, newTranslate.y);
+        }
     }
 } // GodRaysPlugin::resetCenter
 
@@ -805,7 +814,10 @@ GodRaysPlugin::changedParam(const InstanceChangedArgs &args,
 {
     if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);
-        _centerChanged->setValue(false);
+        // Only set if necessary
+        if (_centerChanged->getValue()) {
+            _centerChanged->setValue(false);
+        }
     } else if ( (paramName == kParamTransformTranslateOld) ||
                 ( paramName == kParamTransformRotateOld) ||
                 ( paramName == kParamTransformScaleOld) ||
@@ -816,7 +828,10 @@ GodRaysPlugin::changedParam(const InstanceChangedArgs &args,
                 ( paramName == kParamTransformCenterOld) ) {
         if ( (paramName == kParamTransformCenterOld) &&
              ( (args.reason == eChangeUserEdit) || (args.reason == eChangePluginEdit) ) ) {
-            _centerChanged->setValue(true);
+            // Only set if necessary
+            if (!_centerChanged->getValue()) {
+                _centerChanged->setValue(true);
+            }
         }
         changedTransform(args);
     } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
