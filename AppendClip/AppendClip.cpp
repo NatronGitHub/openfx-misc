@@ -46,7 +46,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 #define kPluginDescription \
     "Append one clip to another.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=AppendClip"
+    "See also: https://web.archive.org/web/20220627030729/http://www.opticalenquiry.com/nuke/index.php?title=AppendClip"
 
 #define kPluginIdentifier "net.sf.openfx.AppendClip"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

@@ -95,7 +95,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "Optionally, the RGB histogram or a color ramp can be displayed in the background of the lookup curves.\n" \
     "\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=ColorLookup"
+    "See also: https://web.archive.org/web/20221208230906/http://opticalenquiry.com/nuke/index.php?title=ColorLookup"
 
 // History:
 // 1.0 initial version

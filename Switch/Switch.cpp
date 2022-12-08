@@ -56,7 +56,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "error in one of the FrameRange ranges (a typical error is to use the same frame number as the " \
     "last frame of shot n and the first frame of shot n+1).\n" \
     "This plugin concatenates transforms.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Switch"
+    "See also: https://web.archive.org/web/20220120145727/http://opticalenquiry.com/nuke/index.php?title=Switch"
 
 #define kPluginIdentifier "net.sf.openfx.switchPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

@@ -42,14 +42,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription "Convert the image to another format or size.\n" \
     "An image transform is computed that goes from the input region of definition (RoD) to the selected format. The Resize Type parameter adjust the way the transform is computed.\n" \
     "This plugin concatenates transforms.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Reformat"
+    "See also: https://web.archive.org/web/20220627014216/http://www.opticalenquiry.com/nuke/index.php?title=Reformat"
 
 #define kPluginDescriptionNatron "Convert the image to another format or size.\n" \
     "An image transform is computed that goes from the input format, regardless of the region of definition (RoD), to the selected format. The Resize Type parameter adjust the way the transform is computed.\n" \
     "The output format is set by this effect.\n" \
     "In order to set the output format without transforming the image content, use the NoOp effect.\n" \
     "This plugin concatenates transforms.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Reformat"
+    "See also: https://web.archive.org/web/20220627014216/http://www.opticalenquiry.com/nuke/index.php?title=Reformat"
 
 #define kPluginIdentifier "net.sf.openfx.Reformat"
 // History:

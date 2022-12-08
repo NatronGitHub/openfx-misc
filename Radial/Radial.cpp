@@ -70,7 +70,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "- The project output format if Color0 is not black and transparent.\n" \
     "- The selected extent plus a one-pixel border if Color0 is black and transparent.\n" \
     "\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Radial"
+    "See also: https://web.archive.org/web/20220807182648/http://www.opticalenquiry.com/nuke/index.php?title=Radial"
 
 #define kPluginIdentifier "net.sf.openfx.Radial"
 // History:

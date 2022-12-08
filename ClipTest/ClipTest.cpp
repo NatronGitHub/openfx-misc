@@ -37,7 +37,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ClipTestOFX"
 #define kPluginGrouping "Color/Math"
 #define kPluginDescription "Draw zebra stripes on all pixels outside of the specified range.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Evaluating_Color#The_ClipTest_node"
+    "See also: https://web.archive.org/web/20220627024754/http://www.opticalenquiry.com/nuke/index.php?title=Evaluating_Color#The_ClipTest_node"
 #define kPluginIdentifier "net.sf.openfx.ClipTestPlugin"
 // History:
 // version 1.0: initial version

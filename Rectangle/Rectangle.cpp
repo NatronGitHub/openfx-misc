@@ -79,7 +79,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "- The project output format if Color0 is not black and transparent.\n" \
     "- The selected extent plus a one-pixel border if Color0 is black and transparent.\n" \
     "\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Rectangle"
+    "See also: https://web.archive.org/web/20220807191757/http://www.opticalenquiry.com/nuke/index.php?title=Rectangle"
 
 #define kPluginIdentifier "net.sf.openfx.Rectangle"
 // History:

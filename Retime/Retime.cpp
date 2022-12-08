@@ -51,7 +51,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Retime"
+    "See also: https://web.archive.org/web/20220627032808/http://www.opticalenquiry.com/nuke/index.php?title=Retime"
 
 #define kPluginIdentifier "net.sf.openfx.Retime"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

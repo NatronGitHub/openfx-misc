@@ -35,7 +35,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 #define kPluginDescription "Move the input clip forward or backward in time. " \
     "This can also reverse the order of the input frames so that last one is first.\n" \
-    "See also http://opticalenquiry.com/nuke/index.php?title=TimeOffset"
+    "See also https://web.archive.org/web/20220627025738/http://www.opticalenquiry.com/nuke/index.php?title=TimeOffset"
 
 #define kPluginIdentifier "net.sf.openfx.timeOffset"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

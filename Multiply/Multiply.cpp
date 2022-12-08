@@ -42,7 +42,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Color/Math"
 #define kPluginDescription \
     "Multiply the selected channels by a constant.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Multiply"
+    "See also: https://web.archive.org/web/20220627015945/http://www.opticalenquiry.com/nuke/index.php?title=Multiply"
 
 #define kPluginIdentifier "net.sf.openfx.MultiplyPlugin"
 // History:

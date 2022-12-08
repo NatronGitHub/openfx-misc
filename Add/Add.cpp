@@ -42,7 +42,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Color/Math"
 #define kPluginDescription \
     "Add a constant to the selected channels.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Add"
+    "See also: https://web.archive.org/web/20220627013304/http://www.opticalenquiry.com/nuke/index.php?title=Add"
 
 #define STRINGIZE_CPP_NAME_(token) # token
 #define STRINGIZE_CPP_(token) STRINGIZE_CPP_NAME_(token)

@@ -53,7 +53,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "Quantize"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Reduce the number of color levels per channel.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Color_Operation"
+    "See also: https://web.archive.org/web/20210728012057/http://opticalenquiry.com/nuke/index.php?title=Color_Operation"
 
 #define kPluginIdentifier "net.sf.openfx.Quantize"
 // History:

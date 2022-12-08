@@ -100,7 +100,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "expands, especially when the image rotates.\n" \
     "\n" \
     "This plugin concatenates transforms.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=CornerPin"
+    "See also: https://web.archive.org/web/20220627032200/http://www.opticalenquiry.com/nuke/index.php?title=CornerPin"
 
 #define kPluginIdentifier "net.sf.openfx.CornerPinPlugin"
 #define kPluginMaskedIdentifier "net.sf.openfx.CornerPinMaskedPlugin"

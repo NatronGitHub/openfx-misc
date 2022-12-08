@@ -39,7 +39,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ConstantOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a constant color.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
+    "See also: https://web.archive.org/web/20220807183203/http://www.opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 #define kPluginIdentifier "net.sf.openfx.ConstantPlugin"
 #define kPluginSolidName "SolidOFX"
 #define kPluginSolidDescription "Generate an image with a constant opaque color."

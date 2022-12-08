@@ -60,7 +60,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Draw a ramp between 2 edges.\n" \
     "The ramp is composited with the source image using the 'over' operator.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Ramp"
+    "See also: https://web.archive.org/web/20220807184828/http://www.opticalenquiry.com/nuke/index.php?title=Ramp"
 
 #define kPluginIdentifier "net.sf.openfx.Ramp"
 // History:

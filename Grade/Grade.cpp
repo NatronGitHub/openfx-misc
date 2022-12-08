@@ -69,7 +69,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "White\" options. If a binary mask containing only 0 and 1 is preferred, the Clamp plugin can be " \
     "used instead.\n" \
     "\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Grade and http://opticalenquiry.com/nuke/index.php?title=Integration#Matching_color"
+    "See also: https://web.archive.org/web/20220627014345/http://www.opticalenquiry.com/nuke/index.php?title=Grade and https://web.archive.org/web/20210728000722/http://opticalenquiry.com/nuke/index.php?title=Integration#Matching_colorr"
 #define kPluginIdentifier "net.sf.openfx.GradePlugin"
 // History:
 // version 1.0: initial version

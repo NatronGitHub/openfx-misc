@@ -48,7 +48,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "If no channel is selected, or the premultChannel is set to None, the " \
     "image data is left untouched, but its premultiplication state is set to PreMultiplied.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Premultiplication"
+    "See also: https://web.archive.org/web/20210413043727/http://opticalenquiry.com/nuke/index.php?title=Premultiplication"
 
 #define kPluginPremultIdentifier "net.sf.openfx.Premult"
 #define kPluginUnpremultName "UnpremultOFX"
@@ -58,7 +58,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "If no channel is selected, or the premultChannel is set to None, the " \
     "image data is left untouched, but its premultiplication state is set to UnPreMultiplied.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Premultiplication"
+    "See also: https://web.archive.org/web/20210413043727/http://opticalenquiry.com/nuke/index.php?title=Premultiplication"
 
 #define kPluginUnpremultIdentifier "net.sf.openfx.Unpremult"
 // History:

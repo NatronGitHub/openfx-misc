@@ -51,7 +51,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "to values close to the threshold, and checking the \"Clamp Black\" and \"Clamp " \
     "White\" options.\n" \
     "\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Clamp"
+    "See also: https://web.archive.org/web/20220627024614/http://www.opticalenquiry.com/nuke/index.php?title=Clamp"
 #define kPluginIdentifier "net.sf.openfx.Clamp"
 // History:
 // version 1.0: initial version

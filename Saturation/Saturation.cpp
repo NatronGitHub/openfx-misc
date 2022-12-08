@@ -41,7 +41,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "SaturationOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Modify the color saturation of an image.\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Saturation"
+    "See also: https://web.archive.org/web/20220627030455/http://www.opticalenquiry.com/nuke/index.php?title=Saturation"
 
 #define kPluginIdentifier "net.sf.openfx.SaturationPlugin"
 // History:

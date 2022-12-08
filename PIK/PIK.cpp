@@ -157,7 +157,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "A is input PFg and B is input C, rw is the value of \"Red Weight\" and gbw is the value of \"Green/Blue Weight\".\n" \
     "\n" \
     "See also:\n" \
-    "- http://opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#IBK\n" \
+    "- https://web.archive.org/web/20220524000628/http://www.opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#IBK\n" \
     "- https://compositingmentor.com/2014/07/19/advanced-keying-breakdown-alpha-1-4-ibk-stacked-technique/"
 
 #define kPluginIdentifier "net.sf.openfx.PIK"

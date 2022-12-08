@@ -49,7 +49,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "The color wheel occupies the full area, minus a one-pixel black and transparent border\n" \
     "\n" \
-    "See also: http://opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
+    "See also: https://web.archive.org/web/20220807183203/http://www.opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 #define kPluginIdentifier "net.sf.openfx.ColorWheel"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

@@ -59,9 +59,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "softnessUpper = (D-C)\n" \
     "\n" \
     "See also:\n" \
-    "- http://opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#Keyer\n" \
-    "- http://opticalenquiry.com/nuke/index.php?title=Green_Screen\n" \
-    "- http://opticalenquiry.com/nuke/index.php?title=Keying_Tips"
+    "- https://web.archive.org/web/20220524000628/http://www.opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#Keyer" \
+    "\n" \
+    "- http://opticalenquiry.com/nuke/index.php?title=Green_Screen" \
+    "\n" \
+    "- https://web.archive.org/web/20211023071843/http://opticalenquiry.com/nuke/index.php?title=Keying_Tips"
 
 #define kPluginIdentifier "net.sf.openfx.KeyerPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

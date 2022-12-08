@@ -38,7 +38,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Translate / Rotate / Scale a 2D image.\n" \
     "This plugin concatenates transforms.\n" \
-    "See also http://opticalenquiry.com/nuke/index.php?title=Transform"
+    "See also https://web.archive.org/web/20220627030948/http://www.opticalenquiry.com/nuke/index.php?title=Transform"
 
 #define kPluginMaskedDescription "Translate / Rotate / Scale a 2D image, with optional masking.\n" \
     "This plugin concatenates transforms upstream."
