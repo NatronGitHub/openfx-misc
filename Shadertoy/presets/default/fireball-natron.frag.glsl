@@ -11,7 +11,7 @@ uniform float _Density = 0.2; // Density, min=0., max=1.
 uniform float _SphereRadius = 2.0; // Sphere Radius, min=0., max=2.
 uniform float _NoiseFreq = 1.0; // Noise Frequency, min=0., max=5.
 uniform float _NoiseAmp = 3.0; // Noise Amplitude, min=0., max=10.
-const vec3 _NoiseAnim = vec3(0, -1, 0);
+uniform vec3 _NoiseAnim = vec3(0, -1, 0); // Noise Animation (x_speed, y_speed, ,z_speed)
 
 // iq's nice integer-less noise function
 
