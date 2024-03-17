@@ -1407,8 +1407,8 @@ class MergePluginFactory
 : public PluginFactoryHelper<MergePluginFactory<majorVersion,plugin> >
 {
 public:
-    MergePluginFactory<majorVersion,plugin>(const std::string & id, unsigned int verMaj, unsigned int verMin)
-    : PluginFactoryHelper<MergePluginFactory>(id, verMaj, verMin)
+    MergePluginFactory(const std::string & id, unsigned int verMaj, unsigned int verMin)
+    : PluginFactoryHelper<MergePluginFactory<majorVersion,plugin> >(id, verMaj, verMin)
     {
     }
 

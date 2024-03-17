@@ -266,8 +266,8 @@ class CImgMatrixPluginFactory
 : public PluginFactoryHelper<CImgMatrixPluginFactory<dim> >
 {
 public:
-    CImgMatrixPluginFactory<dim>(const std::string & id, unsigned int verMaj, unsigned int verMin)
-    : PluginFactoryHelper<CImgMatrixPluginFactory>(id, verMaj, verMin)
+    CImgMatrixPluginFactory(const std::string & id, unsigned int verMaj, unsigned int verMin)
+    : PluginFactoryHelper<CImgMatrixPluginFactory<dim> >(id, verMaj, verMin)
     {
     }
 
