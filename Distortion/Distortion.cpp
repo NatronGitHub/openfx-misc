@@ -3390,8 +3390,8 @@ class DistortionPluginFactory
     : public PluginFactoryHelper<DistortionPluginFactory<plugin, majorVersion> >
 {
 public:
-    DistortionPluginFactory<plugin, majorVersion>(const std::string & id, unsigned int verMaj, unsigned int verMin)
-    : PluginFactoryHelper<DistortionPluginFactory>(id, verMaj, verMin)
+    DistortionPluginFactory(const std::string & id, unsigned int verMaj, unsigned int verMin)
+    : PluginFactoryHelper<DistortionPluginFactory<plugin, majorVersion> >(id, verMaj, verMin)
     {
     }
     virtual void load() OVERRIDE FINAL {ofxsThreadSuiteCheck();}
