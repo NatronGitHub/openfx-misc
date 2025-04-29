@@ -12,8 +12,12 @@ on:
       - README.md
       - README-hosts.txt
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  build_linux:
     name: Build Ubuntu 22.04
     runs-on: ubuntu-22.04
     steps:
@@ -37,4 +41,34 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openfx-misc-build-ubuntu_22-release
+          path: Bundle
+  build_windows:
+    name: Build Windows
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup MinGW environment
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          update: true
+          install: git base-devel mingw-w64-x86_64-cc
+      - name: Build (release)
+        run: |
+          make -j2 CONFIG=release TESTS=1
+          mkdir -p Bundle
+          mv {CImg,Misc,Shadertoy,Test}/MINGW64*-release/*.ofx.bundle Bundle
+      - name: Build (debug)
+        run: |
+          make -j2 CONFIG=debug
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openfx-misc-build-windows-release
           path: Bundle
