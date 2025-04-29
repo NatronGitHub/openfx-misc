@@ -50,8 +50,8 @@
 //#define DEBUG_STDOUT // output debugging messages on stdout (for Resolve)
 
 #if defined(_OPENMP)
-#include <omp.h>
 #define _GLIBCXX_PARALLEL // enable libstdc++ parallel STL algorithm (eg nth_element, sort...)
+#include <omp.h>
 #else
 #define kUseMultithread // define to use the multithread suite
 #endif
