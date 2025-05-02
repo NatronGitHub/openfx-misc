@@ -718,7 +718,7 @@ CheckerBoardPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCenterLineWidth);
         param->setLabel(kParamCenterLineWidthLabel);
         param->setHint(kParamCenterLineWidthHint);
-        param->setDefault(1);
+        param->setDefault(3);
         param->setRange(0., DBL_MAX);
         param->setDisplayRange(0, 10);
         param->setAnimates(true); // can animate
