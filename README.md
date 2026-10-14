@@ -239,7 +239,7 @@ Although Nuke 8 & 9 claim via OpenFX that they support parametric parameters (i.
     Exception thrown
       basic_string::_S_construct NULL not valid
 
-The same happens with other plugins using parametric parameters, such as [TuttleHistogramKeyer](http://www.tuttleofx.org/).
+The same happens with other plugins using parametric parameters, such as TuttleHistogramKeyer.
 
 Parametric parameters work in older versions of Nuke (at least in Nuke 6 & 7).
 
