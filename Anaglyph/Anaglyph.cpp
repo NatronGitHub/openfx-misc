@@ -219,6 +219,9 @@ private:
 
     virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
+    // override the roi call
+    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -323,6 +326,23 @@ AnaglyphPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args,
 
     frameViews.addFrameViewsNeeded(*_srcClip, range, 0);
     frameViews.addFrameViewsNeeded(*_srcClip, range, 1);
+}
+
+// override the roi call
+void
+AnaglyphPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
+                                     RegionOfInterestSetter &rois)
+{
+    if (!_srcClip || !_srcClip->isConnected()) {
+        return;
+    }
+    // the views are shifted horizontally by up to (|offset|+1)/2 pixels (at render scale 1)
+    int offset = _offset->getValueAtTime(args.time);
+    double shift = ( (std::abs(offset) + 1) / 2 + 1 ) * _srcClip->getPixelAspectRatio();
+    OfxRectD roi = args.regionOfInterest;
+    roi.x1 -= shift;
+    roi.x2 += shift;
+    rois.setRegionOfInterest(*_srcClip, roi);
 }
 
 // the overridden render function
