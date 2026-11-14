@@ -407,326 +407,57 @@ protected:
 };
 
 
-template <class PIX, int nComponents, int maxValue>
-class ImageMinMaxMeanProcessor
-    : public ImageStatisticsProcessorBase
-{
-private:
-    double _min[nComponents];
-    double _max[nComponents];
-    double _sum[nComponents];
-
-public:
-    ImageMinMaxMeanProcessor(ImageEffect &instance)
-        : ImageStatisticsProcessorBase(instance)
-    {
-        std::fill( _min, _min + nComponents, +std::numeric_limits<double>::infinity() );
-        std::fill( _max, _max + nComponents, -std::numeric_limits<double>::infinity() );
-        std::fill(_sum, _sum + nComponents, 0.);
-    }
-
-    ~ImageMinMaxMeanProcessor()
-    {
-    }
-
-    void setPrevResults(double /* time */,
-                        const Results & /*results*/) OVERRIDE FINAL {}
-
-    void getResults(Results *results) OVERRIDE FINAL
-    {
-        if (_count > 0) {
-            toRGBA<double, nComponents, 1>(_min, &results->min);
-            toRGBA<double, nComponents, 1>(_max, &results->max);
-            double mean[nComponents];
-            for (int c = 0; c < nComponents; ++c) {
-                mean[c] = _sum[c] / _count;
-            }
-            toRGBA<double, nComponents, 1>(mean, &results->mean);
-        }
-    }
-
-private:
-
-    void addResults(double min[nComponents],
-                    double max[nComponents],
-                    double sum[nComponents],
-                    unsigned long count)
-    {
-        AutoMutex l (&_mutex);
-        for (int c = 0; c < nComponents; ++c) {
-            _min[c] = (std::min)(_min[c], min[c]);
-            _max[c] = (std::max)(_max[c], max[c]);
-            _sum[c] += sum[c];
-        }
-        _count += count;
-    }
-
-    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
-    {
-        unused(rs);
-        double min[nComponents], max[nComponents], sum[nComponents];
-
-        std::fill( min, min + nComponents, +std::numeric_limits<double>::infinity() );
-        std::fill( max, max + nComponents, -std::numeric_limits<double>::infinity() );
-        std::fill(sum, sum + nComponents, 0.);
-        unsigned long count = 0;
-
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
-               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( _effect.abort() ) {
-                break;
-            }
-
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            double sumLine[nComponents]; // partial sum to avoid underflows
-            std::fill(sumLine, sumLine + nComponents, 0.);
-
-            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                for (int c = 0; c < nComponents; ++c) {
-                    double v = *dstPix / (double)maxValue; // normalize integer images to [0,1]
-                    min[c] = (std::min)(min[c], v);
-                    max[c] = (std::max)(max[c], v);
-                    sumLine[c] += v;
-                    ++dstPix;
-                }
-            }
-            for (int c = 0; c < nComponents; ++c) {
-                sum[c] += sumLine[c];
-            }
-            count += procWindow.x2 - procWindow.x1;
-        }
-
-        addResults(min, max, sum, count);
-    }
-};
-
-
-template <class PIX, int nComponents, int maxValue>
-class ImageSDevProcessor
-    : public ImageStatisticsProcessorBase
-{
-private:
-    double _mean[nComponents];
-    double _sum_p2[nComponents];
-
-public:
-    ImageSDevProcessor(ImageEffect &instance)
-        : ImageStatisticsProcessorBase(instance)
-    {
-        std::fill(_mean, _mean + nComponents, 0.);
-        std::fill(_sum_p2, _sum_p2 + nComponents, 0.);
-    }
-
-    ~ImageSDevProcessor()
-    {
-    }
-
-    void setPrevResults(double /* time */,
-                        const Results &results) OVERRIDE FINAL
-    {
-        toComponents<double, nComponents, 1>(results.mean, _mean);
-    }
-
-    void getResults(Results *results) OVERRIDE FINAL
-    {
-        if (_count > 1) {
-            double sdev[nComponents];
-            for (int c = 0; c < nComponents; ++c) {
-                // sdev^2 is an unbiased estimator for the population variance
-                sdev[c] = std::sqrt( (std::max)( 0., _sum_p2[c] / (_count - 1) ) );
-            }
-            toRGBA<double, nComponents, 1>(sdev, &results->sdev);
-        }
-    }
-
-private:
-
-    void addResults(double sum_p2[nComponents],
-                    unsigned long count)
-    {
-        AutoMutex l (&_mutex);
-        for (int c = 0; c < nComponents; ++c) {
-            _sum_p2[c] += sum_p2[c];
-        }
-        _count += count;
-    }
-
-    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
-    {
-        unused(rs);
-        double sum_p2[nComponents];
-
-        std::fill(sum_p2, sum_p2 + nComponents, 0.);
-        unsigned long count = 0;
-
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
-               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( _effect.abort() ) {
-                break;
-            }
-
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            double sumLine_p2[nComponents]; // partial sum to avoid underflows
-            std::fill(sumLine_p2, sumLine_p2 + nComponents, 0.);
-
-            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                for (int c = 0; c < nComponents; ++c) {
-                    double v = (*dstPix / (double)maxValue - _mean[c]);
-                    sumLine_p2[c] += v * v;
-                    ++dstPix;
-                }
-            }
-            for (int c = 0; c < nComponents; ++c) {
-                sum_p2[c] += sumLine_p2[c];
-            }
-            count += procWindow.x2 - procWindow.x1;
-        }
-
-        addResults(sum_p2, count);
-    }
-};
-
-
-template <class PIX, int nComponents, int maxValue>
-class ImageSkewnessKurtosisProcessor
-    : public ImageStatisticsProcessorBase
-{
-private:
-    double _mean[nComponents];
-    double _sdev[nComponents];
-    double _sum_p3[nComponents];
-    double _sum_p4[nComponents];
-
-public:
-    ImageSkewnessKurtosisProcessor(ImageEffect &instance)
-        : ImageStatisticsProcessorBase(instance)
-    {
-        std::fill(_mean, _mean + nComponents, 0.);
-        std::fill(_sdev, _sdev + nComponents, 0.);
-        std::fill(_sum_p3, _sum_p3 + nComponents, 0.);
-        std::fill(_sum_p4, _sum_p4 + nComponents, 0.);
-    }
-
-    ~ImageSkewnessKurtosisProcessor()
-    {
-    }
-
-    void setPrevResults(double /* time */,
-                        const Results &results) OVERRIDE FINAL
-    {
-        toComponents<double, nComponents, 1>(results.mean, _mean);
-        toComponents<double, nComponents, 1>(results.sdev, _sdev);
-    }
-
-    void getResults(Results *results) OVERRIDE FINAL
-    {
-        if (_count > 2) {
-            double skewness[nComponents];
-            // factor for the adjusted Fisher-Pearson standardized moment coefficient G_1
-            double skewfac = ( (double)_count * _count ) / ( (double)(_count - 1) * (_count - 2) );
-            assert( !OFX::IsNaN(skewfac) );
-            for (int c = 0; c < nComponents; ++c) {
-                skewness[c] = skewfac * _sum_p3[c] / _count;
-            }
-            toRGBA<double, nComponents, 1>(skewness, &results->skewness);
-            assert( !OFX::IsNaN(results->skewness.r) && !OFX::IsNaN(results->skewness.g) && !OFX::IsNaN(results->skewness.b) && !OFX::IsNaN(results->skewness.a) );
-        }
-        if (_count > 3) {
-            double kurtosis[nComponents];
-            double kurtfac = ( (double)(_count + 1) * _count ) / ( (double)(_count - 1) * (_count - 2) * (_count - 3) );
-            double kurtshift = -3 * ( (double)(_count - 1) * (_count - 1) ) / ( (double)(_count - 2) * (_count - 3) );
-            assert( !OFX::IsNaN(kurtfac) && !OFX::IsNaN(kurtshift) );
-            for (int c = 0; c < nComponents; ++c) {
-                kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
-            }
-            toRGBA<double, nComponents, 1>(kurtosis, &results->kurtosis);
-            assert( !OFX::IsNaN(results->kurtosis.r) && !OFX::IsNaN(results->kurtosis.g) && !OFX::IsNaN(results->kurtosis.b) && !OFX::IsNaN(results->kurtosis.a) );
-        }
-    }
-
-private:
-
-    void addResults(double sum_p3[nComponents],
-                    double sum_p4[nComponents],
-                    unsigned long count)
-    {
-        AutoMutex l (&_mutex);
-        for (int c = 0; c < nComponents; ++c) {
-            _sum_p3[c] += sum_p3[c];
-            _sum_p4[c] += sum_p4[c];
-        }
-        _count += count;
-    }
-
-    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
-    {
-        unused(rs);
-        double sum_p3[nComponents];
-        double sum_p4[nComponents];
-
-        std::fill(sum_p3, sum_p3 + nComponents, 0.);
-        std::fill(sum_p4, sum_p4 + nComponents, 0.);
-        unsigned long count = 0;
-
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
-               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( _effect.abort() ) {
-                break;
-            }
-
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            double sumLine_p3[nComponents]; // partial sum to avoid underflows
-            double sumLine_p4[nComponents]; // partial sum to avoid underflows
-            std::fill(sumLine_p3, sumLine_p3 + nComponents, 0.);
-            std::fill(sumLine_p4, sumLine_p4 + nComponents, 0.);
-
-            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                for (int c = 0; c < nComponents; ++c) {
-                    if (_sdev[c] > 0.) {
-                        double v = (*dstPix / (double)maxValue - _mean[c]) / _sdev[c];
-                        double v2 = v * v;
-                        sumLine_p3[c] += v2 * v;
-                        sumLine_p4[c] += v2 * v2;
-                    }
-                    ++dstPix;
-                }
-            }
-            for (int c = 0; c < nComponents; ++c) {
-                sum_p3[c] += sumLine_p3[c];
-                sum_p4[c] += sumLine_p4[c];
-            }
-            count += procWindow.x2 - procWindow.x1;
-        }
-
-        addResults(sum_p3, sum_p4, count);
-    }
-};
-
+// The statistics processors work on a vector of nValues values per pixel:
+// the nComponents normalized components (hsvl=false), or the HSVL values (hsvl=true).
 #define nComponentsHSVL 4
 
-template <class PIX, int nComponents, int maxValue>
-class ImageHSVLMinMaxMeanProcessor
+template <class PIX, int nComponents, int maxValue, bool hsvl>
+class ImageStatisticsValuesProcessorBase
     : public ImageStatisticsProcessorBase
 {
-private:
-    double _min[nComponentsHSVL];
-    double _max[nComponentsHSVL];
-    double _sum[nComponentsHSVL];
+protected:
+    enum { nValues = hsvl ? nComponentsHSVL : nComponents };
 
-public:
-    ImageHSVLMinMaxMeanProcessor(ImageEffect &instance)
+    ImageStatisticsValuesProcessorBase(ImageEffect &instance)
         : ImageStatisticsProcessorBase(instance)
     {
-        std::fill( _min, _min + nComponentsHSVL, +std::numeric_limits<double>::infinity() );
-        std::fill( _max, _max + nComponentsHSVL, -std::numeric_limits<double>::infinity() );
-        std::fill(_sum, _sum + nComponentsHSVL, 0.);
     }
 
-    ~ImageHSVLMinMaxMeanProcessor()
+    void pixToValues(const PIX *p,
+                     double v[nValues])
     {
+        if (hsvl) {
+            float hsvlPix[nComponentsHSVL];
+            pixToHSVL<PIX, nComponents, maxValue>(p, hsvlPix);
+            for (int c = 0; c < nValues; ++c) {
+                v[c] = hsvlPix[c];
+            }
+        } else {
+            for (int c = 0; c < nValues; ++c) {
+                v[c] = p[c] / (double)maxValue; // normalize integer images to [0,1]
+            }
+        }
+    }
+};
+
+template <class PIX, int nComponents, int maxValue, bool hsvl>
+class ImageMinMaxMeanProcessorBase
+    : public ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl>
+{
+private:
+    typedef ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl> Base;
+    enum { nValues = Base::nValues };
+    double _min[nValues];
+    double _max[nValues];
+    double _sum[nValues];
+
+public:
+    ImageMinMaxMeanProcessorBase(ImageEffect &instance)
+        : Base(instance)
+    {
+        std::fill( _min, _min + nValues, +std::numeric_limits<double>::infinity() );
+        std::fill( _max, _max + nValues, -std::numeric_limits<double>::infinity() );
+        std::fill(_sum, _sum + nValues, 0.);
     }
 
     void setPrevResults(double /* time */,
@@ -734,66 +465,65 @@ public:
 
     void getResults(Results *results) OVERRIDE FINAL
     {
-        if (_count > 0) {
-            toRGBA<double, nComponentsHSVL, 1>(_min, &results->min);
-            toRGBA<double, nComponentsHSVL, 1>(_max, &results->max);
-            double mean[nComponentsHSVL];
-            for (int c = 0; c < nComponentsHSVL; ++c) {
-                mean[c] = _sum[c] / _count;
+        if (this->_count > 0) {
+            this->template toRGBA<double, nValues, 1>(_min, &results->min);
+            this->template toRGBA<double, nValues, 1>(_max, &results->max);
+            double mean[nValues];
+            for (int c = 0; c < nValues; ++c) {
+                mean[c] = _sum[c] / this->_count;
             }
-            toRGBA<double, nComponentsHSVL, 1>(mean, &results->mean);
+            this->template toRGBA<double, nValues, 1>(mean, &results->mean);
         }
     }
 
 private:
 
-    void addResults(double min[nComponentsHSVL],
-                    double max[nComponentsHSVL],
-                    double sum[nComponentsHSVL],
+    void addResults(double min[nValues],
+                    double max[nValues],
+                    double sum[nValues],
                     unsigned long count)
     {
-        AutoMutex l (&_mutex);
-        for (int c = 0; c < nComponentsHSVL; ++c) {
+        AutoMutex l (&this->_mutex);
+        for (int c = 0; c < nValues; ++c) {
             _min[c] = (std::min)(_min[c], min[c]);
             _max[c] = (std::max)(_max[c], max[c]);
             _sum[c] += sum[c];
         }
-        _count += count;
+        this->_count += count;
     }
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
-        double min[nComponentsHSVL], max[nComponentsHSVL], sum[nComponentsHSVL];
+        double min[nValues], max[nValues], sum[nValues];
 
-        std::fill( min, min + nComponentsHSVL, +std::numeric_limits<double>::infinity() );
-        std::fill( max, max + nComponentsHSVL, -std::numeric_limits<double>::infinity() );
-        std::fill(sum, sum + nComponentsHSVL, 0.);
+        std::fill( min, min + nValues, +std::numeric_limits<double>::infinity() );
+        std::fill( max, max + nValues, -std::numeric_limits<double>::infinity() );
+        std::fill(sum, sum + nValues, 0.);
         unsigned long count = 0;
 
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
-               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        assert(this->_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= this->_dstImg->getBounds().y2 &&
+               this->_dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= this->_dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( _effect.abort() ) {
+            if ( this->_effect.abort() ) {
                 break;
             }
 
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            double sumLine[nComponentsHSVL]; // partial sum to avoid underflows
-            std::fill(sumLine, sumLine + nComponentsHSVL, 0.);
+            PIX *dstPix = (PIX *) this->_dstImg->getPixelAddress(procWindow.x1, y);
+            double sumLine[nValues]; // partial sum to avoid underflows
+            std::fill(sumLine, sumLine + nValues, 0.);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                float hsvl[nComponentsHSVL];
-                pixToHSVL<PIX, nComponents, maxValue>(dstPix, hsvl);
-                for (int c = 0; c < nComponentsHSVL; ++c) {
-                    double v = hsvl[c];
-                    min[c] = (std::min)(min[c], v);
-                    max[c] = (std::max)(max[c], v);
-                    sumLine[c] += v;
+                double v[nValues];
+                this->pixToValues(dstPix, v);
+                for (int c = 0; c < nValues; ++c) {
+                    min[c] = (std::min)(min[c], v[c]);
+                    max[c] = (std::max)(max[c], v[c]);
+                    sumLine[c] += v[c];
                 }
                 dstPix += nComponents;
             }
-            for (int c = 0; c < nComponentsHSVL; ++c) {
+            for (int c = 0; c < nValues; ++c) {
                 sum[c] += sumLine[c];
             }
             count += procWindow.x2 - procWindow.x1;
@@ -804,85 +534,83 @@ private:
 };
 
 
-template <class PIX, int nComponents, int maxValue>
-class ImageHSVLSDevProcessor
-    : public ImageStatisticsProcessorBase
+template <class PIX, int nComponents, int maxValue, bool hsvl>
+class ImageSDevProcessorBase
+    : public ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl>
 {
 private:
-    double _mean[nComponentsHSVL];
-    double _sum_p2[nComponentsHSVL];
+    typedef ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl> Base;
+    enum { nValues = Base::nValues };
+    double _mean[nValues];
+    double _sum_p2[nValues];
 
 public:
-    ImageHSVLSDevProcessor(ImageEffect &instance)
-        : ImageStatisticsProcessorBase(instance)
+    ImageSDevProcessorBase(ImageEffect &instance)
+        : Base(instance)
     {
-        std::fill(_mean, _mean + nComponentsHSVL, 0.);
-        std::fill(_sum_p2, _sum_p2 + nComponentsHSVL, 0.);
-    }
-
-    ~ImageHSVLSDevProcessor()
-    {
+        std::fill(_mean, _mean + nValues, 0.);
+        std::fill(_sum_p2, _sum_p2 + nValues, 0.);
     }
 
     void setPrevResults(double /* time */,
                         const Results &results) OVERRIDE FINAL
     {
-        toComponents<double, nComponentsHSVL, 1>(results.mean, _mean);
+        this->template toComponents<double, nValues, 1>(results.mean, _mean);
     }
 
     void getResults(Results *results) OVERRIDE FINAL
     {
-        if (_count > 1) {
-            double sdev[nComponentsHSVL];
-            for (int c = 0; c < nComponentsHSVL; ++c) {
+        if (this->_count > 1) {
+            double sdev[nValues];
+            for (int c = 0; c < nValues; ++c) {
                 // sdev^2 is an unbiased estimator for the population variance
-                sdev[c] = std::sqrt( (std::max)( 0., _sum_p2[c] / (_count - 1) ) );
+                sdev[c] = std::sqrt( (std::max)( 0., _sum_p2[c] / (this->_count - 1) ) );
             }
-            toRGBA<double, nComponentsHSVL, 1>(sdev, &results->sdev);
+            this->template toRGBA<double, nValues, 1>(sdev, &results->sdev);
         }
     }
 
 private:
 
-    void addResults(double sum_p2[nComponentsHSVL],
+    void addResults(double sum_p2[nValues],
                     unsigned long count)
     {
-        AutoMutex l (&_mutex);
-        for (int c = 0; c < nComponentsHSVL; ++c) {
+        AutoMutex l (&this->_mutex);
+        for (int c = 0; c < nValues; ++c) {
             _sum_p2[c] += sum_p2[c];
         }
-        _count += count;
+        this->_count += count;
     }
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
-        double sum_p2[nComponentsHSVL];
+        double sum_p2[nValues];
 
-        std::fill(sum_p2, sum_p2 + nComponentsHSVL, 0.);
+        std::fill(sum_p2, sum_p2 + nValues, 0.);
         unsigned long count = 0;
 
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
-               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        assert(this->_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= this->_dstImg->getBounds().y2 &&
+               this->_dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= this->_dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( _effect.abort() ) {
+            if ( this->_effect.abort() ) {
                 break;
             }
 
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            double sumLine_p2[nComponentsHSVL]; // partial sum to avoid underflows
-            std::fill(sumLine_p2, sumLine_p2 + nComponentsHSVL, 0.);
+            PIX *dstPix = (PIX *) this->_dstImg->getPixelAddress(procWindow.x1, y);
+            double sumLine_p2[nValues]; // partial sum to avoid underflows
+            std::fill(sumLine_p2, sumLine_p2 + nValues, 0.);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                float hsvl[nComponentsHSVL];
-                pixToHSVL<PIX, nComponents, maxValue>(dstPix, hsvl);
-                for (int c = 0; c < nComponentsHSVL; ++c) {
-                    double v = (hsvl[c] - _mean[c]);
+                double pv[nValues];
+                this->pixToValues(dstPix, pv);
+                for (int c = 0; c < nValues; ++c) {
+                    double v = (pv[c] - _mean[c]);
                     sumLine_p2[c] += v * v;
                 }
                 dstPix += nComponents;
             }
-            for (int c = 0; c < nComponentsHSVL; ++c) {
+            for (int c = 0; c < nValues; ++c) {
                 sum_p2[c] += sumLine_p2[c];
             }
             count += procWindow.x2 - procWindow.x1;
@@ -893,102 +621,105 @@ private:
 };
 
 
-template <class PIX, int nComponents, int maxValue>
-class ImageHSVLSkewnessKurtosisProcessor
-    : public ImageStatisticsProcessorBase
+template <class PIX, int nComponents, int maxValue, bool hsvl>
+class ImageSkewnessKurtosisProcessorBase
+    : public ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl>
 {
 private:
-    double _mean[nComponentsHSVL];
-    double _sdev[nComponentsHSVL];
-    double _sum_p3[nComponentsHSVL];
-    double _sum_p4[nComponentsHSVL];
+    typedef ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl> Base;
+    enum { nValues = Base::nValues };
+    double _mean[nValues];
+    double _sdev[nValues];
+    double _sum_p3[nValues];
+    double _sum_p4[nValues];
 
 public:
-    ImageHSVLSkewnessKurtosisProcessor(ImageEffect &instance)
-        : ImageStatisticsProcessorBase(instance)
+    ImageSkewnessKurtosisProcessorBase(ImageEffect &instance)
+        : Base(instance)
     {
-        std::fill(_mean, _mean + nComponentsHSVL, 0.);
-        std::fill(_sdev, _sdev + nComponentsHSVL, 0.);
-        std::fill(_sum_p3, _sum_p3 + nComponentsHSVL, 0.);
-        std::fill(_sum_p4, _sum_p4 + nComponentsHSVL, 0.);
-    }
-
-    ~ImageHSVLSkewnessKurtosisProcessor()
-    {
+        std::fill(_mean, _mean + nValues, 0.);
+        std::fill(_sdev, _sdev + nValues, 0.);
+        std::fill(_sum_p3, _sum_p3 + nValues, 0.);
+        std::fill(_sum_p4, _sum_p4 + nValues, 0.);
     }
 
     void setPrevResults(double /* time */,
                         const Results &results) OVERRIDE FINAL
     {
-        toComponents<double, nComponentsHSVL, 1>(results.mean, _mean);
-        toComponents<double, nComponentsHSVL, 1>(results.sdev, _sdev);
+        this->template toComponents<double, nValues, 1>(results.mean, _mean);
+        this->template toComponents<double, nValues, 1>(results.sdev, _sdev);
     }
 
     void getResults(Results *results) OVERRIDE FINAL
     {
-        if (_count > 2) {
-            double skewness[nComponentsHSVL];
+        const unsigned long count = this->_count;
+        if (count > 2) {
+            double skewness[nValues];
             // factor for the adjusted Fisher-Pearson standardized moment coefficient G_1
-            double skewfac = ( (double)_count * _count ) / ( (double)(_count - 1) * (_count - 2) );
-            for (int c = 0; c < nComponentsHSVL; ++c) {
-                skewness[c] = skewfac * _sum_p3[c] / _count;
+            double skewfac = ( (double)count * count ) / ( (double)(count - 1) * (count - 2) );
+            assert( !OFX::IsNaN(skewfac) );
+            for (int c = 0; c < nValues; ++c) {
+                skewness[c] = skewfac * _sum_p3[c] / count;
             }
-            toRGBA<double, nComponentsHSVL, 1>(skewness, &results->skewness);
+            this->template toRGBA<double, nValues, 1>(skewness, &results->skewness);
+            assert( hsvl || ( !OFX::IsNaN(results->skewness.r) && !OFX::IsNaN(results->skewness.g) && !OFX::IsNaN(results->skewness.b) && !OFX::IsNaN(results->skewness.a) ) );
         }
-        if (_count > 3) {
-            double kurtosis[nComponentsHSVL];
-            double kurtfac = ( (double)(_count + 1) * _count ) / ( (double)(_count - 1) * (_count - 2) * (_count - 3) );
-            double kurtshift = -3 * ( (double)(_count - 1) * (_count - 1) ) / ( (double)(_count - 2) * (_count - 3) );
-            for (int c = 0; c < nComponentsHSVL; ++c) {
+        if (count > 3) {
+            double kurtosis[nValues];
+            double kurtfac = ( (double)(count + 1) * count ) / ( (double)(count - 1) * (count - 2) * (count - 3) );
+            double kurtshift = -3 * ( (double)(count - 1) * (count - 1) ) / ( (double)(count - 2) * (count - 3) );
+            assert( !OFX::IsNaN(kurtfac) && !OFX::IsNaN(kurtshift) );
+            for (int c = 0; c < nValues; ++c) {
                 kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
             }
-            toRGBA<double, nComponentsHSVL, 1>(kurtosis, &results->kurtosis);
+            this->template toRGBA<double, nValues, 1>(kurtosis, &results->kurtosis);
+            assert( hsvl || ( !OFX::IsNaN(results->kurtosis.r) && !OFX::IsNaN(results->kurtosis.g) && !OFX::IsNaN(results->kurtosis.b) && !OFX::IsNaN(results->kurtosis.a) ) );
         }
     }
 
 private:
 
-    void addResults(double sum_p3[nComponentsHSVL],
-                    double sum_p4[nComponentsHSVL],
+    void addResults(double sum_p3[nValues],
+                    double sum_p4[nValues],
                     unsigned long count)
     {
-        AutoMutex l (&_mutex);
-        for (int c = 0; c < nComponentsHSVL; ++c) {
+        AutoMutex l (&this->_mutex);
+        for (int c = 0; c < nValues; ++c) {
             _sum_p3[c] += sum_p3[c];
             _sum_p4[c] += sum_p4[c];
         }
-        _count += count;
+        this->_count += count;
     }
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
-        double sum_p3[nComponentsHSVL];
-        double sum_p4[nComponentsHSVL];
+        double sum_p3[nValues];
+        double sum_p4[nValues];
 
-        std::fill(sum_p3, sum_p3 + nComponentsHSVL, 0.);
-        std::fill(sum_p4, sum_p4 + nComponentsHSVL, 0.);
+        std::fill(sum_p3, sum_p3 + nValues, 0.);
+        std::fill(sum_p4, sum_p4 + nValues, 0.);
         unsigned long count = 0;
 
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
-               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        assert(this->_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= this->_dstImg->getBounds().y2 &&
+               this->_dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= this->_dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( _effect.abort() ) {
+            if ( this->_effect.abort() ) {
                 break;
             }
 
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            double sumLine_p3[nComponentsHSVL]; // partial sum to avoid underflows
-            double sumLine_p4[nComponentsHSVL]; // partial sum to avoid underflows
-            std::fill(sumLine_p3, sumLine_p3 + nComponentsHSVL, 0.);
-            std::fill(sumLine_p4, sumLine_p4 + nComponentsHSVL, 0.);
+            PIX *dstPix = (PIX *) this->_dstImg->getPixelAddress(procWindow.x1, y);
+            double sumLine_p3[nValues]; // partial sum to avoid underflows
+            double sumLine_p4[nValues]; // partial sum to avoid underflows
+            std::fill(sumLine_p3, sumLine_p3 + nValues, 0.);
+            std::fill(sumLine_p4, sumLine_p4 + nValues, 0.);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                float hsvl[nComponentsHSVL];
-                pixToHSVL<PIX, nComponents, maxValue>(dstPix, hsvl);
-                for (int c = 0; c < nComponentsHSVL; ++c) {
+                double pv[nValues];
+                this->pixToValues(dstPix, pv);
+                for (int c = 0; c < nValues; ++c) {
                     if (_sdev[c] > 0.) {
-                        double v = (hsvl[c] - _mean[c]) / _sdev[c];
+                        double v = (pv[c] - _mean[c]) / _sdev[c];
                         double v2 = v * v;
                         sumLine_p3[c] += v2 * v;
                         sumLine_p4[c] += v2 * v2;
@@ -996,7 +727,7 @@ private:
                 }
                 dstPix += nComponents;
             }
-            for (int c = 0; c < nComponentsHSVL; ++c) {
+            for (int c = 0; c < nValues; ++c) {
                 sum_p3[c] += sumLine_p3[c];
                 sum_p4[c] += sumLine_p4[c];
             }
@@ -1006,6 +737,23 @@ private:
         addResults(sum_p3, sum_p4, count);
     }
 };
+
+// The processors used by updateSub (which takes a template<class PIX, int nComponents, int maxValue>)
+#define IMAGESTATISTICS_PROCESSOR(name, base, hsvl) \
+    template <class PIX, int nComponents, int maxValue> \
+    class name \
+        : public base<PIX, nComponents, maxValue, hsvl> \
+    { \
+    public: \
+        name(ImageEffect &instance) : base<PIX, nComponents, maxValue, hsvl>(instance) {} \
+    }
+
+IMAGESTATISTICS_PROCESSOR(ImageMinMaxMeanProcessor, ImageMinMaxMeanProcessorBase, false);
+IMAGESTATISTICS_PROCESSOR(ImageSDevProcessor, ImageSDevProcessorBase, false);
+IMAGESTATISTICS_PROCESSOR(ImageSkewnessKurtosisProcessor, ImageSkewnessKurtosisProcessorBase, false);
+IMAGESTATISTICS_PROCESSOR(ImageHSVLMinMaxMeanProcessor, ImageMinMaxMeanProcessorBase, true);
+IMAGESTATISTICS_PROCESSOR(ImageHSVLSDevProcessor, ImageSDevProcessorBase, true);
+IMAGESTATISTICS_PROCESSOR(ImageHSVLSkewnessKurtosisProcessor, ImageSkewnessKurtosisProcessorBase, true);
 
 template <class PIX, int nComponents, int maxValue>
 class ImageLumaProcessor
