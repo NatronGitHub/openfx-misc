@@ -285,6 +285,9 @@ private:
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
+    template <int nComponents>
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
+
     /* set up and run a processor */
     void setupAndProcess(GammaProcessorBase &, const RenderArguments &args);
 
@@ -389,6 +392,33 @@ GammaPlugin::setupAndProcess(GammaProcessorBase &processor,
     processor.process();
 } // GammaPlugin::setupAndProcess
 
+// the internal render function
+template <int nComponents>
+void
+GammaPlugin::renderInternal(const RenderArguments &args,
+                            BitDepthEnum dstBitDepth)
+{
+    switch (dstBitDepth) {
+    case eBitDepthUByte: {
+        GammaProcessor<unsigned char, nComponents, 255> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eBitDepthUShort: {
+        GammaProcessor<unsigned short, nComponents, 65535> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eBitDepthFloat: {
+        GammaProcessor<float, nComponents, 1> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    default:
+        throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
 // the overridden render function
 void
 GammaPlugin::render(const RenderArguments &args)
@@ -401,88 +431,16 @@ GammaPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte: {
-            GammaProcessor<unsigned char, 4, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthUShort: {
-            GammaProcessor<unsigned short, 4, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthFloat: {
-            GammaProcessor<float, 4, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentAlpha) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte: {
-            GammaProcessor<unsigned char, 1, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthUShort: {
-            GammaProcessor<unsigned short, 1, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthFloat: {
-            GammaProcessor<float, 1, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<1>(args, dstBitDepth);
 #ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte: {
-            GammaProcessor<unsigned char, 2, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthUShort: {
-            GammaProcessor<unsigned short, 2, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthFloat: {
-            GammaProcessor<float, 2, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<2>(args, dstBitDepth);
 #endif
     } else {
         assert(dstComponents == ePixelComponentRGB);
-        switch (dstBitDepth) {
-        case eBitDepthUByte: {
-            GammaProcessor<unsigned char, 3, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthUShort: {
-            GammaProcessor<unsigned short, 3, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthFloat: {
-            GammaProcessor<float, 3, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<3>(args, dstBitDepth);
     }
 } // GammaPlugin::render
 
