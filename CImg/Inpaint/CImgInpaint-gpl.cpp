@@ -176,10 +176,9 @@ public:
                         const CImgInpaintParams& /*params*/,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 0; // does not support tiles anyway
+        // does not support tiles: the whole image is processed anyway
         assert(!kSupportsTiles);
-
-        cimgPadRect(rect, delta_pix, delta_pix, roi);
+        *roi = rect;
     }
 
     virtual void render(const RenderArguments &args,

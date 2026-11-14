@@ -1534,8 +1534,6 @@ public:
             _blurPlugin == eBlurPluginEdgeExtend ||
             _blurPlugin == eBlurPluginEdgeDetect) {
             params.expandRoD = _expandRoD->getValueAtTime(time);
-        } else if (_blurPlugin == eBlurPluginErodeBlur) {
-            params.expandRoD = true;
         } else {
             assert(_blurPlugin == eBlurPluginLaplacian ||
                    _blurPlugin == eBlurPluginSharpen ||

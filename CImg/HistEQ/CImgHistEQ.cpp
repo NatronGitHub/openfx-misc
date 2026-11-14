@@ -111,9 +111,8 @@ public:
                         const CImgHistEQParams& /*params*/,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 0;
-
-        cimgPadRect(rect, delta_pix, delta_pix, roi);
+        // does not support tiles: the whole image is processed anyway
+        *roi = rect;
     }
 
     virtual void render(const RenderArguments & /*args*/,
