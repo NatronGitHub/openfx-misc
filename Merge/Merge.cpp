@@ -408,6 +408,44 @@ public:
     }
 
 private:
+    // Return the alpha of the A input i at (x, y), and premultiply tmpA by the roto mask of that input, if any.
+    float getAlphaA(std::size_t i,
+                    const PIX *srcPixA,
+                    float tmpA[nComponents],
+                    int x,
+                    int y) const
+    {
+        float a;
+        if (i >= _rotoMaskImgAs.size() || !_rotoMaskImgAs[i]) {
+            if (nComponents == 4) {
+                a = tmpA[nComponents - 1];
+            } else if (nComponents == 1) {
+                a = tmpA[0];
+            } else {
+                a = (_aChannels[3] && srcPixA) ? 1. : 0.;
+            }
+        } else {
+            const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgAs[i]->getPixelAddress(x, y);
+            if (rotoMaskPix) {
+                a = *rotoMaskPix / (float)maxValue;
+            } else {
+                a = 0.;
+            }
+            if (_maskInvert) {
+                a = 1. - a;
+            }
+            // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
+            if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
+                // Premult all A pixels by the roto mask
+                for (int c = 0; c < nComponents; ++c) {
+                    tmpA[c] *= a;
+                }
+            }
+        }
+
+        return a;
+    }
+
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
@@ -471,33 +509,7 @@ private:
                         }
 
                         // work in float: clamping is done when mixing
-                        float a;
-                        if (i >= _rotoMaskImgAs.size() || !_rotoMaskImgAs[i]) {
-                            if (nComponents == 4) {
-                                a = tmpA[nComponents - 1];
-                            } else if (nComponents == 1) {
-                                a = tmpA[0];
-                            } else {
-                                a = (_aChannels[3] && srcPixA) ? 1. : 0.;
-                            }
-                        } else {
-                            const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgAs[i]->getPixelAddress(x, y);
-                            if (rotoMaskPix) {
-                                a = *rotoMaskPix / (float)maxValue;
-                            } else {
-                                a = 0.;
-                            }
-                            if (_maskInvert) {
-                                a = 1. - a;
-                            }
-                            // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
-                            if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
-                                // Premult all A pixels by the roto mask
-                                for (int c = 0; c < nComponents; ++c) {
-                                    tmpA[c] *= a;
-                                }
-                            }
-                        }
+                        float a = getAlphaA(i, srcPixA, tmpA, x, y);
                         if (!_rotoMaskImgB) {
                             if (nComponents == 4) {
                                 b = tmpB[nComponents - 1];
@@ -543,33 +555,7 @@ private:
                             }
 
                             // work in float: clamping is done when mixing
-                            float a;
-                            if (i >= _rotoMaskImgAs.size() || !_rotoMaskImgAs[i]) {
-                                if (nComponents == 4) {
-                                    a = tmpA[nComponents - 1];
-                                } else if (nComponents == 1) {
-                                    a = tmpA[0];
-                                } else {
-                                    a = (_aChannels[3] && srcPixA) ? 1. : 0.;
-                                }
-                            } else {
-                                const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgAs[i]->getPixelAddress(x, y);
-                                if (rotoMaskPix) {
-                                    a = *rotoMaskPix / (float)maxValue;
-                                } else {
-                                    a = 0.;
-                                }
-                                if (_maskInvert) {
-                                    a = 1. - a;
-                                }
-                                // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
-                                if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
-                                    // Premult all A pixels by the roto mask
-                                    for (int c = 0; c < nComponents; ++c) {
-                                        tmpA[c] *= a;
-                                    }
-                                }
-                            }
+                            float a = getAlphaA(i, srcPixA, tmpA, x, y);
 
                             // Update b from the previously computed value.
                             // see https://github.com/MrKepzie/Natron/issues/1648
