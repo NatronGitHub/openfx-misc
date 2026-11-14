@@ -18,7 +18,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * OFX ZDefocus plugin.
+ * OFX ZDefocusCImg plugin.
  *
  * Depth-dependent defocus: the image is split into focus slices according
  * to a depth (or disparity) map, each slice is blurred with its own blur size,
@@ -45,7 +45,7 @@ using namespace cimg_library;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName          "ZDefocus"
+#define kPluginName          "ZDefocusCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
 "Depth-dependent defocus (depth of field) effect.\n" \
@@ -63,7 +63,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.eu)."
 
-#define kPluginIdentifier    "net.sf.openfx.ZDefocus"
+#define kPluginIdentifier    "net.sf.cimg.CImgZDefocus"
 // History:
 // version 1.0: initial version
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -406,19 +406,7 @@ ZDefocusPlugin::getFocusValue(double time,
             return getDepthValue(pixel, depth->getPixelComponentCount(), depthChannel);
         }
     }
-    // the focus point is outside of the fetched depth image: fetch the pixel at the focus point
-    OfxRectI pixRect = {pix.x, pix.y, pix.x + 1, pix.y + 1};
-    OfxRectD bounds;
-    Coords::toCanonical(pixRect, renderScale, par, &bounds);
-    auto_ptr<const Image> pointImg( _depthClip->fetchImage(time, bounds) );
-    if ( pointImg.get() && (pointImg->getPixelDepth() == eBitDepthFloat) ) {
-        const float* pixel = (const float*)pointImg->getPixelAddress(pix.x, pix.y);
-        if (pixel) {
-            return getDepthValue(pixel, pointImg->getPixelComponentCount(), depthChannel);
-        }
-    }
-
-    // depth not available at the focus point: use the focus value
+    // depth not available at the focus point (e.g. outside of the Depth RoD): use the focus value
     return focus;
 }
 
@@ -703,7 +691,21 @@ ZDefocusPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     if (_srcClip) {
         rois.setRegionOfInterest(*_srcClip, roi);
     }
-    rois.setRegionOfInterest(*_depthClip, roi);
+    // the Depth RoI also contains the focus point pixel, which is read at render time
+    OfxRectD depthRoI = roi;
+    if ( _useFocusPoint->getValueAtTime(time) ) {
+        double depthPar = _depthClip->getPixelAspectRatio();
+        if (depthPar <= 0.) {
+            depthPar = 1.;
+        }
+        OfxPointI pix;
+        Coords::toPixel(_focusPoint->getValueAtTime(time), args.renderScale, depthPar, &pix);
+        OfxRectI pixRect = {pix.x, pix.y, pix.x + 1, pix.y + 1};
+        OfxRectD pixRectD;
+        Coords::toCanonical(pixRect, args.renderScale, depthPar, &pixRectD);
+        Coords::rectBoundingBox(depthRoI, pixRectD, &depthRoI);
+    }
+    rois.setRegionOfInterest(*_depthClip, depthRoI);
 }
 
 void
