@@ -24,6 +24,7 @@
 // NOTE: This plugin is very similar to Rectangle. Any changes made here should probably be made in Rectangle.
 
 #include <cmath>
+#include <cfloat> // DBL_MAX
 #include <algorithm>
 
 #include "ofxsProcessing.H"
@@ -55,6 +56,10 @@
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
+#ifndef M_PI
+#define M_PI        3.14159265358979323846264338327950288   /* pi             */
+#endif
+
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -68,7 +73,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "If no source is connected, this effect behaves like a generator. Its region of definition is:\n" \
     "- The selected format if the Extent parameter is a format.\n" \
     "- The project output format if Color0 is not black and transparent.\n" \
-    "- The selected extent plus a one-pixel border if Color0 is black and transparent.\n" \
+    "- The selected extent (or the bounding box of the rotated ellipse, if Angle is not zero) plus a one-pixel border if Color0 is black and transparent.\n" \
     "\n" \
     "See also: https://web.archive.org/web/20220807182648/http://www.opticalenquiry.com/nuke/index.php?title=Radial"
 
@@ -77,8 +82,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: antialiased render
+// version 2.2: add angle parameter
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -122,6 +128,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
 #define kParamSoftnessHint "Softness of the radial ramp. Draws an anti-aliased disc or ellipse if zero."
+
+#define kParamAngle kParamRectangleInteractAngle
+#define kParamAngleLabel kParamRectangleInteractAngleLabel
+#define kParamAngleHint "Rotation angle of the ellipse around its center, in degrees (counter-clockwise)."
 
 #define kParamPLinear "plinear"
 #define kParamPLinearLabel "Perceptually Linear"
@@ -177,6 +187,7 @@ protected:
     bool _maskInvert;
     bool _processR, _processG, _processB, _processA;
     OfxPointD _btmLeft, _size;
+    double _angle;
     double _softness;
     bool _plinear;
     RGBAValues _color0, _color1;
@@ -193,6 +204,7 @@ public:
         , _processG(false)
         , _processB(false)
         , _processA(false)
+        , _angle(0.)
         , _softness(1.)
         , _plinear(false)
     {
@@ -221,6 +233,7 @@ public:
 
     void setValues(const OfxPointD& btmLeft,
                    const OfxPointD& size,
+                   double angle,
                    double softness,
                    bool plinear,
                    const RGBAValues& color0,
@@ -233,6 +246,7 @@ public:
     {
         _btmLeft = btmLeft;
         _size = size;
+        _angle = angle;
         _softness = (std::max)( 0., (std::min)(softness, 1.) );
         _plinear = plinear;
         _color0 = color0;
@@ -335,6 +349,10 @@ private:
     {
         assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
         assert( !processA || (nComponents == 1 || nComponents == 4) );
+
+        if (_angle != 0.) {
+            return processRotated<processR, processG, processB, processA>(procWindow, rs);
+        }
 
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         double par = _dstImg->getPixelAspectRatio();
@@ -502,6 +520,134 @@ private:
             }
         }
     } // process
+
+    // Render a rotated ellipse. The ellipse is rotated by _angle around its center, in canonical coordinates.
+    // Antialiasing: the normalized distance to the center d is computed at the pixel center, and the
+    // pixel footprint is approximated by d-h and d+h, where h is the half-extent of the pixel along the gradient of d.
+    template<bool processR, bool processG, bool processB, bool processA>
+    void processRotated(const OfxRectI& procWindow, const OfxPointD& rs)
+    {
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        double par = _dstImg->getPixelAspectRatio();
+        if (par <= 0.) {
+            par = 1.;
+        }
+
+        // center of the ellipse (canonical)
+        const OfxPointD c = { _btmLeft.x + _size.x / 2, _btmLeft.y + _size.y / 2 };
+        // radius of the ellipse (canonical)
+        const OfxPointD r = { _size.x / 2, _size.y / 2 };
+        // size of a pixel (canonical)
+        const OfxPointD pixSize = { par / rs.x, 1. / rs.y };
+        const double angleRad = _angle * M_PI / 180.;
+        const double cosa = std::cos(angleRad);
+        const double sina = std::sin(angleRad);
+        const bool empty = (r.x <= 0.) || (r.y <= 0.);
+
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if ( _effect.abort() ) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            // pixel center (canonical), relative to the ellipse center
+            const double py = (y + 0.5) * pixSize.y - c.y;
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const double px = (x + 0.5) * pixSize.x - c.x;
+
+                double d_closer = 1.;
+                double d_farther = 1.;
+                if (!empty) {
+                    // coordinates in the ellipse frame, normalized by the radius
+                    const double u = ( cosa * px + sina * py) / r.x;
+                    const double v = (-sina * px + cosa * py) / r.y;
+                    const double d = std::sqrt(u * u + v * v);
+                    double h = 0.;
+                    if (d > 0.) {
+                        // gradient of d in the ellipse frame
+                        const double gu = u / (d * r.x);
+                        const double gv = v / (d * r.y);
+                        // gradient of d in canonical coordinates
+                        const double gx = cosa * gu - sina * gv;
+                        const double gy = sina * gu + cosa * gv;
+                        // half-extent of the pixel along the gradient
+                        h = 0.5 * (std::abs(gx) * pixSize.x + std::abs(gy) * pixSize.y);
+                    }
+                    d_closer = (std::max)(d - h, 0.);
+                    d_farther = d + h;
+                }
+
+                if (d_closer >= 1) {
+                    // fully outside
+                    tmpPix[0] = (float)_color0.r;
+                    tmpPix[1] = (float)_color0.g;
+                    tmpPix[2] = (float)_color0.b;
+                    tmpPix[3] = (float)_color0.a;
+                } else {
+                    // always consider the value closest top the center to avoid discontinuities/artifacts
+                    if ( (d_closer <= 0) || (_softness == 0) ) {
+                        // solid color
+                        tmpPix[0] = (float)_color1.r;
+                        tmpPix[1] = (float)_color1.g;
+                        tmpPix[2] = (float)_color1.b;
+                        tmpPix[3] = (float)_color1.a;
+                    } else {
+                        // mixed
+                        float t = ( 1.f - (float)d_closer ) / (float)_softness;
+                        if (t >= 1) {
+                            tmpPix[0] = (float)_color1.r;
+                            tmpPix[1] = (float)_color1.g;
+                            tmpPix[2] = (float)_color1.b;
+                            tmpPix[3] = (float)_color1.a;
+                        } else {
+                            t = (float)rampSmooth(t);
+
+                            if (_plinear) {
+                                t = t * t * t;
+                            }
+                            tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                            tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                            tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                            tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                        }
+                    }
+                    if (d_farther > 1) {
+                        // mixed pixel, partly inside / partly outside
+                        const float a = (float)( (1. - d_closer) / (d_farther - d_closer) );
+                        tmpPix[0] = (float)_color0.r * (1.f - a) + tmpPix[0] * a;
+                        tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
+                        tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
+                        tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
+                    }
+                }
+                float a = tmpPix[3];
+
+                // ofxsMaskMixPix takes non-normalized values
+                tmpPix[0] *= maxValue;
+                tmpPix[1] *= maxValue;
+                tmpPix[2] *= maxValue;
+                tmpPix[3] *= maxValue;
+                float srcPixRGBA[4] = {0, 0, 0, 0};
+                if (srcPix) {
+                    if (nComponents >= 3) {
+                        srcPixRGBA[0] = srcPix[0];
+                        srcPixRGBA[1] = srcPix[1];
+                        srcPixRGBA[2] = srcPix[2];
+                    }
+                    if ( (nComponents == 1) || (nComponents == 4) ) {
+                        srcPixRGBA[3] = srcPix[nComponents - 1];
+                    }
+                }
+                tmpPix[0] = processR ? (tmpPix[0] + srcPixRGBA[0] * (1.f - a)) : srcPixRGBA[0];
+                tmpPix[1] = processG ? (tmpPix[1] + srcPixRGBA[1] * (1.f - a)) : srcPixRGBA[1];
+                tmpPix[2] = processB ? (tmpPix[2] + srcPixRGBA[2] * (1.f - a)) : srcPixRGBA[2];
+                tmpPix[3] = processA ? (tmpPix[3] + srcPixRGBA[3] * (1.f - a)) : srcPixRGBA[3];
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+            }
+        }
+    } // processRotated
 };
 
 
@@ -519,6 +665,7 @@ public:
         , _processG(NULL)
         , _processB(NULL)
         , _processA(NULL)
+        , _angle(NULL)
         , _color0(NULL)
         , _color1(NULL)
         , _expandRoD(NULL)
@@ -534,12 +681,13 @@ public:
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
+        _angle = fetchDoubleParam(kParamAngle);
         _softness = fetchDoubleParam(kParamSoftness);
         _plinear = fetchBooleanParam(kParamPLinear);
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
-        assert(_softness && _plinear && _color0 && _color1 && _expandRoD);
+        assert(_angle && _softness && _plinear && _color0 && _color1 && _expandRoD);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
@@ -579,6 +727,7 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
+    DoubleParam* _angle;
     DoubleParam* _softness;
     BooleanParam* _plinear;
     RGBAParam* _color0;
@@ -674,6 +823,7 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor,
             size.y = rod.y2 - rod.y1;
         }
     }
+    double angle = _angle->getValueAtTime(time);
     double softness = _softness->getValueAtTime(time);
     bool plinear = _plinear->getValueAtTime(time);
     RGBAValues color0, color1;
@@ -687,6 +837,7 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor,
     double mix = _mix->getValueAtTime(time);
 
     processor.setValues(btmLeft, size,
+                        angle,
                         softness, plinear,
                         color0, color1,
                         mix,
@@ -891,6 +1042,21 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     bool wasCaught = GeneratorPlugin::getRegionOfDefinition(time, rod);
     if ( wasCaught && (extent != eGeneratorExtentFormat) ) {
+        double angle = _angle->getValueAtTime(time);
+        if (angle != 0.) {
+            // bounding box of the rotated ellipse (the softness is inside the ellipse)
+            OfxPointD c = { (rod.x1 + rod.x2) / 2, (rod.y1 + rod.y2) / 2 };
+            OfxPointD r = { (rod.x2 - rod.x1) / 2, (rod.y2 - rod.y1) / 2 };
+            double a = angle * M_PI / 180.;
+            double cosa = std::cos(a);
+            double sina = std::sin(a);
+            double hx = std::sqrt(r.x * r.x * cosa * cosa + r.y * r.y * sina * sina);
+            double hy = std::sqrt(r.x * r.x * sina * sina + r.y * r.y * cosa * cosa);
+            rod.x1 = c.x - hx;
+            rod.x2 = c.x + hx;
+            rod.y1 = c.y - hy;
+            rod.y2 = c.y + hy;
+        }
         // add one pixel in each direction to ensure border is black and transparent
         // (non-black+transparent case was treated above)
         rod.x1 -= 1;
@@ -1052,6 +1218,21 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
     generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentSize, ePixelComponentRGBA, false,  context);
+
+    // angle
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngle);
+        param->setLabel(kParamAngleLabel);
+        param->setHint(kParamAngleHint);
+        param->setDoubleType(eDoubleTypeAngle);
+        param->setDefault(0.);
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setDisplayRange(-180., 180.);
+        param->setIncrement(0.1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     // softness
     {

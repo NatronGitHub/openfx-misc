@@ -64,6 +64,10 @@
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
+#ifndef M_PI
+#define M_PI        3.14159265358979323846264338327950288   /* pi             */
+#endif
+
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -77,7 +81,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "If no source is connected, this effect behaves like a generator. Its region of definition is:\n" \
     "- The selected format if the Extent parameter is a format.\n" \
     "- The project output format if Color0 is not black and transparent.\n" \
-    "- The selected extent plus a one-pixel border if Color0 is black and transparent.\n" \
+    "- The selected extent (or the bounding box of the rotated rectangle, if Angle is not zero) plus a one-pixel border if Color0 is black and transparent.\n" \
     "\n" \
     "See also: https://web.archive.org/web/20220807191757/http://www.opticalenquiry.com/nuke/index.php?title=Rectangle"
 
@@ -86,8 +90,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: antialiased render & remove blackOutside parameter (the outside color is always color0)
+// version 2.2: add angle parameter
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -128,6 +133,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Process alpha channel."
 #endif
+
+#define kParamAngle kParamRectangleInteractAngle
+#define kParamAngleLabel kParamRectangleInteractAngleLabel
+#define kParamAngleHint "Rotation angle of the rectangle around its center, in degrees (counter-clockwise)."
 
 #define kParamCornerRadius "cornerRadius"
 #define kParamCornerRadiusLabel "Corner Radius"
@@ -190,6 +199,7 @@ protected:
     bool _processB;
     bool _processA;
     OfxPointD _btmLeft, _size;
+    double _angle;
     OfxPointD _cornerRadius;
     double _softness;
     RGBAValues _color0, _color1;
@@ -206,6 +216,7 @@ public:
         , _processG(false)
         , _processB(false)
         , _processA(false)
+        , _angle(0.)
         , _softness(0.)
     {
         _btmLeft.x = _btmLeft.y = _size.x = _size.y = 0.;
@@ -234,6 +245,7 @@ public:
 
     void setValues(const OfxPointD& btmLeft,
                    const OfxPointD& size,
+                   double angle,
                    const OfxPointD& cornerRadius,
                    double softness,
                    const RGBAValues& color0,
@@ -246,6 +258,7 @@ public:
     {
         _btmLeft = btmLeft;
         _size = size;
+        _angle = angle;
         _cornerRadius = cornerRadius;
         _softness = (std::max)(0., softness);
         _color0 = color0;
@@ -348,6 +361,10 @@ private:
     {
         assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
         assert( !processA || (nComponents == 1 || nComponents == 4) );
+
+        if (_angle != 0.) {
+            return processRotated<processR, processG, processB, processA>(procWindow, rs);
+        }
 
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         double par = _dstImg->getPixelAspectRatio();
@@ -627,6 +644,213 @@ private:
             }
         }
     } // process
+
+    // Render a rotated rectangle. The rectangle is rotated by _angle around its center, in canonical coordinates.
+    // All distances are computed in canonical coordinates, in the frame of the rectangle.
+    // Antialiasing uses the half-extent of the pixel footprint along the rectangle axes
+    // (or along the gradient of the normalized distance for the rounded corners).
+    template<bool processR, bool processG, bool processB, bool processA>
+    void processRotated(const OfxRectI& procWindow, const OfxPointD& rs)
+    {
+        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        double par = _dstImg->getPixelAspectRatio();
+        if (par <= 0.) {
+            par = 1.;
+        }
+        // center of the rectangle (canonical)
+        const OfxPointD c = { _btmLeft.x + _size.x / 2, _btmLeft.y + _size.y / 2 };
+        // half-size of the rectangle (canonical)
+        const OfxPointD hs = { _size.x / 2, _size.y / 2 };
+        // corner radius (canonical)
+        const OfxPointD& r = _cornerRadius;
+        // size of a pixel (canonical)
+        const OfxPointD pixSize = { par / rs.x, 1. / rs.y };
+        const double angleRad = _angle * M_PI / 180.;
+        const double cosa = std::cos(angleRad);
+        const double sina = std::sin(angleRad);
+        // half-extent of the pixel footprint along the rectangle axes
+        const OfxPointD e = { 0.5 * (std::abs(cosa) * pixSize.x + std::abs(sina) * pixSize.y),
+                              0.5 * (std::abs(sina) * pixSize.x + std::abs(cosa) * pixSize.y) };
+
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if ( _effect.abort() ) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            // pixel center (canonical), relative to the rectangle center
+            const double py = (y + 0.5) * pixSize.y - c.y;
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const double px = (x + 0.5) * pixSize.x - c.x;
+                // coordinates in the rectangle frame
+                const double lx =  cosa * px + sina * py;
+                const double ly = -sina * px + cosa * py;
+                // distance to the closest edge (positive inside)
+                double dx = hs.x - std::abs(lx);
+                double dy = hs.y - std::abs(ly);
+
+                if ( (dx <= -e.x) || (dy <= -e.y) ) {
+                    // outside of the rectangle
+                    tmpPix[0] = (float)_color0.r;
+                    tmpPix[1] = (float)_color0.g;
+                    tmpPix[2] = (float)_color0.b;
+                    tmpPix[3] = (float)_color0.a;
+                } else {
+                    double a = 1.; // mix factor with the outside
+                    // test if the center of the pixel is within one of the rounded corners
+                    if ( (r.x > 0) && (r.y > 0) && (dx < r.x) && (dy < r.y) ) {
+                        // CORNERS
+
+                        // normalized coordinates with respect to the corner ellipse center (in the rectangle frame)
+                        const double u = (r.x - dx) / r.x;
+                        const double v = (r.y - dy) / r.y;
+                        const double d = std::sqrt(u * u + v * v);
+                        double h = 0.;
+                        if (d > 0.) {
+                            // gradient of d in the rectangle frame
+                            const double gu = (lx < 0 ? -u : u) / (d * r.x);
+                            const double gv = (ly < 0 ? -v : v) / (d * r.y);
+                            // gradient of d in canonical coordinates
+                            const double gx = cosa * gu - sina * gv;
+                            const double gy = sina * gu + cosa * gv;
+                            // half-extent of the pixel along the gradient
+                            h = 0.5 * (std::abs(gx) * pixSize.x + std::abs(gy) * pixSize.y);
+                        }
+                        const double d_closer = (std::max)(d - h, 0.);
+                        const double d_farther = d + h;
+
+                        if (d_closer >= 1) {
+                            // fully outside
+                            tmpPix[0] = (float)_color0.r;
+                            tmpPix[1] = (float)_color0.g;
+                            tmpPix[2] = (float)_color0.b;
+                            tmpPix[3] = (float)_color0.a;
+                        } else {
+                            if (_softness <= 0) {
+                                // solid color
+                                tmpPix[0] = (float)_color1.r;
+                                tmpPix[1] = (float)_color1.g;
+                                tmpPix[2] = (float)_color1.b;
+                                tmpPix[3] = (float)_color1.a;
+                            } else {
+                                // compute the non-round rect coeff (tx*ty) first.
+                                float tx = (dx >= _softness) ? 1.f : (float)rampSmooth( (std::max)(dx, 0.) / _softness );
+                                float ty = (dy >= _softness) ? 1.f : (float)rampSmooth( (std::max)(dy, 0.) / _softness );
+
+                                // then the corner coeff: distance to the ellipse along the radius
+                                double dellipse;
+                                if (d_closer <= 0) {
+                                    dellipse = (std::min)(r.x, r.y);
+                                } else {
+                                    // length of the radius through the considered point, times (1 - d_closer)
+                                    dellipse = std::sqrt(u * u * r.x * r.x + v * v * r.y * r.y) / d * (1. - d_closer);
+                                }
+                                assert(dellipse >= 0.);
+                                float t = (float)(dellipse / _softness);
+                                if (t < 1) {
+                                    t = (float)rampSmooth(t);
+                                }
+
+                                // take the min of the rectangle softness and the corner softness
+                                t = (std::min)(t, tx * ty);
+
+                                if (t >= 1) {
+                                    tmpPix[0] = (float)_color1.r;
+                                    tmpPix[1] = (float)_color1.g;
+                                    tmpPix[2] = (float)_color1.b;
+                                    tmpPix[3] = (float)_color1.a;
+                                } else {
+                                    tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                                    tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                                    tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                                    tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                }
+                            }
+
+                            if (d_farther > 1) {
+                                // mixed pixel, partly inside / partly outside
+                                a = (1. - d_closer) / (d_farther - d_closer);
+                            }
+                        }
+                    } else {
+                        // RECTANGLE
+
+                        // within the rectangle area minus the corners
+
+                        // inside or mixed
+                        // is it a mixed pixel?
+                        if (dx < e.x) {
+                            a *= (dx + e.x) / (2 * e.x);
+                            dx = e.x;
+                        }
+                        if (dy < e.y) {
+                            a *= (dy + e.y) / (2 * e.y);
+                            dy = e.y;
+                        }
+                        if ( (_softness == 0) || ( (dx >= _softness) && (dy >= _softness) ) ) {
+                            // inside of the rectangle
+                            tmpPix[0] = (float)_color1.r;
+                            tmpPix[1] = (float)_color1.g;
+                            tmpPix[2] = (float)_color1.b;
+                            tmpPix[3] = (float)_color1.a;
+                        } else {
+                            float tx = (dx >= _softness) ? 1.f : (float)rampSmooth(dx / _softness);
+                            float ty = (dy >= _softness) ? 1.f : (float)rampSmooth(dy / _softness);
+                            float t = tx * ty;
+                            if (t >= 1) {
+                                tmpPix[0] = (float)_color1.r;
+                                tmpPix[1] = (float)_color1.g;
+                                tmpPix[2] = (float)_color1.b;
+                                tmpPix[3] = (float)_color1.a;
+                            } else {
+                                tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                                tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                                tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                                tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                            }
+                        }
+                    }
+                    assert(a >= 0. && a <= 1.);
+                    if (a != 1.) {
+                        // mixed pixel (inside/outside)
+                        const float af = (float)a;
+                        tmpPix[0] = (float)_color0.r * (1.f - af) + tmpPix[0] * af;
+                        tmpPix[1] = (float)_color0.g * (1.f - af) + tmpPix[1] * af;
+                        tmpPix[2] = (float)_color0.b * (1.f - af) + tmpPix[2] * af;
+                        tmpPix[3] = (float)_color0.a * (1.f - af) + tmpPix[3] * af;
+                    }
+                }
+                float a = tmpPix[3];
+
+                // ofxsMaskMixPix takes non-normalized values
+                tmpPix[0] *= maxValue;
+                tmpPix[1] *= maxValue;
+                tmpPix[2] *= maxValue;
+                tmpPix[3] *= maxValue;
+                float srcPixRGBA[4] = {0, 0, 0, 0};
+                if (srcPix) {
+                    if (nComponents >= 3) {
+                        srcPixRGBA[0] = srcPix[0];
+                        srcPixRGBA[1] = srcPix[1];
+                        srcPixRGBA[2] = srcPix[2];
+                    }
+                    if ( (nComponents == 1) || (nComponents == 4) ) {
+                        srcPixRGBA[3] = srcPix[nComponents - 1];
+                    }
+                }
+                tmpPix[0] = processR ? (tmpPix[0] + srcPixRGBA[0] * (1.f - a)) : srcPixRGBA[0];
+                tmpPix[1] = processG ? (tmpPix[1] + srcPixRGBA[1] * (1.f - a)) : srcPixRGBA[1];
+                tmpPix[2] = processB ? (tmpPix[2] + srcPixRGBA[2] * (1.f - a)) : srcPixRGBA[2];
+                tmpPix[3] = processA ? (tmpPix[3] + srcPixRGBA[3] * (1.f - a)) : srcPixRGBA[3];
+                if (nComponents == 1) {
+                    tmpPix[0] = tmpPix[3];
+                }
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+            }
+        }
+    } // processRotated
 };
 
 
@@ -645,6 +869,9 @@ public:
         , _processG(NULL)
         , _processB(NULL)
         , _processA(NULL)
+        , _angle(NULL)
+        , _cornerRadius(NULL)
+        , _softness(NULL)
         , _color0(NULL)
         , _color1(NULL)
         , _expandRoD(NULL)
@@ -661,12 +888,13 @@ public:
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
+        _angle = fetchDoubleParam(kParamAngle);
         _cornerRadius = fetchDouble2DParam(kParamCornerRadius);
         _softness = fetchDoubleParam(kParamSoftness);
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
-        assert(_softness && _color0 && _color1 && _expandRoD);
+        assert(_angle && _softness && _color0 && _color1 && _expandRoD);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
@@ -706,6 +934,7 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
+    DoubleParam* _angle;
     Double2DParam* _cornerRadius;
     DoubleParam* _softness;
     RGBAParam* _color0;
@@ -810,6 +1039,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
     if (cornerRadius.y > size.y / 2) {
         cornerRadius.y = size.y / 2;
     }
+    double angle = _angle->getValueAtTime(time);
     double softness = _softness->getValueAtTime(time);
     RGBAValues color0, color1;
     _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
@@ -822,6 +1052,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
     double mix = _mix->getValueAtTime(time);
 
     processor.setValues(btmLeft, size,
+                        angle,
                         cornerRadius,
                         softness,
                         color0, color1,
@@ -1029,6 +1260,21 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     bool wasCaught = GeneratorPlugin::getRegionOfDefinition(time, rod);
     if ( wasCaught && (extent != eGeneratorExtentFormat) ) {
+        double angle = _angle->getValueAtTime(time);
+        if (angle != 0.) {
+            // bounding box of the rotated rectangle (the softness is inside the rectangle)
+            OfxPointD c = { (rod.x1 + rod.x2) / 2, (rod.y1 + rod.y2) / 2 };
+            OfxPointD hs = { (rod.x2 - rod.x1) / 2, (rod.y2 - rod.y1) / 2 };
+            double a = angle * M_PI / 180.;
+            double cosa = std::abs( std::cos(a) );
+            double sina = std::abs( std::sin(a) );
+            double hx = hs.x * cosa + hs.y * sina;
+            double hy = hs.x * sina + hs.y * cosa;
+            rod.x1 = c.x - hx;
+            rod.x2 = c.x + hx;
+            rod.y1 = c.y - hy;
+            rod.y2 = c.y + hy;
+        }
         // add one pixel in each direction to ensure border is black and transparent
         // (non-black+transparent case was treated above)
         rod.x1 -= 1;
@@ -1320,6 +1566,21 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
     generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentSize, ePixelComponentRGBA, false,  context);
+
+    // angle
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngle);
+        param->setLabel(kParamAngleLabel);
+        param->setHint(kParamAngleHint);
+        param->setDoubleType(eDoubleTypeAngle);
+        param->setDefault(0.);
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setDisplayRange(-180., 180.);
+        param->setIncrement(0.1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     // corner radius
     {
