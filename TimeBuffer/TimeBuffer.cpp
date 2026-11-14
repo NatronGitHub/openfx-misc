@@ -223,6 +223,20 @@ struct TimeBuffer
         bounds.x1 = bounds.y1 = bounds.x2 = bounds.y2 = 0;
         renderScale.x = renderScale.y = 1;
     }
+
+    // reset the buffer to a clean state (the caller must hold the mutex)
+    void reset()
+    {
+        time = -DBL_MAX;
+        dirty = true;
+        pixelComponents = ePixelComponentNone;
+        pixelComponentCount = 0;
+        bitDepth = eBitDepthNone;
+        rowBytes = 0;
+        par = 1.;
+        bounds.x1 = bounds.y1 = bounds.x2 = bounds.y2 = 0;
+        renderScale.x = renderScale.y = 1;
+    }
 };
 
 // This is the global map from buffer names to buffers.
@@ -766,15 +780,7 @@ TimeBufferReadPlugin::changedParam(const InstanceChangedArgs & /*args*/,
         }
         // reset the buffer to a clean state
         AutoMutex guard(timeBuffer->mutex);
-        timeBuffer->time = -DBL_MAX;
-        timeBuffer->dirty = true;
-        timeBuffer->pixelComponents = ePixelComponentNone;
-        timeBuffer->pixelComponentCount = 0;
-        timeBuffer->bitDepth = eBitDepthNone;
-        timeBuffer->rowBytes = 0;
-        timeBuffer->par = 1.;
-        timeBuffer->bounds.x1 = timeBuffer->bounds.y1 = timeBuffer->bounds.x2 = timeBuffer->bounds.y2 = 0;
-        timeBuffer->renderScale.x = timeBuffer->renderScale.y = 1;
+        timeBuffer->reset();
         _resetTrigger->setValue( !_resetTrigger->getValue() ); // trigger a render
     } else if (paramName == kParamInfo) {
         // give information about allocated buffers
@@ -1125,15 +1131,7 @@ TimeBufferWritePlugin::changedParam(const InstanceChangedArgs & /*args*/,
 
             return;
         }
-        timeBuffer->time = -DBL_MAX;
-        timeBuffer->dirty = true;
-        timeBuffer->pixelComponents = ePixelComponentNone;
-        timeBuffer->pixelComponentCount = 0;
-        timeBuffer->bitDepth = eBitDepthNone;
-        timeBuffer->rowBytes = 0;
-        timeBuffer->par = 1.;
-        timeBuffer->bounds.x1 = timeBuffer->bounds.y1 = timeBuffer->bounds.x2 = timeBuffer->bounds.y2 = 0;
-        timeBuffer->renderScale.x = timeBuffer->renderScale.y = 1;
+        timeBuffer->reset();
         _resetTrigger->setValue( !_resetTrigger->getValue() ); // trigger a render
     } else if (paramName == kParamInfo) {
         // give information about allocated buffers
