@@ -347,7 +347,7 @@ private:
         std::fill( max, max + nComponents, -std::numeric_limits<double>::infinity() );
         unsigned long count = 0;
 
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.x2 <= _dstImg->getBounds().x2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -358,7 +358,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
-                    double v = *dstPix;
+                    double v = *dstPix / (double)maxValue;
                     min[c] = (std::min)(min[c], v);
                     max[c] = (std::max)(max[c], v);
                     ++dstPix;
@@ -366,7 +366,6 @@ private:
             }
             count += procWindow.x2 - procWindow.x1;
         }
-        count += (procWindow.x2 - procWindow.x1) * (procWindow.y2 - procWindow.y1);
 
         addResults(min, max, count);
     }
