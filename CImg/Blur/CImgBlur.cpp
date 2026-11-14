@@ -1692,6 +1692,18 @@ public:
         } else {
             assert(false);
         }
+        if (_blurPlugin == eBlurPluginEdgeDetect) {
+            // EdgeDetect applies an erosion/dilation and non-maxima suppression after edge detection
+            // (orderX = orderY = 1, so we did not return early above)
+            const double par = (params.par != 0.) ? params.par : 1.;
+            const int nms = params.edgeDetectNMS ? 1 : 0;
+            const int erodeX = (int)std::floor(std::abs(params.erodeSize) / par * renderScale.x) + nms;
+            const int erodeY = (int)std::floor(std::abs(params.erodeSize) * renderScale.y) + nms;
+            roi->x1 -= erodeX;
+            roi->x2 += erodeX;
+            roi->y1 -= erodeY;
+            roi->y2 += erodeY;
+        }
     }
 
     virtual void render(const RenderArguments &args,
