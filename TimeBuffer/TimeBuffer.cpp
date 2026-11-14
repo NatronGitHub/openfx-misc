@@ -941,8 +941,8 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA) );
-        _syncClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_syncClip && _syncClip->getPixelComponents() == ePixelComponentRGBA);
+        _syncClip = fetchClip(kClipSync);
+        assert( _syncClip && (!_syncClip->isConnected() || _syncClip->getPixelComponents() == ePixelComponentRGBA) );
 
         _bufferName = fetchStringParam(kParamBufferName);
         _resetTrigger = fetchBooleanParam(kParamResetTrigger);
