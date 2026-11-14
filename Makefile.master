@@ -4,6 +4,15 @@ OFXSEXTPATH ?= $(TOP_SRCDIR)/SupportExt
 
 PATHTOROOT = $(OFXPATH)/Support
 
+# Use an absolute object directory. GNU make also applies VPATH directory search
+# to targets: with a relative OBJECTPATH, a combined bundle (e.g. Misc or CImg)
+# would find and link an up-to-date object left in a plugin directory by a
+# standalone build (e.g. ../Merge/$(OBJECTPATH)/Merge.o) instead of building its
+# own. Make does not search VPATH for absolute file names.
+# The override must come before the include, because the rules in
+# Plugins/Makefile.master expand OBJECTPATH when they are read.
+override OBJECTPATH = $(CURDIR)/$(OS)-$(BITS)-$(DEBUGNAME)
+
 include $(PATHTOROOT)/Plugins/Makefile.master
 
 CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_NATRON -DOFX_EXTENSIONS_TUTTLE -DOFX_SUPPORTS_OPENGLRENDER
