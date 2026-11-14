@@ -379,9 +379,9 @@ private:
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
         unused(rs);
-        assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
+        assert( (!processR && !processG) || (nComponents >= 2) );
+        assert( !processB || (nComponents == 3 || nComponents == 4) );
         assert( !processA || (nComponents == 1 || nComponents == 4) );
-        assert(nComponents == 3 || nComponents == 4);
         float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         // set up a random number generator and set the seed
@@ -568,6 +568,13 @@ private:
                     if (!processA) {
                         dstPix[0] = srcPix ? srcPix[0] : PIX();
                     }
+                } else if (nComponents == 2) {
+                    if (!processR) {
+                        dstPix[0] = srcPix ? srcPix[0] : PIX();
+                    }
+                    if (!processG) {
+                        dstPix[1] = srcPix ? srcPix[1] : PIX();
+                    }
                 } else if ( (nComponents == 3) || (nComponents == 4) ) {
                     if (!processR) {
                         dstPix[0] = srcPix ? srcPix[0] : PIX();
@@ -615,16 +622,12 @@ public:
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
-                             _dstClip->getPixelComponents() == ePixelComponentRGBA ||
-                             _dstClip->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                               _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
+                ( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) ) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
-        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         // TODO: fetch noise parameters
 
