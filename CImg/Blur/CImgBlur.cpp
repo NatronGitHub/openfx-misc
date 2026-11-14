@@ -2260,12 +2260,12 @@ public:
                     double gy = grad[1](x, y, 0, c);
                     sumsq += gx * gx + gy * gy;
                     if (std::abs(gx) > std::abs(gy)) {
-                        if (std::abs(gx) < 0) {
+                        if (gx < 0) {
                             gx = -gx;
                             gy = -gy;
                         }
                     } else {
-                        if (std::abs(gy) < 0) {
+                        if (gy < 0) {
                             gx = -gx;
                             gy = -gy;
                         }
