@@ -399,7 +399,8 @@ DissolvePlugin::isIdentity(const IsIdentityArguments &args,
                 Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
                 if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    identityClip = _srcClip[0];
+                    // outside of the mask, render outputs the "from" image, which is _srcClip[prev]
+                    identityClip = _srcClip[prev];
 
                     return true;
                 }
