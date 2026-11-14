@@ -109,7 +109,12 @@ enum ParityEnum
 
 #define kParamDoubleFramerate "doubleFramerate"
 #define kParamDoubleFramerateLabel "Double Framerate"
-#define kParamDoubleFramerateHint "Each input frame produces two output frames, and the framerate is doubled."
+#define kParamDoubleFramerateHint "Each input frame produces two output frames, one per field, and the framerate is doubled. " \
+    "If the input frame range starts at frame F, output frames F+2k and F+2k+1 are both computed from input frame F+k: " \
+    "the first one shows the field that comes first according to the Field Order parameter, and the second one shows the other field. " \
+    "The output frame range is thus twice as long as the input frame range. " \
+    "When this is checked, the Parity parameter is ignored. " \
+    "Only available in the general context, since the plugin cannot change the frame range in the filter context."
 
 #define kParamYadifMode "yadifMode"
 #define kParamYadifModeLabel "Yadif Processing Mode"
@@ -136,6 +141,9 @@ public:
         mode = fetchChoiceParam("mode");
         fieldOrder = fetchChoiceParam("fieldOrder");
         parity = fetchChoiceParam("parity");
+        doubleFramerate = fetchBooleanParam(kParamDoubleFramerate);
+        assert(mode && fieldOrder && parity && doubleFramerate);
+        updateVisibility();
     }
 
 private:
@@ -153,11 +161,25 @@ private:
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
 
+    /* override the time domain action, only for the general context */
+    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
+
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    /** @brief is the Double Framerate mode active? (only possible in the general context) */
+    bool isDoubleFramerate() const;
+
+    /** @brief map an output time to the source time, and to the output field index (0 for the first field, 1 for the second field) */
+    double getSourceTime(double time, int* field) const;
+
+    void updateVisibility();
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
     ChoiceParam *fieldOrder, *mode, *parity;
+    BooleanParam *doubleFramerate;
 };
 
 
@@ -453,12 +475,14 @@ DeinterlacePlugin::render(const RenderArguments &args)
     }
     checkBadRenderScaleOrField(dst, args);
 
+    int field = 0;
+    const double srcTime = getSourceTime(args.time, &field);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                    _srcClip->fetchImage(args.time) : 0 );
+                                    _srcClip->fetchImage(srcTime) : 0 );
     auto_ptr<const Image> srcp( ( _srcClip && _srcClip->isConnected() ) ?
-                                     _srcClip->fetchImage(args.time - 1) : 0 );
+                                     _srcClip->fetchImage(srcTime - 1) : 0 );
     auto_ptr<const Image> srcn( ( _srcClip && _srcClip->isConnected() ) ?
-                                     _srcClip->fetchImage(args.time + 1) : 0 );
+                                     _srcClip->fetchImage(srcTime + 1) : 0 );
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
     } else {
@@ -492,6 +516,19 @@ DeinterlacePlugin::render(const RenderArguments &args)
         } else {
             ifieldOrder = 0;
         }
+    }
+
+    if ( isDoubleFramerate() ) {
+        // Output the first field (field == 0) or the second field (field == 1) of the source frame.
+        // filter_plane() keeps the rows r (r=0 being the bottom row of the image, as in OFX) such
+        // that (r ^ parity) is even, and interpolates the other rows.
+        // The upper field contains the top row (r = height - 1).
+        const bool keepUpper = ( (field == 0) == (ifieldOrder == eFieldOrderUpper) );
+        iparity = keepUpper ? ( (height - 1) & 1 ) : (height & 1);
+        // filter_line_c() uses (parity ^ tff) to select the temporal neighbors of the missing field:
+        // it must be 1 for the first field (previous and current frames)
+        // and 0 for the second field (current and next frames), as in FFmpeg's yadif.
+        ifieldOrder = iparity ^ (field == 0 ? 1 : 0);
     }
 
 
@@ -624,14 +661,78 @@ DeinterlacePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     // set the fielding of _dstClip
     clipPreferences.setOutputFielding(eFieldNone);
+    if ( isDoubleFramerate() && _srcClip && _srcClip->isConnected() && getImageEffectHostDescription()->supportsSetableFrameRate ) {
+        clipPreferences.setOutputFrameRate( 2. * _srcClip->getFrameRate() );
+    }
+}
+
+bool
+DeinterlacePlugin::isDoubleFramerate() const
+{
+    return getContext() == eContextGeneral && doubleFramerate->getValue();
+}
+
+double
+DeinterlacePlugin::getSourceTime(double time,
+                                 int* field) const
+{
+    *field = 0;
+    if ( !isDoubleFramerate() || !_srcClip || !_srcClip->isConnected() ) {
+        return time;
+    }
+    // output frames first+2k and first+2k+1 come from source frame first+k
+    const double first = std::floor( _srcClip->getFrameRange().min );
+    const double d = std::floor(time - first + 0.5); // output frame index, relative to first
+    const double k = std::floor(d / 2.);
+    *field = (int)(d - 2. * k);
+
+    return first + k;
+}
+
+bool
+DeinterlacePlugin::getTimeDomain(OfxRangeD &range)
+{
+    // this should only be called in the general context, ever!
+    if ( isDoubleFramerate() && _srcClip && _srcClip->isConnected() ) {
+        OfxRangeD srcRange = _srcClip->getFrameRange();
+        const double first = std::floor(srcRange.min);
+        range.min = srcRange.min;
+        range.max = first + 2. * (srcRange.max - first) + 1.;
+
+        return true;
+    }
+
+    return false;
+}
+
+void
+DeinterlacePlugin::updateVisibility()
+{
+    parity->setEnabled( !isDoubleFramerate() );
+}
+
+void
+DeinterlacePlugin::changedParam(const InstanceChangedArgs & /*args*/,
+                                const std::string &paramName)
+{
+    if (paramName == kParamDoubleFramerate) {
+        updateVisibility();
+    }
 }
 
 bool
 DeinterlacePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
-                                         OfxRectD & /*rod*/)
+                                         OfxRectD &rod)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         throwSuiteStatusException(kOfxStatFailed);
+    }
+
+    if ( isDoubleFramerate() && _srcClip && _srcClip->isConnected() ) {
+        int field;
+        rod = _srcClip->getRegionOfDefinition( getSourceTime(args.time, &field) );
+
+        return true;
     }
 
     return false;
@@ -655,9 +756,11 @@ DeinterlacePlugin::getFramesNeeded(const FramesNeededArguments &args,
                                    FramesNeededSetter &frames)
 {
     OfxRangeD range;
+    int field;
+    const double srcTime = getSourceTime(args.time, &field);
 
-    range.min = args.time - 1;
-    range.max = args.time + 1;
+    range.min = srcTime - 1;
+    range.max = srcTime + 1;
     frames.setFramesNeeded(*_srcClip, range);
 }
 
@@ -696,7 +799,7 @@ DeinterlacePluginFactory::describe(ImageEffectDescriptor &desc)
 
 void
 DeinterlacePluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                            ContextEnum /*context*/)
+                                            ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -803,7 +906,12 @@ DeinterlacePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamDoubleFramerate);
         param->setLabel(kParamDoubleFramerateLabel);
         param->setHint(kParamDoubleFramerateHint);
-        param->setIsSecretAndDisabled(true); // Not yet implemented!
+        param->setDefault(false);
+        param->setAnimates(false); // used in getTimeDomain()
+        if (context != eContextGeneral) {
+            // the time domain can only be changed in the general context
+            param->setIsSecretAndDisabled(true);
+        }
         if (page) {
             page->addChild(*param);
         }
