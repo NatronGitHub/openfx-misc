@@ -557,6 +557,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
                 return;
             case eUnorderedRenderBlack:
                 fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
+                guard.relock(); // the buffer must be locked before modifying it
                 timeBuffer->dirty = true;
                 timeBuffer->time = time + 1;
 
