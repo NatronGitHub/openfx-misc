@@ -680,9 +680,11 @@ private:
             float a2 = a1 - a;
 
             if (b < a) {
-                b1 = b + a2 *      b  /     a ;
+                // a == 0 is possible with negative (float) values: avoid 0/0
+                b1 = (a != 0.f) ? (b + a2 *      b  /     a ) : (b + a2);
             } else       {
-                b1 = b + a2 * (1.f - b) / (1.f - a);
+                // a == 1 is possible with values above 1 (float): avoid 0/0
+                b1 = (a != 1.f) ? (b + a2 * (1.f - b) / (1.f - a)) : (b + a2);
             }
 
             return b1;
