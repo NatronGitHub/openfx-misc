@@ -383,7 +383,7 @@ DissolvePlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    if ( ( ( which >= _srcClip.size() ) || (prev == which) ) &&
+    if ( (prev == which) &&
          ( !_maskClip || !_maskClip->isConnected() ) ) {
         identityClip = _srcClip[prev];
         identityTime = args.time;
@@ -449,7 +449,7 @@ DissolvePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     }
 
     // at the end?
-    if ( ( ( which >= _srcClip.size() ) || (which == prev) ) &&
+    if ( (which == prev) &&
          _srcClip[prev] && _srcClip[prev]->isConnected() &&
          ( !_maskClip || !_maskClip->isConnected() ) ) {
         rod = _srcClip[prev]->getRegionOfDefinition(args.time);
