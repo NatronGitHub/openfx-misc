@@ -892,15 +892,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         invtransformsizealloc = 1;
         invtransform.resize(invtransformsizealloc);
         invtransformsize = 1;
-        invtransform[0](0,0) = 0.;
-        invtransform[0](0,1) = 0.;
-        invtransform[0](0,2) = 0.;
-        invtransform[0](1,0) = 0.;
-        invtransform[0](1,1) = 0.;
-        invtransform[0](1,2) = 0.;
-        invtransform[0](2,0) = 0.;
-        invtransform[0](2,1) = 0.;
-        invtransform[0](2,2) = 1.;
+        invtransform[0].setNullTransform();
     } else {
 #     ifndef NDEBUG
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
