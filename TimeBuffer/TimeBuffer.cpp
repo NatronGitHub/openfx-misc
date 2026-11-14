@@ -1182,6 +1182,12 @@ TimeBufferWritePlugin::render(const RenderArguments &args)
         }
     }
 # endif
+    if ( !src.get() ) {
+        setPersistentMessage(Message::eMessageError, "", "Could not fetch the Source image.");
+        throwSuiteStatusException(kOfxStatFailed);
+
+        return;
+    }
 
     // do the rendering
     TimeBuffer* timeBuffer = 0;
