@@ -862,7 +862,7 @@ private:
         unused(rs);
         std::vector<unsigned long> histogram(HISTOGRAM_BINS * nComponents);
         unsigned long count = 0;
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.x2 <= _dstImg->getBounds().x2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -876,11 +876,13 @@ private:
                 ofxsUnPremult<PIX, nComponents, maxValue>(dstPix, unpPix, _premult, _premultChannel);
 
                 for (int c = 0; c < (std::min)(nComponents, 3); ++c) {
+                    // ofxsUnPremult stores the value of Alpha-only images in unpPix[3]
+                    const float v = (nComponents == 1) ? unpPix[3] : unpPix[c];
                     int bin = 0;
-                    if (unpPix[c] >= _rangemax) {
+                    if (v >= _rangemax) {
                         bin = HISTOGRAM_BINS - 1;
-                    } else if (unpPix[c] >= _rangemin) {
-                        bin = static_cast<int>( std::floor(HISTOGRAM_BINS * (unpPix[c] - _rangemin) / (_rangemax - _rangemin)) );
+                    } else if (v >= _rangemin) {
+                        bin = static_cast<int>( std::floor(HISTOGRAM_BINS * (v - _rangemin) / (_rangemax - _rangemin)) );
                     }
                     ++histogram[c * HISTOGRAM_BINS + bin];
                 }
