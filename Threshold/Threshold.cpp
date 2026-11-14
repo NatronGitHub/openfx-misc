@@ -441,7 +441,7 @@ ThresholdPlugin::renderInternal(const RenderArguments &args,
         break;
     }
     case eBitDepthUShort: {
-        ThresholdProcessor<unsigned short, nComponents, 65536> fred(*this);
+        ThresholdProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
