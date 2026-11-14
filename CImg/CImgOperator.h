@@ -497,7 +497,19 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         // 3- process the cimg
         printRectI("render srcRoI", srcRoI);
         cimg_library::CImg<cimgpix_t> cimg;
+#if defined(HAVE_THREAD_LOCAL)
+        try {
+            CImgAbortScope abortScope(this);
+            render(cimgA, cimgB, args, params, srcRoI.x1, srcRoI.y1, cimg);
+        } catch (const cimg_library::CImgAbortException&) {
+            return;
+        }
+#else
         render(cimgA, cimgB, args, params, srcRoI.x1, srcRoI.y1, cimg);
+#endif
+        if ( abort() ) {
+            return;
+        }
         // check that the dimensions didn't change
         assert(cimg.width() == cimgWidth && cimg.height() == cimgHeight && cimg.depth() == 1 && cimg.spectrum() == cimgSpectrum);
 
