@@ -359,7 +359,7 @@ SET_TARGET_PROPERTIES(Misc PROPERTIES SUFFIX ".ofx")
 
 # Add extra flags to the link step of the plugin
 if(APPLE)
-    set_target_properties(Misc PROPERTIES LINK_FLAGS "-fvisibility=hidden -exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
+    set_target_properties(Misc PROPERTIES LINK_FLAGS "-fvisibility=hidden -Wl,-exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
     set_target_properties(Misc PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
 elseif(MINGW)
     set_target_properties(Misc PROPERTIES LINK_FLAGS "-shared -fvisibility=hidden -Xlinker --version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
@@ -521,7 +521,7 @@ SET_TARGET_PROPERTIES(CImg PROPERTIES SUFFIX ".ofx")
 
 # Add extra flags to the link step of the plugin
 if(APPLE)
-    set_target_properties(CImg PROPERTIES LINK_FLAGS "-bundle -fvisibility=hidden -exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
+    set_target_properties(CImg PROPERTIES LINK_FLAGS "-fvisibility=hidden -Wl,-exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
     set_target_properties(CImg PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
 elseif(WIN32)
     set_target_properties(CImg PROPERTIES LINK_FLAGS "-fvisibility=hidden,--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
