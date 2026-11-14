@@ -400,6 +400,7 @@ FILE(GLOB CIMG_SOURCES
   "CImg/SharpenInvDiff/CImgSharpenInvDiff.cpp"
   "CImg/SharpenShock/CImgSharpenShock.cpp"
   "CImg/Smooth/CImgSmooth.cpp"
+  "CImg/ZDefocus/CImgZDefocus.cpp"
   "SupportExt/tinythread.cpp"
   "SupportExt/ofxsThreadSuite.cpp"
 #  "SupportExt/ofxsFileOpen.cpp"
