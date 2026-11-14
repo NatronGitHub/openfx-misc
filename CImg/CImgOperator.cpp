@@ -45,6 +45,50 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
 }
 
 void
+CImgOperatorPluginHelperBase::getSrcImageData(const Image* img,
+                                              Clip* clip,
+                                              const RenderArguments &args,
+                                              BitDepthEnum dstBitDepth,
+                                              PixelComponentEnum dstPixelComponents,
+                                              SrcImageData* data)
+{
+    if (!img) {
+        data->pixelData = NULL;
+        data->bounds.x1 = data->bounds.y1 = data->bounds.x2 = data->bounds.y2 = 0;
+        data->rod.x1 = data->rod.y1 = data->rod.x2 = data->rod.y2 = 0;
+        data->pixelComponents = clip ? clip->getPixelComponents() : ePixelComponentNone;
+        data->pixelComponentCount = 0;
+        data->bitDepth = clip ? clip->getPixelDepth() : eBitDepthNone;
+        data->rowBytes = 0;
+
+        return;
+    }
+# ifndef NDEBUG
+    if ( (img->getPixelDepth() != dstBitDepth) || (img->getPixelComponents() != dstPixelComponents) ) {
+        throwSuiteStatusException(kOfxStatErrImageFormat);
+    }
+    checkBadRenderScaleOrField(img, args);
+# else
+    unused(dstBitDepth);
+    unused(dstPixelComponents);
+# endif
+    data->pixelData = img->getPixelData();
+    data->bounds = img->getBounds();
+    // = img->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
+    if (_supportsTiles && clip) {
+        Coords::toPixelEnclosing(clip->getRegionOfDefinition(args.time), args.renderScale, clip->getPixelAspectRatio(), &data->rod);
+    } else {
+        // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+        // in hosts that do not support tiles (such as Sony Catalyst Edit), the image RoD is the image Bounds anyway.
+        data->rod = data->bounds;
+    }
+    data->pixelComponents = img->getPixelComponents();
+    data->pixelComponentCount = img->getPixelComponentCount();
+    data->bitDepth = img->getPixelDepth();
+    data->rowBytes = img->getRowBytes();
+}
+
+void
 CImgOperatorPluginHelperBase::changedClip(const InstanceChangedArgs &args,
                                           const std::string &clipName)
 {
