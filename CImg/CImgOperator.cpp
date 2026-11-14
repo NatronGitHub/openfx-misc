@@ -24,14 +24,12 @@ using namespace OFX;
 CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle handle,
                                                            const char* srcAClipName, //!< should be either kOfxImageEffectSimpleSourceClipName or "A" if you want this to be the default output when plugin is disabled
                                                            const char* srcBClipName,
-                                                           bool usesMask, // true if the mask parameter to render should be a single-channel image containing the mask
-                                                           bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                                            bool supportsTiles,
                                                            bool supportsMultiResolution,
                                                            bool supportsRenderScale,
-                                                           bool defaultUnpremult,
-                                                           bool /*defaultProcessAlphaOnRGBA*/) // unused: the processAlpha default is set by describeInContextBegin()
-    : CImgFilterPluginHelperBase(handle, usesMask, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, /*isFilter=*/ false)
+                                                           bool defaultUnpremult)
+    // usesMask and supportsComponentRemapping are not used by operators
+    : CImgFilterPluginHelperBase(handle, /*usesMask=*/false, /*supportsComponentRemapping=*/false, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, /*isFilter=*/ false)
     , _srcAClip(NULL)
     , _srcBClip(NULL)
     , _srcAClipName(srcAClipName)
@@ -140,10 +138,7 @@ CImgOperatorPluginHelperBase::describeInContextBegin(ImageEffectDescriptor &desc
                                                      bool supportsRGB,
                                                      bool supportsXY,
                                                      bool supportsAlpha,
-                                                     bool supportsTiles,
-                                                     bool /*processRGB*/,
-                                                     bool /*processAlpha*/,
-                                                     bool /*processIsSecret*/)
+                                                     bool supportsTiles)
 {
     ClipDescriptor *srcBClip = desc.defineClip(srcBClipName);
 

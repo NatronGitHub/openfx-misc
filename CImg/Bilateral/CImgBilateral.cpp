@@ -202,7 +202,7 @@ public:
 
     CImgBilateralGuidedPlugin(OfxImageEffectHandle handle,
                               int majorVersion)
-        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         // versions < 3 ignored the Mix parameter
         _ignoreMix = (majorVersion < 3);
@@ -417,10 +417,7 @@ CImgBilateralGuidedPluginFactory<majorVersion>::describeInContext(ImageEffectDes
                                                                                   kSupportsRGB,
                                                                                   kSupportsXY,
                                                                                   kSupportsAlpha,
-                                                                                  kSupportsTiles,
-                                                                                  /*processRGB =*/ true,
-                                                                                  /*processAlpha =*/ false,
-                                                                                  /*processIsSecret =*/ false);
+                                                                                  kSupportsTiles);
 
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
