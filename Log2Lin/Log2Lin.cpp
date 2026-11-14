@@ -183,7 +183,8 @@ protected:
     double lin2log(double xLin,
                    int c)
     {
-        double retval = (std::log10(xLin / _gain[c] + _offset[c]) / (0.002 / _gamma[c]) + _whitepoint[c]) / 1023.;
+        // clamp the log argument (as in PLogLin) to avoid NaNs on negative values
+        double retval = (std::log10( (std::max)(xLin / _gain[c] + _offset[c], 1e-10) ) / (0.002 / _gamma[c]) + _whitepoint[c]) / 1023.;
 
         return retval;
     }
