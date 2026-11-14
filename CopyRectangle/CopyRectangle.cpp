@@ -532,24 +532,16 @@ CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            if (getImageEffectHostDescription()->supportsMultiResolution) {
-                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-                // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    identityClip = _srcClipB;
+    // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+    // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
+    OfxRectI maskRoD;
+    if ( getImageEffectHostDescription()->supportsMultiResolution &&
+         ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, args.time, args.renderScale, &maskRoD) &&
+         !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+        // effect is identity if the renderWindow doesn't intersect the mask RoD
+        identityClip = _srcClipB;
 
-                    return true;
-                }
-            }
-        }
+        return true;
     }
 
     return false;
