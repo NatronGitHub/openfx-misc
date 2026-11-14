@@ -98,20 +98,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipBHint "The main input. This input is passed through when the KeyMix node is disabled."
 
 
-/*
-   For explanations on why we use bitset instead of vector<bool>, see:
-
-   D. Kalev. What You Should Know about vector<bool>.
-   http://www.informit.com/guides/content.aspx?g=cplusplus&seqNum=98
-
-   S. D. Meyers. Effective STL: 50 Specific Ways to Improve Your Use of the Standard Template Library.
-   Item 18: "Avoid using vector<bool>".
-   Professional Computing Series. Addison-Wesley, Boston, 4 edition, 2004
-
-   V. Pieterse et al. Performance of C++ Bit-vector Implementations
-   http://www.cs.up.ac.za/cs/vpieterse/pub/PieterseEtAl_SAICSIT2010.pdf
- */
-
 class KeyMixProcessorBase
     : public ImageProcessor
 {
@@ -171,9 +157,6 @@ private:
     {
         unused(rs);
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
-        for (int c = 0; c < 4; ++c) {
-            tmpPix[c] = 0;
-        }
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -196,10 +179,6 @@ private:
 #                     endif
                         // all images are supposed to be black and transparent outside o
                         tmpPix[c] = (_aChannels[c] && srcPixA) ? srcPixA[c] : 0.f;
-                    }
-                    if (nComponents != 4) {
-                        // set alpha (1 inside, 0 outside)
-                        tmpPix[3] = (_aChannels[3] && srcPixA) ? 1. : 0.;
                     }
                 } else {
                     // everything is black and transparent
@@ -441,15 +420,9 @@ template <class PIX, int nComponents, int maxValue>
 void
 KeyMixPlugin::renderForBitDepth(const RenderArguments &args)
 {
-    //const double time = args.time;
-    auto_ptr<KeyMixProcessorBase> fred;
+    KeyMixProcessor<PIX, nComponents, maxValue> fred(*this);
 
-    fred.reset( new KeyMixProcessor<PIX, nComponents, maxValue>(*this) );
-
-    assert( fred.get() );
-    if ( fred.get() ) {
-        setupAndProcess(*fred, args);
-    }
+    setupAndProcess(fred, args);
 } // KeyMixPlugin::renderForBitDepth
 
 // the overridden render function
