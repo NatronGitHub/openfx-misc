@@ -448,6 +448,12 @@ private:
                         } else if (operation == eOperationAverage) {
                             tmpPix[c] =  (count ? (tmpPix[c] / sumWeights) : 0);
                         }
+                    } else if (nComponents == 2) {
+                        if (operation == eOperationAverage) {
+                            for (int c = 0; c < 2; ++c) {
+                                tmpPix[c] = (count ? (tmpPix[c] / sumWeights) : 0);
+                            }
+                        }
                     } else if ( (3 <= nComponents) && (nComponents <= 4) ) {
                         if (operation == eOperationAverage) {
                             for (int c = 0; c < 3; ++c) {
