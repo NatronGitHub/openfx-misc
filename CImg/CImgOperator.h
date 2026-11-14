@@ -355,9 +355,6 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     }
 #endif
 
-    int srcNComponents = ( (srcAPixelComponents == OFX::ePixelComponentAlpha) ? 1 :
-                           ( (srcAPixelComponents == OFX::ePixelComponentRGB) ? 3 : 4 ) );
-
     // from here on, we do the following steps:
     // 1- copy & unpremult all channels from srcRoI, from src to a tmp image of size srcRoI
     // 2- extract channels to be processed from tmp to a cimg of size srcRoI (and do the interleaved to coplanar conversion)
@@ -370,6 +367,9 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const OfxRectI tmpBounds = srcRoI;
     const OFX::PixelComponentEnum tmpPixelComponents = dstPixelComponents;
     const int tmpPixelComponentCount = dstPixelComponentCount;
+    // the tmp images and the cimg images have the same number of components as dst
+    // (this also covers 2-channel XY images and a disconnected srcA)
+    const int srcNComponents = tmpPixelComponentCount;
     const OFX::BitDepthEnum tmpBitDepth = OFX::eBitDepthFloat;
     const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
