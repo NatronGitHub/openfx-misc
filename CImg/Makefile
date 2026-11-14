@@ -194,9 +194,9 @@ $(OBJECTPATH)/CImgDistance.o: CImgDistance.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImgFilter.h CImg.h
+$(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImgErodeDilate.h CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImgFilter.h CImg.h
+$(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImgErodeDilate.h CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgErodeSmooth.o: CImgErodeSmooth.cpp CImgFilter.h CImg.h
 

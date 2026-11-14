@@ -385,6 +385,7 @@ FILE(GLOB CIMG_SOURCES
   "CImg/Distance/CImgDistance.cpp"
   "CImg/Equalize/CImgEqualize.cpp"
   "CImg/Erode/CImgDilate.cpp"
+  "CImg/Erode/CImgErodeDilate.h"
   "CImg/Erode/CImgErode.cpp"
   "CImg/ErodeSmooth/CImgErodeSmooth.cpp"
   "CImg/Expression/CImgExpression.cpp"
