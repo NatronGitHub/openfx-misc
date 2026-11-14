@@ -51,6 +51,7 @@
 #include "ofxsFilter.h"
 #include "ofxsOGLTextRenderer.h"
 #include "ofxsOGLHiDPI.h"
+#include "ofxsOGLOrigin.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -550,6 +551,9 @@ private:
 bool
 LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
 {
+    // draw in canonical coordinates, even if the host overlay is in its native coordinates
+    OFX::OverlayNativeOriginGLScope nativeOriginScope(_effect);
+
     const double time = args.time;
 
     if ( !_showLayerNames->getValueAtTime(time) ) {

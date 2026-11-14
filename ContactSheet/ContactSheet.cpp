@@ -50,6 +50,7 @@
 #include "ofxsCoords.h"
 #include "ofxsFilter.h"
 #include "ofxsOGLHiDPI.h"
+#include "ofxsOGLOrigin.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -721,6 +722,9 @@ private:
 bool
 ContactSheetInteract::draw(const OFX::DrawArgs &args)
 {
+    // draw in canonical coordinates, even if the host overlay is in its native coordinates
+    OFX::OverlayNativeOriginGLScope nativeOriginScope(_effect);
+
     const double time = args.time;
 
     if ( !_selection->getValueAtTime(time) ) {
@@ -819,8 +823,11 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
 
 
 bool 
-ContactSheetInteract::penDown(const OFX::PenArgs &args)
+ContactSheetInteract::penDown(const OFX::PenArgs &argsNative)
 {
+    // pen position in canonical coordinates, even if the host gives it in its native coordinates
+    const OFX::PenArgs args = OFX::overlayPenArgsToCanonical(_effect, argsNative);
+
     const double time = args.time;
 
     if ( !_selection->getValueAtTime(time) ) {

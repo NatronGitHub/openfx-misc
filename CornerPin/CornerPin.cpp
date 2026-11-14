@@ -61,6 +61,7 @@
 #include "ofxsTransform3x3.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsOGLHiDPI.h"
+#include "ofxsOGLOrigin.h"
 #include "ofxsPositionInteract.h"
 
 using namespace OFX;
@@ -642,6 +643,9 @@ isNearby(const OfxPointD & p,
 bool
 CornerPinTransformInteract::draw(const DrawArgs &args)
 {
+    // draw in canonical coordinates, even if the host overlay is in its native coordinates
+    OFX::OverlayNativeOriginGLScope nativeOriginScope(_effect);
+
 #if 0 //def DEBUG
     const OfxPointD &pscale = args.pixelScale;
     // kOfxInteractPropPixelScale gives the size of a screen pixel in canonical coordinates.
@@ -817,8 +821,11 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
 } // CornerPinTransformInteract::draw
 
 bool
-CornerPinTransformInteract::penMotion(const PenArgs &args)
+CornerPinTransformInteract::penMotion(const PenArgs &argsNative)
 {
+    // pen position in canonical coordinates, even if the host gives it in its native coordinates
+    const OFX::PenArgs args = OFX::overlayPenArgsToCanonical(_effect, argsNative);
+
     const OfxPointD &pscale = args.pixelScale;
     const double time = args.time;
     OfxPointD to[4];
@@ -911,8 +918,11 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
 } // CornerPinTransformInteract::penMotion
 
 bool
-CornerPinTransformInteract::penDown(const PenArgs &args)
+CornerPinTransformInteract::penDown(const PenArgs &argsNative)
 {
+    // pen position in canonical coordinates, even if the host gives it in its native coordinates
+    const OFX::PenArgs args = OFX::overlayPenArgsToCanonical(_effect, argsNative);
+
     const OfxPointD &pscale = args.pixelScale;
     const double time = args.time;
     OfxPointD to[4];
