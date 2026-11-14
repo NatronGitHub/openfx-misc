@@ -324,9 +324,19 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
     bool success = false;
 
     assert(0 <= k && k <= 4);
+    Matrix3x3 extraMat = getExtraMatrix(time);
+    if (invert) {
+        // the direct transform is the inverse of homo3x3 * extraMat, i.e. inverse(extraMat) * inverse(homo3x3)
+        Matrix3x3 extraMatInverse;
+        if ( !extraMat.inverse(&extraMatInverse) ) {
+            return false;
+        }
+        extraMat = extraMatInverse;
+    }
+
     if (k == 0) {
         // no points, only apply extraMat;
-        *invtransform = getExtraMatrix(time);
+        *invtransform = extraMat;
 
         return true;
     }
@@ -356,8 +366,11 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
         homo3x3 *= -1;
     }
 
-    Matrix3x3 extraMat = getExtraMatrix(time);
-    *invtransform = homo3x3 * extraMat;
+    if (invert) {
+        *invtransform = extraMat * homo3x3;
+    } else {
+        *invtransform = homo3x3 * extraMat;
+    }
 
     return true;
 } // CornerPinPlugin::getInverseTransformCanonical
