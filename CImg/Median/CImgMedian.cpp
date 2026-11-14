@@ -123,10 +123,7 @@ public:
         int delta_pix_x = (int)std::ceil(std::abs(params.size) * renderScale.x);
         int delta_pix_y = (int)std::ceil(std::abs(params.size) * renderScale.y);
 
-        roi->x1 = rect.x1 - delta_pix_x;
-        roi->x2 = rect.x2 + delta_pix_x;
-        roi->y1 = rect.y1 - delta_pix_y;
-        roi->y2 = rect.y2 + delta_pix_y;
+        cimgPadRect(rect, delta_pix_x, delta_pix_y, roi);
     }
 
     virtual void render(const RenderArguments &args,

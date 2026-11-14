@@ -402,10 +402,7 @@ public:
                 }
                 int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
                 int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
-                dstRoD->x1 = srcRoD.x1 - delta_pixX;
-                dstRoD->x2 = srcRoD.x2 + delta_pixX;
-                dstRoD->y1 = srcRoD.y1 - delta_pixY;
-                dstRoD->y2 = srcRoD.y2 + delta_pixY;
+                cimgPadRect(srcRoD, delta_pixX, delta_pixY, dstRoD);
             } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
                 if ( (sx <= 1) && (sy <= 1) ) {
                     return false; // identity
@@ -414,10 +411,7 @@ public:
                              (params.filter == eFilterTriangle ? 2 : 3) );
                 int delta_pixX = iter * static_cast<int>( std::ceil( (sx - 1) / 2 ) );
                 int delta_pixY = iter * static_cast<int>( std::ceil( (sy - 1) / 2 ) );
-                dstRoD->x1 = srcRoD.x1 - delta_pixX;
-                dstRoD->x2 = srcRoD.x2 + delta_pixX;
-                dstRoD->y1 = srcRoD.y1 - delta_pixY;
-                dstRoD->y2 = srcRoD.y2 + delta_pixY;
+                cimgPadRect(srcRoD, delta_pixX, delta_pixY, dstRoD);
             } else {
                 assert(false);
             }
@@ -450,19 +444,13 @@ public:
 
             int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
             int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
-            roi->x1 = rect.x1 - delta_pixX;
-            roi->x2 = rect.x2 + delta_pixX;
-            roi->y1 = rect.y1 - delta_pixY;
-            roi->y2 = rect.y2 + delta_pixY;
+            cimgPadRect(rect, delta_pixX, delta_pixY, roi);
         } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
             int iter = ( params.filter == eFilterBox ? 1 :
                          (params.filter == eFilterTriangle ? 2 : 3) );
             int delta_pixX = iter * static_cast<int>(std::floor( (sx - 1) / 2 ) + 1);
             int delta_pixY = iter * static_cast<int>(std::floor( (sy - 1) / 2 ) + 1);
-            roi->x1 = rect.x1 - delta_pixX;
-            roi->x2 = rect.x2 + delta_pixX;
-            roi->y1 = rect.y1 - delta_pixY;
-            roi->y2 = rect.y2 + delta_pixY;
+            cimgPadRect(rect, delta_pixX, delta_pixY, roi);
         } else {
             assert(false);
         }

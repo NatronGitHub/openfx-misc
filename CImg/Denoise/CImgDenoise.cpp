@@ -158,10 +158,7 @@ public:
     {
         int delta_pix = static_cast<int>(std::ceil( (params.sigma_s * 3.6) * renderScale.x ) + std::ceil(params.psize * renderScale.x) + std::ceil(params.lsize * renderScale.x));
 
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        cimgPadRect(rect, delta_pix, delta_pix, roi);
     }
 
     virtual void render(const RenderArguments &args,

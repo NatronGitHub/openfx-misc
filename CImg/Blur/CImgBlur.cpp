@@ -1591,10 +1591,7 @@ public:
                 }
                 int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
                 int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
-                dstRoD->x1 -= delta_pixX + params.orderX;
-                dstRoD->x2 += delta_pixX + params.orderX;
-                dstRoD->y1 -= delta_pixY + params.orderY;
-                dstRoD->y2 += delta_pixY + params.orderY;
+                cimgPadRect(*dstRoD, delta_pixX + params.orderX, delta_pixY + params.orderY, dstRoD);
             } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
                 if ( (sx <= 1) && (sy <= 1) && (params.orderX == 0) && (params.orderY == 0) ) {
                     return false; // identity
@@ -1603,10 +1600,7 @@ public:
                              (params.filter == eFilterTriangle ? 2 : 3) );
                 int delta_pixX = iter * (int)std::ceil( (sx - 1) / 2 );
                 int delta_pixY = iter * (int)std::ceil( (sy - 1) / 2 );
-                dstRoD->x1 -= delta_pixX + (params.orderX > 0);
-                dstRoD->x2 += delta_pixX + (params.orderX > 0);
-                dstRoD->y1 -= delta_pixY + (params.orderY > 0);
-                dstRoD->y2 += delta_pixY + (params.orderY > 0);
+                cimgPadRect(*dstRoD, delta_pixX + (params.orderX > 0), delta_pixY + (params.orderY > 0), dstRoD);
             } else {
                 assert(false);
             }
@@ -1680,19 +1674,13 @@ public:
 
             int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
             int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
-            roi->x1 = rect.x1 - delta_pixX - params.orderX;
-            roi->x2 = rect.x2 + delta_pixX + params.orderX;
-            roi->y1 = rect.y1 - delta_pixY - params.orderY;
-            roi->y2 = rect.y2 + delta_pixY + params.orderY;
+            cimgPadRect(rect, delta_pixX + params.orderX, delta_pixY + params.orderY, roi);
         } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
             int iter = ( params.filter == eFilterBox ? 1 :
                          (params.filter == eFilterTriangle ? 2 : 3) );
             int delta_pixX = iter * static_cast<int>(std::floor( (sx - 1) / 2 ) + 1);
             int delta_pixY = iter * static_cast<int>(std::floor( (sy - 1) / 2 ) + 1);
-            roi->x1 = rect.x1 - delta_pixX - (params.orderX > 0);
-            roi->x2 = rect.x2 + delta_pixX + (params.orderX > 0);
-            roi->y1 = rect.y1 - delta_pixY - (params.orderY > 0);
-            roi->y2 = rect.y2 + delta_pixY + (params.orderY > 0);
+            cimgPadRect(rect, delta_pixX + (params.orderX > 0), delta_pixY + (params.orderY > 0), roi);
         } else {
             assert(false);
         }
@@ -1703,10 +1691,7 @@ public:
             const int nms = params.edgeDetectNMS ? 1 : 0;
             const int erodeX = (int)std::floor(std::abs(params.erodeSize) / par * renderScale.x) + nms;
             const int erodeY = (int)std::floor(std::abs(params.erodeSize) * renderScale.y) + nms;
-            roi->x1 -= erodeX;
-            roi->x2 += erodeX;
-            roi->y1 -= erodeY;
-            roi->y2 += erodeY;
+            cimgPadRect(*roi, erodeX, erodeY, roi);
         }
     }
 

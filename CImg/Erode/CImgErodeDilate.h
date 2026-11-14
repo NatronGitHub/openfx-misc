@@ -148,10 +148,7 @@ public:
         int delta_pix_x = (int)std::ceil(std::abs(params.sx) * renderScale.x);
         int delta_pix_y = (int)std::ceil(std::abs(params.sy) * renderScale.y);
 
-        roi->x1 = rect.x1 - delta_pix_x;
-        roi->x2 = rect.x2 + delta_pix_x;
-        roi->y1 = rect.y1 - delta_pix_y;
-        roi->y2 = rect.y2 + delta_pix_y;
+        cimgPadRect(rect, delta_pix_x, delta_pix_y, roi);
     }
 
     bool getRegionOfDefinition(const OfxRectI& srcRoD,
@@ -166,11 +163,7 @@ public:
             const bool dilateY = dilate ? (params.sy > 0) : (params.sy < 0);
             int delta_pix_x = dilateX ? (int)std::ceil(std::abs(params.sx) * renderScale.x) : 0;
             int delta_pix_y = dilateY ? (int)std::ceil(std::abs(params.sy) * renderScale.y) : 0;
-            *dstRoD = srcRoD;
-            dstRoD->x1 = dstRoD->x1 - delta_pix_x;
-            dstRoD->x2 = dstRoD->x2 + delta_pix_x;
-            dstRoD->y1 = dstRoD->y1 - delta_pix_y;
-            dstRoD->y2 = dstRoD->y2 + delta_pix_y;
+            cimgPadRect(srcRoD, delta_pix_x, delta_pix_y, dstRoD);
 
             return true;
         } else {

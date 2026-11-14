@@ -204,6 +204,20 @@ public:
 #endif
 
 
+// set *dst to rect, enlarged by dx pixels on the left and right sides and dy pixels on the bottom and top sides
+// (dst may be &rect)
+inline void
+cimgPadRect(const OfxRectI& rect,
+            int dx,
+            int dy,
+            OfxRectI* dst)
+{
+    dst->x1 = rect.x1 - dx;
+    dst->x2 = rect.x2 + dx;
+    dst->y1 = rect.y1 - dy;
+    dst->y2 = rect.y2 + dy;
+}
+
 class CImgFilterPluginHelperBase
     : public OFX::ImageEffect
 {

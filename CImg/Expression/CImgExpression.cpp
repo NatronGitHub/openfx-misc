@@ -267,10 +267,7 @@ public:
                         const CImgExpressionParams& /*params*/,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        roi->x1 = rect.x1;
-        roi->x2 = rect.x2;
-        roi->y1 = rect.y1;
-        roi->y2 = rect.y2;
+        *roi = rect;
     }
 
     virtual void render(const RenderArguments &args,
