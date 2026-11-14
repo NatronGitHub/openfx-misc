@@ -307,6 +307,67 @@ CImgFilterPluginHelperBase::describeInContextEnd(ImageEffectDescriptor &desc,
     }
 }
 
+PixelProcessorFilterBase*
+CImgFilterPluginHelperBase::createPixelCopier(int dstPixelComponentCount)
+{
+    switch (dstPixelComponentCount) {
+    case 4:
+        return new PixelCopier<float, 4>(*this);
+    case 3:
+        return new PixelCopier<float, 3>(*this);
+    case 2:
+        return new PixelCopier<float, 2>(*this);
+    case 1:
+        return new PixelCopier<float, 1>(*this);
+    default:
+        return NULL;
+    }
+}
+
+PixelProcessorFilterBase*
+CImgFilterPluginHelperBase::createSrcToTmpCopier(bool hasSrc,
+                                                 PixelComponentEnum dstPixelComponents,
+                                                 int dstPixelComponentCount)
+{
+    if (!hasSrc) {
+        // no src, fill with black & transparent
+        return new BlackFiller<float>(*this, dstPixelComponentCount);
+    }
+    if (dstPixelComponents == ePixelComponentRGBA) {
+        return new PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this);
+    }
+
+    // just copy, no premult
+    return createPixelCopier(dstPixelComponentCount);
+}
+
+PixelProcessorFilterBase*
+CImgFilterPluginHelperBase::createTmpToDstCopier(PixelComponentEnum dstPixelComponents,
+                                                 int dstPixelComponentCount,
+                                                 bool doMasking)
+{
+    if (dstPixelComponents == ePixelComponentRGBA) {
+        return new PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1>(*this);
+    }
+    // just copy, no premult
+    switch (dstPixelComponentCount) {
+    case 4:
+        return doMasking ? static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 4, 1, true>(*this) )
+                         : static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 4, 1, false>(*this) );
+    case 3:
+        return doMasking ? static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 3, 1, true>(*this) )
+                         : static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 3, 1, false>(*this) );
+    case 2:
+        return doMasking ? static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 2, 1, true>(*this) )
+                         : static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 2, 1, false>(*this) );
+    case 1:
+        return doMasking ? static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 1, 1, true>(*this) )
+                         : static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 1, 1, false>(*this) );
+    default:
+        return NULL;
+    }
+}
+
 /* set up and run a copy processor */
 void
 CImgFilterPluginHelperBase::setupAndCopy(PixelProcessorFilterBase & processor,

@@ -262,6 +262,19 @@ protected:
 #endif
 
 
+    // Create the float pixel processors used by render() to copy images, given the
+    // components of the destination. They return NULL for unsupported component counts.
+    // plain copy
+    OFX::PixelProcessorFilterBase* createPixelCopier(int dstPixelComponentCount);
+    // source to temporary image: black fill if there is no source, else copy and unpremult RGBA
+    OFX::PixelProcessorFilterBase* createSrcToTmpCopier(bool hasSrc,
+                                                        OFX::PixelComponentEnum dstPixelComponents,
+                                                        int dstPixelComponentCount);
+    // temporary image to destination: copy, premult RGBA, mask and mix
+    OFX::PixelProcessorFilterBase* createTmpToDstCopier(OFX::PixelComponentEnum dstPixelComponents,
+                                                        int dstPixelComponentCount,
+                                                        bool doMasking);
+
     void setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                       double time,
                       const OfxRectI &renderWindow,
@@ -587,16 +600,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     copyWindowE.y1 = processWindow.y1;
     copyWindowE.y2 = processWindow.y2;
     {
-        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if (dstPixelComponentCount == 4) {
-            fred.reset( new OFX::PixelCopier<float, 4>(*this) );
-        } else if (dstPixelComponentCount == 3) {
-            fred.reset( new OFX::PixelCopier<float, 3>(*this) );
-        } else if (dstPixelComponentCount == 2) {
-            fred.reset( new OFX::PixelCopier<float, 2>(*this) );
-        }  else if (dstPixelComponentCount == 1) {
-            fred.reset( new OFX::PixelCopier<float, 1>(*this) );
-        }
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createPixelCopier(dstPixelComponentCount) );
         assert( fred.get() );
         if ( fred.get() ) {
             setupAndCopy(*fred, time, copyWindowN, renderScale, src.get(), mask.get(),
@@ -682,27 +686,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         tmpData.reset( new OFX::ImageMemory(tmpSize, this) );
         tmpPixelData = (float*)tmpData->lock();
 
-        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if ( !src.get() ) {
-            // no src, fill with black & transparent
-            fred.reset( new OFX::BlackFiller<float>(*this, dstPixelComponentCount) );
-        } else {
-            if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-                fred.reset( new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this) );
-            } else if (dstPixelComponentCount == 4) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 4>(*this) );
-            } else if (dstPixelComponentCount == 3) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 3>(*this) );
-            } else if (dstPixelComponentCount == 2) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 2>(*this) );
-            }  else if (dstPixelComponentCount == 1) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 1>(*this) );
-            }
-        }
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createSrcToTmpCopier(src.get() != NULL, dstPixelComponents, dstPixelComponentCount) );
         assert( fred.get() );
         if ( fred.get() ) {
             setupAndCopy(*fred, time, srcRoI, renderScale, src.get(), mask.get(),
@@ -862,39 +846,8 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // 5- copy+premult+max+mix tmp to dst (only processWindow)
 
     {
-        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-            fred.reset( new OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1>(*this) );
-        } else if (dstPixelComponentCount == 4) {
-            // just copy, no premult
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 4, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 4, 1, false>(*this) );
-            }
-        } else if (dstPixelComponentCount == 3) {
-            // just copy, no premult
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 3, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 3, 1, false>(*this) );
-            }
-        } else if (dstPixelComponentCount == 2) {
-            // just copy, no premult
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 2, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 2, 1, false>(*this) );
-            }
-        }  else if (dstPixelComponentCount == 1) {
-            // just copy, no premult
-            assert(srcPixelComponents == OFX::ePixelComponentAlpha);
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 1, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 1, 1, false>(*this) );
-            }
-        }
+        assert(dstPixelComponentCount != 1 || srcPixelComponents == OFX::ePixelComponentAlpha);
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createTmpToDstCopier(dstPixelComponents, dstPixelComponentCount, doMasking) );
         assert( fred.get() );
         if ( fred.get() ) {
             setupAndCopy(*fred, time, processWindow, renderScale, src.get(), mask.get(),
