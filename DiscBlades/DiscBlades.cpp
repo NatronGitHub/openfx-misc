@@ -200,20 +200,12 @@ public:
     }
 
 private:
-    static PIX toPIX(float v,
-                     bool isColor)
+    // coverage is written linearly (no transfer function), in all channels, so that the
+    // premultiplied output is consistent (color == alpha) and can be used as a linear kernel
+    static PIX toPIX(float v)
     {
         if (maxValue == 1) { // implies float, don't clamp
             return static_cast<PIX>(v);
-        }
-        // color is supposed to be linear: delinearize first (alpha is always linear)
-        if (isColor) {
-            if (maxValue == 255) {
-                v = Color::to_func_srgb(v);
-            } else {
-                assert(maxValue == 65535);
-                v = Color::to_func_Rec709(v);
-            }
         }
 
         return static_cast<PIX>( Color::floatToInt<maxValue + 1>(v) );
@@ -222,9 +214,8 @@ private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
-        const PIX zero = toPIX(0.f, false);
-        const PIX one = toPIX(1.f, false);
-        const PIX oneColor = toPIX(1.f, true);
+        const PIX zero = toPIX(0.f);
+        const PIX one = toPIX(1.f);
         // bounding box of the shape, in pixel coordinates, to skip pixels quickly
         const double extent = _radius + 1.;
         const double bx1 = (_cx - extent) / _par - 1., bx2 = (_cx + extent) / _par + 1.;
@@ -250,22 +241,14 @@ private:
                         dstPix[c] = zero;
                     }
                 } else if (a >= 1.) {
-                    if (nComponents == 1) {
-                        dstPix[0] = one;
-                    } else {
-                        for (int c = 0; c < nComponents; ++c) {
-                            dstPix[c] = (c == 3) ? one : oneColor;
-                        }
+                    for (int c = 0; c < nComponents; ++c) {
+                        dstPix[c] = one;
                     }
                 } else {
-                    if (nComponents == 1) {
-                        dstPix[0] = toPIX( (float)a, false );
-                    } else {
-                        // white, premultiplied by the coverage
-                        const PIX ac = toPIX( (float)a, true );
-                        for (int c = 0; c < nComponents; ++c) {
-                            dstPix[c] = (c == 3) ? toPIX( (float)a, false ) : ac;
-                        }
+                    // white, premultiplied by the coverage
+                    const PIX ac = toPIX( (float)a );
+                    for (int c = 0; c < nComponents; ++c) {
+                        dstPix[c] = ac;
                     }
                 }
             }
