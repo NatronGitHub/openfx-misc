@@ -73,7 +73,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kSupportsComponentRemapping 1
-#define kSupportsTiles 1
+#define kSupportsTiles 0 // blur_bilateral uses a bilateral grid that depends on the image origin and value range
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
