@@ -183,6 +183,7 @@ private:
 private:
 
     void refreshSubLabel(int rangeMin, int rangeMax);
+    BeforeAfterEnum getSourceTime(double time, double *srcTime);
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -209,6 +210,41 @@ FrameRangePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
+// Resolve the Before/After behaviour at the given output time.
+// Returns the behaviour that applies (eBeforeAfterOriginal within the frame range)
+// and sets *srcTime to the source frame to use (meaningless for eBeforeAfterBlack).
+BeforeAfterEnum
+FrameRangePlugin::getSourceTime(double time,
+                                double *srcTime)
+{
+    OfxPointI range = _frameRange->getValue();
+    BeforeAfterEnum mode = eBeforeAfterOriginal;
+
+    if (time < range.x) {
+        mode = (BeforeAfterEnum)_before->getValue();
+    } else if (time > range.y) {
+        mode = (BeforeAfterEnum)_after->getValue();
+    }
+    switch (mode) {
+    case eBeforeAfterHold:
+        *srcTime = (time < range.x) ? range.x : range.y;
+        break;
+    case eBeforeAfterLoop:
+        *srcTime = frameLoop(range.x, range.y, time);
+        break;
+    case eBeforeAfterBounce:
+        *srcTime = frameBounce(range.x, range.y, time);
+        break;
+    case eBeforeAfterOriginal:
+    case eBeforeAfterBlack:
+    default:
+        *srcTime = time;
+        break;
+    }
+
+    return mode;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
 
@@ -220,34 +256,8 @@ FrameRangePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 void
 FrameRangePlugin::render(const RenderArguments &args)
 {
-    const double time = args.time;
-    OfxPointI range = _frameRange->getValue();
-    double srcTime = time;
-    bool black = false;
-
-    if (time < range.x) {
-        BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
-        if (before == eBeforeAfterBlack) {
-            black = true;
-        } else if (before == eBeforeAfterHold) {
-            srcTime = range.x;
-        } else if (before == eBeforeAfterLoop) {
-            srcTime = frameLoop(range.x, range.y, time);
-        } else if (before == eBeforeAfterBounce) {
-            srcTime = frameBounce(range.x, range.y, time);
-        }
-    } else if (time > range.y) {
-        BeforeAfterEnum after = (BeforeAfterEnum)_after->getValue();
-        if (after == eBeforeAfterBlack) {
-            black = true;
-        } else if (after == eBeforeAfterHold) {
-            srcTime = range.y;
-        } else if (after == eBeforeAfterLoop) {
-            srcTime = frameLoop(range.x, range.y, time);
-        } else if (after == eBeforeAfterBounce) {
-            srcTime = frameBounce(range.x, range.y, time);
-        }
-    }
+    double srcTime;
+    const bool black = (getSourceTime(args.time, &srcTime) == eBeforeAfterBlack);
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
@@ -284,31 +294,13 @@ FrameRangePlugin::isIdentity(const IsIdentityArguments &args,
                              double &identityTime
                              , int& /*view*/, std::string& /*plane*/)
 {
-    const double time = args.time;
-    OfxPointI range = _frameRange->getValue();
+    double srcTime;
+    BeforeAfterEnum mode = getSourceTime(args.time, &srcTime);
 
-    if (time < range.x) {
-        BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
-        if (before == eBeforeAfterBlack) {
-            return false;
-        } else if (before == eBeforeAfterHold) {
-            identityTime = range.x;
-        } else if (before == eBeforeAfterLoop) {
-            identityTime = frameLoop(range.x, range.y, time);
-        } else if (before == eBeforeAfterBounce) {
-            identityTime = frameBounce(range.x, range.y, time);
-        }
-    } else if (time > range.y) {
-        BeforeAfterEnum after = (BeforeAfterEnum)_after->getValue();
-        if (after == eBeforeAfterBlack) {
-            return false;
-        } else if (after == eBeforeAfterHold) {
-            identityTime = range.y;
-        } else if (after == eBeforeAfterLoop) {
-            identityTime = frameLoop(range.x, range.y, time);
-        } else if (after == eBeforeAfterBounce) {
-            identityTime = frameBounce(range.x, range.y, time);
-        }
+    if (mode == eBeforeAfterBlack) {
+        return false;
+    } else if (mode != eBeforeAfterOriginal) {
+        identityTime = srcTime;
     }
     identityClip = _srcClip;
 
@@ -322,46 +314,16 @@ FrameRangePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     if ( !_srcClip || !_srcClip->isConnected() ) {
         return false;
     }
-    const double time = args.time;
-    OfxPointI range = _frameRange->getValue();
-    if (time < range.x) {
-        BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
-        if (before == eBeforeAfterBlack) {
-            rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
+    double srcTime;
+    BeforeAfterEnum mode = getSourceTime(args.time, &srcTime);
+    if (mode == eBeforeAfterBlack) {
+        rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
 
-            return true;
-        } else if (before == eBeforeAfterHold) {
-            rod = _srcClip->getRegionOfDefinition(range.x);
+        return true;
+    } else if (mode != eBeforeAfterOriginal) {
+        rod = _srcClip->getRegionOfDefinition(srcTime);
 
-            return true;
-        } else if (before == eBeforeAfterLoop) {
-            rod = _srcClip->getRegionOfDefinition( frameLoop(range.x, range.y, time) );
-
-            return true;
-        } else if (before == eBeforeAfterBounce) {
-            rod = _srcClip->getRegionOfDefinition( frameBounce(range.x, range.y, time) );
-
-            return true;
-        }
-    } else if (time > range.y) {
-        BeforeAfterEnum after = (BeforeAfterEnum)_after->getValue();
-        if (after == eBeforeAfterBlack) {
-            rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
-
-            return true;
-        } else if (after == eBeforeAfterHold) {
-            rod = _srcClip->getRegionOfDefinition(range.y);
-
-            return true;
-        } else if (after == eBeforeAfterLoop) {
-            rod = _srcClip->getRegionOfDefinition(frameLoop(range.x, range.y, time));
-
-            return true;
-        } else if (after == eBeforeAfterBounce) {
-            rod = _srcClip->getRegionOfDefinition(frameBounce(range.x, range.y, time));
-
-            return true;
-        }
+        return true;
     }
 
     return false;
@@ -374,19 +336,9 @@ FrameRangePlugin::getTransform(const TransformArguments &args,
                                Clip * &transformClip,
                                double transformMatrix[9])
 {
-    const double time = args.time;
-    OfxPointI range = _frameRange->getValue();
-
-    if (time < range.x) {
-        BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
-        if (before != eBeforeAfterOriginal) {
-            return false;
-        }
-    } else if (time > range.y) {
-        BeforeAfterEnum after = (BeforeAfterEnum)_after->getValue();
-        if (after != eBeforeAfterOriginal) {
-            return false;
-        }
+    double srcTime;
+    if (getSourceTime(args.time, &srcTime) != eBeforeAfterOriginal) {
+        return false;
     }
     transformClip = _srcClip;
     transformMatrix[0] = 1.;
