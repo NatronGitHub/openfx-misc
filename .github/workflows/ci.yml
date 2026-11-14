@@ -64,6 +64,11 @@ jobs:
           make -j2 CONFIG=release TESTS=1
           mkdir -p Bundle
           mv {CImg,Misc,Shadertoy,Test}/MINGW64*-release/*.ofx.bundle Bundle
+      - name: Build separate plugins (release, nomulti)
+        run: |
+          make -j2 nomulti CONFIG=release
+          mkdir -p BundleNoMulti
+          mv */MINGW64*-release/*.ofx.bundle CImg/*/MINGW64*-release/*.ofx.bundle BundleNoMulti
       - name: Build (debug)
         run: |
           make -j2 CONFIG=debug
@@ -72,3 +77,8 @@ jobs:
         with:
           name: openfx-misc-build-windows-release
           path: Bundle
+      - name: Upload separate plugin artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openfx-misc-build-windows-nomulti-release
+          path: BundleNoMulti
