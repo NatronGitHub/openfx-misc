@@ -834,7 +834,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             cimgSpectrum = (int)processA;
             break;
         case OFX::ePixelComponentXY:
-            cimgSpectrum = (int)processR + (int)processG + (int) processB;
+            cimgSpectrum = (int)processR + (int)processG;
             break;
         case OFX::ePixelComponentRGB:
             cimgSpectrum = (int)processR + (int)processG + (int) processB;
@@ -876,7 +876,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
                 srcChannel[c] = 1;
                 ++c;
             }
-            if (processB) {
+            if ( processB && (tmpPixelComponentCount >= 3) ) {
                 srcChannel[c] = 2;
                 ++c;
             }
