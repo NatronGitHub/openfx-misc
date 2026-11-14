@@ -140,12 +140,13 @@ private:
                     if (nComponents > 1) {
                         for (int c = 0; c < nComponents - 1; ++c) {
                             dstPix[c] = srcPixB[c];
-                            double d = srcPixB[c] - srcPixA[c];
+                            // normalize, so that offset and gain have the same meaning for all bit depths
+                            double d = ( (double)srcPixB[c] - (double)srcPixA[c] ) / maxValue;
                             diff += d * d;
                         }
                     }
                     diff = _gain * diff - _offset; // this seems to be the formula used in Nuke
-                    dstPix[nComponents - 1] = (PIX)(std::max)( 0., (std::min)(diff, (double)maxValue) );
+                    dstPix[nComponents - 1] = (PIX)( (std::max)( 0., (std::min)(diff, 1.) ) * maxValue );
                 } else if (srcPixB && !srcPixA) {
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = srcPixB[c];
