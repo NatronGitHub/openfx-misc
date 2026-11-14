@@ -150,13 +150,15 @@ bool
 JoinViewsPlugin::isIdentity(const IsIdentityArguments &args,
                             Clip * &identityClip,
                             double & /*identityTime*/
-                            , int& /*view*/, std::string& /*plane*/)
+                            , int& view, std::string& /*plane*/)
 {
     if (args.view == 0) {
         identityClip = _srcLeftClip;
     } else {
         identityClip = _srcRightClip;
     }
+    // always use the view 0 of the inputs, as in getFrameViewsNeeded() and render()
+    view = 0;
 
     return true;
 }
