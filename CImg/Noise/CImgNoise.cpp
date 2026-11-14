@@ -54,7 +54,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// version 3.0: fix Rice noise (used the first channel only, real and imaginary parts were identical),
+//              Poisson noise (wrong distribution), and Salt & Pepper noise (pattern depended on the tile)
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsComponentRemapping 1
@@ -143,7 +145,7 @@ using namespace cimg_library;
  **/
 static
 CImg<T>&
-noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned int seed, int x1, int y1)
+noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned int seed, int x1, int y1, bool legacy)
 {
     if (img.is_empty()) {
         return img;
@@ -197,7 +199,9 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
             }
             cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img, x, y, c) {
-                if (cimg_rand(seed, x + x1, y1 + img.height() - y, c, 100) < nsigma) {
+                // legacy: the probability depended on the tile position and size
+                if ( ( legacy ? cimg_rand(seed, x + x1, y1 + img.height() - y, c, 100) :
+                       cimg_rand(cimg_hash(seed ^ 0x9e3779b9U), x + x1, y + y1, c, 100) ) < nsigma ) {
                     img(x,y,0,c) = (T)(cimg_rand(seed, x + x1, y + y1, c)<0.5?M:m);
                 }
             }
@@ -205,7 +209,7 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
         case 3 : { // Poisson Noise
             cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img,x,y,c) {
-                img(x,y,0,c) = (T)cimg_prand(seed, x + x1, y + y1, c, img(x,y,0,c));
+                img(x,y,0,c) = (T)cimg_prand(seed, x + x1, y + y1, c, img(x,y,0,c), legacy);
             }
         } break;
         case 4 : { // Rice noise
@@ -213,9 +217,10 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
             cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img, x, y, c) {
                 const Tfloat
-                val0 = (Tfloat)img(x,y)/sqrt2,
+                // legacy: used the first channel only, and re and im had the same noise
+                val0 = (Tfloat)(legacy ? img(x,y) : img(x,y,0,c))/sqrt2,
                 re = (Tfloat)(val0 + nsigma * cimg_grand(seed, x + x1, y + y1, c)),
-                im = (Tfloat)(val0 + nsigma * cimg_grand(seed, x + x1, y + y1, c));
+                im = (Tfloat)(val0 + nsigma * cimg_grand(legacy ? seed : cimg_hash(seed ^ 0x9e3779b9U), x + x1, y + y1, c));
                 Tfloat val = cimg::hypot(re,im);
                 if (val > vmax) {
                     val = vmax;
@@ -253,8 +258,10 @@ class CImgNoisePlugin
 {
 public:
 
-    CImgNoisePlugin(OfxImageEffectHandle handle)
+    CImgNoisePlugin(OfxImageEffectHandle handle,
+                    int majorVersion)
         : CImgFilterPluginHelper<CImgNoiseParams, true>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ false)
+        , _legacy(majorVersion < 3)
     {
         _sigma  = fetchDoubleParam(kParamSigma);
         _type = fetchChoiceParam(kParamType);
@@ -308,7 +315,7 @@ public:
             // set the seed based on the current time, and double it we get difference seeds on different fields
             seed = cimg_hash( *( (unsigned int*)&time_f ) ^ seed );
         }
-        noise(cimg, params.sigma * std::sqrt(args.renderScale.x), params.type_i, seed, x1, y1);
+        noise(cimg, params.sigma * std::sqrt(args.renderScale.x), params.type_i, seed, x1, y1, _legacy);
 #else
         cimg.noise(params.sigma * std::sqrt(args.renderScale.x), params.type_i);
 #endif
@@ -340,14 +347,19 @@ private:
     ChoiceParam *_type;
     IntParam* _seed;
     BooleanParam* _staticSeed;
+    bool _legacy; // reproduce the noise of versions < 3
 };
 
 
-mDeclarePluginFactory(CImgNoisePluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CImgNoisePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
+template<unsigned int majorVersion>
 void
-CImgNoisePluginFactory::describe(ImageEffectDescriptor& desc)
+CImgNoisePluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -374,8 +386,9 @@ CImgNoisePluginFactory::describe(ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
+template<unsigned int majorVersion>
 void
-CImgNoisePluginFactory::describeInContext(ImageEffectDescriptor& desc,
+CImgNoisePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
                                           ContextEnum context)
 {
     // create the clips and params
@@ -448,14 +461,18 @@ CImgNoisePluginFactory::describeInContext(ImageEffectDescriptor& desc,
     CImgNoisePlugin::describeInContextEnd(desc, context, page);
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-CImgNoisePluginFactory::createInstance(OfxImageEffectHandle handle,
+CImgNoisePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    return new CImgNoisePlugin(handle);
+    return new CImgNoisePlugin(handle, majorVersion);
 }
 
-static CImgNoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// version 2 is kept for backward compatibility
+static CImgNoisePluginFactory<2> p2(kPluginIdentifier, 0);
+static CImgNoisePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

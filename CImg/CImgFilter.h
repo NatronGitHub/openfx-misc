@@ -1207,9 +1207,11 @@ cimg_grand(unsigned int seed, int x, int y, int nComponents)
 
 //! Return a random variable following a Poisson distribution of parameter z.
 /**
+ legacy=true reproduces the old (wrong) distribution, where the same uniform
+ random value was used at each iteration.
  **/
 inline unsigned int
-cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
+cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z, bool legacy = false)
 {
     if (z<=1.0e-10) {
         return 0;
@@ -1220,7 +1222,8 @@ cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
     unsigned int k = 0;
     const double y1 = std::exp(-z);
     for (double s = 1.0; s >= y1; ++k) {
-        s *= cimg_rand(seed+1, x, y, nComponents);
+        // each iteration needs an independent uniform random value
+        s *= cimg_rand(legacy ? (seed + 1) : cimg_hash(seed + 1 + k), x, y, nComponents);
     }
     return k > 0 ? k - 1 : 0;
 }
