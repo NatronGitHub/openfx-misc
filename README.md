@@ -309,6 +309,11 @@ compiling:
 
 	sudo make install [options]
 
+### Using CMake
+
+An out-of-tree CMake build is also available (`mkdir build && cd build && cmake .. && cmake --build .`).
+`CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded at configure time if missing (at the version given in `CImg/CImgVersion.mk`), and the CImg plugins can be disabled with `-DBUILD_CIMG_PLUGINS=OFF`.
+
 ### OS X, using Xcode
 
 The latest version of Xcode should be installed in order to compile this plugin.
