@@ -410,7 +410,7 @@ CropPlugin::getCropRectangle(OfxTime time,
     case eGeneratorExtentSize: {
         par = _srcClip->getPixelAspectRatio();
         _size->getValueAtTime(time, rod.x2, rod.y2);
-        _btmLeft->getValue(rod.x1, rod.y1);
+        _btmLeft->getValueAtTime(time, rod.x1, rod.y1);
         rod.x2 += rod.x1;
         rod.y2 += rod.y1;
         break;
