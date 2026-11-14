@@ -125,8 +125,9 @@ private:
         if (_swap) {
             std::swap(srcRedImg, srcCyanImg);
         }
-        const OfxRectI& srcRedBounds = srcRedImg->getBounds();
-        const OfxRectI& srcCyanBounds = srcCyanImg->getBounds();
+        const OfxRectI emptyBounds = {0, 0, 0, 0};
+        const OfxRectI srcRedBounds = srcRedImg ? srcRedImg->getBounds() : emptyBounds;
+        const OfxRectI srcCyanBounds = srcCyanImg ? srcCyanImg->getBounds() : emptyBounds;
 
 
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
