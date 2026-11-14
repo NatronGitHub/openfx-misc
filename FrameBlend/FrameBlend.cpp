@@ -579,6 +579,9 @@ private:
     template <class PIX, int nComponents, int maxValue, OperationEnum operation>
     void renderForOperation(const RenderArguments &args);
 
+    /** @brief compute the frames blended at time: first + i * interval, for 0 <= i < n */
+    void getFrames(double time, int *first, int *interval, int *n);
+
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -733,25 +736,9 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     float *sumWeightsData = NULL;
 
     // compute range
-    bool absolute;
-    _absolute->getValueAtTime(time, absolute);
-    int first, last;
-    _frameRange->getValueAtTime(time, first, last);
-    int interval;
-    _frameInterval->getValueAtTime(time, interval);
-    interval = (std::max)(1, interval);
-    decay = 1. - ipow(1. - decay, interval); // adjust decay so that the final aspect is similar for different values of the interval
-
-    int n = (std::abs(last - first) + 1) / interval;
-    if (first > last) {
-        interval = -interval;
-    }
-    // last frame should always be in the image set, so first frame must be adjusted if abs(interval) > 1
-    first = last - (n - 1) * interval;
-    if (!absolute) {
-        first += time;
-        //last += time; // last is not used anymore
-    }
+    int first, interval, n;
+    getFrames(time, &first, &interval, &n);
+    decay = 1. - ipow(1. - decay, std::abs(interval)); // adjust decay so that the final aspect is similar for different values of the interval
 
     const OfxRectI& renderWindow = args.renderWindow;
     size_t nPixels = (size_t)(renderWindow.y2 - renderWindow.y1) * (renderWindow.x2 - renderWindow.x1);
@@ -853,6 +840,35 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
         processor.process();
     }
 } // FrameBlendPlugin::setupAndProcess
+
+void
+FrameBlendPlugin::getFrames(double time,
+                            int *firstp,
+                            int *intervalp,
+                            int *np)
+{
+    bool absolute;
+    _absolute->getValueAtTime(time, absolute);
+    int first, last;
+    _frameRange->getValueAtTime(time, first, last);
+    int interval;
+    _frameInterval->getValueAtTime(time, interval);
+    interval = (std::max)(1, interval);
+
+    int n = (std::abs(last - first) + 1) / interval;
+    if (first > last) {
+        interval = -interval;
+    }
+    // last frame should always be in the image set, so first frame must be adjusted if abs(interval) > 1
+    first = last - (n - 1) * interval;
+    if (!absolute) {
+        first += time;
+        //last += time; // last is not used anymore
+    }
+    *firstp = first;
+    *intervalp = interval;
+    *np = n;
+}
 
 // the overridden render function
 void
@@ -1028,32 +1044,23 @@ void
 FrameBlendPlugin::getFramesNeeded(const FramesNeededArguments &args,
                                   FramesNeededSetter &frames)
 {
-    const double time = args.time;
-    bool absolute;
-
-    _absolute->getValueAtTime(time, absolute);
+    // must be the same frames as in render()
+    int first, interval, n;
+    getFrames(args.time, &first, &interval, &n);
     OfxRangeD range;
-    int first, last;
-    _frameRange->getValueAtTime(time, first, last);
-    if (!absolute) {
-        first += time;
-        last += time;
-    }
-    int interval;
-    _frameInterval->getValueAtTime(time, interval);
-    if (interval <= 1) {
-        if (first > last) {
-            std::swap(first, last);
-        }
-        range.min = first;
-        range.max = last;
+    if (n <= 0) {
+        // no frame is used, return an empty range
+        range.min = 0;
+        range.max = -1;
+        frames.setFramesNeeded(*_srcClip, range);
+    } else if (std::abs(interval) == 1) {
+        int last = first + (n - 1) * interval;
+        range.min = (std::min)(first, last);
+        range.max = (std::max)(first, last);
         frames.setFramesNeeded(*_srcClip, range);
     } else {
-        if (first > last) {
-            interval = -interval;
-        }
-        for (int i = first; i <= last; i += interval) {
-            range.min = range.max = i;
+        for (int i = 0; i < n; ++i) {
+            range.min = range.max = first + i * interval;
             frames.setFramesNeeded(*_srcClip, range);
         }
     }
@@ -1063,26 +1070,17 @@ bool
 FrameBlendPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
-    const double time = args.time;
-    bool absolute;
-
-    _absolute->getValueAtTime(time, absolute);
-    int min, max;
-    _frameRange->getValueAtTime(time, min, max);
-    if (min > max) {
-        std::swap(min, max);
+    // must be the union of the RoDs of the frames used in render()
+    int first, interval, n;
+    getFrames(args.time, &first, &interval, &n);
+    if (n <= 0) {
+        return false; // use default behavior
     }
-    if (!absolute) {
-        min += time;
-        max += time;
-    }
-    int interval;
-    _frameInterval->getValueAtTime(time, interval);
 
-    rod = _srcClip->getRegionOfDefinition(min);
+    rod = _srcClip->getRegionOfDefinition(first);
 
-    for (int i = min + interval; i <= max; i += interval) {
-        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(i);
+    for (int i = 1; i < n; ++i) {
+        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(first + i * interval);
         Coords::rectBoundingBox(srcRoD, rod, &rod);
     }
 
