@@ -25,7 +25,10 @@
 #ifndef openfx_misc_ofxsRGBAProcessing_h
 #define openfx_misc_ofxsRGBAProcessing_h
 
+#include <string>
+
 #include "ofxsImageEffect.h"
+#include "ofxsCoords.h"
 
 namespace OFX {
 namespace RGBAProcessingDetail {
@@ -165,6 +168,69 @@ ofxsCopyBackUnprocessedChannels(const PIX *srcPix,
     }
 }
 
+/** @brief When the user connects the source clip, and the premult parameter was never
+   changed by the user, set premult according to the source premultiplication state.
+   To be called from ImageEffect::changedClip(). */
+inline void
+ofxsPremultUpdateFromSourceClip(const InstanceChangedArgs &args,
+                                const std::string &clipName,
+                                Clip *srcClip,
+                                BooleanParam *premult,
+                                BooleanParam *premultChanged)
+{
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         srcClip && srcClip->isConnected() &&
+         !premultChanged->getValue() &&
+         ( args.reason == eChangeUserEdit) ) {
+        if (srcClip->getPixelComponents() != ePixelComponentRGBA) {
+            premult->setValue(false);
+        } else {
+            switch ( srcClip->getPreMultiplication() ) {
+            case eImageOpaque:
+                premult->setValue(false);
+                break;
+            case eImagePreMultiplied:
+                premult->setValue(true);
+                break;
+            case eImageUnPreMultiplied:
+                premult->setValue(false);
+                break;
+            }
+        }
+    }
+}
+
+/** @brief Returns true if masking is enabled with a non-inverted mask whose RoD does
+   not intersect the render window, in which case the effect is identity.
+   To be called from ImageEffect::isIdentity(). */
+inline bool
+ofxsMaskRoDExcludesRenderWindow(const IsIdentityArguments &args,
+                                Clip *maskClip,
+                                BooleanParam *maskApply,
+                                BooleanParam *maskInvertParam)
+{
+    const double time = args.time;
+    bool doMasking = ( ( !maskApply || maskApply->getValueAtTime(time) ) && maskClip && maskClip->isConnected() );
+
+    if (doMasking) {
+        bool maskInvert;
+        maskInvertParam->getValueAtTime(time, maskInvert);
+        if (!maskInvert) {
+            OfxRectI maskRoD;
+            if (getImageEffectHostDescription()->supportsMultiResolution) {
+                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
+                Coords::toPixelEnclosing(maskClip->getRegionOfDefinition(time), args.renderScale, maskClip->getPixelAspectRatio(), &maskRoD);
+                // effect is identity if the renderWindow doesn't intersect the mask RoD
+                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
 } // namespace OFX
 
 #endif // openfx_misc_ofxsRGBAProcessing_h

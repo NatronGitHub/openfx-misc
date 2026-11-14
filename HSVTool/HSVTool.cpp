@@ -28,6 +28,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
@@ -1714,26 +1715,7 @@ void
 HSVToolPlugin::changedClip(const InstanceChangedArgs &args,
                            const std::string &clipName)
 {
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
-         _srcClip && _srcClip->isConnected() &&
-         !_premultChanged->getValue() &&
-         ( args.reason == eChangeUserEdit) ) {
-        if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
-            _premult->setValue(false);
-        } else {
-            switch ( _srcClip->getPreMultiplication() ) {
-            case eImageOpaque:
-                _premult->setValue(false);
-                break;
-            case eImagePreMultiplied:
-                _premult->setValue(true);
-                break;
-            case eImageUnPreMultiplied:
-                _premult->setValue(false);
-                break;
-            }
-        }
-    }
+    ofxsPremultUpdateFromSourceClip(args, clipName, _srcClip, _premult, _premultChanged);
 }
 
 /* Override the clip preferences */
