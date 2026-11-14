@@ -350,22 +350,6 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcBRowBytes = 0;
     }
 
-    // The following checks may be wrong, because the srcRoI may be outside of the region of definition of src.
-    // It is not an error: areas outside of srcRoD should be considered black and transparent.
-    // IF THE FOLLOWING CODE HAS TO BE DISACTIVATED, PLEASE COMMENT WHY.
-    // This was disactivated by commit c47d07669b78a71960b204989d9c36f746d14a4c, then reactivated.
-    // DISACTIVATED AGAIN by FD 9/12/2014: boundary conditions are now handled by pixelcopier, and interstection with dstRoD was added above
-#if 0 //def CIMGFILTER_INSTERSECT_ROI
-    OFX::Coords::rectIntersection(srcRoI, srcRoD, &srcRoI);
-    // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
-    assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
-           srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
-    if ( (srcBounds.x1 > srcRoI.x1) || (srcRoI.x2 > srcBounds.x2) ||
-         ( srcBounds.y1 > srcRoI.y1) || ( srcRoI.y2 > srcBounds.y2) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-#endif
-
     // from here on, we do the following steps:
     // 1- copy & unpremult all channels from srcRoI, from src to a tmp image of size srcRoI
     // 2- extract channels to be processed from tmp to a cimg of size srcRoI (and do the interleaved to coplanar conversion)

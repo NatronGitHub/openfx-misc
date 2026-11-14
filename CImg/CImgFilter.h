@@ -142,22 +142,6 @@ inline void gImageEffectAbort();
 #ifdef PLUGIN_PACK_GPL2
 
 // include the inpaint and nlmeans cimg plugins
-#if 0 // not necessary since CImg cimmit 7c83bdad65ab7447220b54851a5a1035976777fa
-namespace cimg_library_openfx_misc {
-    namespace cimg {
-        //! Return the maximum between two values.
-        template<typename t>
-        inline t max(const t& a, const t& b) {
-            return (std::max)(a,b);
-        }
-        //! Return the minimum between two values.
-        template<typename t>
-        inline t min(const t& a, const t& b) {
-            return (std::min)(a,b);
-        }
-    }
-}
-#endif
 #define cimg_plugin "Inpaint/inpaint.h"
 //#define cimg_plugin1 "nlmeans.h"
 #endif
@@ -277,16 +261,6 @@ protected:
 
 #endif
 
-
-    void setupAndFill(OFX::PixelProcessorFilterBase & processor,
-                      const OfxRectI &renderWindow,
-                      const OfxPointD &renderScale,
-                      void *dstPixelData,
-                      const OfxRectI& dstBounds,
-                      OFX::PixelComponentEnum dstPixelComponents,
-                      int dstPixelComponentCount,
-                      OFX::BitDepthEnum dstPixelDepth,
-                      int dstRowBytes);
 
     void setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                       double time,
@@ -454,46 +428,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         }
         checkBadRenderScaleOrField(src, args);
 #     endif
-#if 0
-    } else {
-        // src is considered black and transparent, just fill black to dst and return
-#pragma message WARN("BUG: even when src is black and transparent, the output may not be black (cf. NoiseCImg)")
-        void* dstPixelData = NULL;
-        OfxRectI dstBounds;
-        OFX::PixelComponentEnum dstPixelComponents;
-        OFX::BitDepthEnum dstBitDepth;
-        int dstRowBytes;
-        getImageData(dst.get(), &dstPixelData, &dstBounds, &dstPixelComponents, &dstBitDepth, &dstRowBytes);
-
-        int nComponents = dst->getPixelComponentCount();
-        switch (nComponents) {
-        case 1: {
-            OFX::BlackFiller<float, 1> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        case 2: {
-            OFX::BlackFiller<float, 2> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        case 3: {
-            OFX::BlackFiller<float, 3> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        case 4: {
-            OFX::BlackFiller<float, 4> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        default:
-            assert(false);
-            break;
-        } // switch
-
-        return;
-#endif
     }
 
     const void *srcPixelData;
@@ -714,32 +648,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcBitDepth = _srcClip->getPixelDepth();
         srcRowBytes = 0;
     }
-
-    // The following checks may be wrong, because the srcRoI may be outside of the region of definition of src.
-    // It is not an error: areas outside of srcRoD should be considered black and transparent.
-    // IF THE FOLLOWING CODE HAS TO BE DISACTIVATED, PLEASE COMMENT WHY.
-    // This was disactivated by commit c47d07669b78a71960b204989d9c36f746d14a4c, then reactivated.
-    // DISACTIVATED AGAIN by FD 9/12/2014: boundary conditions are now handled by pixelcopier, and interstection with dstRoD was added above
-#if 0 //def CIMGFILTER_INSTERSECT_ROI
-    OFX::Coords::rectIntersection(srcRoI, srcRoD, &srcRoI);
-    // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
-    assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
-           srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
-    if ( (srcBounds.x1 > srcRoI.x1) || (srcRoI.x2 > srcBounds.x2) ||
-         ( srcBounds.y1 > srcRoI.y1) || ( srcRoI.y2 > srcBounds.y2) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-
-    if ( doMasking && (mix != 1.) ) {
-        // the renderWindow should also be contained within srcBounds, since we are mixing
-        assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
-               srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
-        if ( (srcBounds.x1 > renderWindow.x1) || (renderWindow.x2 > srcBounds.x2) ||
-             ( srcBounds.y1 > renderWindow.y1) || ( renderWindow.y2 > srcBounds.y2) ) {
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
-    }
-#endif
 
 #if cimg_use_openmp!=0
     // set the number of OpenMP threads to a reasonable value

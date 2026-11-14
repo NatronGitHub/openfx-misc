@@ -309,31 +309,6 @@ CImgFilterPluginHelperBase::describeInContextEnd(ImageEffectDescriptor &desc,
 
 /* set up and run a copy processor */
 void
-CImgFilterPluginHelperBase::setupAndFill(PixelProcessorFilterBase & processor,
-                                         const OfxRectI &renderWindow,
-                                         const OfxPointD &renderScale,
-                                         void *dstPixelData,
-                                         const OfxRectI& dstBounds,
-                                         PixelComponentEnum dstPixelComponents,
-                                         int dstPixelComponentCount,
-                                         BitDepthEnum dstPixelDepth,
-                                         int dstRowBytes)
-{
-    assert(dstPixelData &&
-           dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
-           dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
-    // set the images
-    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstPixelDepth, dstRowBytes);
-
-    // set the render window
-    processor.setRenderWindow(renderWindow, renderScale);
-
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
-}
-
-/* set up and run a copy processor */
-void
 CImgFilterPluginHelperBase::setupAndCopy(PixelProcessorFilterBase & processor,
                                          double time,
                                          const OfxRectI &renderWindow,
