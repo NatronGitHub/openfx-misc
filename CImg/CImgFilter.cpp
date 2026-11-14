@@ -275,12 +275,25 @@ void
 CImgFilterPluginHelperBase::describeInContextEnd(ImageEffectDescriptor &desc,
                                                  ContextEnum /*context*/,
                                                  PageParamDescriptor* page,
-                                                 bool hasUnpremult)
+                                                 bool hasUnpremult,
+                                                 bool hasMask)
 {
     if (hasUnpremult) {
         ofxsPremultDescribeParams(desc, page);
     }
-    ofxsMaskMixDescribeParams(desc, page);
+    if (hasMask) {
+        ofxsMaskMixDescribeParams(desc, page);
+    } else {
+        ofxsMixDescribeParams(desc, page);
+        // there is no mask clip: keep the maskInvert param (secret) for backward compatibility
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMaskInvert);
+        param->setLabel(kParamMaskInvertLabel);
+        param->setHint(kParamMaskInvertHint);
+        param->setIsSecretAndDisabled(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     if (hasUnpremult) {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);

@@ -251,7 +251,8 @@ public:
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc,
                                      OFX::ContextEnum context,
                                      OFX::PageParamDescriptor* page,
-                                     bool hasUnpremult = true);
+                                     bool hasUnpremult = true,
+                                     bool hasMask = true);
 
 protected:
 #ifdef CIMG_DEBUG
