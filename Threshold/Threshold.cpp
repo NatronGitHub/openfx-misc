@@ -100,11 +100,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSoftnessLabel "Threshold Softness"
 #define kParamSoftnessHint  "Threshold softness for the selected channels."
 
-#ifdef OFX_EXTENSIONS_NATRON
-#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#else
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#endif
 
 
 struct RGBAValues
@@ -470,10 +466,6 @@ ThresholdPlugin::render(const RenderArguments &args)
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-#ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == ePixelComponentXY) {
-        renderInternal<2>(args, dstBitDepth);
-#endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);

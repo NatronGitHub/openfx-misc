@@ -44,51 +44,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Add a constant to the selected channels.\n" \
     "See also: https://web.archive.org/web/20220627013304/http://www.opticalenquiry.com/nuke/index.php?title=Add"
 
-#define STRINGIZE_CPP_NAME_(token) # token
-#define STRINGIZE_CPP_(token) STRINGIZE_CPP_NAME_(token)
-
-#ifdef DEBUG
-#define kPluginDescriptionDebug " with debug"
-#else
-#define kPluginDescriptionDebug " without debug"
-#endif
-
-#ifdef NDEBUG
-#define kPluginDescriptionNDebug ", without assertions"
-#else
-#define kPluginDescriptionNDebug ", with assertions"
-#endif
-
-#if defined(__OPTIMIZE__)
-#define kPluginDescriptionOptimize ", with optimizations"
-#else
-#define kPluginDescriptionOptimize "" // don't know (maybe not gcc or clang)
-#endif
-
-#if defined(__NO_INLINE__)
-#define kPluginDescriptionInline ", without inlines"
-#else
-#define kPluginDescriptionInline "" // don't know (maybe not gcc or clang)
-#endif
-
-#ifdef cimg_use_openmp
-#define kPluginDescriptionOpenMP ", with OpenMP " STRINGIZE_CPP_(_OPENMP)
-#else
-#define kPluginDescriptionOpenMP ", without OpenMP"
-#endif
-
-#ifdef __clang__
-#define kPluginDescriptionCompiler ", using Clang version " __clang_version__
-#else
-#ifdef __GNUC__
-#define kPluginDescriptionCompiler ", using GNU C++ version " __VERSION__
-#else
-#define kPluginDescriptionCompiler ""
-#endif
-#endif
-
-#define kPluginDescriptionFull kPluginDescription "\n\nThis plugin was compiled " kPluginDescriptionDebug kPluginDescriptionNDebug kPluginDescriptionOptimize kPluginDescriptionInline kPluginDescriptionOpenMP kPluginDescriptionCompiler "."
-
 #define kPluginIdentifier "net.sf.openfx.AddPlugin"
 
 // History:
@@ -138,11 +93,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamPremultChanged "premultChanged"
 
-#ifdef OFX_EXTENSIONS_NATRON
-#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#else
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#endif
 
 struct RGBAValues
 {
@@ -556,19 +507,11 @@ AddPlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-#ifdef OFX_EXTENSIONS_NATRON
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentXY || dstComponents == ePixelComponentAlpha);
-#else
-    assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB || dstComponents == ePixelComponentAlpha);
-#endif
+    assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-#ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == ePixelComponentXY) {
-        renderInternal<2>(args, dstBitDepth);
-#endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
