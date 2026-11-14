@@ -193,7 +193,6 @@ public:
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {
-        printf("%dx%d\n",cimg.width(), cimg.height());
         // PROCESSING.
         // This is the only place where the actual processing takes place
         if ( (params.patch_size <= 0) || (params.lookup_size <= 0.) || cimg.is_empty() ) {
