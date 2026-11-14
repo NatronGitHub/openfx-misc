@@ -95,6 +95,7 @@ ifneq ($(HAVE_CIMG),0)
   SUBDIRS_NOMULTI += \
 CImg/Bilateral \
 CImg/Blur \
+CImg/Convolve \
 CImg/Denoise \
 CImg/Equalize \
 CImg/Erode \

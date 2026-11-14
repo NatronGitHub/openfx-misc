@@ -381,6 +381,7 @@ FILE(GLOB CIMG_SOURCES
   "CImg/Bilateral/CImgBilateral.cpp"
   "CImg/Blur/CImgBlur.cpp"
   "CImg/Blur/blurmaple.map"
+  "CImg/Convolve/CImgConvolve.cpp"
   "CImg/Denoise/CImgDenoise.cpp"
   "CImg/Distance/CImgDistance.cpp"
   "CImg/Equalize/CImgEqualize.cpp"
