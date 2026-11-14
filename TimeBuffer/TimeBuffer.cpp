@@ -486,6 +486,48 @@ private:
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    enum WaitResultEnum
+    {
+        eWaitClean = 0, // the buffer is clean, and locked by guard
+        eWaitAborted, // abort() returned true, the buffer is unlocked
+        eWaitTimedOutBlack, // timed out with the Black strategy, the buffer is unlocked
+    };
+
+    // While the buffer is dirty, unlock it, wait and lock it again.
+    // The buffer must be locked by guard on entry.
+    // Times out with an error, unless the Black strategy is selected.
+    WaitResultEnum waitForCleanBuffer(TimeBuffer* timeBuffer,
+                                      AutoMutex &guard)
+    {
+        int delay = 5; // initial delay, in milliseconds
+        double timeout = _timeOut->getValue();
+        while (timeBuffer->dirty) {
+            guard.unlock();
+            sleep(delay);
+            if ( abort() ) {
+                return eWaitAborted;
+            }
+            delay *= 2;
+            if (delay > timeout) {
+                UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
+                switch (e) {
+                case eUnorderedRenderError:
+                case eUnorderedRenderLast:
+                    setPersistentMessage(Message::eMessageError, "", "Timed out");
+                    throwSuiteStatusException(kOfxStatFailed);
+
+                    return eWaitAborted;
+                case eUnorderedRenderBlack:
+
+                    return eWaitTimedOutBlack;
+                }
+            }
+            guard.relock();
+        }
+
+        return eWaitClean;
+    }
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -571,34 +613,19 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
         }
     }
     //   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
-    int delay = 5; // initial delay, in milliseconds
-    double timeout = _timeOut->getValue();
-    while (timeBuffer->dirty) {
-        guard.unlock();
-        sleep(delay);
-        if ( abort() ) {
-            return;
-        }
-        delay *= 2;
-        if (delay > timeout) {
-            UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
-            switch (e) {
-            case eUnorderedRenderError:
-            case eUnorderedRenderLast:
-                setPersistentMessage(Message::eMessageError, "", "Timed out");
-                throwSuiteStatusException(kOfxStatFailed);
+    switch ( waitForCleanBuffer(timeBuffer, guard) ) {
+    case eWaitAborted:
 
-                return;
-            case eUnorderedRenderBlack:
-                fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
-                guard.relock(); // the buffer must be locked before modifying it
-                timeBuffer->dirty = true;
-                timeBuffer->time = time + 1;
+        return;
+    case eWaitTimedOutBlack:
+        fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
+        guard.relock(); // the buffer must be locked before modifying it
+        timeBuffer->dirty = true;
+        timeBuffer->time = time + 1;
 
-                return;
-            }
-        }
-        guard.relock();
+        return;
+    case eWaitClean:
+        break;
     }
     if ( (args.renderScale.x != timeBuffer->renderScale.x) || (args.renderScale.y != timeBuffer->renderScale.y) ) {
         UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
@@ -690,30 +717,8 @@ TimeBufferReadPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &a
         }
     }
     // - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
-    int delay = 5; // initial delay, in milliseconds
-    double timeout = _timeOut->getValue();
-    while (timeBuffer->dirty) {
-        guard.unlock();
-        sleep(delay);
-        if ( abort() ) {
-            return false;
-        }
-        delay *= 2;
-        if (delay > timeout) {
-            UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
-            switch (e) {
-            case eUnorderedRenderError:
-            case eUnorderedRenderLast:
-                setPersistentMessage(Message::eMessageError, "", "Timed out");
-                throwSuiteStatusException(kOfxStatFailed);
-
-                return false;
-            case eUnorderedRenderBlack:
-
-                return false;     // use default behavior
-            }
-        }
-        guard.relock();
+    if ( waitForCleanBuffer(timeBuffer, guard) != eWaitClean ) {
+        return false; // aborted, or timed out with Black: use default behavior
     }
     if ( (args.renderScale.x != timeBuffer->renderScale.x) || (args.renderScale.y != timeBuffer->renderScale.y) ) {
         UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
