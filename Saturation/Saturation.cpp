@@ -29,6 +29,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
+#include "ofxsLuminanceMath.h"
 #include "ofxsMacros.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
@@ -89,27 +90,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSaturationLabel "Saturation"
 #define kParamSaturationHint "Color saturation factor to apply. 0 produces grayscale."
 
-#define kParamLuminanceMath "luminanceMath"
-#define kParamLuminanceMathLabel "Luminance Math"
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
-#define kParamLuminanceMathOptionRec709 "Rec. 709", "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b).", "rec709"
-#define kParamLuminanceMathOptionRec2020 "Rec. 2020", "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b).", "rec2020"
-#define kParamLuminanceMathOptionACESAP0 "ACES AP0", "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b).", "acesap0"
-#define kParamLuminanceMathOptionACESAP1 "ACES AP1", "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b).", "acesap1"
-#define kParamLuminanceMathOptionCcir601 "CCIR 601", "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b).", "ccir601"
-#define kParamLuminanceMathOptionAverage "Average", "Use average of r, g, b.", "average"
-#define kParamLuminanceMathOptionMaximum "Max", "Use max or r, g, b.", "max"
-
-enum LuminanceMathEnum
-{
-    eLuminanceMathRec709,
-    eLuminanceMathRec2020,
-    eLuminanceMathACESAP0,
-    eLuminanceMathACESAP1,
-    eLuminanceMathCcir601,
-    eLuminanceMathAverage,
-    eLuminanceMathMaximum,
-};
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
