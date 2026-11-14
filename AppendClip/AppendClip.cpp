@@ -236,6 +236,41 @@ checkComponents(const Image &src,
 }
 #endif
 
+// copy the getSources() results to the non-NULL output pointers
+static void
+setSources(int clip0,
+           double t0,
+           double alpha0,
+           int clip1,
+           double t1,
+           double alpha1,
+           int *clip0_p,
+           double *t0_p,
+           double *alpha0_p,
+           int *clip1_p,
+           double *t1_p,
+           double *alpha1_p)
+{
+    if (clip0_p) {
+        *clip0_p = clip0;
+    }
+    if (t0_p) {
+        *t0_p = t0;
+    }
+    if (alpha0_p) {
+        *alpha0_p = alpha0;
+    }
+    if (clip1_p) {
+        *clip1_p = clip1;
+    }
+    if (t1_p) {
+        *t1_p = t1;
+    }
+    if (alpha1_p) {
+        *alpha1_p = alpha1;
+    }
+}
+
 void
 AppendClipPlugin::getSources(int firstFrame,
                              int fadeIn,
@@ -275,24 +310,7 @@ AppendClipPlugin::getSources(int firstFrame,
     }
     if (lastClip < 0) {
         // no clip, just be black, and lastFrame = firstFrame-1
-        if (clip0_p) {
-            *clip0_p = clip0;
-        }
-        if (t0_p) {
-            *t0_p = t0;
-        }
-        if (alpha0_p) {
-            *alpha0_p = alpha0;
-        }
-        if (clip1_p) {
-            *clip1_p = clip1;
-        }
-        if (t1_p) {
-            *t1_p = t1;
-        }
-        if (alpha1_p) {
-            *alpha1_p = alpha1;
-        }
+        setSources(clip0, t0, alpha0, clip1, t1, alpha1, clip0_p, t0_p, alpha0_p, clip1_p, t1_p, alpha1_p);
         if (lastFrame) {
             *lastFrame = clip1OutMax;
         }
@@ -322,24 +340,7 @@ AppendClipPlugin::getSources(int firstFrame,
                     // render clip0
                     t0 = r.min + (time - firstFrame);
                     alpha0 =  (fadeIn == 0);
-                    if (clip0_p) {
-                        *clip0_p = clip0;
-                    }
-                    if (t0_p) {
-                        *t0_p = t0;
-                    }
-                    if (alpha0_p) {
-                        *alpha0_p = alpha0;
-                    }
-                    if (clip1_p) {
-                        *clip1_p = clip1;
-                    }
-                    if (t1_p) {
-                        *t1_p = t1;
-                    }
-                    if (alpha1_p) {
-                        *alpha1_p = alpha1;
-                    }
+                    setSources(clip0, t0, alpha0, clip1, t1, alpha1, clip0_p, t0_p, alpha0_p, clip1_p, t1_p, alpha1_p);
                     assert(!lastFrame);
 
                     return;
@@ -498,24 +499,7 @@ AppendClipPlugin::getSources(int firstFrame,
     assert(0 <= alpha0 && alpha0 <= 1);
     assert(0 <= alpha1 && alpha1 < 1);
 
-    if (clip0_p) {
-        *clip0_p = clip0;
-    }
-    if (t0_p) {
-        *t0_p = t0;
-    }
-    if (alpha0_p) {
-        *alpha0_p = alpha0;
-    }
-    if (clip1_p) {
-        *clip1_p = clip1;
-    }
-    if (t1_p) {
-        *t1_p = t1;
-    }
-    if (alpha1_p) {
-        *alpha1_p = alpha1;
-    }
+    setSources(clip0, t0, alpha0, clip1, t1, alpha1, clip0_p, t0_p, alpha0_p, clip1_p, t1_p, alpha1_p);
 } // AppendClipPlugin::getSources
 
 void
