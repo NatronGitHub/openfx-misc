@@ -279,11 +279,12 @@ public:
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_bufferName && _startFrame && _unorderedRender && _sublabel);
 
+        // the project and group identifiers are part of the buffer key, set them before setName()
+        _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
+        _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
         std::string name;
         _bufferName->getValue(name);
         setName(name);
-        _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
-        _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
     }
 
     virtual ~TimeBufferReadPlugin()
@@ -947,12 +948,13 @@ public:
         _resetTrigger = fetchBooleanParam(kParamResetTrigger);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_bufferName && _sublabel);
+        // the project and group identifiers are part of the buffer key, set them before setName()
+        _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
+        _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
         std::string name;
         _bufferName->getValue(name);
         setName(name);
         _sublabel->setValue(name);
-        _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
-        _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
     }
 
     virtual ~TimeBufferWritePlugin()
