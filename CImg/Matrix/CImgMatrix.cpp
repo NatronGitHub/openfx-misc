@@ -154,12 +154,13 @@ public:
         // - 3x3 if dim=3 and renderScale.x > 0.33 or dim=5 and renderScale.x > 0.4
         // - 5x5 if dim=5 and renderScale.x > 0.6
         const OfxPointD& renderScale = args.renderScale;
+        double sum = 0.;
+        for (int i=0; i < dim * dim; ++i) {
+            sum += params.coeff[i];
+        }
         double s = 1;
         if (params.normalize) {
-            s = 0.;
-            for (int i=0; i < dim * dim; ++i) {
-                s += params.coeff[i];
-            }
+            s = sum;
             if (s == 0.) {
                 ImageEffect::setPersistentMessage(OFX::Message::eMessageError, "", "Matrix sums to zero, cannot normalize");
                 throwSuiteStatusException(kOfxStatFailed);
@@ -194,7 +195,16 @@ public:
         } else if ( (dim == 3 && renderScale.x > 1./3.) ||
                     (dim == 5 && renderScale.x > 0.4) ) {
             CImg<cimgpix_t> res(cimg.width(), cimg.height(), cimg.depth(), cimg.spectrum());
-            double *M = (double*)params.coeff;
+            // for a 5x5 matrix, fold the outer rows/columns into the 3x3 matrix
+            // (0,1 -> 0, 2 -> 1, 3,4 -> 2), so that the sum of coefficients is kept
+            double M[9] = {0., 0., 0., 0., 0., 0., 0., 0., 0.};
+            for (int i = 0; i < dim; ++i) {
+                const int i3 = (dim == 3) ? i : (i < 2 ? 0 : (i == 2 ? 1 : 2));
+                for (int j = 0; j < dim; ++j) {
+                    const int j3 = (dim == 3) ? j : (j < 2 ? 0 : (j == 2 ? 1 : 2));
+                    M[i3 * 3 + j3] += params.coeff[i * dim + j];
+                }
+            }
             double Mpp = M[0]; double Mcp = M[1]; double Mnp = M[2];
             double Mpc = M[3]; double Mcc = M[4]; double Mnc = M[5];
             double Mpn = M[6]; double Mcn = M[7]; double Mnn = M[8];
@@ -215,10 +225,11 @@ public:
             }
 
         } else {
+            // the matrix is reduced to a 1x1 matrix: the sum of its coefficients
             if (params.normalize) {
                 return;
             }
-            cimg *= s;
+            cimg *= sum;
         }
     }
 
