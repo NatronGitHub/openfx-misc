@@ -283,9 +283,8 @@ private:
             if (!dstPix) {
                 continue;
             }
-            const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(procWindow.x1, y) : 0);
-
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 double spillmap;
                 if (srcPix) {
                     tmpPix[0] = sampleToFloat<PIX, maxValue>(srcPix[0]);
@@ -310,6 +309,10 @@ private:
                     spillmap = 0.;
                 }
 
+                // ofxsMaskMixPix takes denormalized input
+                for (int c = 0; c < 4; ++c) {
+                    tmpPix[c] *= maxValue;
+                }
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _maskImg != 0, _maskImg, _mix, _maskInvert, dstPix);
 
                 if (_outputToAlpha) {
@@ -319,7 +322,6 @@ private:
 
                 // increment the dst pixel
                 dstPix += nComponents;
-                srcPix += nComponents;
             }
         }
     } // multiThreadProcessImages
