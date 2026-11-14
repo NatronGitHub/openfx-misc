@@ -182,6 +182,7 @@ private:
 
 
     bool isIdentityInternal(OfxTime time, Clip* &identityClip, OfxTime &identityTime);
+    double getSourceTime(double time);
 };
 
 
@@ -331,19 +332,16 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     processor.process();
 } // RetimePlugin::setupAndProcess
 
-void
-RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
-                              FramesNeededSetter &frames)
+// figure the source frame we should be retiming from at the given output time
+double
+RetimePlugin::getSourceTime(double time)
 {
-    if (!_srcClip || !_srcClip->isConnected()) {
-        return;
-    }
-    const double time = args.time;
-    double sourceTime;
     if (getContext() == eContextRetimer) {
         // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
-        sourceTime = _sourceTime->getValueAtTime(time);
-    } else {
+        return _sourceTime->getValueAtTime(time);
+    }
+    double sourceTime = time;
+    if (_srcClip) {
         bool reverse_input;
         OfxRangeD srcRange = _srcClip->getFrameRange();
         _reverse_input->getValueAtTime(time, reverse_input);
@@ -360,6 +358,19 @@ RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
             }
         }
     }
+
+    return sourceTime;
+}
+
+void
+RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
+                              FramesNeededSetter &frames)
+{
+    if (!_srcClip || !_srcClip->isConnected()) {
+        return;
+    }
+    const double time = args.time;
+    double sourceTime = getSourceTime(time);
 
     FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
     OfxRangeD range;
@@ -406,27 +417,7 @@ RetimePlugin::isIdentityInternal(OfxTime time,
     if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
-    double sourceTime;
-    if (getContext() == eContextRetimer) {
-        // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
-        sourceTime = _sourceTime->getValueAtTime(time);
-    } else {
-        bool reverse_input;
-        OfxRangeD srcRange = _srcClip->getFrameRange();
-        _reverse_input->getValueAtTime(time, reverse_input);
-        // we have our own param, which is a speed, so we integrate it to get the time we want
-        if (reverse_input) {
-            sourceTime = srcRange.max - _speed->integrate(srcRange.min, time);
-        } else {
-            sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
-        }
-        if (_warp) {
-            double r = srcRange.max - srcRange.min;
-            if (r != 0.) {
-                sourceTime = srcRange.min + r * _warp->getValue(0, time, (sourceTime - srcRange.min) / r);
-            }
-        }
-    }
+    double sourceTime = getSourceTime(time);
     FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
 
     if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) ) {
@@ -524,28 +515,7 @@ RetimePlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     // figure the frame we should be retiming from
-    double sourceTime = time;
-
-    if (getContext() == eContextRetimer) {
-        // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
-        sourceTime = _sourceTime->getValueAtTime(time);
-    } else if (_srcClip) {
-        bool reverse_input;
-        OfxRangeD srcRange = _srcClip->getFrameRange();
-        _reverse_input->getValueAtTime(time, reverse_input);
-        // we have our own param, which is a speed, so we integrate it to get the time we want
-        if (reverse_input) {
-            sourceTime = srcRange.max - _speed->integrate(srcRange.min, time);
-        } else {
-            sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
-        }
-        if (_warp) {
-            double r = srcRange.max - srcRange.min;
-            if (r != 0.) {
-                sourceTime = srcRange.min + r * _warp->getValue(0, time, (sourceTime - srcRange.min) / r);
-            }
-        }
-    }
+    double sourceTime = getSourceTime(time);
 
     FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
 
