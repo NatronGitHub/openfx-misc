@@ -633,7 +633,7 @@ CImgOperatorPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefin
     double srcBpixelaspectratio = _srcBClip ? _srcBClip->getPixelAspectRatio() : 1.;
     OfxRectI srcBRoDPixel = {0, 0, 0, 0};
     if (_srcBClip) {
-        OFX::Coords::toPixelEnclosing(_srcBClip->getRegionOfDefinition(args.time), args.renderScale, srcBpixelaspectratio, &srcARoDPixel);
+        OFX::Coords::toPixelEnclosing(_srcBClip->getRegionOfDefinition(args.time), args.renderScale, srcBpixelaspectratio, &srcBRoDPixel);
     }
 
     OfxRectI rodPixel;
