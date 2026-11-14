@@ -1286,6 +1286,9 @@ private:
     // compute the analyzed rectangle, in canonical coordinates
     void getAnalysisRectangle(double time, OfxRectD *rect);
 
+    // compute the canonical region to fetch from the source for analysis
+    bool computeFetchRect(double time, OfxRectD *fetchRect);
+
     // compute computation window in srcImg
     bool computeWindow(const Image* srcImg, const OfxPointD& renderScale, double time, OfxRectI *analysisWindow);
 
@@ -1619,10 +1622,11 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         doAnalyzeLuma = (k != -1);
     }
     // RGBA analysis
-#pragma message WARN("TODO: only fetchImage() the required region.")
     if ( (doAnalyzeRGBA || doAnalyzeHSVL || doAnalyzeLuma) && _srcClip && _srcClip->isConnected() ) {
-        auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                  _srcClip->fetchImage(args.time) : 0 );
+        // only fetch the analyzed region
+        OfxRectD fetchRect;
+        bool fetch = computeFetchRect(args.time, &fetchRect);
+        auto_ptr<Image> src( fetch ? _srcClip->fetchImage(args.time, fetchRect) : 0 );
         if ( src.get() ) {
             checkBadRenderScale(src, args);
             bool intersect = computeWindow(src.get(), args.renderScale, args.time, &analysisWindow);
@@ -1657,8 +1661,10 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         int tmin = (int)std::ceil(range.min);
         int tmax = (int)std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
-            auto_ptr<Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                      _srcClip->fetchImage(t) : 0 );
+            // only fetch the analyzed region
+            OfxRectD fetchRect;
+            bool fetch = computeFetchRect(t, &fetchRect);
+            auto_ptr<Image> src( fetch ? _srcClip->fetchImage(t, fetchRect) : 0 );
             if ( src.get() ) {
                 checkBadRenderScale(src, args);
                 bool intersect = computeWindow(src.get(), args.renderScale, t, &analysisWindow);
@@ -1742,6 +1748,20 @@ ImageStatisticsPlugin::getAnalysisRectangle(double time,
         rect->x2 += rect->x1;
         rect->y2 += rect->y1;
     }
+}
+
+// Compute the canonical region to fetch for analysis: the analyzed rectangle (see
+// getAnalysisRectangle()) intersected with the source RoD. Returns false if it is empty, in which
+// case nothing has to be fetched.
+bool
+ImageStatisticsPlugin::computeFetchRect(double time,
+                                        OfxRectD *fetchRect)
+{
+    assert(_srcClip);
+    OfxRectD rect;
+    getAnalysisRectangle(time, &rect);
+
+    return Coords::rectIntersection(rect, _srcClip->getRegionOfDefinition(time), fetchRect);
 }
 
 bool
