@@ -252,7 +252,7 @@ public:
                 }
             }
         }
-        return false;
+        return true;
     };
 
     virtual void changedParam(const InstanceChangedArgs &args,
