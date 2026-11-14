@@ -484,7 +484,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
-                    double v = *dstPix;
+                    double v = *dstPix / (double)maxValue;
                     min[c] = (std::min)(min[c], v);
                     max[c] = (std::max)(max[c], v);
                     sumLine[c] += v;
@@ -573,7 +573,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
-                    double v = (*dstPix - _mean[c]);
+                    double v = (*dstPix / (double)maxValue - _mean[c]);
                     sumLine_p2[c] += v * v;
                     ++dstPix;
                 }
@@ -686,7 +686,7 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
                     if (_sdev[c] > 0.) {
-                        double v = (*dstPix - _mean[c]) / _sdev[c];
+                        double v = (*dstPix / (double)maxValue - _mean[c]) / _sdev[c];
                         double v2 = v * v;
                         sumLine_p3[c] += v2 * v;
                         sumLine_p4[c] += v2 * v2;
@@ -1465,6 +1465,27 @@ ImageStatisticsPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &ar
         _size->getValueAtTime(args.time, regionOfInterest.x2, regionOfInterest.y2);
         regionOfInterest.x2 += regionOfInterest.x1;
         regionOfInterest.y2 += regionOfInterest.y1;
+        // Union with output RoD, so that render works
+        Coords::rectBoundingBox(args.regionOfInterest, regionOfInterest, &regionOfInterest);
+        rois.setRegionOfInterest(*_srcClip, regionOfInterest);
+    } else if ( _autoUpdate->getValueAtTime(args.time) && _srcClip && _srcClip->isConnected() ) {
+        // render analyzes the whole source RoD (see computeWindow()), so it must be fetched entirely,
+        // else only the current tile would be analyzed.
+        OfxRectD regionOfInterest = _srcClip->getRegionOfDefinition(args.time);
+        OfxPointD size = getProjectSize();
+        OfxPointD offset = getProjectOffset();
+        if (regionOfInterest.x1 <= kOfxFlagInfiniteMin) {
+            regionOfInterest.x1 = offset.x;
+        }
+        if (regionOfInterest.x2 >= kOfxFlagInfiniteMax) {
+            regionOfInterest.x2 = offset.x + size.x;
+        }
+        if (regionOfInterest.y1 <= kOfxFlagInfiniteMin) {
+            regionOfInterest.y1 = offset.y;
+        }
+        if (regionOfInterest.y2 >= kOfxFlagInfiniteMax) {
+            regionOfInterest.y2 = offset.y + size.y;
+        }
         // Union with output RoD, so that render works
         Coords::rectBoundingBox(args.regionOfInterest, regionOfInterest, &regionOfInterest);
         rois.setRegionOfInterest(*_srcClip, regionOfInterest);
