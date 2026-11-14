@@ -442,15 +442,19 @@ CropPlugin::getCropRectangle(OfxTime time,
     }
     }
 
-    if (reformat) {
-        rod.x2 -= rod.x1;
-        rod.y2 -= rod.y1;
-        rod.x1 = 0.;
-        rod.y1 = 0.;
-    }
+    // origin of the full crop rectangle, which is moved to (0,0) by reformat (see CropProcessorBase::setValues)
+    const double originX = rod.x1;
+    const double originY = rod.y1;
     if (intersect && _srcClip) {
+        // intersect before reformat: srcRoD is in source coordinates
         const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(time);
         Coords::rectIntersection(rod, srcRoD, &rod);
+    }
+    if (reformat) {
+        rod.x1 -= originX;
+        rod.x2 -= originX;
+        rod.y1 -= originY;
+        rod.y2 -= originY;
     }
 
     if (blackOutside) {
