@@ -40,6 +40,7 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsMerging.h"
+#include "ofxsCopier.h"
 
 using namespace OFX;
 
@@ -745,6 +746,12 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     int first, interval, n;
     getFrames(time, &first, &interval, &n);
     decay = 1. - ipow(1. - decay, std::abs(interval)); // adjust decay so that the final aspect is similar for different values of the interval
+    if (n <= 0) {
+        // no frame is blended (frame interval larger than the frame range)
+        fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
+
+        return;
+    }
 
     const OfxRectI& renderWindow = args.renderWindow;
     size_t nPixels = (size_t)(renderWindow.y2 - renderWindow.y1) * (renderWindow.x2 - renderWindow.x1);
