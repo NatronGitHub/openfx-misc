@@ -77,6 +77,7 @@ protected:
     // params
     std::string _srcAClipName;
     std::string _srcBClipName;
+    bool _ignoreMix; //!< for backward compatibility: old versions ignored the Mix parameter
 };
 
 template <class Params>
@@ -308,7 +309,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     int premultChannel;
     _premult->getValueAtTime(time, premult);
     _premultChannel->getValueAtTime(time, premultChannel);
-    const double mix = _mix->getValueAtTime(time);
+    const double mix = _ignoreMix ? 1. : _mix->getValueAtTime(time);
 
     Params params;
     getValuesAtTime(time, params);
@@ -661,7 +662,7 @@ CImgOperatorPluginHelper<Params>::isIdentity(const OFX::IsIdentityArguments &arg
     }
 # endif
     const double time = args.time;
-    if (_mix->getValueAtTime(time) == 0.) {
+    if ( !_ignoreMix && (_mix->getValueAtTime(time) == 0.) ) {
         identityClip = _srcAClip;
 
         return true;

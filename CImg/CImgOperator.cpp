@@ -36,6 +36,7 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
     , _srcBClip(NULL)
     , _srcAClipName(srcAClipName)
     , _srcBClipName(srcBClipName)
+    , _ignoreMix(false)
 {
     _srcAClip = fetchClip(_srcAClipName);
     assert( _srcAClip && (!_srcAClip->isConnected() || _srcAClip->getPixelComponents() == ePixelComponentRGB || _srcAClip->getPixelComponents() == ePixelComponentRGBA) );
