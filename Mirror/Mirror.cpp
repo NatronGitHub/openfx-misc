@@ -129,30 +129,15 @@ void
 mirrorPixelsForDepthAndComponentsFlipFlop(ImageEffect &instance,
                                           const OfxRectI & renderWindow,
                                           const OfxPointD& renderScale,
-                                          const PIX *srcPixelData,
-                                          const OfxRectI & srcBounds,
-                                          PixelComponentEnum srcPixelComponents,
-                                          int srcPixelComponentCount,
-                                          BitDepthEnum srcBitDepth,
-                                          int srcRowBytes,
-                                          PIX *dstPixelData,
-                                          const OfxRectI & dstBounds,
-                                          PixelComponentEnum dstPixelComponents,
-                                          int dstPixelComponentCount,
-                                          BitDepthEnum dstBitDepth,
-                                          int dstRowBytes,
+                                          const Image* src,
+                                          Image* dst,
                                           int xoff,
                                           int yoff)
 {
-    (void)srcPixelComponents;
-    (void)srcBitDepth;
-    (void)dstPixelComponents;
-    (void)dstBitDepth;
-
     PixelMirrorer<PIX, nComponents, flip, flop> processor(instance, xoff, yoff);
     // set the images
-    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes);
-    processor.setSrcImg(srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, 0);
+    processor.setDstImg(dst);
+    processor.setSrcImg(src, 0);
 
     // set the render window
     processor.setRenderWindow(renderWindow, renderScale);
@@ -166,24 +151,15 @@ void
 mirrorPixelsForDepthAndComponents(ImageEffect &instance,
                                   const OfxRectI & renderWindow,
                                   const OfxPointD& renderScale,
-                                  const PIX *srcPixelData,
-                                  const OfxRectI & srcBounds,
-                                  PixelComponentEnum srcPixelComponents,
-                                  int srcPixelComponentCount,
-                                  BitDepthEnum srcBitDepth,
-                                  int srcRowBytes,
-                                  PIX *dstPixelData,
-                                  const OfxRectI & dstBounds,
-                                  PixelComponentEnum dstPixelComponents,
-                                  int dstPixelComponentCount,
-                                  BitDepthEnum dstBitDepth,
-                                  int dstRowBytes,
+                                  const Image* src,
+                                  Image* dst,
                                   bool flip,
                                   bool flop,
                                   int xoff,
                                   int yoff)
 {
-    assert(srcPixelData && dstPixelData);
+#ifndef NDEBUG
+    const OfxRectI& srcBounds = src->getBounds();
     if (flip) {
         assert(srcBounds.y1 <= (yoff + 1 - renderWindow.y2) && renderWindow.y1 <= renderWindow.y2 && (yoff + 1 - renderWindow.y1) <= srcBounds.y2);
     } else {
@@ -194,38 +170,20 @@ mirrorPixelsForDepthAndComponents(ImageEffect &instance,
     } else {
         assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x1 <= renderWindow.x2 && renderWindow.x2 <= srcBounds.x2);
     }
-    assert(srcPixelComponents == dstPixelComponents && srcBitDepth == dstBitDepth);
-    assert(srcPixelComponentCount == dstPixelComponentCount && srcPixelComponentCount == nComponents);
-    (void)srcPixelComponents;
-    (void)srcBitDepth;
-    (void)dstPixelComponents;
-    (void)dstBitDepth;
-    (void)srcPixelComponentCount;
-    (void)dstPixelComponentCount;
+    assert(src->getPixelComponentCount() == dst->getPixelComponentCount() && src->getPixelComponentCount() == nComponents);
+#endif
 
     if (flip) {
         if (flop) {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, true, true>(instance, renderWindow, renderScale,
-                                                                                    (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                                                    (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                                                                                    xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, true, true>(instance, renderWindow, renderScale, src, dst, xoff, yoff);
         } else {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, true, false>(instance, renderWindow, renderScale,
-                                                                                     (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                                                     (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                                                                                     xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, true, false>(instance, renderWindow, renderScale, src, dst, xoff, yoff);
         }
     } else {
         if (flop) {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, false, true>(instance, renderWindow, renderScale,
-                                                                                     (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                                                     (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                                                                                     xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, false, true>(instance, renderWindow, renderScale, src, dst, xoff, yoff);
         } else {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, false, false>(instance, renderWindow, renderScale,
-                                                                                      (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                                                      (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                                                                                      xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, false, false>(instance, renderWindow, renderScale, src, dst, xoff, yoff);
         }
     }
 }
@@ -235,46 +193,27 @@ void
 mirrorPixelsForDepth(ImageEffect &instance,
                      const OfxRectI & renderWindow,
                      const OfxPointD& renderScale,
-                     const void *srcPixelData,
-                     const OfxRectI & srcBounds,
-                     PixelComponentEnum srcPixelComponents,
-                     int srcPixelComponentCount,
-                     BitDepthEnum srcBitDepth,
-                     int srcRowBytes,
-                     void *dstPixelData,
-                     const OfxRectI & dstBounds,
-                     PixelComponentEnum dstPixelComponents,
-                     int dstPixelComponentCount,
-                     BitDepthEnum dstBitDepth,
-                     int dstRowBytes,
+                     const Image* src,
+                     Image* dst,
                      bool flip,
                      bool flop,
                      int xoff,
                      int yoff)
 {
-    assert(srcPixelData && dstPixelData);
-    assert(srcPixelComponents == dstPixelComponents && srcBitDepth == dstBitDepth);
-    assert(srcPixelComponentCount == dstPixelComponentCount);
+    int dstPixelComponentCount = dst->getPixelComponentCount();
+
     // do the rendering
     if ( (dstPixelComponentCount < 0) || (4 < dstPixelComponentCount) ) {
         throwSuiteStatusException(kOfxStatErrFormat);
     }
     if (dstPixelComponentCount == 4) {
-        mirrorPixelsForDepthAndComponents<PIX, 4>(instance, renderWindow, renderScale,
-                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepthAndComponents<PIX, 4>(instance, renderWindow, renderScale, src, dst, flip, flop, xoff, yoff);
     } else if (dstPixelComponentCount == 3) {
-        mirrorPixelsForDepthAndComponents<PIX, 3>(instance, renderWindow, renderScale,
-                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepthAndComponents<PIX, 3>(instance, renderWindow, renderScale, src, dst, flip, flop, xoff, yoff);
     } else if (dstPixelComponentCount == 2) {
-        mirrorPixelsForDepthAndComponents<PIX, 2>(instance, renderWindow, renderScale,
-                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepthAndComponents<PIX, 2>(instance, renderWindow, renderScale, src, dst, flip, flop, xoff, yoff);
     }  else if (dstPixelComponentCount == 1) {
-        mirrorPixelsForDepthAndComponents<PIX, 1>(instance, renderWindow, renderScale,
-                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepthAndComponents<PIX, 1>(instance, renderWindow, renderScale, src, dst, flip, flop, xoff, yoff);
     } // switch
 }
 
@@ -282,43 +221,29 @@ inline void
 mirrorPixels(ImageEffect &instance,
              const OfxRectI & renderWindow,
              const OfxPointD& renderScale,
-             const void *srcPixelData,
-             const OfxRectI & srcBounds,
-             PixelComponentEnum srcPixelComponents,
-             int srcPixelComponentCount,
-             BitDepthEnum srcBitDepth,
-             int srcRowBytes,
-             void *dstPixelData,
-             const OfxRectI & dstBounds,
-             PixelComponentEnum dstPixelComponents,
-             int dstPixelComponentCount,
-             BitDepthEnum dstBitDepth,
-             int dstRowBytes,
+             const Image* src,
+             Image* dst,
              bool flip,
              bool flop,
              int xoff,
              int yoff)
 {
-    assert(dstPixelData);
-    assert(srcPixelData);
-    assert(srcPixelComponents == dstPixelComponents && srcBitDepth == dstBitDepth);
-    assert(srcPixelComponentCount == dstPixelComponentCount);
+    assert(src && dst);
+    assert(src->getPixelComponents() == dst->getPixelComponents() && src->getPixelDepth() == dst->getPixelDepth());
+    assert(src->getPixelComponentCount() == dst->getPixelComponentCount());
+    assert(dst->getPixelData() && src->getPixelData());
+    BitDepthEnum dstBitDepth = dst->getPixelDepth();
+
     // do the rendering
     if ( (dstBitDepth != eBitDepthUByte) && (dstBitDepth != eBitDepthUShort) && (dstBitDepth != eBitDepthHalf) && (dstBitDepth != eBitDepthFloat) ) {
         throwSuiteStatusException(kOfxStatErrFormat);
     }
     if (dstBitDepth == eBitDepthUByte) {
-        mirrorPixelsForDepth<unsigned char>(instance, renderWindow, renderScale,
-                                            srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                            dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepth<unsigned char>(instance, renderWindow, renderScale, src, dst, flip, flop, xoff, yoff);
     } else if ( (dstBitDepth == eBitDepthUShort) || (dstBitDepth == eBitDepthHalf) ) {
-        mirrorPixelsForDepth<unsigned short>(instance, renderWindow, renderScale,
-                                             srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                             dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepth<unsigned short>(instance, renderWindow, renderScale, src, dst, flip, flop, xoff, yoff);
     } else if (dstBitDepth == eBitDepthFloat) {
-        mirrorPixelsForDepth<float>(instance, renderWindow, renderScale,
-                                    srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                    dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepth<float>(instance, renderWindow, renderScale, src, dst, flip, flop, xoff, yoff);
     } // switch
 }
 
@@ -385,13 +310,6 @@ MirrorPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-    void* dstPixelData;
-    OfxRectI dstBounds;
-    PixelComponentEnum dstComponents;
-    BitDepthEnum dstBitDepth;
-    int dstRowBytes;
-    getImageData(dst.get(), &dstPixelData, &dstBounds, &dstComponents, &dstBitDepth, &dstRowBytes);
-    int dstPixelComponentCount = dst->getPixelComponentCount();
     auto_ptr<const Image> src(_srcClip->isConnected() ?
                                    _srcClip->fetchImage(args.time) : 0);
     if ( src.get() ) {
@@ -399,7 +317,7 @@ MirrorPlugin::render(const RenderArguments &args)
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
-        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+        if ( ( srcBitDepth != dst->getPixelDepth() ) || ( srcComponents != dst->getPixelComponents() ) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
 #     endif
@@ -409,13 +327,6 @@ MirrorPlugin::render(const RenderArguments &args)
 
         return;
     }
-    const void* srcPixelData;
-    OfxRectI srcBounds;
-    PixelComponentEnum srcPixelComponents;
-    BitDepthEnum srcBitDepth;
-    int srcRowBytes;
-    getImageData(src.get(), &srcPixelData, &srcBounds, &srcPixelComponents, &srcBitDepth, &srcRowBytes);
-    int srcPixelComponentCount = src->getPixelComponentCount();
     const double time = args.time;
     bool flip;
     bool flop;
@@ -439,6 +350,7 @@ MirrorPlugin::render(const RenderArguments &args)
 
 # ifndef NDEBUG
     const OfxRectI& renderWindow = args.renderWindow;
+    const OfxRectI& srcBounds = src->getBounds();
     // these things should never happen
     if ( !src.get() ||
          ( flip  &&
@@ -453,7 +365,7 @@ MirrorPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
 # endif
-    mirrorPixels(*this, args.renderWindow, args.renderScale, srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, dstPixelData, dstBounds, dstComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+    mirrorPixels(*this, args.renderWindow, args.renderScale, src.get(), dst.get(), flip, flop, xoff, yoff);
 } // MirrorPlugin::render
 
 // override the roi call
