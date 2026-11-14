@@ -397,52 +397,10 @@ AppendClipPlugin::getSources(int firstFrame,
     assert( clip0 == -1 || clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax) );
     assert( clip0 == -1 || (clip0Min <= clip0Max && clip0OutMin <= clip0OutMax) );
     assert( clip1 == -1 || (clip1Min <= clip1Max && clip1OutMin <= clip1OutMax) );
-    if ( (clip0 == -1) && (clip1 == -1) ) {
-        assert(false); // treated above, should never happen!
-        // no clip, just be black, and lastFrame = firstFrame-1
-        if (clip0_p) {
-            *clip0_p = clip0;
-        }
-        if (t0_p) {
-            *t0_p = t0;
-        }
-        if (alpha0_p) {
-            *alpha0_p = alpha0;
-        }
-        if (clip1_p) {
-            *clip1_p = clip1;
-        }
-        if (t1_p) {
-            *t1_p = t1;
-        }
-        if (alpha1_p) {
-            *alpha1_p = alpha1;
-        }
-
-        return;
-    }
+    // the first connected clip is always visited, and "no clip" and "before the first clip" were treated above
     assert(clip1 != -1);
-    if ( (clip0 == -1) &&
-         (clip1 != -1) && ( time < clip1OutMin) ) {
-        assert(false); // treated above, should never happen!
-        // before the first clip, the solution is trivial
-        clip0 = clip1;
-        clip0Min = clip1Min;
-        clip0Max = clip1Max;
-        clip0OutMin = clip1OutMin;
-        clip0OutMax = clip1OutMax;
-
-        clip1 = -1;
-        clip1Min = -1;
-        clip1Max = -1;
-        clip1OutMin = firstFrame;
-        clip1OutMax = firstFrame - 1;
-        // render clip0
-        t0 = clip1Min + (time - clip1OutMin);
-        alpha0 = (fadeIn == 0);
-        t1 = -1;
-        alpha1 = 0.;
-    } else if ( (clip0 != -1) && (clip0OutMin <= time) && (time <= clip0OutMax) &&
+    assert( (clip0 != -1) || (time >= clip1OutMin) );
+    if ( (clip0 != -1) && (clip0OutMin <= time) && (time <= clip0OutMax) &&
                 (clip1 != -1) && ( clip1OutMin <= time) && ( time <= clip1OutMax) ) {
         // clip0 and clip1: cross-dissolve
         assert(clip1OutMin + crossDissolve - 1 >= clip0OutMax);
