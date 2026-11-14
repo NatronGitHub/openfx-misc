@@ -414,7 +414,7 @@ CImgFilterPluginHelperBase::maskLineIsZero(const Image* mask,
         }
         const OfxRectI& maskBounds = mask->getBounds();
         // if part of the line is out of maskbounds, then mask is 1 at these places
-        if ( (y < maskBounds.y1) || (maskBounds.y2 <= y) || (x1 < maskBounds.x1) || (maskBounds.x2 <= x2) ) {
+        if ( (y < maskBounds.y1) || (maskBounds.y2 <= y) || (x1 < maskBounds.x1) || (maskBounds.x2 < x2) ) {
             return false;
         }
         // the whole line is within the mask
@@ -469,7 +469,7 @@ CImgFilterPluginHelperBase::maskColumnIsZero(const Image* mask,
     if (maskInvert) {
         const OfxRectI& maskBounds = mask->getBounds();
         // if part of the column is out of maskbounds, then mask is 1 at these places
-        if ( (x < maskBounds.x1) || (maskBounds.x2 <= x) || (y1 < maskBounds.y1) || (maskBounds.y2 <= y2) ) {
+        if ( (x < maskBounds.x1) || (maskBounds.x2 <= x) || (y1 < maskBounds.y1) || (maskBounds.y2 < y2) ) {
             return false;
         }
         // the whole column is within the mask
