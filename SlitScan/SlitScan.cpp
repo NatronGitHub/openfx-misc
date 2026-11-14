@@ -746,7 +746,6 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
                 }
             }
         } else {
-            retimeMap.reset(_retimeMapClip ? _retimeMapClip->fetchImage(time) : NULL);
             assert(retimeMap->getPixelComponents() == ePixelComponentAlpha);
             processor.setRetimeMap( retimeMap.get() );
 
