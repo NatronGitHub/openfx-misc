@@ -182,6 +182,18 @@ private:
                     double *alpha1,
                     int *lastFrame = NULL); // if non-NULL, this is the only returned value, and time is not taken into account
 
+    // getSources() with the parameter values at the given time
+    void getSourcesAtTime(double time,
+                          int *clip0,
+                          double *t0,
+                          double *alpha0,
+                          int *clip1,
+                          double *t1,
+                          double *alpha1);
+
+    // the last output frame, computed by getSources() with the parameter values at the given time
+    int getLastFrameAtTime(double time);
+
 private:
 
     template<int nComponents>
@@ -548,6 +560,37 @@ AppendClipPlugin::getSources(int firstFrame,
     }
 } // AppendClipPlugin::getSources
 
+void
+AppendClipPlugin::getSourcesAtTime(double time,
+                                   int *clip0,
+                                   double *t0,
+                                   double *alpha0,
+                                   int *clip1,
+                                   double *t1,
+                                   double *alpha1)
+{
+    int firstFrame = _firstFrame->getValueAtTime(time);
+    int fadeIn = _fadeIn->getValueAtTime(time);
+    int fadeOut = _fadeOut->getValueAtTime(time);
+    int crossDissolve = _crossDissolve->getValueAtTime(time);
+
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, clip0, t0, alpha0, clip1, t1, alpha1, NULL);
+}
+
+int
+AppendClipPlugin::getLastFrameAtTime(double time)
+{
+    int firstFrame = _firstFrame->getValueAtTime(time);
+    int fadeIn = _fadeIn->getValueAtTime(time);
+    int fadeOut = _fadeOut->getValueAtTime(time);
+    int crossDissolve = _crossDissolve->getValueAtTime(time);
+    int lastFrame;
+
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
+
+    return lastFrame;
+}
+
 /* set up and run a processor */
 void
 AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
@@ -571,21 +614,13 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
 # endif
     
     const double time = args.time;
-    int firstFrame;
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0;
     double t0;
     double alpha0;
     int clip1;
     double t1;
     double alpha1;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, &alpha0, &clip1, &t1, &alpha1, NULL);
+    getSourcesAtTime(time, &clip0, &t0, &alpha0, &clip1, &t1, &alpha1);
 
     if ( ( (clip0 == -1) && (clip1 == -1) ) || ( (alpha0 == 0.) && (alpha1 == 0.) ) ) {
         // no clip, just fill with black
@@ -716,19 +751,10 @@ AppendClipPlugin::isIdentity(const IsIdentityArguments &args,
                              , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0;
     double t0;
     double alpha0;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, &alpha0, NULL, NULL, NULL, NULL);
+    getSourcesAtTime(time, &clip0, &t0, &alpha0, NULL, NULL, NULL);
     assert( clip0 >= -1 && clip0 < (int)_srcClip.size() );
     if ( (clip0 >= 0) && ( clip0 < (int)_srcClip.size() ) && (alpha0 == 1.) ) {
         identityClip = _srcClip[clip0];
@@ -749,17 +775,8 @@ AppendClipPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                        RegionOfInterestSetter &rois)
 {
     const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0, clip1;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, NULL, NULL, &clip1, NULL, NULL, NULL);
+    getSourcesAtTime(time, &clip0, NULL, NULL, &clip1, NULL, NULL);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         if ( ( (int)i != clip0 ) && ( (int)i != clip1 ) ) {
@@ -773,18 +790,10 @@ AppendClipPlugin::getFramesNeeded(const FramesNeededArguments &args,
                                   FramesNeededSetter &frames)
 {
     const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0, clip1;
     double t0, t1;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, &clip1, &t1, NULL, NULL);
+    getSourcesAtTime(time, &clip0, &t0, NULL, &clip1, &t1, NULL);
+    const int firstFrame = _firstFrame->getValueAtTime(time);
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         OfxRangeD range;
         if (i == (unsigned)clip0) {
@@ -817,18 +826,9 @@ AppendClipPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
     const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0;
     double t0;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, NULL, NULL, NULL, NULL);
+    getSourcesAtTime(time, &clip0, &t0, NULL, NULL, NULL, NULL);
     assert( clip0 >= -1 && clip0 < (int)_srcClip.size() );
     if ( (clip0 >= 0) && ( clip0 < (int)_srcClip.size() ) ) {
         rod = _srcClip[clip0]->getRegionOfDefinition(t0);
@@ -843,19 +843,7 @@ void
 AppendClipPlugin::changedClip(const InstanceChangedArgs &args,
                               const std::string & /*clipName*/)
 {
-    const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
-    int lastFrame;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
-    _lastFrame->setValue(lastFrame);
+    _lastFrame->setValue( getLastFrameAtTime(args.time) );
 }
 
 void
@@ -865,17 +853,7 @@ AppendClipPlugin::changedParam(const InstanceChangedArgs &args,
     const double time = args.time;
 
     if ( (paramName != kParamLastFrame) && (args.reason == eChangeUserEdit) ) {
-        int firstFrame;
-        _firstFrame->getValueAtTime(time, firstFrame);
-        int fadeIn;
-        _fadeIn->getValueAtTime(time, fadeIn);
-        int fadeOut;
-        _fadeOut->getValueAtTime(time, fadeOut);
-        int crossDissolve;
-        _crossDissolve->getValueAtTime(time, crossDissolve);
-        int lastFrame;
-        getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
-        _lastFrame->setValue(lastFrame);
+        _lastFrame->setValue( getLastFrameAtTime(time) );
     }
 }
 
