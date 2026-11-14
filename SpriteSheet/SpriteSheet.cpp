@@ -261,7 +261,11 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
     if ( !src.get() || !( _srcClip && _srcClip->isConnected() ) ) {
-        // nothing to do
+        // no source: fill the render window with black (the processor writes 0 when there is no source image)
+        processor.setDstImg( dst.get() );
+        processor.setRenderWindow(args.renderWindow, args.renderScale);
+        processor.process();
+
         return;
     } else {
 #     ifndef NDEBUG
