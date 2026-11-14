@@ -358,7 +358,9 @@ NoOpPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         _pixelAspectRatio->getValueAtTime(args.time, pixelAspectRatio);
     }
 #ifdef OFX_EXTENSIONS_NATRON
-    if (_formatPar) {
+    // the format PAR is only used if the format is actually set
+    if ( _formatPar && _setFormat && _extent && _setFormat->getValueAtTime(args.time) &&
+         ( (GeneratorExtentEnum)_extent->getValueAtTime(args.time) == eGeneratorExtentFormat ) ) {
         _formatPar->getValueAtTime(args.time, pixelAspectRatio);
     }
 #endif
