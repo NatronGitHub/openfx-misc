@@ -28,6 +28,9 @@ include $(TOP_SRCDIR)/Makefile.master
 VPATH += $(TOP_SRCDIR)/CImg
 CXXFLAGS += -I$(TOP_SRCDIR)/CImg
 
+# the shared CImg sources also need CImg.h (downloaded by ../Makefile)
+$(OBJECTPATH)/CImgFilter.o $(OBJECTPATH)/CImgOperator.o: CImg.h
+
 $(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImg.h
 
 $(OBJECTPATH)/CImgErode.o: CImgErode.cpp  CImg.h
