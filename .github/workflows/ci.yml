@@ -60,13 +60,15 @@ jobs:
           update: true
           install: git base-devel mingw-w64-x86_64-cc
       - name: Build (release)
+        # link the MinGW runtime (libstdc++, libgcc, winpthread) statically so
+        # that the bundles also load in hosts that do not ship these DLLs
         run: |
-          make -j2 CONFIG=release TESTS=1
+          make -j2 CONFIG=release TESTS=1 LDFLAGS_ADD=-static
           mkdir -p Bundle
           mv {CImg,Misc,Shadertoy,Test}/MINGW64*-release/*.ofx.bundle Bundle
       - name: Build separate plugins (release, nomulti)
         run: |
-          make -j2 nomulti CONFIG=release
+          make -j2 nomulti CONFIG=release LDFLAGS_ADD=-static
           mkdir -p BundleNoMulti
           mv */MINGW64*-release/*.ofx.bundle CImg/*/MINGW64*-release/*.ofx.bundle BundleNoMulti
       - name: Build (debug)

@@ -36,6 +36,9 @@ continuous integration:
    - `openfx-misc-build-windows-release`: Windows (64-bit, MinGW-w64) plugins.
    - `openfx-misc-build-windows-nomulti-release`: the same Windows plugins, with one
      bundle per plugin, if you only need a few of them.
+
+   Artifacts are deleted by GitHub after 90 days, so always use the latest successful
+   run.
 3. Unzip the archive. It contains directories named `*.ofx.bundle` (for example
    `Misc.ofx.bundle`, `CImg.ofx.bundle`, `Shadertoy.ofx.bundle`).
 4. Copy these `*.ofx.bundle` directories, as they are, into the standard OpenFX
