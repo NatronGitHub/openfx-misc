@@ -558,10 +558,13 @@ CropPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         // translate, because cropRect will be rendered at (0,0) in this case
         // Remember: this is the region of INTEREST: the region from the input
         // used to render the region args.regionOfInterest
-        roi.x1 += cropRect.x1;
-        roi.y1 += cropRect.y1;
-        roi.x2 += cropRect.x1;
-        roi.y2 += cropRect.y1;
+        // The translation is given by the full (non-intersected) crop rectangle, as in render.
+        OfxRectD cropRectFull;
+        getCropRectangle(args.time, args.renderScale, /*useIntersect=*/ false, /*forceIntersect=*/ false, /*useBlackOutside=*/ false, /*useReformat=*/ false, &cropRectFull, NULL);
+        roi.x1 += cropRectFull.x1;
+        roi.y1 += cropRectFull.y1;
+        roi.x2 += cropRectFull.x1;
+        roi.y2 += cropRectFull.y1;
     }
 
     // intersect the crop rectangle with args.regionOfInterest
