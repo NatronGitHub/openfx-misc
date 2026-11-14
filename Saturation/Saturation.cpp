@@ -199,10 +199,10 @@ public:
     }
 
     template<bool processR, bool processG, bool processB, bool processA>
-    void grade(double *r,
-               double *g,
-               double *b,
-               double *a)
+    void saturate(double *r,
+                  double *g,
+                  double *b,
+                  double *a)
     {
         double l;
 
@@ -243,9 +243,6 @@ public:
         if (processB) {
             *b = (1. - _saturation) * l + _saturation * *b;
         }
-        if (processA) {
-            // nothing to do
-        }
         if (_clampBlack) {
             if (processR) {
                 *r = (std::max)(0., *r);
@@ -274,7 +271,7 @@ public:
                 *a = (std::min)(1., *a);
             }
         }
-    } // grade
+    } // saturate
 
 private:
     double _saturation;
@@ -391,7 +388,7 @@ private:
                 double t_g = unpPix[1];
                 double t_b = unpPix[2];
                 double t_a = unpPix[3];
-                grade<processR, processG, processB, processA>(&t_r, &t_g, &t_b, &t_a);
+                saturate<processR, processG, processB, processA>(&t_r, &t_g, &t_b, &t_a);
                 tmpPix[0] = (float)t_r;
                 tmpPix[1] = (float)t_g;
                 tmpPix[2] = (float)t_b;

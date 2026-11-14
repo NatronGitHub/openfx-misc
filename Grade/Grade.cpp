@@ -248,48 +248,6 @@ protected:
             rgba->a = 0;
         }
     }
-
-    /*
-    template<class PIX, int nComponents, int maxValue>
-    void pixToHSVL(const PIX *p,
-                   float hsvl[4])
-    {
-        if ( (nComponents == 4) || (nComponents == 3) ) {
-            float r, g, b;
-            r = p[0] / (float)maxValue;
-            g = p[1] / (float)maxValue;
-            b = p[2] / (float)maxValue;
-            Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
-            hsvl[0] *= 360 / OFXS_HUE_CIRCLE;
-            float min = (std::min)((std::min)(r, g), b);
-            float max = (std::max)((std::max)(r, g), b);
-            hsvl[3] = (min + max) / 2;
-        } else {
-            hsvl[0] = hsvl[1] = hsvl[2] = hsvl[3] = 0.f;
-        }
-    }
-    */
-
-    template<class PIX, int nComponents, int maxValue>
-    void toComponents(const RGBAValues& rgba,
-                      PIX *p)
-    {
-        if (nComponents == 4) {
-            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[2] = rgba.b * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[3] = rgba.a * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-        } else if (nComponents == 3) {
-            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[2] = rgba.b * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-        } else if (nComponents == 2) {
-            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-        } else if (nComponents == 1) {
-            p[0] = rgba.a * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-        }
-    }
 };
 
 
