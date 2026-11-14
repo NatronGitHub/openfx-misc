@@ -326,7 +326,7 @@ class MergeProcessorBase
     : public ImageProcessor
 {
 protected:
-    ImageEffectVersioned& _effect;
+    unsigned int _majorVersion;
     std::vector<const Image*> _srcImgAs;
     const Image *_srcImgB;
     const Image* _rotoMaskImgB;
@@ -344,7 +344,7 @@ public:
 
     MergeProcessorBase(ImageEffectVersioned &instance)
         : ImageProcessor(instance)
-        , _effect(instance)
+        , _majorVersion( instance.getMajorVersion() )
         , _srcImgAs()
         , _srcImgB(NULL)
         , _rotoMaskImgB(NULL)
@@ -467,7 +467,7 @@ private:
                 // If the operator is not identity when B only is connected, still process
                 // one A input, even if none is connected.
                 // This behavior was introduced in version 2.0.
-                if ( _srcImgAs.size() == 0 && ( isIdentityForBOnly(f) || _effect.getMajorVersion() == 1 ) ) {
+                if ( _srcImgAs.size() == 0 && ( isIdentityForBOnly(f) || _majorVersion == 1 ) ) {
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = (_outputChannels[nComponents > 1 ? c : 3] && srcPixB) ? srcPixB[c] : 0;
