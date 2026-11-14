@@ -454,7 +454,6 @@ protected:
     bool _magenta; // Magenta: Override autolevel with magenta component.
     bool _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     bool _clampAlpha; // Clamp: Clamp matte to 0-1.
-    bool _rgbal; // Legalize rgba relationship.
     double _screenClipMin;
     double _screenClipMax;
     ReplaceEnum _screenReplace;
@@ -492,7 +491,6 @@ public:
         , _magenta(kParamMagentaDefault)
         , _ss(kParamSSDefault)
         , _clampAlpha(kParamClampAlphaDefault)
-        , _rgbal(kParamRGBALDefault)
         , _screenClipMin(0.)
         , _screenClipMax(1.)
         , _screenReplace(eReplaceSoftColor)
@@ -542,7 +540,6 @@ public:
                    bool magenta, // Magenta: Override autolevel with magenta component.
                    bool ss, // Screen Subtraction: Have the keyer subtract the foreground or just premult.
                    bool clampAlpha, // Clamp: Clamp matte to 0-1.
-                   bool rgbal, // Legalize rgba relationship.
                    double screenClipMin,
                    double screenClipMax,
                    ReplaceEnum screenReplace,
@@ -592,7 +589,6 @@ public:
         _magenta = magenta;
         _ss = ss;
         _clampAlpha = clampAlpha;
-        _rgbal = rgbal;
         _screenClipMin = screenClipMin;
         _screenClipMax = (std::max)(screenClipMin + 0.0001, screenClipMax); // avoid divisions by zero
         _screenReplace = screenReplace;
@@ -1017,32 +1013,6 @@ private:
                                     alpha = 1.;
                                 } else {
                                     alpha = 1. - pfgKey / cKey;
-#ifndef DISABLE_RGBAL
-#pragma message WARN("RGBAL is not yet properly implemented")
-                                    // wrong
-                                    if (_rgbal) {
-                                        float k[3] = {0., 0., 0.};
-                                        for (int i = 0; i < 3; ++i) {
-                                            if (c[i] > 0) {
-                                                k[i] = pfg[i] / c[i];
-                                            }
-                                        }
-                                        double kmax = -DBL_MAX;
-                                        for (int i = 0; i < 3; ++i) {
-                                            if (k[i] > kmax) {
-                                                kmax = k[i];
-                                            }
-                                        }
-                                        float kKey = pfgKey / cKey;
-                                        if ( (kKey > kmax) && (kKey > 1.) ) {
-                                            alpha = 0.; // the "zero zone" is OK
-                                        } else {
-                                            // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
-                                            // the closest I could get to IBK
-                                            alpha = (std::max)( (double)alpha, (std::min)( (kmax - kKey) / (50 * kKey), 1. ) );
-                                        }
-                                    }
-#endif
                                 }
                             }
                         }
@@ -1061,30 +1031,6 @@ private:
                                     alpha = 1.;
                                 } else {
                                     alpha = 1. - pfgKey / cKey;
-#ifndef DISABLE_RGBAL
-                                    if (_rgbal) {
-                                        float k[3] = {0., 0., 0.};
-                                        for (int i = 0; i < 3; ++i) {
-                                            if (c[i] > 0) {
-                                                k[i] = pfg[i] / c[i];
-                                            }
-                                        }
-                                        double kmax = -DBL_MAX;
-                                        for (int i = 0; i < 3; ++i) {
-                                            if (k[i] > kmax) {
-                                                kmax = k[i];
-                                            }
-                                        }
-                                        float kKey = pfgKey / cKey;
-                                        if ( (kKey > kmax) && (kKey > 1.) ) {
-                                            alpha = 0.; // the "zero zone" is OK
-                                        } else {
-                                            // the second part ((kmax - kKey) / (50*kKey)) is wrong, but that's
-                                            // the closest I could get to IBK
-                                            alpha = (std::max)( (double)alpha, (std::min)( (kmax - kKey) / (50 * kKey), 1. ) );
-                                        }
-                                    }
-#endif
                                 }
                             }
                         }
@@ -1119,31 +1065,6 @@ private:
                         out[i] = v < 0. ? 0 : v;
                     }
                 }
-                    /*
-                       } else if (_rgbal) {
-                       double alphamin = DBL_MAX;
-                       for (int i = 0; i < 3; ++i) {
-                        if (c[i] > 0) {
-                            double a = 1. - pfg[i] / c[i];
-                            if (a < alphamin) {
-                                alphamin = a;
-                            }
-                        }
-                       }
-                       // alphamin, which corresponds to black is mapped to alpha=0
-                       // alpha = alphamin -> 0.
-                       // alpha = 1 -> 1.
-                       alpha = (alpha - alphamin) / (1. - alphamin);
-                       if (alpha <= 0.) {
-                        alpha = 0.;
-                        dstPix[0] = dstPix[1] = dstPix[2] = 0;
-                        dstPix[0] = dstPix[1] = dstPix[2] = 1;alpha=1;
-                       } else {
-                        for (int i = 0; i < 3; ++i) {
-                            dstPix[i] = floatToSample<PIX, maxValue>(fg[i]*alpha);
-                        }
-                       }
-                     */
 
                 if (_clampAlpha) {
                     if (alpha < 0.) {
@@ -1729,7 +1650,6 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     bool magenta = _magenta->getValueAtTime(time);
     bool ss = _ss->getValueAtTime(time);
     bool clampAlpha = _clampAlpha->getValueAtTime(time);
-    bool rgbal = _rgbal->getValueAtTime(time);
     double screenClipMin = _screenClipMin->getValueAtTime(time);
     double screenClipMax = _screenClipMax->getValueAtTime(time);
     ReplaceEnum screenReplace = (ReplaceEnum)_screenReplace->getValueAtTime(time);
@@ -1897,7 +1817,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     }
 # endif
 
-    processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha, rgbal,
+    processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha,
                         screenClipMin, screenClipMax, screenReplace, screenReplaceColor,
                         sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode);
     processor.setDstImg( dst.get() );
