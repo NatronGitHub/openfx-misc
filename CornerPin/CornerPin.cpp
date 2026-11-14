@@ -104,7 +104,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier "net.sf.openfx.CornerPinPlugin"
 #define kPluginMaskedIdentifier "net.sf.openfx.CornerPinMaskedPlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define POINT_SIZE 5
@@ -194,13 +194,15 @@ class CornerPinPlugin
 public:
     /** @brief ctor */
     CornerPinPlugin(OfxImageEffectHandle handle,
-                    bool masked)
+                    bool masked,
+                    unsigned int majorVersion)
         : Transform3x3Plugin(handle, masked, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur)
         , _transformAmount(NULL)
         , _extraMatrixRow1(NULL)
         , _extraMatrixRow2(NULL)
         , _extraMatrixRow3(NULL)
         , _srcClipChanged(NULL)
+        , _majorVersion(majorVersion)
     {
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
@@ -279,6 +281,7 @@ private:
     Double3DParam* _extraMatrixRow3;
     Double2DParam* _from[4];
     BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    unsigned int _majorVersion;
 };
 
 
@@ -325,7 +328,14 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
 
     assert(0 <= k && k <= 4);
     Matrix3x3 extraMat = getExtraMatrix(time);
-    if (invert) {
+    // Before version 2, the transform used for rendering with "Invert" checked was homo3x3 * extraMat
+    // (instead of inverse(extraMat) * homo3x3). Keep that render for old instances, and compute the
+    // direct transform used for the RoD as its inverse, which means swapping the composition order.
+    bool composeInverted = invert;
+    if ( (_majorVersion < 2) && _invert && _invert->getValueAtTime(time) ) {
+        composeInverted = !invert;
+    }
+    if (composeInverted) {
         // the direct transform is the inverse of homo3x3 * extraMat, i.e. inverse(extraMat) * inverse(homo3x3)
         Matrix3x3 extraMatInverse;
         if ( !extraMat.inverse(&extraMatInverse) ) {
@@ -366,7 +376,7 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
         homo3x3 *= -1;
     }
 
-    if (invert) {
+    if (composeInverted) {
         *invtransform = extraMat * homo3x3;
     } else {
         *invtransform = homo3x3 * extraMat;
@@ -1341,6 +1351,9 @@ CornerPinPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, false);
+    if (getMajorVersion() < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
@@ -1371,7 +1384,7 @@ ImageEffect*
 CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    return new CornerPinPlugin(handle, false);
+    return new CornerPinPlugin(handle, false, getMajorVersion());
 }
 
 mDeclarePluginFactory(CornerPinMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
@@ -1384,6 +1397,9 @@ CornerPinMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, true);
+    if (getMajorVersion() < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
@@ -1414,12 +1430,17 @@ ImageEffect*
 CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
                                              ContextEnum /*context*/)
 {
-    return new CornerPinPlugin(handle, true);
+    return new CornerPinPlugin(handle, true, getMajorVersion());
 }
 
 static CornerPinPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static CornerPinMaskedPluginFactory p2(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// version 1: "Invert" composes the extra matrix as homo3x3 * extraMat
+static CornerPinPluginFactory p1v1(kPluginIdentifier, 1, 0);
+static CornerPinMaskedPluginFactory p2v1(kPluginMaskedIdentifier, 1, 0);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p1v1)
+mRegisterPluginFactoryInstance(p2v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
