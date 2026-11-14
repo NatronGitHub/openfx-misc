@@ -20,10 +20,35 @@ To compile openfx-misc from source, see the Installation section below. There is
 
 ### Binaries
 
-Windows binaries compiled with Visual Studio 2017 (which should be compatible with most OpenFX hosts including [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve/)) are available as part of the [openfx-misc project on AppVeyor](https://ci.appveyor.com/project/NatronGitHub/openfx-misc/build/artifacts).
+The easiest way to get these plugins is to install
+[Natron](https://natrongithub.github.io/): they are included in all Natron binary
+distributions, so there is nothing else to install.
 
-Windows binaries compiled with MinGW MinGW-w64 are available as part of the portable Natron binary distributions for Windows.
+To use the plugins with another OpenFX host, you can download binaries built by the
+continuous integration:
 
+1. Go to the [GitHub Actions page](https://github.com/NatronGitHub/openfx-misc/actions)
+   of openfx-misc, and click on the latest successful run of the "Continous
+   Integration tests" workflow on the `master` branch.
+2. At the bottom of the page, in the "Artifacts" section, download the archive for
+   your system (you must be logged in to GitHub):
+   - `openfx-misc-build-ubuntu_22-release`: Linux (64-bit) plugins.
+   - `openfx-misc-build-windows-release`: Windows (64-bit, MinGW-w64) plugins.
+   - `openfx-misc-build-windows-nomulti-release`: the same Windows plugins, with one
+     bundle per plugin, if you only need a few of them.
+3. Unzip the archive. It contains directories named `*.ofx.bundle` (for example
+   `Misc.ofx.bundle`, `CImg.ofx.bundle`, `Shadertoy.ofx.bundle`).
+4. Copy these `*.ofx.bundle` directories, as they are, into the standard OpenFX
+   plugins directory for your system (create it if it does not exist):
+   - Linux: `/usr/OFX/Plugins`
+   - macOS: `/Library/OFX/Plugins`
+   - Windows: `C:\Program Files\Common Files\OFX\Plugins`
+5. Restart your OpenFX host.
+
+Do not rename the bundles or the files they contain, and do not copy only the `.ofx`
+file: the host needs the whole `*.ofx.bundle` directory.
+
+Older Windows binaries compiled with Visual Studio 2017 (which should be compatible with most OpenFX hosts including [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve/)) are available as part of the [openfx-misc project on AppVeyor](https://ci.appveyor.com/project/NatronGitHub/openfx-misc/build/artifacts). These builds are no longer updated regularly.
 
 License
 -------
@@ -263,8 +288,16 @@ Installation
 
 These plugins are included in the binary distributions of [Natron](https://natrongithub.github.io/).
 
-If you want to compile the plugins from source, you may either use the
-provided Unix Makefile, the Xcode project, or the Visual Studio project.
+If you want to compile the plugins from source, the recommended way is to use the
+provided Makefiles (this is what the continuous integration and the Natron binaries
+use, on Linux, macOS, and Windows with MSYS2/MinGW-w64). The CMake build, the Xcode
+project, and the Visual Studio project are alternatives, which may not always be up
+to date.
+
+Whichever method you use, the compiled `*.ofx.bundle` directories must end up in
+the standard OpenFX plugins directory: `/usr/OFX/Plugins` on Linux,
+`/Library/OFX/Plugins` on macOS, `C:\Program Files\Common Files\OFX\Plugins` on
+Windows.
 
 ### Getting the sources from github
 
@@ -312,10 +345,22 @@ compiling:
 
 	sudo make install [options]
 
-### Using CMake
+### Using CMake (alternative)
 
-An out-of-tree CMake build is also available (`mkdir build && cd build && cmake .. && cmake --build .`).
-`CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded at configure time if missing (at the version given in `CImg/CImgVersion.mk`), and the CImg plugins can be disabled with `-DBUILD_CIMG_PLUGINS=OFF`.
+CMake is supported as an alternative to the Makefiles. It only builds the combined
+`Misc` and `CImg` bundles, and only out-of-tree builds are allowed.
+`CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded at configure time if missing
+(at the version given in `CImg/CImgVersion.mk`), and the CImg plugins can be disabled
+with `-DBUILD_CIMG_PLUGINS=OFF`. By default, `make install` copies the bundles directly
+into `CMAKE_INSTALL_PREFIX`, which is `/usr/local` on Unix, so set it to the OpenFX
+plugins directory:
+
+	mkdir build && cd build
+	cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/OFX/Plugins
+	make
+	sudo make install
+
+Use `-DCMAKE_INSTALL_PREFIX=/Library/OFX/Plugins` on macOS.
 
 ### OS X, using Xcode
 
