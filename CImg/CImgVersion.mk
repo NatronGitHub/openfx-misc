@@ -2,7 +2,6 @@
 # see https://github.com/dtschump/CImg/commits/master/CImg.h
 # This file is included by CImg/Makefile and parsed by the toplevel
 # CMakeLists.txt, so the version is declared in a single place.
-# Important: must be also set in .appveyor.yml at toplevel.
 #
 # commit a841cc3080ee7bc00c5781e94b7f06c2920453ac is CImg 2.2.3+
 # commit 4d54d452896fdf9347af68d3854f98f4986eea4c is CImg 2.3.1
