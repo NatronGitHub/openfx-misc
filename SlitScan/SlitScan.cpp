@@ -26,6 +26,7 @@
 #include <cassert>
 #include <set>
 #include <map>
+#include <algorithm> // for max
 
 #include "ofxsImageEffect.h"
 #include "ofxsThreadSuite.h"
@@ -596,12 +597,12 @@ public:
                 switch (_retimeFunction) {
                 case eRetimeFunctionHorizontalSlit: {
                     // A vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the top image line.
-                    retimeVal = (double)(y - _srcRoDPixel.y1) / (_srcRoDPixel.y2 - 1 - _srcRoDPixel.y1);
+                    retimeVal = (double)(y - _srcRoDPixel.y1) / (std::max)(1, _srcRoDPixel.y2 - 1 - _srcRoDPixel.y1);
                     break;
                 }
                 case eRetimeFunctionVerticalSlit: {
                     // A horizontal ramp (alinear function of x) which is 0 at the center of the leftmost image line, and 1 at the center of the rightmost image line."
-                    retimeVal = (double)(x - _srcRoDPixel.x1) / (_srcRoDPixel.x2 - 1 - _srcRoDPixel.x1);
+                    retimeVal = (double)(x - _srcRoDPixel.x1) / (std::max)(1, _srcRoDPixel.x2 - 1 - _srcRoDPixel.x1);
                     break;
                 }
                 case eRetimeFunctionRetimeMap: {
@@ -730,14 +731,16 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
 
     switch (retimeFunction) {
     case eRetimeFunctionHorizontalSlit: {
-        double a = (double)(args.renderWindow.y1 - srcRoDPixel.y1) / (srcRoDPixel.y2 - 1 - srcRoDPixel.y1);
-        double b = (double)(args.renderWindow.y2 - 1 - srcRoDPixel.y1) / (srcRoDPixel.y2 - 1 - srcRoDPixel.y1);
+        const int h = (std::max)(1, srcRoDPixel.y2 - 1 - srcRoDPixel.y1); // avoid division by zero
+        double a = (double)(args.renderWindow.y1 - srcRoDPixel.y1) / h;
+        double b = (double)(args.renderWindow.y2 - 1 - srcRoDPixel.y1) / h;
         buildTimesSlit(time, a, b, retimeGain, retimeOffset, retimeAbsolute, filter, &sourceImagesTimes);
         break;
     }
     case eRetimeFunctionVerticalSlit: {
-        double a = (double)(args.renderWindow.x1 - srcRoDPixel.y1) / (srcRoDPixel.x2 - 1 - srcRoDPixel.x1);
-        double b = (double)(args.renderWindow.x2 - 1 - srcRoDPixel.x1) / (srcRoDPixel.x2 - 1 - srcRoDPixel.x1);
+        const int w = (std::max)(1, srcRoDPixel.x2 - 1 - srcRoDPixel.x1); // avoid division by zero
+        double a = (double)(args.renderWindow.x1 - srcRoDPixel.x1) / w;
+        double b = (double)(args.renderWindow.x2 - 1 - srcRoDPixel.x1) / w;
         buildTimesSlit(time, a, b, retimeGain, retimeOffset, retimeAbsolute, filter, &sourceImagesTimes);
         break;
     }
