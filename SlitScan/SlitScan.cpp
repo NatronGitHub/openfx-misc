@@ -734,15 +734,15 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
         }
         if ( !retimeMap.get() ) {
             // empty retimeMap or no gain, we need only one or two images
-            double identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
-            if (identityTime == (int)identityTime) {
-                sourceImagesTimes.insert(identityTime);
+            double retimeTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
+            if (retimeTime == (int)retimeTime) {
+                sourceImagesTimes.insert(retimeTime);
             } else {
                 if (filter == eFilterNearest) {
-                    sourceImagesTimes.insert( std::floor(identityTime + 0.5) );
+                    sourceImagesTimes.insert( std::floor(retimeTime + 0.5) );
                 } else {
-                    sourceImagesTimes.insert( std::floor(identityTime) );
-                    sourceImagesTimes.insert( std::ceil(identityTime) );
+                    sourceImagesTimes.insert( std::floor(retimeTime) );
+                    sourceImagesTimes.insert( std::ceil(retimeTime) );
                 }
             }
         } else {
