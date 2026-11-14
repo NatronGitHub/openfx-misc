@@ -228,6 +228,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.0: use kNatronOfxParamProcess* parameters
 // version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
 // version 4.1: added cropToFormat parameter on Natron
+// EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5)
+#define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -1159,7 +1161,8 @@ class CImgBlurPlugin
 public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle,
-                   BlurPluginEnum blurPlugin = eBlurPluginBlur)
+                   BlurPluginEnum blurPlugin = eBlurPluginBlur,
+                   int majorVersion = kPluginVersionMajor)
         : CImgFilterPluginHelper<CImgBlurParams, false>(handle, /*usesMask=*/false,
                                                         blurPlugin == eBlurPluginChromaBlur ? false : kSupportsComponentRemapping,
                                                         kSupportsTiles,
@@ -1167,6 +1170,7 @@ public:
                                                         kSupportsRenderScale,
                                                         kDefaultUnpremult)
         , _blurPlugin(blurPlugin)
+        , _edgeDetectRMSSignFix(blurPlugin == eBlurPluginEdgeDetect && majorVersion >= 5)
         , _sharpenSoftenAmount(NULL)
         , _size(NULL)
         , _erodeSize(NULL)
@@ -2271,13 +2275,14 @@ public:
                     double gx = grad[0](x, y, 0, c);
                     double gy = grad[1](x, y, 0, c);
                     sumsq += gx * gx + gy * gy;
+                    // versions < 5 tested std::abs(g) < 0, which is always false
                     if (std::abs(gx) > std::abs(gy)) {
-                        if (gx < 0) {
+                        if (_edgeDetectRMSSignFix && gx < 0) {
                             gx = -gx;
                             gy = -gy;
                         }
                     } else {
-                        if (gy < 0) {
+                        if (_edgeDetectRMSSignFix && gy < 0) {
                             gx = -gx;
                             gy = -gy;
                         }
@@ -2502,6 +2507,7 @@ private:
 
     // params
     const BlurPluginEnum _blurPlugin;
+    const bool _edgeDetectRMSSignFix; // EdgeDetect versions < 5 never flipped the gradient sign in RMS mode
     DoubleParam *_sharpenSoftenAmount;
     Double2DParam *_size;
     DoubleParam *_erodeSize;
@@ -2535,7 +2541,7 @@ CImgBlurPlugin::describe(ImageEffectDescriptor& desc,
                          int /*minorVersion*/,
                          BlurPluginEnum blurPlugin)
 {
-    if (majorVersion < kPluginVersionMajor) {
+    if ( majorVersion < ( (blurPlugin == eBlurPluginEdgeDetect) ? kPluginVersionMajorEdgeDetect : kPluginVersionMajor ) ) {
         desc.setIsDeprecated(true);
     }
     // basic labels
@@ -3280,7 +3286,7 @@ ImageEffect*
 CImgEdgeDetectPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                           ContextEnum /*context*/)
 {
-    return new CImgBlurPlugin(handle, eBlurPluginEdgeDetect);
+    return new CImgBlurPlugin(handle, eBlurPluginEdgeDetect, majorVersion);
 }
 
 
@@ -3294,6 +3300,9 @@ mRegisterPluginFactoryInstance(oldp1)
 mRegisterPluginFactoryInstance(oldp2)
 mRegisterPluginFactoryInstance(oldp3)
 mRegisterPluginFactoryInstance(oldp4)
+// EdgeDetect version 4 is kept for backward compatibility (RMS gradient direction)
+static CImgEdgeDetectPluginFactory<kPluginVersionMajor> oldp9(kPluginIdentifierEdgeDetect, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(oldp9)
 
 static CImgBlurPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
 static CImgLaplacianPluginFactory<kPluginVersionMajor> p2(kPluginIdentifierLaplacian, kPluginVersionMinor);
@@ -3303,7 +3312,7 @@ static CImgErodeBlurPluginFactory<kPluginVersionMajor> p5(kPluginIdentifierErode
 static CImgSharpenPluginFactory<kPluginVersionMajor> p6(kPluginIdentifierSharpen, kPluginVersionMinor);
 static CImgSoftenPluginFactory<kPluginVersionMajor> p7(kPluginIdentifierSoften, kPluginVersionMinor);
 static CImgEdgeExtendPluginFactory<kPluginVersionMajor> p8(kPluginIdentifierEdgeExtend, kPluginVersionMinor);
-static CImgEdgeDetectPluginFactory<kPluginVersionMajor> p9(kPluginIdentifierEdgeDetect, kPluginVersionMinor);
+static CImgEdgeDetectPluginFactory<kPluginVersionMajorEdgeDetect> p9(kPluginIdentifierEdgeDetect, 0);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
