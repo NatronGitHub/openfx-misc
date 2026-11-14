@@ -316,7 +316,7 @@ private:
                 // we may free this buffer
                 {
                     AutoMutex guard( gTimeBufferMapMutex.get() );
-                    gTimeBufferMap->erase(_name);
+                    gTimeBufferMap->erase(_projectId + '.' + _groupId + '.' + _name);
                 }
                 delete _buffer;
                 _buffer = 0;
@@ -987,7 +987,7 @@ private:
                 // we may free this buffer
                 {
                     AutoMutex guard( gTimeBufferMapMutex.get() );
-                    gTimeBufferMap->erase(_name);
+                    gTimeBufferMap->erase(_projectId + '.' + _groupId + '.' + _name);
                 }
                 delete _buffer;
                 _buffer = 0;
