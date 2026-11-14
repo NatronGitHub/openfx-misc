@@ -56,6 +56,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "By default, the kernel origin is the center of the Filter format (or of the project window if the host does not support formats). " \
     "The 'Filter Center' parameter can also center the kernel automatically on its centroid (the weighted mean position of its pixels, with weights equal to the absolute kernel values), or on the center of its region of definition.\n" \
     "\n" \
+    "An infinite Filter region of definition (e.g. from a Constant generator) is clamped to the Filter format (or project window).\n" \
     "The output region of definition is the Source region of definition, enlarged by the kernel extent. Pixels outside of the Source region of definition are considered black and transparent.\n" \
     "At a render scale lower than 1 (e.g. proxy mode), the Filter image is fetched at the same render scale as Source.\n" \
     "If the Filter input is not connected, Source is passed through.\n" \
@@ -189,22 +190,36 @@ public:
         if (params.filterConnected) {
             params.filterRoD = _filterClip->getRegionOfDefinition(time);
             params.par = _filterClip->getPixelAspectRatio();
+            // the Filter format, in canonical coordinates (or the project window)
+            OfxRectD formatRect;
             bool gotFormat = false;
 #ifdef OFX_EXTENSIONS_NATRON
             OfxRectI format;
             _filterClip->getFormat(format);
             if ( !Coords::rectIsEmpty(format) ) {
                 // the format is in pixel coordinates at render scale 1
-                params.formatCenter.x = (format.x1 + format.x2) * 0.5 * params.par;
-                params.formatCenter.y = (format.y1 + format.y2) * 0.5;
+                formatRect.x1 = format.x1 * params.par;
+                formatRect.x2 = format.x2 * params.par;
+                formatRect.y1 = format.y1;
+                formatRect.y2 = format.y2;
                 gotFormat = true;
             }
 #endif
             if (!gotFormat) {
                 OfxPointD offset = getProjectOffset();
                 OfxPointD size = getProjectSize();
-                params.formatCenter.x = offset.x + size.x * 0.5;
-                params.formatCenter.y = offset.y + size.y * 0.5;
+                formatRect.x1 = offset.x;
+                formatRect.x2 = offset.x + size.x;
+                formatRect.y1 = offset.y;
+                formatRect.y2 = offset.y + size.y;
+            }
+            params.formatCenter.x = (formatRect.x1 + formatRect.x2) * 0.5;
+            params.formatCenter.y = (formatRect.y1 + formatRect.y2) * 0.5;
+            // an infinite Filter RoD (e.g. from a Constant generator) is clamped to the format
+            if ( Coords::rectIsInfinite(params.filterRoD) ) {
+                if ( !Coords::rectIntersection(params.filterRoD, formatRect, &params.filterRoD) ) {
+                    params.filterRoD.x1 = params.filterRoD.y1 = params.filterRoD.x2 = params.filterRoD.y2 = 0.;
+                }
             }
         }
         params.filterChannel = _filterChannel->getValueAtTime(time);
@@ -307,15 +322,17 @@ public:
         return true;
     }
 
-    // the Filter clip needs its whole region of definition
+    // the Filter clip needs its whole region of definition (clamped to its format if infinite)
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                       RegionOfInterestSetter &rois) OVERRIDE FINAL
     {
         CImgFilterPluginHelper<CImgConvolveParams, false>::getRegionsOfInterest(args, rois);
         if ( _filterClip && _filterClip->isConnected() ) {
-            OfxRectD filterRoD = _filterClip->getRegionOfDefinition(args.time);
-            if ( !Coords::rectIsEmpty(filterRoD) ) {
-                rois.setRegionOfInterest(*_filterClip, filterRoD);
+            // use the same (possibly clamped) Filter RoD as getKernelOffsets()
+            CImgConvolveParams params;
+            getValuesAtTime(args.time, params);
+            if ( !Coords::rectIsEmpty(params.filterRoD) ) {
+                rois.setRegionOfInterest(*_filterClip, params.filterRoD);
             }
         }
     }
