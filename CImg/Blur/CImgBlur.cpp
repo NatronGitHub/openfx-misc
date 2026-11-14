@@ -2341,14 +2341,16 @@ public:
 
         if ( abort() ) { return; }
 
+        // par is 0 if the source is not connected
+        const double par = (params.par != 0.) ? params.par : 1.;
         if ( params.erodeSize > 0 ) {
-            cimg.erode( (unsigned int)std::floor((std::max)(0., params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
+            cimg.erode( (unsigned int)std::floor((std::max)(0., params.erodeSize / par) * args.renderScale.x) * 2 + 1,
                        (unsigned int)std::floor((std::max)(0., params.erodeSize) * args.renderScale.y) * 2 + 1 );
         }
         if ( abort() ) { return; }
 
         if ( params.erodeSize < 0 ) {
-            cimg.dilate( (unsigned int)std::floor((std::max)(0., -params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
+            cimg.dilate( (unsigned int)std::floor((std::max)(0., -params.erodeSize / par) * args.renderScale.x) * 2 + 1,
                         (unsigned int)std::floor((std::max)(0., -params.erodeSize) * args.renderScale.y) * 2 + 1 );
         }
         if (params.edgeDetectNMS) {
