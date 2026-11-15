@@ -1,5 +1,5 @@
 PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o PLogLin.o
-PLUGINNAME = Templates
+PLUGINNAME = PLogLin
 #RESOURCES = net.sf.openfx.PLogLin.png net.sf.openfx.PLogLin.svg
 
 TOP_SRCDIR = ..
