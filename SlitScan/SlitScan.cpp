@@ -597,11 +597,13 @@ public:
                 switch (_retimeFunction) {
                 case eRetimeFunctionHorizontalSlit: {
                     // A vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the top image line.
+                    // (std::max) avoids a division by zero on a 1-pixel-high source
                     retimeVal = (double)(y - _srcRoDPixel.y1) / (std::max)(1, _srcRoDPixel.y2 - 1 - _srcRoDPixel.y1);
                     break;
                 }
                 case eRetimeFunctionVerticalSlit: {
                     // A horizontal ramp (alinear function of x) which is 0 at the center of the leftmost image line, and 1 at the center of the rightmost image line."
+                    // (std::max) avoids a division by zero on a 1-pixel-wide source
                     retimeVal = (double)(x - _srcRoDPixel.x1) / (std::max)(1, _srcRoDPixel.x2 - 1 - _srcRoDPixel.x1);
                     break;
                 }

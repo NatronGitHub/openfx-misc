@@ -125,6 +125,7 @@ private:
         if (_swap) {
             std::swap(srcRedImg, srcCyanImg);
         }
+        // one of the views may be missing (e.g. not rendered by the host): its pixels are then black
         const OfxRectI emptyBounds = {0, 0, 0, 0};
         const OfxRectI srcRedBounds = srcRedImg ? srcRedImg->getBounds() : emptyBounds;
         const OfxRectI srcCyanBounds = srcCyanImg ? srcCyanImg->getBounds() : emptyBounds;

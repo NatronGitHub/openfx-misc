@@ -293,6 +293,7 @@ private:
                     } else {
                         dstPix[2] = srcPix ? srcPix[2] : PIX();
                     }
+                    // RGB images have no alpha channel: do not touch dstPix[3]
                     if (nComponents == 4) {
                         if (processA && srcPix) {
                             dstPix[3] = threshold(srcPix[3], _level.a - _softness.a, _level.a + _softness.a);
