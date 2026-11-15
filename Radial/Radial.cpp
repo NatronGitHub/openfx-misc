@@ -344,6 +344,41 @@ private:
 
 private:
 
+    // Composite the shape color tmpPix (normalized, premultiplied) over the source pixel in the
+    // processed channels, then apply the mask and mix and write dstPix.
+    // Shared by process() and processRotated(), which only differ in how they compute tmpPix.
+    template<bool processR, bool processG, bool processB, bool processA>
+    void writePixel(float tmpPix[4],
+                    const PIX* srcPix,
+                    int x,
+                    int y,
+                    PIX* dstPix)
+    {
+        float a = tmpPix[3];
+
+        // ofxsMaskMixPix takes non-normalized values
+        tmpPix[0] *= maxValue;
+        tmpPix[1] *= maxValue;
+        tmpPix[2] *= maxValue;
+        tmpPix[3] *= maxValue;
+        float srcPixRGBA[4] = {0, 0, 0, 0};
+        if (srcPix) {
+            if (nComponents >= 3) {
+                srcPixRGBA[0] = srcPix[0];
+                srcPixRGBA[1] = srcPix[1];
+                srcPixRGBA[2] = srcPix[2];
+            }
+            if ( (nComponents == 1) || (nComponents == 4) ) {
+                srcPixRGBA[3] = srcPix[nComponents - 1];
+            }
+        }
+        tmpPix[0] = processR ? (tmpPix[0] + srcPixRGBA[0] * (1.f - a)) : srcPixRGBA[0];
+        tmpPix[1] = processG ? (tmpPix[1] + srcPixRGBA[1] * (1.f - a)) : srcPixRGBA[1];
+        tmpPix[2] = processB ? (tmpPix[2] + srcPixRGBA[2] * (1.f - a)) : srcPixRGBA[2];
+        tmpPix[3] = processA ? (tmpPix[3] + srcPixRGBA[3] * (1.f - a)) : srcPixRGBA[3];
+        ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+    }
+
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
@@ -478,45 +513,7 @@ private:
                         }
                     }
                 }
-                float a = tmpPix[3];
-
-                // ofxsMaskMixPix takes non-normalized values
-                tmpPix[0] *= maxValue;
-                tmpPix[1] *= maxValue;
-                tmpPix[2] *= maxValue;
-                tmpPix[3] *= maxValue;
-                float srcPixRGBA[4] = {0, 0, 0, 0};
-                if (srcPix) {
-                    if (nComponents >= 3) {
-                        srcPixRGBA[0] = srcPix[0];
-                        srcPixRGBA[1] = srcPix[1];
-                        srcPixRGBA[2] = srcPix[2];
-                    }
-                    if ( (nComponents == 1) || (nComponents == 4) ) {
-                        srcPixRGBA[3] = srcPix[nComponents - 1];
-                    }
-                }
-                if (processR) {
-                    tmpPix[0] = tmpPix[0] + srcPixRGBA[0] * (1.f - a);
-                } else {
-                    tmpPix[0] = srcPixRGBA[0];
-                }
-                if (processG) {
-                    tmpPix[1] = tmpPix[1] + srcPixRGBA[1] * (1.f - a);
-                } else {
-                    tmpPix[1] = srcPixRGBA[1];
-                }
-                if (processB) {
-                    tmpPix[2] = tmpPix[2] + srcPixRGBA[2] * (1.f - a);
-                } else {
-                    tmpPix[2] = srcPixRGBA[2];
-                }
-                if (processA) {
-                    tmpPix[3] = tmpPix[3] + srcPixRGBA[3] * (1.f - a);
-                } else {
-                    tmpPix[3] = srcPixRGBA[3];
-                }
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+                writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
             }
         }
     } // process
@@ -622,29 +619,7 @@ private:
                         tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
                     }
                 }
-                float a = tmpPix[3];
-
-                // ofxsMaskMixPix takes non-normalized values
-                tmpPix[0] *= maxValue;
-                tmpPix[1] *= maxValue;
-                tmpPix[2] *= maxValue;
-                tmpPix[3] *= maxValue;
-                float srcPixRGBA[4] = {0, 0, 0, 0};
-                if (srcPix) {
-                    if (nComponents >= 3) {
-                        srcPixRGBA[0] = srcPix[0];
-                        srcPixRGBA[1] = srcPix[1];
-                        srcPixRGBA[2] = srcPix[2];
-                    }
-                    if ( (nComponents == 1) || (nComponents == 4) ) {
-                        srcPixRGBA[3] = srcPix[nComponents - 1];
-                    }
-                }
-                tmpPix[0] = processR ? (tmpPix[0] + srcPixRGBA[0] * (1.f - a)) : srcPixRGBA[0];
-                tmpPix[1] = processG ? (tmpPix[1] + srcPixRGBA[1] * (1.f - a)) : srcPixRGBA[1];
-                tmpPix[2] = processB ? (tmpPix[2] + srcPixRGBA[2] * (1.f - a)) : srcPixRGBA[2];
-                tmpPix[3] = processA ? (tmpPix[3] + srcPixRGBA[3] * (1.f - a)) : srcPixRGBA[3];
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+                writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
             }
         }
     } // processRotated
