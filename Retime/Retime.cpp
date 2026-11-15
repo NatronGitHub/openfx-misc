@@ -34,6 +34,8 @@
 #include <cmath> // for floor
 #include <cfloat> // DBL_MAX
 #include <cassert>
+#include <climits> // INT_MAX
+#include <algorithm> // std::sort
 
 #include "ofxsImageEffect.h"
 #include "ofxsThreadSuite.h"
@@ -47,6 +49,7 @@
 #include "../FrameRange/FrameRangeBeforeAfter.h"
 
 using namespace OFX;
+using namespace OFX::FrameRangeBeforeAfter;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
@@ -54,6 +57,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip.\n" \
     "The Before and After parameters set what is read when the source frame falls outside the frame range of the input clip: the input frame itself (Original), the first or last frame (Hold), transparent black (Black), or frames repeated from the input range (Loop, Bounce).\n" \
+    "Before and After refer to the source frame range, not to the output: when the input is played backwards (Reverse input, or a negative speed or warp slope), Before sets what is shown at the end of the output.\n" \
     "See also: https://web.archive.org/web/20220627032808/http://www.opticalenquiry.com/nuke/index.php?title=Retime"
 
 #define kPluginIdentifier "net.sf.openfx.Retime"
@@ -99,8 +103,8 @@ enum FilterEnum
 
 #define kParamFilterDefault eFilterLinear
 
-#define kParamBeforeHint "What to read when the source frame (computed from the retiming parameters) is before the first frame of the input clip."
-#define kParamAfterHint "What to read when the source frame (computed from the retiming parameters) is after the last frame of the input clip."
+#define kParamBeforeHint "What to read when the source frame (computed from the retiming parameters) is before the first frame of the input clip. This refers to source frames: when the input is played backwards, it applies at the end of the output."
+#define kParamAfterHint "What to read when the source frame (computed from the retiming parameters) is after the last frame of the input clip. This refers to source frames: when the input is played backwards, it applies at the start of the output."
 
 #define kPageTimeWarp "timeWarp"
 #define kPageTimeWarpLabel "Time Warp"
@@ -115,10 +119,37 @@ struct SourceFrames
 {
     double from, to; // source times of the frames to read
     bool fromBlack, toBlack; // the frame is transparent black (Before/After = Black)
-    bool original; // no Before/After behaviour applies: same result as before these params existed
+    bool original; // no Before/After behaviour applies: keeps old projects rendering as before these params existed
     bool blended; // blend "from" and "to" (Linear filter), else only "from" is used
     double blend; // weight of "to"
 };
+
+// beyond this, frame numbers could overflow an int in frameLoop/frameBounce
+#define kMaxBeforeAfterFrame (INT_MAX / 4)
+
+// Apply Before/After to source time *t. The whole frame is mapped and the fractional part (second
+// field, or sub-frame time with the None filter) is kept, so that the second field of the last frame
+// is still in range.
+static BeforeAfterEnum
+mapSourceTime(int first,
+              int last,
+              BeforeAfterEnum before,
+              BeforeAfterEnum after,
+              double *t)
+{
+    const double frame = std::floor(*t);
+
+    if ( !(std::fabs(frame) < kMaxBeforeAfterFrame) ) { // also false for NaN
+        return eBeforeAfterOriginal;
+    }
+    double mapped;
+    BeforeAfterEnum mode = getBeforeAfterTime(first, last, before, after, frame, &mapped);
+    if ( (mode != eBeforeAfterOriginal) && (mode != eBeforeAfterBlack) ) {
+        *t = mapped + (*t - frame);
+    }
+
+    return mode;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -406,17 +437,23 @@ RetimePlugin::getSourceFrames(double time,
 
     BeforeAfterEnum fromMode = eBeforeAfterOriginal;
     BeforeAfterEnum toMode = eBeforeAfterOriginal;
-    if ( _srcClip && _srcClip->isConnected() ) {
-        const OfxRangeD srcRange = _srcClip->getFrameRange();
+    const OfxRangeD srcRange = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getFrameRange() : OfxRangeD();
+    // only apply Before/After to a finite, reasonable source range
+    if ( _srcClip && _srcClip->isConnected() &&
+         (std::fabs(srcRange.min) < kMaxBeforeAfterFrame) && (std::fabs(srcRange.max) < kMaxBeforeAfterFrame) ) {
         const int first = (int)std::floor(srcRange.min);
         const int last = (int)std::ceil(srcRange.max);
         const BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
         const BeforeAfterEnum after = (BeforeAfterEnum)_after->getValue();
-        fromMode = getBeforeAfterTime(first, last, before, after, frames->from, &frames->from);
-        toMode = getBeforeAfterTime(first, last, before, after, frames->to, &frames->to);
+        fromMode = mapSourceTime(first, last, before, after, &frames->from);
+        toMode = mapSourceTime(first, last, before, after, &frames->to);
     }
     frames->fromBlack = (fromMode == eBeforeAfterBlack);
     frames->toBlack = frames->blended && (toMode == eBeforeAfterBlack);
+    if ( frames->blended && !frames->fromBlack && !frames->toBlack && (frames->from == frames->to) ) {
+        // e.g. Hold: do not blend an image with itself
+        frames->blended = false;
+    }
     frames->original = (fromMode == eBeforeAfterOriginal) && (!frames->blended || toMode == eBeforeAfterOriginal);
 }
 
@@ -427,17 +464,29 @@ RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
     if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
-    // whatever the rendered field is, the frames are the same
-    SourceFrames src;
-    getSourceFrames(args.time, eFieldNone, &src);
-
-    // if all frames are black, nothing is set and the host uses its default (the frame at args.time)
-    if (!src.fromBlack) {
-        OfxRangeD range = {src.from, src.from};
-        frames.setFramesNeeded(*_srcClip, range);
+    // The rendered field is not known here: collect the frames read for unfielded and fielded renders.
+    double times[4];
+    int n = 0;
+    const FieldEnum fields[2] = {eFieldNone, eFieldBoth};
+    for (int i = 0; i < 2; ++i) {
+        SourceFrames src;
+        getSourceFrames(args.time, fields[i], &src);
+        if (!src.fromBlack) {
+            times[n++] = src.from;
+        }
+        if (src.blended && !src.toBlack) {
+            times[n++] = src.to;
+        }
     }
-    if (src.blended && !src.toBlack) {
-        OfxRangeD range = {src.to, src.to};
+    // Times at most one frame apart make one continuous range, e.g. [n, n+1] as before Before/After
+    // existed, which also covers the field n+0.5. A Loop/Bounce wrap gives separate ranges.
+    // If every frame is black, nothing is requested and the host uses its default (the frame at args.time).
+    std::sort(times, times + n);
+    for (int i = 0; i < n; ) {
+        OfxRangeD range = {times[i], times[i]};
+        while ( (++i < n) && (times[i] - range.max <= 1.) ) {
+            range.max = times[i];
+        }
         frames.setFramesNeeded(*_srcClip, range);
     }
 }
