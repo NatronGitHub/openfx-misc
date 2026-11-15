@@ -125,12 +125,12 @@ protected:
     double _mix;
     bool _maskInvert;
     std::bitset<4> _aChannels;
-    unsigned int _majorVersion;
+    bool _alphaOnlyUsesR; // version 1: with Alpha-only images, the R checkbox controls alpha
 
 public:
 
     KeyMixProcessorBase(ImageEffect &instance,
-                        unsigned int majorVersion)
+                        bool alphaOnlyUsesR)
         : ImageProcessor(instance)
         , _srcImgA(NULL)
         , _srcImgB(NULL)
@@ -138,7 +138,7 @@ public:
         , _mix(1.)
         , _maskInvert(false)
         , _aChannels()
-        , _majorVersion(majorVersion)
+        , _alphaOnlyUsesR(alphaOnlyUsesR)
     {
     }
 
@@ -168,8 +168,8 @@ class KeyMixProcessor
 {
 public:
     KeyMixProcessor(ImageEffect &instance,
-                    unsigned int majorVersion)
-        : KeyMixProcessorBase(instance, majorVersion)
+                    bool alphaOnlyUsesR)
+        : KeyMixProcessorBase(instance, alphaOnlyUsesR)
     {
     }
 
@@ -178,8 +178,8 @@ private:
     {
         unused(rs);
         // With Alpha-only images, the only component is alpha, so it is controlled by the A checkbox.
-        // Version 1 used the R checkbox for it.
-        const bool alphaFromA = (nComponents == 1) && (_majorVersion >= 2);
+        // Version 1 used the R checkbox for it, which is kept so that old projects render the same.
+        const bool alphaFromA = (nComponents == 1) && !_alphaOnlyUsesR;
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         for (int c = 0; c < 4; ++c) {
             tmpPix[c] = 0;
@@ -253,7 +253,7 @@ public:
     KeyMixPlugin(OfxImageEffectHandle handle,
                  unsigned int majorVersion)
         : ImageEffect(handle)
-        , _majorVersion(majorVersion)
+        , _alphaOnlyUsesR(majorVersion < 2)
         , _dstClip(NULL)
         , _srcClipA(NULL)
         , _srcClipB(NULL)
@@ -302,7 +302,7 @@ private:
     template <class PIX, int nComponents, int maxValue>
     void renderForBitDepth(const RenderArguments &args);
 
-    unsigned int _majorVersion;
+    bool _alphaOnlyUsesR; // version 1: with Alpha-only images, the R checkbox controls alpha
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClipA;
@@ -457,7 +457,7 @@ KeyMixPlugin::renderForBitDepth(const RenderArguments &args)
     //const double time = args.time;
     auto_ptr<KeyMixProcessorBase> fred;
 
-    fred.reset( new KeyMixProcessor<PIX, nComponents, maxValue>(*this, _majorVersion) );
+    fred.reset( new KeyMixProcessor<PIX, nComponents, maxValue>(*this, _alphaOnlyUsesR) );
 
     assert( fred.get() );
     if ( fred.get() ) {
