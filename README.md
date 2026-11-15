@@ -33,6 +33,8 @@ continuous integration:
 2. At the bottom of the page, in the "Artifacts" section, download the archive for
    your system (you must be logged in to GitHub):
    - `openfx-misc-build-ubuntu_22-release`: Linux (64-bit) plugins.
+   - `openfx-misc-build-macos-release`: macOS plugins for Apple silicon (arm64),
+     macOS 11 or later.
    - `openfx-misc-build-windows-release`: Windows (64-bit, MinGW-w64) plugins.
    - `openfx-misc-build-windows-nomulti-release`: the same Windows plugins, with one
      bundle per plugin, if you only need a few of them.
@@ -48,7 +50,10 @@ continuous integration:
    - Linux: `/usr/OFX/Plugins`
    - macOS: `/Library/OFX/Plugins`
    - Windows: `C:\Program Files\Common Files\OFX\Plugins`
-5. Restart your OpenFX host.
+5. On macOS, the downloaded plugins are not signed, and macOS may refuse to load
+   them. To allow them, run in a Terminal, for each bundle:
+   `sudo xattr -dr com.apple.quarantine /Library/OFX/Plugins/Misc.ofx.bundle`
+6. Restart your OpenFX host.
 
 Older Windows binaries compiled with Visual Studio 2017 (which should be compatible with most OpenFX hosts including [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve/)) are available as part of the [openfx-misc project on AppVeyor](https://ci.appveyor.com/project/NatronGitHub/openfx-misc/build/artifacts). These builds are no longer updated regularly.
 
