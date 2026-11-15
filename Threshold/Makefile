@@ -1,6 +1,6 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Add.o
-PLUGINNAME = Add
-RESOURCES = net.sf.openfx.AddPlugin.png
+PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Threshold.o
+PLUGINNAME = Threshold
+RESOURCES =
 
 TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.master

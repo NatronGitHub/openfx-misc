@@ -70,6 +70,7 @@ SideBySide \
 SlitScan \
 SpriteSheet \
 Switch \
+Threshold \
 TimeBlur \
 TimeDissolve \
 TimeOffset \
