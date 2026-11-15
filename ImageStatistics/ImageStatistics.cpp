@@ -1874,6 +1874,8 @@ private:
         if (restrictToRectangle) {
             return RectangleInteract::penMotion(args);
         }
+        // the rectangle is hidden: give the cursor back, or a resize cursor could stick
+        releaseCursor();
 
         return false;
     }

@@ -72,10 +72,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
-
 /*
    Simple Chroma Keyer.
 
@@ -310,10 +306,10 @@ public:
         _sinKey = 2 * cr / _xKey;
         _ys = _xKey == 0. ? 0. : y / _xKey;
         if (_acceptanceAngle < 180.) {
-            _tan__acceptanceAngle2 = std::tan( (_acceptanceAngle / 2) * M_PI / 180 );
+            _tan__acceptanceAngle2 = std::tan( (_acceptanceAngle / 2) * OFXS_PI / 180 );
         }
         if (_suppressionAngle < 180.) {
-            _tan__suppressionAngle2 = std::tan( (_suppressionAngle / 2) * M_PI / 180 );
+            _tan__suppressionAngle2 = std::tan( (_suppressionAngle / 2) * OFXS_PI / 180 );
         }
     } // setValues
 };

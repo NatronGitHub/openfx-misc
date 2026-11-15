@@ -15,7 +15,14 @@ ifeq ($(OSMESA),1)
   ## Enable these if you installed a mangled OSMesa (preferably with 32 bits FP support)
   CXXFLAGS_MESA += -I$(OSMESA_PATH)/include
   CXXFLAGS_EXTRA += -DHAVE_OSMESA
-  LDFLAGS_MESA += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `$(LLVM_PATH)/bin/llvm-config --ldflags --libs engine mcjit mcdisassembler --system-libs`
+  LLVM_CONFIG = $(LLVM_PATH)/bin/llvm-config
+  LLVM_CONFIG_FLAGS = --ldflags --libs engine mcjit mcdisassembler --system-libs
+  # Recent Mesa (e.g. 25.0) needs LLVM >= 15 and more LLVM components.
+  # --link-static: also link LLVM statically if it was built in shared mode (Homebrew, MacPorts).
+  ifeq ($(shell test `$(LLVM_CONFIG) --version | cut -d. -f1` -ge 15 && echo yes),yes)
+    LLVM_CONFIG_FLAGS = --link-static --ldflags --libs bitwriter engine mcdisassembler mcjit core executionengine scalaropts transformutils instcombine coroutines native passes --system-libs
+  endif
+  LDFLAGS_MESA += -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `$(LLVM_CONFIG) $(LLVM_CONFIG_FLAGS)`
 endif
 
 #CXXFLAGS_EXTRA += $(CXXFLAGS_MESA) # only added when building ShadertoyRenderMesa.o

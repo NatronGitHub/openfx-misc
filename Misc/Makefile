@@ -38,6 +38,7 @@ Deinterlace.o \
 DenoiseSharpen.o \
 Despill.o \
 Difference.o \
+DiscBlades.o \
 Dissolve.o \
 FrameBlend.o \
 FrameHold.o \
@@ -272,6 +273,7 @@ $(TOP_SRCDIR)/Deinterlace \
 $(TOP_SRCDIR)/DenoiseSharpen \
 $(TOP_SRCDIR)/Despill \
 $(TOP_SRCDIR)/Difference \
+$(TOP_SRCDIR)/DiscBlades \
 $(TOP_SRCDIR)/Dissolve \
 $(TOP_SRCDIR)/FrameBlend \
 $(TOP_SRCDIR)/FrameHold \
@@ -352,6 +354,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/DenoiseSharpen \
 -I$(TOP_SRCDIR)/Despill \
 -I$(TOP_SRCDIR)/Difference \
+-I$(TOP_SRCDIR)/DiscBlades \
 -I$(TOP_SRCDIR)/Dissolve \
 -I$(TOP_SRCDIR)/FrameBlend \
 -I$(TOP_SRCDIR)/FrameHold \

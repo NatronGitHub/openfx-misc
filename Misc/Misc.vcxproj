@@ -433,6 +433,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="..\Deinterlace\Deinterlace.cpp" />
     <ClCompile Include="..\Despill\Despill.cpp" />
     <ClCompile Include="..\Difference\Difference.cpp" />
+    <ClCompile Include="..\DiscBlades\DiscBlades.cpp" />
     <ClCompile Include="..\Dissolve\Dissolve.cpp" />
     <ClCompile Include="..\FrameBlend\FrameBlend.cpp" />
     <ClCompile Include="..\FrameHold\FrameHold.cpp" />
