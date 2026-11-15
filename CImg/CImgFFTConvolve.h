@@ -71,6 +71,27 @@ cimgKernelValue(const float* pix,
     }
 }
 
+// Extract the given kernel channel of the Filter image within rect (pixel coordinates).
+// Pixels outside of the Filter image bounds are zero.
+static inline void
+cimgExtractKernel(const OFX::Image& filter,
+                  const OfxRectI& rect,
+                  int key,
+                  cimg_library::CImg<cimgpix_t>* kernel)
+{
+    const int fnc = filter.getPixelComponentCount();
+
+    kernel->assign(rect.x2 - rect.x1, rect.y2 - rect.y1, 1, 1, 0);
+    for (int y = rect.y1; y < rect.y2; ++y) {
+        for (int x = rect.x1; x < rect.x2; ++x) {
+            const float *pix = (const float*)filter.getPixelAddress(x, y);
+            if (pix) {
+                (*kernel)(x - rect.x1, y - rect.y1) = cimgKernelValue(pix, fnc, key);
+            }
+        }
+    }
+}
+
 // Region of definition of the Filter clip (canonical coordinates), and the center of its format.
 // The format is the project window if the host does not support formats.
 // An infinite RoD (e.g. from a Constant generator) is clamped to the format, so that the kernel is finite.

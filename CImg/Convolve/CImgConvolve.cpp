@@ -160,7 +160,7 @@ public:
         params.formatCenter.x = params.formatCenter.y = 0.;
         if (params.filterConnected) {
             params.par = _filterClip->getPixelAspectRatio();
-            // an infinite Filter RoD (e.g. from a Constant generator) is clamped to the format
+            // Filter RoD (clamped to the format if infinite, e.g. from a Constant generator) and format center
             cimgGetFilterRoD(*this, _filterClip, time, &params.filterRoD, &params.formatCenter);
         }
         params.filterChannel = _filterChannel->getValueAtTime(time);
@@ -373,20 +373,7 @@ public:
         std::vector<cimg_library::CImg<cimgpix_t> > kernels(eCImgKernelCount);
         for (int k = 0; k < eCImgKernelCount; ++k) {
             if (keyUsed[k]) {
-                kernels[k].assign(kw, kh, 1, 1, 0);
-            }
-        }
-        for (int y = kernelRect.y1; y < kernelRect.y2; ++y) {
-            for (int x = kernelRect.x1; x < kernelRect.x2; ++x) {
-                const float *pix = (const float*)filter->getPixelAddress(x, y);
-                if (!pix) {
-                    continue;
-                }
-                for (int k = 0; k < eCImgKernelCount; ++k) {
-                    if (keyUsed[k]) {
-                        kernels[k](x - kernelRect.x1, y - kernelRect.y1) = cimgKernelValue(pix, fnc, k);
-                    }
-                }
+                cimgExtractKernel(*filter, kernelRect, k, &kernels[k]);
             }
         }
         filter.reset(NULL);
