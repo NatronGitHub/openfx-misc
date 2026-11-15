@@ -396,6 +396,7 @@ private:
     void exitOpenGL();
     void exitMesa();
     void renderGL(const OFX::RenderArguments &args);
+    static bool openGLContextIsCurrent(); // (OpenGL-only) true if the calling thread has a current OpenGL context
     void renderMesa(const OFX::RenderArguments &args);
     void* contextAttachedMesa(bool createContextData);
     void contextDetachedMesa(void* contextData);

@@ -23,3 +23,25 @@
 
 #define USE_OPENGL
 #include "ShadertoyRender.h"
+
+#if defined(__APPLE__)
+#  include <OpenGL/OpenGL.h> // CGLGetCurrentContext
+#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#  include <windows.h> // wglGetCurrentContext
+#else
+#  include <GL/glx.h> // glXGetCurrentContext
+#endif
+
+// Some hosts (DaVinci Resolve) call the CPU render action and we render with whatever OpenGL
+// context is current: this tells if there is one, since GL calls without one crash.
+bool
+Shadertoy::ShadertoyPlugin::openGLContextIsCurrent()
+{
+#if defined(__APPLE__)
+    return CGLGetCurrentContext() != NULL;
+#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    return wglGetCurrentContext() != NULL;
+#else
+    return glXGetCurrentContext() != NULL;
+#endif
+}

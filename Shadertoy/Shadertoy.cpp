@@ -1296,7 +1296,15 @@ ShadertoyPlugin::render(const RenderArguments &args)
         // context is attached, thus we can do off-screen rendering.
         // We execute the OpenGL code, but with args.openGLEnabled = false, which creates a
         // framebuffer and reads back the rendered image using glReadPixels.
-        openGLRender = true;
+        // The Fusion page renders from its own threads without a current context, and GL
+        // calls then crash Resolve (issue #69): use OSMesa there, if available.
+        openGLRender = openGLContextIsCurrent();
+#ifndef HAVE_OSMESA
+        if (!openGLRender) {
+            setPersistentMessage(Message::eMessageError, "", "No OpenGL context is available for rendering (e.g. on the DaVinci Resolve Fusion page). "
+                                 "Use a Shadertoy plugin built with OSMesa CPU rendering.");
+        }
+#endif
     }
 
     // do the rendering
