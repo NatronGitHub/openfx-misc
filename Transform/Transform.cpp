@@ -49,6 +49,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDirBlurDescription "Apply directional blur to an image.\n" \
     "This plugin concatenates transforms upstream."
 #define kPluginDirBlurIdentifier "net.sf.openfx.DirBlur"
+#define kPluginDirBlurVersionMajor 2 // Version 2 fixes fading with a negative amount.
+#define kPluginDirBlurVersionMinor 0
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -64,7 +66,8 @@ public:
     /** @brief ctor */
     TransformPlugin(OfxImageEffectHandle handle,
                     bool masked,
-                    bool isDirBlur)
+                    bool isDirBlur,
+                    unsigned int majorVersion = kPluginVersionMajor)
         : Transform3x3Plugin(handle, masked, isDirBlur ? eTransform3x3ParamsTypeDirBlur : eTransform3x3ParamsTypeMotionBlur)
         , _translate(NULL)
         , _rotate(NULL)
@@ -83,6 +86,8 @@ public:
             _dirBlurAmount = fetchDoubleParam(kParamTransform3x3DirBlurAmount);
             _dirBlurCentered = fetchBooleanParam(kParamTransform3x3DirBlurCentered);
             _dirBlurFading = fetchDoubleParam(kParamTransform3x3DirBlurFading);
+            // DirBlur version 1 divided the fading parameter by the signed amount
+            _dirBlurFadingSignedAmount = (majorVersion < 2);
         }
 
         _translate = fetchDouble2DParam(kParamTransformTranslateOld);
@@ -510,9 +515,10 @@ TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new TransformPlugin(handle, true, false);
 }
 
-mDeclarePluginFactory(DirBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(DirBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-DirBlurPluginFactory::describe(ImageEffectDescriptor &desc)
+DirBlurPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginDirBlurName);
@@ -520,12 +526,16 @@ DirBlurPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDirBlurDescription);
 
     Transform3x3Describe(desc, true);
+    if (majorVersion < kPluginDirBlurVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
 }
 
+template<unsigned int majorVersion>
 void
-DirBlurPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+DirBlurPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                         ContextEnum context)
 {
     // make some pages and to things in
@@ -547,18 +557,21 @@ DirBlurPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-DirBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
+DirBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                      ContextEnum /*context*/)
 {
-    return new TransformPlugin(handle, true, true);
+    return new TransformPlugin(handle, true, true, majorVersion);
 }
 
 static TransformPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static TransformMaskedPluginFactory p2(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DirBlurPluginFactory p3(kPluginDirBlurIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DirBlurPluginFactory<kPluginDirBlurVersionMajor> p3(kPluginDirBlurIdentifier, kPluginDirBlurVersionMinor);
+static DirBlurPluginFactory<1> p3v1(kPluginDirBlurIdentifier, 0);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
+mRegisterPluginFactoryInstance(p3v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
