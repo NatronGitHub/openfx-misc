@@ -507,6 +507,7 @@ private:
     bool _openGLContextAttached; // (OpenGL-only) - set to true when the contextAttached function is executed - used for checking non-conformant hosts such as Sony Catalyst
     OFX::auto_ptr<Mutex> _rendererInfoMutex;
     std::string _rendererInfo;
+    bool _rendererInfoIsMesa; // which render path filled _rendererInfo
 
     std::vector<Preset> _presets;
     

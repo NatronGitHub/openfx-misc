@@ -1099,6 +1099,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderCompiled(false)
     , _openGLContextData()
     , _openGLContextAttached(false)
+    , _rendererInfoIsMesa(false)
     , _presets(gPresetsDefault)
 {
     try {
@@ -1311,6 +1312,16 @@ ShadertoyPlugin::render(const RenderArguments &args)
                                  "Use a Shadertoy plugin built with OSMesa CPU rendering.");
         }
 #endif
+    }
+
+    {
+        // _rendererInfo is filled by whichever path renders first: refill it when the path
+        // changes (on Resolve, GL on the Edit/Color pages, OSMesa on the Fusion page)
+        AutoMutex lock( _rendererInfoMutex.get() );
+        if (_rendererInfoIsMesa == openGLRender) {
+            _rendererInfo.clear();
+            _rendererInfoIsMesa = !openGLRender;
+        }
     }
 
     // do the rendering
