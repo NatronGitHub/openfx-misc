@@ -64,6 +64,7 @@ grouping).
 
 ### Draw
 
+* DiscBladesOFX: Generate a lens aperture shape (disc, or polygon with curved blades), to be used e.g. as the Filter input of ConvolveCImg.
 * Rand: Generate a random field of noise.
 * NoiseCImg: Generate different kinds of noise.
 * PlasmaCImg: Generate plasma noise.

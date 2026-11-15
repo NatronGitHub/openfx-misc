@@ -27,6 +27,7 @@ Deinterlace \
 DenoiseSharpen \
 Despill \
 Difference \
+DiscBlades \
 Dissolve \
 FrameBlend \
 FrameHold \

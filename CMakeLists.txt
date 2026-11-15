@@ -135,6 +135,7 @@ FILE(GLOB MISC_SOURCES
   "DenoiseSharpen/*.cpp"
   "Despill/*.cpp"
   "Difference/*.cpp"
+  "DiscBlades/*.cpp"
   "Dissolve/*.cpp"
   "Distortion/*.cpp"
   "FrameBlend/*.cpp"
