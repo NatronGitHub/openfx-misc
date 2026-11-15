@@ -30,6 +30,7 @@
 #  include <windows.h> // wglGetCurrentContext
 #else
 #  include <GL/glx.h> // glXGetCurrentContext
+#  include <dlfcn.h> // dlsym
 #endif
 
 // Some hosts (DaVinci Resolve) call the CPU render action and we render with whatever OpenGL
@@ -42,6 +43,14 @@ Shadertoy::ShadertoyPlugin::openGLContextIsCurrent()
 #elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     return wglGetCurrentContext() != NULL;
 #else
-    return glXGetCurrentContext() != NULL;
+    if (glXGetCurrentContext() != NULL) {
+        return true;
+    }
+    // The host may use EGL instead of GLX: look eglGetCurrentContext up at runtime,
+    // so that the plugin does not depend on libEGL (it is only found if the host loaded it).
+    typedef void* (*EGLGetCurrentContextFunc)(void);
+    EGLGetCurrentContextFunc eglGetCurrentContextPtr = (EGLGetCurrentContextFunc)dlsym(RTLD_DEFAULT, "eglGetCurrentContext");
+
+    return eglGetCurrentContextPtr && eglGetCurrentContextPtr() != NULL;
 #endif
 }
