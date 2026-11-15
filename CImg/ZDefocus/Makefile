@@ -12,7 +12,7 @@ ofxsPropertyValidation.o \
 ofxsImageEffect.o \
 ofxsParams.o 
 
-PLUGINNAME = ZDefocus
+PLUGINNAME = CImgZDefocus
 
 RESOURCES =
 
