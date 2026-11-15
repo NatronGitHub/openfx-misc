@@ -82,7 +82,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: antialiased render
-// version 2.2: add angle parameter
+// version 2.2: add angle parameter, fix rendering to an Alpha-only output
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -376,6 +376,10 @@ private:
         tmpPix[1] = processG ? (tmpPix[1] + srcPixRGBA[1] * (1.f - a)) : srcPixRGBA[1];
         tmpPix[2] = processB ? (tmpPix[2] + srcPixRGBA[2] * (1.f - a)) : srcPixRGBA[2];
         tmpPix[3] = processA ? (tmpPix[3] + srcPixRGBA[3] * (1.f - a)) : srcPixRGBA[3];
+        if (nComponents == 1) {
+            // ofxsMaskMixPix reads the only channel from tmpPix[0]
+            tmpPix[0] = tmpPix[3];
+        }
         ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
     }
 
