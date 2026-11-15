@@ -259,7 +259,7 @@ private:
                 } else if (nComponents == 4) {
                     maskAlpha = maskPix ? maskPix[nComponents - 1] : 0;
                 } else {
-                    maskAlpha = 1;
+                    maskAlpha = maxValue; // no alpha channel: the roto is opaque
                 }
 #             ifdef DEBUG_NAN
                 assert( !OFX::IsNaN(srcAlpha) ); // check for NaN
@@ -283,6 +283,16 @@ private:
 
                 // merge/over
                 for (int c = 0; c < nComponents; ++c) {
+                    // channels that are not processed are copied from the source
+                    // (when nComponents == 1, the only channel is alpha)
+                    const bool processChannel = (nComponents == 1) ? processA :
+                                                (c == 0) ? processR :
+                                                (c == 1) ? processG :
+                                                (c == 2) ? processB : processA;
+                    if (!processChannel) {
+                        dstPix[c] = srcVal[c];
+                        continue;
+                    }
 #                 ifdef DEBUG_NAN
                     assert( !OFX::IsNaN(maskPix[c]) ); // check for NaN
 #                 endif
