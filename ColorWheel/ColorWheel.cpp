@@ -266,7 +266,8 @@ private:
                 double dx_farther = (p_farther.x - c.x) / r.x;
                 double dy_farther = (p_farther.y - c.y) / r.y;
 
-                if ( (dx_closer >= 1) || (dy_closer >= 1) ) {
+                // a zero or negative radius would give NaN or garbage: treat it as outside
+                if ( (r.x <= 0.) || (r.y <= 0.) || (dx_closer >= 1) || (dy_closer >= 1) ) {
                     // outside
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = 0;

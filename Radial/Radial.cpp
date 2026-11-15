@@ -389,7 +389,8 @@ private:
                 double dy_farther = (p_farther.y - c.y) / r.y;
 
 
-                if ( (dx_closer >= 1) || (dy_closer >= 1) ) {
+                // a zero or negative radius would give NaN or garbage: treat it as outside
+                if ( (r.x <= 0.) || (r.y <= 0.) || (dx_closer >= 1) || (dy_closer >= 1) ) {
                     // outside
                     tmpPix[0] = (float)_color0.r;
                     tmpPix[1] = (float)_color0.g;
