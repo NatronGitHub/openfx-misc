@@ -55,8 +55,6 @@ continuous integration:
    `sudo xattr -dr com.apple.quarantine /Library/OFX/Plugins/Misc.ofx.bundle`
 6. Restart your OpenFX host.
 
-Older Windows binaries compiled with Visual Studio 2017 (which should be compatible with most OpenFX hosts including [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve/)) are available as part of the [openfx-misc project on AppVeyor](https://ci.appveyor.com/project/NatronGitHub/openfx-misc/build/artifacts). These builds are no longer updated regularly.
-
 License
 -------
 
