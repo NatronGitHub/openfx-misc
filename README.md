@@ -121,6 +121,7 @@ grouping).
 * Transform/RGBToYCbCr601, YCbCrToRGB601, RGBToYCbCr709 and YCbCrToRGB709: Convert to/from YCbCr color representation. 
 * Transform/RGBToYPbPr601, YPbPrToRGB601, RGBToYPbPr709 and YPbPrToRGB709: Convert to/from YPbPr color representation. 
 * Transform/RGBToYUV601, YUVToRGB601, RGBToYUV709 and YUVToRGB709: Convert to/from YUV color representation. 
+* Transform/RGBToYIQ, YIQToRGB, RGBToYDbDr and YDbDrToRGB: Convert to/from YIQ (NTSC) and YDbDr (SECAM) color representations.
 * Transform/RGB709ToLab and LabToRGB709: Convert to/from Lab color representation.
 * Transform/RGB709ToXYZ and XYZToRGB709: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.
