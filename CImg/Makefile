@@ -173,7 +173,7 @@ $(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImgOperator.h CImgFilter.h CIm
 
 $(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgConvolve.o: CImgConvolve.cpp CImgFilter.h CImg.h
+$(OBJECTPATH)/CImgConvolve.o: CImgConvolve.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImgFilter.h CImg.h
 
@@ -215,4 +215,4 @@ $(OBJECTPATH)/CImgSharpenShock.o: CImgSharpenShock.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgSmooth.o: CImgSmooth.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgZDefocus.o: CImgZDefocus.cpp CImgFilter.h CImg.h
+$(OBJECTPATH)/CImgZDefocus.o: CImgZDefocus.cpp CImgFFTConvolve.h CImgFilter.h CImg.h

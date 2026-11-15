@@ -435,6 +435,7 @@ file(WRITE "${CIMG_VERSION_STAMP}" "${CIMGVERSION}\n")
 FILE(GLOB CIMG_SOURCES
   "CImg/CImg.h"
   "CImg/CImgFilter.cpp"
+  "CImg/CImgFFTConvolve.h"
   "CImg/CImgFilter.h"
   "CImg/CImgOperator.cpp"
   "CImg/CImgOperator.h"

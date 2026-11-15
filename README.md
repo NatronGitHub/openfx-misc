@@ -184,7 +184,7 @@ grouping).
 * SmoothPatchBasedCImg: Denoise selected images by non-local patch averaging.
 * SmoothRollingGuidanceCImg: Filter out details under a given scale using the [Rolling Guidance filter](http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/).
 * SoftenCImg: Soften the input stream by reducing its Laplacian.
-* ZDefocusCImg: Depth-dependent defocus (depth of field), using a depth or disparity map, with Gaussian or disc aperture.
+* ZDefocusCImg: Depth-dependent defocus (depth of field), using a depth or disparity map, with Gaussian, antialiased disc, or custom (bokeh kernel from the Filter input, e.g. made with DiscBlades) aperture.
 
 ### Keyer
 
