@@ -27,6 +27,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
@@ -270,45 +271,12 @@ public:
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-#     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
         // channels with black == white are passed through (copied from the source)
-        const bool r = _processR && !_passThrough[0] && (nComponents != 1);
-        const bool g = _processG && !_passThrough[1] && (nComponents >= 2);
-        const bool b = _processB && !_passThrough[2] && (nComponents >= 3);
-        if (r) {
-            if (g) {
-                if (b) {
-                    return process<true, true, true>(procWindow, rs);     // RGBa
-                } else {
-                    return process<true, true, false>(procWindow, rs);     // RGba
-                }
-            } else {
-                if (b) {
-                    return process<true, false, true>(procWindow, rs);     // RgBa
-                } else {
-                    return process<true, false, false>(procWindow, rs);     // Rgba
-                }
-            }
-        } else {
-            if (g) {
-                if (b) {
-                    return process<false, true, true>(procWindow, rs);     // rGBa
-                } else {
-                    return process<false, true, false>(procWindow, rs);     // rGba
-                }
-            } else {
-                if (b) {
-                    return process<false, false, true>(procWindow, rs);     // rgBa
-                } else {
-                    return process<false, false, false>(procWindow, rs);     // rgba
-                }
-            }
-        }
-#     endif // ifndef __COVERITY__
+        ofxsProcessRGB<nComponents>(*this, _processR && !_passThrough[0], _processG && !_passThrough[1], _processB && !_passThrough[2], procWindow, rs);
     } // multiThreadProcessImages
 
-private:
-
+public:
+    // called by ofxsProcessRGB()
     template<bool processR, bool processG, bool processB>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
@@ -375,45 +343,12 @@ public:
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-#     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
         // channels with black == white are passed through (copied from the source)
-        const bool r = _processR && !_passThrough[0] && (nComponents != 1);
-        const bool g = _processG && !_passThrough[1] && (nComponents >= 2);
-        const bool b = _processB && !_passThrough[2] && (nComponents >= 3);
-        if (r) {
-            if (g) {
-                if (b) {
-                    return process<true, true, true>(procWindow, rs);     // RGBa
-                } else {
-                    return process<true, true, false>(procWindow, rs);     // RGba
-                }
-            } else {
-                if (b) {
-                    return process<true, false, true>(procWindow, rs);     // RgBa
-                } else {
-                    return process<true, false, false>(procWindow, rs);     // Rgba
-                }
-            }
-        } else {
-            if (g) {
-                if (b) {
-                    return process<false, true, true>(procWindow, rs);     // rGBa
-                } else {
-                    return process<false, true, false>(procWindow, rs);     // rGba
-                }
-            } else {
-                if (b) {
-                    return process<false, false, true>(procWindow, rs);     // rgBa
-                } else {
-                    return process<false, false, false>(procWindow, rs);     // rgba
-                }
-            }
-        }
-#     endif // ifndef __COVERITY__
+        ofxsProcessRGB<nComponents>(*this, _processR && !_passThrough[0], _processG && !_passThrough[1], _processB && !_passThrough[2], procWindow, rs);
     } // multiThreadProcessImages
 
-private:
-
+public:
+    // called by ofxsProcessRGB()
     template<bool processR, bool processG, bool processB>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {

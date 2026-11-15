@@ -27,8 +27,10 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
+#include "ofxsLuminanceMath.h"
 #include "ofxsMacros.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
@@ -90,27 +92,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSaturationLabel "Saturation"
 #define kParamSaturationHint "Color saturation factor to apply. 0 produces grayscale."
 
-#define kParamLuminanceMath "luminanceMath"
-#define kParamLuminanceMathLabel "Luminance Math"
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
-#define kParamLuminanceMathOptionRec709 "Rec. 709", "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b).", "rec709"
-#define kParamLuminanceMathOptionRec2020 "Rec. 2020", "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b).", "rec2020"
-#define kParamLuminanceMathOptionACESAP0 "ACES AP0", "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b).", "acesap0"
-#define kParamLuminanceMathOptionACESAP1 "ACES AP1", "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b).", "acesap1"
-#define kParamLuminanceMathOptionCcir601 "CCIR 601", "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b).", "ccir601"
-#define kParamLuminanceMathOptionAverage "Average", "Use average of r, g, b.", "average"
-#define kParamLuminanceMathOptionMaximum "Max", "Use max or r, g, b.", "max"
-
-enum LuminanceMathEnum
-{
-    eLuminanceMathRec709,
-    eLuminanceMathRec2020,
-    eLuminanceMathACESAP0,
-    eLuminanceMathACESAP1,
-    eLuminanceMathCcir601,
-    eLuminanceMathAverage,
-    eLuminanceMathMaximum,
-};
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -200,10 +182,10 @@ public:
     }
 
     template<bool processR, bool processG, bool processB, bool processA>
-    void grade(double *r,
-               double *g,
-               double *b,
-               double *a)
+    void saturate(double *r,
+                  double *g,
+                  double *b,
+                  double *a)
     {
         double l;
 
@@ -245,9 +227,6 @@ public:
         if (processB) {
             *b = (1. - _saturation) * l + _saturation * *b;
         }
-        if (processA) {
-            // nothing to do
-        }
         if (_clampBlack) {
             if (processR) {
                 *r = (std::max)(0., *r);
@@ -276,7 +255,7 @@ public:
                 *a = (std::min)(1., *a);
             }
         }
-    } // grade
+    } // saturate
 
 private:
     double _saturation;
@@ -298,77 +277,11 @@ public:
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-#     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
-        const bool a = _processA && (nComponents == 1 || nComponents == 4);
-        if (r) {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<true, true, true, true >(procWindow, rs); // RGBA
-                    } else {
-                        return process<true, true, true, false>(procWindow, rs); // RGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, true, false, true >(procWindow, rs); // RGbA
-                    } else {
-                        return process<true, true, false, false>(procWindow, rs); // RGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<true, false, true, true >(procWindow, rs); // RgBA
-                    } else {
-                        return process<true, false, true, false>(procWindow, rs); // RgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, false, false, true >(procWindow, rs); // RgbA
-                    } else {
-                        return process<true, false, false, false>(procWindow, rs); // Rgba
-                    }
-                }
-            }
-        } else {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<false, true, true, true >(procWindow, rs); // rGBA
-                    } else {
-                        return process<false, true, true, false>(procWindow, rs); // rGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, true, false, true >(procWindow, rs); // rGbA
-                    } else {
-                        return process<false, true, false, false>(procWindow, rs); // rGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<false, false, true, true >(procWindow, rs); // rgBA
-                    } else {
-                        return process<false, false, true, false>(procWindow, rs); // rgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, false, false, true >(procWindow, rs); // rgbA
-                    } else {
-                        return process<false, false, false, false>(procWindow, rs); // rgba
-                    }
-                }
-            }
-        }
-#     endif // ifndef __COVERITY__
+        ofxsProcessRGBA<nComponents>(*this, _processR, _processG, _processB, _processA, procWindow, rs);
     } // multiThreadProcessImages
 
-private:
-
+public:
+    // called by ofxsProcessRGBA()
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
@@ -393,31 +306,14 @@ private:
                 double t_g = unpPix[1];
                 double t_b = unpPix[2];
                 double t_a = unpPix[3];
-                grade<processR, processG, processB, processA>(&t_r, &t_g, &t_b, &t_a);
+                saturate<processR, processG, processB, processA>(&t_r, &t_g, &t_b, &t_a);
                 tmpPix[0] = (float)t_r;
                 tmpPix[1] = (float)t_g;
                 tmpPix[2] = (float)t_b;
                 tmpPix[3] = (float)t_a;
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
-                if (nComponents == 1) {
-                    if (!processA) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                } else if ( (nComponents == 3) || (nComponents == 4) ) {
-                    if (!processR) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                    if (!processG) {
-                        dstPix[1] = srcPix ? srcPix[1] : PIX();
-                    }
-                    if (!processB) {
-                        dstPix[2] = srcPix ? srcPix[2] : PIX();
-                    }
-                    if ( !processA && (nComponents == 4) ) {
-                        dstPix[3] = srcPix ? srcPix[3] : PIX();
-                    }
-                }
+                ofxsCopyBackUnprocessedChannels<PIX, nComponents, processR, processG, processB, processA>(srcPix, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }

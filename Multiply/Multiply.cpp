@@ -27,6 +27,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #ifdef OFX_EXTENSIONS_NATRON
@@ -187,75 +188,11 @@ private:
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-#     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
-        const bool a = _processA && (nComponents == 1 || nComponents == 4);
-        if (r) {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<true, true, true, true >(procWindow, rs); // RGBA
-                    } else {
-                        return process<true, true, true, false>(procWindow, rs); // RGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, true, false, true >(procWindow, rs); // RGbA
-                    } else {
-                        return process<true, true, false, false>(procWindow, rs); // RGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<true, false, true, true >(procWindow, rs); // RgBA
-                    } else {
-                        return process<true, false, true, false>(procWindow, rs); // RgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, false, false, true >(procWindow, rs); // RgbA
-                    } else {
-                        return process<true, false, false, false>(procWindow, rs); // Rgba
-                    }
-                }
-            }
-        } else {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<false, true, true, true >(procWindow, rs); // rGBA
-                    } else {
-                        return process<false, true, true, false>(procWindow, rs); // rGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, true, false, true >(procWindow, rs); // rGbA
-                    } else {
-                        return process<false, true, false, false>(procWindow, rs); // rGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<false, false, true, true >(procWindow, rs); // rgBA
-                    } else {
-                        return process<false, false, true, false>(procWindow, rs); // rgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, false, false, true >(procWindow, rs); // rgbA
-                    } else {
-                        return process<false, false, false, false>(procWindow, rs); // rgba
-                    }
-                }
-            }
-        }
-#     endif // ifndef __COVERITY__
+        ofxsProcessRGBA<nComponents>(*this, _processR, _processG, _processB, _processA, procWindow, rs);
     } // multiThreadProcessImages
 
+public:
+    // called by ofxsProcessRGBA()
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
@@ -289,24 +226,7 @@ private:
                 }
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
-                if (nComponents == 1) {
-                    if (!processA) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                } else if ( (nComponents == 3) || (nComponents == 4) ) {
-                    if (!processR) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                    if (!processG) {
-                        dstPix[1] = srcPix ? srcPix[1] : PIX();
-                    }
-                    if (!processB) {
-                        dstPix[2] = srcPix ? srcPix[2] : PIX();
-                    }
-                    if ( !processA && (nComponents == 4) ) {
-                        dstPix[3] = srcPix ? srcPix[3] : PIX();
-                    }
-                }
+                ofxsCopyBackUnprocessedChannels<PIX, nComponents, processR, processG, processB, processA>(srcPix, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -368,6 +288,9 @@ public:
 private:
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+
+    template <int nComponents>
+    void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
     void setupAndProcess(MultiplyProcessorBase &, const RenderArguments &args);
@@ -474,6 +397,33 @@ MultiplyPlugin::setupAndProcess(MultiplyProcessorBase &processor,
     processor.process();
 } // MultiplyPlugin::setupAndProcess
 
+// the internal render function
+template <int nComponents>
+void
+MultiplyPlugin::renderInternal(const RenderArguments &args,
+                               BitDepthEnum dstBitDepth)
+{
+    switch (dstBitDepth) {
+    case eBitDepthUByte: {
+        MultiplyProcessor<unsigned char, nComponents, 255> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eBitDepthUShort: {
+        MultiplyProcessor<unsigned short, nComponents, 65535> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case eBitDepthFloat: {
+        MultiplyProcessor<float, nComponents, 1> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    default:
+        throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
 // the overridden render function
 void
 MultiplyPlugin::render(const RenderArguments &args)
@@ -486,88 +436,16 @@ MultiplyPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte: {
-            MultiplyProcessor<unsigned char, 4, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthUShort: {
-            MultiplyProcessor<unsigned short, 4, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthFloat: {
-            MultiplyProcessor<float, 4, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentAlpha) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte: {
-            MultiplyProcessor<unsigned char, 1, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthUShort: {
-            MultiplyProcessor<unsigned short, 1, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthFloat: {
-            MultiplyProcessor<float, 1, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<1>(args, dstBitDepth);
 #ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
-        switch (dstBitDepth) {
-        case eBitDepthUByte: {
-            MultiplyProcessor<unsigned char, 2, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthUShort: {
-            MultiplyProcessor<unsigned short, 2, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthFloat: {
-            MultiplyProcessor<float, 2, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<2>(args, dstBitDepth);
 #endif
     } else {
         assert(dstComponents == ePixelComponentRGB);
-        switch (dstBitDepth) {
-        case eBitDepthUByte: {
-            MultiplyProcessor<unsigned char, 3, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthUShort: {
-            MultiplyProcessor<unsigned short, 3, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eBitDepthFloat: {
-            MultiplyProcessor<float, 3, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<3>(args, dstBitDepth);
     }
 } // MultiplyPlugin::render
 
@@ -603,24 +481,10 @@ MultiplyPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            if (getImageEffectHostDescription()->supportsMultiResolution) {
-                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-                // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    identityClip = _srcClip;
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
+        identityClip = _srcClip;
 
-                    return true;
-                }
-            }
-        }
+        return true;
     }
 
     return false;
@@ -630,26 +494,7 @@ void
 MultiplyPlugin::changedClip(const InstanceChangedArgs &args,
                             const std::string &clipName)
 {
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
-         _srcClip && _srcClip->isConnected() &&
-         !_premultChanged->getValue() &&
-         ( args.reason == eChangeUserEdit) ) {
-        if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
-            _premult->setValue(false);
-        } else {
-            switch ( _srcClip->getPreMultiplication() ) {
-            case eImageOpaque:
-                _premult->setValue(false);
-                break;
-            case eImagePreMultiplied:
-                _premult->setValue(true);
-                break;
-            case eImageUnPreMultiplied:
-                _premult->setValue(false);
-                break;
-            }
-        }
-    }
+    ofxsPremultUpdateFromSourceClip(args, clipName, _srcClip, _premult, _premultChanged);
 }
 
 void

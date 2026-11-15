@@ -27,8 +27,10 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
+#include "ofxsLuminanceMath.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 
@@ -112,27 +114,7 @@ static const std::string kParamOffset = std::string("Offset");
 #define kParamColorCorrectToneRangesDim0 "Shadow"
 #define kParamColorCorrectToneRangesDim1 "Highlight"
 
-#define kParamLuminanceMath "luminanceMath"
-#define kParamLuminanceMathLabel "Luminance Math"
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values (used for saturation adjustments)."
-#define kParamLuminanceMathOptionRec709 "Rec. 709", "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b).", "rec709"
-#define kParamLuminanceMathOptionRec2020 "Rec. 2020", "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b).", "rec2020"
-#define kParamLuminanceMathOptionACESAP0 "ACES AP0", "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b).", "acesap0"
-#define kParamLuminanceMathOptionACESAP1 "ACES AP1", "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b).", "acesap1"
-#define kParamLuminanceMathOptionCcir601 "CCIR 601", "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b).", "ccir601"
-#define kParamLuminanceMathOptionAverage "Average", "Use average of r, g, b.", "average"
-#define kParamLuminanceMathOptionMaximum "Max", "Use max or r, g, b.", "max"
-
-enum LuminanceMathEnum
-{
-    eLuminanceMathRec709,
-    eLuminanceMathRec2020,
-    eLuminanceMathACESAP0,
-    eLuminanceMathACESAP1,
-    eLuminanceMathCcir601,
-    eLuminanceMathAverage,
-    eLuminanceMathMaximum,
-};
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -184,40 +166,6 @@ struct ColorControlGroup
     ColorControlValues gain;
     ColorControlValues offset;
 };
-
-template<typename T>
-T
-luminance(T r,
-          T g,
-          T b,
-          LuminanceMathEnum luminanceMath)
-{
-    switch (luminanceMath) {
-    case eLuminanceMathRec709:
-    default:
-
-        return Color::rgb709_to_y(r, g, b);
-
-    case eLuminanceMathRec2020:     // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
-
-        return Color::rgb2020_to_y(r, g, b);
-    case eLuminanceMathACESAP0:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
-
-        return Color::rgbACESAP0_to_y(r, g, b);
-    case eLuminanceMathACESAP1:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
-
-        return Color::rgbACESAP1_to_y(r, g, b);
-    case eLuminanceMathCcir601:
-
-        return (T)(0.2989f * r + 0.5866f * g + 0.1145f * b);
-    case eLuminanceMathAverage:
-
-        return (r + g + b) / 3;
-    case eLuminanceMathMaximum:
-
-        return (std::max)((std::max)(r, g), b);
-    }
-}
 
 template<bool processR, bool processG, bool processB, bool processA>
 struct RGBAPixel
@@ -553,78 +501,11 @@ public:
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-#     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
-        const bool a = _processA && (nComponents == 1 || nComponents == 4);
-        if (r) {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<true, true, true, true >(procWindow, rs); // RGBA
-                    } else {
-                        return process<true, true, true, false>(procWindow, rs); // RGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, true, false, true >(procWindow, rs); // RGbA
-                    } else {
-                        return process<true, true, false, false>(procWindow, rs); // RGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<true, false, true, true >(procWindow, rs); // RgBA
-                    } else {
-                        return process<true, false, true, false>(procWindow, rs); // RgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, false, false, true >(procWindow, rs); // RgbA
-                    } else {
-                        return process<true, false, false, false>(procWindow, rs); // Rgba
-                    }
-                }
-            }
-        } else {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<false, true, true, true >(procWindow, rs); // rGBA
-                    } else {
-                        return process<false, true, true, false>(procWindow, rs); // rGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, true, false, true >(procWindow, rs); // rGbA
-                    } else {
-                        return process<false, true, false, false>(procWindow, rs); // rGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<false, false, true, true >(procWindow, rs); // rgBA
-                    } else {
-                        return process<false, false, true, false>(procWindow, rs); // rgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, false, false, true >(procWindow, rs); // rgbA
-                    } else {
-                        return process<false, false, false, false>(procWindow, rs); // rgba
-                    }
-                }
-            }
-        }
-#     endif // ifndef __COVERITY__
+        ofxsProcessRGBA<nComponents>(*this, _processR, _processG, _processB, _processA, procWindow, rs);
     } // multiThreadProcessImages
 
-private:
-
-
+public:
+    // called by ofxsProcessRGBA()
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
@@ -654,29 +535,14 @@ private:
                 tmpPix[3] = (float)t_a;
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
-                if (nComponents == 1) {
-                    if (!processA) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                } else if ( (nComponents == 3) || (nComponents == 4) ) {
-                    if (!processR) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                    if (!processG) {
-                        dstPix[1] = srcPix ? srcPix[1] : PIX();
-                    }
-                    if (!processB) {
-                        dstPix[2] = srcPix ? srcPix[2] : PIX();
-                    }
-                    if ( !processA && (nComponents == 4) ) {
-                        dstPix[3] = srcPix ? srcPix[3] : PIX();
-                    }
-                }
+                ofxsCopyBackUnprocessedChannels<PIX, nComponents, processR, processG, processB, processA>(srcPix, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
         }
     } // process
+
+private:
 
     template<bool processR, bool processG, bool processB, bool processA>
     void colorTransform(double *r,
@@ -1193,24 +1059,10 @@ ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            if (getImageEffectHostDescription()->supportsMultiResolution) {
-                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-                // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    identityClip = _srcClip;
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
+        identityClip = _srcClip;
 
-                    return true;
-                }
-            }
-        }
+        return true;
     }
 
     //std::cout << "isIdentity! false\n";
@@ -1221,28 +1073,7 @@ void
 ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args,
                                 const std::string &clipName)
 {
-    //std::cout << "changedClip!\n";
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
-         _srcClip && _srcClip->isConnected() &&
-         !_premultChanged->getValue() &&
-         ( args.reason == eChangeUserEdit) ) {
-        if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
-            _premult->setValue(false);
-        } else {
-            switch ( _srcClip->getPreMultiplication() ) {
-            case eImageOpaque:
-                _premult->setValue(false);
-                break;
-            case eImagePreMultiplied:
-                _premult->setValue(true);
-                break;
-            case eImageUnPreMultiplied:
-                _premult->setValue(false);
-                break;
-            }
-        }
-    }
-    //std::cout << "changedClip OK!\n";
+    ofxsPremultUpdateFromSourceClip(args, clipName, _srcClip, _premult, _premultChanged);
 }
 
 void

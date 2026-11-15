@@ -28,6 +28,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
@@ -246,48 +247,6 @@ protected:
             rgba->g = 0;
             rgba->b = 0;
             rgba->a = 0;
-        }
-    }
-
-    /*
-    template<class PIX, int nComponents, int maxValue>
-    void pixToHSVL(const PIX *p,
-                   float hsvl[4])
-    {
-        if ( (nComponents == 4) || (nComponents == 3) ) {
-            float r, g, b;
-            r = p[0] / (float)maxValue;
-            g = p[1] / (float)maxValue;
-            b = p[2] / (float)maxValue;
-            Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
-            hsvl[0] *= 360 / OFXS_HUE_CIRCLE;
-            float min = (std::min)((std::min)(r, g), b);
-            float max = (std::max)((std::max)(r, g), b);
-            hsvl[3] = (min + max) / 2;
-        } else {
-            hsvl[0] = hsvl[1] = hsvl[2] = hsvl[3] = 0.f;
-        }
-    }
-    */
-
-    template<class PIX, int nComponents, int maxValue>
-    void toComponents(const RGBAValues& rgba,
-                      PIX *p)
-    {
-        if (nComponents == 4) {
-            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[2] = rgba.b * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[3] = rgba.a * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-        } else if (nComponents == 3) {
-            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[2] = rgba.b * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-        } else if (nComponents == 2) {
-            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
-        } else if (nComponents == 1) {
-            p[0] = rgba.a * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
         }
     }
 };
@@ -611,77 +570,11 @@ public:
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-#     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
-        const bool a = _processA && (nComponents == 1 || nComponents == 4);
-        if (r) {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<true, true, true, true >(procWindow, rs); // RGBA
-                    } else {
-                        return process<true, true, true, false>(procWindow, rs); // RGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, true, false, true >(procWindow, rs); // RGbA
-                    } else {
-                        return process<true, true, false, false>(procWindow, rs); // RGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<true, false, true, true >(procWindow, rs); // RgBA
-                    } else {
-                        return process<true, false, true, false>(procWindow, rs); // RgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, false, false, true >(procWindow, rs); // RgbA
-                    } else {
-                        return process<true, false, false, false>(procWindow, rs); // Rgba
-                    }
-                }
-            }
-        } else {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<false, true, true, true >(procWindow, rs); // rGBA
-                    } else {
-                        return process<false, true, true, false>(procWindow, rs); // rGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, true, false, true >(procWindow, rs); // rGbA
-                    } else {
-                        return process<false, true, false, false>(procWindow, rs); // rGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<false, false, true, true >(procWindow, rs); // rgBA
-                    } else {
-                        return process<false, false, true, false>(procWindow, rs); // rgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, false, false, true >(procWindow, rs); // rgbA
-                    } else {
-                        return process<false, false, false, false>(procWindow, rs); // rgba
-                    }
-                }
-            }
-        }
-#     endif // ifndef __COVERITY__
+        ofxsProcessRGBA<nComponents>(*this, _processR, _processG, _processB, _processA, procWindow, rs);
     } // multiThreadProcessImages
 
-private:
-
+public:
+    // called by ofxsProcessRGBA()
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
@@ -1159,24 +1052,10 @@ GradePlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            if (getImageEffectHostDescription()->supportsMultiResolution) {
-                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-                // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    identityClip = _srcClip;
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
+        identityClip = _srcClip;
 
-                    return true;
-                }
-            }
-        }
+        return true;
     }
 
     return false;
@@ -1186,26 +1065,7 @@ void
 GradePlugin::changedClip(const InstanceChangedArgs &args,
                          const std::string &clipName)
 {
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
-         _srcClip && _srcClip->isConnected() &&
-         !_premultChanged->getValue() &&
-         ( args.reason == eChangeUserEdit) ) {
-        if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
-            _premult->setValue(false);
-        } else {
-            switch ( _srcClip->getPreMultiplication() ) {
-            case eImageOpaque:
-                _premult->setValue(false);
-                break;
-            case eImagePreMultiplied:
-                _premult->setValue(true);
-                break;
-            case eImageUnPreMultiplied:
-                _premult->setValue(false);
-                break;
-            }
-        }
-    }
+    ofxsPremultUpdateFromSourceClip(args, clipName, _srcClip, _premult, _premultChanged);
 }
 
 void

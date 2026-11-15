@@ -30,6 +30,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsCoords.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsMacros.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
@@ -100,11 +101,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSoftnessLabel "Threshold Softness"
 #define kParamSoftnessHint  "Threshold softness for the selected channels."
 
-#ifdef OFX_EXTENSIONS_NATRON
-#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#else
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#endif
 
 
 struct RGBAValues
@@ -176,73 +173,7 @@ private:
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-#     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
-        const bool a = _processA && (nComponents == 1 || nComponents == 4);
-        if (r) {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<true, true, true, true >(procWindow, rs); // RGBA
-                    } else {
-                        return process<true, true, true, false>(procWindow, rs); // RGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, true, false, true >(procWindow, rs); // RGbA
-                    } else {
-                        return process<true, true, false, false>(procWindow, rs); // RGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<true, false, true, true >(procWindow, rs); // RgBA
-                    } else {
-                        return process<true, false, true, false>(procWindow, rs); // RgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, false, false, true >(procWindow, rs); // RgbA
-                    } else {
-                        return process<true, false, false, false>(procWindow, rs); // Rgba
-                    }
-                }
-            }
-        } else {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<false, true, true, true >(procWindow, rs); // rGBA
-                    } else {
-                        return process<false, true, true, false>(procWindow, rs); // rGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, true, false, true >(procWindow, rs); // rGbA
-                    } else {
-                        return process<false, true, false, false>(procWindow, rs); // rGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<false, false, true, true >(procWindow, rs); // rgBA
-                    } else {
-                        return process<false, false, true, false>(procWindow, rs); // rgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, false, false, true >(procWindow, rs); // rgbA
-                    } else {
-                        return process<false, false, false, false>(procWindow, rs); // rgba
-                    }
-                }
-            }
-        }
-#     endif // ifndef __COVERITY__
+        ofxsProcessRGBA<nComponents>(*this, _processR, _processG, _processB, _processA, procWindow, rs);
     } // multiThreadProcessImages
 
     PIX threshold(PIX value, double low, double high)
@@ -256,6 +187,8 @@ private:
         return (PIX)((value - low * maxValue) / (high - low) + (maxValue == 1 ? 0. : 0.5));
     }
   
+public:
+    // called by ofxsProcessRGBA()
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
@@ -470,10 +403,6 @@ ThresholdPlugin::render(const RenderArguments &args)
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-#ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == ePixelComponentXY) {
-        renderInternal<2>(args, dstBitDepth);
-#endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);

@@ -300,50 +300,32 @@ public:
                     // "Color gamut transform pairs", Alvy Ray Smith, Proceeding SIGGRAPH '78
                     // https://doi.org/10.1145/800248.807361
                     // http://www.icst.pku.edu.cn/F/course/ImageProcessing/2018/resource/Color78.pdf
-                    //unpPix[0] = Color::to_func_srgb(unpPix[0]);
-                    //unpPix[1] = Color::to_func_srgb(unpPix[1]);
-                    //unpPix[2] = Color::to_func_srgb(unpPix[2]);
                     Color::rgb_to_hsv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSVToRGB:
                     Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     // Use linear color values, see comment above
-                    //tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
-                    //tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
-                    //tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToHSL:
                     // Use linear color values, see comment above
-                    //unpPix[0] = Color::to_func_srgb(unpPix[0]);
-                    //unpPix[1] = Color::to_func_srgb(unpPix[1]);
-                    //unpPix[2] = Color::to_func_srgb(unpPix[2]);
                     Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSLToRGB:
                     Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     // Use linear color values, see comment above
-                    //tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
-                    //tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
-                    //tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToHSI:
                     // Use linear color values, see comment above
-                    //unpPix[0] = Color::to_func_srgb(unpPix[0]);
-                    //unpPix[1] = Color::to_func_srgb(unpPix[1]);
-                    //unpPix[2] = Color::to_func_srgb(unpPix[2]);
                     Color::rgb_to_hsi(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSIToRGB:
                     Color::hsi_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     // Use linear color values, see comment above
-                    //tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
-                    //tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
-                    //tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
 

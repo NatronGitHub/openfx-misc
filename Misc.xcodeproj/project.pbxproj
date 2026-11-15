@@ -3973,6 +3973,8 @@
 		1ED4AEB21973DD6D00EE64C8 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1ED4AEB51973DE1100EE64C8 /* randomGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = randomGenerator.cpp; sourceTree = "<group>"; };
 		1ED4AEB61973DE1200EE64C8 /* randomGenerator.H */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = randomGenerator.H; sourceTree = "<group>"; };
+		1EC0C0A11D00000000C0C0A1 /* ofxsLuminanceMath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsLuminanceMath.h; sourceTree = "<group>"; };
+		1EC0C0A21D00000000C0C0A2 /* ofxsRGBAProcessing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsRGBAProcessing.h; sourceTree = "<group>"; };
 		1ED5372E1A234CDF007966D5 /* ColorTransform.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorTransform.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ED537301A234D21007966D5 /* ColorTransform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorTransform.cpp; sourceTree = "<group>"; };
 		1ED537351A234D35007966D5 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -5740,6 +5742,8 @@
 			children = (
 				1ED4AEB51973DE1100EE64C8 /* randomGenerator.cpp */,
 				1ED4AEB61973DE1200EE64C8 /* randomGenerator.H */,
+				1EC0C0A11D00000000C0C0A1 /* ofxsLuminanceMath.h */,
+				1EC0C0A21D00000000C0C0A2 /* ofxsRGBAProcessing.h */,
 				1E8B5D4718B769CA00C31FDC /* Info.plist */,
 				1E8B5D4818B769CA00C31FDC /* Makefile */,
 			);

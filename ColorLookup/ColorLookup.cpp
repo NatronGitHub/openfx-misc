@@ -58,8 +58,10 @@ typedef void (APIENTRYP PFNGLBLENDEQUATIONSEPARATEPROC)(GLenum modeRGB, GLenum m
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
+#include "ofxsLuminanceMath.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
@@ -164,27 +166,7 @@ enum MasterCurveModeEnum
 };
 #define kParamMasterCurveModeDefault eMasterCurveModeStandard
 
-#define kParamLuminanceMath "luminanceMath"
-#define kParamLuminanceMathLabel "Luminance Math"
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values (only used by 'Set Master')."
-#define kParamLuminanceMathOptionRec709 "Rec. 709", "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b).", "rec709"
-#define kParamLuminanceMathOptionRec2020 "Rec. 2020", "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b).", "rec2020"
-#define kParamLuminanceMathOptionACESAP0 "ACES AP0", "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b).", "acesap0"
-#define kParamLuminanceMathOptionACESAP1 "ACES AP1", "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b).", "acesap1"
-#define kParamLuminanceMathOptionCcir601 "CCIR 601", "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b).", "ccir601"
-#define kParamLuminanceMathOptionAverage "Average", "Use average of r, g, b.", "average"
-#define kParamLuminanceMathOptionMaximum "Max", "Use max or r, g, b.", "max"
-
-enum LuminanceMathEnum
-{
-    eLuminanceMathRec709,
-    eLuminanceMathRec2020,
-    eLuminanceMathACESAP0,
-    eLuminanceMathACESAP1,
-    eLuminanceMathCcir601,
-    eLuminanceMathAverage,
-    eLuminanceMathMaximum,
-};
 
 #define kParamHasBackgroundInteract "hasBackgroundInteract"
 
@@ -228,13 +210,6 @@ enum DisplayEnum
 #define kCurveBlue 3
 #define kCurveAlpha 4
 #define kCurveNb 5
-
-template<class T>
-T
-luminance(T r,
-          T g,
-          T b,
-          LuminanceMathEnum luminanceMath);
 
 class ColorLookupProcessorBase
     : public ImageProcessor
@@ -710,40 +685,6 @@ private:
     double _rangeMax;
     LuminanceMathEnum _luminanceMath;
 };
-
-template<class T>
-T
-luminance(T r,
-          T g,
-          T b,
-          LuminanceMathEnum luminanceMath)
-{
-    switch (luminanceMath) {
-    case eLuminanceMathRec709:
-    default:
-
-        return Color::rgb709_to_y(r, g, b);
-
-    case eLuminanceMathRec2020:     // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
-
-        return Color::rgb2020_to_y(r, g, b);
-    case eLuminanceMathACESAP0:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
-
-        return Color::rgbACESAP0_to_y(r, g, b);
-    case eLuminanceMathACESAP1:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
-
-        return Color::rgbACESAP1_to_y(r, g, b);
-    case eLuminanceMathCcir601:
-
-        return (T)(0.2989f * r + 0.5866f * g + 0.1145f * b);
-    case eLuminanceMathAverage:
-
-        return (r + g + b) / 3;
-    case eLuminanceMathMaximum:
-
-        return (std::max)((std::max)(r, g), b);
-    }
-}
 
 #define HISTOGRAM_BINS 256
 
@@ -1316,26 +1257,10 @@ ColorLookupPlugin::isIdentity(const IsIdentityArguments &args,
                               double & /*identityTime*/
                             , int& /*view*/, std::string& /*plane*/)
 {
-    const double time = args.time;
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
+        identityClip = _srcClip;
 
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            if (getImageEffectHostDescription()->supportsMultiResolution) {
-                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-                // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    identityClip = _srcClip;
-
-                    return true;
-                }
-            }
-        }
+        return true;
     }
 
     return false;
@@ -1345,26 +1270,7 @@ void
 ColorLookupPlugin::changedClip(const InstanceChangedArgs &args,
                                const std::string &clipName)
 {
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
-         _srcClip && _srcClip->isConnected() &&
-         !_premultChanged->getValue() &&
-         ( args.reason == eChangeUserEdit) ) {
-        if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
-            _premult->setValue(false);
-        } else {
-            switch ( _srcClip->getPreMultiplication() ) {
-            case eImageOpaque:
-                _premult->setValue(false);
-                break;
-            case eImagePreMultiplied:
-                _premult->setValue(true);
-                break;
-            case eImageUnPreMultiplied:
-                _premult->setValue(false);
-                break;
-            }
-        }
-    }
+    ofxsPremultUpdateFromSourceClip(args, clipName, _srcClip, _premult, _premultChanged);
 }
 
 void
