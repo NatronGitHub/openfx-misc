@@ -686,7 +686,9 @@ RampPlugin::isIdentity(const IsIdentityArguments &args,
     RGBAValues color0, color1;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
-    if ( (color0.a == 0.) && (color1.a == 0.) ) {
+    // the color is added to the source even if alpha is zero, so all components must be zero
+    if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
+         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         identityClip = _srcClip;
 
         return true;
