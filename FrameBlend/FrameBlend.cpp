@@ -40,6 +40,7 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsMerging.h"
+#include "ofxsCopier.h"
 
 using namespace OFX;
 
@@ -56,7 +57,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// version 3.0: the frames blended are the lower bound of the range, then one frame out of frameInterval up to the upper bound
+//              (version 2 aligned them on the last frame and dropped the lower bound, e.g. only frame 2 for range 0..2 with interval 2)
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -96,7 +99,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFrameRangeName  "frameRange"
 #define kParamFrameRangeLabel "Frame Range"
-#define kParamFrameRangeHint  "Range of frames which are to be blended together. Frame range is absolute if \"absolute\" is checked, else relative. The last frame is always included, and then one frame out of frameInterval within this interval."
+#define kParamFrameRangeHintBase "Range of frames which are to be blended together. Frame range is absolute if \"absolute\" is checked, else relative. "
+#define kParamFrameRangeHint  kParamFrameRangeHintBase "The lower bound of the range is always included, and then one frame out of frameInterval within this interval."
+#define kParamFrameRangeHintV2  kParamFrameRangeHintBase "The last frame is always included, and then one frame out of frameInterval within this interval." // version 2
 
 #define kParamAbsoluteName  "absolute"
 #define kParamAbsoluteLabel "Absolute"
@@ -448,6 +453,13 @@ private:
                         } else if (operation == eOperationAverage) {
                             tmpPix[c] =  (count ? (tmpPix[c] / sumWeights) : 0);
                         }
+                    } else if (nComponents == 2) {
+                        // XY images have no alpha: normalize both channels like RGB
+                        if (operation == eOperationAverage) {
+                            for (int c = 0; c < 2; ++c) {
+                                tmpPix[c] = (count ? (tmpPix[c] / sumWeights) : 0);
+                            }
+                        }
                     } else if ( (3 <= nComponents) && (nComponents <= 4) ) {
                         if (operation == eOperationAverage) {
                             for (int c = 0; c < 3; ++c) {
@@ -502,7 +514,8 @@ class FrameBlendPlugin
 {
 public:
     /** @brief ctor */
-    FrameBlendPlugin(OfxImageEffectHandle handle)
+    FrameBlendPlugin(OfxImageEffectHandle handle,
+                     unsigned int majorVersion)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(NULL)
@@ -522,6 +535,7 @@ public:
         , _mix(NULL)
         , _maskApply(NULL)
         , _maskInvert(NULL)
+        , _alignFramesOnLast(majorVersion < 3)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -579,6 +593,9 @@ private:
     template <class PIX, int nComponents, int maxValue, OperationEnum operation>
     void renderForOperation(const RenderArguments &args);
 
+    /** @brief compute the frames blended at time: first + i * interval, for 0 <= i < n */
+    void getFrames(double time, int *first, int *interval, int *n);
+
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -598,6 +615,7 @@ private:
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
+    bool _alignFramesOnLast; // version 2 and older: the blended frames are aligned on the last frame of the range
 };
 
 
@@ -733,24 +751,14 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     float *sumWeightsData = NULL;
 
     // compute range
-    bool absolute;
-    _absolute->getValueAtTime(time, absolute);
-    int first, last;
-    _frameRange->getValueAtTime(time, first, last);
-    int interval;
-    _frameInterval->getValueAtTime(time, interval);
-    interval = (std::max)(1, interval);
-    decay = 1. - ipow(1. - decay, interval); // adjust decay so that the final aspect is similar for different values of the interval
+    int first, interval, n;
+    getFrames(time, &first, &interval, &n);
+    decay = 1. - ipow(1. - decay, std::abs(interval)); // adjust decay so that the final aspect is similar for different values of the interval
+    if (n <= 0) {
+        // no frame is blended (frame interval larger than the frame range)
+        fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
 
-    int n = (std::abs(last - first) + 1) / interval;
-    if (first > last) {
-        interval = -interval;
-    }
-    // last frame should always be in the image set, so first frame must be adjusted if abs(interval) > 1
-    first = last - (n - 1) * interval;
-    if (!absolute) {
-        first += time;
-        //last += time; // last is not used anymore
+        return;
     }
 
     const OfxRectI& renderWindow = args.renderWindow;
@@ -853,6 +861,47 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
         processor.process();
     }
 } // FrameBlendPlugin::setupAndProcess
+
+void
+FrameBlendPlugin::getFrames(double time,
+                            int *firstp,
+                            int *intervalp,
+                            int *np)
+{
+    bool absolute;
+    _absolute->getValueAtTime(time, absolute);
+    int first, last;
+    _frameRange->getValueAtTime(time, first, last);
+    int interval;
+    _frameInterval->getValueAtTime(time, interval);
+    interval = (std::max)(1, interval);
+
+    int n;
+    if (_alignFramesOnLast) {
+        // version 2 (kept so that old projects render the same): the last frame is always in the image set, so first frame must be adjusted if abs(interval) > 1,
+        // and the lower bound of the range is dropped when the range length is not a multiple of the interval
+        n = (std::abs(last - first) + 1) / interval;
+        if (first > last) {
+            interval = -interval;
+        }
+        first = last - (n - 1) * interval;
+    } else {
+        // the frames are lower, lower + interval, ..., up to the upper bound (inclusive),
+        // and they are processed from the first frame of the range towards the last one
+        n = std::abs(last - first) / interval + 1;
+        if (first > last) {
+            // start from the highest frame of the set and step towards the lower bound
+            first = last + (n - 1) * interval;
+            interval = -interval;
+        }
+    }
+    if (!absolute) {
+        first += time;
+    }
+    *firstp = first;
+    *intervalp = interval;
+    *np = n;
+}
 
 // the overridden render function
 void
@@ -1028,32 +1077,23 @@ void
 FrameBlendPlugin::getFramesNeeded(const FramesNeededArguments &args,
                                   FramesNeededSetter &frames)
 {
-    const double time = args.time;
-    bool absolute;
-
-    _absolute->getValueAtTime(time, absolute);
-    OfxRangeD range;
-    int first, last;
-    _frameRange->getValueAtTime(time, first, last);
-    if (!absolute) {
-        first += time;
-        last += time;
+    // must be the same frames as in render()
+    int first, interval, n;
+    getFrames(args.time, &first, &interval, &n);
+    if (n <= 0) {
+        // no frame is blended and render outputs black: the OFX spec has no empty frame range,
+        // so set nothing and let the host use its default (the current frame)
+        return;
     }
-    int interval;
-    _frameInterval->getValueAtTime(time, interval);
-    if (interval <= 1) {
-        if (first > last) {
-            std::swap(first, last);
-        }
-        range.min = first;
-        range.max = last;
+    OfxRangeD range;
+    if (std::abs(interval) == 1) {
+        int last = first + (n - 1) * interval;
+        range.min = (std::min)(first, last);
+        range.max = (std::max)(first, last);
         frames.setFramesNeeded(*_srcClip, range);
     } else {
-        if (first > last) {
-            interval = -interval;
-        }
-        for (int i = first; i <= last; i += interval) {
-            range.min = range.max = i;
+        for (int i = 0; i < n; ++i) {
+            range.min = range.max = first + i * interval;
             frames.setFramesNeeded(*_srcClip, range);
         }
     }
@@ -1063,26 +1103,17 @@ bool
 FrameBlendPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
-    const double time = args.time;
-    bool absolute;
-
-    _absolute->getValueAtTime(time, absolute);
-    int min, max;
-    _frameRange->getValueAtTime(time, min, max);
-    if (min > max) {
-        std::swap(min, max);
+    // must be the union of the RoDs of the frames used in render()
+    int first, interval, n;
+    getFrames(args.time, &first, &interval, &n);
+    if (n <= 0) {
+        return false; // use default behavior
     }
-    if (!absolute) {
-        min += time;
-        max += time;
-    }
-    int interval;
-    _frameInterval->getValueAtTime(time, interval);
 
-    rod = _srcClip->getRegionOfDefinition(min);
+    rod = _srcClip->getRegionOfDefinition(first);
 
-    for (int i = min + interval; i <= max; i += interval) {
-        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(i);
+    for (int i = 1; i < n; ++i) {
+        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(first + i * interval);
         Coords::rectBoundingBox(srcRoD, rod, &rod);
     }
 
@@ -1106,14 +1137,18 @@ FrameBlendPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(FrameBlendPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(FrameBlendPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-FrameBlendPluginFactory::describe(ImageEffectDescriptor &desc)
+FrameBlendPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -1138,8 +1173,9 @@ FrameBlendPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-FrameBlendPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+FrameBlendPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                            ContextEnum context)
 {
     // Source clip only in the filter context
@@ -1230,7 +1266,7 @@ FrameBlendPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         Int2DParamDescriptor *param = desc.defineInt2DParam(kParamFrameRangeName);
         param->setLabel(kParamFrameRangeLabel);
-        param->setHint(kParamFrameRangeHint);
+        param->setHint(majorVersion < 3 ? kParamFrameRangeHintV2 : kParamFrameRangeHint);
         param->setDimensionLabels("first", "last");
         param->setDefault(-5, 0);
         param->setAnimates(true); // can animate
@@ -1320,14 +1356,18 @@ FrameBlendPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 } // FrameBlendPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-FrameBlendPluginFactory::createInstance(OfxImageEffectHandle handle,
+FrameBlendPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                         ContextEnum /*context*/)
 {
-    return new FrameBlendPlugin(handle);
+    return new FrameBlendPlugin(handle, majorVersion);
 }
 
-static FrameBlendPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static FrameBlendPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 2: the blended frames are aligned on the last frame of the range
+static FrameBlendPluginFactory<2> pv2(kPluginIdentifier, 0);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(pv2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

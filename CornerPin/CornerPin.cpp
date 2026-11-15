@@ -104,7 +104,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier "net.sf.openfx.CornerPinPlugin"
 #define kPluginMaskedIdentifier "net.sf.openfx.CornerPinMaskedPlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define POINT_SIZE 5
@@ -194,13 +194,15 @@ class CornerPinPlugin
 public:
     /** @brief ctor */
     CornerPinPlugin(OfxImageEffectHandle handle,
-                    bool masked)
+                    bool masked,
+                    unsigned int majorVersion)
         : Transform3x3Plugin(handle, masked, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur)
         , _transformAmount(NULL)
         , _extraMatrixRow1(NULL)
         , _extraMatrixRow2(NULL)
         , _extraMatrixRow3(NULL)
         , _srcClipChanged(NULL)
+        , _majorVersion(majorVersion)
     {
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
@@ -279,6 +281,7 @@ private:
     Double3DParam* _extraMatrixRow3;
     Double2DParam* _from[4];
     BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    unsigned int _majorVersion;
 };
 
 
@@ -324,9 +327,26 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
     bool success = false;
 
     assert(0 <= k && k <= 4);
+    Matrix3x3 extraMat = getExtraMatrix(time);
+    // Before version 2, the transform used for rendering with "Invert" checked was homo3x3 * extraMat
+    // (instead of inverse(extraMat) * homo3x3). Keep that render for old instances, and compute the
+    // direct transform used for the RoD as its inverse, which means swapping the composition order.
+    bool composeInverted = invert;
+    if ( (_majorVersion < 2) && _invert && _invert->getValueAtTime(time) ) {
+        composeInverted = !invert;
+    }
+    if (composeInverted) {
+        // the direct transform is the inverse of homo3x3 * extraMat, i.e. inverse(extraMat) * inverse(homo3x3)
+        Matrix3x3 extraMatInverse;
+        if ( !extraMat.inverse(&extraMatInverse) ) {
+            return false;
+        }
+        extraMat = extraMatInverse;
+    }
+
     if (k == 0) {
         // no points, only apply extraMat;
-        *invtransform = getExtraMatrix(time);
+        *invtransform = extraMat;
 
         return true;
     }
@@ -356,8 +376,11 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
         homo3x3 *= -1;
     }
 
-    Matrix3x3 extraMat = getExtraMatrix(time);
-    *invtransform = homo3x3 * extraMat;
+    if (composeInverted) {
+        *invtransform = extraMat * homo3x3;
+    } else {
+        *invtransform = homo3x3 * extraMat;
+    }
 
     return true;
 } // CornerPinPlugin::getInverseTransformCanonical
@@ -907,6 +930,13 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
 
     _lastMousePos = args.penPosition;
 
+#ifdef OFX_EXTENSIONS_NATRON
+    // The host reads the cursor whatever penMotion returns, so the return value is unchanged.
+    // setCursor() does nothing on hosts without interact cursors.
+    const bool overPoint = (_dragging != -1) || (_hovering != -1);
+    setCursor(overPoint ? kOfxInteractCursorMove : kOfxInteractCursorDefault);
+#endif
+
     return valuesChanged;
 } // CornerPinTransformInteract::penMotion
 
@@ -1116,7 +1146,10 @@ defineExtraMatrixRow(ImageEffectDescriptor &desc,
 {
     Double3DParamDescriptor* param = desc.defineDouble3DParam(name);
 
-    if ( getImageEffectHostDescription()->isNatron && (getImageEffectHostDescription()->versionMajor >= 2) && (getImageEffectHostDescription()->versionMinor >= 1) ) {
+    // Natron >= 2.1 (testing major and minor separately would fail for 3.0)
+    const ImageEffectHostDescription& host = *getImageEffectHostDescription();
+    if ( host.isNatron &&
+         ( (host.versionMajor > 2) || ( (host.versionMajor == 2) && (host.versionMinor >= 1) ) ) ) {
         param->setLabel(kGroupExtraMatrixLabel);
     } else {
         param->setLabels("", "", "");
@@ -1318,9 +1351,10 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
     }
 } // CornerPinPluginDescribeInContext
 
-mDeclarePluginFactory(CornerPinPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CornerPinPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-CornerPinPluginFactory::describe(ImageEffectDescriptor &desc)
+CornerPinPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -1328,12 +1362,16 @@ CornerPinPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, false);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
 
+template<unsigned int majorVersion>
 void
-CornerPinPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+CornerPinPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum context)
 {
     // make some pages and to things in
@@ -1354,16 +1392,18 @@ CornerPinPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle,
+CornerPinPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    return new CornerPinPlugin(handle, false);
+    return new CornerPinPlugin(handle, false, majorVersion);
 }
 
-mDeclarePluginFactory(CornerPinMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CornerPinMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-CornerPinMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
+CornerPinMaskedPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginMaskedName);
@@ -1371,12 +1411,16 @@ CornerPinMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, true);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
 
+template<unsigned int majorVersion>
 void
-CornerPinMaskedPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+CornerPinMaskedPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                                 ContextEnum context)
 {
     // make some pages and to things in
@@ -1397,16 +1441,24 @@ CornerPinMaskedPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
+CornerPinMaskedPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                              ContextEnum /*context*/)
 {
-    return new CornerPinPlugin(handle, true);
+    return new CornerPinPlugin(handle, true, majorVersion);
 }
 
-static CornerPinPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static CornerPinMaskedPluginFactory p2(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// Each major version needs its own factory class: FactoryMainEntryHelper stores
+// the plugin UID in a static shared by all objects of the same class.
+static CornerPinPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
+static CornerPinMaskedPluginFactory<kPluginVersionMajor> p2(kPluginMaskedIdentifier, kPluginVersionMinor);
+// version 1: "Invert" composes the extra matrix as homo3x3 * extraMat
+static CornerPinPluginFactory<1> p1v1(kPluginIdentifier, 0);
+static CornerPinMaskedPluginFactory<1> p2v1(kPluginMaskedIdentifier, 0);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p1v1)
+mRegisterPluginFactoryInstance(p2v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

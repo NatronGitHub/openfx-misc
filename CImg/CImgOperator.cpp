@@ -30,17 +30,18 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
                                                            bool supportsMultiResolution,
                                                            bool supportsRenderScale,
                                                            bool defaultUnpremult,
-                                                           bool defaultProcessAlphaOnRGBA)
-    : CImgFilterPluginHelperBase(handle, usesMask, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA)
+                                                           bool /*defaultProcessAlphaOnRGBA*/) // unused: the processAlpha default is set by describeInContextBegin()
+    : CImgFilterPluginHelperBase(handle, usesMask, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, /*isFilter=*/ false)
     , _srcAClip(NULL)
     , _srcBClip(NULL)
     , _srcAClipName(srcAClipName)
     , _srcBClipName(srcBClipName)
+    , _ignoreMix(false)
 {
     _srcAClip = fetchClip(_srcAClipName);
     assert( _srcAClip && (!_srcAClip->isConnected() || _srcAClip->getPixelComponents() == ePixelComponentRGB || _srcAClip->getPixelComponents() == ePixelComponentRGBA) );
     _srcBClip = fetchClip(_srcBClipName);
-    assert( _srcBClip && (!_srcBClip->isConnected() || _srcAClip->getPixelComponents() == ePixelComponentRGB || _srcBClip->getPixelComponents() == ePixelComponentRGBA) );
+    assert( _srcBClip && (!_srcBClip->isConnected() || _srcBClip->getPixelComponents() == ePixelComponentRGB || _srcBClip->getPixelComponents() == ePixelComponentRGBA) );
 }
 
 void

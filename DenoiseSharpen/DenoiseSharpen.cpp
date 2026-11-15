@@ -1856,6 +1856,20 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
         return;
     }
 
+    // reduce the number of levels if the image is too small for the filter at the coarsest scale
+    // (hat_transform requires size >= 2*sc for the linear filter, size >= 4*sc for the B3 filter)
+    {
+        const unsigned int minSize = (std::min)(iwidth, iheight);
+        const unsigned int k = b3 ? 4 : 2;
+        while ( maxLevel >= 0 && (k << maxLevel) > minSize ) {
+            --maxLevel;
+        }
+        if (maxLevel < 0) {
+            // image is too small to be processed: leave it unchanged
+            return;
+        }
+    }
+
     if ( ( ( (noiselevels[0] <= 0.) && (noiselevels[1] <= 0.) && (noiselevels[2] <= 0.) && (noiselevels[3] <= 0.) ) || (denoise_amount <= 0.) ) && (sharpen_amount <= 0.) ) {
         return;
     }
@@ -3004,28 +3018,37 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB /*|| dstComponents == ePixelComponentXY*/ || dstComponents == ePixelComponentAlpha);
     // do the rendering
-    switch (dstComponents) {
-    case ePixelComponentRGBA:
-        analyzeNoiseLevelsForComponents<4>(args);
-        break;
-    case ePixelComponentRGB:
-        analyzeNoiseLevelsForComponents<3>(args);
-        break;
+    try {
+        switch (dstComponents) {
+        case ePixelComponentRGBA:
+            analyzeNoiseLevelsForComponents<4>(args);
+            break;
+        case ePixelComponentRGB:
+            analyzeNoiseLevelsForComponents<3>(args);
+            break;
 #ifdef OFX_EXTENSIONS_NATRON
-    //case ePixelComponentXY:
-    //    renderForComponents<2>(args);
-    //    break;
+        //case ePixelComponentXY:
+        //    renderForComponents<2>(args);
+        //    break;
 #endif
-    case ePixelComponentAlpha:
-        analyzeNoiseLevelsForComponents<1>(args);
-        break;
-    default:
+        case ePixelComponentAlpha:
+            analyzeNoiseLevelsForComponents<1>(args);
+            break;
+        default:
 #ifdef DEBUG_STDOUT
-        std::cout << "components usupported\n";
+            std::cout << "components usupported\n";
 #endif
-        throwSuiteStatusException(kOfxStatErrUnsupported);
-        break;
-    } // switch
+            throwSuiteStatusException(kOfxStatErrUnsupported);
+            break;
+        } // switch
+    } catch (...) {
+        // end the progress and the analysis even if the analysis failed
+        progressEndAnalysis();
+# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+# endif
+        throw;
+    }
     _analysisFrame->setValue( (int)args.time );
 
     // lock values

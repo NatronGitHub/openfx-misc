@@ -405,6 +405,28 @@ static PFNGLDELETERENDERBUFFERSPROC glDeleteRenderbuffers;
 
 #endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
+// Delete the GL program of a shader. The GL context that owns the program must be current:
+// deleting the ShadertoyShader alone would leak the program on each context detach.
+static
+void
+deleteShaderProgram(ShadertoyShader* shader)
+{
+    if (!shader) {
+        return;
+    }
+#if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
+    // glDeleteProgram is a function pointer, loaded in contextAttached()
+    if (glDeleteProgram == NULL) {
+        shader->program = 0;
+
+        return;
+    }
+#endif
+    if (shader->program) {
+        glDeleteProgram(shader->program);
+        shader->program = 0;
+    }
+}
 
 static
 int
@@ -479,6 +501,8 @@ struct ShadertoyPlugin::OSMesaPrivate
             unsigned char buffer[4];
             OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
             _effect->contextDetachedMesa(NULL);
+            // the program belongs to this context, which is about to be destroyed
+            deleteShaderProgram( (ShadertoyShader*)_openGLContextData.imageShader );
             OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
             OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
             OSMesaDestroyContext( _ctx );
@@ -520,6 +544,9 @@ struct ShadertoyPlugin::OSMesaPrivate
                 unsigned char buffer[4];
                 OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
                 _effect->contextDetachedMesa(NULL);
+                // the program belongs to this context, which is about to be destroyed:
+                // delete it, and do not delete its stale name in the new context
+                deleteShaderProgram( (ShadertoyShader*)_openGLContextData.imageShader );
                 OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
                 OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
                 OSMesaDestroyContext( _ctx );
@@ -1238,6 +1265,47 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             _osmesa.pop_back();
         }
     }
+    // Detach the buffer and make osmesa available for other renders when leaving this function,
+    // even if an exception is thrown (else the OSMesaPrivate would leak).
+    struct OSMesaReleaser
+    {
+        OSMesaReleaser(OSMesaPrivate* o,
+                       std::list<OSMesaPrivate *>& l,
+                       Mutex* m)
+            : osmesa(o)
+            , list(l)
+            , mutex(m)
+        {
+        }
+
+        ~OSMesaReleaser()
+        {
+            release();
+        }
+
+        void release()
+        {
+            if (!osmesa) {
+                return;
+            }
+            // make sure the buffer is not referenced anymore
+            osmesa->setContext(0, 0, 0, 0, 0, eCPUDriverSoftPipe, NULL, 0, 0, 0, true);
+            OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
+            assert(OSMesaGetCurrentContext() == NULL);
+
+            // We're finished with this osmesa, make it available for other renders
+            {
+                AutoMutex lock(mutex);
+                list.push_back(osmesa);
+            }
+            osmesa = NULL;
+        }
+
+        OSMesaPrivate* osmesa;
+        std::list<OSMesaPrivate *>& list;
+        Mutex* mutex;
+    };
+    OSMesaReleaser osmesaReleaser( osmesa, _osmesa, _osmesaMutex.get() );
     if (OSMesaGetCurrentContext() != NULL) {
         DPRINT( ("render error: %s\n", "Mesa context still attached") );
         glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
@@ -1317,6 +1385,15 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         uniforms_changed = (_imageShaderUniformsID != contextData->imageShaderUniformsID);
         contextData->imageShaderUniformsID = _imageShaderUniformsID;
 
+        if (!must_recompile && !shadertoy->program) {
+            // The last compilation of this shader failed on this context, and imageShaderID
+            // was already updated, so it will not be recompiled: fail instead of rendering
+            // with an invalid program (which would produce garbage that may be cached).
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+
+            return;
+        }
         if (must_recompile) {
             if (shadertoy->program) {
                 glDeleteProgram(shadertoy->program);
@@ -2183,16 +2260,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 
 #ifdef USE_OSMESA
-    // make sure the buffer is not referenced anymore
-    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, NULL, 0, 0, 0, true);
-    OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
-    assert(OSMesaGetCurrentContext() == NULL);
-
-    // We're finished with this osmesa, make it available for other renders
-    {
-        AutoMutex lock( _osmesaMutex.get() );
-        _osmesa.push_back(osmesa);
-    }
+    // detach the buffer and make osmesa available for other renders
+    osmesaReleaser.release();
 #endif // ifdef USE_OSMESA
 #ifdef DEBUG_TIME
     gettimeofday(&t2, NULL);
@@ -2548,11 +2617,17 @@ ShadertoyPlugin::contextDetached(void* contextData)
 {
     // Shadertoy:
 #ifdef USE_OPENGL
+    // The spec says the host calls this with the same OpenGL context active as in
+    // kOfxActionOpenGLContextAttached, so this is where the GL program can be deleted
+    // (deleting the ShadertoyShader alone leaked the program on each detach).
     if (contextData) {
+        deleteShaderProgram( (ShadertoyShader*)( (OpenGLContextData*)contextData )->imageShader );
         delete (ShadertoyShader*)( (OpenGLContextData*)contextData )->imageShader;
         ( (OpenGLContextData*)contextData )->imageShader = NULL;
         delete (OpenGLContextData*)contextData;
     } else {
+        // the single context data is kept, but its program belongs to the detached context
+        deleteShaderProgram( (ShadertoyShader*)_openGLContextData.imageShader );
         _openGLContextAttached = false;
     }
 #else

@@ -260,7 +260,7 @@ private:
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
         unused(rs);
-        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
+        assert(nComponents >= 1 && nComponents <= 4); // XY (2 components) is supported too
         assert(_dstImg);
         float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};

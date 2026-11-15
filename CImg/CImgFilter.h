@@ -99,15 +99,7 @@
 #endif
 
 #if !defined(HAVE_THREAD_LOCAL)
-#ifdef WIN32
 #pragma message WARN("Most CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang.")
-#else
-// non-Win32 systems should have at least pthread
-#pragma message WARN("CImg plugins use pthread-based thread-local storage.")
-#include <assert.h>
-#include <pthread.h>
-#define HAVE_PTHREAD
-#endif
 #endif //!HAVE_THREAD_LOCAL
 
 
@@ -137,7 +129,7 @@
 // Abort mechanism:
 // we have a struct with a thread-local storage that holds the OFX::ImageEffect
 // for the thread being rendered
-#if defined(HAVE_THREAD_LOCAL) || defined(HAVE_PTHREAD)
+#if defined(HAVE_THREAD_LOCAL)
 #define cimg_abort_test gImageEffectAbort()
 inline void gImageEffectAbort();
 #endif
@@ -199,39 +191,32 @@ gImageEffectAbort()
     }
 }
 
-#elif defined(HAVE_PTHREAD)
-struct tls
+// sets the effect checked by the CImg abort test in the current thread,
+// and restores the previous value on exit (including on exceptions)
+class CImgAbortScope
 {
-    // the key is created once and *never* deleted using pthread_key_delete()
-    static pthread_key_t gImageEffect_key;
-    static void gImageEffect_key_delete(void * arg)
+public:
+    explicit CImgAbortScope(OFX::ImageEffect* effect)
+        : _prev(tls::gImageEffect)
     {
-        assert (NULL != arg);
-        free(arg);
+        tls::gImageEffect = effect;
     }
-    static void gImageEffect_key_create(void)
-    {
-        int _ret;
-        _ret = pthread_key_create(&(gImageEffect_key), gImageEffect_key_delete);
-        cimg_library::cimg::unused(_ret); /* To get rid of warnings in case of NDEBUG */
-        assert (0 == _ret);
-    }
-    static pthread_once_t gImageEffect_once/* = PTHREAD_ONCE_INIT*/;
-};
 
-inline void
-gImageEffectAbort()
+    ~CImgAbortScope()
+    {
+        tls::gImageEffect = _prev;
+    }
+
+private:
+    OFX::ImageEffect* _prev;
+};
+#else
+// without thread-local storage CImg never checks for abort, so there is nothing to set
+class CImgAbortScope
 {
-#  if cimg_use_openmp!=0
-    if ( omp_get_thread_num() ) {
-        return;
-    }
-#  endif
-    OFX::ImageEffect **_ptr = (OFX::ImageEffect **)pthread_getspecific(tls::gImageEffect_key);
-    if ( *_ptr && (*_ptr)->abort() ) {
-        throw cimg_library::CImgAbortException("");
-    }
-}
+public:
+    explicit CImgAbortScope(OFX::ImageEffect* /*effect*/) {}
+};
 #endif
 
 
@@ -266,7 +251,8 @@ public:
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc,
                                      OFX::ContextEnum context,
                                      OFX::PageParamDescriptor* page,
-                                     bool hasUnpremult = true);
+                                     bool hasUnpremult = true,
+                                     bool hasMask = true);
 
 protected:
 #ifdef CIMG_DEBUG
@@ -376,7 +362,8 @@ public:
     }
 
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    // (not final: plugins with extra input clips may override it to set the RoI on these clips, but must call this one)
+    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE;
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
@@ -834,7 +821,8 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             cimgSpectrum = (int)processA;
             break;
         case OFX::ePixelComponentXY:
-            cimgSpectrum = (int)processR + (int)processG + (int) processB;
+            // XY images have no B channel
+            cimgSpectrum = (int)processR + (int)processG;
             break;
         case OFX::ePixelComponentRGB:
             cimgSpectrum = (int)processR + (int)processG + (int) processB;
@@ -876,7 +864,8 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
                 srcChannel[c] = 1;
                 ++c;
             }
-            if (processB) {
+            // XY images have no B channel (and only RGBA has A)
+            if ( processB && (tmpPixelComponentCount >= 3) ) {
                 srcChannel[c] = 2;
                 ++c;
             }
@@ -934,34 +923,12 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         //////////////////////////////////////////////////////////////////////////////////////////
         // 3- process the cimg
         printRectI("render srcRoI", srcRoI);
-#if defined(HAVE_THREAD_LOCAL) || defined(HAVE_PTHREAD)
-#  if defined(HAVE_THREAD_LOCAL)
-        tls::gImageEffect = this;
-#  else
-        OFX::ImageEffect **_ptr = (OFX::ImageEffect **)pthread_getspecific(tls::gImageEffect_key);
-        assert (NULL != _ptr);
-        *_ptr = this;
-#  endif
         try {
+            CImgAbortScope abortScope(this);
             render(args, params, srcRoI.x1, srcRoI.y1, maskcimg, cimg, alphaChannel);
-        } catch (cimg_library::CImgAbortException) {
-#  if defined(HAVE_THREAD_LOCAL)
-            tls::gImageEffect = 0;
-#  else
-            *_ptr = 0;
-#  endif
-
+        } catch (const cimg_library::CImgAbortException&) {
             return;
         }
-
-#  if defined(HAVE_THREAD_LOCAL)
-        tls::gImageEffect = 0;
-#  else
-        *_ptr = 0;
-#  endif
-#else
-        render(args, params, srcRoI.x1, srcRoI.y1, maskcimg, cimg, alphaChannel);
-#endif
         // check that the dimensions didn't change
         assert(cimg.width() == cimgWidth && cimg.height() == cimgHeight && cimg.depth() == 1 && cimg.spectrum() == cimgSpectrum);
         if ( abort() ) {
@@ -1241,9 +1208,11 @@ cimg_grand(unsigned int seed, int x, int y, int nComponents)
 
 //! Return a random variable following a Poisson distribution of parameter z.
 /**
+ legacy=true reproduces the old (wrong) distribution, where the same uniform
+ random value was used at each iteration.
  **/
 inline unsigned int
-cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
+cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z, bool legacy = false)
 {
     if (z<=1.0e-10) {
         return 0;
@@ -1254,7 +1223,8 @@ cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
     unsigned int k = 0;
     const double y1 = std::exp(-z);
     for (double s = 1.0; s >= y1; ++k) {
-        s *= cimg_rand(seed+1, x, y, nComponents);
+        // each iteration needs an independent uniform random value
+        s *= cimg_rand(legacy ? (seed + 1) : cimg_hash(seed + 1 + k), x, y, nComponents);
     }
     return k > 0 ? k - 1 : 0;
 }

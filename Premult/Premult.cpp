@@ -370,7 +370,8 @@ public:
         assert(_processR && _processG && _processB && _processA);
         _premult = fetchChoiceParam(kParamPremultChannel);
         assert(_premult);
-        _inputPlane = fetchChoiceParam(kParamInputPlane);
+        // the plane param is only defined when multiplanar (see describeInContext)
+        _inputPlane = gIsMultiplanar ? fetchChoiceParam(kParamInputPlane) : NULL;
         //_premultChanged = fetchBooleanParam(kParamPremultChanged);
         //assert(_premultChanged);
 
@@ -400,6 +401,8 @@ private:
     void fetchSourceAndOutputImage(const RenderArguments &args, const Image** srcImage, Image** dstImage);
 
     const Image* fetchPremultChannelImage(const RenderArguments &args, int *channelIndex, bool *fillWith1IfNoImage);
+
+    bool getPremultChannelNonMultiplanar(double time, int *channelIndex, bool *fillWith1);
 
     virtual OfxStatus getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE;
 
@@ -503,15 +506,58 @@ PremultPlugin<isPremult>::fetchPremultChannelImage(const RenderArguments &args, 
 
                 return NULL;
             }
+        } else {
+            // the premult channel is read from the source image (see setupAndProcess()),
+            // but the channel index must still be set, else premultPix[-1] would be read
+            if ( !getPremultChannelNonMultiplanar(args.time, channelIndex, fillWith1IfNoImage) ) {
+                setPersistentMessage(Message::eMessageError, "", "Only the channels of the color plane can be used on this host");
+                throwSuiteStatusException(kOfxStatFailed);
+            }
         }
     }
     return srcImage;
+}
+
+// Without multiplane support, getPlaneNeeded() cannot be used (the choice params are not
+// managed by MultiPlaneEffect): get the channel of the color plane from the premult choice.
+// Sets channelIndex to the RGBA channel index (0-3), or to -1 for the constant 0 or 1
+// (fillWith1 is set to true for the constant 1).
+// Returns false if the selected channel is not in the color plane.
+template<bool isPremult>
+bool
+PremultPlugin<isPremult>::getPremultChannelNonMultiplanar(double time, int *channelIndex, bool *fillWith1)
+{
+    assert(!gIsMultiplanar);
+    *channelIndex = -1;
+    *fillWith1 = false;
+    int choice = _premult->getValueAtTime(time);
+    std::string option;
+    if ( (0 <= choice) && ( choice < _premult->getNOptions() ) ) {
+        _premult->getOption(choice, option);
+    }
+    if (option == kMultiPlaneChannelParamOption0) {
+        // constant 0
+    } else if (option == kMultiPlaneChannelParamOption1) {
+        *fillWith1 = true;
+    } else if ( (0 <= choice) && (choice < 4) ) {
+        // the first 4 options are the R, G, B, A channels of the color plane
+        // (see MultiPlane::Factory::describeInContextAddPlaneChannelChoice)
+        *channelIndex = choice;
+    } else {
+        return false;
+    }
+
+    return true;
 }
 
 template<bool isPremult>
 OfxStatus
 PremultPlugin<isPremult>::getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents)
 {
+    if (!gIsMultiplanar) {
+        // the multiplane params are not defined, and getPlaneNeeded() cannot be used
+        return kOfxStatReplyDefault;
+    }
 
     // Request the premult channel plane on the source clip
     std::string premultChannelOfxPlane;
@@ -610,7 +656,27 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
     // set the images
     processor.setDstImg( dst );
     processor.setSrcImg( src );
-    processor.setPremultChannelImg(!gIsMultiplanar ? src : premultChanImg.get(), premultChannelIndex, premultWith1IfNoImage);
+    const Image* premultImg = premultChanImg.get();
+    if (!gIsMultiplanar) {
+        // the premult channel is read from the source image, at the RGBA channel index
+        // given by fetchPremultChannelImage(): adapt it to the source components
+        premultImg = NULL;
+        if (src && (premultChannelIndex >= 0) ) {
+            int srcNComps = src->getPixelComponentCount();
+            if (srcNComps == 1) {
+                // Alpha image: only A is available
+                premultChannelIndex = (premultChannelIndex == 3) ? 0 : -1;
+            } else if (premultChannelIndex >= srcNComps) {
+                // A in an image without alpha (RGB): it is opaque
+                premultChannelIndex = -1;
+                premultWith1IfNoImage = true;
+            }
+            if (premultChannelIndex >= 0) {
+                premultImg = src;
+            }
+        }
+    }
+    processor.setPremultChannelImg(premultImg, premultChannelIndex, premultWith1IfNoImage);
     // set the render window
     processor.setRenderWindow(args.renderWindow, args.renderScale);
 
@@ -775,11 +841,22 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args,
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
 
-    MultiPlane::ImagePlaneDesc premultPlane;
-    OFX::Clip* clip = 0;
-    int premultChanIndex;
-    MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &premultPlane, &premultChanIndex);
-    if ( (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1) || (!processR && !processG && !processB && !processA) ) {
+    bool premultByOne;
+    if (gIsMultiplanar) {
+        MultiPlane::ImagePlaneDesc premultPlane;
+        OFX::Clip* clip = 0;
+        int premultChanIndex;
+        MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &premultPlane, &premultChanIndex);
+        premultByOne = (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1);
+    } else {
+        // getPlaneNeeded() can only be used when multiplanar
+        int premultChanIndex;
+        if ( !getPremultChannelNonMultiplanar(args.time, &premultChanIndex, &premultByOne) ) {
+            // channel not available: render reports the error
+            return false;
+        }
+    }
+    if ( premultByOne || (!processR && !processG && !processB && !processA) ) {
         // no processing: identity
         identityClip = _srcClip;
 
@@ -975,7 +1052,8 @@ PremultPluginFactory<isPremult>::describe(ImageEffectDescriptor &desc)
 #else
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
     desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelPassThroughNonRenderedPlanes);
-    gIsMultiplanar = getImageEffectHostDescription()->supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2);
+    // optional=true: fetchSuite() throws instead of returning NULL when the host lacks the suite
+    gIsMultiplanar = getImageEffectHostDescription()->supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true);
     desc.setIsMultiPlanar(gIsMultiplanar);
 #endif
 }

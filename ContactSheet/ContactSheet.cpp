@@ -497,7 +497,7 @@ ContactSheetPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
             int cell = count * i + frame; // cell number
             int r = cell / columns;
             int c = cell % columns;
-            if (r > rows) {
+            if (r >= rows) {
                 continue;
             }
             if (topbottom) {
@@ -590,7 +590,7 @@ ContactSheetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
         int clipCount = (std::min)(framesLeft, count); // number of frames from this clip
         OfxRangeD range;
         range.min = first;
-        range.max = (std::min)(last, first + clipCount);
+        range.max = (std::min)(last, first + clipCount - 1); // the range is inclusive
         frames.setFramesNeeded(*_srcClip[i], range);
 
         framesLeft -= clipCount;
@@ -700,6 +700,12 @@ private:
     // overridden functions from OFX::Interact to do things
     virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL;
     virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL;
+#ifdef OFX_EXTENSIONS_NATRON
+    virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL;
+#endif
+
+    // the input and frame of the cell under the pen; false if selection is off or not over a cell
+    bool cellAt(const OFX::PenArgs &args, int* selectionInput, int* selectionFrame) const;
 
 private:
     Clip* _dstClip;
@@ -818,8 +824,8 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
 }
 
 
-bool 
-ContactSheetInteract::penDown(const OFX::PenArgs &args)
+bool
+ContactSheetInteract::cellAt(const OFX::PenArgs &args, int* selectionInput, int* selectionFrame) const
 {
     const double time = args.time;
 
@@ -867,14 +873,40 @@ ContactSheetInteract::penDown(const OFX::PenArgs &args)
 
     c = c + r * columns;
 
-    int selectionFrame = c % count;
-    int selectionInput = c / count;
+    *selectionFrame = c % count;
+    *selectionInput = c / count;
 
+    return true;
+}
+
+bool
+ContactSheetInteract::penDown(const OFX::PenArgs &args)
+{
+    int selectionInput, selectionFrame;
+
+    if ( !cellAt(args, &selectionInput, &selectionFrame) ) {
+        return false;
+    }
     _selectionFrame->setValue(selectionFrame);
     _selectionInput->setValue(selectionInput);
 
     return true;
 }
+
+#ifdef OFX_EXTENSIONS_NATRON
+bool
+ContactSheetInteract::penMotion(const OFX::PenArgs &args)
+{
+    // cells are clickable when selection is on: show a pointer over them. The host reads the
+    // cursor whatever penMotion returns, so don't trap the motion (other overlays still get it).
+    int selectionInput, selectionFrame;
+    const bool overCell = cellAt(args, &selectionInput, &selectionFrame);
+
+    setCursor(overCell ? kOfxInteractCursorPointer : kOfxInteractCursorDefault);
+
+    return false;
+}
+#endif
 
 #endif // SELECTION
 
