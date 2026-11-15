@@ -84,12 +84,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kSupportsTiles 1
+// With Auto Update, render() writes the statistics params (setValueAtTime), so it must not
+// run concurrently on the same instance (on several tiles or frames): render whole images
+// only, one render at a time per instance. The output is a copy of the input either way.
+#define kSupportsTiles 0
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 0 // no renderscale support: statistics are computed at full resolution
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
-#define kRenderThreadSafety eRenderFullySafe
+#define kRenderThreadSafety eRenderInstanceSafe
 
 
 #define kParamRestrictToRectangle "restrictToRectangle"
