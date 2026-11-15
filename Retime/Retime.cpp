@@ -43,6 +43,8 @@
 #include "ofxsImageBlender.H"
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
+#include "ofxsCoords.h"
+#include "../FrameRange/FrameRangeBeforeAfter.h"
 
 using namespace OFX;
 
@@ -51,6 +53,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip.\n" \
+    "The Before and After parameters set what is read when the source frame falls outside the frame range of the input clip: the input frame itself (Original), the first or last frame (Hold), transparent black (Black), or frames repeated from the input range (Loop, Bounce).\n" \
     "See also: https://web.archive.org/web/20220627032808/http://www.opticalenquiry.com/nuke/index.php?title=Retime"
 
 #define kPluginIdentifier "net.sf.openfx.Retime"
@@ -96,6 +99,9 @@ enum FilterEnum
 
 #define kParamFilterDefault eFilterLinear
 
+#define kParamBeforeHint "What to read when the source frame (computed from the retiming parameters) is before the first frame of the input clip."
+#define kParamAfterHint "What to read when the source frame (computed from the retiming parameters) is after the last frame of the input clip."
+
 #define kPageTimeWarp "timeWarp"
 #define kPageTimeWarpLabel "Time Warp"
 
@@ -103,6 +109,16 @@ enum FilterEnum
 #define kParamWarpLabel "Warp"
 #define kParamWarpHint "Curve that maps input range (after applying speed) to the output range. A low positive slope slows down the input clip, and a negative slope plays it backwards."
 
+
+// The source frames used at a given output time, after applying Before/After.
+struct SourceFrames
+{
+    double from, to; // source times of the frames to read
+    bool fromBlack, toBlack; // the frame is transparent black (Before/After = Black)
+    bool original; // no Before/After behaviour applies: same result as before these params existed
+    bool blended; // blend "from" and "to" (Linear filter), else only "from" is used
+    double blend; // weight of "to"
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -119,6 +135,8 @@ private:
     ParametricParam  *_warp;      /**< @brief only used in the filter or general context. */
     DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only. */
     ChoiceParam  *_filter;   /**< @brief how images are interpolated (or not). */
+    ChoiceParam  *_before;
+    ChoiceParam  *_after;
 
 public:
     /** @brief ctor */
@@ -133,6 +151,8 @@ public:
         , _warp(NULL)
         , _duration(NULL)
         , _filter(NULL)
+        , _before(NULL)
+        , _after(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -158,14 +178,16 @@ public:
             }
         }
         _filter = fetchChoiceParam(kParamFilter);
-        assert(_filter);
+        _before = fetchChoiceParam(kParamBefore);
+        _after = fetchChoiceParam(kParamAfter);
+        assert(_filter && _before && _after);
     }
 
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const RenderArguments &args, double sourceTime, FilterEnum filter, BitDepthEnum dstBitDepth);
+    void renderInternal(const RenderArguments &args, const SourceFrames &frames, BitDepthEnum dstBitDepth);
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
@@ -174,14 +196,13 @@ public:
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(ImageBlenderBase &, const RenderArguments &args, double sourceTime, FilterEnum filter);
+    void setupAndProcess(ImageBlenderBase &, const RenderArguments &args, const SourceFrames &frames);
 
 private:
-
-
-    bool isIdentityInternal(OfxTime time, Clip* &identityClip, OfxTime &identityTime);
+    void getSourceFrames(double time, FieldEnum fieldToRender, SourceFrames *frames);
     double getSourceTime(double time);
 };
 
@@ -249,8 +270,7 @@ framesNeeded(double sourceTime,
 void
 RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
                               const RenderArguments &args,
-                              double sourceTime,
-                              FilterEnum filter)
+                              const SourceFrames &frames)
 {
     const double time = args.time;
 
@@ -271,14 +291,15 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     checkBadRenderScaleOrField(dst, args);
 # endif
 
-    if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
-        // should have been caught by isIdentity...
-        if (filter == eFilterNearest) {
-            // same frame as in isIdentity() and getFramesNeeded()
-            sourceTime = std::floor(sourceTime + 0.5);
+    const bool srcConnected = _srcClip && _srcClip->isConnected();
+    if (!frames.blended) {
+        // should have been caught by isIdentity, unless the frame is black
+        if (frames.fromBlack) {
+            fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
+
+            return;
         }
-        auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                        _srcClip->fetchImage(sourceTime) : 0 );
+        auto_ptr<const Image> src( srcConnected ? _srcClip->fetchImage(frames.from) : 0 );
 #    ifndef NDEBUG
        if ( src.get() ) {
             checkBadRenderScaleOrField(src, args);
@@ -294,16 +315,11 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
         return;
     }
 
-    // figure the two images we are blending between
-    double fromTime, toTime;
-    double blend;
-    framesNeeded(sourceTime, args.fieldToRender, &fromTime, &toTime, &blend);
-
-    // fetch the two source images
-    auto_ptr<Image> fromImg( ( _srcClip && _srcClip->isConnected() ) ?
-                                  _srcClip->fetchImage(fromTime) : 0 );
-    auto_ptr<Image> toImg( ( _srcClip && _srcClip->isConnected() ) ?
-                                _srcClip->fetchImage(toTime) : 0 );
+    // fetch the two source images (a missing image is blended as transparent black)
+    auto_ptr<Image> fromImg( (srcConnected && !frames.fromBlack) ?
+                                  _srcClip->fetchImage(frames.from) : 0 );
+    auto_ptr<Image> toImg( (srcConnected && !frames.toBlack) ?
+                                _srcClip->fetchImage(frames.to) : 0 );
 
 # ifndef NDEBUG
     // make sure bit depths are sane
@@ -326,7 +342,7 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // set the blend between
-    processor.setBlend( (float)blend );
+    processor.setBlend( (float)frames.blend );
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -362,6 +378,48 @@ RetimePlugin::getSourceTime(double time)
     return sourceTime;
 }
 
+// The frames to read at the given output time: used by getFramesNeeded, isIdentity, getRegionOfDefinition
+// and render, so that they all agree. Before/After is applied to each frame read, so that the Linear filter
+// blends the right frames across the loop or bounce point.
+void
+RetimePlugin::getSourceFrames(double time,
+                              FieldEnum fieldToRender,
+                              SourceFrames *frames)
+{
+    const double sourceTime = getSourceTime(time);
+    const FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
+
+    frames->blended = false;
+    frames->blend = 0.;
+    if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) ) {
+        frames->from = sourceTime;
+    } else if (filter == eFilterNearest) {
+        frames->from = std::floor(sourceTime + 0.5);
+    } else {
+        assert(filter == eFilterLinear);
+        frames->blended = true;
+        framesNeeded(sourceTime, fieldToRender, &frames->from, &frames->to, &frames->blend);
+    }
+    if (!frames->blended) {
+        frames->to = frames->from;
+    }
+
+    BeforeAfterEnum fromMode = eBeforeAfterOriginal;
+    BeforeAfterEnum toMode = eBeforeAfterOriginal;
+    if ( _srcClip && _srcClip->isConnected() ) {
+        const OfxRangeD srcRange = _srcClip->getFrameRange();
+        const int first = (int)std::floor(srcRange.min);
+        const int last = (int)std::ceil(srcRange.max);
+        const BeforeAfterEnum before = (BeforeAfterEnum)_before->getValue();
+        const BeforeAfterEnum after = (BeforeAfterEnum)_after->getValue();
+        fromMode = getBeforeAfterTime(first, last, before, after, frames->from, &frames->from);
+        toMode = getBeforeAfterTime(first, last, before, after, frames->to, &frames->to);
+    }
+    frames->fromBlack = (fromMode == eBeforeAfterBlack);
+    frames->toBlack = frames->blended && (toMode == eBeforeAfterBlack);
+    frames->original = (fromMode == eBeforeAfterOriginal) && (!frames->blended || toMode == eBeforeAfterOriginal);
+}
+
 void
 RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
                               FramesNeededSetter &frames)
@@ -369,71 +427,49 @@ RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
     if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
-    const double time = args.time;
-    double sourceTime = getSourceTime(time);
+    // whatever the rendered field is, the frames are the same
+    SourceFrames src;
+    getSourceFrames(args.time, eFieldNone, &src);
 
-    FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
-    OfxRangeD range;
-    if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) ) {
-        range.min = sourceTime;
-        range.max = sourceTime;
-    } else if (filter == eFilterNearest) {
-        range.min = range.max = std::floor(sourceTime + 0.5);
-    } else if (filter == eFilterLinear) {
-        // figure the two images we are blending between
-        double fromTime, toTime;
-        double blend;
-        // whatever the rendered field is, the frames are the same
-        framesNeeded(sourceTime, eFieldNone, &fromTime, &toTime, &blend);
-        range.min = fromTime;
-        range.max = toTime;
-    } else {
-        assert(false);
+    // if all frames are black, nothing is set and the host uses its default (the frame at args.time)
+    if (!src.fromBlack) {
+        OfxRangeD range = {src.from, src.from};
+        frames.setFramesNeeded(*_srcClip, range);
     }
-    frames.setFramesNeeded(*_srcClip, range);
+    if (src.blended && !src.toBlack) {
+        OfxRangeD range = {src.to, src.to};
+        frames.setFramesNeeded(*_srcClip, range);
+    }
 }
 
 bool
 RetimePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                     OfxRectD &rod)
 {
-    Clip* identityClip;
-    OfxTime identityTime;
-    bool identity = isIdentityInternal(args.time, identityClip, identityTime);
-
-    if (!identity) {
-        return false;
-    }
-    rod = _srcClip->getRegionOfDefinition(identityTime, args.view);
-
-    return true;
-}
-
-bool
-RetimePlugin::isIdentityInternal(OfxTime time,
-                                 Clip* &identityClip,
-                                 OfxTime &identityTime)
-{
     if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
-    double sourceTime = getSourceTime(time);
-    FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
-
-    if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) ) {
-        identityClip = _srcClip;
-        identityTime = sourceTime;
-
-        return true;
+    SourceFrames src;
+    getSourceFrames(args.time, eFieldNone, &src);
+    if (src.blended && src.original) {
+        // keep the host default, as before Before/After existed
+        return false;
     }
-    if (filter == eFilterNearest) {
-        identityClip = _srcClip;
-        identityTime = std::floor(sourceTime + 0.5);
-
-        return true;
+    // union of the RoDs of the frames read, empty if they are all black
+    rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
+    if (!src.fromBlack) {
+        rod = _srcClip->getRegionOfDefinition(src.from, args.view);
+    }
+    if (src.blended && !src.toBlack) {
+        const OfxRectD toRoD = _srcClip->getRegionOfDefinition(src.to, args.view);
+        if (src.fromBlack) {
+            rod = toRoD;
+        } else {
+            Coords::rectBoundingBox(rod, toRoD, &rod);
+        }
     }
 
-    return false;
+    return true;
 }
 
 bool
@@ -442,7 +478,28 @@ RetimePlugin::isIdentity(const IsIdentityArguments &args,
                          double &identityTime
                          , int& /*view*/, std::string& /*plane*/)
 {
-    return isIdentityInternal(args.time, identityClip, identityTime);
+    if (!_srcClip || !_srcClip->isConnected()) {
+        return false;
+    }
+    SourceFrames src;
+    getSourceFrames(args.time, args.fieldToRender, &src);
+    if (src.blended || src.fromBlack) {
+        return false;
+    }
+    identityClip = _srcClip;
+    identityTime = src.from;
+
+    return true;
+}
+
+void
+RetimePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    // a black output outside of the input frame range varies from frame to frame, even with a still input
+    if ( ( (BeforeAfterEnum)_before->getValue() == eBeforeAfterBlack ) ||
+         ( (BeforeAfterEnum)_after->getValue() == eBeforeAfterBlack ) ) {
+        clipPreferences.setOutputFrameVarying(true);
+    }
 }
 
 /* override the time domain action, only for the general context */
@@ -477,24 +534,23 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
 template <int nComponents>
 void
 RetimePlugin::renderInternal(const RenderArguments &args,
-                             double sourceTime,
-                             FilterEnum filter,
+                             const SourceFrames &frames,
                              BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
     case eBitDepthUByte: {
         ImageBlender<unsigned char, nComponents> fred(*this);
-        setupAndProcess(fred, args, sourceTime, filter);
+        setupAndProcess(fred, args, frames);
         break;
     }
     case eBitDepthUShort: {
         ImageBlender<unsigned short, nComponents> fred(*this);
-        setupAndProcess(fred, args, sourceTime, filter);
+        setupAndProcess(fred, args, frames);
         break;
     }
     case eBitDepthFloat: {
         ImageBlender<float, nComponents> fred(*this);
-        setupAndProcess(fred, args, sourceTime, filter);
+        setupAndProcess(fred, args, frames);
         break;
     }
     default:
@@ -514,13 +570,12 @@ RetimePlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
-    // figure the frame we should be retiming from
-    double sourceTime = getSourceTime(time);
-
-    FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
+    // figure the frames we should be retiming from
+    SourceFrames frames;
+    getSourceFrames(time, args.fieldToRender, &frames);
 
 #ifdef DEBUG
-    if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
+    if (!frames.blended && !frames.fromBlack) {
         // should be caught by isIdentity!
         setPersistentMessage(Message::eMessageError, "", "OFX Host should not render");
         throwSuiteStatusException(kOfxStatFailed);
@@ -529,16 +584,16 @@ RetimePlugin::render(const RenderArguments &args)
 
     // do the rendering
     if (dstComponents == ePixelComponentRGBA) {
-        renderInternal<4>(args, sourceTime, filter, dstBitDepth);
+        renderInternal<4>(args, frames, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
-        renderInternal<3>(args, sourceTime, filter, dstBitDepth);
+        renderInternal<3>(args, frames, dstBitDepth);
 #ifdef OFX_EXTENSIONS_NATRON
     } else if (dstComponents == ePixelComponentXY) {
-        renderInternal<2>(args, sourceTime, filter, dstBitDepth);
+        renderInternal<2>(args, frames, dstBitDepth);
 #endif
     } else {
         assert(dstComponents == ePixelComponentAlpha);
-        renderInternal<1>(args, sourceTime, filter, dstBitDepth);
+        renderInternal<1>(args, frames, dstBitDepth);
     }
 } // RetimePlugin::render
 
@@ -737,6 +792,9 @@ RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+    // Original (the default) asks the input for frames outside its range, as before these params existed
+    defineBeforeAfterParam(desc, page, kParamBefore, kParamBeforeLabel, kParamBeforeHint, eBeforeAfterOriginal);
+    defineBeforeAfterParam(desc, page, kParamAfter, kParamAfterLabel, kParamAfterHint, eBeforeAfterOriginal);
 } // RetimePluginFactory::describeInContext
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref ImageEffect class */
