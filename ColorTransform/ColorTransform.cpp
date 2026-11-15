@@ -109,19 +109,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginYUVToRGB709Identifier "net.sf.openfx.YUVToRGB709"
 
 #define kPluginRGBToYIQName "RGBToYIQ"
-#define kPluginRGBToYIQDescription "Convert from RGB to YIQ color model (NTSC 1953, FCC). RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion. I and Q may be negative, so only floating-point images are supported."
+#define kPluginRGBToYIQDescription "Convert from RGB to YIQ color model (NTSC 1953, FCC; assuming sRGB/Rec.709 primaries). RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion. I and Q may be negative, so only floating-point images are supported."
 #define kPluginRGBToYIQIdentifier "net.sf.openfx.RGBToYIQ"
 
 #define kPluginYIQToRGBName "YIQToRGB"
-#define kPluginYIQToRGBDescription "Convert from YIQ color model (NTSC 1953, FCC) to RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion. I and Q may be negative, so only floating-point images are supported."
+#define kPluginYIQToRGBDescription "Convert from YIQ color model (NTSC 1953, FCC; assuming sRGB/Rec.709 primaries) to RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion. I and Q may be negative, so only floating-point images are supported."
 #define kPluginYIQToRGBIdentifier "net.sf.openfx.YIQToRGB"
 
 #define kPluginRGBToYDbDrName "RGBToYDbDr"
-#define kPluginRGBToYDbDrDescription "Convert from RGB to YDbDr color model (SECAM). RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion. Db and Dr may be negative, so only floating-point images are supported."
+#define kPluginRGBToYDbDrDescription "Convert from RGB to YDbDr color model (SECAM; assuming sRGB/Rec.709 primaries). RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion. Db and Dr may be negative, so only floating-point images are supported."
 #define kPluginRGBToYDbDrIdentifier "net.sf.openfx.RGBToYDbDr"
 
 #define kPluginYDbDrToRGBName "YDbDrToRGB"
-#define kPluginYDbDrToRGBDescription "Convert from YDbDr color model (SECAM) to RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion. Db and Dr may be negative, so only floating-point images are supported."
+#define kPluginYDbDrToRGBDescription "Convert from YDbDr color model (SECAM; assuming sRGB/Rec.709 primaries) to RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion. Db and Dr may be negative, so only floating-point images are supported."
 #define kPluginYDbDrToRGBIdentifier "net.sf.openfx.YDbDrToRGB"
 
 
@@ -251,12 +251,14 @@ enum ColorTransformEnum
 // conversions with signed components (I, Q, Db, Dr) on input or output, which were
 // added after the signedOutput() conversions became float-only: they only have a
 // version 1, and it only supports float images
-#define floatOnlyFromV1(e) ( (e) == eColorTransformRGBToYIQ || \
+#define floatOnlyAllVersions(e) ( (e) == eColorTransformRGBToYIQ || \
                              (e) == eColorTransformYIQToRGB || \
                              (e) == eColorTransformRGBToYDbDr || \
                              (e) == eColorTransformYDbDrToRGB )
 
 // YIQ (NTSC 1953, FCC), applied to gamma-compressed R'G'B'.
+// The precise form is used: U = 0.492111(B'-Y') and V = 0.877283(R'-Y') rotated by 33 degrees
+// (the rounded 1953 formula I = 0.74(R'-Y') - 0.27(B'-Y'), Q = 0.48(R'-Y') + 0.41(B'-Y') differs by < 0.005).
 // Forward coefficients from https://en.wikipedia.org/wiki/YIQ (FCC NTSC standard);
 // the inverse is the exact (double-precision) inverse of the forward matrix.
 static inline void
@@ -984,7 +986,7 @@ ColorTransformPluginFactory<transform, majorVersion>::describe(ImageEffectDescri
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     //desc.addSupportedContext(eContextPaint);
-    if ( ( signedOutput(transform) && (majorVersion >= kPluginSignedOutputVersionMajor) ) || floatOnlyFromV1(transform) ) {
+    if ( ( signedOutput(transform) && (majorVersion >= kPluginSignedOutputVersionMajor) ) || floatOnlyAllVersions(transform) ) {
         // the output may be negative: only support float images
         desc.addSupportedBitDepth(eBitDepthFloat);
     } else {
