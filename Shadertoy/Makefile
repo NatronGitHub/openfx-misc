@@ -27,6 +27,10 @@ endif
 
 #CXXFLAGS_EXTRA += $(CXXFLAGS_MESA) # only added when building ShadertoyRenderMesa.o
 LDFLAGS_EXTRA += $(LDFLAGS_MESA)
+ifeq ($(shell uname -s),Linux)
+  # dlsym (eglGetCurrentContext lookup) is in libdl before glibc 2.34
+  LDFLAGS_EXTRA += -ldl
+endif
 
 TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.master

@@ -396,6 +396,7 @@ private:
     void exitOpenGL();
     void exitMesa();
     void renderGL(const OFX::RenderArguments &args);
+    static bool openGLContextIsCurrent(); // (OpenGL-only) true if the calling thread has a current OpenGL context
     void renderMesa(const OFX::RenderArguments &args);
     void* contextAttachedMesa(bool createContextData);
     void contextDetachedMesa(void* contextData);
@@ -506,6 +507,7 @@ private:
     bool _openGLContextAttached; // (OpenGL-only) - set to true when the contextAttached function is executed - used for checking non-conformant hosts such as Sony Catalyst
     OFX::auto_ptr<Mutex> _rendererInfoMutex;
     std::string _rendererInfo;
+    bool _rendererInfoIsMesa; // which render path filled _rendererInfo
 
     std::vector<Preset> _presets;
     
