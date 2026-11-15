@@ -226,12 +226,22 @@ struct TimeBuffer
 };
 
 // This is the global map from buffer names to buffers.
-// The buffer key should *really* be the concatenation of the ProjectId, the GroupId (if any), and the buffer name,
+// The buffer key is the concatenation of the ProjectId, the GroupId (if any), and the buffer name,
 // so that the same name can exist in different groups and/or different projects
 typedef std::string TimeBufferKey;
 typedef std::map<TimeBufferKey, TimeBuffer*> TimeBufferMap;
 static auto_ptr<TimeBufferMap> gTimeBufferMap;
 static auto_ptr<Mutex> gTimeBufferMapMutex;
+
+// builds the key of a buffer in gTimeBufferMap: always use this, so that
+// insertion, lookup and erasure use the same key
+static TimeBufferKey
+getTimeBufferKey(const std::string &projectId,
+                 const std::string &groupId,
+                 const std::string &name)
+{
+    return projectId + '.' + groupId + '.' + name;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -309,14 +319,14 @@ private:
 
             return;
         }
-        std::string key = _projectId + '.' + _groupId + '.' + name;
+        std::string key = getTimeBufferKey(_projectId, _groupId, name);
         if ( _buffer && (name != _name) ) {
             _buffer->readInstance = 0; // remove reference to this instance
             if (!_buffer->writeInstance) {
                 // we may free this buffer
                 {
                     AutoMutex guard( gTimeBufferMapMutex.get() );
-                    gTimeBufferMap->erase(_projectId + '.' + _groupId + '.' + _name);
+                    gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
                 }
                 delete _buffer;
                 _buffer = 0;
@@ -372,7 +382,7 @@ private:
     void check()
     {
 #ifdef DEBUG
-        std::string key = _projectId + '.' + _groupId + '.' + _name;
+        std::string key = getTimeBufferKey(_projectId, _groupId, _name);
         AutoMutex guard( gTimeBufferMapMutex.get() );
         TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
         if ( it == gTimeBufferMap->end() ) {
@@ -408,7 +418,7 @@ private:
 
     TimeBuffer* getBuffer()
     {
-        std::string key = _projectId + '.' + _groupId + '.' + _name;
+        std::string key = getTimeBufferKey(_projectId, _groupId, _name);
         TimeBuffer* timeBuffer = 0;
         // * if the write instance does not exist, an error is displayed and render fails
         {
@@ -981,14 +991,14 @@ private:
 
             return;
         }
-        std::string key = _projectId + '.' + _groupId + '.' + name;
+        std::string key = getTimeBufferKey(_projectId, _groupId, name);
         if ( _buffer && (name != _name) ) {
             _buffer->writeInstance = 0; // remove reference to this instance
             if (!_buffer->readInstance) {
                 // we may free this buffer
                 {
                     AutoMutex guard( gTimeBufferMapMutex.get() );
-                    gTimeBufferMap->erase(_projectId + '.' + _groupId + '.' + _name);
+                    gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
                 }
                 delete _buffer;
                 _buffer = 0;
@@ -1044,7 +1054,7 @@ private:
     void check()
     {
 #ifdef DEBUG
-        std::string key = _projectId + '.' + _groupId + '.' + _name;
+        std::string key = getTimeBufferKey(_projectId, _groupId, _name);
         AutoMutex guard( gTimeBufferMapMutex.get() );
         TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
         if ( it == gTimeBufferMap->end() ) {
@@ -1080,7 +1090,7 @@ private:
 
     TimeBuffer* getBuffer()
     {
-        std::string key = _projectId + '.' + _groupId + '.' + _name;
+        std::string key = getTimeBufferKey(_projectId, _groupId, _name);
         TimeBuffer* timeBuffer = 0;
         // * if the read instance does not exist, an error is displayed and render fails
         {
@@ -1183,6 +1193,7 @@ TimeBufferWritePlugin::render(const RenderArguments &args)
         }
     }
 # endif
+    // the buffer stores a copy of the source image, so there must be one
     if ( !src.get() ) {
         setPersistentMessage(Message::eMessageError, "", "Could not fetch the Source image.");
         throwSuiteStatusException(kOfxStatFailed);
