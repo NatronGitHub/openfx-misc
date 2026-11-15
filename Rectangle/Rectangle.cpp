@@ -532,7 +532,11 @@ private:
                                     double dellipse; // distance to the ellipse along the radius
                                     // compute the point on the ellipse that goes through the ellipse center and the considered point.
                                     if (dsq_closer <= 0) {
-                                        dellipse = (std::min)(r.x, r.y);
+                                        // r is in pixels, but dellipse is compared with _softness,
+                                        // which is canonical: use the canonical corner radius, as
+                                        // in the other branch and in processRotated(), so that the
+                                        // result does not depend on the render scale.
+                                        dellipse = (std::min)(_cornerRadius.x, _cornerRadius.y);
                                     } else {
                                         double radius = std::sqrt(dsq_closer);
                                         // distance must be measured at full scale in canonical coords
