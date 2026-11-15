@@ -482,6 +482,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="randomGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\ContactSheet\ContactSheetLayout.h" />
     <ClInclude Include="randomGenerator.H" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
