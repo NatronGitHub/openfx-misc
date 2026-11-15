@@ -30,7 +30,7 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
                                                            bool supportsMultiResolution,
                                                            bool supportsRenderScale,
                                                            bool defaultUnpremult,
-                                                           bool /*defaultProcessAlphaOnRGBA*/)
+                                                           bool /*defaultProcessAlphaOnRGBA*/) // unused: the processAlpha default is set by describeInContextBegin()
     : CImgFilterPluginHelperBase(handle, usesMask, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, /*isFilter=*/ false)
     , _srcAClip(NULL)
     , _srcBClip(NULL)
