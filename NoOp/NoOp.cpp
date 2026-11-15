@@ -357,8 +357,8 @@ NoOpPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     if (_pixelAspectRatio) {
         _pixelAspectRatio->getValueAtTime(args.time, pixelAspectRatio);
     }
-    // Note: the format PAR is not used here, because getClipPreferences sets the output PAR from
-    // _pixelAspectRatio last when setPixelAspectRatio is checked, and getRegionsOfInterest uses it too.
+    // Do not use the format PAR here: when Set Pixel Aspect Ratio is checked, the output PAR is
+    // _pixelAspectRatio (it overrides the format PAR in getClipPreferences), as in getRegionsOfInterest.
     if ( (srcPAR <= 0) || (pixelAspectRatio <= 0) ) {
         return false;
     }
