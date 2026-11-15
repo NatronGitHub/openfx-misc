@@ -472,6 +472,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="..\Test\TestGroups.cpp" />
     <ClCompile Include="..\Test\TestPosition.cpp" />
     <ClCompile Include="..\Test\TestRender.cpp" />
+    <ClCompile Include="..\Threshold\Threshold.cpp" />
     <ClCompile Include="..\TimeBlur\NoTimeBlur.cpp" />
     <ClCompile Include="..\TimeBlur\TimeBlur.cpp" />
     <ClCompile Include="..\TimeOffset\TimeOffset.cpp" />

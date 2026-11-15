@@ -84,6 +84,7 @@ SlitScan.o \
 SpriteSheet.o \
 Switch.o \
 TestRender.o \
+Threshold.o \
 TimeBlur.o \
 NoTimeBlur.o \
 TimeDissolve.o \
@@ -316,6 +317,7 @@ $(TOP_SRCDIR)/SlitScan \
 $(TOP_SRCDIR)/SpriteSheet \
 $(TOP_SRCDIR)/Switch \
 $(TOP_SRCDIR)/Test \
+$(TOP_SRCDIR)/Threshold \
 $(TOP_SRCDIR)/TimeBlur \
 $(TOP_SRCDIR)/TimeDissolve \
 $(TOP_SRCDIR)/TimeOffset \
@@ -396,6 +398,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/SpriteSheet \
 -I$(TOP_SRCDIR)/Switch \
 -I$(TOP_SRCDIR)/Test \
+-I$(TOP_SRCDIR)/Threshold \
 -I$(TOP_SRCDIR)/TimeBlur \
 -I$(TOP_SRCDIR)/TimeDissolve \
 -I$(TOP_SRCDIR)/TimeOffset \
