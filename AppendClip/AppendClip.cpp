@@ -53,7 +53,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: during a cross-dissolve, weight the second clip by its own factor (including fade in/out),
-//              instead of 1 minus the weight of the first clip
+//              instead of 1 minus the weight of the first clip, and include its RoD in the output RoD
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -199,7 +199,7 @@ public:
         , _crossDissolve(NULL)
         , _firstFrame(NULL)
         , _lastFrame(NULL)
-        , _majorVersion(majorVersion)
+        , _legacyCrossDissolve(majorVersion < 2)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -276,7 +276,7 @@ private:
     IntParam* _crossDissolve;
     IntParam* _firstFrame;
     IntParam* _lastFrame;
-    unsigned int _majorVersion;
+    bool _legacyCrossDissolve; // version 1 cross-dissolve: clip1 is weighted by 1-alpha0, and the RoD is clip0's only
 };
 
 
@@ -723,8 +723,9 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
     assert(0 < alpha0 && alpha0 <= 1 && 0 <= alpha1 && alpha1 < 1);
     assert( toImg.get() || (alpha1 == 0) );
     assert( fromImg.get() );
-    if (_majorVersion < 2) {
-        // version 1: clip1 is weighted by 1-alpha0, which ignores the fade in/out applied to alpha1
+    if (_legacyCrossDissolve) {
+        // version 1 (kept so that old projects render the same): clip1 is weighted by 1-alpha0,
+        // which ignores the fade in/out applied to alpha1
         processor.setBlend(static_cast<float>(1. - alpha0));
     } else {
         WeightedBlenderBase* weighted = dynamic_cast<WeightedBlenderBase*>(&processor);
@@ -792,7 +793,8 @@ template <class PIX, int nComponents, int maxValue>
 void
 AppendClipPlugin::renderForBitDepth(const RenderArguments &args)
 {
-    if (_majorVersion < 2) {
+    // setupAndProcess() sets the blend factor of ImageBlender (version 1) or the weights of WeightedBlender
+    if (_legacyCrossDissolve) {
         ImageBlender<PIX, nComponents> fred(*this);
         setupAndProcess(fred, args);
     } else {
@@ -926,8 +928,8 @@ AppendClipPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     assert( clip0 >= -1 && clip0 < (int)_srcClip.size() );
     if ( (clip0 >= 0) && ( clip0 < (int)_srcClip.size() ) ) {
         rod = _srcClip[clip0]->getRegionOfDefinition(t0);
-        // version 1 only used the RoD of clip0, even during a cross-dissolve
-        if ( (_majorVersion >= 2) && ( clip1 >= 0) && ( clip1 < (int)_srcClip.size() ) && (alpha1 > 0.) &&
+        // during a cross-dissolve, the RoD also contains clip1's RoD (version 1 only used the RoD of clip0)
+        if ( !_legacyCrossDissolve && ( clip1 >= 0) && ( clip1 < (int)_srcClip.size() ) && (alpha1 > 0.) &&
              _srcClip[clip1]->isConnected() ) {
             Coords::rectBoundingBox(_srcClip[clip1]->getRegionOfDefinition(t1), rod, &rod);
         }
