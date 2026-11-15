@@ -27,6 +27,7 @@ Deinterlace \
 DenoiseSharpen \
 Despill \
 Difference \
+DiscBlades \
 Dissolve \
 FrameBlend \
 FrameHold \
@@ -69,6 +70,7 @@ SideBySide \
 SlitScan \
 SpriteSheet \
 Switch \
+Threshold \
 TimeBlur \
 TimeDissolve \
 TimeOffset \
@@ -95,6 +97,7 @@ ifneq ($(HAVE_CIMG),0)
   SUBDIRS_NOMULTI += \
 CImg/Bilateral \
 CImg/Blur \
+CImg/Convolve \
 CImg/Denoise \
 CImg/Equalize \
 CImg/Erode \
@@ -109,6 +112,7 @@ CImg/RollingGuidance \
 CImg/SharpenInvDiff \
 CImg/SharpenShock \
 CImg/Smooth \
+CImg/ZDefocus \
 
 endif
 
@@ -123,6 +127,13 @@ subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
 	(cd $@ && $(MAKE) $(MFLAGS))
+
+# Download CImg/CImg.h (and CImg/Inpaint/inpaint.h) once, before the CImg
+# subplugins are built in parallel by "make nomulti".
+$(filter CImg/%,$(SUBDIRS)): CImg/CImg.h
+
+CImg/CImg.h:
+	(cd CImg && $(MAKE) $(MFLAGS) CImg.h)
 
 clean:
 	@for i in $(SUBDIRS) $(SUBDIRS_NOMULTI); do \
