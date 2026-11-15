@@ -29,6 +29,7 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsCoords.h"
+#include "ofxsMaskMix.h"
 
 namespace OFX {
 namespace RGBAProcessingDetail {
@@ -207,29 +208,15 @@ inline bool
 ofxsMaskRoDExcludesRenderWindow(const IsIdentityArguments &args,
                                 Clip *maskClip,
                                 BooleanParam *maskApply,
-                                BooleanParam *maskInvertParam)
+                                BooleanParam *maskInvert)
 {
-    const double time = args.time;
-    bool doMasking = ( ( !maskApply || maskApply->getValueAtTime(time) ) && maskClip && maskClip->isConnected() );
+    // Skipped on hosts without multi-resolution: there, all inputs have the same RoD anyway,
+    // and some (e.g. Sony Catalyst Edit) return clip RoDs in pixels instead of canonical coordinates.
+    OfxRectI maskRoD;
 
-    if (doMasking) {
-        bool maskInvert;
-        maskInvertParam->getValueAtTime(time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            if (getImageEffectHostDescription()->supportsMultiResolution) {
-                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                Coords::toPixelEnclosing(maskClip->getRegionOfDefinition(time), args.renderScale, maskClip->getPixelAspectRatio(), &maskRoD);
-                // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    return false;
+    return ( getImageEffectHostDescription()->supportsMultiResolution &&
+             ofxsMaskGetRoDPixel(maskClip, maskApply, maskInvert, args.time, args.renderScale, &maskRoD) &&
+             !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) );
 }
 } // namespace OFX
 
