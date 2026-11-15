@@ -99,8 +99,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFrameRangeName  "frameRange"
 #define kParamFrameRangeLabel "Frame Range"
-#define kParamFrameRangeHint  "Range of frames which are to be blended together. Frame range is absolute if \"absolute\" is checked, else relative. The lower bound of the range is always included, and then one frame out of frameInterval within this interval."
-#define kParamFrameRangeHintV2  "Range of frames which are to be blended together. Frame range is absolute if \"absolute\" is checked, else relative. The last frame is always included, and then one frame out of frameInterval within this interval."
+#define kParamFrameRangeHintBase "Range of frames which are to be blended together. Frame range is absolute if \"absolute\" is checked, else relative. "
+#define kParamFrameRangeHint  kParamFrameRangeHintBase "The lower bound of the range is always included, and then one frame out of frameInterval within this interval."
+#define kParamFrameRangeHintV2  kParamFrameRangeHintBase "The last frame is always included, and then one frame out of frameInterval within this interval." // version 2
 
 #define kParamAbsoluteName  "absolute"
 #define kParamAbsoluteLabel "Absolute"
@@ -534,7 +535,7 @@ public:
         , _mix(NULL)
         , _maskApply(NULL)
         , _maskInvert(NULL)
-        , _majorVersion(majorVersion)
+        , _alignFramesOnLast(majorVersion < 3)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -614,7 +615,7 @@ private:
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
-    unsigned int _majorVersion;
+    bool _alignFramesOnLast; // version 2 and older: the blended frames are aligned on the last frame of the range
 };
 
 
@@ -876,8 +877,8 @@ FrameBlendPlugin::getFrames(double time,
     interval = (std::max)(1, interval);
 
     int n;
-    if (_majorVersion < 3) {
-        // version 2: the last frame is always in the image set, so first frame must be adjusted if abs(interval) > 1,
+    if (_alignFramesOnLast) {
+        // version 2 (kept so that old projects render the same): the last frame is always in the image set, so first frame must be adjusted if abs(interval) > 1,
         // and the lower bound of the range is dropped when the range length is not a multiple of the interval
         n = (std::abs(last - first) + 1) / interval;
         if (first > last) {
