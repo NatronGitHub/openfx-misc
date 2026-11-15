@@ -119,6 +119,14 @@ enum TypeEnum
 #define Tfloat cimgpixfloat_t
 using namespace cimg_library;
 
+// derive a second seed from seed, to get random values independent from those drawn with seed
+// (0x9e3779b9 is the usual golden-ratio hashing constant)
+static inline unsigned int
+otherSeed(unsigned int seed)
+{
+    return cimg_hash(seed ^ 0x9e3779b9U);
+}
+
 //! Add random noise to pixel values.
 // Differences with the original cimg_library::CImg::noise:
 // - static function
@@ -201,7 +209,7 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
             cimg_forXYC(img, x, y, c) {
                 // legacy: the probability depended on the tile position and size
                 if ( ( legacy ? cimg_rand(seed, x + x1, y1 + img.height() - y, c, 100) :
-                       cimg_rand(cimg_hash(seed ^ 0x9e3779b9U), x + x1, y + y1, c, 100) ) < nsigma ) {
+                       cimg_rand(otherSeed(seed), x + x1, y + y1, c, 100) ) < nsigma ) {
                     img(x,y,0,c) = (T)(cimg_rand(seed, x + x1, y + y1, c)<0.5?M:m);
                 }
             }
@@ -220,7 +228,7 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
                 // legacy: used the first channel only, and re and im had the same noise
                 val0 = (Tfloat)(legacy ? img(x,y) : img(x,y,0,c))/sqrt2,
                 re = (Tfloat)(val0 + nsigma * cimg_grand(seed, x + x1, y + y1, c)),
-                im = (Tfloat)(val0 + nsigma * cimg_grand(legacy ? seed : cimg_hash(seed ^ 0x9e3779b9U), x + x1, y + y1, c));
+                im = (Tfloat)(val0 + nsigma * cimg_grand(legacy ? seed : otherSeed(seed), x + x1, y + y1, c));
                 Tfloat val = cimg::hypot(re,im);
                 if (val > vmax) {
                     val = vmax;
