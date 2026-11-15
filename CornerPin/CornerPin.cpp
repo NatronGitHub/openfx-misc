@@ -1341,9 +1341,10 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
     }
 } // CornerPinPluginDescribeInContext
 
-mDeclarePluginFactory(CornerPinPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CornerPinPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-CornerPinPluginFactory::describe(ImageEffectDescriptor &desc)
+CornerPinPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -1351,15 +1352,16 @@ CornerPinPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, false);
-    if (getMajorVersion() < kPluginVersionMajor) {
+    if (majorVersion < kPluginVersionMajor) {
         desc.setIsDeprecated(true);
     }
 
     desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
 
+template<unsigned int majorVersion>
 void
-CornerPinPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+CornerPinPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum context)
 {
     // make some pages and to things in
@@ -1380,16 +1382,18 @@ CornerPinPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle,
+CornerPinPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    return new CornerPinPlugin(handle, false, getMajorVersion());
+    return new CornerPinPlugin(handle, false, majorVersion);
 }
 
-mDeclarePluginFactory(CornerPinMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CornerPinMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-CornerPinMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
+CornerPinMaskedPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginMaskedName);
@@ -1397,15 +1401,16 @@ CornerPinMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, true);
-    if (getMajorVersion() < kPluginVersionMajor) {
+    if (majorVersion < kPluginVersionMajor) {
         desc.setIsDeprecated(true);
     }
 
     desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
 
+template<unsigned int majorVersion>
 void
-CornerPinMaskedPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+CornerPinMaskedPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                                 ContextEnum context)
 {
     // make some pages and to things in
@@ -1426,18 +1431,21 @@ CornerPinMaskedPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
+CornerPinMaskedPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                              ContextEnum /*context*/)
 {
-    return new CornerPinPlugin(handle, true, getMajorVersion());
+    return new CornerPinPlugin(handle, true, majorVersion);
 }
 
-static CornerPinPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static CornerPinMaskedPluginFactory p2(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// Each major version needs its own factory class: FactoryMainEntryHelper stores
+// the plugin UID in a static shared by all objects of the same class.
+static CornerPinPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
+static CornerPinMaskedPluginFactory<kPluginVersionMajor> p2(kPluginMaskedIdentifier, kPluginVersionMinor);
 // version 1: "Invert" composes the extra matrix as homo3x3 * extraMat
-static CornerPinPluginFactory p1v1(kPluginIdentifier, 1, 0);
-static CornerPinMaskedPluginFactory p2v1(kPluginMaskedIdentifier, 1, 0);
+static CornerPinPluginFactory<1> p1v1(kPluginIdentifier, 0);
+static CornerPinMaskedPluginFactory<1> p2v1(kPluginMaskedIdentifier, 0);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p1v1)
