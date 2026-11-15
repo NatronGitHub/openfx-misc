@@ -67,7 +67,7 @@ public:
     TransformPlugin(OfxImageEffectHandle handle,
                     bool masked,
                     bool isDirBlur,
-                    unsigned int majorVersion = kPluginVersionMajor)
+                    unsigned int dirBlurMajorVersion = kPluginDirBlurVersionMajor) // only used by DirBlur
         : Transform3x3Plugin(handle, masked, isDirBlur ? eTransform3x3ParamsTypeDirBlur : eTransform3x3ParamsTypeMotionBlur)
         , _translate(NULL)
         , _rotate(NULL)
@@ -86,8 +86,9 @@ public:
             _dirBlurAmount = fetchDoubleParam(kParamTransform3x3DirBlurAmount);
             _dirBlurCentered = fetchBooleanParam(kParamTransform3x3DirBlurCentered);
             _dirBlurFading = fetchDoubleParam(kParamTransform3x3DirBlurFading);
-            // DirBlur version 1 divided the fading parameter by the signed amount
-            _dirBlurFadingSignedAmount = (majorVersion < 2);
+            // DirBlur version 1 divided the fading parameter by the signed amount,
+            // which is kept so that old projects render the same
+            _dirBlurFadingSignedAmount = (dirBlurMajorVersion < 2);
         }
 
         _translate = fetchDouble2DParam(kParamTransformTranslateOld);
