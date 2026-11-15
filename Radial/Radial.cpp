@@ -874,7 +874,7 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     RGBAValues color1;
     _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
     if ( (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
-        if ( _srcClip->isConnected() ) {
+        if ( _srcClip && _srcClip->isConnected() ) { // _srcClip is NULL in the Generator context
             // nothing to draw: return default region of definition
             return false;
         } else {
