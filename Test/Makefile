@@ -3,6 +3,7 @@ ofxsTransform3x3.o ofxsShutter.o \
 TestRender.o \
 TestPosition.o \
 TestGroups.o \
+TestHostBehaviour.o \
 TestOpenGL.o TestOpenGLRenderGL.o  TestOpenGLRenderMesa.o \
 
 PLUGINNAME = Test
