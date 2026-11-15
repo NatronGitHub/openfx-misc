@@ -245,6 +245,7 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
     <ClInclude Include="..\CImg\CImgDilate.h" />
     <ClInclude Include="..\CImg\CImgEqualize.h" />
     <ClInclude Include="..\CImg\CImgErode.h" />
+    <ClInclude Include="..\CImg\Erode\CImgErodeDilate.h" />
     <ClInclude Include="..\CImg\CImgErodeSmooth.h" />
     <ClInclude Include="..\CImg\CImgExpression.h" />
     <ClInclude Include="..\CImg\CImgFilter.h" />
