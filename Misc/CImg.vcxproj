@@ -221,6 +221,7 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
   <ItemGroup>
     <ClCompile Include="..\CImg\CImgBilateral.cpp" />
     <ClCompile Include="..\CImg\CImgBlur.cpp" />
+    <ClCompile Include="..\CImg\Convolve\CImgConvolve.cpp" />
     <ClCompile Include="..\CImg\CImgDenoise.cpp" />
     <ClCompile Include="..\CImg\CImgDilate.cpp" />
     <ClCompile Include="..\CImg\CImgEqualize.cpp" />
@@ -237,6 +238,7 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
     <ClCompile Include="..\CImg\CImgSharpenInvDiff.cpp" />
     <ClCompile Include="..\CImg\CImgSharpenShock.cpp" />
     <ClCompile Include="..\CImg\CImgSmooth.cpp" />
+    <ClCompile Include="..\CImg\ZDefocus\CImgZDefocus.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\CImg\CImgBilateral.h" />
@@ -248,6 +250,7 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
     <ClInclude Include="..\CImg\Erode\CImgErodeDilate.h" />
     <ClInclude Include="..\CImg\CImgErodeSmooth.h" />
     <ClInclude Include="..\CImg\CImgExpression.h" />
+    <ClInclude Include="..\CImg\CImgFFTConvolve.h" />
     <ClInclude Include="..\CImg\CImgFilter.h" />
     <ClInclude Include="..\CImg\CImgGuided.h" />
     <ClInclude Include="..\CImg\CImgHistEQ.h" />

@@ -4,6 +4,10 @@
 
 The Normalize button should only compute the white and black points from values where the mask is non-zero, see https://forum.natron.fr/t/how-to-normalize-z-pass-from-blender-3d/1885/7
 
+#### ZDefocusCImg
+
+Add an icon (net.sf.cimg.CImgZDefocus.png/.svg). Test in a host (Natron) with a depth map and a DiscBlades bokeh kernel.
+
 #### ImageStatistics
 
 Should be maskable, so that it can be used to compute statistics over an image area. Note that when analysing a sequence, the msk may be different at each frame.
