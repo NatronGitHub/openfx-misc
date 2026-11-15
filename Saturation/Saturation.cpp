@@ -49,7 +49,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// version 3.0: fix ACES AP1 luminance math (version 2 used CCIR 601)
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -203,6 +204,7 @@ public:
 
         case eLuminanceMathACESAP1: // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
             l = Color::rgbACESAP1_to_y(*r, *g, *b);
+            break;
 
         case eLuminanceMathCcir601:
             l = 0.2989 * *r + 0.5866 * *g + 0.1145 * *b;
@@ -327,7 +329,8 @@ class SaturationPlugin
 {
 public:
     /** @brief ctor */
-    SaturationPlugin(OfxImageEffectHandle handle)
+    SaturationPlugin(OfxImageEffectHandle handle,
+                     unsigned int majorVersion)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(NULL)
@@ -346,6 +349,7 @@ public:
         , _maskApply(NULL)
         , _maskInvert(NULL)
         , _premultChanged(NULL)
+        , _legacyAcesAp1(majorVersion < 3)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -411,6 +415,7 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
+    bool _legacyAcesAp1; // versions 1 and 2 computed "ACES AP1" luminance as CCIR 601, keep it so that old projects render the same
 };
 
 
@@ -469,6 +474,10 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor,
 
     double saturation = _saturation->getValueAtTime(time);
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
+    if ( _legacyAcesAp1 && (luminanceMath == eLuminanceMathACESAP1) ) {
+        // Before version 3, ACES AP1 fell through to CCIR 601 (missing break)
+        luminanceMath = eLuminanceMathCcir601;
+    }
     bool clampBlack = _clampBlack->getValueAtTime(time);
     bool clampWhite = _clampWhite->getValueAtTime(time);
     bool premult = _premult ? _premult->getValueAtTime(time) : false;
@@ -629,14 +638,18 @@ SaturationPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(SaturationPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(SaturationPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-SaturationPluginFactory::describe(ImageEffectDescriptor &desc)
+SaturationPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -660,8 +673,9 @@ SaturationPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-SaturationPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+SaturationPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                            ContextEnum context)
 {
     // Source clip only in the filter context
@@ -803,14 +817,18 @@ SaturationPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // SaturationPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-SaturationPluginFactory::createInstance(OfxImageEffectHandle handle,
+SaturationPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                         ContextEnum /*context*/)
 {
-    return new SaturationPlugin(handle);
+    return new SaturationPlugin(handle, majorVersion);
 }
 
-static SaturationPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static SaturationPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 2: "ACES AP1" luminance math is computed as CCIR 601
+static SaturationPluginFactory<2> p2(kPluginIdentifier, 0);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -48,7 +48,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // History:
 // version 1.0: initial version
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// version 2.0: in "Alpha" and "Image and Alpha" output modes, premultiply RGB by the source alpha
+//              (version 1 premultiplied RGB by the suppress mask)
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -132,6 +134,7 @@ protected:
     bool _doMasking;
     double _mix;
     bool _maskInvert;
+    bool _premultByMask; // version 1: in Alpha modes, premultiply RGB by the suppress mask instead of the source alpha
 
 public:
 
@@ -153,6 +156,7 @@ public:
         , _doMasking(false)
         , _mix(1.)
         , _maskInvert(false)
+        , _premultByMask(false)
     {
     }
 
@@ -183,7 +187,8 @@ public:
                    LuminanceMathEnum luminanceMath,
                    bool premult,
                    int premultChannel,
-                   double mix)
+                   double mix,
+                   bool premultByMask)
     {
         _redSuppress = redSuppress;
         _blueSuppress = blueSuppress;
@@ -197,6 +202,7 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
+        _premultByMask = premultByMask;
     }
 
 protected:
@@ -354,14 +360,33 @@ private:
                     tmpPix[1] = output.g;
                     tmpPix[2] = output.b;
                 }
-                // fill output Alpha
-                if ( (_outputMode == eOutputModeAlpha) || (_outputMode == eOutputModeAlphaImage) ) {
-                    tmpPix[3] = pixelModified;
+                if ( (_outputMode == eOutputModeImage) || _premultByMask ) {
+                    // RGB is premultiplied by the output alpha: the source alpha in "Image" mode,
+                    // the suppress mask in the Alpha modes of version 1 (kept so that old projects
+                    // render the same)
+                    tmpPix[3] = (_outputMode == eOutputModeImage) ? unpPix[3] : pixelModified;
+                    ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 } else {
-                    tmpPix[3] = unpPix[3];
+                    // "Alpha" or "Image and Alpha": RGB is premultiplied by the source alpha
+                    // ("Alpha" leaves it unchanged), alpha is the suppress mask
+                    float outPix[4];
+                    if (nComponents == 1) {
+                        outPix[0] = (float)(pixelModified * maxValue);
+                    } else {
+                        for (int c = 0; c < 3 && c < nComponents; ++c) {
+                            if (_outputMode == eOutputModeAlpha) {
+                                outPix[c] = srcPix ? (float)srcPix[c] : 0.f;
+                            } else {
+                                // premult by alpha <= 0 gives 0, as in ofxsPremult()
+                                outPix[c] = tmpPix[c] * (_premult ? (std::max)(0.f, unpPix[3]) : 1.f) * maxValue;
+                            }
+                        }
+                        if (nComponents == 4) {
+                            outPix[3] = (float)(pixelModified * maxValue);
+                        }
+                    }
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(outPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 }
-
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -377,7 +402,8 @@ class ColorSuppressPlugin
 {
 public:
     /** @brief ctor */
-    ColorSuppressPlugin(OfxImageEffectHandle handle)
+    ColorSuppressPlugin(OfxImageEffectHandle handle,
+                        unsigned int majorVersion)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(NULL)
@@ -392,6 +418,7 @@ public:
         , _preserveLuma(NULL)
         , _luminanceMath(NULL)
         , _premultChanged(NULL)
+        , _premultByMask(majorVersion < 2)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -492,6 +519,7 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
+    bool _premultByMask; // version 1 premultiplied RGB by the suppress mask in Alpha modes, keep it so that old projects render the same
 };
 
 
@@ -570,7 +598,8 @@ ColorSuppressPlugin::setupAndProcess(ColorSuppressProcessorBase &processor,
                         outputMode,
                         preserveLuma,
                         luminanceMath,
-                        premult, premultChannel, mix);
+                        premult, premultChannel, mix,
+                        _premultByMask);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -757,14 +786,18 @@ ColorSuppressPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(ColorSuppressPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(ColorSuppressPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-ColorSuppressPluginFactory::describe(ImageEffectDescriptor &desc)
+ColorSuppressPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -789,8 +822,9 @@ ColorSuppressPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+ColorSuppressPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                               ContextEnum context)
 {
     // Source clip only in the filter context
@@ -958,14 +992,18 @@ ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // ColorSuppressPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-ColorSuppressPluginFactory::createInstance(OfxImageEffectHandle handle,
+ColorSuppressPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                            ContextEnum /*context*/)
 {
-    return new ColorSuppressPlugin(handle);
+    return new ColorSuppressPlugin(handle, majorVersion);
 }
 
-static ColorSuppressPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorSuppressPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 1: in "Alpha" and "Image and Alpha" modes, RGB is premultiplied by the suppress mask
+static ColorSuppressPluginFactory<1> p1(kPluginIdentifier, 0);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -1837,7 +1837,8 @@ ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 #endif
 #ifdef OFX_EXTENSIONS_NUKE
     gIsMultiPlanarV1 = kEnableMultiPlanar && getImageEffectHostDescription()->isMultiPlanar;
-    gIsMultiPlanarV2 = gIsMultiPlanarV1 && supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2);
+    // optional=true: fetchSuite() throws instead of returning NULL when the host lacks the suite
+    gIsMultiPlanarV2 = gIsMultiPlanarV1 && supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true);
     if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
         // This enables fetching different planes from the input.
         // Generally the user will read a multi-layered EXR file in the Reader node and then use the shuffle
@@ -1861,9 +1862,9 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
                                                       ContextEnum context)
 {
 #ifdef OFX_EXTENSIONS_NUKE
-    if ( gIsMultiPlanarV2 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2) ) {
+    if ( gIsMultiPlanarV2 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
-    } else if ( gIsMultiPlanarV1 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 1) ) {
+    } else if ( gIsMultiPlanarV1 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 #endif

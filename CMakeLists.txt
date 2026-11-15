@@ -24,7 +24,7 @@ ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 ########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 PROJECT(OpenFXMisc CXX)
 ENABLE_TESTING()
 
@@ -51,6 +51,8 @@ endif()
 include(FindOpenGL REQUIRED)
 
 set (CMAKE_CXX_STANDARD 11)
+
+option(BUILD_CIMG_PLUGINS "Build the CImg plugins (CImg.ofx.bundle)" ON)
 
 # Use -Ofast when applicable (implies -ffast-math)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -79,7 +81,6 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Misc)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/Plugins/include)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/CImg)
 
 # Define "DEBUG" on debug builds
 SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
@@ -135,6 +136,7 @@ FILE(GLOB MISC_SOURCES
   "DenoiseSharpen/*.cpp"
   "Despill/*.cpp"
   "Difference/*.cpp"
+  "DiscBlades/*.cpp"
   "Dissolve/*.cpp"
   "Distortion/*.cpp"
   "FrameBlend/*.cpp"
@@ -359,7 +361,7 @@ SET_TARGET_PROPERTIES(Misc PROPERTIES SUFFIX ".ofx")
 
 # Add extra flags to the link step of the plugin
 if(APPLE)
-    set_target_properties(Misc PROPERTIES LINK_FLAGS "-fvisibility=hidden -exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
+    set_target_properties(Misc PROPERTIES LINK_FLAGS "-fvisibility=hidden -Wl,-exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
     set_target_properties(Misc PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
 elseif(MINGW)
     set_target_properties(Misc PROPERTIES LINK_FLAGS "-shared -fvisibility=hidden -Xlinker --version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
@@ -373,6 +375,50 @@ TARGET_COMPILE_DEFINITIONS(Misc PRIVATE OFX_EXTENSIONS_VEGAS OFX_EXTENSIONS_NUKE
 #TARGET_LINK_LIBRARIES(Misc Support ${OPENGL_gl_LIBRARY})
 TARGET_LINK_LIBRARIES(Misc ${OPENGL_gl_LIBRARY})
 
+if(BUILD_CIMG_PLUGINS)
+# CImg.h and Inpaint/inpaint.h are not distributed with the sources.
+# Download them at the version used by CImg/Makefile (see CImg/CImgVersion.mk)
+# if they are missing, as "cd CImg && make CImg.h" would do.
+set(CIMG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/CImg")
+file(STRINGS "${CIMG_DIR}/CImgVersion.mk" CIMGVERSION REGEX "^CIMGVERSION *=")
+string(REGEX REPLACE "^CIMGVERSION *= *([0-9a-fA-F]+).*$" "\\1" CIMGVERSION "${CIMGVERSION}")
+if(NOT CIMGVERSION MATCHES "^[0-9a-fA-F]+$")
+  message(FATAL_ERROR "Could not read CIMGVERSION from ${CIMG_DIR}/CImgVersion.mk")
+endif()
+set(CIMG_URL "https://raw.githubusercontent.com/dtschump/CImg/${CIMGVERSION}")
+
+function(cimg_download url dest)
+  message(STATUS "Downloading ${url}")
+  file(DOWNLOAD "${url}" "${dest}.tmp" STATUS _status TLS_VERIFY ON)
+  list(GET _status 0 _code)
+  if(NOT _code EQUAL 0)
+    file(REMOVE "${dest}.tmp")
+    list(GET _status 1 _msg)
+    message(FATAL_ERROR "Failed to download ${url}: ${_msg}\n"
+      "Download it manually to ${dest} (e.g. \"cd CImg && make CImg.h\"), "
+      "or configure with -DBUILD_CIMG_PLUGINS=OFF.")
+  endif()
+  file(RENAME "${dest}.tmp" "${dest}")
+endfunction()
+
+if(NOT EXISTS "${CIMG_DIR}/Inpaint/inpaint.h")
+  find_program(PATCH_EXECUTABLE patch)
+  if(NOT PATCH_EXECUTABLE)
+    message(FATAL_ERROR "patch is required to prepare CImg/Inpaint/inpaint.h")
+  endif()
+  cimg_download("${CIMG_URL}/plugins/inpaint.h" "${CIMG_DIR}/Inpaint/inpaint.h")
+  execute_process(COMMAND "${PATCH_EXECUTABLE}" -p0 -d "${CIMG_DIR}"
+    INPUT_FILE "${CIMG_DIR}/Inpaint/inpaint.h.patch"
+    RESULT_VARIABLE _patch_result)
+  if(NOT _patch_result EQUAL 0)
+    file(REMOVE "${CIMG_DIR}/Inpaint/inpaint.h")
+    message(FATAL_ERROR "Failed to apply CImg/Inpaint/inpaint.h.patch")
+  endif()
+endif()
+if(NOT EXISTS "${CIMG_DIR}/CImg.h")
+  cimg_download("${CIMG_URL}/CImg.h" "${CIMG_DIR}/CImg.h")
+endif()
+
 FILE(GLOB CIMG_SOURCES
   "CImg/CImg.h"
   "CImg/CImgFilter.cpp"
@@ -382,6 +428,7 @@ FILE(GLOB CIMG_SOURCES
   "CImg/Bilateral/CImgBilateral.cpp"
   "CImg/Blur/CImgBlur.cpp"
   "CImg/Blur/blurmaple.map"
+  "CImg/Convolve/CImgConvolve.cpp"
   "CImg/Denoise/CImgDenoise.cpp"
   "CImg/Distance/CImgDistance.cpp"
   "CImg/Equalize/CImgEqualize.cpp"
@@ -401,6 +448,7 @@ FILE(GLOB CIMG_SOURCES
   "CImg/SharpenInvDiff/CImgSharpenInvDiff.cpp"
   "CImg/SharpenShock/CImgSharpenShock.cpp"
   "CImg/Smooth/CImgSmooth.cpp"
+  "CImg/ZDefocus/CImgZDefocus.cpp"
   "SupportExt/tinythread.cpp"
   "SupportExt/ofxsThreadSuite.cpp"
 #  "SupportExt/ofxsFileOpen.cpp"
@@ -470,12 +518,13 @@ FILE(GLOB CIMG_RESOURCES
 
 
 ADD_LIBRARY(CImg SHARED ${CIMG_SOURCES} ${SUPPORT_SOURCES})
+TARGET_INCLUDE_DIRECTORIES(CImg PRIVATE ${CIMG_DIR})
 SET_TARGET_PROPERTIES(CImg PROPERTIES PREFIX "")
 SET_TARGET_PROPERTIES(CImg PROPERTIES SUFFIX ".ofx")
 
 # Add extra flags to the link step of the plugin
 if(APPLE)
-    set_target_properties(CImg PROPERTIES LINK_FLAGS "-bundle -fvisibility=hidden -exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
+    set_target_properties(CImg PROPERTIES LINK_FLAGS "-fvisibility=hidden -Wl,-exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
     set_target_properties(CImg PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
 elseif(WIN32)
     set_target_properties(CImg PROPERTIES LINK_FLAGS "-fvisibility=hidden,--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
@@ -506,6 +555,7 @@ if (OPENMP_FOUND AND NOT MSVC)
     SET_TARGET_PROPERTIES(CImg PROPERTIES LINK_FLAGS "${OpenMP_EXE_LINKER_FLAGS}")
     TARGET_LINK_LIBRARIES(CImg ${OpenMP_CXX_LIB_NAMES})
 endif(OPENMP_FOUND AND NOT MSVC)
+endif(BUILD_CIMG_PLUGINS)
 
 IF (MSVC)
   # Some files require this option. This breaks compatibility with older linkers.
@@ -586,16 +636,18 @@ ELSE()
   INSTALL(FILES Info.plist
     DESTINATION Misc.ofx.bundle/Contents
   )
-  INSTALL(TARGETS CImg
-    RUNTIME DESTINATION CImg.ofx.bundle/Contents/${OFX_ARCH_NAME}
-    LIBRARY DESTINATION CImg.ofx.bundle/Contents/${OFX_ARCH_NAME}
-  )
+  if(BUILD_CIMG_PLUGINS)
+    INSTALL(TARGETS CImg
+      RUNTIME DESTINATION CImg.ofx.bundle/Contents/${OFX_ARCH_NAME}
+      LIBRARY DESTINATION CImg.ofx.bundle/Contents/${OFX_ARCH_NAME}
+    )
 
-  INSTALL(FILES ${CIMG_RESOURCES}
-    DESTINATION CImg.ofx.bundle/Contents/Resources
-  )
+    INSTALL(FILES ${CIMG_RESOURCES}
+      DESTINATION CImg.ofx.bundle/Contents/Resources
+    )
 
-  INSTALL(FILES CImg/Info.plist
-    DESTINATION CImg.ofx.bundle/Contents
-  )
+    INSTALL(FILES CImg/Info.plist
+      DESTINATION CImg.ofx.bundle/Contents
+    )
+  endif()
 ENDIF()
