@@ -486,6 +486,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\ContactSheet\ContactSheetLayout.h" />
+    <ClInclude Include="..\FrameRange\FrameRangeBeforeAfter.h" />
     <ClInclude Include="randomGenerator.H" />
     <ClInclude Include="ofxsLuminanceMath.h" />
     <ClInclude Include="ofxsRGBAProcessing.h" />

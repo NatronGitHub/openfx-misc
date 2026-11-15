@@ -38,6 +38,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
+#include "FrameRangeBeforeAfter.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
@@ -72,64 +73,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamResetLabel "Reset"
 #define kParamResetHint "Resets the frame range to its initial value."
 
-#define kParamBefore "before"
-#define kParamBeforeLabel "Before"
 #define kParamBeforeHint "What the plugin should return for frames before the first frame."
-#define kParamAfter "after"
-#define kParamAfterLabel "After"
 #define kParamAfterHint "What the plugin should return for frames after the last frame."
-#define kParamBeforeAfterOptionOriginal "Original", "Return the original frame from the source, even if it is out of the frame range.", "original"
-#define kParamBeforeAfterOptionHold "Hold", "Return the nearest frame within the frame range.", "hold"
-#define kParamBeforeAfterOptionBlack "Black", "Return an empty frame.", "black"
-#define kParamBeforeAfterOptionLoop "Loop", "Substitutes an equal number of frames, effectively creating a clip loop.", "loop"
-#define kParamBeforeAfterOptionBounce "Bounce", "Substitutes a reversed equal number of frames, creating a clip bounce.", "loop"
-
-enum BeforeAfterEnum
-{
-    eBeforeAfterOriginal = 0,
-    eBeforeAfterHold,
-    eBeforeAfterBlack,
-    eBeforeAfterLoop,
-    eBeforeAfterBounce,
-};
-
-// returns a frame between x and y for frame f
-static int frameBounce(int x, int y, int f)
-{
-    if (y <= x) {
-        // empty or single-frame range: avoid a division by zero below
-        return x;
-    }
-    if (f > y) {
-        f = x + (f - x) % ((y-x)*2);
-        if (f > y) {
-            f = y - (f - y);
-        }
-    } else if (f < x) {
-        f = y - (y - f) % ((y-x)*2);
-        if (f < x) {
-            f = x + (x - f);
-        }
-    }
-    assert(x <= f && f <= y);
-    return f;
-}
-
-// returns a frame between x and y for frame f
-static int frameLoop(int x, int y, int f)
-{
-    if (y <= x) {
-        // empty or single-frame range: avoid a division by zero below
-        return x;
-    }
-    if (f > y) {
-        f = x + (f - x) % (y+1-x);
-    } else if (f < x) {
-        f = y - (y - f) % (y+1-x);
-    }
-    assert(x <= f && f <= y);
-    return f;
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -218,31 +163,10 @@ FrameRangePlugin::getSourceTime(double time,
                                 double *srcTime)
 {
     OfxPointI range = _frameRange->getValue();
-    BeforeAfterEnum mode = eBeforeAfterOriginal;
 
-    if (time < range.x) {
-        mode = (BeforeAfterEnum)_before->getValue();
-    } else if (time > range.y) {
-        mode = (BeforeAfterEnum)_after->getValue();
-    }
-    switch (mode) {
-    case eBeforeAfterHold:
-        *srcTime = (time < range.x) ? range.x : range.y;
-        break;
-    case eBeforeAfterLoop:
-        *srcTime = frameLoop(range.x, range.y, time);
-        break;
-    case eBeforeAfterBounce:
-        *srcTime = frameBounce(range.x, range.y, time);
-        break;
-    case eBeforeAfterOriginal:
-    case eBeforeAfterBlack:
-    default:
-        *srcTime = time;
-        break;
-    }
-
-    return mode;
+    return getBeforeAfterTime(range.x, range.y,
+                              (BeforeAfterEnum)_before->getValue(), (BeforeAfterEnum)_after->getValue(),
+                              time, srcTime);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -519,48 +443,9 @@ FrameRangePluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    // before
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBefore);
-        param->setLabel(kParamBeforeLabel);
-        param->setHint(kParamBeforeHint);
-        assert(param->getNOptions() == (int)eBeforeAfterOriginal);
-        param->appendOption(kParamBeforeAfterOptionOriginal);
-        assert(param->getNOptions() == (int)eBeforeAfterHold);
-        param->appendOption(kParamBeforeAfterOptionHold);
-        assert(param->getNOptions() == (int)eBeforeAfterBlack);
-        param->appendOption(kParamBeforeAfterOptionBlack);
-        assert(param->getNOptions() == (int)eBeforeAfterLoop);
-        param->appendOption(kParamBeforeAfterOptionLoop);
-        assert(param->getNOptions() == (int)eBeforeAfterBounce);
-        param->appendOption(kParamBeforeAfterOptionBounce);
-        param->setDefault( (int)eBeforeAfterBlack );
-        param->setAnimates(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    // after
-    {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAfter);
-        param->setLabel(kParamAfterLabel);
-        param->setHint(kParamAfterHint);
-        assert(param->getNOptions() == (int)eBeforeAfterOriginal);
-        param->appendOption(kParamBeforeAfterOptionOriginal);
-        assert(param->getNOptions() == (int)eBeforeAfterHold);
-        param->appendOption(kParamBeforeAfterOptionHold);
-        assert(param->getNOptions() == (int)eBeforeAfterBlack);
-        param->appendOption(kParamBeforeAfterOptionBlack);
-        assert(param->getNOptions() == (int)eBeforeAfterLoop);
-        param->appendOption(kParamBeforeAfterOptionLoop);
-        assert(param->getNOptions() == (int)eBeforeAfterBounce);
-        param->appendOption(kParamBeforeAfterOptionBounce);
-        param->setDefault( (int)eBeforeAfterBlack );
-        param->setAnimates(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
+    // before, after (legacy Bounce option id, see FrameRangeBeforeAfter.h)
+    defineBeforeAfterParam(desc, page, kParamBefore, kParamBeforeLabel, kParamBeforeHint, eBeforeAfterBlack, true);
+    defineBeforeAfterParam(desc, page, kParamAfter, kParamAfterLabel, kParamAfterHint, eBeforeAfterBlack, true);
     // sublabel
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
