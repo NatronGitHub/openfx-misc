@@ -85,6 +85,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamNormalizeLabel "Normalize", "Normalize the matrix coefficients so that their sum is 1."
 
 
+// index in the 3x3 matrix of row (or column) i of a dim x dim matrix (dim is 3 or 5):
+// a 5x5 matrix is folded as 0,1 -> 0, 2 -> 1, 3,4 -> 2
+static inline int
+foldIndexTo3x3(int i,
+               int dim)
+{
+    if (dim == 3) {
+        return i;
+    }
+
+    return (i < 2) ? 0 : ( (i == 2) ? 1 : 2 );
+}
+
 /// Matrix plugin
 template<int dim>
 struct CImgMatrixParams
@@ -195,13 +208,13 @@ public:
         } else if ( (dim == 3 && renderScale.x > 1./3.) ||
                     (dim == 5 && renderScale.x > 0.4) ) {
             CImg<cimgpix_t> res(cimg.width(), cimg.height(), cimg.depth(), cimg.spectrum());
-            // for a 5x5 matrix, fold the outer rows/columns into the 3x3 matrix
-            // (0,1 -> 0, 2 -> 1, 3,4 -> 2), so that the sum of coefficients is kept
+            // for a 5x5 matrix, fold the outer rows/columns into the 3x3 matrix,
+            // so that the sum of coefficients is kept
             double M[9] = {0., 0., 0., 0., 0., 0., 0., 0., 0.};
             for (int i = 0; i < dim; ++i) {
-                const int i3 = (dim == 3) ? i : (i < 2 ? 0 : (i == 2 ? 1 : 2));
+                const int i3 = foldIndexTo3x3(i, dim);
                 for (int j = 0; j < dim; ++j) {
-                    const int j3 = (dim == 3) ? j : (j < 2 ? 0 : (j == 2 ? 1 : 2));
+                    const int j3 = foldIndexTo3x3(j, dim);
                     M[i3 * 3 + j3] += params.coeff[i * dim + j];
                 }
             }
