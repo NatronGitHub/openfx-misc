@@ -907,6 +907,13 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
 
     _lastMousePos = args.penPosition;
 
+#ifdef OFX_EXTENSIONS_NATRON
+    // The host reads the cursor whatever penMotion returns, so the return value is unchanged.
+    // setCursor() does nothing on hosts without interact cursors.
+    const bool overPoint = (_dragging != -1) || (_hovering != -1);
+    setCursor(overPoint ? kOfxInteractCursorMove : kOfxInteractCursorDefault);
+#endif
+
     return valuesChanged;
 } // CornerPinTransformInteract::penMotion
 
