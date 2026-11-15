@@ -497,16 +497,13 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         // 3- process the cimg
         printRectI("render srcRoI", srcRoI);
         cimg_library::CImg<cimgpix_t> cimg;
-#if defined(HAVE_THREAD_LOCAL)
         try {
             CImgAbortScope abortScope(this);
             render(cimgA, cimgB, args, params, srcRoI.x1, srcRoI.y1, cimg);
         } catch (const cimg_library::CImgAbortException&) {
             return;
         }
-#else
-        render(cimgA, cimgB, args, params, srcRoI.x1, srcRoI.y1, cimg);
-#endif
+        // render() may also return early (without throwing) when aborted, leaving cimg incomplete
         if ( abort() ) {
             return;
         }

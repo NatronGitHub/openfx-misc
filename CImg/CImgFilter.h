@@ -210,6 +210,13 @@ public:
 private:
     OFX::ImageEffect* _prev;
 };
+#else
+// without thread-local storage CImg never checks for abort, so there is nothing to set
+class CImgAbortScope
+{
+public:
+    explicit CImgAbortScope(OFX::ImageEffect* /*effect*/) {}
+};
 #endif
 
 
@@ -812,6 +819,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             cimgSpectrum = (int)processA;
             break;
         case OFX::ePixelComponentXY:
+            // XY images have no B channel
             cimgSpectrum = (int)processR + (int)processG;
             break;
         case OFX::ePixelComponentRGB:
@@ -819,7 +827,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             break;
         case OFX::ePixelComponentRGBA:
             cimgSpectrum = (int)processR + (int)processG + (int) processB + (int)processA;
-            // XY images have no B channel
             break;
         default:
             cimgSpectrum = 0;
@@ -855,6 +862,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
                 srcChannel[c] = 1;
                 ++c;
             }
+            // XY images have no B channel (and only RGBA has A)
             if ( processB && (tmpPixelComponentCount >= 3) ) {
                 srcChannel[c] = 2;
                 ++c;
@@ -862,7 +870,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             if ( processA && (tmpPixelComponentCount >= 4) ) {
                 srcChannel[c] = 3;
                 alphaChannel = c;
-            // XY images have no B channel (and only RGBA has A)
                 ++c;
             }
             assert(c == cimgSpectrum);
@@ -914,16 +921,12 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         //////////////////////////////////////////////////////////////////////////////////////////
         // 3- process the cimg
         printRectI("render srcRoI", srcRoI);
-#if defined(HAVE_THREAD_LOCAL)
         try {
             CImgAbortScope abortScope(this);
             render(args, params, srcRoI.x1, srcRoI.y1, maskcimg, cimg, alphaChannel);
         } catch (const cimg_library::CImgAbortException&) {
             return;
         }
-#else
-        render(args, params, srcRoI.x1, srcRoI.y1, maskcimg, cimg, alphaChannel);
-#endif
         // check that the dimensions didn't change
         assert(cimg.width() == cimgWidth && cimg.height() == cimgHeight && cimg.depth() == 1 && cimg.spectrum() == cimgSpectrum);
         if ( abort() ) {
