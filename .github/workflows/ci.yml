@@ -12,9 +12,12 @@ on:
       - README.md
       - README-hosts.txt
 
+# One run per branch or PR. Superseded PR runs are cancelled, but every push to
+# master is built to completion, so each merge gets a CI result.
+# (github.job is empty at workflow level, so it is not part of the group.)
 concurrency:
-  group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build_linux:
