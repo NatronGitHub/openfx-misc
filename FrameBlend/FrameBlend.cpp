@@ -876,7 +876,6 @@ FrameBlendPlugin::getFrames(double time,
     first = last - (n - 1) * interval;
     if (!absolute) {
         first += time;
-        //last += time; // last is not used anymore
     }
     *firstp = first;
     *intervalp = interval;
