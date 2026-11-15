@@ -392,8 +392,7 @@ function(cimg_download url dest)
   if(NOT _code EQUAL 0)
     file(REMOVE "${dest}.tmp")
     list(GET _status 1 _msg)
-    message(FATAL_ERROR "Failed to download ${url}: ${_msg}
-"
+    message(FATAL_ERROR "Failed to download ${url}: ${_msg}\n"
       "Download it manually to ${dest} (e.g. \"cd CImg && make CImg.h\"), "
       "or configure with -DBUILD_CIMG_PLUGINS=OFF.")
   endif()
