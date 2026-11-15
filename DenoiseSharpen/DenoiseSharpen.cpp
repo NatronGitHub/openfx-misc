@@ -1856,6 +1856,20 @@ DenoiseSharpenPlugin::wavelet_denoise(float *fimg[4], //!< fimg[0] is the channe
         return;
     }
 
+    // reduce the number of levels if the image is too small for the filter at the coarsest scale
+    // (hat_transform requires size >= 2*sc for the linear filter, size >= 4*sc for the B3 filter)
+    {
+        const unsigned int minSize = (std::min)(iwidth, iheight);
+        const unsigned int k = b3 ? 4 : 2;
+        while ( maxLevel >= 0 && (k << maxLevel) > minSize ) {
+            --maxLevel;
+        }
+        if (maxLevel < 0) {
+            // image is too small to be processed: leave it unchanged
+            return;
+        }
+    }
+
     if ( ( ( (noiselevels[0] <= 0.) && (noiselevels[1] <= 0.) && (noiselevels[2] <= 0.) && (noiselevels[3] <= 0.) ) || (denoise_amount <= 0.) ) && (sharpen_amount <= 0.) ) {
         return;
     }
