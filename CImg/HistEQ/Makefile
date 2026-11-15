@@ -23,13 +23,6 @@ net.sf.cimg.CImgHistEQ.svg \
 TOP_SRCDIR = ../..
 include $(TOP_SRCDIR)/Makefile.master
 
-VPATH += $(TOP_SRCDIR)/CImg
-CXXFLAGS += -I$(TOP_SRCDIR)/CImg
-
-# the shared CImg sources also need CImg.h (downloaded by ../Makefile)
-$(OBJECTPATH)/CImgFilter.o $(OBJECTPATH)/CImgOperator.o: CImg.h
+include $(TOP_SRCDIR)/CImg/CImgSubplugin.mk
 
 $(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp  CImg.h
-
-CImg.h:
-	cd .. && $(MAKE) $@
