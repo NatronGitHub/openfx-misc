@@ -24,18 +24,11 @@
 
 #include <memory>
 #include <cmath>
-#include <cstring>
 #include <vector>
 #include <algorithm>
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <windows.h>
-#endif
 
-#include "ofxsProcessing.H"
-#include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
-#include "ofxsCopier.h"
 
 #include "CImgFilter.h"
 
@@ -624,7 +617,7 @@ public:
                             const CImgConvolveParams& params) OVERRIDE FINAL
     {
         return !params.filterConnected;
-    };
+    }
 
 private:
     static inline float kernelValue(const float* pix,
