@@ -487,6 +487,12 @@ public:
         if (rmax == rmin) {
             return;
         }
+        if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
+            // nothing to do: return before the image is transformed
+            if ( (sx / 2.4 < 0.1) && (sy / 2.4 < 0.1) ) {
+                return;
+            }
+        }
         // scale to [0,1]
         cimg_pragma_openmp(parallel for if (cimg.size()>=4096))
         cimg_rof_openmp(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - rmin) / (rmax - rmin) + ERODESMOOTH_OFFSET );
@@ -508,9 +514,6 @@ public:
             if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
                 float sigmax = (float)(sx / 2.4);
                 float sigmay = (float)(sy / 2.4);
-                if ( (sigmax < 0.1) && (sigmay < 0.1) ) {
-                    return;
-                }
                 if (params.filter == eFilterGaussian) {
                     cimg.vanvliet(sigmax, 0, 'x', (bool)params.boundary_i);
                     if ( abort() ) { return; }

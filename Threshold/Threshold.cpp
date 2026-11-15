@@ -293,10 +293,13 @@ private:
                     } else {
                         dstPix[2] = srcPix ? srcPix[2] : PIX();
                     }
-                    if ( processA && srcPix && nComponents == 4 ) {
-                        dstPix[3] = threshold(srcPix[3], _level.a - _softness.a, _level.a + _softness.a);
-                    } else {
-                        dstPix[3] = srcPix ? srcPix[3] : PIX();
+                    // RGB images have no alpha channel: do not touch dstPix[3]
+                    if (nComponents == 4) {
+                        if (processA && srcPix) {
+                            dstPix[3] = threshold(srcPix[3], _level.a - _softness.a, _level.a + _softness.a);
+                        } else {
+                            dstPix[3] = srcPix ? srcPix[3] : PIX();
+                        }
                     }
                 }
                 // increment the dst pixel
@@ -438,7 +441,7 @@ ThresholdPlugin::renderInternal(const RenderArguments &args,
         break;
     }
     case eBitDepthUShort: {
-        ThresholdProcessor<unsigned short, nComponents, 65536> fred(*this);
+        ThresholdProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }

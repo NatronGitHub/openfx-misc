@@ -64,6 +64,7 @@ grouping).
 
 ### Draw
 
+* DiscBladesOFX: Generate a lens aperture shape (disc, or polygon with curved blades), to be used e.g. as the Filter input of ConvolveCImg.
 * Rand: Generate a random field of noise.
 * NoiseCImg: Generate different kinds of noise.
 * PlasmaCImg: Generate plasma noise.
@@ -128,6 +129,7 @@ grouping).
 
 * BlurCImg: Blur input stream by a quasi-Gaussian or Gaussian filter (recursive implementation), or compute derivatives.
 * ChromaBlurCImg: Blur the chrominance components (usually to prep strongly compressed and chroma subsampled footage for keying).
+* ConvolveCImg: Convolve the input by an arbitrary kernel image (e.g. an aperture shape, for bokeh effects), using the FFT.
 * DenoiseSharpen: Denoise and/or sharpen images using wavelet-based algorithms.
 * DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann (a.k.a. nearest) boundary conditions.
 * DirBlurOFX: Directional blur.
@@ -152,6 +154,7 @@ grouping).
 * SmoothPatchBasedCImg: Denoise selected images by non-local patch averaging.
 * SmoothRollingGuidanceCImg: Filter out details under a given scale using the [Rolling Guidance filter](http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/).
 * SoftenCImg: Soften the input stream by reducing its Laplacian.
+* ZDefocusCImg: Depth-dependent defocus (depth of field), using a depth or disparity map, with Gaussian or disc aperture.
 
 ### Keyer
 

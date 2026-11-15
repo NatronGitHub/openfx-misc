@@ -532,7 +532,7 @@ AddPlugin::renderInternal(const RenderArguments &args,
         break;
     }
     case eBitDepthUShort: {
-        AddProcessor<unsigned short, nComponents, 65536> fred(*this);
+        AddProcessor<unsigned short, nComponents, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }

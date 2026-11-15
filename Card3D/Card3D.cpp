@@ -21,7 +21,6 @@
  * OFX Transform & DirBlur plugins.
  */
 
-#define _USE_MATH_DEFINES
 #include <cmath> // tan, atan2
 #include <cstring> // strerror
 #include <cstdio> // fopen, fclose
@@ -39,10 +38,7 @@
 #include "ofxsGenerator.h"
 #include "ofxsFormatResolution.h"
 #include "ofxsFileOpen.h"
-
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
+#include "ofxsMacros.h"
 
 using namespace OFX;
 using std::string;
@@ -521,8 +517,8 @@ CameraParam::getMatrix(const Matrix4x4& pos,
     (*mat)(1,2) /= winScaleV;
     // apply winRoll
     if (winRoll != 0.) {
-        double s = std::sin(winRoll * M_PI / 180.);
-        double c = std::cos(winRoll * M_PI / 180.);
+        double s = std::sin(winRoll * OFXS_PI / 180.);
+        double c = std::cos(winRoll * OFXS_PI / 180.);
         *mat = Matrix3x3(c, -s, 0,
                          s, c, 0,
                          0, 0, 1) * *mat;
@@ -904,7 +900,7 @@ PosMatParam::importChan()
         _rotate->setValueAtTime(it->frame, it->rx, it->ry, it->rz);
         if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
             double vaperture = _projection->_camVAperture->getValueAtTime(it->frame);
-            double focal = 0.5 * vaperture / std::tan(0.5 * (it->vfov * M_PI / 180));
+            double focal = 0.5 * vaperture / std::tan(0.5 * (it->vfov * OFXS_PI / 180));
 
             _projection->_camFocalLength->setValueAtTime(it->frame, focal);
         }
@@ -1033,13 +1029,13 @@ PosMatParam::importBoujou()
             double rot21 = std::atof(line[7].c_str());
             double rot22 = std::atof(line[8].c_str());
             if (rot00 == 0 && rot10 == 0) {
-                l.rx = std::atan2(-rot01, -rot02) * 180. / M_PI;
+                l.rx = std::atan2(-rot01, -rot02) * 180. / OFXS_PI;
                 l.ry = 90.;
                 l.rz = 0.;
             } else {
-                l.rx = std::atan2(rot21, -rot22) * 180. / M_PI;
-                l.ry = -std::asin(rot20) * 180. / M_PI;
-                l.rz = std::atan2(rot10,rot00) * 180. / M_PI;
+                l.rx = std::atan2(rot21, -rot22) * 180. / OFXS_PI;
+                l.ry = -std::asin(rot20) * 180. / OFXS_PI;
+                l.rz = std::atan2(rot10,rot00) * 180. / OFXS_PI;
             }
             lines.push_back(l);
             ++startFrame;
@@ -1070,7 +1066,7 @@ PosMatParam::importBoujou()
             // it-vfov contains focal in Boujou
             double focal = it->vfov;
             //double vaperture = _projection->_camVAperture->getValueAtTime(it->frame);
-            //double focal = 0.5 * vaperture / std::tan(0.5 * (it->vfov * M_PI / 180));
+            //double focal = 0.5 * vaperture / std::tan(0.5 * (it->vfov * OFXS_PI / 180));
 
             _projection->_camFocalLength->setValueAtTime(it->frame, focal);
         }
@@ -1100,7 +1096,7 @@ PosMatParam::exportChan()
         if (_type == ePosMatCamera && _projection && _projection->_camVAperture) {
             double vaperture = _projection->_camVAperture->getValueAtTime(t);
             double focal = _projection->_camFocalLength->getValueAtTime(t);
-            l.vfov = 2 * std::atan2(0.5 * vaperture, focal) * 180 / M_PI;
+            l.vfov = 2 * std::atan2(0.5 * vaperture, focal) * 180 / OFXS_PI;
             std::fprintf(f, "%d\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n",
                          t, l.tx, l.ty, l.tz, l.rx, l.ry, l.rz, l.vfov);
         } else {
@@ -1424,22 +1420,22 @@ PosMatParam::getMatrix(const double t, Matrix4x4* mat) const
         Matrix4x4 Rx, Ry, Rz;
         Rx(3,3) = Ry(3,3) = Rz(3,3) = 1.;
         {
-            double s = std::sin(theta[0] * M_PI / 180.);
-            double c = std::cos(theta[0] * M_PI / 180.);
+            double s = std::sin(theta[0] * OFXS_PI / 180.);
+            double c = std::cos(theta[0] * OFXS_PI / 180.);
             Rx(0,0) = 1.;
             Rx(1,1) = c; Rx(1,2) = -s;
             Rx(2,1) = s; Rx(2,2) = c;
         }
         {
-            double s = std::sin(theta[1] * M_PI / 180.);
-            double c = std::cos(theta[1] * M_PI / 180.);
+            double s = std::sin(theta[1] * OFXS_PI / 180.);
+            double c = std::cos(theta[1] * OFXS_PI / 180.);
             Ry(1,1) = 1.;
             Ry(2,2) = c; Ry(2,0) = -s;
             Ry(0,2) = s; Ry(0,0) = c;
         }
         {
-            double s = std::sin(theta[2] * M_PI / 180.);
-            double c = std::cos(theta[2] * M_PI / 180.);
+            double s = std::sin(theta[2] * OFXS_PI / 180.);
+            double c = std::cos(theta[2] * OFXS_PI / 180.);
             Rz(2,2) = 1.;
             Rz(0,0) = c; Rz(0,1) = -s;
             Rz(1,0) = s; Rz(1,1) = c;
@@ -1474,9 +1470,9 @@ PosMatParam::getMatrix(const double t, Matrix4x4* mat) const
         skew[1] != 0. ||
         skew[2] != 0.) {
         Matrix4x4 K;
-        K(0,1) = std::tan(skew[0] * M_PI / 180.);
-        K(1,0) = std::tan(skew[1] * M_PI / 180.);
-        K(1,2) = std::tan(skew[2] * M_PI / 180.);
+        K(0,1) = std::tan(skew[0] * OFXS_PI / 180.);
+        K(1,0) = std::tan(skew[1] * OFXS_PI / 180.);
+        K(1,2) = std::tan(skew[2] * OFXS_PI / 180.);
         K(0,0) = K(1,1) = K(2,2) = K(3,3) = 1;
         R = R * K;
     }

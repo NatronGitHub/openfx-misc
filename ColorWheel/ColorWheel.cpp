@@ -21,7 +21,6 @@
  * OFX ColorWheel plugin.
  */
 
-#define _USE_MATH_DEFINES
 #include <cmath>
 #include <climits>
 #include <cfloat> // DBL_MAX
@@ -33,10 +32,6 @@
 #include "ofxsCoords.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
-#endif
-
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
 #endif
 
 using namespace OFX;
@@ -266,7 +261,8 @@ private:
                 double dx_farther = (p_farther.x - c.x) / r.x;
                 double dy_farther = (p_farther.y - c.y) / r.y;
 
-                if ( (dx_closer >= 1) || (dy_closer >= 1) ) {
+                // a zero or negative radius would give NaN or garbage: treat it as outside
+                if ( (r.x <= 0.) || (r.y <= 0.) || (dx_closer >= 1) || (dy_closer >= 1) ) {
                     // outside
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = 0;
@@ -292,7 +288,7 @@ private:
 
                         // hue in [0..1]
                         double d = std::sqrt(dsq);
-                        double hue = d > 0. ? OFXS_HUE_CIRCLE * std::acos( (std::max)( -1., (std::min)( dx / d, 1. ) ) ) / (2 * M_PI) : 0.;
+                        double hue = d > 0. ? OFXS_HUE_CIRCLE * std::acos( (std::max)( -1., (std::min)( dx / d, 1. ) ) ) / (2 * OFXS_PI) : 0.;
                         assert(hue == hue);
                         if (dy > 0) {
                             hue = OFXS_HUE_CIRCLE - hue;

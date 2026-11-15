@@ -221,8 +221,9 @@ private:
 
         if ( _clampBlack && (comp < 0.) ) {
             comp = 0.;
-        } else if ( _clampWhite && (comp > maxValue) ) {
-            comp = maxValue;
+        } else if ( _clampWhite && (comp > 1.) ) {
+            // values are normalized to [0,1]
+            comp = 1.;
         }
 
         return comp;

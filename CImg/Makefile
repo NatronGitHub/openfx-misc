@@ -3,6 +3,7 @@ PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
 ofxsLut.o \
 CImgBilateral.o \
 CImgBlur.o \
+CImgConvolve.o \
 CImgDenoise.o \
 CImgDilate.o \
 CImgDistance.o \
@@ -21,6 +22,7 @@ CImgRollingGuidance.o \
 CImgSharpenInvDiff.o \
 CImgSharpenShock.o \
 CImgSmooth.o \
+CImgZDefocus.o \
 CImgFilter.o \
 CImgOperator.o \
 
@@ -89,6 +91,7 @@ Smooth/net.sf.cimg.CImgSmooth.svg \
 VPATH += \
 Bilateral \
 Blur \
+Convolve \
 Denoise \
 Distance \
 Equalize \
@@ -106,6 +109,7 @@ RollingGuidance \
 SharpenInvDiff \
 SharpenShock \
 Smooth \
+ZDefocus \
 
 TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.master
@@ -116,6 +120,7 @@ CXXFLAGS += \
 -I. \
 -IBilateral \
 -IBlur \
+-IConvolve \
 -IDenoise \
 -IDistance \
 -IEqualize \
@@ -133,6 +138,7 @@ CXXFLAGS += \
 -ISharpenInvDiff \
 -ISharpenShock \
 -ISmooth \
+-IZDefocus \
 
 # openmp
 ifeq ($(OPENMP),1)
@@ -165,6 +171,8 @@ distclean: clean
 $(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImgOperator.h CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgConvolve.o: CImgConvolve.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImgFilter.h CImg.h
 
@@ -205,3 +213,5 @@ $(OBJECTPATH)/CImgSharpenInvDiff.o: CImgSharpenInvDiff.cpp CImgFilter.h CImg.h
 $(OBJECTPATH)/CImgSharpenShock.o: CImgSharpenShock.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgSmooth.o: CImgSmooth.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgZDefocus.o: CImgZDefocus.cpp CImgFilter.h CImg.h

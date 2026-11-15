@@ -284,6 +284,49 @@ convertPixelDepth(float pix)
     return pix;
 }
 
+// compute the index of the R,G,B,A components in img (-1 if absent)
+static void
+getSrcMapComp(const Image* img,
+              int srcMapComp[4])
+{
+    PixelComponentEnum srcComponents = img ? img->getPixelComponents() : ePixelComponentNone;
+
+    switch (srcComponents) {
+    case ePixelComponentRGBA:
+        srcMapComp[0] = 0;
+        srcMapComp[1] = 1;
+        srcMapComp[2] = 2;
+        srcMapComp[3] = 3;
+        break;
+    case ePixelComponentRGB:
+        srcMapComp[0] = 0;
+        srcMapComp[1] = 1;
+        srcMapComp[2] = 2;
+        srcMapComp[3] = -1;
+        break;
+    case ePixelComponentAlpha:
+        srcMapComp[0] = -1;
+        srcMapComp[1] = -1;
+        srcMapComp[2] = -1;
+        srcMapComp[3] = 0;
+        break;
+#ifdef OFX_EXTENSIONS_NATRON
+    case ePixelComponentXY:
+        srcMapComp[0] = 0;
+        srcMapComp[1] = 1;
+        srcMapComp[2] = -1;
+        srcMapComp[3] = -1;
+        break;
+#endif
+    default:
+        srcMapComp[0] = -1;
+        srcMapComp[1] = -1;
+        srcMapComp[2] = -1;
+        srcMapComp[3] = -1;
+        break;
+    }
+}
+
 template <class PIXSRC, class PIXDST, int nComponentsDst>
 class Shuffler
     : public ShufflerBase
@@ -300,74 +343,37 @@ private:
         unused(rs);
         const Image* channelMapImg[nComponentsDst];
         int channelMapComp[nComponentsDst]; // channel component, or value if no image
-        int srcMapComp[4]; // R,G,B,A components for src
-        PixelComponentEnum srcComponents = ePixelComponentNone;
-
-        if (_srcImgA) {
-            srcComponents = _srcImgA->getPixelComponents();
-        } else if (_srcImgB) {
-            srcComponents = _srcImgB->getPixelComponents();
-        }
-        switch (srcComponents) {
-        case ePixelComponentRGBA:
-            srcMapComp[0] = 0;
-            srcMapComp[1] = 1;
-            srcMapComp[2] = 2;
-            srcMapComp[3] = 3;
-            break;
-        case ePixelComponentRGB:
-            srcMapComp[0] = 0;
-            srcMapComp[1] = 1;
-            srcMapComp[2] = 2;
-            srcMapComp[3] = -1;
-            break;
-        case ePixelComponentAlpha:
-            srcMapComp[0] = -1;
-            srcMapComp[1] = -1;
-            srcMapComp[2] = -1;
-            srcMapComp[3] = 0;
-            break;
-#ifdef OFX_EXTENSIONS_NATRON
-        case ePixelComponentXY:
-            srcMapComp[0] = 0;
-            srcMapComp[1] = 1;
-            srcMapComp[2] = -1;
-            srcMapComp[3] = -1;
-            break;
-#endif
-        default:
-            srcMapComp[0] = -1;
-            srcMapComp[1] = -1;
-            srcMapComp[2] = -1;
-            srcMapComp[3] = -1;
-            break;
-        }
+        // R,G,B,A components for each src (A and B may have different components)
+        int srcMapCompA[4];
+        int srcMapCompB[4];
+        getSrcMapComp(_srcImgA, srcMapCompA);
+        getSrcMapComp(_srcImgB, srcMapCompB);
         for (int c = 0; c < nComponentsDst; ++c) {
             channelMapImg[c] = NULL;
             channelMapComp[c] = 0;
             switch (_channelMap[c]) {
             case eInputChannelAR:
-                if ( _srcImgA && ( srcMapComp[0] >= 0) ) {
+                if ( _srcImgA && ( srcMapCompA[0] >= 0) ) {
                     channelMapImg[c] = _srcImgA;
-                    channelMapComp[c] = srcMapComp[0];     // srcImg may not have R!!!
+                    channelMapComp[c] = srcMapCompA[0];     // srcImg may not have R!!!
                 }
                 break;
             case eInputChannelAG:
-                if ( _srcImgA && ( srcMapComp[1] >= 0) ) {
+                if ( _srcImgA && ( srcMapCompA[1] >= 0) ) {
                     channelMapImg[c] = _srcImgA;
-                    channelMapComp[c] = srcMapComp[1];
+                    channelMapComp[c] = srcMapCompA[1];
                 }
                 break;
             case eInputChannelAB:
-                if ( _srcImgA && ( srcMapComp[2] >= 0) ) {
+                if ( _srcImgA && ( srcMapCompA[2] >= 0) ) {
                     channelMapImg[c] = _srcImgA;
-                    channelMapComp[c] = srcMapComp[2];
+                    channelMapComp[c] = srcMapCompA[2];
                 }
                 break;
             case eInputChannelAA:
-                if ( _srcImgA && ( srcMapComp[3] >= 0) ) {
+                if ( _srcImgA && ( srcMapCompA[3] >= 0) ) {
                     channelMapImg[c] = _srcImgA;
-                    channelMapComp[c] = srcMapComp[3];
+                    channelMapComp[c] = srcMapCompA[3];
                 }
                 break;
             case eInputChannel0:
@@ -377,27 +383,27 @@ private:
                 channelMapComp[c] = 1;
                 break;
             case eInputChannelBR:
-                if ( _srcImgB && ( srcMapComp[0] >= 0) ) {
+                if ( _srcImgB && ( srcMapCompB[0] >= 0) ) {
                     channelMapImg[c] = _srcImgB;
-                    channelMapComp[c] = srcMapComp[0];
+                    channelMapComp[c] = srcMapCompB[0];
                 }
                 break;
             case eInputChannelBG:
-                if ( _srcImgB && ( srcMapComp[1] >= 0) ) {
+                if ( _srcImgB && ( srcMapCompB[1] >= 0) ) {
                     channelMapImg[c] = _srcImgB;
-                    channelMapComp[c] = srcMapComp[1];
+                    channelMapComp[c] = srcMapCompB[1];
                 }
                 break;
             case eInputChannelBB:
-                if ( _srcImgB && ( srcMapComp[2] >= 0) ) {
+                if ( _srcImgB && ( srcMapCompB[2] >= 0) ) {
                     channelMapImg[c] = _srcImgB;
-                    channelMapComp[c] = srcMapComp[2];
+                    channelMapComp[c] = srcMapCompB[2];
                 }
                 break;
             case eInputChannelBA:
-                if ( _srcImgB && ( srcMapComp[3] >= 0) ) {
+                if ( _srcImgB && ( srcMapCompB[3] >= 0) ) {
                     channelMapImg[c] = _srcImgB;
-                    channelMapComp[c] = srcMapComp[3];
+                    channelMapComp[c] = srcMapCompB[3];
                 }
                 break;
             } // switch
@@ -927,9 +933,8 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         BitDepthEnum srcOtherBitDepth      = srcOther->getPixelDepth();
         PixelComponentEnum srcOtherComponents = srcOther->getPixelComponents();
         assert(_srcClipOther && _srcClipOther->getPixelComponents() == srcOtherComponents);
-        // both input must have the same bit depth and components
-        if ( ( (srcBitDepth != eBitDepthNone) && (srcBitDepth != srcOtherBitDepth) ) ||
-             ( ( srcComponents != ePixelComponentNone) && ( srcComponents != srcOtherComponents) ) ) {
+        // both input must have the same bit depth (components may differ, see getClipPreferences())
+        if ( (srcBitDepth != eBitDepthNone) && (srcBitDepth != srcOtherBitDepth) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -1832,7 +1837,8 @@ ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 #endif
 #ifdef OFX_EXTENSIONS_NUKE
     gIsMultiPlanarV1 = kEnableMultiPlanar && getImageEffectHostDescription()->isMultiPlanar;
-    gIsMultiPlanarV2 = gIsMultiPlanarV1 && supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2);
+    // optional=true: fetchSuite() throws instead of returning NULL when the host lacks the suite
+    gIsMultiPlanarV2 = gIsMultiPlanarV1 && supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true);
     if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
         // This enables fetching different planes from the input.
         // Generally the user will read a multi-layered EXR file in the Reader node and then use the shuffle
@@ -1856,9 +1862,9 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
                                                       ContextEnum context)
 {
 #ifdef OFX_EXTENSIONS_NUKE
-    if ( gIsMultiPlanarV2 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2) ) {
+    if ( gIsMultiPlanarV2 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
-    } else if ( gIsMultiPlanarV1 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 1) ) {
+    } else if ( gIsMultiPlanarV1 && !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 #endif

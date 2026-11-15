@@ -272,6 +272,10 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
 
     if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) || (filter == eFilterNearest) ) {
         // should have been caught by isIdentity...
+        if (filter == eFilterNearest) {
+            // same frame as in isIdentity() and getFramesNeeded()
+            sourceTime = std::floor(sourceTime + 0.5);
+        }
         auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                         _srcClip->fetchImage(sourceTime) : 0 );
 #    ifndef NDEBUG

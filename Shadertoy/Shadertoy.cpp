@@ -1356,7 +1356,8 @@ ShadertoyPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     if (bboxChoice >= eBBoxIChannel) {
         unsigned i = bboxChoice - eBBoxIChannel;
-        if ( inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) {
+        // i may be out of range if the parameter was set from an invalid BBox comment
+        if ( (i < NBINPUTS) && inputEnable[i] && _srcClips[i] && _srcClips[i]->isConnected() ) {
             rod = _srcClips[i]->getRegionOfDefinition(time);
 
             return true;
@@ -1666,6 +1667,8 @@ ShadertoyPlugin::updateExtra()
                         //_paramMinVec4[i]->resetToDefault();
                         //_paramMaxVec4[i]->resetToDefault();
                     }
+                    // do not fall through into the Bool case, which would set the bool default
+                    break;
                 }
                 case eUniformTypeBool: {
                     if (tChanged) {

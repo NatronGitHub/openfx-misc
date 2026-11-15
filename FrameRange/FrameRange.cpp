@@ -96,6 +96,10 @@ enum BeforeAfterEnum
 // returns a frame between x and y for frame f
 static int frameBounce(int x, int y, int f)
 {
+    if (y <= x) {
+        // empty or single-frame range: avoid a division by zero below
+        return x;
+    }
     if (f > y) {
         f = x + (f - x) % ((y-x)*2);
         if (f > y) {
@@ -114,6 +118,10 @@ static int frameBounce(int x, int y, int f)
 // returns a frame between x and y for frame f
 static int frameLoop(int x, int y, int f)
 {
+    if (y <= x) {
+        // empty or single-frame range: avoid a division by zero below
+        return x;
+    }
     if (f > y) {
         f = x + (f - x) % (y+1-x);
     } else if (f < x) {

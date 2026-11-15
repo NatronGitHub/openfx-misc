@@ -940,9 +940,10 @@ TrackerPMPluginFactory::describe(ImageEffectDescriptor &desc)
 
 #ifdef OFX_EXTENSIONS_NATRON
     // This plug-in is deprecated since Natron has its new tracker implementation
-    if ( getImageEffectHostDescription()->isNatron &&
-         ( getImageEffectHostDescription()->versionMajor >= 2) &&
-         ( getImageEffectHostDescription()->versionMinor >= 1) ) {
+    // Natron >= 2.1 (testing major and minor separately would fail for 3.0)
+    const ImageEffectHostDescription& host = *getImageEffectHostDescription();
+    if ( host.isNatron &&
+         ( (host.versionMajor > 2) || ( (host.versionMajor == 2) && (host.versionMinor >= 1) ) ) ) {
         desc.setIsDeprecated(true);
     }
 #endif

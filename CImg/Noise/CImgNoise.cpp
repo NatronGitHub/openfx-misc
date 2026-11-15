@@ -54,7 +54,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// version 3.0: fix Rice noise (used the first channel only, real and imaginary parts were identical),
+//              Poisson noise (wrong distribution), and Salt & Pepper noise (pattern depended on the tile,
+//              and the salt and pepper values were the max and min of each tile; they are now 1 and 0)
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsComponentRemapping 1
@@ -84,7 +87,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamTypeHint "Type of additive noise."
 #define kParamTypeOptionGaussian "Gaussian", "Gaussian noise.", "gaussian"
 #define kParamTypeOptionUniform "Uniform", "Uniform noise.", "uniform"
-#define kParamTypeOptionSaltPepper "Salt & Pepper", "Salt & pepper noise.", "saltnpepper"
+#define kParamTypeOptionSaltPepperLegacy "Salt & Pepper", "Salt & pepper noise.", "saltnpepper"
+#define kParamTypeOptionSaltPepper "Salt & Pepper", "Salt & pepper noise: a fraction Sigma (in percent) of the pixel values is set to 0 (pepper) or 1 (salt).", "saltnpepper"
 #define kParamTypeOptionPoisson "Poisson", "Poisson noise. Image is divided by Sigma before computing noise, then remultiplied by Sigma.", "poisson"
 #define kParamTypeOptionRice "Rice", "Rician noise.", "rice"
 #define kParamTypeDefault eTypeGaussian
@@ -117,6 +121,14 @@ enum TypeEnum
 #define Tfloat cimgpixfloat_t
 using namespace cimg_library;
 
+// derive a second seed from seed, to get random values independent from those drawn with seed
+// (0x9e3779b9 is the usual golden-ratio hashing constant)
+static inline unsigned int
+otherSeed(unsigned int seed)
+{
+    return cimg_hash(seed ^ 0x9e3779b9U);
+}
+
 //! Add random noise to pixel values.
 // Differences with the original cimg_library::CImg::noise:
 // - static function
@@ -143,7 +155,7 @@ using namespace cimg_library;
  **/
 static
 CImg<T>&
-noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned int seed, int x1, int y1)
+noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned int seed, int x1, int y1, bool legacy)
 {
     if (img.is_empty()) {
         return img;
@@ -156,7 +168,9 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
     if (nsigma==0 && noise_type!=3) {
         return img;
     }
-    if (nsigma<0 || noise_type==2) {
+    if (nsigma<0 || (noise_type==2 && legacy)) {
+        // legacy: the salt and pepper values were the min and max of the tile being rendered,
+        // so they differed from tile to tile (kept so old projects render the same)
         m = (Tfloat)img.min_max(M);
     }
     if (nsigma<0) {
@@ -191,13 +205,21 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
             if (nsigma<0) {
                 nsigma = -nsigma;
             }
-            if (M==m) {
+            if (!legacy) {
+                // a render only sees its own tile (OFX: the render window), so the range of
+                // the whole image is not available: use black and white, which is what
+                // "salt and pepper" means, so that all tiles get the same values
+                m = 0;
+                M = cimg::type<T>::is_float()?(Tfloat)1:(Tfloat)cimg::type<T>::max();
+            } else if (M==m) {
                 m = 0;
                 M = cimg::type<T>::is_float()?(Tfloat)1:(Tfloat)cimg::type<T>::max();
             }
             cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img, x, y, c) {
-                if (cimg_rand(seed, x + x1, y1 + img.height() - y, c, 100) < nsigma) {
+                // legacy: the probability depended on the tile position and size
+                if ( ( legacy ? cimg_rand(seed, x + x1, y1 + img.height() - y, c, 100) :
+                       cimg_rand(otherSeed(seed), x + x1, y + y1, c, 100) ) < nsigma ) {
                     img(x,y,0,c) = (T)(cimg_rand(seed, x + x1, y + y1, c)<0.5?M:m);
                 }
             }
@@ -205,7 +227,7 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
         case 3 : { // Poisson Noise
             cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img,x,y,c) {
-                img(x,y,0,c) = (T)cimg_prand(seed, x + x1, y + y1, c, img(x,y,0,c));
+                img(x,y,0,c) = (T)cimg_prand(seed, x + x1, y + y1, c, img(x,y,0,c), legacy);
             }
         } break;
         case 4 : { // Rice noise
@@ -213,9 +235,10 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
             cimg_pragma_openmp(parallel for collapse(3) cimg_openmp_if(img.size()>=2048))
             cimg_forXYC(img, x, y, c) {
                 const Tfloat
-                val0 = (Tfloat)img(x,y)/sqrt2,
+                // legacy: used the first channel only, and re and im had the same noise
+                val0 = (Tfloat)(legacy ? img(x,y) : img(x,y,0,c))/sqrt2,
                 re = (Tfloat)(val0 + nsigma * cimg_grand(seed, x + x1, y + y1, c)),
-                im = (Tfloat)(val0 + nsigma * cimg_grand(seed, x + x1, y + y1, c));
+                im = (Tfloat)(val0 + nsigma * cimg_grand(legacy ? seed : otherSeed(seed), x + x1, y + y1, c));
                 Tfloat val = cimg::hypot(re,im);
                 if (val > vmax) {
                     val = vmax;
@@ -253,8 +276,10 @@ class CImgNoisePlugin
 {
 public:
 
-    CImgNoisePlugin(OfxImageEffectHandle handle)
+    CImgNoisePlugin(OfxImageEffectHandle handle,
+                    int majorVersion)
         : CImgFilterPluginHelper<CImgNoiseParams, true>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ false)
+        , _legacy(majorVersion < 3)
     {
         _sigma  = fetchDoubleParam(kParamSigma);
         _type = fetchChoiceParam(kParamType);
@@ -308,7 +333,7 @@ public:
             // set the seed based on the current time, and double it we get difference seeds on different fields
             seed = cimg_hash( *( (unsigned int*)&time_f ) ^ seed );
         }
-        noise(cimg, params.sigma * std::sqrt(args.renderScale.x), params.type_i, seed, x1, y1);
+        noise(cimg, params.sigma * std::sqrt(args.renderScale.x), params.type_i, seed, x1, y1, _legacy);
 #else
         cimg.noise(params.sigma * std::sqrt(args.renderScale.x), params.type_i);
 #endif
@@ -340,14 +365,19 @@ private:
     ChoiceParam *_type;
     IntParam* _seed;
     BooleanParam* _staticSeed;
+    bool _legacy; // reproduce the noise of versions < 3
 };
 
 
-mDeclarePluginFactory(CImgNoisePluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CImgNoisePluginFactory, {ofxsThreadSuiteCheck();}, {});
 
+template<unsigned int majorVersion>
 void
-CImgNoisePluginFactory::describe(ImageEffectDescriptor& desc)
+CImgNoisePluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -374,8 +404,9 @@ CImgNoisePluginFactory::describe(ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
+template<unsigned int majorVersion>
 void
-CImgNoisePluginFactory::describeInContext(ImageEffectDescriptor& desc,
+CImgNoisePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
                                           ContextEnum context)
 {
     // create the clips and params
@@ -411,7 +442,12 @@ CImgNoisePluginFactory::describeInContext(ImageEffectDescriptor& desc,
         assert(param->getNOptions() == eTypeUniform && param->getNOptions() == 1);
         param->appendOption(kParamTypeOptionUniform);
         assert(param->getNOptions() == eTypeSaltPepper && param->getNOptions() == 2);
-        param->appendOption(kParamTypeOptionSaltPepper);
+        if (majorVersion < 3) {
+            // version 2 used the min and max of each tile (kept so old projects render the same)
+            param->appendOption(kParamTypeOptionSaltPepperLegacy);
+        } else {
+            param->appendOption(kParamTypeOptionSaltPepper);
+        }
         assert(param->getNOptions() == eTypePoisson && param->getNOptions() == 3);
         param->appendOption(kParamTypeOptionPoisson);
         assert(param->getNOptions() == eTypeRice && param->getNOptions() == 4);
@@ -448,14 +484,18 @@ CImgNoisePluginFactory::describeInContext(ImageEffectDescriptor& desc,
     CImgNoisePlugin::describeInContextEnd(desc, context, page);
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-CImgNoisePluginFactory::createInstance(OfxImageEffectHandle handle,
+CImgNoisePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    return new CImgNoisePlugin(handle);
+    return new CImgNoisePlugin(handle, majorVersion);
 }
 
-static CImgNoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// version 2 is kept for backward compatibility
+static CImgNoisePluginFactory<2> p2(kPluginIdentifier, 0);
+static CImgNoisePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

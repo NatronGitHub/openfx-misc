@@ -27,6 +27,7 @@ Deinterlace \
 DenoiseSharpen \
 Despill \
 Difference \
+DiscBlades \
 Dissolve \
 FrameBlend \
 FrameHold \
@@ -69,6 +70,7 @@ SideBySide \
 SlitScan \
 SpriteSheet \
 Switch \
+Threshold \
 TimeBlur \
 TimeDissolve \
 TimeOffset \
@@ -95,6 +97,7 @@ ifneq ($(HAVE_CIMG),0)
   SUBDIRS_NOMULTI += \
 CImg/Bilateral \
 CImg/Blur \
+CImg/Convolve \
 CImg/Denoise \
 CImg/Equalize \
 CImg/Erode \
@@ -109,6 +112,7 @@ CImg/RollingGuidance \
 CImg/SharpenInvDiff \
 CImg/SharpenShock \
 CImg/Smooth \
+CImg/ZDefocus \
 
 endif
 
