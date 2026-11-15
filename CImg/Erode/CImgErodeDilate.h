@@ -108,7 +108,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kDilateParamExpandRoDHint "Expand the source region of definition by 2*size pixels if size is positive"
 
 
-/// Erode/Dilate plugin
+// parameter values at a given time
 struct CImgErodeDilateParams
 {
     int sx;
