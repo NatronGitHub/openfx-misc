@@ -293,6 +293,7 @@ private:
     void setupAndProcess(SlitScanProcessorBase &, const RenderArguments &args);
     void getFramesNeededRange(const double time,
                               OfxRangeD &range);
+    bool getIdentityTime(double time, double *identityTime);
     void updateVisibility()
     {
         RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValue();
@@ -362,13 +363,12 @@ SlitScanPlugin::getFramesNeededRange(const double time,
     range.max = tmax;
 }
 
+// If the output at the given time is a single source frame (no retime gain, and an integer
+// source time, or the Nearest filter), set *identityTime to that frame and return true.
 bool
-SlitScanPlugin::isIdentity(const IsIdentityArguments &args,
-                           Clip * &identityClip,
-                           double &identityTime
-                           , int& /*view*/, std::string& /*plane*/)
+SlitScanPlugin::getIdentityTime(double time,
+                                double *identityTime)
 {
-    const double time = args.time;
     double retimeGain = _retimeGain->getValueAtTime(time);
     RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
 
@@ -377,18 +377,31 @@ SlitScanPlugin::isIdentity(const IsIdentityArguments &args,
         retimeGain = 0.;
     }
 
-    if (retimeGain == 0.) {
-        double retimeOffset = _retimeOffset->getValueAtTime(time);
-        bool retimeAbsolute = _retimeAbsolute->getValueAtTime(time);
-        identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
-        if (identityTime != (int)identityTime) {
-            FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
-            if (filter == eFilterNearest) {
-                identityTime = std::floor(identityTime + 0.5);
-            } else {
-                return false; // result is blended
-            }
+    if (retimeGain != 0.) {
+        return false;
+    }
+    double retimeOffset = _retimeOffset->getValueAtTime(time);
+    bool retimeAbsolute = _retimeAbsolute->getValueAtTime(time);
+    *identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
+    if (*identityTime != (int)*identityTime) {
+        FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
+        if (filter == eFilterNearest) {
+            *identityTime = std::floor(*identityTime + 0.5);
+        } else {
+            return false; // result is blended
         }
+    }
+
+    return true;
+}
+
+bool
+SlitScanPlugin::isIdentity(const IsIdentityArguments &args,
+                           Clip * &identityClip,
+                           double &identityTime
+                           , int& /*view*/, std::string& /*plane*/)
+{
+    if ( getIdentityTime(args.time, &identityTime) ) {
         identityClip = _srcClip;
 
         return true;
@@ -401,31 +414,8 @@ bool
 SlitScanPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                       OfxRectD &rod)
 {
-    const double time = args.time;
-    double retimeGain;
-
-    _retimeGain->getValueAtTime(time, retimeGain);
-
-    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
-    if ( (retimeFunction == eRetimeFunctionRetimeMap) && !( _retimeMapClip && _retimeMapClip->isConnected() ) ) {
-        // no retime map, equivalent to value = 0 everywhere
-        retimeGain = 0.;
-    }
-
-    if (retimeGain == 0.) {
-        double retimeOffset;
-        _retimeOffset->getValueAtTime(time, retimeOffset);
-        bool retimeAbsolute;
-        _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
-        double identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
-        if (identityTime != (int)identityTime) {
-            FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
-            if (filter == eFilterNearest) {
-                identityTime = std::floor(identityTime + 0.5);
-            } else {
-                return false; // result is blended
-            }
-        }
+    double identityTime;
+    if ( getIdentityTime(args.time, &identityTime) ) {
         rod = _srcClip->getRegionOfDefinition(identityTime);
 
         return true;
@@ -678,6 +668,26 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
     checkBadRenderScaleOrField(dst, args);
 # endif
 
+    double identityTime;
+    if ( getIdentityTime(time, &identityTime) ) {
+        // should have been caught by isIdentity...
+        auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                        _srcClip->fetchImage(identityTime) : 0 );
+#     ifndef NDEBUG
+        if ( src.get() ) {
+            checkBadRenderScaleOrField(src, args);
+            BitDepthEnum srcBitDepth      = src->getPixelDepth();
+            PixelComponentEnum srcComponents = src->getPixelComponents();
+            if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+                throwSuiteStatusException(kOfxStatErrImageFormat);
+            }
+        }
+#     endif
+        copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
+
+        return;
+    }
+
     double retimeGain = _retimeGain->getValueAtTime(time);
     RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
     FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
@@ -688,34 +698,6 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
         // no retime map, equivalent to value = 0 everywhere
         retimeGain = 0.;
     }
-
-    if (retimeGain == 0.) {
-        double identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
-        if (identityTime != (int)identityTime) {
-            if (filter == eFilterNearest) {
-                identityTime = std::floor(identityTime + 0.5);
-            }
-        }
-        if (identityTime == (int)identityTime) {
-            // should have been caught by isIdentity...
-            auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                            _srcClip->fetchImage(identityTime) : 0 );
-#        ifndef NDEBUG
-           if ( src.get() ) {
-                checkBadRenderScaleOrField(src, args);
-                BitDepthEnum srcBitDepth      = src->getPixelDepth();
-                PixelComponentEnum srcComponents = src->getPixelComponents();
-                if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-                    throwSuiteStatusException(kOfxStatErrImageFormat);
-                }
-            }
-#         endif
-            copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
-
-            return;
-        }
-    }
-
 
     // set the images
     processor.setDstImg( dst.get() );
@@ -752,19 +734,18 @@ SlitScanPlugin::setupAndProcess(SlitScanProcessorBase &processor,
         }
         if ( !retimeMap.get() ) {
             // empty retimeMap or no gain, we need only one or two images
-            double identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
-            if (identityTime == (int)identityTime) {
-                sourceImagesTimes.insert(identityTime);
+            double retimeTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
+            if (retimeTime == (int)retimeTime) {
+                sourceImagesTimes.insert(retimeTime);
             } else {
                 if (filter == eFilterNearest) {
-                    sourceImagesTimes.insert( std::floor(identityTime + 0.5) );
+                    sourceImagesTimes.insert( std::floor(retimeTime + 0.5) );
                 } else {
-                    sourceImagesTimes.insert( std::floor(identityTime) );
-                    sourceImagesTimes.insert( std::ceil(identityTime) );
+                    sourceImagesTimes.insert( std::floor(retimeTime) );
+                    sourceImagesTimes.insert( std::ceil(retimeTime) );
                 }
             }
         } else {
-            retimeMap.reset(_retimeMapClip ? _retimeMapClip->fetchImage(time) : NULL);
             assert(retimeMap->getPixelComponents() == ePixelComponentAlpha);
             processor.setRetimeMap( retimeMap.get() );
 

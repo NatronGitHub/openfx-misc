@@ -223,6 +223,20 @@ struct TimeBuffer
         bounds.x1 = bounds.y1 = bounds.x2 = bounds.y2 = 0;
         renderScale.x = renderScale.y = 1;
     }
+
+    // reset the buffer to a clean state (the caller must hold the mutex)
+    void reset()
+    {
+        time = -DBL_MAX;
+        dirty = true;
+        pixelComponents = ePixelComponentNone;
+        pixelComponentCount = 0;
+        bitDepth = eBitDepthNone;
+        rowBytes = 0;
+        par = 1.;
+        bounds.x1 = bounds.y1 = bounds.x2 = bounds.y2 = 0;
+        renderScale.x = renderScale.y = 1;
+    }
 };
 
 // This is the global map from buffer names to buffers.
@@ -244,28 +258,19 @@ getTimeBufferKey(const std::string &projectId,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/** @brief The plugin that does our work */
-class TimeBufferReadPlugin
+/** @brief Code shared by TimeBufferRead and TimeBufferWrite: registration of the
+    instance in the global buffer map, and buffer lookup */
+class TimeBufferPluginBase
     : public ImageEffect
 {
-public:
-
-    /** @brief ctor */
-    TimeBufferReadPlugin(OfxImageEffectHandle handle)
+protected:
+    TimeBufferPluginBase(OfxImageEffectHandle handle,
+                         bool isRead)
         : ImageEffect(handle)
-        , _dstClip(NULL)
-        , _srcClip(NULL)
-        , _bufferName(NULL)
-        , _startFrame(NULL)
-        , _unorderedRender(NULL)
-        , _timeOut(NULL)
-        , _resetTrigger(NULL)
-        , _sublabel(NULL)
         , _buffer(NULL)
         , _name()
+        , _isRead(isRead)
     {
-
-        setSequentialRender(true); // must also be set here, since it is missing from the plugin descriptor in Resolve
         if ( !gTimeBufferMapMutex.get() ) {
             gTimeBufferMapMutex.reset(new Mutex);
         }
@@ -275,54 +280,35 @@ public:
                 gTimeBufferMap.reset(new TimeBufferMap);
             }
         }
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGBA) ) );
-
-        _bufferName = fetchStringParam(kParamBufferName);
-        _startFrame = fetchIntParam(kParamStartFrame);
-        _unorderedRender = fetchChoiceParam(kParamUnorderedRender);
-        _timeOut = fetchDoubleParam(kParamTimeOut);
-        _resetTrigger = fetchBooleanParam(kParamResetTrigger);
-        _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
-        assert(_bufferName && _startFrame && _unorderedRender && _sublabel);
-
         // the project and group identifiers are part of the buffer key, set them before setName()
         _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
         _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
-        std::string name;
-        _bufferName->getValue(name);
-        setName(name);
     }
 
-    virtual ~TimeBufferReadPlugin()
-    {
-        setName("");
-    }
+    // the TimeBuffer member pointing to this instance, and the one pointing to the other side
+    ImageEffect* & thisInstance(TimeBuffer* timeBuffer) const { return _isRead ? timeBuffer->readInstance : timeBuffer->writeInstance; }
 
-private:
-    /* Override the render */
-    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+    ImageEffect* otherInstance(const TimeBuffer* timeBuffer) const { return _isRead ? timeBuffer->writeInstance : timeBuffer->readInstance; }
 
-    /* Override the clip preferences, we need to say we are setting the frame varying flag */
-    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    const char* thisPluginName() const { return _isRead ? "TimeBufferRead" : "TimeBufferWrite"; }
+
+    const char* otherPluginName() const { return _isRead ? "TimeBufferWrite" : "TimeBufferRead"; }
 
     void setName(const std::string &name)
     {
         if (name == _name) {
             // ok!
+            if (!_isRead) {
+                clearPersistentMessage();
+            }
             check();
 
             return;
         }
         std::string key = getTimeBufferKey(_projectId, _groupId, name);
         if ( _buffer && (name != _name) ) {
-            _buffer->readInstance = 0; // remove reference to this instance
-            if (!_buffer->writeInstance) {
+            thisInstance(_buffer) = 0; // remove reference to this instance
+            if ( !otherInstance(_buffer) ) {
                 // we may free this buffer
                 {
                     AutoMutex guard( gTimeBufferMapMutex.get() );
@@ -342,9 +328,9 @@ private:
                     timeBuffer = it->second;
                 }
             }
-            if ( timeBuffer && timeBuffer->readInstance && (timeBuffer->readInstance != this) ) {
+            if ( timeBuffer && thisInstance(timeBuffer) && (thisInstance(timeBuffer) != this) ) {
                 // a buffer already exists with that name
-                setPersistentMessage(Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"") + name + "\".");
+                setPersistentMessage(Message::eMessageError, "", std::string("A ") + thisPluginName() + " already exists with name \"" + name + "\".");
                 throwSuiteStatusException(kOfxStatFailed);
 
                 return;
@@ -354,7 +340,7 @@ private:
             } else {
                 _buffer = new TimeBuffer;
             }
-            _buffer->readInstance = this;
+            thisInstance(_buffer) = this;
             _name = name;
             {
                 AutoMutex guard( gTimeBufferMapMutex.get() );
@@ -362,7 +348,7 @@ private:
                 if ( it != gTimeBufferMap->end() ) {
                     assert(it->second == timeBuffer);
                     if (it->second != timeBuffer) {
-                        setPersistentMessage(Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"") + name + "\".");
+                        setPersistentMessage(Message::eMessageError, "", std::string("A ") + thisPluginName() + " already exists with name \"" + name + "\".");
                         delete _buffer;
                         _buffer = 0;
                         _name.clear();
@@ -407,8 +393,8 @@ private:
 
                 return;
             }
-            if (it->second->readInstance != this) {
-                std::cout << "Error: Buffer '" << _name << "' belongs to " << (void*)it->second->readInstance << ", not " << (void*)this << std::endl;
+            if (thisInstance(it->second) != this) {
+                std::cout << "Error: Buffer '" << _name << "' belongs to " << (void*)thisInstance(it->second) << ", not " << (void*)this << std::endl;
 
                 return;
             }
@@ -420,7 +406,7 @@ private:
     {
         std::string key = getTimeBufferKey(_projectId, _groupId, _name);
         TimeBuffer* timeBuffer = 0;
-        // * if the write instance does not exist, an error is displayed and render fails
+        // * if the other instance does not exist, an error is displayed and render fails
         {
             AutoMutex guard( gTimeBufferMapMutex.get() );
             TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
@@ -435,27 +421,125 @@ private:
 
             return NULL;
         }
-        if (timeBuffer && !timeBuffer->readInstance) {
-            setPersistentMessage(Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"") + _name + "\". Try using another name.");
-            throwSuiteStatusException(kOfxStatFailed);
-
-            return NULL;
-        }
-        if ( timeBuffer && timeBuffer->readInstance && (timeBuffer->readInstance != this) ) {
+        if ( !thisInstance(timeBuffer) || (thisInstance(timeBuffer) != this) ) {
             // a buffer already exists with that name
-            setPersistentMessage(Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"") + _name + "\". Try using another name.");
+            setPersistentMessage(Message::eMessageError, "", std::string("Another ") + thisPluginName() + " already exists with name \"" + _name + "\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
         }
-        if (timeBuffer && !timeBuffer->writeInstance) {
-            setPersistentMessage(Message::eMessageError, "", std::string("No TimeBufferWrite exists with name \"") + _name + "\". Create one and connect it to this TimeBufferRead via the Sync input.");
+        if ( !otherInstance(timeBuffer) ) {
+            setPersistentMessage(Message::eMessageError, "", std::string("No ") + otherPluginName() + " exists with name \"" + _name + "\". Create one and connect it to this " + thisPluginName() + " via the Sync input.");
             throwSuiteStatusException(kOfxStatFailed);
 
             return NULL;
         }
 
         return timeBuffer;
+    }
+
+private:
+    TimeBuffer *_buffer; // associated TimeBuffer
+    std::string _name; // name of the TimeBuffer
+    std::string _projectId; // identifier for the project the instance lives in
+    std::string _groupId; // identifier for the group (or subproject) the instance lives in
+    const bool _isRead; // true for TimeBufferRead, false for TimeBufferWrite
+};
+
+////////////////////////////////////////////////////////////////////////////////
+/** @brief The plugin that does our work */
+class TimeBufferReadPlugin
+    : public TimeBufferPluginBase
+{
+public:
+
+    /** @brief ctor */
+    TimeBufferReadPlugin(OfxImageEffectHandle handle)
+        : TimeBufferPluginBase(handle, true)
+        , _dstClip(NULL)
+        , _srcClip(NULL)
+        , _bufferName(NULL)
+        , _startFrame(NULL)
+        , _unorderedRender(NULL)
+        , _timeOut(NULL)
+        , _resetTrigger(NULL)
+        , _sublabel(NULL)
+    {
+
+        setSequentialRender(true); // must also be set here, since it is missing from the plugin descriptor in Resolve
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
+        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( (!_srcClip && getContext() == eContextGenerator) ||
+                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGBA) ) );
+
+        _bufferName = fetchStringParam(kParamBufferName);
+        _startFrame = fetchIntParam(kParamStartFrame);
+        _unorderedRender = fetchChoiceParam(kParamUnorderedRender);
+        _timeOut = fetchDoubleParam(kParamTimeOut);
+        _resetTrigger = fetchBooleanParam(kParamResetTrigger);
+        _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
+        assert(_bufferName && _startFrame && _unorderedRender && _sublabel);
+
+        std::string name;
+        _bufferName->getValue(name);
+        setName(name);
+    }
+
+    virtual ~TimeBufferReadPlugin()
+    {
+        setName("");
+    }
+
+private:
+    /* Override the render */
+    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+
+    /* Override the clip preferences, we need to say we are setting the frame varying flag */
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    enum WaitResultEnum
+    {
+        eWaitClean = 0, // the buffer is clean, and locked by guard
+        eWaitAborted, // abort() returned true, the buffer is unlocked
+        eWaitTimedOutBlack, // timed out with the Black strategy, the buffer is unlocked
+    };
+
+    // While the buffer is dirty, unlock it, wait and lock it again.
+    // The buffer must be locked by guard on entry.
+    // Times out with an error, unless the Black strategy is selected.
+    WaitResultEnum waitForCleanBuffer(TimeBuffer* timeBuffer,
+                                      AutoMutex &guard)
+    {
+        int delay = 5; // initial delay, in milliseconds
+        double timeout = _timeOut->getValue();
+        while (timeBuffer->dirty) {
+            guard.unlock();
+            sleep(delay);
+            if ( abort() ) {
+                return eWaitAborted;
+            }
+            delay *= 2;
+            if (delay > timeout) {
+                UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
+                switch (e) {
+                case eUnorderedRenderError:
+                case eUnorderedRenderLast:
+                    setPersistentMessage(Message::eMessageError, "", "Timed out");
+                    throwSuiteStatusException(kOfxStatFailed);
+
+                    return eWaitAborted;
+                case eUnorderedRenderBlack:
+
+                    return eWaitTimedOutBlack;
+                }
+            }
+            guard.relock();
+        }
+
+        return eWaitClean;
     }
 
 private:
@@ -468,10 +552,6 @@ private:
     DoubleParam *_timeOut;
     BooleanParam *_resetTrigger;
     StringParam *_sublabel;
-    TimeBuffer *_buffer; // associated TimeBuffer
-    std::string _name; // name of the TimeBuffer
-    std::string _projectId; // identifier for the project the instance lives in
-    std::string _groupId; // identifier for the group (or subproject) the instance lives in
 };
 
 
@@ -547,34 +627,19 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
         }
     }
     //   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
-    int delay = 5; // initial delay, in milliseconds
-    double timeout = _timeOut->getValue();
-    while (timeBuffer->dirty) {
-        guard.unlock();
-        sleep(delay);
-        if ( abort() ) {
-            return;
-        }
-        delay *= 2;
-        if (delay > timeout) {
-            UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
-            switch (e) {
-            case eUnorderedRenderError:
-            case eUnorderedRenderLast:
-                setPersistentMessage(Message::eMessageError, "", "Timed out");
-                throwSuiteStatusException(kOfxStatFailed);
+    switch ( waitForCleanBuffer(timeBuffer, guard) ) {
+    case eWaitAborted:
 
-                return;
-            case eUnorderedRenderBlack:
-                fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
-                guard.relock(); // the buffer must be locked before modifying it
-                timeBuffer->dirty = true;
-                timeBuffer->time = time + 1;
+        return;
+    case eWaitTimedOutBlack:
+        fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
+        guard.relock(); // the buffer must be locked before modifying it
+        timeBuffer->dirty = true;
+        timeBuffer->time = time + 1;
 
-                return;
-            }
-        }
-        guard.relock();
+        return;
+    case eWaitClean:
+        break;
     }
     if ( (args.renderScale.x != timeBuffer->renderScale.x) || (args.renderScale.y != timeBuffer->renderScale.y) ) {
         UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
@@ -666,30 +731,8 @@ TimeBufferReadPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &a
         }
     }
     // - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
-    int delay = 5; // initial delay, in milliseconds
-    double timeout = _timeOut->getValue();
-    while (timeBuffer->dirty) {
-        guard.unlock();
-        sleep(delay);
-        if ( abort() ) {
-            return false;
-        }
-        delay *= 2;
-        if (delay > timeout) {
-            UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
-            switch (e) {
-            case eUnorderedRenderError:
-            case eUnorderedRenderLast:
-                setPersistentMessage(Message::eMessageError, "", "Timed out");
-                throwSuiteStatusException(kOfxStatFailed);
-
-                return false;
-            case eUnorderedRenderBlack:
-
-                return false;     // use default behavior
-            }
-        }
-        guard.relock();
+    if ( waitForCleanBuffer(timeBuffer, guard) != eWaitClean ) {
+        return false; // aborted, or timed out with Black: use default behavior
     }
     if ( (args.renderScale.x != timeBuffer->renderScale.x) || (args.renderScale.y != timeBuffer->renderScale.y) ) {
         UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
@@ -737,15 +780,7 @@ TimeBufferReadPlugin::changedParam(const InstanceChangedArgs & /*args*/,
         }
         // reset the buffer to a clean state
         AutoMutex guard(timeBuffer->mutex);
-        timeBuffer->time = -DBL_MAX;
-        timeBuffer->dirty = true;
-        timeBuffer->pixelComponents = ePixelComponentNone;
-        timeBuffer->pixelComponentCount = 0;
-        timeBuffer->bitDepth = eBitDepthNone;
-        timeBuffer->rowBytes = 0;
-        timeBuffer->par = 1.;
-        timeBuffer->bounds.x1 = timeBuffer->bounds.y1 = timeBuffer->bounds.x2 = timeBuffer->bounds.y2 = 0;
-        timeBuffer->renderScale.x = timeBuffer->renderScale.y = 1;
+        timeBuffer->reset();
         _resetTrigger->setValue( !_resetTrigger->getValue() ); // trigger a render
     } else if (paramName == kParamInfo) {
         // give information about allocated buffers
@@ -921,33 +956,20 @@ TimeBufferReadPluginFactory::createInstance(OfxImageEffectHandle handle,
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TimeBufferWritePlugin
-    : public ImageEffect
+    : public TimeBufferPluginBase
 {
 public:
 
     /** @brief ctor */
     TimeBufferWritePlugin(OfxImageEffectHandle handle)
-        : ImageEffect(handle)
+        : TimeBufferPluginBase(handle, false)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _syncClip(NULL)
         , _bufferName(NULL)
         , _resetTrigger(NULL)
         , _sublabel(NULL)
-        , _buffer(NULL)
-        , _name()
     {
-
-        if ( !gTimeBufferMapMutex.get() ) {
-            gTimeBufferMapMutex.reset(new Mutex);
-        }
-        {
-            AutoMutex guard( gTimeBufferMapMutex.get() );
-            if ( !gTimeBufferMap.get() ) {
-                gTimeBufferMap.reset(new TimeBufferMap);
-            }
-        }
-
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -959,9 +981,6 @@ public:
         _resetTrigger = fetchBooleanParam(kParamResetTrigger);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_bufferName && _sublabel);
-        // the project and group identifiers are part of the buffer key, set them before setName()
-        _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
-        _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
         std::string name;
         _bufferName->getValue(name);
         setName(name);
@@ -982,154 +1001,6 @@ private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
-    void setName(const std::string &name)
-    {
-        if (name == _name) {
-            // ok!
-            clearPersistentMessage();
-            check();
-
-            return;
-        }
-        std::string key = getTimeBufferKey(_projectId, _groupId, name);
-        if ( _buffer && (name != _name) ) {
-            _buffer->writeInstance = 0; // remove reference to this instance
-            if (!_buffer->readInstance) {
-                // we may free this buffer
-                {
-                    AutoMutex guard( gTimeBufferMapMutex.get() );
-                    gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
-                }
-                delete _buffer;
-                _buffer = 0;
-                _name.clear();
-            }
-        }
-        if (!name.empty() && !_buffer) {
-            TimeBuffer* timeBuffer = 0;
-            {
-                AutoMutex guard( gTimeBufferMapMutex.get() );
-                TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
-                if ( it != gTimeBufferMap->end() ) {
-                    timeBuffer = it->second;
-                }
-            }
-            if ( timeBuffer && timeBuffer->writeInstance && (timeBuffer->writeInstance != this) ) {
-                // a buffer already exists with that name
-                setPersistentMessage(Message::eMessageError, "", std::string("A TimeBufferWrite already exists with name \"") + name + "\".");
-                throwSuiteStatusException(kOfxStatFailed);
-
-                return;
-            }
-            if (timeBuffer) {
-                _buffer = timeBuffer;
-            } else {
-                _buffer = new TimeBuffer;
-            }
-            _buffer->writeInstance = this;
-            _name = name;
-            {
-                AutoMutex guard( gTimeBufferMapMutex.get() );
-                TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
-                if ( it != gTimeBufferMap->end() ) {
-                    assert(it->second == timeBuffer);
-                    if (it->second != timeBuffer) {
-                        setPersistentMessage(Message::eMessageError, "", std::string("A TimeBufferWrite already exists with name \"") + name + "\".");
-                        delete _buffer;
-                        _buffer = 0;
-                        _name.clear();
-                        throwSuiteStatusException(kOfxStatFailed);
-
-                        return;
-                    }
-                } else {
-                    (*gTimeBufferMap)[key] = _buffer;
-                }
-            }
-        }
-        clearPersistentMessage();
-        check();
-    } // setName
-
-    void check()
-    {
-#ifdef DEBUG
-        std::string key = getTimeBufferKey(_projectId, _groupId, _name);
-        AutoMutex guard( gTimeBufferMapMutex.get() );
-        TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
-        if ( it == gTimeBufferMap->end() ) {
-            if ( !_name.empty() ) {
-                std::cout << "Error: Buffer '" << _name << "' not found\n";
-
-                return;
-            }
-        } else {
-            if ( _name.empty() ) {
-                if ( it != gTimeBufferMap->end() ) {
-                    std::cout << "Error: Buffer with empty name found\n";
-                }
-                if (_buffer) {
-                    std::cout << "Error: Local buffer with empty name found\n";
-                }
-
-                return;
-            }
-            if (!it->second) {
-                std::cout << "Error: Buffer '" << _name << "' is NULL\n";
-
-                return;
-            }
-            if (it->second->writeInstance != this) {
-                std::cout << "Error: Buffer '" << _name << "' belongs to " << (void*)it->second->writeInstance << ", not " << (void*)this << std::endl;
-
-                return;
-            }
-        }
-#endif
-    }
-
-    TimeBuffer* getBuffer()
-    {
-        std::string key = getTimeBufferKey(_projectId, _groupId, _name);
-        TimeBuffer* timeBuffer = 0;
-        // * if the read instance does not exist, an error is displayed and render fails
-        {
-            AutoMutex guard( gTimeBufferMapMutex.get() );
-            TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
-            if ( it != gTimeBufferMap->end() ) {
-                timeBuffer = it->second;
-            }
-        }
-
-        if (!timeBuffer) {
-            setPersistentMessage(Message::eMessageError, "", std::string("No TimeBuffer exists with name \"") + _name + "\". Try using another name.");
-            throwSuiteStatusException(kOfxStatFailed);
-
-            return NULL;
-        }
-        if (!timeBuffer->writeInstance) {
-            setPersistentMessage(Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"") + _name + "\". Try using another name.");
-            throwSuiteStatusException(kOfxStatFailed);
-
-            return NULL;
-        }
-        if ( timeBuffer->writeInstance && (timeBuffer->writeInstance != this) ) {
-            // a buffer already exists with that name
-            setPersistentMessage(Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"") + _name + "\". Try using another name.");
-            throwSuiteStatusException(kOfxStatFailed);
-
-            return NULL;
-        }
-        if (!timeBuffer->readInstance) {
-            setPersistentMessage(Message::eMessageError, "", std::string("No TimeBufferRead exists with name \"") + _name + "\". Create one and connect it to this TimeBufferWrite via the Sync input.");
-            throwSuiteStatusException(kOfxStatFailed);
-
-            return NULL;
-        }
-
-        return timeBuffer;
-    }
-
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -1138,10 +1009,6 @@ private:
     StringParam *_bufferName;
     BooleanParam *_resetTrigger;
     StringParam *_sublabel;
-    TimeBuffer *_buffer; // associated TimeBuffer
-    std::string _name; // name of the TimeBuffer
-    std::string _projectId; // identifier for the project the instance lives in
-    std::string _groupId; // identifier for the group (or subproject) the instance lives in
 };
 
 
@@ -1264,15 +1131,7 @@ TimeBufferWritePlugin::changedParam(const InstanceChangedArgs & /*args*/,
 
             return;
         }
-        timeBuffer->time = -DBL_MAX;
-        timeBuffer->dirty = true;
-        timeBuffer->pixelComponents = ePixelComponentNone;
-        timeBuffer->pixelComponentCount = 0;
-        timeBuffer->bitDepth = eBitDepthNone;
-        timeBuffer->rowBytes = 0;
-        timeBuffer->par = 1.;
-        timeBuffer->bounds.x1 = timeBuffer->bounds.y1 = timeBuffer->bounds.x2 = timeBuffer->bounds.y2 = 0;
-        timeBuffer->renderScale.x = timeBuffer->renderScale.y = 1;
+        timeBuffer->reset();
         _resetTrigger->setValue( !_resetTrigger->getValue() ); // trigger a render
     } else if (paramName == kParamInfo) {
         // give information about allocated buffers
