@@ -453,7 +453,7 @@ public:
         , _maskApply(NULL)
         , _maskInvert(NULL)
         , _premultChanged(NULL)
-        , _majorVersion(majorVersion)
+        , _legacyAcesAp1(majorVersion < 3)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -519,7 +519,7 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
-    unsigned int _majorVersion;
+    bool _legacyAcesAp1; // versions 1 and 2 computed "ACES AP1" luminance as CCIR 601, keep it so that old projects render the same
 };
 
 
@@ -578,7 +578,7 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor,
 
     double saturation = _saturation->getValueAtTime(time);
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
-    if ( (_majorVersion < 3) && (luminanceMath == eLuminanceMathACESAP1) ) {
+    if ( _legacyAcesAp1 && (luminanceMath == eLuminanceMathACESAP1) ) {
         // Before version 3, ACES AP1 fell through to CCIR 601 (missing break)
         luminanceMath = eLuminanceMathCcir601;
     }
