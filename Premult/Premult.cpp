@@ -975,7 +975,8 @@ PremultPluginFactory<isPremult>::describe(ImageEffectDescriptor &desc)
 #else
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
     desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelPassThroughNonRenderedPlanes);
-    gIsMultiplanar = getImageEffectHostDescription()->supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2);
+    // optional=true: fetchSuite() throws instead of returning NULL when the host lacks the suite
+    gIsMultiplanar = getImageEffectHostDescription()->supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true);
     desc.setIsMultiPlanar(gIsMultiplanar);
 #endif
 }
