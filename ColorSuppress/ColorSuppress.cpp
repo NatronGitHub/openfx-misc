@@ -153,7 +153,7 @@ protected:
     bool _doMasking;
     double _mix;
     bool _maskInvert;
-    bool _premultByMask;
+    bool _premultByMask; // version 1: in Alpha modes, premultiply RGB by the suppress mask instead of the source alpha
 
 public:
 
@@ -404,14 +404,10 @@ private:
                     tmpPix[2] = output.b;
                 }
                 if ( (_outputMode == eOutputModeImage) || _premultByMask ) {
-                    // fill output Alpha
-                    if (_outputMode == eOutputModeImage) {
-                        tmpPix[3] = unpPix[3];
-                    } else {
-                        // version 1: RGB is premultiplied by the suppress mask, not by the source alpha
-                        tmpPix[3] = pixelModified;
-                    }
-
+                    // RGB is premultiplied by the output alpha: the source alpha in "Image" mode,
+                    // the suppress mask in the Alpha modes of version 1 (kept so that old projects
+                    // render the same)
+                    tmpPix[3] = (_outputMode == eOutputModeImage) ? unpPix[3] : pixelModified;
                     ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 } else {
                     // "Alpha" or "Image and Alpha": RGB is premultiplied by the source alpha
@@ -465,7 +461,7 @@ public:
         , _preserveLuma(NULL)
         , _luminanceMath(NULL)
         , _premultChanged(NULL)
-        , _majorVersion(majorVersion)
+        , _premultByMask(majorVersion < 2)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -566,7 +562,7 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
-    unsigned int _majorVersion;
+    bool _premultByMask; // version 1 premultiplied RGB by the suppress mask in Alpha modes, keep it so that old projects render the same
 };
 
 
@@ -646,7 +642,7 @@ ColorSuppressPlugin::setupAndProcess(ColorSuppressProcessorBase &processor,
                         preserveLuma,
                         luminanceMath,
                         premult, premultChannel, mix,
-                        _majorVersion < 2);
+                        _premultByMask);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
