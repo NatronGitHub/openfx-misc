@@ -569,6 +569,7 @@ private:
                         dstPix[0] = srcPix ? srcPix[0] : PIX();
                     }
                 } else if (nComponents == 2) {
+                    // XY images: copy the unprocessed channels (R is X, G is Y)
                     if (!processR) {
                         dstPix[0] = srcPix ? srcPix[0] : PIX();
                     }

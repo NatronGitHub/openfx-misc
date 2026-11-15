@@ -358,7 +358,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
-                    double v = *dstPix / (double)maxValue;
+                    double v = *dstPix / (double)maxValue; // normalize integer images to [0,1]
                     min[c] = (std::min)(min[c], v);
                     max[c] = (std::max)(max[c], v);
                     ++dstPix;

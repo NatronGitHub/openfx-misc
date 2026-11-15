@@ -450,6 +450,7 @@ private:
                             tmpPix[c] =  (count ? (tmpPix[c] / sumWeights) : 0);
                         }
                     } else if (nComponents == 2) {
+                        // XY images have no alpha: normalize both channels like RGB
                         if (operation == eOperationAverage) {
                             for (int c = 0; c < 2; ++c) {
                                 tmpPix[c] = (count ? (tmpPix[c] / sumWeights) : 0);
