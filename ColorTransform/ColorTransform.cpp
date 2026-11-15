@@ -108,6 +108,22 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginYUVToRGB709Description "Convert from YUV color model (ITU.BT-709) to RGB. RGB is gamma-decompressed using the Rec.709 Electro-Optical Transfer Function (EOTF) after conversion."
 #define kPluginYUVToRGB709Identifier "net.sf.openfx.YUVToRGB709"
 
+#define kPluginRGBToYIQName "RGBToYIQ"
+#define kPluginRGBToYIQDescription "Convert from RGB to YIQ color model (NTSC 1953, FCC; assuming sRGB/Rec.709 primaries). RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion. I and Q may be negative, so only floating-point images are supported."
+#define kPluginRGBToYIQIdentifier "net.sf.openfx.RGBToYIQ"
+
+#define kPluginYIQToRGBName "YIQToRGB"
+#define kPluginYIQToRGBDescription "Convert from YIQ color model (NTSC 1953, FCC; assuming sRGB/Rec.709 primaries) to RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion. I and Q may be negative, so only floating-point images are supported."
+#define kPluginYIQToRGBIdentifier "net.sf.openfx.YIQToRGB"
+
+#define kPluginRGBToYDbDrName "RGBToYDbDr"
+#define kPluginRGBToYDbDrDescription "Convert from RGB to YDbDr color model (SECAM; assuming sRGB/Rec.709 primaries). RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion. Db and Dr may be negative, so only floating-point images are supported."
+#define kPluginRGBToYDbDrIdentifier "net.sf.openfx.RGBToYDbDr"
+
+#define kPluginYDbDrToRGBName "YDbDrToRGB"
+#define kPluginYDbDrToRGBDescription "Convert from YDbDr color model (SECAM; assuming sRGB/Rec.709 primaries) to RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion. Db and Dr may be negative, so only floating-point images are supported."
+#define kPluginYDbDrToRGBIdentifier "net.sf.openfx.YDbDrToRGB"
+
 
 #define kPluginRGB709ToXYZName "RGB709ToXYZ"
 #define kPluginRGB709ToXYZDescription "Convert from RGB (Rec.709 with D65 illuminant) to XYZ color model. X, Y and Z are in the same units as RGB."
@@ -193,6 +209,10 @@ enum ColorTransformEnum
     eColorTransformYUVToRGB601,
     eColorTransformRGBToYUV709,
     eColorTransformYUVToRGB709,
+    eColorTransformRGBToYIQ,
+    eColorTransformYIQToRGB,
+    eColorTransformRGBToYDbDr,
+    eColorTransformYDbDrToRGB,
     eColorTransformRGB709ToXYZ,
     eColorTransformXYZToRGB709,
     eColorTransformRGB709ToLab,
@@ -212,6 +232,8 @@ enum ColorTransformEnum
                      (e) == eColorTransformYPbPrToRGB709 || \
                      (e) == eColorTransformYUVToRGB601 || \
                      (e) == eColorTransformYUVToRGB709 || \
+                     (e) == eColorTransformYIQToRGB || \
+                     (e) == eColorTransformYDbDrToRGB || \
                      (e) == eColorTransformXYZToRGB709 || \
                      (e) == eColorTransformLabToRGB709 )
 
@@ -225,6 +247,54 @@ enum ColorTransformEnum
                           (e) == eColorTransformRGBToYUV709 || \
                           (e) == eColorTransformRGB709ToLab || \
                           (e) == eColorTransformXYZToLab )
+
+// conversions with signed components (I, Q, Db, Dr) on input or output, which were
+// added after the signedOutput() conversions became float-only: they only have a
+// version 1, and it only supports float images
+#define floatOnlyAllVersions(e) ( (e) == eColorTransformRGBToYIQ || \
+                             (e) == eColorTransformYIQToRGB || \
+                             (e) == eColorTransformRGBToYDbDr || \
+                             (e) == eColorTransformYDbDrToRGB )
+
+// YIQ (NTSC 1953, FCC), applied to gamma-compressed R'G'B'.
+// The precise form is used: U = 0.492111(B'-Y') and V = 0.877283(R'-Y') rotated by 33 degrees
+// (the rounded 1953 formula I = 0.74(R'-Y') - 0.27(B'-Y'), Q = 0.48(R'-Y') + 0.41(B'-Y') differs by < 0.005).
+// Forward coefficients from https://en.wikipedia.org/wiki/YIQ (FCC NTSC standard);
+// the inverse is the exact (double-precision) inverse of the forward matrix.
+static inline void
+rgb_to_yiq(float r, float g, float b, float *y, float *i, float *q)
+{
+    *y = 0.299f    * r + 0.587f    * g + 0.114f    * b;
+    *i = 0.595716f * r - 0.274453f * g - 0.321263f * b;
+    *q = 0.211456f * r - 0.522591f * g + 0.311135f * b;
+}
+
+static inline void
+yiq_to_rgb(float y, float i, float q, float *r, float *g, float *b)
+{
+    *r = y + 0.9562957198f * i + 0.6210244165f * q;
+    *g = y - 0.2721220993f * i - 0.6473805968f * q;
+    *b = y - 1.1069890167f * i + 1.7046149984f * q;
+}
+
+// YDbDr (SECAM), applied to gamma-compressed R'G'B'.
+// Forward coefficients from https://en.wikipedia.org/wiki/YDbDr (SECAM standard);
+// the inverse is the exact (double-precision) inverse of the forward matrix.
+static inline void
+rgb_to_ydbdr(float r, float g, float b, float *y, float *db, float *dr)
+{
+    *y  =  0.299f * r + 0.587f * g + 0.114f * b;
+    *db = -0.450f * r - 0.883f * g + 1.333f * b;
+    *dr = -1.333f * r + 1.116f * g + 0.217f * b;
+}
+
+static inline void
+ydbdr_to_rgb(float y, float db, float dr, float *r, float *g, float *b)
+{
+    *r = y + 0.0000923037f * db - 0.5259126307f * dr;
+    *g = y - 0.1291328989f * db + 0.2678993282f * dr;
+    *b = y + 0.6646790600f * db - 0.0000792025f * dr;
+}
 
 class ColorTransformProcessorBase
     : public ImageProcessor
@@ -411,6 +481,34 @@ public:
                     tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
                     tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
                     tmpPix[2] = Color::from_func_Rec709(tmpPix[2]);
+                    break;
+
+                case eColorTransformRGBToYIQ:
+                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    rgb_to_yiq(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    break;
+
+                case eColorTransformYIQToRGB:
+                    yiq_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
+                    break;
+
+                case eColorTransformRGBToYDbDr:
+                    unpPix[0] = Color::to_func_srgb(unpPix[0]);
+                    unpPix[1] = Color::to_func_srgb(unpPix[1]);
+                    unpPix[2] = Color::to_func_srgb(unpPix[2]);
+                    rgb_to_ydbdr(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    break;
+
+                case eColorTransformYDbDrToRGB:
+                    ydbdr_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    tmpPix[0] = Color::from_func_srgb(tmpPix[0]);
+                    tmpPix[1] = Color::from_func_srgb(tmpPix[1]);
+                    tmpPix[2] = Color::from_func_srgb(tmpPix[2]);
                     break;
 
                 case eColorTransformRGB709ToXYZ:
@@ -823,6 +921,26 @@ ColorTransformPluginFactory<transform, majorVersion>::describe(ImageEffectDescri
         desc.setPluginDescription(kPluginYUVToRGB709Description);
         break;
 
+    case eColorTransformRGBToYIQ:
+        desc.setLabel(kPluginRGBToYIQName);
+        desc.setPluginDescription(kPluginRGBToYIQDescription);
+        break;
+
+    case eColorTransformYIQToRGB:
+        desc.setLabel(kPluginYIQToRGBName);
+        desc.setPluginDescription(kPluginYIQToRGBDescription);
+        break;
+
+    case eColorTransformRGBToYDbDr:
+        desc.setLabel(kPluginRGBToYDbDrName);
+        desc.setPluginDescription(kPluginRGBToYDbDrDescription);
+        break;
+
+    case eColorTransformYDbDrToRGB:
+        desc.setLabel(kPluginYDbDrToRGBName);
+        desc.setPluginDescription(kPluginYDbDrToRGBDescription);
+        break;
+
     case eColorTransformRGB709ToXYZ:
         desc.setLabel(kPluginRGB709ToXYZName);
         desc.setPluginDescription(kPluginRGB709ToXYZDescription);
@@ -868,7 +986,7 @@ ColorTransformPluginFactory<transform, majorVersion>::describe(ImageEffectDescri
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     //desc.addSupportedContext(eContextPaint);
-    if ( signedOutput(transform) && (majorVersion >= kPluginSignedOutputVersionMajor) ) {
+    if ( ( signedOutput(transform) && (majorVersion >= kPluginSignedOutputVersionMajor) ) || floatOnlyAllVersions(transform) ) {
         // the output may be negative: only support float images
         desc.addSupportedBitDepth(eBitDepthFloat);
     } else {
@@ -1016,6 +1134,14 @@ static ColorTransformPluginFactory<eColorTransformRGBToYUV709, kPluginSignedOutp
 static ColorTransformPluginFactory<eColorTransformRGBToYUV709, 1> p21v1(kPluginRGBToYUV709Identifier, 0);
 // YUVToRGB709
 static ColorTransformPluginFactory<eColorTransformYUVToRGB709, kPluginVersionMajor> p22(kPluginYUVToRGB709Identifier, kPluginVersionMinor);
+// RGBToYIQ
+static ColorTransformPluginFactory<eColorTransformRGBToYIQ, kPluginVersionMajor> p27(kPluginRGBToYIQIdentifier, kPluginVersionMinor);
+// YIQToRGB
+static ColorTransformPluginFactory<eColorTransformYIQToRGB, kPluginVersionMajor> p28(kPluginYIQToRGBIdentifier, kPluginVersionMinor);
+// RGBToYDbDr
+static ColorTransformPluginFactory<eColorTransformRGBToYDbDr, kPluginVersionMajor> p29(kPluginRGBToYDbDrIdentifier, kPluginVersionMinor);
+// YDbDrToRGB
+static ColorTransformPluginFactory<eColorTransformYDbDrToRGB, kPluginVersionMajor> p30(kPluginYDbDrToRGBIdentifier, kPluginVersionMinor);
 // RGB709ToXYZ
 static ColorTransformPluginFactory<eColorTransformRGB709ToXYZ, kPluginVersionMajor> p11(kPluginRGB709ToXYZIdentifier, kPluginVersionMinor);
 // XYZToRGB709
@@ -1067,5 +1193,9 @@ mRegisterPluginFactoryInstance(p23v1)
 mRegisterPluginFactoryInstance(p24)
 mRegisterPluginFactoryInstance(p25)
 mRegisterPluginFactoryInstance(p26)
+mRegisterPluginFactoryInstance(p27)
+mRegisterPluginFactoryInstance(p28)
+mRegisterPluginFactoryInstance(p29)
+mRegisterPluginFactoryInstance(p30)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
