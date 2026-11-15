@@ -309,6 +309,9 @@ struct Results
     RGBAValues minVal; // luma only
 };
 
+// Number of values per pixel for the HSVL statistics: hue, saturation, value, luminance.
+#define nComponentsHSVL 4
+
 class ImageStatisticsProcessorBase
     : public ImageProcessor
 {
@@ -384,6 +387,24 @@ protected:
         }
     }
 
+    // The statistics processors work on a vector of values per pixel: the nComponents
+    // components normalized to [0,1] or, if hsvl is true, the nComponentsHSVL values
+    // computed by pixToHSVL(). v must have room for that many values.
+    template<class PIX, int nComponents, int maxValue, bool hsvl>
+    void pixToValues(const PIX *p,
+                     double *v)
+    {
+        if (hsvl) {
+            float hsvlPix[nComponentsHSVL];
+            pixToHSVL<PIX, nComponents, maxValue>(p, hsvlPix);
+            std::copy(hsvlPix, hsvlPix + nComponentsHSVL, v);
+        } else {
+            for (int c = 0; c < nComponents; ++c) {
+                v[c] = p[c] / (double)maxValue; // normalize integer images to [0,1]
+            }
+        }
+    }
+
     template<class PIX, int nComponents, int maxValue>
     void toComponents(const RGBAValues& rgba,
                       PIX *p)
@@ -407,53 +428,21 @@ protected:
 };
 
 
-// The statistics processors work on a vector of nValues values per pixel:
-// the nComponents normalized components (hsvl=false), or the HSVL values (hsvl=true).
-#define nComponentsHSVL 4
-
-template <class PIX, int nComponents, int maxValue, bool hsvl>
-class ImageStatisticsValuesProcessorBase
-    : public ImageStatisticsProcessorBase
-{
-protected:
-    enum { nValues = hsvl ? nComponentsHSVL : nComponents };
-
-    ImageStatisticsValuesProcessorBase(ImageEffect &instance)
-        : ImageStatisticsProcessorBase(instance)
-    {
-    }
-
-    void pixToValues(const PIX *p,
-                     double v[nValues])
-    {
-        if (hsvl) {
-            float hsvlPix[nComponentsHSVL];
-            pixToHSVL<PIX, nComponents, maxValue>(p, hsvlPix);
-            for (int c = 0; c < nValues; ++c) {
-                v[c] = hsvlPix[c];
-            }
-        } else {
-            for (int c = 0; c < nValues; ++c) {
-                v[c] = p[c] / (double)maxValue; // normalize integer images to [0,1]
-            }
-        }
-    }
-};
-
+// The min/max/mean, sdev and skewness/kurtosis processors compute the statistics of
+// the RGBA components (hsvl=false) or of the HSVL values (hsvl=true), see pixToValues().
 template <class PIX, int nComponents, int maxValue, bool hsvl>
 class ImageMinMaxMeanProcessorBase
-    : public ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl>
+    : public ImageStatisticsProcessorBase
 {
 private:
-    typedef ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl> Base;
-    enum { nValues = Base::nValues };
+    enum { nValues = hsvl ? nComponentsHSVL : nComponents };
     double _min[nValues];
     double _max[nValues];
     double _sum[nValues];
 
 public:
     ImageMinMaxMeanProcessorBase(ImageEffect &instance)
-        : Base(instance)
+        : ImageStatisticsProcessorBase(instance)
     {
         std::fill( _min, _min + nValues, +std::numeric_limits<double>::infinity() );
         std::fill( _max, _max + nValues, -std::numeric_limits<double>::infinity() );
@@ -465,14 +454,14 @@ public:
 
     void getResults(Results *results) OVERRIDE FINAL
     {
-        if (this->_count > 0) {
-            this->template toRGBA<double, nValues, 1>(_min, &results->min);
-            this->template toRGBA<double, nValues, 1>(_max, &results->max);
+        if (_count > 0) {
+            toRGBA<double, nValues, 1>(_min, &results->min);
+            toRGBA<double, nValues, 1>(_max, &results->max);
             double mean[nValues];
             for (int c = 0; c < nValues; ++c) {
-                mean[c] = _sum[c] / this->_count;
+                mean[c] = _sum[c] / _count;
             }
-            this->template toRGBA<double, nValues, 1>(mean, &results->mean);
+            toRGBA<double, nValues, 1>(mean, &results->mean);
         }
     }
 
@@ -483,13 +472,13 @@ private:
                     double sum[nValues],
                     unsigned long count)
     {
-        AutoMutex l (&this->_mutex);
+        AutoMutex l (&_mutex);
         for (int c = 0; c < nValues; ++c) {
             _min[c] = (std::min)(_min[c], min[c]);
             _max[c] = (std::max)(_max[c], max[c]);
             _sum[c] += sum[c];
         }
-        this->_count += count;
+        _count += count;
     }
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
@@ -502,20 +491,20 @@ private:
         std::fill(sum, sum + nValues, 0.);
         unsigned long count = 0;
 
-        assert(this->_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= this->_dstImg->getBounds().y2 &&
-               this->_dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= this->_dstImg->getBounds().y2);
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( this->_effect.abort() ) {
+            if ( _effect.abort() ) {
                 break;
             }
 
-            PIX *dstPix = (PIX *) this->_dstImg->getPixelAddress(procWindow.x1, y);
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             double sumLine[nValues]; // partial sum to avoid underflows
             std::fill(sumLine, sumLine + nValues, 0.);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 double v[nValues];
-                this->pixToValues(dstPix, v);
+                pixToValues<PIX, nComponents, maxValue, hsvl>(dstPix, v);
                 for (int c = 0; c < nValues; ++c) {
                     min[c] = (std::min)(min[c], v[c]);
                     max[c] = (std::max)(max[c], v[c]);
@@ -536,17 +525,16 @@ private:
 
 template <class PIX, int nComponents, int maxValue, bool hsvl>
 class ImageSDevProcessorBase
-    : public ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl>
+    : public ImageStatisticsProcessorBase
 {
 private:
-    typedef ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl> Base;
-    enum { nValues = Base::nValues };
+    enum { nValues = hsvl ? nComponentsHSVL : nComponents };
     double _mean[nValues];
     double _sum_p2[nValues];
 
 public:
     ImageSDevProcessorBase(ImageEffect &instance)
-        : Base(instance)
+        : ImageStatisticsProcessorBase(instance)
     {
         std::fill(_mean, _mean + nValues, 0.);
         std::fill(_sum_p2, _sum_p2 + nValues, 0.);
@@ -555,18 +543,18 @@ public:
     void setPrevResults(double /* time */,
                         const Results &results) OVERRIDE FINAL
     {
-        this->template toComponents<double, nValues, 1>(results.mean, _mean);
+        toComponents<double, nValues, 1>(results.mean, _mean);
     }
 
     void getResults(Results *results) OVERRIDE FINAL
     {
-        if (this->_count > 1) {
+        if (_count > 1) {
             double sdev[nValues];
             for (int c = 0; c < nValues; ++c) {
                 // sdev^2 is an unbiased estimator for the population variance
-                sdev[c] = std::sqrt( (std::max)( 0., _sum_p2[c] / (this->_count - 1) ) );
+                sdev[c] = std::sqrt( (std::max)( 0., _sum_p2[c] / (_count - 1) ) );
             }
-            this->template toRGBA<double, nValues, 1>(sdev, &results->sdev);
+            toRGBA<double, nValues, 1>(sdev, &results->sdev);
         }
     }
 
@@ -575,11 +563,11 @@ private:
     void addResults(double sum_p2[nValues],
                     unsigned long count)
     {
-        AutoMutex l (&this->_mutex);
+        AutoMutex l (&_mutex);
         for (int c = 0; c < nValues; ++c) {
             _sum_p2[c] += sum_p2[c];
         }
-        this->_count += count;
+        _count += count;
     }
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
@@ -590,20 +578,20 @@ private:
         std::fill(sum_p2, sum_p2 + nValues, 0.);
         unsigned long count = 0;
 
-        assert(this->_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= this->_dstImg->getBounds().y2 &&
-               this->_dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= this->_dstImg->getBounds().y2);
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( this->_effect.abort() ) {
+            if ( _effect.abort() ) {
                 break;
             }
 
-            PIX *dstPix = (PIX *) this->_dstImg->getPixelAddress(procWindow.x1, y);
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             double sumLine_p2[nValues]; // partial sum to avoid underflows
             std::fill(sumLine_p2, sumLine_p2 + nValues, 0.);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 double pv[nValues];
-                this->pixToValues(dstPix, pv);
+                pixToValues<PIX, nComponents, maxValue, hsvl>(dstPix, pv);
                 for (int c = 0; c < nValues; ++c) {
                     double v = (pv[c] - _mean[c]);
                     sumLine_p2[c] += v * v;
@@ -623,11 +611,10 @@ private:
 
 template <class PIX, int nComponents, int maxValue, bool hsvl>
 class ImageSkewnessKurtosisProcessorBase
-    : public ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl>
+    : public ImageStatisticsProcessorBase
 {
 private:
-    typedef ImageStatisticsValuesProcessorBase<PIX, nComponents, maxValue, hsvl> Base;
-    enum { nValues = Base::nValues };
+    enum { nValues = hsvl ? nComponentsHSVL : nComponents };
     double _mean[nValues];
     double _sdev[nValues];
     double _sum_p3[nValues];
@@ -635,7 +622,7 @@ private:
 
 public:
     ImageSkewnessKurtosisProcessorBase(ImageEffect &instance)
-        : Base(instance)
+        : ImageStatisticsProcessorBase(instance)
     {
         std::fill(_mean, _mean + nValues, 0.);
         std::fill(_sdev, _sdev + nValues, 0.);
@@ -646,13 +633,13 @@ public:
     void setPrevResults(double /* time */,
                         const Results &results) OVERRIDE FINAL
     {
-        this->template toComponents<double, nValues, 1>(results.mean, _mean);
-        this->template toComponents<double, nValues, 1>(results.sdev, _sdev);
+        toComponents<double, nValues, 1>(results.mean, _mean);
+        toComponents<double, nValues, 1>(results.sdev, _sdev);
     }
 
     void getResults(Results *results) OVERRIDE FINAL
     {
-        const unsigned long count = this->_count;
+        const unsigned long count = _count;
         if (count > 2) {
             double skewness[nValues];
             // factor for the adjusted Fisher-Pearson standardized moment coefficient G_1
@@ -661,7 +648,7 @@ public:
             for (int c = 0; c < nValues; ++c) {
                 skewness[c] = skewfac * _sum_p3[c] / count;
             }
-            this->template toRGBA<double, nValues, 1>(skewness, &results->skewness);
+            toRGBA<double, nValues, 1>(skewness, &results->skewness);
             assert( hsvl || ( !OFX::IsNaN(results->skewness.r) && !OFX::IsNaN(results->skewness.g) && !OFX::IsNaN(results->skewness.b) && !OFX::IsNaN(results->skewness.a) ) );
         }
         if (count > 3) {
@@ -672,7 +659,7 @@ public:
             for (int c = 0; c < nValues; ++c) {
                 kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
             }
-            this->template toRGBA<double, nValues, 1>(kurtosis, &results->kurtosis);
+            toRGBA<double, nValues, 1>(kurtosis, &results->kurtosis);
             assert( hsvl || ( !OFX::IsNaN(results->kurtosis.r) && !OFX::IsNaN(results->kurtosis.g) && !OFX::IsNaN(results->kurtosis.b) && !OFX::IsNaN(results->kurtosis.a) ) );
         }
     }
@@ -683,12 +670,12 @@ private:
                     double sum_p4[nValues],
                     unsigned long count)
     {
-        AutoMutex l (&this->_mutex);
+        AutoMutex l (&_mutex);
         for (int c = 0; c < nValues; ++c) {
             _sum_p3[c] += sum_p3[c];
             _sum_p4[c] += sum_p4[c];
         }
-        this->_count += count;
+        _count += count;
     }
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
@@ -701,14 +688,14 @@ private:
         std::fill(sum_p4, sum_p4 + nValues, 0.);
         unsigned long count = 0;
 
-        assert(this->_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= this->_dstImg->getBounds().y2 &&
-               this->_dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= this->_dstImg->getBounds().y2);
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( this->_effect.abort() ) {
+            if ( _effect.abort() ) {
                 break;
             }
 
-            PIX *dstPix = (PIX *) this->_dstImg->getPixelAddress(procWindow.x1, y);
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             double sumLine_p3[nValues]; // partial sum to avoid underflows
             double sumLine_p4[nValues]; // partial sum to avoid underflows
             std::fill(sumLine_p3, sumLine_p3 + nValues, 0.);
@@ -716,7 +703,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 double pv[nValues];
-                this->pixToValues(dstPix, pv);
+                pixToValues<PIX, nComponents, maxValue, hsvl>(dstPix, pv);
                 for (int c = 0; c < nValues; ++c) {
                     if (_sdev[c] > 0.) {
                         double v = (pv[c] - _mean[c]) / _sdev[c];
@@ -738,22 +725,55 @@ private:
     }
 };
 
-// The processors used by updateSub (which takes a template<class PIX, int nComponents, int maxValue>)
-#define IMAGESTATISTICS_PROCESSOR(name, base, hsvl) \
-    template <class PIX, int nComponents, int maxValue> \
-    class name \
-        : public base<PIX, nComponents, maxValue, hsvl> \
-    { \
-    public: \
-        name(ImageEffect &instance) : base<PIX, nComponents, maxValue, hsvl>(instance) {} \
-    }
+// updateSub() takes a processor template with <PIX, nComponents, maxValue> parameters,
+// so each RGBA (hsvl=false) and HSVL (hsvl=true) processor gets its own name.
+template <class PIX, int nComponents, int maxValue>
+class ImageMinMaxMeanProcessor
+    : public ImageMinMaxMeanProcessorBase<PIX, nComponents, maxValue, false>
+{
+public:
+    ImageMinMaxMeanProcessor(ImageEffect &instance) : ImageMinMaxMeanProcessorBase<PIX, nComponents, maxValue, false>(instance) {}
+};
 
-IMAGESTATISTICS_PROCESSOR(ImageMinMaxMeanProcessor, ImageMinMaxMeanProcessorBase, false);
-IMAGESTATISTICS_PROCESSOR(ImageSDevProcessor, ImageSDevProcessorBase, false);
-IMAGESTATISTICS_PROCESSOR(ImageSkewnessKurtosisProcessor, ImageSkewnessKurtosisProcessorBase, false);
-IMAGESTATISTICS_PROCESSOR(ImageHSVLMinMaxMeanProcessor, ImageMinMaxMeanProcessorBase, true);
-IMAGESTATISTICS_PROCESSOR(ImageHSVLSDevProcessor, ImageSDevProcessorBase, true);
-IMAGESTATISTICS_PROCESSOR(ImageHSVLSkewnessKurtosisProcessor, ImageSkewnessKurtosisProcessorBase, true);
+template <class PIX, int nComponents, int maxValue>
+class ImageSDevProcessor
+    : public ImageSDevProcessorBase<PIX, nComponents, maxValue, false>
+{
+public:
+    ImageSDevProcessor(ImageEffect &instance) : ImageSDevProcessorBase<PIX, nComponents, maxValue, false>(instance) {}
+};
+
+template <class PIX, int nComponents, int maxValue>
+class ImageSkewnessKurtosisProcessor
+    : public ImageSkewnessKurtosisProcessorBase<PIX, nComponents, maxValue, false>
+{
+public:
+    ImageSkewnessKurtosisProcessor(ImageEffect &instance) : ImageSkewnessKurtosisProcessorBase<PIX, nComponents, maxValue, false>(instance) {}
+};
+
+template <class PIX, int nComponents, int maxValue>
+class ImageHSVLMinMaxMeanProcessor
+    : public ImageMinMaxMeanProcessorBase<PIX, nComponents, maxValue, true>
+{
+public:
+    ImageHSVLMinMaxMeanProcessor(ImageEffect &instance) : ImageMinMaxMeanProcessorBase<PIX, nComponents, maxValue, true>(instance) {}
+};
+
+template <class PIX, int nComponents, int maxValue>
+class ImageHSVLSDevProcessor
+    : public ImageSDevProcessorBase<PIX, nComponents, maxValue, true>
+{
+public:
+    ImageHSVLSDevProcessor(ImageEffect &instance) : ImageSDevProcessorBase<PIX, nComponents, maxValue, true>(instance) {}
+};
+
+template <class PIX, int nComponents, int maxValue>
+class ImageHSVLSkewnessKurtosisProcessor
+    : public ImageSkewnessKurtosisProcessorBase<PIX, nComponents, maxValue, true>
+{
+public:
+    ImageHSVLSkewnessKurtosisProcessor(ImageEffect &instance) : ImageSkewnessKurtosisProcessorBase<PIX, nComponents, maxValue, true>(instance) {}
+};
 
 template <class PIX, int nComponents, int maxValue>
 class ImageLumaProcessor
