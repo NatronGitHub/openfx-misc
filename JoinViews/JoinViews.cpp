@@ -36,7 +36,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription "JoinView inputs to make a stereo output. " \
     "The first view from each input is copied to the left and right views of the output."
 #define kPluginIdentifier "net.sf.openfx.joinViewsPlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -57,8 +57,10 @@ class JoinViewsPlugin
 {
 public:
     /** @brief ctor */
-    JoinViewsPlugin(OfxImageEffectHandle handle)
+    JoinViewsPlugin(OfxImageEffectHandle handle,
+                    unsigned int majorVersion)
         : ImageEffect(handle)
+        , _legacyIsIdentity(majorVersion < 2)
         , _dstClip(NULL)
         , _srcLeftClip(NULL)
         , _srcRightClip(NULL)
@@ -92,6 +94,8 @@ private:
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
 private:
+    // version 1 returned the rendered view of the input from isIdentity, instead of view 0
+    bool _legacyIsIdentity;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcLeftClip;
@@ -157,8 +161,11 @@ JoinViewsPlugin::isIdentity(const IsIdentityArguments &args,
     } else {
         identityClip = _srcRightClip;
     }
-    // always use the view 0 of the inputs, as in getFrameViewsNeeded() and render()
-    view = 0;
+    if (!_legacyIsIdentity) {
+        // always use the view 0 of the inputs, as in getFrameViewsNeeded() and render()
+        view = 0;
+    }
+    // else version 1 left the view unchanged (the rendered view): kept so old projects render the same
 
     return true;
 }
@@ -286,10 +293,11 @@ JoinViewsPlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(JoinViewsPluginFactory,{ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(JoinViewsPluginFactory,{ofxsThreadSuiteCheck();}, {});
 #if 0
+template<unsigned int majorVersion>
 void
-JoinViewsPluginFactory::load()
+JoinViewsPluginFactory<majorVersion>::load()
 {
     // we can't be used on hosts that don't support the stereoscopic suite
     // returning an error here causes a blank menu entry in Nuke
@@ -299,13 +307,17 @@ JoinViewsPluginFactory::load()
 }
 #endif
 
+template<unsigned int majorVersion>
 void
-JoinViewsPluginFactory::describe(ImageEffectDescriptor &desc)
+JoinViewsPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     // add the supported contexts, only general at the moment, because there are several inputs
     // (see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#kOfxImageEffectContextFilter)
@@ -349,9 +361,10 @@ JoinViewsPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-JoinViewsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                          ContextEnum /*context*/)
+JoinViewsPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                        ContextEnum /*context*/)
 {
     if ( !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) &&
          !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
@@ -390,14 +403,20 @@ JoinViewsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     dstClip->setSupportsTiles(kSupportsTiles);
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-JoinViewsPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       ContextEnum /*context*/)
+JoinViewsPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                     ContextEnum /*context*/)
 {
-    return new JoinViewsPlugin(handle);
+    return new JoinViewsPlugin(handle, majorVersion);
 }
 
-static JoinViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// Each major version needs its own factory class: FactoryMainEntryHelper stores
+// the plugin UID in a static shared by all objects of the same class.
+static JoinViewsPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 1: isIdentity returns the rendered view of the input (deprecated, kept so old projects render the same)
+static JoinViewsPluginFactory<1> p1(kPluginIdentifier, 0);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
