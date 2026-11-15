@@ -79,6 +79,7 @@ Retime.o \
 Roto.o \
 Saturation.o \
 Shuffle.o \
+ShuffleClassic.o \
 SideBySide.o \
 SlitScan.o \
 SpriteSheet.o \
