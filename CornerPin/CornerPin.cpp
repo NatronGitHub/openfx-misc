@@ -908,13 +908,10 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
     _lastMousePos = args.penPosition;
 
 #ifdef OFX_EXTENSIONS_NATRON
-    // The host only shows our cursor if we trap the motion, so trap it while over or dragging a point.
+    // The host reads the cursor whatever penMotion returns, so the return value is unchanged.
     // setCursor() does nothing on hosts without interact cursors.
     const bool overPoint = (_dragging != -1) || (_hovering != -1);
     setCursor(overPoint ? kOfxInteractCursorMove : kOfxInteractCursorDefault);
-    if (overPoint) {
-        return true;
-    }
 #endif
 
     return valuesChanged;

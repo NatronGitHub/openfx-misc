@@ -897,14 +897,14 @@ ContactSheetInteract::penDown(const OFX::PenArgs &args)
 bool
 ContactSheetInteract::penMotion(const OFX::PenArgs &args)
 {
-    // cells are clickable when selection is on: show a pointer over them. The host only shows our
-    // cursor if we trap the motion; elsewhere we return false and the host restores its own cursor.
+    // cells are clickable when selection is on: show a pointer over them. The host reads the
+    // cursor whatever penMotion returns, so don't trap the motion (other overlays still get it).
     int selectionInput, selectionFrame;
     const bool overCell = cellAt(args, &selectionInput, &selectionFrame);
 
     setCursor(overCell ? kOfxInteractCursorPointer : kOfxInteractCursorDefault);
 
-    return overCell;
+    return false;
 }
 #endif
 
