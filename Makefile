@@ -124,6 +124,13 @@ subdirs: $(SUBDIRS)
 $(SUBDIRS):
 	(cd $@ && $(MAKE) $(MFLAGS))
 
+# Download CImg/CImg.h (and CImg/Inpaint/inpaint.h) once, before the CImg
+# subplugins are built in parallel by "make nomulti".
+$(filter CImg/%,$(SUBDIRS)): CImg/CImg.h
+
+CImg/CImg.h:
+	(cd CImg && $(MAKE) $(MFLAGS) CImg.h)
+
 clean:
 	@for i in $(SUBDIRS) $(SUBDIRS_NOMULTI); do \
 	  echo "(cd $$i && $(MAKE) $(MFLAGS) $@)"; \
