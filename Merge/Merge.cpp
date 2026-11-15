@@ -417,7 +417,7 @@ private:
         float tmpA[nComponents];
         float tmpB[nComponents];
         // With Alpha-only images, the only component is alpha, so it is controlled by the A checkboxes.
-        // Versions 1 and 2 used the R checkboxes of A and B for it.
+        // Versions 1 and 2 used the R checkboxes of A and B for it, which is kept so that old projects render the same.
         const bool alphaFromA = (nComponents == 1) && (_effect.getMajorVersion() >= 3);
 
         for (int c = 0; c < nComponents; ++c) {
@@ -969,26 +969,19 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
 #endif
             } else {
                 const Image* srcA = _srcClipAs[i]->fetchImage(time);
-                if ( !srcA && (getMajorVersion() >= 3) ) {
-                    // Since version 3, keep NULL images, so that a connected A input is merged
-                    // as transparent black even if it has no image here.
-                    srcAs.images.push_back(srcA);
-#ifdef OFX_EXTENSIONS_NUKE
-                    if (_pluginType == eMergePluginRoto) {
-                        const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
-                        // always push the rotoMask, even if NULL, so that indexes in srcAs.images and srcAs.rotoMaskImg correspond
-                        srcAs.rotoMaskImg.push_back(rotoMaskA);
-                    }
-#endif
-                } else if (srcA) {
+                // Since version 3, keep NULL images, so that a connected A input is merged
+                // as transparent black even if it has no image here.
+                if ( srcA || (getMajorVersion() >= 3) ) {
                     srcAs.images.push_back(srcA);
 
 #                 ifndef NDEBUG
-                    checkBadRenderScaleOrField(srcA, args);
-                    BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
-                    PixelComponentEnum srcComponents = srcA->getPixelComponents();
-                    if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-                        throwSuiteStatusException(kOfxStatErrImageFormat);
+                    if (srcA) {
+                        checkBadRenderScaleOrField(srcA, args);
+                        BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
+                        PixelComponentEnum srcComponents = srcA->getPixelComponents();
+                        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+                            throwSuiteStatusException(kOfxStatErrImageFormat);
+                        }
                     }
 #                 endif
 #ifdef OFX_EXTENSIONS_NUKE
@@ -2003,7 +1996,8 @@ mRegisterPluginFactoryInstance(p9)
 mRegisterPluginFactoryInstance(p10)
 mRegisterPluginFactoryInstance(p11)
 
-// Version 2: with Alpha-only images, the R checkboxes control the alpha channel
+// Version 2: with Alpha-only images, the R checkboxes control the alpha channel,
+// and the A inputs after the first one are skipped outside of their image
 static MergePluginFactory<2,eMergePluginMerge>       r1(kPluginIdentifier, 2, 0);
 static MergePluginFactory<2,eMergePluginPlus>        r2(kPluginIdentifierSub "Plus", 2, 0);
 static MergePluginFactory<2,eMergePluginMatte>       r3(kPluginIdentifierSub "Matte", 2, 0);
