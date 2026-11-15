@@ -169,8 +169,8 @@ private:
     /** @brief is the Double Framerate mode active? (only possible in the general context) */
     bool isDoubleFramerate() const;
 
-    /** @brief map an output time to the source time, and to the output field index (0 for the first field, 1 for the second field) */
-    double getSourceTime(double time, int* field) const;
+    /** @brief map an output time to the source time, and optionally to the output field index (0 for the first field, 1 for the second field) */
+    double getSourceTime(double time, int* field = NULL) const;
 
     void updateVisibility();
 
@@ -676,7 +676,9 @@ double
 DeinterlacePlugin::getSourceTime(double time,
                                  int* field) const
 {
-    *field = 0;
+    if (field) {
+        *field = 0;
+    }
     if ( !isDoubleFramerate() || !_srcClip || !_srcClip->isConnected() ) {
         return time;
     }
@@ -684,7 +686,9 @@ DeinterlacePlugin::getSourceTime(double time,
     const double first = std::floor( _srcClip->getFrameRange().min );
     const double d = std::floor(time - first + 0.5); // output frame index, relative to first
     const double k = std::floor(d / 2.);
-    *field = (int)(d - 2. * k);
+    if (field) {
+        *field = (int)(d - 2. * k);
+    }
 
     return first + k;
 }
@@ -729,8 +733,7 @@ DeinterlacePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args
     }
 
     if ( isDoubleFramerate() && _srcClip && _srcClip->isConnected() ) {
-        int field;
-        rod = _srcClip->getRegionOfDefinition( getSourceTime(args.time, &field) );
+        rod = _srcClip->getRegionOfDefinition( getSourceTime(args.time) );
 
         return true;
     }
@@ -756,8 +759,7 @@ DeinterlacePlugin::getFramesNeeded(const FramesNeededArguments &args,
                                    FramesNeededSetter &frames)
 {
     OfxRangeD range;
-    int field;
-    const double srcTime = getSourceTime(args.time, &field);
+    const double srcTime = getSourceTime(args.time);
 
     range.min = srcTime - 1;
     range.max = srcTime + 1;
