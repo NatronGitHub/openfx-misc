@@ -177,6 +177,7 @@ $RECYCLE.BIN/
 
 CImg/CImg.h
 CImg/Inpaint/inpaint.h
+CImg/CImg.h.version
 CImg/gmic.h
 CImg/gmic.cpp
 CImg/gmic_def.h
