@@ -135,11 +135,12 @@ enum MergePluginEnum
 
 #define kPluginIdentifier "net.sf.openfx.MergePlugin"
 #define kPluginIdentifierSub "net.sf.openfx.Merge"
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 // History:
 // 1.0: Original version
 // 2.0: After fixing https://github.com/NatronGitHub/Natron/issues/647
+// 3.0: With Alpha-only images, the A checkboxes (instead of the R checkboxes) of A and B control the alpha channel
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -414,6 +415,9 @@ private:
         float tmpPix[nComponents];
         float tmpA[nComponents];
         float tmpB[nComponents];
+        // With Alpha-only images, the only component is alpha, so it is controlled by the A checkboxes.
+        // Versions 1 and 2 used the R checkboxes of A and B for it.
+        const bool alphaFromA = (nComponents == 1) && (_effect.getMajorVersion() >= 3);
 
         for (int c = 0; c < nComponents; ++c) {
             tmpA[c] = tmpB[c] = 0.;
@@ -461,8 +465,8 @@ private:
                             assert( !srcPixB || !OFX::IsNaN(srcPixB[c]) );
 #                         endif
                             // all images are supposed to be black and transparent outside o
-                            tmpA[c] = (_aChannels[c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
-                            tmpB[c] = (_bChannels[c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
+                            tmpA[c] = (_aChannels[alphaFromA ? 3 : c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
+                            tmpB[c] = (_bChannels[alphaFromA ? 3 : c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
 #                         ifdef DEBUG
                             // check for NaN
                             assert( !OFX::IsNaN(tmpA[c]) );
@@ -535,7 +539,7 @@ private:
                                 assert( !OFX::IsNaN(srcPixA[c]) );
 #                             endif
                                 // all images are supposed to be black and transparent outside o
-                                tmpA[c] = _aChannels[c] ? ( (float)srcPixA[c] / maxValue ) : 0.f;
+                                tmpA[c] = _aChannels[alphaFromA ? 3 : c] ? ( (float)srcPixA[c] / maxValue ) : 0.f;
 #                             ifdef DEBUG
                                 // check for NaN
                                 assert( !OFX::IsNaN(tmpA[c]) );
@@ -1981,6 +1985,30 @@ mRegisterPluginFactoryInstance(p8)
 mRegisterPluginFactoryInstance(p9)
 mRegisterPluginFactoryInstance(p10)
 mRegisterPluginFactoryInstance(p11)
+
+// Version 2: with Alpha-only images, the R checkboxes control the alpha channel
+static MergePluginFactory<2,eMergePluginMerge>       r1(kPluginIdentifier, 2, 0);
+static MergePluginFactory<2,eMergePluginPlus>        r2(kPluginIdentifierSub "Plus", 2, 0);
+static MergePluginFactory<2,eMergePluginMatte>       r3(kPluginIdentifierSub "Matte", 2, 0);
+static MergePluginFactory<2,eMergePluginMultiply>    r4(kPluginIdentifierSub "Multiply", 2, 0);
+static MergePluginFactory<2,eMergePluginIn>          r5(kPluginIdentifierSub "In", 2, 0);
+static MergePluginFactory<2,eMergePluginOut>         r6(kPluginIdentifierSub "Out", 2, 0);
+static MergePluginFactory<2,eMergePluginScreen>      r7(kPluginIdentifierSub "Screen", 2, 0);
+static MergePluginFactory<2,eMergePluginMax>         r8(kPluginIdentifierSub "Max", 2, 0);
+static MergePluginFactory<2,eMergePluginMin>         r9(kPluginIdentifierSub "Min", 2, 0);
+static MergePluginFactory<2,eMergePluginAbsMinus>   r10(kPluginIdentifierSub "Difference", 2, 0);
+static MergePluginFactory<2,eMergePluginRoto>       r11(kPluginIdentifierSub "Roto", 2, 0);
+mRegisterPluginFactoryInstance(r1)
+mRegisterPluginFactoryInstance(r2)
+mRegisterPluginFactoryInstance(r3)
+mRegisterPluginFactoryInstance(r4)
+mRegisterPluginFactoryInstance(r5)
+mRegisterPluginFactoryInstance(r6)
+mRegisterPluginFactoryInstance(r7)
+mRegisterPluginFactoryInstance(r8)
+mRegisterPluginFactoryInstance(r9)
+mRegisterPluginFactoryInstance(r10)
+mRegisterPluginFactoryInstance(r11)
 
 // Keep backward compatibility following the change introduced in
 // https://github.com/NatronGitHub/Natron/issues/647
