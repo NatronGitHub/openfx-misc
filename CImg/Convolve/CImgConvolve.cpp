@@ -134,18 +134,6 @@ enum KernelKeyEnum
     eKernelCount
 };
 
-static inline unsigned int
-nextPowerOfTwo(unsigned int n)
-{
-    unsigned int p = 1;
-
-    while (p < n) {
-        p <<= 1;
-    }
-
-    return p;
-}
-
 /// Convolve plugin
 struct CImgConvolveParams
 {
@@ -191,10 +179,8 @@ public:
             _filterClip->getFormat(format);
             if ( !Coords::rectIsEmpty(format) ) {
                 // the format is in pixel coordinates at render scale 1
-                formatRect.x1 = format.x1 * params.par;
-                formatRect.x2 = format.x2 * params.par;
-                formatRect.y1 = format.y1;
-                formatRect.y2 = format.y2;
+                const OfxPointD rs1 = {1., 1.};
+                Coords::toCanonical(format, rs1, params.par, &formatRect);
                 gotFormat = true;
             }
 #endif
@@ -372,11 +358,7 @@ public:
         OfxRectI kernelRect, offsets;
         if ( !filter.get() || !getKernelOffsets(params, args.renderScale, &kernelRect, &offsets) ) {
             // empty kernel: the convolution is zero
-            for (int c = 0; c < nc; ++c) {
-                if (processChannel[c]) {
-                    cimg.get_shared_channel(c).fill(0);
-                }
-            }
+            zeroChannels(processChannel, cimg);
 
             return;
         }
@@ -388,11 +370,7 @@ public:
         // the kernel is the part of the filter image within its RoD
         OfxRectI filterBounds = filter->getBounds();
         if ( !Coords::rectIntersection(kernelRect, filterBounds, &kernelRect) ) {
-            for (int c = 0; c < nc; ++c) {
-                if (processChannel[c]) {
-                    cimg.get_shared_channel(c).fill(0);
-                }
-            }
+            zeroChannels(processChannel, cimg);
 
             return;
         }
@@ -478,11 +456,7 @@ public:
         }
         if (bx2 < bx1) {
             // kernel is zero
-            for (int c = 0; c < nc; ++c) {
-                if (processChannel[c]) {
-                    cimg.get_shared_channel(c).fill(0);
-                }
-            }
+            zeroChannels(processChannel, cimg);
 
             return;
         }
@@ -517,8 +491,8 @@ public:
         // FFT size: power of two, large enough to hold the linear convolution
         const int w = cimg.width();
         const int h = cimg.height();
-        const unsigned int fw = nextPowerOfTwo(w + kw - 1);
-        const unsigned int fh = nextPowerOfTwo(h + kh - 1);
+        const unsigned int fw = (unsigned int)cimg_library::cimg::nearest_pow2( (unsigned int)(w + kw - 1) );
+        const unsigned int fh = (unsigned int)cimg_library::cimg::nearest_pow2( (unsigned int)(h + kh - 1) );
         cimg_library::CImg<cimgpix_t> kre, kim, sre, sim;
 
         for (int k = 0; k < eKernelCount; ++k) {
@@ -620,6 +594,17 @@ public:
     }
 
 private:
+    // The result of a convolution by an empty or all-zero kernel is zero: clear the processed channels.
+    static void zeroChannels(const std::vector<bool>& processChannel,
+                             cimg_library::CImg<cimgpix_t>& cimg)
+    {
+        for (int c = 0; c < cimg.spectrum(); ++c) {
+            if (processChannel[c]) {
+                cimg.get_shared_channel(c).fill(0);
+            }
+        }
+    }
+
     static inline float kernelValue(const float* pix,
                                     int fnc,
                                     int key)
