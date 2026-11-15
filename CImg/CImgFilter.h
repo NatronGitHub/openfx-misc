@@ -122,15 +122,15 @@
 // To download, use:
 // git archive --remote=git://git.code.sf.net/p/gmic/source 9b52016cab3368744ea9f3cc20a3e9b4f0c66eb3:src CImg.h |tar xf -
 #define cimg_display 0
-#define cimg_namespace_suffix openfx_misc
-#ifdef _OPENMP
-#  ifndef cimg_use_openmp
-#    define cimg_use_openmp 1
-#  endif
-#else
-#  ifndef cimg_use_openmp
-#    define cimg_use_openmp 0
-#  endif
+// CImg 3.x removed support for cimg_namespace_suffix: rename the cimg_library namespace
+// with a macro instead, so that the CImg symbols stay private to openfx-misc and do not
+// clash with another copy of CImg loaded in the host (this also works with older CImg.h).
+#define cimg_library cimg_library_openfx_misc
+// Do not define cimg_use_openmp when OpenMP is not available: since CImg 3.x, any
+// definition of cimg_use_openmp (even "0") enables OpenMP and includes <omp.h>.
+// If it is not defined, CImg.h defines it to 1 if _OPENMP is defined, else to 0.
+#if defined(_OPENMP) && !defined(cimg_use_openmp)
+#  define cimg_use_openmp 1
 #endif
 #define cimg_verbosity 0
 
@@ -173,7 +173,12 @@ namespace cimg_library_openfx_misc {
 CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
 CLANG_DIAG_ON(shorten-64-to-32)
-#define cimg_library cimg_library_suffixed // so that namespace is private, but code requires no change
+
+// Since CImg 4.0, cimg_for() and cimg_rof() declare two loop variables, so they cannot follow
+// "#pragma omp parallel for" (the loop is not in OpenMP canonical form): use cimg_rof_openmp().
+#ifndef cimg_rof_openmp
+#define cimg_rof_openmp(img,ptrs,T_ptrs) for (T_ptrs *ptrs = (img)._data + (img).size() - 1; ptrs>=(img)._data; --ptrs)
+#endif
 
 typedef float cimgpix_t;
 typedef float cimgpixfloat_t;

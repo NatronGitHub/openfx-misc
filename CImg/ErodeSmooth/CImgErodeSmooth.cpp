@@ -489,7 +489,7 @@ public:
         }
         // scale to [0,1]
         cimg_pragma_openmp(parallel for if (cimg.size()>=4096))
-        cimg_rof(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - rmin) / (rmax - rmin) + ERODESMOOTH_OFFSET );
+        cimg_rof_openmp(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - rmin) / (rmax - rmin) + ERODESMOOTH_OFFSET );
 
         // see "Robust local max-min filters by normalized power-weighted filtering" by L.J. van Vliet
         // http://dx.doi.org/10.1109/ICPR.2004.1334273
@@ -499,7 +499,7 @@ public:
             const double vmin = std::pow( (double)ERODESMOOTH_MIN, (double)1. / params.exponent );
             //printf("%g\n",vmin);
             cimg_pragma_openmp(parallel for if (denom.size()>=4096))
-            cimg_rof(denom, ptrd, cimgpix_t) * ptrd = (cimgpix_t)std::pow( (double)( (*ptrd < 0. ? 0. : *ptrd) + vmin ), params.exponent ); // C++98 and C++11 both have std::pow(double,int)
+            cimg_rof_openmp(denom, ptrd, cimgpix_t) * ptrd = (cimgpix_t)std::pow( (double)( (*ptrd < 0. ? 0. : *ptrd) + vmin ), params.exponent ); // C++98 and C++11 both have std::pow(double,int)
 
             cimg.mul(denom);
 
@@ -550,7 +550,7 @@ public:
 
         // scale to [rmin,rmax]
         cimg_pragma_openmp(parallel for if (cimg.size()>=4096))
-        cimg_rof(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - ERODESMOOTH_OFFSET) * (rmax - rmin) + rmin );
+        cimg_rof_openmp(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - ERODESMOOTH_OFFSET) * (rmax - rmin) + rmin );
     } // render
 
     virtual bool isIdentity(const IsIdentityArguments & /*args*/,
