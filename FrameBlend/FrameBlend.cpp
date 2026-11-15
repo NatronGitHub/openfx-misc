@@ -1059,13 +1059,13 @@ FrameBlendPlugin::getFramesNeeded(const FramesNeededArguments &args,
     // must be the same frames as in render()
     int first, interval, n;
     getFrames(args.time, &first, &interval, &n);
-    OfxRangeD range;
     if (n <= 0) {
-        // no frame is used, return an empty range
-        range.min = 0;
-        range.max = -1;
-        frames.setFramesNeeded(*_srcClip, range);
-    } else if (std::abs(interval) == 1) {
+        // no frame is blended and render outputs black: the OFX spec has no empty frame range,
+        // so set nothing and let the host use its default (the current frame)
+        return;
+    }
+    OfxRangeD range;
+    if (std::abs(interval) == 1) {
         int last = first + (n - 1) * interval;
         range.min = (std::min)(first, last);
         range.max = (std::max)(first, last);
