@@ -497,7 +497,7 @@ ContactSheetPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
             int cell = count * i + frame; // cell number
             int r = cell / columns;
             int c = cell % columns;
-            if (r > rows) {
+            if (r >= rows) {
                 continue;
             }
             if (topbottom) {
@@ -590,7 +590,7 @@ ContactSheetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
         int clipCount = (std::min)(framesLeft, count); // number of frames from this clip
         OfxRangeD range;
         range.min = first;
-        range.max = (std::min)(last, first + clipCount);
+        range.max = (std::min)(last, first + clipCount - 1); // the range is inclusive
         frames.setFramesNeeded(*_srcClip[i], range);
 
         framesLeft -= clipCount;

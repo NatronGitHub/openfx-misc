@@ -25,6 +25,7 @@
 
 #include <string>
 #include <cstring>
+#include <cctype> // isalnum
 #include <cstdio>
 #include <cassert>
 #include <algorithm>
@@ -165,9 +166,9 @@ getChannelInfo(const char* fragmentShader,
                     ++sstart;
                 }
                 if (isFilter) {
-                    if (std::strncmp(sstart, "nearest", 6) == 0) {
+                    if (std::strncmp(sstart, "nearest", 7) == 0) { // strlen("nearest") == 7
                         filter = ShadertoyPlugin::eFilterNearest;
-                        sstart += 6;
+                        sstart += 7;
                     } else if (std::strncmp(sstart, "linear", 6) == 0) {
                         filter = ShadertoyPlugin::eFilterLinear;
                         sstart += 6;
@@ -250,7 +251,12 @@ getExtraParameterInfo(const char* fragmentShader,
 {
     std::string startstr = std::string("uniform ") + ShadertoyPlugin::mapUniformTypeToStr( p.getType() ) + ' ' + p.getName();
     const char* tok = startstr.c_str();
+    const size_t toklen = startstr.size();
     const char* tokpos = strstr(fragmentShader, tok);
+    // skip matches where the name is only a prefix of a longer identifier (e.g. "amp" in "amplitude")
+    while ( tokpos && ( std::isalnum( (unsigned char)tokpos[toklen] ) || (tokpos[toklen] == '_') ) ) {
+        tokpos = strstr(tokpos + 1, tok);
+    }
     if (tokpos == NULL) {
         return;
     }

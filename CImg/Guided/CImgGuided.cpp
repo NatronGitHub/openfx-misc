@@ -133,7 +133,8 @@ public:
                         const CImgGuidedParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil(params.radius * renderScale.x * params.iterations);
+        // each iteration of blur_guided applies two box filters of radius r
+        int delta_pix = (int)std::ceil(2 * params.radius * renderScale.x * params.iterations);
 
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;

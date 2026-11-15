@@ -275,12 +275,25 @@ void
 CImgFilterPluginHelperBase::describeInContextEnd(ImageEffectDescriptor &desc,
                                                  ContextEnum /*context*/,
                                                  PageParamDescriptor* page,
-                                                 bool hasUnpremult)
+                                                 bool hasUnpremult,
+                                                 bool hasMask)
 {
     if (hasUnpremult) {
         ofxsPremultDescribeParams(desc, page);
     }
-    ofxsMaskMixDescribeParams(desc, page);
+    if (hasMask) {
+        ofxsMaskMixDescribeParams(desc, page);
+    } else {
+        ofxsMixDescribeParams(desc, page);
+        // there is no mask clip: keep the maskInvert param (secret) for backward compatibility
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMaskInvert);
+        param->setLabel(kParamMaskInvertLabel);
+        param->setHint(kParamMaskInvertHint);
+        param->setIsSecretAndDisabled(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     if (hasUnpremult) {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
@@ -401,7 +414,8 @@ CImgFilterPluginHelperBase::maskLineIsZero(const Image* mask,
         }
         const OfxRectI& maskBounds = mask->getBounds();
         // if part of the line is out of maskbounds, then mask is 1 at these places
-        if ( (y < maskBounds.y1) || (maskBounds.y2 <= y) || (x1 < maskBounds.x1) || (maskBounds.x2 <= x2) ) {
+        // (x2 and maskBounds.x2 are both exclusive bounds)
+        if ( (y < maskBounds.y1) || (maskBounds.y2 <= y) || (x1 < maskBounds.x1) || (maskBounds.x2 < x2) ) {
             return false;
         }
         // the whole line is within the mask
@@ -456,7 +470,8 @@ CImgFilterPluginHelperBase::maskColumnIsZero(const Image* mask,
     if (maskInvert) {
         const OfxRectI& maskBounds = mask->getBounds();
         // if part of the column is out of maskbounds, then mask is 1 at these places
-        if ( (x < maskBounds.x1) || (maskBounds.x2 <= x) || (y1 < maskBounds.y1) || (maskBounds.y2 <= y2) ) {
+        // (y2 and maskBounds.y2 are both exclusive bounds)
+        if ( (x < maskBounds.x1) || (maskBounds.x2 <= x) || (y1 < maskBounds.y1) || (maskBounds.y2 < y2) ) {
             return false;
         }
         // the whole column is within the mask

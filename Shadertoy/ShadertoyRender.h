@@ -1358,6 +1358,15 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         uniforms_changed = (_imageShaderUniformsID != contextData->imageShaderUniformsID);
         contextData->imageShaderUniformsID = _imageShaderUniformsID;
 
+        if (!must_recompile && !shadertoy->program) {
+            // The last compilation of this shader failed on this context, and imageShaderID
+            // was already updated, so it will not be recompiled: fail instead of rendering
+            // with an invalid program (which would produce garbage that may be cached).
+            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+
+            return;
+        }
         if (must_recompile) {
             if (shadertoy->program) {
                 glDeleteProgram(shadertoy->program);

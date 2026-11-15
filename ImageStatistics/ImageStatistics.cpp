@@ -484,7 +484,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
-                    double v = *dstPix;
+                    double v = *dstPix / (double)maxValue; // normalize integer images to [0,1]
                     min[c] = (std::min)(min[c], v);
                     max[c] = (std::max)(max[c], v);
                     sumLine[c] += v;
@@ -573,7 +573,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
-                    double v = (*dstPix - _mean[c]);
+                    double v = (*dstPix / (double)maxValue - _mean[c]);
                     sumLine_p2[c] += v * v;
                     ++dstPix;
                 }
@@ -686,7 +686,7 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
                     if (_sdev[c] > 0.) {
-                        double v = (*dstPix - _mean[c]) / _sdev[c];
+                        double v = (*dstPix / (double)maxValue - _mean[c]) / _sdev[c];
                         double v2 = v * v;
                         sumLine_p3[c] += v2 * v;
                         sumLine_p4[c] += v2 * v2;
@@ -1283,6 +1283,9 @@ private:
     /* set up and run a processor */
     void setupAndProcess(ImageStatisticsProcessorBase &processor, const Image* srcImg, double time, const OfxRectI &analysisWindow, const OfxPointD& renderScale, const Results &prevResults, Results *results);
 
+    // compute the analyzed rectangle, in canonical coordinates
+    void getAnalysisRectangle(double time, OfxRectD *rect);
+
     // compute computation window in srcImg
     bool computeWindow(const Image* srcImg, const OfxPointD& renderScale, double time, OfxRectI *analysisWindow);
 
@@ -1459,12 +1462,13 @@ ImageStatisticsPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &ar
 {
     bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
 
-    if (restrictToRectangle) {
+    // render analyzes the whole rectangle (see computeWindow()), so it must be fetched entirely,
+    // else only the current tile would be analyzed. Without a rectangle, this is the whole source
+    // RoD, which is only analyzed when Auto Update is checked.
+    if ( restrictToRectangle ||
+         ( _autoUpdate->getValueAtTime(args.time) && _srcClip && _srcClip->isConnected() ) ) {
         OfxRectD regionOfInterest;
-        _btmLeft->getValueAtTime(args.time, regionOfInterest.x1, regionOfInterest.y1);
-        _size->getValueAtTime(args.time, regionOfInterest.x2, regionOfInterest.y2);
-        regionOfInterest.x2 += regionOfInterest.x1;
-        regionOfInterest.y2 += regionOfInterest.y1;
+        getAnalysisRectangle(args.time, &regionOfInterest);
         // Union with output RoD, so that render works
         Coords::rectBoundingBox(args.regionOfInterest, regionOfInterest, &regionOfInterest);
         rois.setRegionOfInterest(*_srcClip, regionOfInterest);
@@ -1709,6 +1713,37 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor,
     }
 }
 
+void
+ImageStatisticsPlugin::getAnalysisRectangle(double time,
+                                            OfxRectD *rect)
+{
+    bool restrictToRectangle = _restrictToRectangle->getValueAtTime(time);
+
+    if (!restrictToRectangle && _srcClip) {
+        // use the src region of definition as rectangle, but avoid infinite rectangle
+        *rect = _srcClip->getRegionOfDefinition(time);
+        OfxPointD size = getProjectSize();
+        OfxPointD offset = getProjectOffset();
+        if (rect->x1 <= kOfxFlagInfiniteMin) {
+            rect->x1 = offset.x;
+        }
+        if (rect->x2 >= kOfxFlagInfiniteMax) {
+            rect->x2 = offset.x + size.x;
+        }
+        if (rect->y1 <= kOfxFlagInfiniteMin) {
+            rect->y1 = offset.y;
+        }
+        if (rect->y2 >= kOfxFlagInfiniteMax) {
+            rect->y2 = offset.y + size.y;
+        }
+    } else {
+        _btmLeft->getValueAtTime(time, rect->x1, rect->y1);
+        _size->getValueAtTime(time, rect->x2, rect->y2);
+        rect->x2 += rect->x1;
+        rect->y2 += rect->y1;
+    }
+}
+
 bool
 ImageStatisticsPlugin::computeWindow(const Image* srcImg,
                                      const OfxPointD& renderScale,
@@ -1716,31 +1751,7 @@ ImageStatisticsPlugin::computeWindow(const Image* srcImg,
                                      OfxRectI *analysisWindow)
 {
     OfxRectD regionOfInterest;
-    bool restrictToRectangle = _restrictToRectangle->getValueAtTime(time);
-
-    if (!restrictToRectangle && _srcClip) {
-        // use the src region of definition as rectangle, but avoid infinite rectangle
-        regionOfInterest = _srcClip->getRegionOfDefinition(time);
-        OfxPointD size = getProjectSize();
-        OfxPointD offset = getProjectOffset();
-        if (regionOfInterest.x1 <= kOfxFlagInfiniteMin) {
-            regionOfInterest.x1 = offset.x;
-        }
-        if (regionOfInterest.x2 >= kOfxFlagInfiniteMax) {
-            regionOfInterest.x2 = offset.x + size.x;
-        }
-        if (regionOfInterest.y1 <= kOfxFlagInfiniteMin) {
-            regionOfInterest.y1 = offset.y;
-        }
-        if (regionOfInterest.y2 >= kOfxFlagInfiniteMax) {
-            regionOfInterest.y2 = offset.y + size.y;
-        }
-    } else {
-        _btmLeft->getValueAtTime(time, regionOfInterest.x1, regionOfInterest.y1);
-        _size->getValueAtTime(time, regionOfInterest.x2, regionOfInterest.y2);
-        regionOfInterest.x2 += regionOfInterest.x1;
-        regionOfInterest.y2 += regionOfInterest.y1;
-    }
+    getAnalysisRectangle(time, &regionOfInterest);
     Coords::toPixelEnclosing(regionOfInterest,
                              renderScale,
                              srcImg->getPixelAspectRatio(),

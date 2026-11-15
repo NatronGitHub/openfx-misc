@@ -3018,28 +3018,37 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB /*|| dstComponents == ePixelComponentXY*/ || dstComponents == ePixelComponentAlpha);
     // do the rendering
-    switch (dstComponents) {
-    case ePixelComponentRGBA:
-        analyzeNoiseLevelsForComponents<4>(args);
-        break;
-    case ePixelComponentRGB:
-        analyzeNoiseLevelsForComponents<3>(args);
-        break;
+    try {
+        switch (dstComponents) {
+        case ePixelComponentRGBA:
+            analyzeNoiseLevelsForComponents<4>(args);
+            break;
+        case ePixelComponentRGB:
+            analyzeNoiseLevelsForComponents<3>(args);
+            break;
 #ifdef OFX_EXTENSIONS_NATRON
-    //case ePixelComponentXY:
-    //    renderForComponents<2>(args);
-    //    break;
+        //case ePixelComponentXY:
+        //    renderForComponents<2>(args);
+        //    break;
 #endif
-    case ePixelComponentAlpha:
-        analyzeNoiseLevelsForComponents<1>(args);
-        break;
-    default:
+        case ePixelComponentAlpha:
+            analyzeNoiseLevelsForComponents<1>(args);
+            break;
+        default:
 #ifdef DEBUG_STDOUT
-        std::cout << "components usupported\n";
+            std::cout << "components usupported\n";
 #endif
-        throwSuiteStatusException(kOfxStatErrUnsupported);
-        break;
-    } // switch
+            throwSuiteStatusException(kOfxStatErrUnsupported);
+            break;
+        } // switch
+    } catch (...) {
+        // end the progress and the analysis even if the analysis failed
+        progressEndAnalysis();
+# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+# endif
+        throw;
+    }
     _analysisFrame->setValue( (int)args.time );
 
     // lock values

@@ -60,6 +60,15 @@ public:
                                                             bool processAlpha /*= false*/,
                                                             bool processIsSecret /*= false*/);
 
+    // operators have no mask clip
+    static void describeInContextEnd(OFX::ImageEffectDescriptor &desc,
+                                     OFX::ContextEnum context,
+                                     OFX::PageParamDescriptor* page,
+                                     bool hasUnpremult = true)
+    {
+        CImgFilterPluginHelperBase::describeInContextEnd(desc, context, page, hasUnpremult, /*hasMask=*/false);
+    }
+
 protected:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_srcAClip;
@@ -68,6 +77,7 @@ protected:
     // params
     std::string _srcAClipName;
     std::string _srcBClipName;
+    bool _ignoreMix; //!< for backward compatibility: old versions ignored the Mix parameter
 };
 
 template <class Params>
@@ -299,6 +309,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     int premultChannel;
     _premult->getValueAtTime(time, premult);
     _premultChannel->getValueAtTime(time, premultChannel);
+    const double mix = _ignoreMix ? 1. : _mix->getValueAtTime(time);
 
     Params params;
     getValuesAtTime(time, params);
@@ -529,28 +540,29 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     {
         OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-            fred.reset( new OFX::PixelCopierPremult<float, 4, 1, float, 4, 1>(*this) );
+            fred.reset( new OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1>(*this) );
         } else if (dstPixelComponentCount == 4) {
             // just copy, no premult
-            fred.reset( new OFX::PixelCopier<float, 4>(*this) );
+            fred.reset( new OFX::PixelCopierMaskMix<float, 4, 1, false>(*this) );
         } else if (dstPixelComponentCount == 3) {
             // just copy, no premult
-            fred.reset( new OFX::PixelCopier<float, 3>(*this) );
+            fred.reset( new OFX::PixelCopierMaskMix<float, 3, 1, false>(*this) );
         } else if (dstPixelComponentCount == 2) {
             // just copy, no premult
-            fred.reset( new OFX::PixelCopier<float, 2>(*this) );
+            fred.reset( new OFX::PixelCopierMaskMix<float, 2, 1, false>(*this) );
         } else if (dstPixelComponentCount == 1) {
             // just copy, no premult
-            fred.reset( new OFX::PixelCopier<float, 1>(*this) );
+            fred.reset( new OFX::PixelCopierMaskMix<float, 1, 1, false>(*this) );
         }
         assert( fred.get() );
         if ( fred.get() ) {
+            // mix with srcA (there is no mask)
             setupAndCopy(*fred, time, renderWindow, renderScale,
-                         NULL, NULL,
+                         srcA.get(), NULL,
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes, 0,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
                          premult, premultChannel,
-                         1., false);
+                         mix, false);
         }
     }
 
@@ -622,7 +634,7 @@ CImgOperatorPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefin
     double srcBpixelaspectratio = _srcBClip ? _srcBClip->getPixelAspectRatio() : 1.;
     OfxRectI srcBRoDPixel = {0, 0, 0, 0};
     if (_srcBClip) {
-        OFX::Coords::toPixelEnclosing(_srcBClip->getRegionOfDefinition(args.time), args.renderScale, srcBpixelaspectratio, &srcARoDPixel);
+        OFX::Coords::toPixelEnclosing(_srcBClip->getRegionOfDefinition(args.time), args.renderScale, srcBpixelaspectratio, &srcBRoDPixel);
     }
 
     OfxRectI rodPixel;
@@ -650,6 +662,11 @@ CImgOperatorPluginHelper<Params>::isIdentity(const OFX::IsIdentityArguments &arg
     }
 # endif
     const double time = args.time;
+    if ( !_ignoreMix && (_mix->getValueAtTime(time) == 0.) ) {
+        identityClip = _srcAClip;
+
+        return true;
+    }
     Params params;
     getValuesAtTime(time, params);
     switch ( isIdentity(args, params) ) {

@@ -410,7 +410,7 @@ CropPlugin::getCropRectangle(OfxTime time,
     case eGeneratorExtentSize: {
         par = _srcClip->getPixelAspectRatio();
         _size->getValueAtTime(time, rod.x2, rod.y2);
-        _btmLeft->getValue(rod.x1, rod.y1);
+        _btmLeft->getValueAtTime(time, rod.x1, rod.y1);
         rod.x2 += rod.x1;
         rod.y2 += rod.y1;
         break;
@@ -442,15 +442,19 @@ CropPlugin::getCropRectangle(OfxTime time,
     }
     }
 
-    if (reformat) {
-        rod.x2 -= rod.x1;
-        rod.y2 -= rod.y1;
-        rod.x1 = 0.;
-        rod.y1 = 0.;
-    }
+    // origin of the full crop rectangle, which is moved to (0,0) by reformat (see CropProcessorBase::setValues)
+    const double originX = rod.x1;
+    const double originY = rod.y1;
     if (intersect && _srcClip) {
+        // intersect before reformat: srcRoD is in source coordinates
         const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(time);
         Coords::rectIntersection(rod, srcRoD, &rod);
+    }
+    if (reformat) {
+        rod.x1 -= originX;
+        rod.x2 -= originX;
+        rod.y1 -= originY;
+        rod.y2 -= originY;
     }
 
     if (blackOutside) {
@@ -554,10 +558,13 @@ CropPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         // translate, because cropRect will be rendered at (0,0) in this case
         // Remember: this is the region of INTEREST: the region from the input
         // used to render the region args.regionOfInterest
-        roi.x1 += cropRect.x1;
-        roi.y1 += cropRect.y1;
-        roi.x2 += cropRect.x1;
-        roi.y2 += cropRect.y1;
+        // The translation is given by the full (non-intersected) crop rectangle, as in render.
+        OfxRectD cropRectFull;
+        getCropRectangle(args.time, args.renderScale, /*useIntersect=*/ false, /*forceIntersect=*/ false, /*useBlackOutside=*/ false, /*useReformat=*/ false, &cropRectFull, NULL);
+        roi.x1 += cropRectFull.x1;
+        roi.y1 += cropRectFull.y1;
+        roi.x2 += cropRectFull.x1;
+        roi.y2 += cropRectFull.y1;
     }
 
     // intersect the crop rectangle with args.regionOfInterest

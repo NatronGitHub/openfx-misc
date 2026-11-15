@@ -357,11 +357,8 @@ NoOpPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     if (_pixelAspectRatio) {
         _pixelAspectRatio->getValueAtTime(args.time, pixelAspectRatio);
     }
-#ifdef OFX_EXTENSIONS_NATRON
-    if (_formatPar) {
-        _formatPar->getValueAtTime(args.time, pixelAspectRatio);
-    }
-#endif
+    // Do not use the format PAR here: when Set Pixel Aspect Ratio is checked, the output PAR is
+    // _pixelAspectRatio (it overrides the format PAR in getClipPreferences), as in getRegionsOfInterest.
     if ( (srcPAR <= 0) || (pixelAspectRatio <= 0) ) {
         return false;
     }
