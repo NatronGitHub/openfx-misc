@@ -41,15 +41,14 @@ continuous integration:
    run.
 3. Unzip the archive. It contains directories named `*.ofx.bundle` (for example
    `Misc.ofx.bundle`, `CImg.ofx.bundle`, `Shadertoy.ofx.bundle`).
-4. Copy these `*.ofx.bundle` directories, as they are, into the standard OpenFX
-   plugins directory for your system (create it if it does not exist):
+4. Copy these `*.ofx.bundle` directories into the standard OpenFX plugins
+   directory for your system (create it if it does not exist). Copy each whole
+   directory without renaming it: the host needs the complete bundle, not only the
+   `.ofx` file inside it.
    - Linux: `/usr/OFX/Plugins`
    - macOS: `/Library/OFX/Plugins`
    - Windows: `C:\Program Files\Common Files\OFX\Plugins`
 5. Restart your OpenFX host.
-
-Do not rename the bundles or the files they contain, and do not copy only the `.ofx`
-file: the host needs the whole `*.ofx.bundle` directory.
 
 Older Windows binaries compiled with Visual Studio 2017 (which should be compatible with most OpenFX hosts including [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve/)) are available as part of the [openfx-misc project on AppVeyor](https://ci.appveyor.com/project/NatronGitHub/openfx-misc/build/artifacts). These builds are no longer updated regularly.
 
@@ -289,7 +288,8 @@ We should take the code from FrameBlend, simplify, and incorporate it in Retime.
 Installation
 ------------
 
-These plugins are included in the binary distributions of [Natron](https://natrongithub.github.io/).
+To install prebuilt binaries, see [Binaries](#binaries) above. This section
+explains how to compile the plugins from source.
 
 If you want to compile the plugins from source, the recommended way is to use the
 provided Makefiles (this is what the continuous integration and the Natron binaries
@@ -298,9 +298,7 @@ project, and the Visual Studio project are alternatives, which may not always be
 to date.
 
 Whichever method you use, the compiled `*.ofx.bundle` directories must end up in
-the standard OpenFX plugins directory: `/usr/OFX/Plugins` on Linux,
-`/Library/OFX/Plugins` on macOS, `C:\Program Files\Common Files\OFX\Plugins` on
-Windows.
+the standard OpenFX plugins directory (listed in step 4 of [Binaries](#binaries)).
 
 ### Getting the sources from github
 
