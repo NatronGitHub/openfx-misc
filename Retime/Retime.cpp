@@ -127,9 +127,10 @@ struct SourceFrames
 // beyond this, frame numbers could overflow an int in frameLoop/frameBounce
 #define kMaxBeforeAfterFrame (INT_MAX / 4)
 
-// Apply Before/After to source time *t. The whole frame is mapped and the fractional part (second
-// field, or sub-frame time with the None filter) is kept, so that the second field of the last frame
-// is still in range.
+// Apply Before/After to source time *t. The whole frame (rounded down) is mapped.
+// Hold reads the whole first/last frame, so that a held field does not alternate and flicker.
+// Loop and Bounce keep the fractional part (second field, or sub-frame time with the None filter),
+// mirrored where Bounce plays backwards, so that the second field of the last frame is still in range.
 static BeforeAfterEnum
 mapSourceTime(int first,
               int last,
@@ -144,8 +145,16 @@ mapSourceTime(int first,
     }
     double mapped;
     BeforeAfterEnum mode = getBeforeAfterTime(first, last, before, after, frame, &mapped);
-    if ( (mode != eBeforeAfterOriginal) && (mode != eBeforeAfterBlack) ) {
-        *t = mapped + (*t - frame);
+    const double frac = *t - frame;
+    if (mode == eBeforeAfterHold) {
+        *t = mapped;
+    } else if (mode == eBeforeAfterLoop) {
+        *t = mapped + frac;
+    } else if (mode == eBeforeAfterBounce) {
+        double next;
+        getBeforeAfterTime(first, last, before, after, frame + 1, &next);
+        // in a reversed Bounce segment, the next frame is the previous source frame
+        *t = (next == mapped - 1) ? (mapped - frac) : (mapped + frac);
     }
 
     return mode;

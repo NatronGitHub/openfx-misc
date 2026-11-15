@@ -26,7 +26,6 @@
 #define openfx_misc_FrameRangeBeforeAfter_h
 
 #include <cassert>
-#include <cmath>
 #include <string>
 
 #include "ofxsImageEffect.h"
@@ -106,7 +105,7 @@ frameLoop(int x,
 // Resolve the Before/After behaviour for time in the frame range [first, last].
 // Returns the behaviour that applies (eBeforeAfterOriginal within the frame range)
 // and sets *srcTime to the source frame to use (meaningless for eBeforeAfterBlack).
-// Loop and Bounce work on whole frames (time is rounded down to an int).
+// Loop and Bounce work on whole frames (time is truncated to an int, as FrameRange always did).
 inline BeforeAfterEnum
 getBeforeAfterTime(int first,
                    int last,
@@ -127,10 +126,10 @@ getBeforeAfterTime(int first,
         *srcTime = (time < first) ? first : last;
         break;
     case eBeforeAfterLoop:
-        *srcTime = frameLoop( first, last, (int)std::floor(time) );
+        *srcTime = frameLoop(first, last, (int)time);
         break;
     case eBeforeAfterBounce:
-        *srcTime = frameBounce( first, last, (int)std::floor(time) );
+        *srcTime = frameBounce(first, last, (int)time);
         break;
     case eBeforeAfterOriginal:
     case eBeforeAfterBlack:
