@@ -66,7 +66,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -389,8 +389,10 @@ class RampPlugin
 {
 public:
     /** @brief ctor */
-    RampPlugin(OfxImageEffectHandle handle)
+    RampPlugin(OfxImageEffectHandle handle,
+               unsigned int majorVersion)
         : ImageEffect(handle)
+        , _legacyIsIdentity(majorVersion < 3)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _processR(NULL)
@@ -480,6 +482,8 @@ private:
 
 private:
 
+    // version 2 only tested the alpha of both colors in isIdentity
+    bool _legacyIsIdentity;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -686,9 +690,16 @@ RampPlugin::isIdentity(const IsIdentityArguments &args,
     RGBAValues color0, color1;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
-    // the color is added to the source even if alpha is zero, so all components must be zero
-    if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
-         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
+    bool zeroColors;
+    if (_legacyIsIdentity) {
+        // version 2 only tested alpha: kept so old projects render the same
+        zeroColors = (color0.a == 0.) && (color1.a == 0.);
+    } else {
+        // the color is added to the source even if alpha is zero, so all components must be zero
+        zeroColors = ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
+                       (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) );
+    }
+    if (zeroColors) {
         identityClip = _srcClip;
 
         return true;
@@ -752,14 +763,18 @@ RampPlugin::changedParam(const InstanceChangedArgs &args,
 //static void intersectToRoD(const OfxRectD& rod,const OfxPointD& p0)
 
 
-mDeclarePluginFactory(RampPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(RampPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-RampPluginFactory::describe(ImageEffectDescriptor &desc)
+RampPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextGenerator);
@@ -790,16 +805,18 @@ RampPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-RampPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                  ContextEnum /*context*/)
+RampPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                ContextEnum /*context*/)
 {
-    return new RampPlugin(handle);
+    return new RampPlugin(handle, majorVersion);
 }
 
+template<unsigned int majorVersion>
 void
-RampPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                     ContextEnum context)
+RampPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                   ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -887,7 +904,12 @@ RampPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 } // RampPluginFactory::describeInContext
 
-static RampPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// Each major version needs its own factory class: FactoryMainEntryHelper stores
+// the plugin UID in a static shared by all objects of the same class.
+static RampPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 2: isIdentity only tests the alpha of the colors (deprecated, kept so old projects render the same)
+static RampPluginFactory<2> p2(kPluginIdentifier, 0);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
