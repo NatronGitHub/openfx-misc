@@ -1301,6 +1301,33 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 } // RectanglePlugin::getRegionOfDefinition
 
+// the generator interact, with the rectangle rotated by the Angle parameter
+class RectangleGeneratorInteract
+    : public GeneratorInteract
+{
+public:
+    RectangleGeneratorInteract(OfxInteractHandle handle,
+                               ImageEffect* effect)
+        : GeneratorInteract( handle, effect, interactParams() )
+    {
+    }
+
+private:
+    static RectangleInteractParams interactParams()
+    {
+        RectangleInteractParams params;
+
+        params.angle = kParamAngle;
+
+        return params;
+    }
+};
+
+class RectangleGeneratorOverlayDescriptor
+    : public DefaultEffectOverlayDescriptor<RectangleGeneratorOverlayDescriptor, RectangleGeneratorInteract>
+{
+};
+
 mDeclarePluginFactory(RectanglePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 RectanglePluginFactory::describe(ImageEffectDescriptor &desc)
@@ -1466,7 +1493,7 @@ RectanglePluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
-    generatorDescribe(desc);
+    desc.setOverlayInteractDescriptor(new RectangleGeneratorOverlayDescriptor); // like generatorDescribe(desc), with the Angle parameter
 
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
