@@ -101,20 +101,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipBHint "The main input. This input is passed through when the KeyMix node is disabled."
 
 
-/*
-   For explanations on why we use bitset instead of vector<bool>, see:
-
-   D. Kalev. What You Should Know about vector<bool>.
-   http://www.informit.com/guides/content.aspx?g=cplusplus&seqNum=98
-
-   S. D. Meyers. Effective STL: 50 Specific Ways to Improve Your Use of the Standard Template Library.
-   Item 18: "Avoid using vector<bool>".
-   Professional Computing Series. Addison-Wesley, Boston, 4 edition, 2004
-
-   V. Pieterse et al. Performance of C++ Bit-vector Implementations
-   http://www.cs.up.ac.za/cs/vpieterse/pub/PieterseEtAl_SAICSIT2010.pdf
- */
-
 class KeyMixProcessorBase
     : public ImageProcessor
 {
@@ -181,9 +167,6 @@ private:
         // Version 1 used the R checkbox for it, which is kept so that old projects render the same.
         const bool alphaFromA = (nComponents == 1) && !_alphaOnlyUsesR;
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
-        for (int c = 0; c < 4; ++c) {
-            tmpPix[c] = 0;
-        }
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -206,10 +189,6 @@ private:
 #                     endif
                         // all images are supposed to be black and transparent outside o
                         tmpPix[c] = (_aChannels[alphaFromA ? 3 : c] && srcPixA) ? srcPixA[c] : 0.f;
-                    }
-                    if (nComponents != 4) {
-                        // set alpha (1 inside, 0 outside)
-                        tmpPix[3] = (_aChannels[3] && srcPixA) ? 1. : 0.;
                     }
                 } else {
                     // everything is black and transparent
@@ -454,15 +433,9 @@ template <class PIX, int nComponents, int maxValue>
 void
 KeyMixPlugin::renderForBitDepth(const RenderArguments &args)
 {
-    //const double time = args.time;
-    auto_ptr<KeyMixProcessorBase> fred;
+    KeyMixProcessor<PIX, nComponents, maxValue> fred(*this, _alphaOnlyUsesR);
 
-    fred.reset( new KeyMixProcessor<PIX, nComponents, maxValue>(*this, _alphaOnlyUsesR) );
-
-    assert( fred.get() );
-    if ( fred.get() ) {
-        setupAndProcess(*fred, args);
-    }
+    setupAndProcess(fred, args);
 } // KeyMixPlugin::renderForBitDepth
 
 // the overridden render function
@@ -535,21 +508,12 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
     }
 
     OfxRectI maskRoD;
-    bool maskRoDValid = false;
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
-        if (!maskInvert) {
-            maskRoDValid = true;
-            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-            // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                identityClip = _srcClipB;
+    bool maskRoDValid = ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD);
+    // effect is identity if the renderWindow doesn't intersect the mask RoD
+    if ( maskRoDValid && !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+        identityClip = _srcClipB;
 
-                return true;
-            }
-        }
+        return true;
     }
 
     // The region of effect is only the set of the intersections between the A inputs and the mask.

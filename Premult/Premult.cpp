@@ -937,60 +937,8 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs & args,
                                       const std::string & clipName)
 {
     // It is very dangerous to set this from the input premult, which is sometimes wrong.
-    // If the user wants to premult/unpremul, the default should always be to premult/unpremult
-    /*
-       if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
-         _srcClip && _srcClip->isConnected() &&
-         !_premultChanged->getValue() &&
-         ( args.reason == eChangeUserEdit) ) {
-        if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
-            _processR->setValue(false);
-            _processG->setValue(false);
-            _processB->setValue(false);
-            _processA->setValue(false);
-        } else {
-            switch ( _srcClip->getPreMultiplication() ) {
-            case eImageOpaque:
-                _processR->setValue(false);
-                _processG->setValue(false);
-                _processB->setValue(false);
-                _processA->setValue(false);
-                break;
-            case eImagePreMultiplied:
-                if (isPremult) {
-                    _processR->setValue(false);
-                    _processG->setValue(false);
-                    _processB->setValue(false);
-                    _processA->setValue(false);
-                    //_premult->setValue(eInputChannelNone);
-                } else {
-                    _processR->setValue(true);
-                    _processG->setValue(true);
-                    _processB->setValue(true);
-                    _processA->setValue(false);
-                    _premult->setValue(eInputChannelA);
-                }
-                break;
-            case eImageUnPreMultiplied:
-                if (!isPremult) {
-                    _processR->setValue(false);
-                    _processG->setValue(false);
-                    _processB->setValue(false);
-                    _processA->setValue(false);
-                    //_premult->setValue(eInputChannelNone);
-                } else {
-                    _processR->setValue(true);
-                    _processG->setValue(true);
-                    _processB->setValue(true);
-                    _processA->setValue(false);
-                    _premult->setValue(eInputChannelA);
-                }
-                break;
-            }
-            _premultChanged->setValue(true);
-        }
-       }
-     */
+    // If the user wants to premult/unpremul, the default should always be to premult/unpremult,
+    // so the process and premult params are not set from the input premultiplication state.
     MultiPlaneEffect::changedClip(args, clipName);
 } // >::changedClip
 

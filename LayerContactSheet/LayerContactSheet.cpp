@@ -49,6 +49,7 @@
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
 #include "ofxsFilter.h"
+#include "../ContactSheet/ContactSheetLayout.h"
 #include "ofxsOGLTextRenderer.h"
 #include "ofxsOGLHiDPI.h"
 
@@ -211,34 +212,6 @@ LayerContactSheetPlugin::LayerContactSheetPlugin(OfxImageEffectHandle handle)
     syncPrivateData();
 }
 
-static void
-fitRod(const OfxRectD& srcFormatCanonical,
-       const OfxRectD& cellRoD,
-       int gap,
-       bool center,
-       double* f,
-       OfxRectD* imageRoD)
-{
-    double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
-    double sh = srcFormatCanonical.y2 - srcFormatCanonical.y1;
-    OfxRectD cRoD = { cellRoD.x1 + gap / 2, cellRoD.y1 + gap/2, cellRoD.x2 - (gap + 1) / 2, cellRoD.y2 - (gap + 1) / 2};
-    double cw = (std::max)(1., cRoD.x2 - cRoD.x1);
-    double ch = (std::max)(1., cRoD.y2 - cRoD.y1);
-    bool fitwidth = sw * ch > sh * cw;
-    *f = fitwidth ? (cw/sw) : (ch / sh);
-    if (center) {
-        imageRoD->x1 = cRoD.x1 + (cw - *f * sw) / 2;
-        imageRoD->x2 = cRoD.x2 - (cw - *f * sw) / 2;
-        imageRoD->y1 = cRoD.y1 + (ch - *f * sh) / 2;
-        imageRoD->y2 = cRoD.y2 - (ch - *f * sh) / 2;
-    } else {
-        imageRoD->x1 = cRoD.x1;
-        imageRoD->x2 = cRoD.x1 + *f * sw;
-        imageRoD->y1 = cRoD.y1;
-        imageRoD->y2 = cRoD.y1 + *f * sh;
-    }
-}
-
 void
 LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
 {
@@ -251,13 +224,6 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     }
     checkBadRenderScaleOrField(dst, args);
     //PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    const OfxRectI& dstBounds = dst->getBounds();
-    assert(dst->getPixelDepth() == eBitDepthFloat);
-    float* b = (float*)dst->getPixelData();
-    const size_t bwidth = dstBounds.x2 - dstBounds.x1;
-    const size_t bheight = dstBounds.y2 - dstBounds.y1;
-    const size_t bxstride = dst->getPixelComponentCount();
-    const size_t bystride = bwidth * bxstride;
     // clear the renderWindow
     fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
 
@@ -318,29 +284,15 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     }
 
     for (std::size_t layer = 0; layer < planes.size(); ++layer) {
-        int r = layer / columns;
-        int c = layer % columns;
-        if (r >= rows) {
+        OfxRectD cellRoD;
+        if ( !ContactSheet::cellRoD(layer, rows, columns, topbottom, leftright, rod, &cellRoD) ) {
             continue;
         }
-        if (topbottom) {
-            r = rows - 1 - r;
-        }
-        if (!leftright) {
-            c = columns - 1 - c;
-        }
-        // now compute the four corners of the cell in the rod
-        OfxRectD cellRoD = {
-            rod.x1 + c * (rod.x2 - rod.x1) / columns,
-            rod.y1 + r * (rod.y2 - rod.y1) / rows,
-            rod.x1 + (c + 1) * (rod.x2 - rod.x1) / columns,
-            rod.y1 + (r + 1) * (rod.y2 - rod.y1) / rows
-        };
 
         // and the four corners of the image area in the dest rod
         double f = 1;
         OfxRectD imageRoD = {0., 0., 0., 0.};
-        fitRod(srcFormatCanonical, cellRoD, gap, center, &f, &imageRoD);
+        ContactSheet::fitRod(srcFormatCanonical, cellRoD, gap, center, &f, &imageRoD);
 
         //- intersect with the render window
         OfxRectD imageRoDClipped;
@@ -365,26 +317,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
 #             endif
 
                 //- draw it at the right place
-                const OfxRectI& srcBounds = src->getBounds();
-                assert(src->getPixelDepth() == eBitDepthFloat);
-                const float* a = (const float*)src->getPixelData();
-                const size_t awidth = srcBounds.x2 - srcBounds.x1;
-                const size_t aheight = srcBounds.y2 - srcBounds.y1;
-                const size_t axstride = src->getPixelComponentCount();
-                const size_t aystride = awidth * axstride;
-                const size_t depth = (std::min)(axstride, bxstride);
-                const OfxRectD from = {0., 0., (double)awidth, (double)aheight};
-                OfxRectI to;
-                Coords::toPixelEnclosing(imageRoD, args.renderScale, dstPar, &to);
-                to.x1 -= dstBounds.x1;
-                to.y1 -= dstBounds.y1;
-                to.x2 -= dstBounds.x1;
-                to.y2 -= dstBounds.y1;
-
-                ofxsFilterResize2d(a, awidth, aheight, axstride, aystride, depth,
-                                   from, /*zeroOutside=*/false,
-                                   b, bwidth, bheight, bxstride, bystride,
-                                   to);
+                ContactSheet::drawImage(src.get(), dst.get(), imageRoD, args.renderScale, dstPar);
             }
         }
     }
@@ -645,29 +578,15 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
          */
 #define kFnOfxImagePlaneStereoDisparityRight "uk.co.thefoundry.OfxImagePlaneStereoDisparityRight"
 
-        int r = layer / columns;
-        int c = layer % columns;
-        if (r >= rows) {
+        OfxRectD cellRoD;
+        if ( !ContactSheet::cellRoD(layer, rows, columns, topbottom, leftright, rod, &cellRoD) ) {
             continue;
         }
-        if (topbottom) {
-            r = rows - 1 - r;
-        }
-        if (!leftright) {
-            c = columns - 1 - c;
-        }
-        // now compute the four corners of the cell in the rod
-        OfxRectD cellRoD = {
-            rod.x1 + c * (rod.x2 - rod.x1) / columns,
-            rod.y1 + r * (rod.y2 - rod.y1) / rows,
-            rod.x1 + (c + 1) * (rod.x2 - rod.x1) / columns,
-            rod.y1 + (r + 1) * (rod.y2 - rod.y1) / rows
-        };
 
         // and the four corners of the image area in the dest rod
         double f = 1;
         OfxRectD imageRoD = {0., 0., 0., 0.};
-        fitRod(srcFormatCanonical, cellRoD, gap, center, &f, &imageRoD);
+        ContactSheet::fitRod(srcFormatCanonical, cellRoD, gap, center, &f, &imageRoD);
 
         // Draw everything twice
         // l = 0: shadow

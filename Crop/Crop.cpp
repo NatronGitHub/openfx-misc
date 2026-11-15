@@ -90,28 +90,20 @@ class CropProcessorBase
 {
 protected:
     const Image *_srcImg;
-    OfxRectD _cropRect;
     OfxRectD _cropRectFull;
-    OfxPointD _renderScale;
-    double _par;
     OfxPointI _translation;
     bool _blackOutside;
     double _softness;
-    OfxRectI _cropRectPixel;
     OfxRectI _cropRectFullPixel;
 
 public:
     CropProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
         , _srcImg(NULL)
-        , _par(1.)
         , _blackOutside(false)
         , _softness(0.)
     {
-        _cropRect.x1 = _cropRect.y1 = _cropRect.x2 = _cropRect.y2 = 0.;
         _cropRectFull.x1 = _cropRectFull.y1 = _cropRectFull.x2 = _cropRectFull.y2 = 0.;
-        _renderScale.x = _renderScale.y = 1.;
-        _cropRectPixel.x1 = _cropRectPixel.y1 = _cropRectPixel.x2 = _cropRectPixel.y2 = 0;
         _cropRectFullPixel.x1 = _cropRectFullPixel.y1 = _cropRectFullPixel.x2 = _cropRectFullPixel.y2 = 0;
         _translation.x = _translation.y = 0;
     }
@@ -122,21 +114,16 @@ public:
         _srcImg = v;
     }
 
-    void setValues(const OfxRectD& cropRect,
-                   const OfxRectD& cropRectFull, // without intersection
+    void setValues(const OfxRectD& cropRectFull, // without intersection
                    const OfxPointD& renderScale,
                    double par,
                    bool blackOutside,
                    bool reformat,
                    double softness)
     {
-        _cropRect = cropRect;
         _cropRectFull = cropRectFull;
-        _renderScale = renderScale;
-        _par = par;
         _blackOutside = blackOutside;
         _softness = softness;
-        Coords::toPixelNearest(cropRect, renderScale, par, &_cropRectPixel);
         Coords::toPixelNearest(cropRectFull, renderScale, par, &_cropRectFullPixel);
         if (reformat) {
             _translation.x = -_cropRectFullPixel.x1;
@@ -527,15 +514,13 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor,
 
     bool reformat = _reformat->getValueAtTime(args.time);
     bool blackOutside = _blackOutside->getValueAtTime(args.time);
-    OfxRectD cropRectCanonical;
     OfxRectD cropRectFullCanonical;
     double par;
-    getCropRectangle(time, args.renderScale, /*useIntersect=*/ true, /*forceIntersect=*/ false, /*useBlackOutside=*/ false, /*useReformat=*/ false, &cropRectCanonical, &par);
     getCropRectangle(time, args.renderScale, /*useIntersect=*/ false, /*forceIntersect=*/ false, /*useBlackOutside=*/ false, /*useReformat=*/ false, &cropRectFullCanonical, &par);
     double softness = _softness->getValueAtTime(args.time);
     // no need to softness *= args.renderScale.x; since softness is computed on canonical coords
 
-    processor.setValues(cropRectCanonical, cropRectFullCanonical, args.renderScale, par, blackOutside, reformat, softness);
+    processor.setValues(cropRectFullCanonical, args.renderScale, par, blackOutside, reformat, softness);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();

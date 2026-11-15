@@ -3875,6 +3875,7 @@
 		1EAFE3DD1C5D087900F9E4E4 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EB00C711EDEF686006CA180 /* ContactSheet.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ContactSheet.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EB00C741EDEF75D006CA180 /* ContactSheet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ContactSheet.cpp; sourceTree = "<group>"; };
+		1EC0C0B11D00000000C0C0B1 /* ContactSheetLayout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ContactSheetLayout.h; sourceTree = "<group>"; };
 		1EB00C751EDEF75D006CA180 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EB00C761EDEF75D006CA180 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EB00C911EE078D2006CA180 /* LayerContactSheet.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LayerContactSheet.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -5917,6 +5918,7 @@
 			isa = PBXGroup;
 			children = (
 				1EB00C741EDEF75D006CA180 /* ContactSheet.cpp */,
+				1EC0C0B11D00000000C0C0B1 /* ContactSheetLayout.h */,
 				1EB00C751EDEF75D006CA180 /* Info.plist */,
 				1EB00C761EDEF75D006CA180 /* Makefile */,
 			);

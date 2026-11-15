@@ -167,6 +167,17 @@ private:
         return 0; // no input
     }
 
+    // return the selected input (automatic, or the clamped "which" value)
+    int getInput(double time)
+    {
+        if ( _automatic->getValueAtTime(time) ) {
+            return getInputAutomatic(time);
+        }
+        int input = _which->getValueAtTime(time);
+
+        return (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
+    }
+
     // do not need to delete these, the ImageEffect is managing them for us
     Clip* _dstClip;
     std::vector<Clip *> _srcClip;
@@ -209,13 +220,7 @@ SwitchPlugin::render(const RenderArguments &args)
     const double time = args.time;
 
     // copy input to output
-    int input = 0;
-    if ( _automatic->getValueAtTime(time) ) {
-        input = getInputAutomatic(time);
-    } else {
-        input = _which->getValueAtTime(time);
-        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
-    }
+    int input = getInput(time);
     Clip *srcClip = _srcClip[input];
     assert( kSupportsMultipleClipPARs   || !srcClip || srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !srcClip || srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
@@ -250,14 +255,8 @@ SwitchPlugin::isIdentity(const IsIdentityArguments &args,
                          , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
-    int input;
+    int input = getInput(time);
 
-    if ( _automatic->getValueAtTime(time) ) {
-        input = getInputAutomatic(time);
-    } else {
-        input = _which->getValueAtTime(time);
-        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
-    }
     identityClip = _srcClip[input];
 
     return true;
@@ -273,13 +272,7 @@ SwitchPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     // this should never be called as isIdentity should always be trapped
     assert(false);
     const double time = args.time;
-    int input;
-    if ( _automatic->getValueAtTime(time) ) {
-        input = getInputAutomatic(time);
-    } else {
-        input = _which->getValueAtTime(time);
-        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
-    }
+    int input = getInput(time);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         if (i != (unsigned)input) {
@@ -293,14 +286,8 @@ SwitchPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                     OfxRectD &rod)
 {
     const double time = args.time;
-    int input;
+    int input = getInput(time);
 
-    if ( _automatic->getValueAtTime(time) ) {
-        input = getInputAutomatic(time);
-    } else {
-        input = _which->getValueAtTime(time);
-        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
-    }
     if ( _srcClip[input] && _srcClip[input]->isConnected() ) {
         rod = _srcClip[input]->getRegionOfDefinition(args.time);
 
@@ -318,14 +305,8 @@ SwitchPlugin::getTransform(const TransformArguments &args,
                            double transformMatrix[9])
 {
     const double time = args.time;
-    int input;
+    int input = getInput(time);
 
-    if ( _automatic->getValueAtTime(time) ) {
-        input = getInputAutomatic(time);
-    } else {
-        input = _which->getValueAtTime(time);
-        input = (std::max)( 0, (std::min)(input, (int)_srcClip.size() - 1) );
-    }
     transformClip = _srcClip[input];
 
     transformMatrix[0] = 1.;
