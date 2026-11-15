@@ -1082,33 +1082,6 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 } // RadialPlugin::getRegionOfDefinition
 
-// the generator interact, with the rectangle rotated by the Angle parameter
-class RadialGeneratorInteract
-    : public GeneratorInteract
-{
-public:
-    RadialGeneratorInteract(OfxInteractHandle handle,
-                            ImageEffect* effect)
-        : GeneratorInteract( handle, effect, interactParams() )
-    {
-    }
-
-private:
-    static RectangleInteractParams interactParams()
-    {
-        RectangleInteractParams params;
-
-        params.angle = kParamAngle;
-
-        return params;
-    }
-};
-
-class RadialGeneratorOverlayDescriptor
-    : public DefaultEffectOverlayDescriptor<RadialGeneratorOverlayDescriptor, RadialGeneratorInteract>
-{
-};
-
 mDeclarePluginFactory(RadialPluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 RadialPluginFactory::describe(ImageEffectDescriptor &desc)
@@ -1145,7 +1118,7 @@ RadialPluginFactory::describe(ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setOverlayInteractDescriptor(new RadialGeneratorOverlayDescriptor); // like generatorDescribe(desc), with the Angle parameter
+    generatorDescribe(desc, true); // the overlay is rotated by the Angle parameter
 
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
