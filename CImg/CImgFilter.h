@@ -819,6 +819,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             break;
         case OFX::ePixelComponentRGBA:
             cimgSpectrum = (int)processR + (int)processG + (int) processB + (int)processA;
+            // XY images have no B channel
             break;
         default:
             cimgSpectrum = 0;
@@ -861,6 +862,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             if ( processA && (tmpPixelComponentCount >= 4) ) {
                 srcChannel[c] = 3;
                 alphaChannel = c;
+            // XY images have no B channel (and only RGBA has A)
                 ++c;
             }
             assert(c == cimgSpectrum);
