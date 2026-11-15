@@ -154,7 +154,8 @@ CImg.h: Inpaint/inpaint.h
 #	patch -p0 -d. < CImg-2.0.0-anisotropic.patch
 #	patch -p0 -d. < CImg-1.7.1-omp.patch
 
-Inpaint/inpaint.h:
+# Depend on CImgVersion.mk so that the headers are downloaded again when CIMGVERSION changes.
+Inpaint/inpaint.h: $(TOP_SRCDIR)/CImg/CImgVersion.mk
 	curl -L -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/inpaint.h
 	patch -p0 -d. < Inpaint/inpaint.h.patch
 

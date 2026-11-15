@@ -401,6 +401,18 @@ function(cimg_download url dest)
   file(RENAME "${dest}.tmp" "${dest}")
 endfunction()
 
+# Download the headers again when CIMGVERSION changes: the downloaded version is
+# recorded in CImg/CImg.h.version (not tracked by git).
+set(CIMG_VERSION_STAMP "${CIMG_DIR}/CImg.h.version")
+if(EXISTS "${CIMG_VERSION_STAMP}")
+  file(READ "${CIMG_VERSION_STAMP}" _cimg_downloaded_version)
+  string(STRIP "${_cimg_downloaded_version}" _cimg_downloaded_version)
+else()
+  set(_cimg_downloaded_version "")
+endif()
+if(NOT _cimg_downloaded_version STREQUAL CIMGVERSION)
+  file(REMOVE "${CIMG_DIR}/CImg.h" "${CIMG_DIR}/Inpaint/inpaint.h")
+endif()
 if(NOT EXISTS "${CIMG_DIR}/Inpaint/inpaint.h")
   find_program(PATCH_EXECUTABLE patch)
   if(NOT PATCH_EXECUTABLE)
@@ -418,6 +430,7 @@ endif()
 if(NOT EXISTS "${CIMG_DIR}/CImg.h")
   cimg_download("${CIMG_URL}/CImg.h" "${CIMG_DIR}/CImg.h")
 endif()
+file(WRITE "${CIMG_VERSION_STAMP}" "${CIMGVERSION}\n")
 
 FILE(GLOB CIMG_SOURCES
   "CImg/CImg.h"
