@@ -86,7 +86,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamDepthChannel "depthChannel"
 #define kParamDepthChannelLabel "Depth Channel"
-#define kParamDepthChannelHint "Channel of the Depth input that contains the depth or disparity. If the Depth input has a single channel, it is always used."
+#define kParamDepthChannelHint "Channel of the Depth input that contains the depth or disparity. If the Depth input has a single channel, it is always used. If it has two channels, only R and G can be used."
 #define kParamDepthChannelOptionR "R", "Red channel.", "r"
 #define kParamDepthChannelOptionG "G", "Green channel.", "g"
 #define kParamDepthChannelOptionB "B", "Blue channel.", "b"
@@ -134,7 +134,7 @@ enum DepthTypeEnum
 
 #define kParamMaxSize "maxSize"
 #define kParamMaxSizeLabel "Maximum Size"
-#define kParamMaxSizeHint "Maximum blur size (in pixels at full resolution). This also defines the range covered by the focus slices and the extra region of the input that is needed to render a tile."
+#define kParamMaxSizeHint "Maximum blur size (in pixels at full resolution). The focus slices are spread evenly between 0 and this size. Larger values are slower to render, because more of the input around each rendered tile is needed."
 
 #define kParamSlices "slices"
 #define kParamSlicesLabel "Focus Slices"
@@ -161,16 +161,32 @@ enum ApertureEnum
 // extra margin for the Gaussian, relative to size (same as CImgBlur)
 #define kGaussianMargin 1.5
 
+// Number of extra input pixels needed on each side of the render window to blur by
+// sizePixels. render() and getRegionsOfInterest() must use the same value.
+// The disc only needs sizePixels/2, so the Gaussian margin covers both apertures.
+static inline int
+blurPadding(double sizePixels)
+{
+    return (int)std::ceil(sizePixels * kGaussianMargin) + 3;
+}
 
-// Read the depth value from a pixel with nComps components
+// Pixel aspect ratio of a clip, falling back to 1 if the host returns an invalid value.
+static inline double
+clipPAR(const Clip* clip)
+{
+    const double par = clip ? clip->getPixelAspectRatio() : 1.;
+
+    return (par > 0.) ? par : 1.;
+}
+
+
+// Read the depth value from a (non-NULL) pixel with nComps components.
+// Channels that the pixel does not have read as 0 (or 1 for a missing alpha).
 static inline float
 getDepthValue(const float* p,
               int nComps,
               DepthChannelEnum channel)
 {
-    if (!p) {
-        return 0.f;
-    }
     switch (nComps) {
     case 1:
 
@@ -323,11 +339,10 @@ public:
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentAlpha) );
         _depthClip = fetchClip(kClipDepth);
         assert(_depthClip);
 
@@ -379,9 +394,6 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////
-/** @brief render for the filter */
-
-// the overridden render function
 double
 ZDefocusPlugin::getFocusValue(double time,
                               const OfxPointD& renderScale,
@@ -394,12 +406,8 @@ ZDefocusPlugin::getFocusValue(double time,
         return focus;
     }
     OfxPointD p = _focusPoint->getValueAtTime(time);
-    double par = _depthClip->getPixelAspectRatio();
-    if (par <= 0.) {
-        par = 1.;
-    }
     OfxPointI pix;
-    Coords::toPixel(p, renderScale, par, &pix);
+    Coords::toPixel(p, renderScale, clipPAR(_depthClip), &pix);
     if (depth) {
         const float* pixel = (const float*)depth->getPixelAddress(pix.x, pix.y);
         if (pixel) {
@@ -427,7 +435,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 
-    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+    auto_ptr<const Image> src( _srcClip->isConnected() ?
                                _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
         if ( (src->getPixelDepth() != dstBitDepth) || (src->getPixelComponentCount() != nComps) ) {
@@ -487,10 +495,8 @@ ZDefocusPlugin::render(const RenderArguments &args)
     }
 
     // compute the region to process: the render window, padded by the maximum blur size
-    const double maxSizeX = maxSize * args.renderScale.x;
-    const double maxSizeY = maxSize * args.renderScale.y;
-    const int padX = (int)std::ceil(maxSizeX * kGaussianMargin) + 3;
-    const int padY = (int)std::ceil(maxSizeY * kGaussianMargin) + 3;
+    const int padX = blurPadding(maxSize * args.renderScale.x);
+    const int padY = blurPadding(maxSize * args.renderScale.y);
     OfxRectI procRect = { renderWindow.x1 - padX, renderWindow.y1 - padY, renderWindow.x2 + padX, renderWindow.y2 + padY };
     OfxRectI srcBounds = src->getBounds();
     if ( !Coords::rectIntersection(procRect, srcBounds, &procRect) ) {
@@ -529,6 +535,10 @@ ZDefocusPlugin::render(const RenderArguments &args)
         ++sliceCount[sliceIndex(x, y) + slices];
     }
 
+    // Register this effect so that CImg's abort test (cimg_abort_test, see CImgFilter.h)
+    // can stop the long vanvliet() calls when the host aborts the render.
+    // This plugin has two inputs and its own render loop, so it cannot use CImgFilterPluginHelper,
+    // which does the same thing around its render() call.
 #if defined(HAVE_THREAD_LOCAL) || defined(HAVE_PTHREAD)
 #  if defined(HAVE_THREAD_LOCAL)
     tls::gImageEffect = this;
@@ -661,7 +671,7 @@ bool
 ZDefocusPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                       OfxRectD &rod)
 {
-    if ( !_srcClip || !_srcClip->isConnected() ) {
+    if ( !_srcClip->isConnected() ) {
         return false;
     }
     // the RoD is the source RoD
@@ -676,28 +686,19 @@ ZDefocusPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
 {
     const double time = args.time;
     const double maxSize = (std::max)(0., _maxSize->getValueAtTime(time));
-    // margin in canonical coordinates (same as in render, which works in pixels)
-    double par = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
-    if (par <= 0.) {
-        par = 1.;
-    }
-    const double padX = (std::ceil(maxSize * args.renderScale.x * kGaussianMargin) + 3) * par / args.renderScale.x;
-    const double padY = (std::ceil(maxSize * args.renderScale.y * kGaussianMargin) + 3) / args.renderScale.y;
+    // same padding as in render(), converted from pixels to canonical coordinates
+    const double padX = blurPadding(maxSize * args.renderScale.x) * clipPAR(_srcClip) / args.renderScale.x;
+    const double padY = blurPadding(maxSize * args.renderScale.y) / args.renderScale.y;
     OfxRectD roi = args.regionOfInterest;
     roi.x1 -= padX;
     roi.x2 += padX;
     roi.y1 -= padY;
     roi.y2 += padY;
-    if (_srcClip) {
-        rois.setRegionOfInterest(*_srcClip, roi);
-    }
+    rois.setRegionOfInterest(*_srcClip, roi);
     // the Depth RoI also contains the focus point pixel, which is read at render time
     OfxRectD depthRoI = roi;
     if ( _useFocusPoint->getValueAtTime(time) ) {
-        double depthPar = _depthClip->getPixelAspectRatio();
-        if (depthPar <= 0.) {
-            depthPar = 1.;
-        }
+        const double depthPar = clipPAR(_depthClip);
         OfxPointI pix;
         Coords::toPixel(_focusPoint->getValueAtTime(time), args.renderScale, depthPar, &pix);
         OfxRectI pixRect = {pix.x, pix.y, pix.x + 1, pix.y + 1};
@@ -761,7 +762,6 @@ void
 ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                          ContextEnum /*context*/)
 {
-    // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
