@@ -46,7 +46,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Weighted average of two inputs."
 #define kPluginIdentifier "net.sf.openfx.DissolvePlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -91,8 +91,10 @@ class DissolvePlugin
 public:
     /** @brief ctor */
     DissolvePlugin(OfxImageEffectHandle handle,
-                   bool numerousInputs)
+                   bool numerousInputs,
+                   unsigned int majorVersion)
         : ImageEffect(handle)
+        , _legacyIsIdentity(majorVersion < 2)
         , _dstClip(NULL)
         , _srcClip(numerousInputs ? kClipSourceCount : 2)
         , _which(NULL)
@@ -168,6 +170,8 @@ private:
     template <class PIX, int nComponents, int maxValue>
     void renderForBitDepth(const RenderArguments &args);
 
+    // version 1 returned input 0 instead of the "from" input from isIdentity outside the mask
+    bool _legacyIsIdentity;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     std::vector<Clip *> _srcClip;
@@ -400,7 +404,12 @@ DissolvePlugin::isIdentity(const IsIdentityArguments &args,
                 // effect is identity if the renderWindow doesn't intersect the mask RoD
                 if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                     // outside of the mask, render outputs the "from" image, which is _srcClip[prev]
-                    identityClip = _srcClip[prev];
+                    if (_legacyIsIdentity) {
+                        // version 1 returned input 0: kept so old projects render the same
+                        identityClip = _srcClip[0];
+                    } else {
+                        identityClip = _srcClip[prev];
+                    }
 
                     return true;
                 }
@@ -485,14 +494,18 @@ DissolvePlugin::changedClip(const InstanceChangedArgs & /*args*/,
     updateRange();
 }
 
-mDeclarePluginFactory(DissolvePluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(DissolvePluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-DissolvePluginFactory::describe(ImageEffectDescriptor &desc)
+DissolvePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     // Say we are a transition context
     desc.addSupportedContext(eContextTransition);
@@ -518,8 +531,9 @@ DissolvePluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-DissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+DissolvePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                          ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
@@ -632,8 +646,9 @@ DissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ofxsMaskDescribeParams(desc, page);
 } // DissolvePluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-DissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
+DissolvePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                       ContextEnum /*context*/)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
@@ -641,10 +656,15 @@ DissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
     bool numerousInputs =  (getImageEffectHostDescription()->isNatron &&
                             getImageEffectHostDescription()->versionMajor >= 2);
 
-    return new DissolvePlugin(handle, numerousInputs);
+    return new DissolvePlugin(handle, numerousInputs, majorVersion);
 }
 
-static DissolvePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// Each major version needs its own factory class: FactoryMainEntryHelper stores
+// the plugin UID in a static shared by all objects of the same class.
+static DissolvePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 1: isIdentity returns input 0 outside the mask (deprecated, kept so old projects render the same)
+static DissolvePluginFactory<1> p1(kPluginIdentifier, 0);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
