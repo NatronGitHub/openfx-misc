@@ -99,15 +99,7 @@
 #endif
 
 #if !defined(HAVE_THREAD_LOCAL)
-#ifdef WIN32
 #pragma message WARN("Most CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang.")
-#else
-// non-Win32 systems should have at least pthread
-#pragma message WARN("CImg plugins use pthread-based thread-local storage.")
-#include <assert.h>
-#include <pthread.h>
-#define HAVE_PTHREAD
-#endif
 #endif //!HAVE_THREAD_LOCAL
 
 
@@ -122,22 +114,22 @@
 // To download, use:
 // git archive --remote=git://git.code.sf.net/p/gmic/source 9b52016cab3368744ea9f3cc20a3e9b4f0c66eb3:src CImg.h |tar xf -
 #define cimg_display 0
-#define cimg_namespace_suffix openfx_misc
-#ifdef _OPENMP
-#  ifndef cimg_use_openmp
-#    define cimg_use_openmp 1
-#  endif
-#else
-#  ifndef cimg_use_openmp
-#    define cimg_use_openmp 0
-#  endif
+// CImg 3.x removed support for cimg_namespace_suffix: rename the cimg_library namespace
+// with a macro instead, so that the CImg symbols stay private to openfx-misc and do not
+// clash with another copy of CImg loaded in the host (this also works with older CImg.h).
+#define cimg_library cimg_library_openfx_misc
+// Do not define cimg_use_openmp when OpenMP is not available: since CImg 3.x, any
+// definition of cimg_use_openmp (even "0") enables OpenMP and includes <omp.h>.
+// If it is not defined, CImg.h defines it to 1 if _OPENMP is defined, else to 0.
+#if defined(_OPENMP) && !defined(cimg_use_openmp)
+#  define cimg_use_openmp 1
 #endif
 #define cimg_verbosity 0
 
 // Abort mechanism:
 // we have a struct with a thread-local storage that holds the OFX::ImageEffect
 // for the thread being rendered
-#if defined(HAVE_THREAD_LOCAL) || defined(HAVE_PTHREAD)
+#if defined(HAVE_THREAD_LOCAL)
 #define cimg_abort_test gImageEffectAbort()
 inline void gImageEffectAbort();
 #endif
@@ -150,22 +142,6 @@ inline void gImageEffectAbort();
 #ifdef PLUGIN_PACK_GPL2
 
 // include the inpaint and nlmeans cimg plugins
-#if 0 // not necessary since CImg cimmit 7c83bdad65ab7447220b54851a5a1035976777fa
-namespace cimg_library_openfx_misc {
-    namespace cimg {
-        //! Return the maximum between two values.
-        template<typename t>
-        inline t max(const t& a, const t& b) {
-            return (std::max)(a,b);
-        }
-        //! Return the minimum between two values.
-        template<typename t>
-        inline t min(const t& a, const t& b) {
-            return (std::min)(a,b);
-        }
-    }
-}
-#endif
 #define cimg_plugin "Inpaint/inpaint.h"
 //#define cimg_plugin1 "nlmeans.h"
 #endif
@@ -173,7 +149,12 @@ namespace cimg_library_openfx_misc {
 CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
 CLANG_DIAG_ON(shorten-64-to-32)
-#define cimg_library cimg_library_suffixed // so that namespace is private, but code requires no change
+
+// Since CImg 4.0, cimg_for() and cimg_rof() declare two loop variables, so they cannot follow
+// "#pragma omp parallel for" (the loop is not in OpenMP canonical form): use cimg_rof_openmp().
+#ifndef cimg_rof_openmp
+#define cimg_rof_openmp(img,ptrs,T_ptrs) for (T_ptrs *ptrs = (img)._data + (img).size() - 1; ptrs>=(img)._data; --ptrs)
+#endif
 
 typedef float cimgpix_t;
 typedef float cimgpixfloat_t;
@@ -199,41 +180,48 @@ gImageEffectAbort()
     }
 }
 
-#elif defined(HAVE_PTHREAD)
-struct tls
+// sets the effect checked by the CImg abort test in the current thread,
+// and restores the previous value on exit (including on exceptions)
+class CImgAbortScope
 {
-    // the key is created once and *never* deleted using pthread_key_delete()
-    static pthread_key_t gImageEffect_key;
-    static void gImageEffect_key_delete(void * arg)
+public:
+    explicit CImgAbortScope(OFX::ImageEffect* effect)
+        : _prev(tls::gImageEffect)
     {
-        assert (NULL != arg);
-        free(arg);
+        tls::gImageEffect = effect;
     }
-    static void gImageEffect_key_create(void)
-    {
-        int _ret;
-        _ret = pthread_key_create(&(gImageEffect_key), gImageEffect_key_delete);
-        cimg_library::cimg::unused(_ret); /* To get rid of warnings in case of NDEBUG */
-        assert (0 == _ret);
-    }
-    static pthread_once_t gImageEffect_once/* = PTHREAD_ONCE_INIT*/;
-};
 
-inline void
-gImageEffectAbort()
+    ~CImgAbortScope()
+    {
+        tls::gImageEffect = _prev;
+    }
+
+private:
+    OFX::ImageEffect* _prev;
+};
+#else
+// without thread-local storage CImg never checks for abort, so there is nothing to set
+class CImgAbortScope
 {
-#  if cimg_use_openmp!=0
-    if ( omp_get_thread_num() ) {
-        return;
-    }
-#  endif
-    OFX::ImageEffect **_ptr = (OFX::ImageEffect **)pthread_getspecific(tls::gImageEffect_key);
-    if ( *_ptr && (*_ptr)->abort() ) {
-        throw cimg_library::CImgAbortException("");
-    }
-}
+public:
+    explicit CImgAbortScope(OFX::ImageEffect* /*effect*/) {}
+};
 #endif
 
+
+// set *dst to rect, enlarged by dx pixels on the left and right sides and dy pixels on the bottom and top sides
+// (dst may be &rect)
+inline void
+cimgPadRect(const OfxRectI& rect,
+            int dx,
+            int dy,
+            OfxRectI* dst)
+{
+    dst->x1 = rect.x1 - dx;
+    dst->x2 = rect.x2 + dx;
+    dst->y1 = rect.y1 - dy;
+    dst->y2 = rect.y2 + dy;
+}
 
 class CImgFilterPluginHelperBase
     : public OFX::ImageEffect
@@ -266,7 +254,8 @@ public:
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc,
                                      OFX::ContextEnum context,
                                      OFX::PageParamDescriptor* page,
-                                     bool hasUnpremult = true);
+                                     bool hasUnpremult = true,
+                                     bool hasMask = true);
 
 protected:
 #ifdef CIMG_DEBUG
@@ -292,15 +281,18 @@ protected:
 #endif
 
 
-    void setupAndFill(OFX::PixelProcessorFilterBase & processor,
-                      const OfxRectI &renderWindow,
-                      const OfxPointD &renderScale,
-                      void *dstPixelData,
-                      const OfxRectI& dstBounds,
-                      OFX::PixelComponentEnum dstPixelComponents,
-                      int dstPixelComponentCount,
-                      OFX::BitDepthEnum dstPixelDepth,
-                      int dstRowBytes);
+    // Create the float pixel processors used by render() to copy images, given the
+    // components of the destination. They return NULL for unsupported component counts.
+    // plain copy
+    OFX::PixelProcessorFilterBase* createPixelCopier(int dstPixelComponentCount);
+    // source to temporary image: black fill if there is no source, else copy and unpremult RGBA
+    OFX::PixelProcessorFilterBase* createSrcToTmpCopier(bool hasSrc,
+                                                        OFX::PixelComponentEnum dstPixelComponents,
+                                                        int dstPixelComponentCount);
+    // temporary image to destination: copy, premult RGBA, mask and mix
+    OFX::PixelProcessorFilterBase* createTmpToDstCopier(OFX::PixelComponentEnum dstPixelComponents,
+                                                        int dstPixelComponentCount,
+                                                        bool doMasking);
 
     void setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                       double time,
@@ -469,46 +461,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         }
         checkBadRenderScaleOrField(src, args);
 #     endif
-#if 0
-    } else {
-        // src is considered black and transparent, just fill black to dst and return
-#pragma message WARN("BUG: even when src is black and transparent, the output may not be black (cf. NoiseCImg)")
-        void* dstPixelData = NULL;
-        OfxRectI dstBounds;
-        OFX::PixelComponentEnum dstPixelComponents;
-        OFX::BitDepthEnum dstBitDepth;
-        int dstRowBytes;
-        getImageData(dst.get(), &dstPixelData, &dstBounds, &dstPixelComponents, &dstBitDepth, &dstRowBytes);
-
-        int nComponents = dst->getPixelComponentCount();
-        switch (nComponents) {
-        case 1: {
-            OFX::BlackFiller<float, 1> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        case 2: {
-            OFX::BlackFiller<float, 2> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        case 3: {
-            OFX::BlackFiller<float, 3> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        case 4: {
-            OFX::BlackFiller<float, 4> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        default:
-            assert(false);
-            break;
-        } // switch
-
-        return;
-#endif
     }
 
     const void *srcPixelData;
@@ -668,16 +620,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     copyWindowE.y1 = processWindow.y1;
     copyWindowE.y2 = processWindow.y2;
     {
-        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if (dstPixelComponentCount == 4) {
-            fred.reset( new OFX::PixelCopier<float, 4>(*this) );
-        } else if (dstPixelComponentCount == 3) {
-            fred.reset( new OFX::PixelCopier<float, 3>(*this) );
-        } else if (dstPixelComponentCount == 2) {
-            fred.reset( new OFX::PixelCopier<float, 2>(*this) );
-        }  else if (dstPixelComponentCount == 1) {
-            fred.reset( new OFX::PixelCopier<float, 1>(*this) );
-        }
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createPixelCopier(dstPixelComponentCount) );
         assert( fred.get() );
         if ( fred.get() ) {
             setupAndCopy(*fred, time, copyWindowN, renderScale, src.get(), mask.get(),
@@ -730,32 +673,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcRowBytes = 0;
     }
 
-    // The following checks may be wrong, because the srcRoI may be outside of the region of definition of src.
-    // It is not an error: areas outside of srcRoD should be considered black and transparent.
-    // IF THE FOLLOWING CODE HAS TO BE DISACTIVATED, PLEASE COMMENT WHY.
-    // This was disactivated by commit c47d07669b78a71960b204989d9c36f746d14a4c, then reactivated.
-    // DISACTIVATED AGAIN by FD 9/12/2014: boundary conditions are now handled by pixelcopier, and interstection with dstRoD was added above
-#if 0 //def CIMGFILTER_INSTERSECT_ROI
-    OFX::Coords::rectIntersection(srcRoI, srcRoD, &srcRoI);
-    // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
-    assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
-           srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
-    if ( (srcBounds.x1 > srcRoI.x1) || (srcRoI.x2 > srcBounds.x2) ||
-         ( srcBounds.y1 > srcRoI.y1) || ( srcRoI.y2 > srcBounds.y2) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-
-    if ( doMasking && (mix != 1.) ) {
-        // the renderWindow should also be contained within srcBounds, since we are mixing
-        assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
-               srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
-        if ( (srcBounds.x1 > renderWindow.x1) || (renderWindow.x2 > srcBounds.x2) ||
-             ( srcBounds.y1 > renderWindow.y1) || ( renderWindow.y2 > srcBounds.y2) ) {
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
-    }
-#endif
-
 #if cimg_use_openmp!=0
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
@@ -789,27 +706,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         tmpData.reset( new OFX::ImageMemory(tmpSize, this) );
         tmpPixelData = (float*)tmpData->lock();
 
-        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if ( !src.get() ) {
-            // no src, fill with black & transparent
-            fred.reset( new OFX::BlackFiller<float>(*this, dstPixelComponentCount) );
-        } else {
-            if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-                fred.reset( new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this) );
-            } else if (dstPixelComponentCount == 4) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 4>(*this) );
-            } else if (dstPixelComponentCount == 3) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 3>(*this) );
-            } else if (dstPixelComponentCount == 2) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 2>(*this) );
-            }  else if (dstPixelComponentCount == 1) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 1>(*this) );
-            }
-        }
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createSrcToTmpCopier(src.get() != NULL, dstPixelComponents, dstPixelComponentCount) );
         assert( fred.get() );
         if ( fred.get() ) {
             setupAndCopy(*fred, time, srcRoI, renderScale, src.get(), mask.get(),
@@ -835,7 +732,8 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             cimgSpectrum = (int)processA;
             break;
         case OFX::ePixelComponentXY:
-            cimgSpectrum = (int)processR + (int)processG + (int) processB;
+            // XY images have no B channel
+            cimgSpectrum = (int)processR + (int)processG;
             break;
         case OFX::ePixelComponentRGB:
             cimgSpectrum = (int)processR + (int)processG + (int) processB;
@@ -877,7 +775,8 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
                 srcChannel[c] = 1;
                 ++c;
             }
-            if (processB) {
+            // XY images have no B channel (and only RGBA has A)
+            if ( processB && (tmpPixelComponentCount >= 3) ) {
                 srcChannel[c] = 2;
                 ++c;
             }
@@ -935,34 +834,12 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         //////////////////////////////////////////////////////////////////////////////////////////
         // 3- process the cimg
         printRectI("render srcRoI", srcRoI);
-#if defined(HAVE_THREAD_LOCAL) || defined(HAVE_PTHREAD)
-#  if defined(HAVE_THREAD_LOCAL)
-        tls::gImageEffect = this;
-#  else
-        OFX::ImageEffect **_ptr = (OFX::ImageEffect **)pthread_getspecific(tls::gImageEffect_key);
-        assert (NULL != _ptr);
-        *_ptr = this;
-#  endif
         try {
+            CImgAbortScope abortScope(this);
             render(args, params, srcRoI.x1, srcRoI.y1, maskcimg, cimg, alphaChannel);
-        } catch (cimg_library::CImgAbortException) {
-#  if defined(HAVE_THREAD_LOCAL)
-            tls::gImageEffect = 0;
-#  else
-            *_ptr = 0;
-#  endif
-
+        } catch (const cimg_library::CImgAbortException&) {
             return;
         }
-
-#  if defined(HAVE_THREAD_LOCAL)
-        tls::gImageEffect = 0;
-#  else
-        *_ptr = 0;
-#  endif
-#else
-        render(args, params, srcRoI.x1, srcRoI.y1, maskcimg, cimg, alphaChannel);
-#endif
         // check that the dimensions didn't change
         assert(cimg.width() == cimgWidth && cimg.height() == cimgHeight && cimg.depth() == 1 && cimg.spectrum() == cimgSpectrum);
         if ( abort() ) {
@@ -989,39 +866,8 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // 5- copy+premult+max+mix tmp to dst (only processWindow)
 
     {
-        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-            fred.reset( new OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1>(*this) );
-        } else if (dstPixelComponentCount == 4) {
-            // just copy, no premult
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 4, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 4, 1, false>(*this) );
-            }
-        } else if (dstPixelComponentCount == 3) {
-            // just copy, no premult
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 3, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 3, 1, false>(*this) );
-            }
-        } else if (dstPixelComponentCount == 2) {
-            // just copy, no premult
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 2, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 2, 1, false>(*this) );
-            }
-        }  else if (dstPixelComponentCount == 1) {
-            // just copy, no premult
-            assert(srcPixelComponents == OFX::ePixelComponentAlpha);
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 1, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 1, 1, false>(*this) );
-            }
-        }
+        assert(dstPixelComponentCount != 1 || srcPixelComponents == OFX::ePixelComponentAlpha);
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createTmpToDstCopier(dstPixelComponents, dstPixelComponentCount, doMasking) );
         assert( fred.get() );
         if ( fred.get() ) {
             setupAndCopy(*fred, time, processWindow, renderScale, src.get(), mask.get(),
@@ -1242,9 +1088,11 @@ cimg_grand(unsigned int seed, int x, int y, int nComponents)
 
 //! Return a random variable following a Poisson distribution of parameter z.
 /**
+ legacy=true reproduces the old (wrong) distribution, where the same uniform
+ random value was used at each iteration.
  **/
 inline unsigned int
-cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
+cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z, bool legacy = false)
 {
     if (z<=1.0e-10) {
         return 0;
@@ -1255,7 +1103,8 @@ cimg_prand(unsigned int seed, int x, int y, int nComponents, const double z)
     unsigned int k = 0;
     const double y1 = std::exp(-z);
     for (double s = 1.0; s >= y1; ++k) {
-        s *= cimg_rand(seed+1, x, y, nComponents);
+        // each iteration needs an independent uniform random value
+        s *= cimg_rand(legacy ? (seed + 1) : cimg_hash(seed + 1 + k), x, y, nComponents);
     }
     return k > 0 ? k - 1 : 0;
 }

@@ -135,11 +135,13 @@ enum MergePluginEnum
 
 #define kPluginIdentifier "net.sf.openfx.MergePlugin"
 #define kPluginIdentifierSub "net.sf.openfx.Merge"
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 // History:
 // 1.0: Original version
 // 2.0: After fixing https://github.com/NatronGitHub/Natron/issues/647
+// 3.0: With Alpha-only images, the A checkboxes (instead of the R checkboxes) of A and B control the alpha channel.
+//      A inputs after the first one are merged as transparent black outside of their image (instead of being skipped).
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -326,7 +328,7 @@ class MergeProcessorBase
     : public ImageProcessor
 {
 protected:
-    ImageEffectVersioned& _effect;
+    unsigned int _majorVersion;
     std::vector<const Image*> _srcImgAs;
     const Image *_srcImgB;
     const Image* _rotoMaskImgB;
@@ -344,7 +346,7 @@ public:
 
     MergeProcessorBase(ImageEffectVersioned &instance)
         : ImageProcessor(instance)
-        , _effect(instance)
+        , _majorVersion( instance.getMajorVersion() )
         , _srcImgAs()
         , _srcImgB(NULL)
         , _rotoMaskImgB(NULL)
@@ -408,12 +410,53 @@ public:
     }
 
 private:
+    // Return the alpha of the A input i at (x, y), and premultiply tmpA by the roto mask of that input, if any.
+    float getAlphaA(std::size_t i,
+                    const PIX *srcPixA,
+                    float tmpA[nComponents],
+                    int x,
+                    int y) const
+    {
+        float a;
+        if (i >= _rotoMaskImgAs.size() || !_rotoMaskImgAs[i]) {
+            if (nComponents == 4) {
+                a = tmpA[nComponents - 1];
+            } else if (nComponents == 1) {
+                a = tmpA[0];
+            } else {
+                a = (_aChannels[3] && srcPixA) ? 1. : 0.;
+            }
+        } else {
+            const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgAs[i]->getPixelAddress(x, y);
+            if (rotoMaskPix) {
+                a = *rotoMaskPix / (float)maxValue;
+            } else {
+                a = 0.;
+            }
+            if (_maskInvert) {
+                a = 1. - a;
+            }
+            // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
+            if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
+                // Premult all A pixels by the roto mask
+                for (int c = 0; c < nComponents; ++c) {
+                    tmpA[c] *= a;
+                }
+            }
+        }
+
+        return a;
+    }
+
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
         float tmpPix[nComponents];
         float tmpA[nComponents];
         float tmpB[nComponents];
+        // With Alpha-only images, the only component is alpha, so it is controlled by the A checkboxes.
+        // Versions 1 and 2 used the R checkboxes of A and B for it, which is kept so that old projects render the same.
+        const bool alphaFromA = (nComponents == 1) && (_majorVersion >= 3);
 
         for (int c = 0; c < nComponents; ++c) {
             tmpA[c] = tmpB[c] = 0.;
@@ -429,7 +472,7 @@ private:
                 // If the operator is not identity when B only is connected, still process
                 // one A input, even if none is connected.
                 // This behavior was introduced in version 2.0.
-                if ( _srcImgAs.size() == 0 && ( isIdentityForBOnly(f) || _effect.getMajorVersion() == 1 ) ) {
+                if ( _srcImgAs.size() == 0 && ( isIdentityForBOnly(f) || _majorVersion == 1 ) ) {
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = (_outputChannels[nComponents > 1 ? c : 3] && srcPixB) ? srcPixB[c] : 0;
@@ -461,8 +504,8 @@ private:
                             assert( !srcPixB || !OFX::IsNaN(srcPixB[c]) );
 #                         endif
                             // all images are supposed to be black and transparent outside o
-                            tmpA[c] = (_aChannels[c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
-                            tmpB[c] = (_bChannels[c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
+                            tmpA[c] = (_aChannels[alphaFromA ? 3 : c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
+                            tmpB[c] = (_bChannels[alphaFromA ? 3 : c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
 #                         ifdef DEBUG
                             // check for NaN
                             assert( !OFX::IsNaN(tmpA[c]) );
@@ -471,33 +514,7 @@ private:
                         }
 
                         // work in float: clamping is done when mixing
-                        float a;
-                        if (i >= _rotoMaskImgAs.size() || !_rotoMaskImgAs[i]) {
-                            if (nComponents == 4) {
-                                a = tmpA[nComponents - 1];
-                            } else if (nComponents == 1) {
-                                a = tmpA[0];
-                            } else {
-                                a = (_aChannels[3] && srcPixA) ? 1. : 0.;
-                            }
-                        } else {
-                            const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgAs[i]->getPixelAddress(x, y);
-                            if (rotoMaskPix) {
-                                a = *rotoMaskPix / (float)maxValue;
-                            } else {
-                                a = 0.;
-                            }
-                            if (_maskInvert) {
-                                a = 1. - a;
-                            }
-                            // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
-                            if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
-                                // Premult all A pixels by the roto mask
-                                for (int c = 0; c < nComponents; ++c) {
-                                    tmpA[c] *= a;
-                                }
-                            }
-                        }
+                        float a = getAlphaA(i, srcPixA, tmpA, x, y);
                         if (!_rotoMaskImgB) {
                             if (nComponents == 4) {
                                 b = tmpB[nComponents - 1];
@@ -528,14 +545,17 @@ private:
 
                         srcPixA = (const PIX *)  (_srcImgAs[i] ? _srcImgAs[i]->getPixelAddress(x, y) : 0);
 
-                        if (srcPixA) {
+                        // Since version 3, like the first A input, the other A inputs are
+                        // merged as transparent black outside of their image.
+                        // Before version 3, they were skipped there.
+                        if ( srcPixA || (_majorVersion >= 3) ) {
                             for (std::size_t c = 0; c < nComponents; ++c) {
 #                             ifdef DEBUG
                                 // check for NaN
-                                assert( !OFX::IsNaN(srcPixA[c]) );
+                                assert( !srcPixA || !OFX::IsNaN(srcPixA[c]) );
 #                             endif
                                 // all images are supposed to be black and transparent outside o
-                                tmpA[c] = _aChannels[c] ? ( (float)srcPixA[c] / maxValue ) : 0.f;
+                                tmpA[c] = (_aChannels[alphaFromA ? 3 : c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
 #                             ifdef DEBUG
                                 // check for NaN
                                 assert( !OFX::IsNaN(tmpA[c]) );
@@ -543,33 +563,7 @@ private:
                             }
 
                             // work in float: clamping is done when mixing
-                            float a;
-                            if (i >= _rotoMaskImgAs.size() || !_rotoMaskImgAs[i]) {
-                                if (nComponents == 4) {
-                                    a = tmpA[nComponents - 1];
-                                } else if (nComponents == 1) {
-                                    a = tmpA[0];
-                                } else {
-                                    a = (_aChannels[3] && srcPixA) ? 1. : 0.;
-                                }
-                            } else {
-                                const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgAs[i]->getPixelAddress(x, y);
-                                if (rotoMaskPix) {
-                                    a = *rotoMaskPix / (float)maxValue;
-                                } else {
-                                    a = 0.;
-                                }
-                                if (_maskInvert) {
-                                    a = 1. - a;
-                                }
-                                // When rendering the RotoMask plane, srcImg and rotoMask image point to the same image
-                                if (_rotoMaskImgAs[i] != _srcImgAs[i]) {
-                                    // Premult all A pixels by the roto mask
-                                    for (int c = 0; c < nComponents; ++c) {
-                                        tmpA[c] *= a;
-                                    }
-                                }
-                            }
+                            float a = getAlphaA(i, srcPixA, tmpA, x, y);
 
                             // Update b from the previously computed value.
                             // see https://github.com/MrKepzie/Natron/issues/1648
@@ -953,21 +947,27 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
             if (renderRotoMask) {
 #ifdef OFX_EXTENSIONS_NUKE
                 const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
-                if (rotoMaskA) {
+                // Since version 3, keep NULL images, so that a connected A input is merged
+                // as transparent black even if it has no image here.
+                if ( rotoMaskA || (getMajorVersion() >= 3) ) {
                     srcAs.rotoMaskImg.push_back(rotoMaskA);
                 }
 #endif
             } else {
                 const Image* srcA = _srcClipAs[i]->fetchImage(time);
-                if (srcA) {
+                // Since version 3, keep NULL images, so that a connected A input is merged
+                // as transparent black even if it has no image here.
+                if ( srcA || (getMajorVersion() >= 3) ) {
                     srcAs.images.push_back(srcA);
 
 #                 ifndef NDEBUG
-                    checkBadRenderScaleOrField(srcA, args);
-                    BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
-                    PixelComponentEnum srcComponents = srcA->getPixelComponents();
-                    if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
-                        throwSuiteStatusException(kOfxStatErrImageFormat);
+                    if (srcA) {
+                        checkBadRenderScaleOrField(srcA, args);
+                        BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
+                        PixelComponentEnum srcComponents = srcA->getPixelComponents();
+                        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+                            throwSuiteStatusException(kOfxStatErrImageFormat);
+                        }
                     }
 #                 endif
 #ifdef OFX_EXTENSIONS_NUKE
@@ -1334,21 +1334,12 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
 
 
     OfxRectI maskRoD;
-    bool maskRoDValid = false;
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
-        if (!maskInvert) {
-            maskRoDValid = true;
-            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-            // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                identityClip = _srcClipB;
+    bool maskRoDValid = ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD);
+    // effect is identity if the renderWindow doesn't intersect the mask RoD
+    if ( maskRoDValid && !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+        identityClip = _srcClipB;
 
-                return true;
-            }
-        }
+        return true;
     }
 
     MergingFunctionEnum blendingOperator = (MergingFunctionEnum)_operation->getValueAtTime(args.time);
@@ -1981,6 +1972,31 @@ mRegisterPluginFactoryInstance(p8)
 mRegisterPluginFactoryInstance(p9)
 mRegisterPluginFactoryInstance(p10)
 mRegisterPluginFactoryInstance(p11)
+
+// Version 2: with Alpha-only images, the R checkboxes control the alpha channel,
+// and the A inputs after the first one are skipped outside of their image
+static MergePluginFactory<2,eMergePluginMerge>       r1(kPluginIdentifier, 2, 0);
+static MergePluginFactory<2,eMergePluginPlus>        r2(kPluginIdentifierSub "Plus", 2, 0);
+static MergePluginFactory<2,eMergePluginMatte>       r3(kPluginIdentifierSub "Matte", 2, 0);
+static MergePluginFactory<2,eMergePluginMultiply>    r4(kPluginIdentifierSub "Multiply", 2, 0);
+static MergePluginFactory<2,eMergePluginIn>          r5(kPluginIdentifierSub "In", 2, 0);
+static MergePluginFactory<2,eMergePluginOut>         r6(kPluginIdentifierSub "Out", 2, 0);
+static MergePluginFactory<2,eMergePluginScreen>      r7(kPluginIdentifierSub "Screen", 2, 0);
+static MergePluginFactory<2,eMergePluginMax>         r8(kPluginIdentifierSub "Max", 2, 0);
+static MergePluginFactory<2,eMergePluginMin>         r9(kPluginIdentifierSub "Min", 2, 0);
+static MergePluginFactory<2,eMergePluginAbsMinus>   r10(kPluginIdentifierSub "Difference", 2, 0);
+static MergePluginFactory<2,eMergePluginRoto>       r11(kPluginIdentifierSub "Roto", 2, 0);
+mRegisterPluginFactoryInstance(r1)
+mRegisterPluginFactoryInstance(r2)
+mRegisterPluginFactoryInstance(r3)
+mRegisterPluginFactoryInstance(r4)
+mRegisterPluginFactoryInstance(r5)
+mRegisterPluginFactoryInstance(r6)
+mRegisterPluginFactoryInstance(r7)
+mRegisterPluginFactoryInstance(r8)
+mRegisterPluginFactoryInstance(r9)
+mRegisterPluginFactoryInstance(r10)
+mRegisterPluginFactoryInstance(r11)
 
 // Keep backward compatibility following the change introduced in
 // https://github.com/NatronGitHub/Natron/issues/647

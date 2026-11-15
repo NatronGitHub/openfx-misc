@@ -85,6 +85,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamNormalizeLabel "Normalize", "Normalize the matrix coefficients so that their sum is 1."
 
 
+// index in the 3x3 matrix of row (or column) i of a dim x dim matrix (dim is 3 or 5):
+// a 5x5 matrix is folded as 0,1 -> 0, 2 -> 1, 3,4 -> 2
+static inline int
+foldIndexTo3x3(int i,
+               int dim)
+{
+    if (dim == 3) {
+        return i;
+    }
+
+    return (i < 2) ? 0 : ( (i == 2) ? 1 : 2 );
+}
+
 /// Matrix plugin
 template<int dim>
 struct CImgMatrixParams
@@ -133,10 +146,7 @@ public:
         int delta_pix_x = (int)std::ceil((dim * renderScale.x - 1)/2.);
         int delta_pix_y = (int)std::ceil((dim * renderScale.x - 1)/2.); // note: we only use renderScale.x
 
-        roi->x1 = rect.x1 - delta_pix_x;
-        roi->x2 = rect.x2 + delta_pix_x;
-        roi->y1 = rect.y1 - delta_pix_y;
-        roi->y2 = rect.y2 + delta_pix_y;
+        cimgPadRect(rect, delta_pix_x, delta_pix_y, roi);
     }
 
     virtual void render(const RenderArguments &args,
@@ -154,12 +164,13 @@ public:
         // - 3x3 if dim=3 and renderScale.x > 0.33 or dim=5 and renderScale.x > 0.4
         // - 5x5 if dim=5 and renderScale.x > 0.6
         const OfxPointD& renderScale = args.renderScale;
+        double sum = 0.;
+        for (int i=0; i < dim * dim; ++i) {
+            sum += params.coeff[i];
+        }
         double s = 1;
         if (params.normalize) {
-            s = 0.;
-            for (int i=0; i < dim * dim; ++i) {
-                s += params.coeff[i];
-            }
+            s = sum;
             if (s == 0.) {
                 ImageEffect::setPersistentMessage(OFX::Message::eMessageError, "", "Matrix sums to zero, cannot normalize");
                 throwSuiteStatusException(kOfxStatFailed);
@@ -194,7 +205,16 @@ public:
         } else if ( (dim == 3 && renderScale.x > 1./3.) ||
                     (dim == 5 && renderScale.x > 0.4) ) {
             CImg<cimgpix_t> res(cimg.width(), cimg.height(), cimg.depth(), cimg.spectrum());
-            double *M = (double*)params.coeff;
+            // for a 5x5 matrix, fold the outer rows/columns into the 3x3 matrix,
+            // so that the sum of coefficients is kept
+            double M[9] = {0., 0., 0., 0., 0., 0., 0., 0., 0.};
+            for (int i = 0; i < dim; ++i) {
+                const int i3 = foldIndexTo3x3(i, dim);
+                for (int j = 0; j < dim; ++j) {
+                    const int j3 = foldIndexTo3x3(j, dim);
+                    M[i3 * 3 + j3] += params.coeff[i * dim + j];
+                }
+            }
             double Mpp = M[0]; double Mcp = M[1]; double Mnp = M[2];
             double Mpc = M[3]; double Mcc = M[4]; double Mnc = M[5];
             double Mpn = M[6]; double Mcn = M[7]; double Mnn = M[8];
@@ -215,10 +235,11 @@ public:
             }
 
         } else {
+            // the matrix is reduced to a 1x1 matrix: the sum of its coefficients
             if (params.normalize) {
                 return;
             }
-            cimg *= s;
+            cimg *= sum;
         }
     }
 
@@ -241,7 +262,7 @@ public:
                 }
             }
         }
-        return false;
+        return true;
     };
 
     virtual void changedParam(const InstanceChangedArgs &args,

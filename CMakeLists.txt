@@ -77,6 +77,7 @@ endif()
 # C++ Include directories
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Misc)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/include)
 INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/Plugins/include)
@@ -432,6 +433,7 @@ FILE(GLOB CIMG_SOURCES
   "CImg/Distance/CImgDistance.cpp"
   "CImg/Equalize/CImgEqualize.cpp"
   "CImg/Erode/CImgDilate.cpp"
+  "CImg/Erode/CImgErodeDilate.h"
   "CImg/Erode/CImgErode.cpp"
   "CImg/ErodeSmooth/CImgErodeSmooth.cpp"
   "CImg/Expression/CImgExpression.cpp"

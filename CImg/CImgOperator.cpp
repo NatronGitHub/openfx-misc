@@ -24,23 +24,66 @@ using namespace OFX;
 CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle handle,
                                                            const char* srcAClipName, //!< should be either kOfxImageEffectSimpleSourceClipName or "A" if you want this to be the default output when plugin is disabled
                                                            const char* srcBClipName,
-                                                           bool usesMask, // true if the mask parameter to render should be a single-channel image containing the mask
-                                                           bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                                            bool supportsTiles,
                                                            bool supportsMultiResolution,
                                                            bool supportsRenderScale,
-                                                           bool defaultUnpremult,
-                                                           bool defaultProcessAlphaOnRGBA)
-    : CImgFilterPluginHelperBase(handle, usesMask, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA)
+                                                           bool defaultUnpremult)
+    // usesMask and supportsComponentRemapping are not used by operators
+    : CImgFilterPluginHelperBase(handle, /*usesMask=*/false, /*supportsComponentRemapping=*/false, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, /*isFilter=*/ false)
     , _srcAClip(NULL)
     , _srcBClip(NULL)
     , _srcAClipName(srcAClipName)
     , _srcBClipName(srcBClipName)
+    , _ignoreMix(false)
 {
     _srcAClip = fetchClip(_srcAClipName);
     assert( _srcAClip && (!_srcAClip->isConnected() || _srcAClip->getPixelComponents() == ePixelComponentRGB || _srcAClip->getPixelComponents() == ePixelComponentRGBA) );
     _srcBClip = fetchClip(_srcBClipName);
-    assert( _srcBClip && (!_srcBClip->isConnected() || _srcAClip->getPixelComponents() == ePixelComponentRGB || _srcBClip->getPixelComponents() == ePixelComponentRGBA) );
+    assert( _srcBClip && (!_srcBClip->isConnected() || _srcBClip->getPixelComponents() == ePixelComponentRGB || _srcBClip->getPixelComponents() == ePixelComponentRGBA) );
+}
+
+void
+CImgOperatorPluginHelperBase::getSrcImageData(const Image* img,
+                                              Clip* clip,
+                                              const RenderArguments &args,
+                                              BitDepthEnum dstBitDepth,
+                                              PixelComponentEnum dstPixelComponents,
+                                              SrcImageData* data)
+{
+    if (!img) {
+        data->pixelData = NULL;
+        data->bounds.x1 = data->bounds.y1 = data->bounds.x2 = data->bounds.y2 = 0;
+        data->rod.x1 = data->rod.y1 = data->rod.x2 = data->rod.y2 = 0;
+        data->pixelComponents = clip ? clip->getPixelComponents() : ePixelComponentNone;
+        data->pixelComponentCount = 0;
+        data->bitDepth = clip ? clip->getPixelDepth() : eBitDepthNone;
+        data->rowBytes = 0;
+
+        return;
+    }
+# ifndef NDEBUG
+    if ( (img->getPixelDepth() != dstBitDepth) || (img->getPixelComponents() != dstPixelComponents) ) {
+        throwSuiteStatusException(kOfxStatErrImageFormat);
+    }
+    checkBadRenderScaleOrField(img, args);
+# else
+    unused(dstBitDepth);
+    unused(dstPixelComponents);
+# endif
+    data->pixelData = img->getPixelData();
+    data->bounds = img->getBounds();
+    // = img->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
+    if (_supportsTiles && clip) {
+        Coords::toPixelEnclosing(clip->getRegionOfDefinition(args.time), args.renderScale, clip->getPixelAspectRatio(), &data->rod);
+    } else {
+        // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
+        // in hosts that do not support tiles (such as Sony Catalyst Edit), the image RoD is the image Bounds anyway.
+        data->rod = data->bounds;
+    }
+    data->pixelComponents = img->getPixelComponents();
+    data->pixelComponentCount = img->getPixelComponentCount();
+    data->bitDepth = img->getPixelDepth();
+    data->rowBytes = img->getRowBytes();
 }
 
 void
@@ -95,10 +138,7 @@ CImgOperatorPluginHelperBase::describeInContextBegin(ImageEffectDescriptor &desc
                                                      bool supportsRGB,
                                                      bool supportsXY,
                                                      bool supportsAlpha,
-                                                     bool supportsTiles,
-                                                     bool /*processRGB*/,
-                                                     bool /*processAlpha*/,
-                                                     bool /*processIsSecret*/)
+                                                     bool supportsTiles)
 {
     ClipDescriptor *srcBClip = desc.defineClip(srcBClipName);
 

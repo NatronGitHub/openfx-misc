@@ -74,12 +74,38 @@ private:
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
+    double getSourceTime(double time);
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
     ChoiceParam *_rounding;
 };
+
+// the source frame for the given output time, rounded as specified by the Rounding parameter
+double
+NoTimeBlurPlugin::getSourceTime(double time)
+{
+    RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
+    double srcTime = time;
+
+    switch (rounding) {
+    case eRoundingRint:
+        srcTime = std::floor(time + 0.5);
+        break;
+    case eRoundingFloor:
+        srcTime = std::floor(time);
+        break;
+    case eRoundingCeil:
+        srcTime = std::ceil(time);
+        break;
+    case eRoundingNone:
+        break;
+    }
+
+    return srcTime;
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -108,21 +134,7 @@ NoTimeBlurPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-    RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
-    double srcTime = time;
-    switch (rounding) {
-    case eRoundingRint:
-        srcTime = std::floor(time + 0.5);
-        break;
-    case eRoundingFloor:
-        srcTime = std::floor(time);
-        break;
-    case eRoundingCeil:
-        srcTime = std::ceil(time);
-        break;
-    case eRoundingNone:
-        break;
-    }
+    double srcTime = getSourceTime(time);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(srcTime) : 0 );
 # ifndef NDEBUG
@@ -146,23 +158,7 @@ NoTimeBlurPlugin::isIdentity(const IsIdentityArguments &args,
                              double &identityTime
                              , int& /*view*/, std::string& /*plane*/)
 {
-    const double time = args.time;
-    RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
-    double srcTime = time;
-
-    switch (rounding) {
-    case eRoundingRint:
-        srcTime = std::floor(time + 0.5);
-        break;
-    case eRoundingFloor:
-        srcTime = std::floor(time);
-        break;
-    case eRoundingCeil:
-        srcTime = std::ceil(time);
-        break;
-    case eRoundingNone:
-        break;
-    }
+    double srcTime = getSourceTime(args.time);
 
     identityClip = _srcClip;
     identityTime = srcTime;
@@ -174,23 +170,7 @@ bool
 NoTimeBlurPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
-    const double time = args.time;
-    RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
-    double srcTime = time;
-
-    switch (rounding) {
-    case eRoundingRint:
-        srcTime = std::floor(time + 0.5);
-        break;
-    case eRoundingFloor:
-        srcTime = std::floor(time);
-        break;
-    case eRoundingCeil:
-        srcTime = std::ceil(time);
-        break;
-    case eRoundingNone:
-        break;
-    }
+    double srcTime = getSourceTime(args.time);
 
     rod = _srcClip->getRegionOfDefinition(srcTime);
 

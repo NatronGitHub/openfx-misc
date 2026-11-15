@@ -65,6 +65,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginGuidedName          "SmoothBilateralGuidedCImg"
 #define kPluginGuidedIdentifier    "net.sf.cimg.CImgBilateralGuided"
+// History (BilateralGuided):
+// version 1.0: initial version
+// version 2.0: use kNatronOfxParamProcess* parameters
+// version 3.0: the Mix parameter is applied (it was ignored before)
+#define kPluginGuidedVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginGuidedVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginGuidedDescription \
     "Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B. " \
     "Uses the 'blur_bilateral' function from the CImg library.\n" \
@@ -73,7 +79,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kSupportsComponentRemapping 1
-#define kSupportsTiles 1
+#define kSupportsTiles 0 // blur_bilateral uses a bilateral grid that depends on the image origin and value range
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
@@ -148,10 +154,7 @@ public:
     {
         int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x * params.iterations);
 
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        cimgPadRect(rect, delta_pix, delta_pix, roi);
     }
 
     virtual void render(const RenderArguments &args,
@@ -194,9 +197,12 @@ class CImgBilateralGuidedPlugin
 {
 public:
 
-    CImgBilateralGuidedPlugin(OfxImageEffectHandle handle)
-        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+    CImgBilateralGuidedPlugin(OfxImageEffectHandle handle,
+                              int majorVersion)
+        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
+        // versions < 3 ignored the Mix parameter
+        _ignoreMix = (majorVersion < 3);
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
         _iterations = fetchIntParam(kParamIterations);
@@ -220,10 +226,7 @@ public:
     {
         int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x * params.iterations);
 
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        cimgPadRect(rect, delta_pix, delta_pix, roi);
     }
 
     virtual void render(const cimg_library::CImg<cimgpix_t>& srcA,
@@ -359,10 +362,14 @@ CImgBilateralPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new CImgBilateralPlugin(handle);
 }
 
-mDeclarePluginFactory(CImgBilateralGuidedPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CImgBilateralGuidedPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-CImgBilateralGuidedPluginFactory::describe(ImageEffectDescriptor& desc)
+CImgBilateralGuidedPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
+    if (majorVersion < kPluginGuidedVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
     // basic labels
     desc.setLabel(kPluginGuidedName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -389,8 +396,9 @@ CImgBilateralGuidedPluginFactory::describe(ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
+template<unsigned int majorVersion>
 void
-CImgBilateralGuidedPluginFactory::describeInContext(ImageEffectDescriptor& desc,
+CImgBilateralGuidedPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& desc,
                                                     ContextEnum context)
 {
     // create the clips and params
@@ -403,10 +411,7 @@ CImgBilateralGuidedPluginFactory::describeInContext(ImageEffectDescriptor& desc,
                                                                                   kSupportsRGB,
                                                                                   kSupportsXY,
                                                                                   kSupportsAlpha,
-                                                                                  kSupportsTiles,
-                                                                                  /*processRGB =*/ true,
-                                                                                  /*processAlpha =*/ false,
-                                                                                  /*processIsSecret =*/ false);
+                                                                                  kSupportsTiles);
 
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
@@ -447,16 +452,20 @@ CImgBilateralGuidedPluginFactory::describeInContext(ImageEffectDescriptor& desc,
     CImgBilateralGuidedPlugin::describeInContextEnd(desc, context, page);
 } // CImgBilateralGuidedPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-CImgBilateralGuidedPluginFactory::createInstance(OfxImageEffectHandle handle,
+CImgBilateralGuidedPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                  ContextEnum /*context*/)
 {
-    return new CImgBilateralGuidedPlugin(handle);
+    return new CImgBilateralGuidedPlugin(handle, majorVersion);
 }
 
 static CImgBilateralPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static CImgBilateralGuidedPluginFactory p2(kPluginGuidedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// BilateralGuided version 2 is kept for backward compatibility (Mix is ignored)
+static CImgBilateralGuidedPluginFactory<2> p2old(kPluginGuidedIdentifier, 0);
+static CImgBilateralGuidedPluginFactory<kPluginGuidedVersionMajor> p2(kPluginGuidedIdentifier, kPluginGuidedVersionMinor);
 mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2old)
 mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

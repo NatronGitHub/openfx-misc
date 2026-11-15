@@ -31,6 +31,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
@@ -303,85 +304,18 @@ public:
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-#     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
-        const bool a = _processA && (nComponents == 1 || nComponents == 4);
-        if (r) {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<true, true, true, true >(procWindow, rs); // RGBA
-                    } else {
-                        return process<true, true, true, false>(procWindow, rs); // RGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, true, false, true >(procWindow, rs); // RGbA
-                    } else {
-                        return process<true, true, false, false>(procWindow, rs); // RGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<true, false, true, true >(procWindow, rs); // RgBA
-                    } else {
-                        return process<true, false, true, false>(procWindow, rs); // RgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<true, false, false, true >(procWindow, rs); // RgbA
-                    } else {
-                        return process<true, false, false, false>(procWindow, rs); // Rgba
-                    }
-                }
-            }
-        } else {
-            if (g) {
-                if (b) {
-                    if (a) {
-                        return process<false, true, true, true >(procWindow, rs); // rGBA
-                    } else {
-                        return process<false, true, true, false>(procWindow, rs); // rGBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, true, false, true >(procWindow, rs); // rGbA
-                    } else {
-                        return process<false, true, false, false>(procWindow, rs); // rGba
-                    }
-                }
-            } else {
-                if (b) {
-                    if (a) {
-                        return process<false, false, true, true >(procWindow, rs); // rgBA
-                    } else {
-                        return process<false, false, true, false>(procWindow, rs); // rgBa
-                    }
-                } else {
-                    if (a) {
-                        return process<false, false, false, true >(procWindow, rs); // rgbA
-                    } else {
-                        return process<false, false, false, false>(procWindow, rs); // rgba
-                    }
-                }
-            }
-        }
-#     endif // ifndef __COVERITY__
+        ofxsProcessRGBA<nComponents>(*this, _processR, _processG, _processB, _processA, procWindow, rs);
     } // multiThreadProcessImages
 
-private:
-
-
+public:
+    // called by ofxsProcessRGBA()
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
         unused(rs);
-        assert( (!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4) );
+        assert( (!processR && !processG) || (nComponents >= 2) );
+        assert( !processB || (nComponents == 3 || nComponents == 4) );
         assert( !processA || (nComponents == 1 || nComponents == 4) );
-        assert(nComponents == 3 || nComponents == 4);
         float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         // set up a random number generator and set the seed
@@ -568,6 +502,14 @@ private:
                     if (!processA) {
                         dstPix[0] = srcPix ? srcPix[0] : PIX();
                     }
+                } else if (nComponents == 2) {
+                    // XY images: copy the unprocessed channels (R is X, G is Y)
+                    if (!processR) {
+                        dstPix[0] = srcPix ? srcPix[0] : PIX();
+                    }
+                    if (!processG) {
+                        dstPix[1] = srcPix ? srcPix[1] : PIX();
+                    }
                 } else if ( (nComponents == 3) || (nComponents == 4) ) {
                     if (!processR) {
                         dstPix[0] = srcPix ? srcPix[0] : PIX();
@@ -615,16 +557,12 @@ public:
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
-                             _dstClip->getPixelComponents() == ePixelComponentRGBA ||
-                             _dstClip->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _dstClip && (!_dstClip->isConnected() || OFX_COMPONENTS_OK(_dstClip->getPixelComponents())) );
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                               _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
+                ( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) ) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
-        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         // TODO: fetch noise parameters
 
@@ -761,6 +699,10 @@ QuantizePlugin::setupAndProcess(QuantizeProcessorBase &processor,
     _processA->getValueAtTime(time, processA);
 
     double colors = _colors->getValueAtTime(time);
+    if (colors < kParamColorsMin) {
+        // fewer than 2 levels is meaningless and would divide by (colors - 1) <= 0
+        colors = kParamColorsMin;
+    }
     DitherEnum dither = (DitherEnum)_dither->getValueAtTime(time);
     bool staticSeed = _staticSeed->getValueAtTime(time);
     uint32_t seed = hash( (unsigned int)_seed->getValueAtTime(time) );
@@ -1061,7 +1003,7 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamColors);
         param->setLabel(kParamColorsLabel);
         param->setHint(kParamColorsHint);
-        param->setRange(0, DBL_MAX);
+        param->setRange(kParamColorsMin, DBL_MAX);
         param->setDisplayRange(kParamColorsMin, kParamColorsMax);
         param->setDefault(kParamColorsDefault);
         if (page) {

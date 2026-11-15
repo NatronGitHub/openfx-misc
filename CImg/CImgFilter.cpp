@@ -23,11 +23,6 @@ using namespace OFX;
 
 #if defined(HAVE_THREAD_LOCAL)
 thread_local ImageEffect *tls::gImageEffect = 0;
-#elif defined(HAVE_PTHREAD)
-#include <assert.h>
-#include <pthread.h>
-pthread_key_t tls::gImageEffect_key;
-pthread_once_t tls::gImageEffect_once = PTHREAD_ONCE_INIT;
 #endif
 
 
@@ -280,12 +275,25 @@ void
 CImgFilterPluginHelperBase::describeInContextEnd(ImageEffectDescriptor &desc,
                                                  ContextEnum /*context*/,
                                                  PageParamDescriptor* page,
-                                                 bool hasUnpremult)
+                                                 bool hasUnpremult,
+                                                 bool hasMask)
 {
     if (hasUnpremult) {
         ofxsPremultDescribeParams(desc, page);
     }
-    ofxsMaskMixDescribeParams(desc, page);
+    if (hasMask) {
+        ofxsMaskMixDescribeParams(desc, page);
+    } else {
+        ofxsMixDescribeParams(desc, page);
+        // there is no mask clip: keep the maskInvert param (secret) for backward compatibility
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMaskInvert);
+        param->setLabel(kParamMaskInvertLabel);
+        param->setHint(kParamMaskInvertHint);
+        param->setIsSecretAndDisabled(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     if (hasUnpremult) {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
@@ -299,29 +307,65 @@ CImgFilterPluginHelperBase::describeInContextEnd(ImageEffectDescriptor &desc,
     }
 }
 
-/* set up and run a copy processor */
-void
-CImgFilterPluginHelperBase::setupAndFill(PixelProcessorFilterBase & processor,
-                                         const OfxRectI &renderWindow,
-                                         const OfxPointD &renderScale,
-                                         void *dstPixelData,
-                                         const OfxRectI& dstBounds,
-                                         PixelComponentEnum dstPixelComponents,
-                                         int dstPixelComponentCount,
-                                         BitDepthEnum dstPixelDepth,
-                                         int dstRowBytes)
+PixelProcessorFilterBase*
+CImgFilterPluginHelperBase::createPixelCopier(int dstPixelComponentCount)
 {
-    assert(dstPixelData &&
-           dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
-           dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
-    // set the images
-    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstPixelDepth, dstRowBytes);
+    switch (dstPixelComponentCount) {
+    case 4:
+        return new PixelCopier<float, 4>(*this);
+    case 3:
+        return new PixelCopier<float, 3>(*this);
+    case 2:
+        return new PixelCopier<float, 2>(*this);
+    case 1:
+        return new PixelCopier<float, 1>(*this);
+    default:
+        return NULL;
+    }
+}
 
-    // set the render window
-    processor.setRenderWindow(renderWindow, renderScale);
+PixelProcessorFilterBase*
+CImgFilterPluginHelperBase::createSrcToTmpCopier(bool hasSrc,
+                                                 PixelComponentEnum dstPixelComponents,
+                                                 int dstPixelComponentCount)
+{
+    if (!hasSrc) {
+        // no src, fill with black & transparent
+        return new BlackFiller<float>(*this, dstPixelComponentCount);
+    }
+    if (dstPixelComponents == ePixelComponentRGBA) {
+        return new PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this);
+    }
 
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
+    // just copy, no premult
+    return createPixelCopier(dstPixelComponentCount);
+}
+
+PixelProcessorFilterBase*
+CImgFilterPluginHelperBase::createTmpToDstCopier(PixelComponentEnum dstPixelComponents,
+                                                 int dstPixelComponentCount,
+                                                 bool doMasking)
+{
+    if (dstPixelComponents == ePixelComponentRGBA) {
+        return new PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1>(*this);
+    }
+    // just copy, no premult
+    switch (dstPixelComponentCount) {
+    case 4:
+        return doMasking ? static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 4, 1, true>(*this) )
+                         : static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 4, 1, false>(*this) );
+    case 3:
+        return doMasking ? static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 3, 1, true>(*this) )
+                         : static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 3, 1, false>(*this) );
+    case 2:
+        return doMasking ? static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 2, 1, true>(*this) )
+                         : static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 2, 1, false>(*this) );
+    case 1:
+        return doMasking ? static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 1, 1, true>(*this) )
+                         : static_cast<PixelProcessorFilterBase*>( new PixelCopierMaskMix<float, 1, 1, false>(*this) );
+    default:
+        return NULL;
+    }
 }
 
 /* set up and run a copy processor */
@@ -406,7 +450,8 @@ CImgFilterPluginHelperBase::maskLineIsZero(const Image* mask,
         }
         const OfxRectI& maskBounds = mask->getBounds();
         // if part of the line is out of maskbounds, then mask is 1 at these places
-        if ( (y < maskBounds.y1) || (maskBounds.y2 <= y) || (x1 < maskBounds.x1) || (maskBounds.x2 <= x2) ) {
+        // (x2 and maskBounds.x2 are both exclusive bounds)
+        if ( (y < maskBounds.y1) || (maskBounds.y2 <= y) || (x1 < maskBounds.x1) || (maskBounds.x2 < x2) ) {
             return false;
         }
         // the whole line is within the mask
@@ -461,7 +506,8 @@ CImgFilterPluginHelperBase::maskColumnIsZero(const Image* mask,
     if (maskInvert) {
         const OfxRectI& maskBounds = mask->getBounds();
         // if part of the column is out of maskbounds, then mask is 1 at these places
-        if ( (x < maskBounds.x1) || (maskBounds.x2 <= x) || (y1 < maskBounds.y1) || (maskBounds.y2 <= y2) ) {
+        // (y2 and maskBounds.y2 are both exclusive bounds)
+        if ( (x < maskBounds.x1) || (maskBounds.x2 <= x) || (y1 < maskBounds.y1) || (maskBounds.y2 < y2) ) {
             return false;
         }
         // the whole column is within the mask

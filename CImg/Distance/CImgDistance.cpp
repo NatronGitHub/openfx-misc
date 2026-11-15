@@ -143,13 +143,9 @@ public:
                         const CImgDistanceParams& /*params*/,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 0; // does not support tiles anyway
+        // does not support tiles: the whole image is processed anyway
         assert(!kSupportsTiles);
-
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        *roi = rect;
     }
 
     virtual void render(const RenderArguments &args,
@@ -197,7 +193,7 @@ public:
             cimg.swap(cimg_save);
             cimg_pragma_openmp(parallel for cimg_openmp_if(cimg.size()>=8192))
             // compute the negative part first
-            cimg_rof(cimg,ptrd,cimgpix_t) *ptrd = (*ptrd == 0);
+            cimg_rof_openmp(cimg,ptrd,cimgpix_t) *ptrd = (*ptrd == 0);
         }
 
         for (int i = 0; i < niter; ++i) {

@@ -224,6 +224,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.0: use kNatronOfxParamProcess* parameters
 // version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
 // version 4.1: added cropToFormat parameter on Natron
+// EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5)
+#define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -1133,13 +1135,30 @@ unpremult(CImg<cimgpix_t> &cimg)
 }
 
 
+// convert chromaticity (x,y) and luminance Y to the X and Z tristimulus values
+static inline void
+xyYToXYZ(float x,
+         float y,
+         float Y,
+         float *X,
+         float *Z)
+{
+    // y is zero where the chrominance is zero (e.g. black areas): avoid NaN
+    const float Yy = (y != 0.f) ? (Y / y) : 0.f;
+
+    *X = x * Yy;
+    *Z = (1.f - x - y) * Yy;
+}
+
+
 class CImgBlurPlugin
     : public CImgFilterPluginHelper<CImgBlurParams, false>
 {
 public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle,
-                   BlurPluginEnum blurPlugin = eBlurPluginBlur)
+                   BlurPluginEnum blurPlugin = eBlurPluginBlur,
+                   int majorVersion = kPluginVersionMajor)
         : CImgFilterPluginHelper<CImgBlurParams, false>(handle, /*usesMask=*/false,
                                                         blurPlugin == eBlurPluginChromaBlur ? false : kSupportsComponentRemapping,
                                                         kSupportsTiles,
@@ -1147,6 +1166,7 @@ public:
                                                         kSupportsRenderScale,
                                                         kDefaultUnpremult)
         , _blurPlugin(blurPlugin)
+        , _edgeDetectRMSSignFix(blurPlugin == eBlurPluginEdgeDetect && majorVersion >= 5)
         , _sharpenSoftenAmount(NULL)
         , _size(NULL)
         , _erodeSize(NULL)
@@ -1510,8 +1530,6 @@ public:
             _blurPlugin == eBlurPluginEdgeExtend ||
             _blurPlugin == eBlurPluginEdgeDetect) {
             params.expandRoD = _expandRoD->getValueAtTime(time);
-        } else if (_blurPlugin == eBlurPluginErodeBlur) {
-            params.expandRoD = true;
         } else {
             assert(_blurPlugin == eBlurPluginLaplacian ||
                    _blurPlugin == eBlurPluginSharpen ||
@@ -1567,10 +1585,7 @@ public:
                 }
                 int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
                 int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
-                dstRoD->x1 -= delta_pixX + params.orderX;
-                dstRoD->x2 += delta_pixX + params.orderX;
-                dstRoD->y1 -= delta_pixY + params.orderY;
-                dstRoD->y2 += delta_pixY + params.orderY;
+                cimgPadRect(*dstRoD, delta_pixX + params.orderX, delta_pixY + params.orderY, dstRoD);
             } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
                 if ( (sx <= 1) && (sy <= 1) && (params.orderX == 0) && (params.orderY == 0) ) {
                     return false; // identity
@@ -1579,10 +1594,7 @@ public:
                              (params.filter == eFilterTriangle ? 2 : 3) );
                 int delta_pixX = iter * (int)std::ceil( (sx - 1) / 2 );
                 int delta_pixY = iter * (int)std::ceil( (sy - 1) / 2 );
-                dstRoD->x1 -= delta_pixX + (params.orderX > 0);
-                dstRoD->x2 += delta_pixX + (params.orderX > 0);
-                dstRoD->y1 -= delta_pixY + (params.orderY > 0);
-                dstRoD->y2 += delta_pixY + (params.orderY > 0);
+                cimgPadRect(*dstRoD, delta_pixX + (params.orderX > 0), delta_pixY + (params.orderY > 0), dstRoD);
             } else {
                 assert(false);
             }
@@ -1656,21 +1668,24 @@ public:
 
             int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
             int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
-            roi->x1 = rect.x1 - delta_pixX - params.orderX;
-            roi->x2 = rect.x2 + delta_pixX + params.orderX;
-            roi->y1 = rect.y1 - delta_pixY - params.orderY;
-            roi->y2 = rect.y2 + delta_pixY + params.orderY;
+            cimgPadRect(rect, delta_pixX + params.orderX, delta_pixY + params.orderY, roi);
         } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
             int iter = ( params.filter == eFilterBox ? 1 :
                          (params.filter == eFilterTriangle ? 2 : 3) );
             int delta_pixX = iter * static_cast<int>(std::floor( (sx - 1) / 2 ) + 1);
             int delta_pixY = iter * static_cast<int>(std::floor( (sy - 1) / 2 ) + 1);
-            roi->x1 = rect.x1 - delta_pixX - (params.orderX > 0);
-            roi->x2 = rect.x2 + delta_pixX + (params.orderX > 0);
-            roi->y1 = rect.y1 - delta_pixY - (params.orderY > 0);
-            roi->y2 = rect.y2 + delta_pixY + (params.orderY > 0);
+            cimgPadRect(rect, delta_pixX + (params.orderX > 0), delta_pixY + (params.orderY > 0), roi);
         } else {
             assert(false);
+        }
+        if (_blurPlugin == eBlurPluginEdgeDetect) {
+            // EdgeDetect applies an erosion/dilation and non-maxima suppression after edge detection
+            // (orderX = orderY = 1, so we did not return early above)
+            const double par = (params.par != 0.) ? params.par : 1.;
+            const int nms = params.edgeDetectNMS ? 1 : 0;
+            const int erodeX = (int)std::floor(std::abs(params.erodeSize) / par * renderScale.x) + nms;
+            const int erodeY = (int)std::floor(std::abs(params.erodeSize) * renderScale.y) + nms;
+            cimgPadRect(*roi, erodeX, erodeY, roi);
         }
     }
 
@@ -1892,8 +1907,8 @@ public:
                 case eColorspaceRec709: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
-                        float X = *px * Y / *py;
-                        float Z = (1.f - *px - *py) * Y / *py;
+                        float X, Z;
+                        xyYToXYZ(*px, *py, Y, &X, &Z);
                         float r, g, b;
                         Color::xyz_to_rgb709(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1910,8 +1925,8 @@ public:
                 case eColorspaceRec2020: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
-                        float X = *px * Y / *py;
-                        float Z = (1.f - *px - *py) * Y / *py;
+                        float X, Z;
+                        xyYToXYZ(*px, *py, Y, &X, &Z);
                         float r, g, b;
                         Color::xyz_to_rgb2020(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1928,8 +1943,8 @@ public:
                 case eColorspaceACESAP0: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
-                        float X = *px * Y / *py;
-                        float Z = (1.f - *px - *py) * Y / *py;
+                        float X, Z;
+                        xyYToXYZ(*px, *py, Y, &X, &Z);
                         float r, g, b;
                         Color::xyz_to_rgbACESAP0(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1946,8 +1961,8 @@ public:
                 case eColorspaceACESAP1: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
-                        float X = *px * Y / *py;
-                        float Z = (1.f - *px - *py) * Y / *py;
+                        float X, Z;
+                        xyYToXYZ(*px, *py, Y, &X, &Z);
                         float r, g, b;
                         Color::xyz_to_rgbACESAP1(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -2239,13 +2254,14 @@ public:
                     double gx = grad[0](x, y, 0, c);
                     double gy = grad[1](x, y, 0, c);
                     sumsq += gx * gx + gy * gy;
+                    // versions < 5 tested std::abs(g) < 0, which is always false
                     if (std::abs(gx) > std::abs(gy)) {
-                        if (std::abs(gx) < 0) {
+                        if (_edgeDetectRMSSignFix && gx < 0) {
                             gx = -gx;
                             gy = -gy;
                         }
                     } else {
-                        if (std::abs(gy) < 0) {
+                        if (_edgeDetectRMSSignFix && gy < 0) {
                             gx = -gx;
                             gy = -gy;
                         }
@@ -2329,14 +2345,16 @@ public:
 
         if ( abort() ) { return; }
 
+        // par is 0 if the source is not connected
+        const double par = (params.par != 0.) ? params.par : 1.;
         if ( params.erodeSize > 0 ) {
-            cimg.erode( (unsigned int)std::floor((std::max)(0., params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
+            cimg.erode( (unsigned int)std::floor((std::max)(0., params.erodeSize / par) * args.renderScale.x) * 2 + 1,
                        (unsigned int)std::floor((std::max)(0., params.erodeSize) * args.renderScale.y) * 2 + 1 );
         }
         if ( abort() ) { return; }
 
         if ( params.erodeSize < 0 ) {
-            cimg.dilate( (unsigned int)std::floor((std::max)(0., -params.erodeSize / params.par) * args.renderScale.x) * 2 + 1,
+            cimg.dilate( (unsigned int)std::floor((std::max)(0., -params.erodeSize / par) * args.renderScale.x) * 2 + 1,
                         (unsigned int)std::floor((std::max)(0., -params.erodeSize) * args.renderScale.y) * 2 + 1 );
         }
         if (params.edgeDetectNMS) {
@@ -2468,6 +2486,7 @@ private:
 
     // params
     const BlurPluginEnum _blurPlugin;
+    const bool _edgeDetectRMSSignFix; // EdgeDetect versions < 5 never flipped the gradient sign in RMS mode
     DoubleParam *_sharpenSoftenAmount;
     Double2DParam *_size;
     DoubleParam *_erodeSize;
@@ -2501,7 +2520,7 @@ CImgBlurPlugin::describe(ImageEffectDescriptor& desc,
                          int /*minorVersion*/,
                          BlurPluginEnum blurPlugin)
 {
-    if (majorVersion < kPluginVersionMajor) {
+    if ( majorVersion < ( (blurPlugin == eBlurPluginEdgeDetect) ? kPluginVersionMajorEdgeDetect : kPluginVersionMajor ) ) {
         desc.setIsDeprecated(true);
     }
     // basic labels
@@ -3246,7 +3265,7 @@ ImageEffect*
 CImgEdgeDetectPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                           ContextEnum /*context*/)
 {
-    return new CImgBlurPlugin(handle, eBlurPluginEdgeDetect);
+    return new CImgBlurPlugin(handle, eBlurPluginEdgeDetect, majorVersion);
 }
 
 
@@ -3260,6 +3279,9 @@ mRegisterPluginFactoryInstance(oldp1)
 mRegisterPluginFactoryInstance(oldp2)
 mRegisterPluginFactoryInstance(oldp3)
 mRegisterPluginFactoryInstance(oldp4)
+// EdgeDetect version 4 is kept for backward compatibility (RMS gradient direction)
+static CImgEdgeDetectPluginFactory<kPluginVersionMajor> oldp9(kPluginIdentifierEdgeDetect, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(oldp9)
 
 static CImgBlurPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
 static CImgLaplacianPluginFactory<kPluginVersionMajor> p2(kPluginIdentifierLaplacian, kPluginVersionMinor);
@@ -3269,7 +3291,7 @@ static CImgErodeBlurPluginFactory<kPluginVersionMajor> p5(kPluginIdentifierErode
 static CImgSharpenPluginFactory<kPluginVersionMajor> p6(kPluginIdentifierSharpen, kPluginVersionMinor);
 static CImgSoftenPluginFactory<kPluginVersionMajor> p7(kPluginIdentifierSoften, kPluginVersionMinor);
 static CImgEdgeExtendPluginFactory<kPluginVersionMajor> p8(kPluginIdentifierEdgeExtend, kPluginVersionMinor);
-static CImgEdgeDetectPluginFactory<kPluginVersionMajor> p9(kPluginIdentifierEdgeDetect, kPluginVersionMinor);
+static CImgEdgeDetectPluginFactory<kPluginVersionMajorEdgeDetect> p9(kPluginIdentifierEdgeDetect, 0);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)

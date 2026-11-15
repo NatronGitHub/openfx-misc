@@ -402,10 +402,7 @@ public:
                 }
                 int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
                 int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
-                dstRoD->x1 = srcRoD.x1 - delta_pixX;
-                dstRoD->x2 = srcRoD.x2 + delta_pixX;
-                dstRoD->y1 = srcRoD.y1 - delta_pixY;
-                dstRoD->y2 = srcRoD.y2 + delta_pixY;
+                cimgPadRect(srcRoD, delta_pixX, delta_pixY, dstRoD);
             } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
                 if ( (sx <= 1) && (sy <= 1) ) {
                     return false; // identity
@@ -414,10 +411,7 @@ public:
                              (params.filter == eFilterTriangle ? 2 : 3) );
                 int delta_pixX = iter * static_cast<int>( std::ceil( (sx - 1) / 2 ) );
                 int delta_pixY = iter * static_cast<int>( std::ceil( (sy - 1) / 2 ) );
-                dstRoD->x1 = srcRoD.x1 - delta_pixX;
-                dstRoD->x2 = srcRoD.x2 + delta_pixX;
-                dstRoD->y1 = srcRoD.y1 - delta_pixY;
-                dstRoD->y2 = srcRoD.y2 + delta_pixY;
+                cimgPadRect(srcRoD, delta_pixX, delta_pixY, dstRoD);
             } else {
                 assert(false);
             }
@@ -450,19 +444,13 @@ public:
 
             int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
             int delta_pixY = (std::max)( 3, (int)std::ceil(sy * 1.5) );
-            roi->x1 = rect.x1 - delta_pixX;
-            roi->x2 = rect.x2 + delta_pixX;
-            roi->y1 = rect.y1 - delta_pixY;
-            roi->y2 = rect.y2 + delta_pixY;
+            cimgPadRect(rect, delta_pixX, delta_pixY, roi);
         } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
             int iter = ( params.filter == eFilterBox ? 1 :
                          (params.filter == eFilterTriangle ? 2 : 3) );
             int delta_pixX = iter * static_cast<int>(std::floor( (sx - 1) / 2 ) + 1);
             int delta_pixY = iter * static_cast<int>(std::floor( (sy - 1) / 2 ) + 1);
-            roi->x1 = rect.x1 - delta_pixX;
-            roi->x2 = rect.x2 + delta_pixX;
-            roi->y1 = rect.y1 - delta_pixY;
-            roi->y2 = rect.y2 + delta_pixY;
+            cimgPadRect(rect, delta_pixX, delta_pixY, roi);
         } else {
             assert(false);
         }
@@ -487,9 +475,15 @@ public:
         if (rmax == rmin) {
             return;
         }
+        if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
+            // nothing to do: return before the image is transformed
+            if ( (sx / 2.4 < 0.1) && (sy / 2.4 < 0.1) ) {
+                return;
+            }
+        }
         // scale to [0,1]
         cimg_pragma_openmp(parallel for if (cimg.size()>=4096))
-        cimg_rof(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - rmin) / (rmax - rmin) + ERODESMOOTH_OFFSET );
+        cimg_rof_openmp(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - rmin) / (rmax - rmin) + ERODESMOOTH_OFFSET );
 
         // see "Robust local max-min filters by normalized power-weighted filtering" by L.J. van Vliet
         // http://dx.doi.org/10.1109/ICPR.2004.1334273
@@ -499,7 +493,7 @@ public:
             const double vmin = std::pow( (double)ERODESMOOTH_MIN, (double)1. / params.exponent );
             //printf("%g\n",vmin);
             cimg_pragma_openmp(parallel for if (denom.size()>=4096))
-            cimg_rof(denom, ptrd, cimgpix_t) * ptrd = (cimgpix_t)std::pow( (double)( (*ptrd < 0. ? 0. : *ptrd) + vmin ), params.exponent ); // C++98 and C++11 both have std::pow(double,int)
+            cimg_rof_openmp(denom, ptrd, cimgpix_t) * ptrd = (cimgpix_t)std::pow( (double)( (*ptrd < 0. ? 0. : *ptrd) + vmin ), params.exponent ); // C++98 and C++11 both have std::pow(double,int)
 
             cimg.mul(denom);
 
@@ -508,9 +502,6 @@ public:
             if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
                 float sigmax = (float)(sx / 2.4);
                 float sigmay = (float)(sy / 2.4);
-                if ( (sigmax < 0.1) && (sigmay < 0.1) ) {
-                    return;
-                }
                 if (params.filter == eFilterGaussian) {
                     cimg.vanvliet(sigmax, 0, 'x', (bool)params.boundary_i);
                     if ( abort() ) { return; }
@@ -550,7 +541,7 @@ public:
 
         // scale to [rmin,rmax]
         cimg_pragma_openmp(parallel for if (cimg.size()>=4096))
-        cimg_rof(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - ERODESMOOTH_OFFSET) * (rmax - rmin) + rmin );
+        cimg_rof_openmp(cimg, ptrd, cimgpix_t) * ptrd = (cimgpix_t)( (*ptrd - ERODESMOOTH_OFFSET) * (rmax - rmin) + rmin );
     } // render
 
     virtual bool isIdentity(const IsIdentityArguments & /*args*/,

@@ -176,13 +176,9 @@ public:
                         const CImgInpaintParams& /*params*/,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 0; // does not support tiles anyway
+        // does not support tiles: the whole image is processed anyway
         assert(!kSupportsTiles);
-
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        *roi = rect;
     }
 
     virtual void render(const RenderArguments &args,
@@ -193,7 +189,6 @@ public:
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
     {
-        printf("%dx%d\n",cimg.width(), cimg.height());
         // PROCESSING.
         // This is the only place where the actual processing takes place
         if ( (params.patch_size <= 0) || (params.lookup_size <= 0.) || cimg.is_empty() ) {

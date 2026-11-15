@@ -22,6 +22,7 @@
  */
 
 #include <cmath>
+#include <algorithm>
 #include <cfloat> // DBL_MAX
 #include <iostream>
 
@@ -112,12 +113,36 @@ private:
     // override the roi call
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
 
+    // the translation in pixels, rounded to the closest pixel (and to an even y if evenY)
+    OfxPointI getTranslatePixel(double time, const OfxPointD& renderScale, double par, bool evenY) const;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
     Double2DParam* _translate;
 };
+
+OfxPointI
+PositionPlugin::getTranslatePixel(double time,
+                                  const OfxPointD& renderScale,
+                                  double par,
+                                  bool evenY) const
+{
+    OfxPointD t_canonical;
+    _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);
+    OfxPointI t_pixel;
+
+    // rounding is done by going to pixels, and back to Canonical
+    t_pixel.x = (int)std::floor(t_canonical.x * renderScale.x / par + 0.5);
+    t_pixel.y = (int)std::floor(t_canonical.y * renderScale.y + 0.5);
+    if (evenY) {
+        // round to an even y
+        t_pixel.y = t_pixel.y - (t_pixel.y & 1);
+    }
+
+    return t_pixel;
+}
 
 // the overridden render function
 void
@@ -162,17 +187,7 @@ PositionPlugin::render(const RenderArguments &args)
     // translate srcBounds
     const double time = args.time;
     double par = _dstClip->getPixelAspectRatio();
-    OfxPointD t_canonical;
-    _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);
-    OfxPointI t_pixel;
-
-    // rounding is done by going to pixels, and back to Canonical
-    t_pixel.x = (int)std::floor(t_canonical.x * args.renderScale.x / par + 0.5);
-    t_pixel.y = (int)std::floor(t_canonical.y * args.renderScale.y + 0.5);
-    if (args.fieldToRender == eFieldBoth) {
-        // round to an even y
-        t_pixel.y = t_pixel.y - (t_pixel.y & 1);
-    }
+    OfxPointI t_pixel = getTranslatePixel(time, args.renderScale, par, args.fieldToRender == eFieldBoth);
 
     // translate srcBounds
     srcBounds.x1 += t_pixel.x;
@@ -197,26 +212,24 @@ PositionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         return false;
     }
     double par = _dstClip->getPixelAspectRatio();
-    OfxPointD t_canonical;
-    _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);
-    OfxPointI t_pixel;
-
-    // rounding is done by going to pixels, and back to Canonical
-    t_pixel.x = (int)std::floor(t_canonical.x * args.renderScale.x / par + 0.5);
-    t_pixel.y = (int)std::floor(t_canonical.y * args.renderScale.y + 0.5);
-    if (_srcClip->getFieldOrder() == eFieldBoth) {
-        // round to an even y
-        t_pixel.y = t_pixel.y - (t_pixel.y & 1);
-    }
-    if ( (t_pixel.x == 0) && (t_pixel.y == 0) ) {
+    OfxPointI t_pixel = getTranslatePixel(time, args.renderScale, par, false);
+    // render() rounds y to an even number of rows when rendering both fields of
+    // interlaced material, but the field being rendered is not known here: if the
+    // source is interlaced, use the union of the unrounded and rounded positions.
+    const FieldEnum fieldOrder = _srcClip->getFieldOrder();
+    const bool interlaced = (fieldOrder == eFieldLower || fieldOrder == eFieldUpper);
+    const int t_pixel_y_even = interlaced ? t_pixel.y - (t_pixel.y & 1) : t_pixel.y;
+    if ( (t_pixel.x == 0) && (t_pixel.y == 0) && (t_pixel_y_even == 0) ) {
         return false;
     }
+    OfxPointD t_canonical;
     t_canonical.x = t_pixel.x * par / args.renderScale.x;
-    t_canonical.y = t_pixel.y / args.renderScale.y;
+    const double t_canonical_y1 = (std::min)(t_pixel.y, t_pixel_y_even) / args.renderScale.y;
+    const double t_canonical_y2 = (std::max)(t_pixel.y, t_pixel_y_even) / args.renderScale.y;
     rod.x1 = srcrod.x1 + t_canonical.x;
     rod.x2 = srcrod.x2 + t_canonical.x;
-    rod.y1 = srcrod.y1 + t_canonical.y;
-    rod.y2 = srcrod.y2 + t_canonical.y;
+    rod.y1 = srcrod.y1 + t_canonical_y1;
+    rod.y2 = srcrod.y2 + t_canonical_y2;
 
     return true;
 }
@@ -235,28 +248,26 @@ PositionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         return;
     }
     double par = _dstClip->getPixelAspectRatio();
-    OfxPointD t_canonical;
-    _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);
-    OfxPointI t_pixel;
-
-    // rounding is done by going to pixels, and back to Canonical
-    t_pixel.x = (int)std::floor(t_canonical.x * args.renderScale.x / par + 0.5);
-    t_pixel.y = (int)std::floor(t_canonical.y * args.renderScale.y + 0.5);
-    if (_srcClip->getFieldOrder() == eFieldBoth) {
-        // round to an even y
-        t_pixel.y = t_pixel.y - (t_pixel.y & 1);
-    }
-    if ( (t_pixel.x == 0) && (t_pixel.y == 0) ) {
+    OfxPointI t_pixel = getTranslatePixel(time, args.renderScale, par, false);
+    // render() rounds y to an even number of rows when rendering both fields of
+    // interlaced material, but the field being rendered is not known here: if the
+    // source is interlaced, use the union of the RoIs for the unrounded and rounded positions.
+    const FieldEnum fieldOrder = _srcClip->getFieldOrder();
+    const bool interlaced = (fieldOrder == eFieldLower || fieldOrder == eFieldUpper);
+    const int t_pixel_y_even = interlaced ? t_pixel.y - (t_pixel.y & 1) : t_pixel.y;
+    if ( (t_pixel.x == 0) && (t_pixel.y == 0) && (t_pixel_y_even == 0) ) {
         return;
     }
+    OfxPointD t_canonical;
     t_canonical.x = t_pixel.x * par / args.renderScale.x;
-    t_canonical.y = t_pixel.y / args.renderScale.y;
+    const double t_canonical_y1 = (std::min)(t_pixel.y, t_pixel_y_even) / args.renderScale.y;
+    const double t_canonical_y2 = (std::max)(t_pixel.y, t_pixel_y_even) / args.renderScale.y;
 
     OfxRectD srcRoi = args.regionOfInterest;
     srcRoi.x1 -= t_canonical.x;
     srcRoi.x2 -= t_canonical.x;
-    srcRoi.y1 -= t_canonical.y;
-    srcRoi.y2 -= t_canonical.y;
+    srcRoi.y1 -= t_canonical_y2;
+    srcRoi.y2 -= t_canonical_y1;
     // intersect srcRoi with srcRoD
     Coords::rectIntersection(srcRoi, srcRod, &srcRoi);
     rois.setRegionOfInterest(*_srcClip, srcRoi);
@@ -271,18 +282,7 @@ PositionPlugin::isIdentity(const IsIdentityArguments &args,
 {
     const double time = args.time;
     double par = _dstClip->getPixelAspectRatio();
-    OfxPointD t_canonical;
-
-    _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);
-    OfxPointI t_pixel;
-
-    // rounding is done by going to pixels, and back to Canonical
-    t_pixel.x = (int)std::floor(t_canonical.x * args.renderScale.x / par + 0.5);
-    t_pixel.y = (int)std::floor(t_canonical.y * args.renderScale.y + 0.5);
-    if (args.fieldToRender == eFieldBoth) {
-        // round to an even y
-        t_pixel.y = t_pixel.y - (t_pixel.y & 1);
-    }
+    OfxPointI t_pixel = getTranslatePixel(time, args.renderScale, par, args.fieldToRender == eFieldBoth);
     if ( (t_pixel.x == 0) && (t_pixel.y == 0) ) {
         identityClip = _srcClip;
 

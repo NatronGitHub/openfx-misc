@@ -34,6 +34,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsImageBlender.H"
 #include "ofxsCopier.h"
+#include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
@@ -49,7 +50,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: https://web.archive.org/web/20220627030729/http://www.opticalenquiry.com/nuke/index.php?title=AppendClip"
 
 #define kPluginIdentifier "net.sf.openfx.AppendClip"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// History:
+// version 1.0: initial version
+// version 2.0: during a cross-dissolve, weight the second clip by its own factor (including fade in/out),
+//              instead of 1 minus the weight of the first clip, and include its RoD in the output RoD
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -106,6 +111,77 @@ unsignedToString(unsigned i)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/** @brief base class for the weighted sum of two images: dst = weight0 * from + weight1 * to */
+class WeightedBlenderBase
+    : public ImageBlenderBase
+{
+protected:
+    float _weight0;
+    float _weight1;
+
+public:
+    WeightedBlenderBase(ImageEffect &instance)
+        : ImageBlenderBase(instance)
+        , _weight0(1.f)
+        , _weight1(0.f)
+    {
+    }
+
+    void setWeights(float weight0,
+                    float weight1)
+    {
+        _weight0 = weight0;
+        _weight1 = weight1;
+    }
+};
+
+/** @brief weighted sum of two images (a missing image is black), without renormalization */
+template <class PIX, int nComponents>
+class WeightedBlender
+    : public WeightedBlenderBase
+{
+public:
+    WeightedBlender(ImageEffect &instance)
+        : WeightedBlenderBase(instance)
+    {
+    }
+
+private:
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
+    {
+        unused(rs);
+        const float weight0 = _weight0;
+        const float weight1 = _weight1;
+
+        for (int y = procWindow.y1; y < procWindow.y2; y++) {
+            if ( _effect.abort() ) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            for (int x = procWindow.x1; x < procWindow.x2; x++) {
+                const PIX *fromPix = (const PIX *)  (_fromImg ? _fromImg->getPixelAddress(x, y) : 0);
+                const PIX *toPix   = (const PIX *)  (_toImg   ? _toImg->getPixelAddress(x, y)   : 0);
+
+                for (int c = 0; c < nComponents; c++) {
+                    float v = 0.f;
+                    if (fromPix) {
+                        v += fromPix[c] * weight0;
+                    }
+                    if (toPix) {
+                        v += toPix[c] * weight1;
+                    }
+                    dstPix[c] = PIX(v);
+                }
+
+                dstPix += nComponents;
+            }
+        }
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class AppendClipPlugin
     : public ImageEffect
@@ -113,7 +189,8 @@ class AppendClipPlugin
 public:
     /** @brief ctor */
     AppendClipPlugin(OfxImageEffectHandle handle,
-                     bool numerousInputs)
+                     bool numerousInputs,
+                     unsigned int majorVersion)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(numerousInputs ? kClipSourceCount : 2)
@@ -122,6 +199,7 @@ public:
         , _crossDissolve(NULL)
         , _firstFrame(NULL)
         , _lastFrame(NULL)
+        , _legacyCrossDissolve(majorVersion < 2)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -182,6 +260,18 @@ private:
                     double *alpha1,
                     int *lastFrame = NULL); // if non-NULL, this is the only returned value, and time is not taken into account
 
+    // getSources() with the parameter values at the given time
+    void getSourcesAtTime(double time,
+                          int *clip0,
+                          double *t0,
+                          double *alpha0,
+                          int *clip1,
+                          double *t1,
+                          double *alpha1);
+
+    // the last output frame, computed by getSources() with the parameter values at the given time
+    int getLastFrameAtTime(double time);
+
 private:
 
     template<int nComponents>
@@ -198,6 +288,7 @@ private:
     IntParam* _crossDissolve;
     IntParam* _firstFrame;
     IntParam* _lastFrame;
+    bool _legacyCrossDissolve; // version 1 cross-dissolve: clip1 is weighted by 1-alpha0, and the RoD is clip0's only
 };
 
 
@@ -223,6 +314,41 @@ checkComponents(const Image &src,
     }
 }
 #endif
+
+// copy the getSources() results to the non-NULL output pointers
+static void
+setSources(int clip0,
+           double t0,
+           double alpha0,
+           int clip1,
+           double t1,
+           double alpha1,
+           int *clip0_p,
+           double *t0_p,
+           double *alpha0_p,
+           int *clip1_p,
+           double *t1_p,
+           double *alpha1_p)
+{
+    if (clip0_p) {
+        *clip0_p = clip0;
+    }
+    if (t0_p) {
+        *t0_p = t0;
+    }
+    if (alpha0_p) {
+        *alpha0_p = alpha0;
+    }
+    if (clip1_p) {
+        *clip1_p = clip1;
+    }
+    if (t1_p) {
+        *t1_p = t1;
+    }
+    if (alpha1_p) {
+        *alpha1_p = alpha1;
+    }
+}
 
 void
 AppendClipPlugin::getSources(int firstFrame,
@@ -263,24 +389,7 @@ AppendClipPlugin::getSources(int firstFrame,
     }
     if (lastClip < 0) {
         // no clip, just be black, and lastFrame = firstFrame-1
-        if (clip0_p) {
-            *clip0_p = clip0;
-        }
-        if (t0_p) {
-            *t0_p = t0;
-        }
-        if (alpha0_p) {
-            *alpha0_p = alpha0;
-        }
-        if (clip1_p) {
-            *clip1_p = clip1;
-        }
-        if (t1_p) {
-            *t1_p = t1;
-        }
-        if (alpha1_p) {
-            *alpha1_p = alpha1;
-        }
+        setSources(clip0, t0, alpha0, clip1, t1, alpha1, clip0_p, t0_p, alpha0_p, clip1_p, t1_p, alpha1_p);
         if (lastFrame) {
             *lastFrame = clip1OutMax;
         }
@@ -310,24 +419,7 @@ AppendClipPlugin::getSources(int firstFrame,
                     // render clip0
                     t0 = r.min + (time - firstFrame);
                     alpha0 =  (fadeIn == 0);
-                    if (clip0_p) {
-                        *clip0_p = clip0;
-                    }
-                    if (t0_p) {
-                        *t0_p = t0;
-                    }
-                    if (alpha0_p) {
-                        *alpha0_p = alpha0;
-                    }
-                    if (clip1_p) {
-                        *clip1_p = clip1;
-                    }
-                    if (t1_p) {
-                        *t1_p = t1;
-                    }
-                    if (alpha1_p) {
-                        *alpha1_p = alpha1;
-                    }
+                    setSources(clip0, t0, alpha0, clip1, t1, alpha1, clip0_p, t0_p, alpha0_p, clip1_p, t1_p, alpha1_p);
                     assert(!lastFrame);
 
                     return;
@@ -385,52 +477,10 @@ AppendClipPlugin::getSources(int firstFrame,
     assert( clip0 == -1 || clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax) );
     assert( clip0 == -1 || (clip0Min <= clip0Max && clip0OutMin <= clip0OutMax) );
     assert( clip1 == -1 || (clip1Min <= clip1Max && clip1OutMin <= clip1OutMax) );
-    if ( (clip0 == -1) && (clip1 == -1) ) {
-        assert(false); // treated above, should never happen!
-        // no clip, just be black, and lastFrame = firstFrame-1
-        if (clip0_p) {
-            *clip0_p = clip0;
-        }
-        if (t0_p) {
-            *t0_p = t0;
-        }
-        if (alpha0_p) {
-            *alpha0_p = alpha0;
-        }
-        if (clip1_p) {
-            *clip1_p = clip1;
-        }
-        if (t1_p) {
-            *t1_p = t1;
-        }
-        if (alpha1_p) {
-            *alpha1_p = alpha1;
-        }
-
-        return;
-    }
+    // the first connected clip is always visited, and "no clip" and "before the first clip" were treated above
     assert(clip1 != -1);
-    if ( (clip0 == -1) &&
-         (clip1 != -1) && ( time < clip1OutMin) ) {
-        assert(false); // treated above, should never happen!
-        // before the first clip, the solution is trivial
-        clip0 = clip1;
-        clip0Min = clip1Min;
-        clip0Max = clip1Max;
-        clip0OutMin = clip1OutMin;
-        clip0OutMax = clip1OutMax;
-
-        clip1 = -1;
-        clip1Min = -1;
-        clip1Max = -1;
-        clip1OutMin = firstFrame;
-        clip1OutMax = firstFrame - 1;
-        // render clip0
-        t0 = clip1Min + (time - clip1OutMin);
-        alpha0 = (fadeIn == 0);
-        t1 = -1;
-        alpha1 = 0.;
-    } else if ( (clip0 != -1) && (clip0OutMin <= time) && (time <= clip0OutMax) &&
+    assert( (clip0 != -1) || (time >= clip1OutMin) );
+    if ( (clip0 != -1) && (clip0OutMin <= time) && (time <= clip0OutMax) &&
                 (clip1 != -1) && ( clip1OutMin <= time) && ( time <= clip1OutMax) ) {
         // clip0 and clip1: cross-dissolve
         assert(clip1OutMin + crossDissolve - 1 >= clip0OutMax);
@@ -528,25 +578,39 @@ AppendClipPlugin::getSources(int firstFrame,
     assert(0 <= alpha0 && alpha0 <= 1);
     assert(0 <= alpha1 && alpha1 < 1);
 
-    if (clip0_p) {
-        *clip0_p = clip0;
-    }
-    if (t0_p) {
-        *t0_p = t0;
-    }
-    if (alpha0_p) {
-        *alpha0_p = alpha0;
-    }
-    if (clip1_p) {
-        *clip1_p = clip1;
-    }
-    if (t1_p) {
-        *t1_p = t1;
-    }
-    if (alpha1_p) {
-        *alpha1_p = alpha1;
-    }
+    setSources(clip0, t0, alpha0, clip1, t1, alpha1, clip0_p, t0_p, alpha0_p, clip1_p, t1_p, alpha1_p);
 } // AppendClipPlugin::getSources
+
+void
+AppendClipPlugin::getSourcesAtTime(double time,
+                                   int *clip0,
+                                   double *t0,
+                                   double *alpha0,
+                                   int *clip1,
+                                   double *t1,
+                                   double *alpha1)
+{
+    int firstFrame = _firstFrame->getValueAtTime(time);
+    int fadeIn = _fadeIn->getValueAtTime(time);
+    int fadeOut = _fadeOut->getValueAtTime(time);
+    int crossDissolve = _crossDissolve->getValueAtTime(time);
+
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, clip0, t0, alpha0, clip1, t1, alpha1, NULL);
+}
+
+int
+AppendClipPlugin::getLastFrameAtTime(double time)
+{
+    int firstFrame = _firstFrame->getValueAtTime(time);
+    int fadeIn = _fadeIn->getValueAtTime(time);
+    int fadeOut = _fadeOut->getValueAtTime(time);
+    int crossDissolve = _crossDissolve->getValueAtTime(time);
+    int lastFrame;
+
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
+
+    return lastFrame;
+}
 
 /* set up and run a processor */
 void
@@ -571,21 +635,13 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
 # endif
     
     const double time = args.time;
-    int firstFrame;
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0;
     double t0;
     double alpha0;
     int clip1;
     double t1;
     double alpha1;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, &alpha0, &clip1, &t1, &alpha1, NULL);
+    getSourcesAtTime(time, &clip0, &t0, &alpha0, &clip1, &t1, &alpha1);
 
     if ( ( (clip0 == -1) && (clip1 == -1) ) || ( (alpha0 == 0.) && (alpha1 == 0.) ) ) {
         // no clip, just fill with black
@@ -644,7 +700,18 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
     assert(0 < alpha0 && alpha0 <= 1 && 0 <= alpha1 && alpha1 < 1);
     assert( toImg.get() || (alpha1 == 0) );
     assert( fromImg.get() );
-    processor.setBlend(static_cast<float>(1. - alpha0));
+    if (_legacyCrossDissolve) {
+        // version 1 (kept so that old projects render the same): clip1 is weighted by 1-alpha0,
+        // which ignores the fade in/out applied to alpha1
+        processor.setBlend(static_cast<float>(1. - alpha0));
+    } else {
+        WeightedBlenderBase* weighted = dynamic_cast<WeightedBlenderBase*>(&processor);
+        assert(weighted);
+        if (!weighted) {
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        weighted->setWeights( static_cast<float>(alpha0), static_cast<float>(alpha1) );
+    }
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -703,9 +770,14 @@ template <class PIX, int nComponents, int maxValue>
 void
 AppendClipPlugin::renderForBitDepth(const RenderArguments &args)
 {
-    ImageBlender<PIX, nComponents> fred(*this);
-
-    setupAndProcess(fred, args);
+    // setupAndProcess() sets the blend factor of ImageBlender (version 1) or the weights of WeightedBlender
+    if (_legacyCrossDissolve) {
+        ImageBlender<PIX, nComponents> fred(*this);
+        setupAndProcess(fred, args);
+    } else {
+        WeightedBlender<PIX, nComponents> fred(*this);
+        setupAndProcess(fred, args);
+    }
 }
 
 // overridden is identity
@@ -716,19 +788,10 @@ AppendClipPlugin::isIdentity(const IsIdentityArguments &args,
                              , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0;
     double t0;
     double alpha0;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, &alpha0, NULL, NULL, NULL, NULL);
+    getSourcesAtTime(time, &clip0, &t0, &alpha0, NULL, NULL, NULL);
     assert( clip0 >= -1 && clip0 < (int)_srcClip.size() );
     if ( (clip0 >= 0) && ( clip0 < (int)_srcClip.size() ) && (alpha0 == 1.) ) {
         identityClip = _srcClip[clip0];
@@ -749,17 +812,8 @@ AppendClipPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                        RegionOfInterestSetter &rois)
 {
     const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0, clip1;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, NULL, NULL, &clip1, NULL, NULL, NULL);
+    getSourcesAtTime(time, &clip0, NULL, NULL, &clip1, NULL, NULL);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         if ( ( (int)i != clip0 ) && ( (int)i != clip1 ) ) {
@@ -773,18 +827,10 @@ AppendClipPlugin::getFramesNeeded(const FramesNeededArguments &args,
                                   FramesNeededSetter &frames)
 {
     const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0, clip1;
     double t0, t1;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, &clip1, &t1, NULL, NULL);
+    getSourcesAtTime(time, &clip0, &t0, NULL, &clip1, &t1, NULL);
+    const int firstFrame = _firstFrame->getValueAtTime(time);
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         OfxRangeD range;
         if (i == (unsigned)clip0) {
@@ -817,21 +863,18 @@ AppendClipPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
 {
     const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
-    int clip0;
-    double t0;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, NULL, NULL, NULL, NULL);
+    int clip0, clip1;
+    double t0, t1;
+    double alpha1;
+    getSourcesAtTime(time, &clip0, &t0, NULL, &clip1, &t1, &alpha1);
     assert( clip0 >= -1 && clip0 < (int)_srcClip.size() );
     if ( (clip0 >= 0) && ( clip0 < (int)_srcClip.size() ) ) {
         rod = _srcClip[clip0]->getRegionOfDefinition(t0);
+        // during a cross-dissolve, the RoD also contains clip1's RoD (version 1 only used the RoD of clip0)
+        if ( !_legacyCrossDissolve && ( clip1 >= 0) && ( clip1 < (int)_srcClip.size() ) && (alpha1 > 0.) &&
+             _srcClip[clip1]->isConnected() ) {
+            Coords::rectBoundingBox(_srcClip[clip1]->getRegionOfDefinition(t1), rod, &rod);
+        }
 
         return true;
     }
@@ -843,19 +886,7 @@ void
 AppendClipPlugin::changedClip(const InstanceChangedArgs &args,
                               const std::string & /*clipName*/)
 {
-    const double time = args.time;
-    int firstFrame;
-
-    _firstFrame->getValueAtTime(time, firstFrame);
-    int fadeIn;
-    _fadeIn->getValueAtTime(time, fadeIn);
-    int fadeOut;
-    _fadeOut->getValueAtTime(time, fadeOut);
-    int crossDissolve;
-    _crossDissolve->getValueAtTime(time, crossDissolve);
-    int lastFrame;
-    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
-    _lastFrame->setValue(lastFrame);
+    _lastFrame->setValue( getLastFrameAtTime(args.time) );
 }
 
 void
@@ -865,17 +896,7 @@ AppendClipPlugin::changedParam(const InstanceChangedArgs &args,
     const double time = args.time;
 
     if ( (paramName != kParamLastFrame) && (args.reason == eChangeUserEdit) ) {
-        int firstFrame;
-        _firstFrame->getValueAtTime(time, firstFrame);
-        int fadeIn;
-        _fadeIn->getValueAtTime(time, fadeIn);
-        int fadeOut;
-        _fadeOut->getValueAtTime(time, fadeOut);
-        int crossDissolve;
-        _crossDissolve->getValueAtTime(time, crossDissolve);
-        int lastFrame;
-        getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
-        _lastFrame->setValue(lastFrame);
+        _lastFrame->setValue( getLastFrameAtTime(time) );
     }
 }
 
@@ -904,14 +925,18 @@ AppendClipPlugin::getTimeDomain(OfxRangeD &range)
     return true;
 }
 
-mDeclarePluginFactory(AppendClipPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(AppendClipPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-AppendClipPluginFactory::describe(ImageEffectDescriptor &desc)
+AppendClipPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.addSupportedContext(eContextGeneral);
 
@@ -935,8 +960,9 @@ AppendClipPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-AppendClipPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+AppendClipPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                            ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
@@ -1093,8 +1119,9 @@ AppendClipPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // AppendClipPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-AppendClipPluginFactory::createInstance(OfxImageEffectHandle handle,
+AppendClipPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                         ContextEnum /*context*/)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
@@ -1106,10 +1133,13 @@ AppendClipPluginFactory::createInstance(OfxImageEffectHandle handle,
     bool numerousInputs = false;
 #endif
 
-    return new AppendClipPlugin(handle, numerousInputs);
+    return new AppendClipPlugin(handle, numerousInputs, majorVersion);
 }
 
-static AppendClipPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static AppendClipPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 1: clip1 is weighted by 1-alpha0 during a cross-dissolve
+static AppendClipPluginFactory<1> pv1(kPluginIdentifier, 0);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(pv1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

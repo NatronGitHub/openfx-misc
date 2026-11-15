@@ -27,6 +27,6 @@ include $(TOP_SRCDIR)/Makefile.master
 
 include $(TOP_SRCDIR)/CImg/CImgSubplugin.mk
 
-$(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImg.h
+$(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImgErodeDilate.h CImg.h
 
-$(OBJECTPATH)/CImgErode.o: CImgErode.cpp  CImg.h
+$(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImgErodeDilate.h CImg.h
