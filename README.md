@@ -240,8 +240,11 @@ These plugins are compatible with the Sony Vegas and Nuke [multiview extensions]
 
 * ImageStatisticsOFX: Compute statistics over an image or a rectangular area.
 * NoOpOFX: Copies the input to the output. Useful for inspecting the properties of input and output clips.
-* TestRenderOFX: Test some rendering features of the OFX host.
-* TestIdentityLeftHalf, TestGarbageOutsideRenderWindow, TestInfiniteRoI, TestInfiniteRoD: Test how the OFX host handles the isIdentity renderWindow, a plugin writing outside its renderWindow, and infinite RoI/RoD (Test bundle only).
+* TestRenderOFX: Test some rendering features of the OFX host: tiles, multiresolution and render scale (Test bundle, debug builds only).
+* TestIdentityLeftHalfOFX: Test the renderWindow passed to isIdentity. The right half must always be inverted, even after zooming on the left half and panning right (Test bundle).
+* TestGarbageOutsideRenderWindowOFX: A buggy plugin that writes magenta outside its renderWindow. Magenta in the result is a host bug (Test bundle, debug builds only).
+* TestInfiniteRoIOFX: Asks for an infinite region of interest. The host must not hang, run out of memory or crash (Test bundle).
+* TestInfiniteRoDOFX: Returns an infinite region of definition. The checkerboard around the input must be clipped by the host, typically to the project extent (Test bundle).
 
 Notes & Caveats
 ---------------

@@ -53,8 +53,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "and the color depends on the render scale " \
     "(respectively cyan, magenta, yellow, red, green, blue for levels 0, 1, 2, 3, 4, 5)." \
     "Several versions of this plugin are available, with support for tiling enabled/disabled (TiOK/TiNo), " \
-    "multiresolution enabled/disabled (MrOK/MrNo), render scale support enabled/disabled (RsOK/RsNo)." \
-    "The effect returns a region-dependent value for isIdentity."
+    "multiresolution enabled/disabled (MrOK/MrNo), render scale support enabled/disabled (RsOK/RsNo). " \
+    "To test a region-dependent isIdentity, use TestIdentityLeftHalfOFX."
 
 #define kPluginIdentifier "net.sf.openfx.TestRender"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

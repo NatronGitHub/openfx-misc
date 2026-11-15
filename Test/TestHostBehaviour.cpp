@@ -172,7 +172,8 @@ private:
         OfxRectI rod;
         Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), renderScale, _srcClip->getPixelAspectRatio(), &rod);
 
-        return rod.x1 + (rod.x2 - rod.x1) / 2;
+        // in double: rod may keep the kOfxFlagInfinite* values, and rod.x2 - rod.x1 would overflow
+        return (int)std::floor( 0.5 * ( (double)rod.x1 + (double)rod.x2 ) );
     }
 
     Clip *_dstClip;
@@ -269,7 +270,7 @@ TestHostBehaviourPlugin<behaviour>::isIdentity(const IsIdentityArguments &args,
                                               )
 {
     // Identity only if the whole renderWindow is in the left half.
-    // A host that ignores the renderWindow passed to isIdentity will show a non-inverted right half.
+    // A host that reuses this result for another renderWindow (or tile) will show a non-inverted right half.
     if ( (behaviour == eTestIdentityLeftHalf) && ( args.renderWindow.x2 <= midX(args.time, args.renderScale) ) ) {
         identityClip = _srcClip;
 
@@ -335,30 +336,42 @@ TestHostBehaviourPluginFactory<behaviour>::describe(ImageEffectDescriptor &desc)
 {
     switch (behaviour) {
     case eTestIdentityLeftHalf:
-        desc.setLabel("TestIdentityLeftHalf");
+        desc.setLabel("TestIdentityLeftHalfOFX");
         desc.setPluginDescription("Test the renderWindow of isIdentity.\n"
                                   "Copies the input on the left half of its region of definition and inverts the color on the right half. "
                                   "isIdentity returns true only if the renderWindow is entirely in the left half, "
-                                  "so the output must not depend on how the host tiles the image.");
+                                  "so the output must not depend on how the host tiles the image. "
+                                  "A non-inverted right half means that the host reused an isIdentity result "
+                                  "for a different renderWindow or tile.\n"
+                                  "Usage: in a viewer, zoom so that only the left half is visible, then pan to the right: "
+                                  "the right half must be inverted.\n"
+                                  "The RGB values are inverted without taking alpha into account (premultiplication is ignored), "
+                                  "so use an opaque input.");
         break;
     case eTestGarbageOutsideRenderWindow:
-        desc.setLabel("TestGarbageOutsideRenderWindow");
+        desc.setLabel("TestGarbageOutsideRenderWindowOFX");
         desc.setPluginDescription("Test host robustness to a buggy plugin.\n"
                                   "Copies the input inside the renderWindow, but also (wrongly) writes opaque magenta "
                                   "to every pixel of the output image outside the renderWindow. "
-                                  "Magenta areas in the output show that the host used pixels it did not ask the plugin to render.");
+                                  "Magenta areas in the output show that the host used pixels it did not ask the plugin to render.\n"
+                                  "Host frame threading is enabled, so a host that splits the image into several renderWindows "
+                                  "runs concurrent render calls that overwrite each other's areas: "
+                                  "the corruption is non-deterministic on purpose.");
         break;
     case eTestInfiniteRoI:
-        desc.setLabel("TestInfiniteRoI");
+        desc.setLabel("TestInfiniteRoIOFX");
         desc.setPluginDescription("Test infinite regions of interest.\n"
                                   "Copies the input, but asks for an infinite region of interest on the input for any renderWindow. "
-                                  "The host should clip it to the input region of definition.");
+                                  "The host should clip it to the input region of definition. "
+                                  "A host that does not may hang, run out of memory or crash.");
         break;
     case eTestInfiniteRoD:
-        desc.setLabel("TestInfiniteRoD");
+        desc.setLabel("TestInfiniteRoDOFX");
         desc.setPluginDescription("Test infinite regions of definition.\n"
                                   "Returns an infinite region of definition, copies the input where it is defined, "
-                                  "and fills the rest of the plane with an opaque gray and white checkerboard (64-pixel squares in canonical coordinates). "
+                                  "and fills the rest of the plane with an opaque gray and white checkerboard "
+                                  "(squares of 64 canonical units, i.e. 64 pixels at full resolution with PAR 1). "
+                                  "On alpha-only images, the checkerboard is in the alpha channel (0.5 and 1). "
                                   "The host should clip the region of definition to an appropriate rectangle, typically the project extent.");
         break;
     }
@@ -372,7 +385,8 @@ TestHostBehaviourPluginFactory<behaviour>::describe(ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthFloat);
 
     desc.setSingleInstance(false);
-    desc.setHostFrameThreading(false);
+    // GarbageOutsideRenderWindow: let the host run concurrent renders of the same frame, so that they overwrite each other
+    desc.setHostFrameThreading(behaviour == eTestGarbageOutsideRenderWindow);
     desc.setSupportsMultiResolution(true);
     desc.setSupportsTiles(true);
     desc.setTemporalClipAccess(false);
@@ -403,12 +417,15 @@ TestHostBehaviourPluginFactory<behaviour>::describeInContext(ImageEffectDescript
 }
 
 static TestHostBehaviourPluginFactory<eTestIdentityLeftHalf> p1(kPluginIdentifier "_IdentityLeftHalf", kPluginVersionMajor, kPluginVersionMinor);
-static TestHostBehaviourPluginFactory<eTestGarbageOutsideRenderWindow> p2(kPluginIdentifier "_GarbageOutsideRenderWindow", kPluginVersionMajor, kPluginVersionMinor);
 static TestHostBehaviourPluginFactory<eTestInfiniteRoI> p3(kPluginIdentifier "_InfiniteRoI", kPluginVersionMajor, kPluginVersionMinor);
 static TestHostBehaviourPluginFactory<eTestInfiniteRoD> p4(kPluginIdentifier "_InfiniteRoD", kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
-mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
 mRegisterPluginFactoryInstance(p4)
+#ifdef DEBUG
+// buggy on purpose: only in debug builds
+static TestHostBehaviourPluginFactory<eTestGarbageOutsideRenderWindow> p2(kPluginIdentifier "_GarbageOutsideRenderWindow", kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p2)
+#endif
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
