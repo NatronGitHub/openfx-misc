@@ -24,7 +24,6 @@
 
 #include <cmath>
 #include <algorithm>
-#include <climits>
 #include <cfloat> // DBL_MAX
 #ifndef M_PI
 #define M_PI        3.14159265358979323846264338327950288   /* pi             */
@@ -75,7 +74,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamBlades "blades"
 #define kParamBladesLabel "Blades"
-#define kParamBladesHint "Number of diaphragm blades. 0 gives a perfect disc, 3 or more gives a polygon with that number of sides (1 and 2 also give a disc)."
+#define kParamBladesHint "Number of diaphragm blades. 3 or more gives a polygon with that many sides; 0, 1 or 2 give a perfect disc."
 #define kParamBladesDefault 0
 
 #define kParamRotation "rotation"
@@ -149,13 +148,12 @@ public:
         _par = pixelAspectRatio;
         _cx = ( (rod.x1 + rod.x2) * 0.5 + offset.x ) * renderScale.x;
         _cy = ( (rod.y1 + rod.y2) * 0.5 + offset.y ) * renderScale.y;
+        // radius is measured along y (x is already corrected by the PAR)
         _radius = (std::max)(0., radius) * renderScale.y;
         _blades = blades < 3 ? 0 : blades;
         _rotation = rotation * M_PI / 180.;
         _curvature = (std::max)( 0., (std::min)(1., curvature) );
         _softness = (std::max)(0., softness) * _radius;
-        // renderScale.x and renderScale.y are supposed to be equal
-        unused(renderScale);
     }
 
     // coverage of the pixel centered at (x,y), in canonical-like coordinates with pixel units
@@ -215,7 +213,6 @@ private:
     {
         unused(rs);
         const PIX zero = toPIX(0.f);
-        const PIX one = toPIX(1.f);
         // bounding box of the shape, in pixel coordinates, to skip pixels quickly
         const double extent = _radius + 1.;
         const double bx1 = (_cx - extent) / _par - 1., bx2 = (_cx + extent) / _par + 1.;
@@ -229,27 +226,11 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             const bool yout = (y + 1 < by1) || (y > by2);
             for (int x = procWindow.x1; x < procWindow.x2; x++, dstPix += nComponents) {
-                if ( yout || (x + 1 < bx1) || (x > bx2) ) {
-                    for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = zero;
-                    }
-                    continue;
-                }
-                const double a = coverage( (x + 0.5) * _par, y + 0.5 );
-                if (a <= 0.) {
-                    for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = zero;
-                    }
-                } else if (a >= 1.) {
-                    for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = one;
-                    }
-                } else {
-                    // white, premultiplied by the coverage
-                    const PIX ac = toPIX( (float)a );
-                    for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = ac;
-                    }
+                const bool outside = yout || (x + 1 < bx1) || (x > bx2);
+                // white, premultiplied by the coverage (coverage() already returns a value in [0,1])
+                const PIX v = outside ? zero : toPIX( (float)coverage( (x + 0.5) * _par, y + 0.5 ) );
+                for (int c = 0; c < nComponents; ++c) {
+                    dstPix[c] = v;
                 }
             }
         }
