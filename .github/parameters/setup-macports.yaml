@@ -1,0 +1,10 @@
+# MacPorts setup for the macOS CI jobs (melusina-org/setup-macports).
+# Shared by ci.yml and nightly.yml so that both use the same cached
+# installation (the cache key is derived from this file).
+version: '2.12.7'
+prefix: '/opt/local'
+ports:
+  # GNU sed, needed by openfx/Support/include/osxDeploy.sh (release bundles)
+  - name: gsed
+  # OpenMP runtime for Apple clang (nightly OpenMP build)
+  - name: libomp
