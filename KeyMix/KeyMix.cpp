@@ -54,8 +54,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: https://web.archive.org/web/20220120144948/opticalenquiry.com/nuke/index.php?title=KeyMix"
 
 #define kPluginIdentifier "net.sf.openfx.KeyMix"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+// History:
+// 1.0: Original version
+// 2.0: With Alpha-only images, the A checkbox (instead of the R checkbox) controls the alpha channel
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -108,10 +111,12 @@ protected:
     double _mix;
     bool _maskInvert;
     std::bitset<4> _aChannels;
+    bool _alphaOnlyUsesR; // version 1: with Alpha-only images, the R checkbox controls alpha
 
 public:
 
-    KeyMixProcessorBase(ImageEffect &instance)
+    KeyMixProcessorBase(ImageEffect &instance,
+                        bool alphaOnlyUsesR)
         : ImageProcessor(instance)
         , _srcImgA(NULL)
         , _srcImgB(NULL)
@@ -119,6 +124,7 @@ public:
         , _mix(1.)
         , _maskInvert(false)
         , _aChannels()
+        , _alphaOnlyUsesR(alphaOnlyUsesR)
     {
     }
 
@@ -147,8 +153,9 @@ class KeyMixProcessor
     : public KeyMixProcessorBase
 {
 public:
-    KeyMixProcessor(ImageEffect &instance)
-        : KeyMixProcessorBase(instance)
+    KeyMixProcessor(ImageEffect &instance,
+                    bool alphaOnlyUsesR)
+        : KeyMixProcessorBase(instance, alphaOnlyUsesR)
     {
     }
 
@@ -156,6 +163,9 @@ private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
+        // With Alpha-only images, the only component is alpha, so it is controlled by the A checkbox.
+        // Version 1 used the R checkbox for it, which is kept so that old projects render the same.
+        const bool alphaFromA = (nComponents == 1) && !_alphaOnlyUsesR;
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
@@ -178,7 +188,7 @@ private:
                         assert( !srcPixB || !OFX::IsNaN(srcPixB[c]) );
 #                     endif
                         // all images are supposed to be black and transparent outside o
-                        tmpPix[c] = (_aChannels[c] && srcPixA) ? srcPixA[c] : 0.f;
+                        tmpPix[c] = (_aChannels[alphaFromA ? 3 : c] && srcPixA) ? srcPixA[c] : 0.f;
                     }
                 } else {
                     // everything is black and transparent
@@ -200,7 +210,7 @@ private:
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, true, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy unprocessed channels from B
                 for (int c = 0; c < nComponents; ++c) {
-                    if (!_aChannels[c]) {
+                    if (!_aChannels[alphaFromA ? 3 : c]) {
                         dstPix[c] = srcPixB ? srcPixB[c] : 0;
                     }
                 }
@@ -219,8 +229,10 @@ class KeyMixPlugin
 {
 public:
     /** @brief ctor */
-    KeyMixPlugin(OfxImageEffectHandle handle)
+    KeyMixPlugin(OfxImageEffectHandle handle,
+                 unsigned int majorVersion)
         : ImageEffect(handle)
+        , _alphaOnlyUsesR(majorVersion < 2)
         , _dstClip(NULL)
         , _srcClipA(NULL)
         , _srcClipB(NULL)
@@ -269,6 +281,7 @@ private:
     template <class PIX, int nComponents, int maxValue>
     void renderForBitDepth(const RenderArguments &args);
 
+    bool _alphaOnlyUsesR; // version 1: with Alpha-only images, the R checkbox controls alpha
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClipA;
@@ -420,7 +433,7 @@ template <class PIX, int nComponents, int maxValue>
 void
 KeyMixPlugin::renderForBitDepth(const RenderArguments &args)
 {
-    KeyMixProcessor<PIX, nComponents, maxValue> fred(*this);
+    KeyMixProcessor<PIX, nComponents, maxValue> fred(*this, _alphaOnlyUsesR);
 
     setupAndProcess(fred, args);
 } // KeyMixPlugin::renderForBitDepth
@@ -529,14 +542,18 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
     return true;
 } // KeyMixPlugin::isIdentity
 
-mDeclarePluginFactory(KeyMixPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(KeyMixPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-KeyMixPluginFactory::describe(ImageEffectDescriptor &desc)
+KeyMixPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -556,8 +573,9 @@ KeyMixPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 } // >::describe
 
+template<unsigned int majorVersion>
 void
-KeyMixPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+KeyMixPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                        ContextEnum context)
 {
     ClipDescriptor* srcClipB = desc.defineClip(kClipB);
@@ -657,14 +675,19 @@ KeyMixPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 } // >::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-KeyMixPluginFactory::createInstance(OfxImageEffectHandle handle,
+KeyMixPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                     ContextEnum /*context*/)
 {
-    return new KeyMixPlugin(handle);
+    return new KeyMixPlugin(handle, majorVersion);
 }
 
-static KeyMixPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static KeyMixPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+// Version 1: with Alpha-only images, the R checkbox controls the alpha channel
+static KeyMixPluginFactory<1> pv1(kPluginIdentifier, 0);
+mRegisterPluginFactoryInstance(pv1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

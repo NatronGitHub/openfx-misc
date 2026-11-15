@@ -1667,6 +1667,8 @@ ShadertoyPlugin::updateExtra()
                         //_paramMinVec4[i]->resetToDefault();
                         //_paramMaxVec4[i]->resetToDefault();
                     }
+                    // do not fall through into the Bool case, which would set the bool default
+                    break;
                 }
                 case eUniformTypeBool: {
                     if (tChanged) {

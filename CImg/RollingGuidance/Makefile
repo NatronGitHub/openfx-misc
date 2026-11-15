@@ -22,10 +22,6 @@ net.sf.cimg.CImgRollingGuidance.svg \
 TOP_SRCDIR = ../..
 include $(TOP_SRCDIR)/Makefile.master
 
-VPATH += $(TOP_SRCDIR)/CImg
-CXXFLAGS += -I$(TOP_SRCDIR)/CImg
+include $(TOP_SRCDIR)/CImg/CImgSubplugin.mk
 
 $(OBJECTPATH)/CImgRollingGuidance.o: CImgRollingGuidance.cpp  CImg.h
-
-CImg.h:
-	cd .. && $(MAKE) $@

@@ -930,6 +930,13 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
 
     _lastMousePos = args.penPosition;
 
+#ifdef OFX_EXTENSIONS_NATRON
+    // The host reads the cursor whatever penMotion returns, so the return value is unchanged.
+    // setCursor() does nothing on hosts without interact cursors.
+    const bool overPoint = (_dragging != -1) || (_hovering != -1);
+    setCursor(overPoint ? kOfxInteractCursorMove : kOfxInteractCursorDefault);
+#endif
+
     return valuesChanged;
 } // CornerPinTransformInteract::penMotion
 
@@ -1139,7 +1146,10 @@ defineExtraMatrixRow(ImageEffectDescriptor &desc,
 {
     Double3DParamDescriptor* param = desc.defineDouble3DParam(name);
 
-    if ( getImageEffectHostDescription()->isNatron && (getImageEffectHostDescription()->versionMajor >= 2) && (getImageEffectHostDescription()->versionMinor >= 1) ) {
+    // Natron >= 2.1 (testing major and minor separately would fail for 3.0)
+    const ImageEffectHostDescription& host = *getImageEffectHostDescription();
+    if ( host.isNatron &&
+         ( (host.versionMajor > 2) || ( (host.versionMajor == 2) && (host.versionMinor >= 1) ) ) ) {
         param->setLabel(kGroupExtraMatrixLabel);
     } else {
         param->setLabels("", "", "");

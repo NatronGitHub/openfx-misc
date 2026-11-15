@@ -27,10 +27,6 @@
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
-
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -207,7 +203,7 @@ public:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 pixToVector<PIX, nComponents>(srcPix, vec, _xChannel, _yChannel);
-                h = (float)( std::atan2(_inverseY ? -vec[1] : vec[1], vec[0]) * OFXS_HUE_CIRCLE / (2 * M_PI) );
+                h = (float)( std::atan2(_inverseY ? -vec[1] : vec[1], vec[0]) * OFXS_HUE_CIRCLE / (2 * OFXS_PI) );
                 if (_opposite) {
                     h += OFXS_HUE_CIRCLE / 2.;
                 }

@@ -19,14 +19,11 @@
 
 #include "DistortionModel.h"
 
-#define _USE_MATH_DEFINES
 #include <cmath>
 #include <cfloat> // DBL_EPSILON
 #include <algorithm> // max
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
+#include "ofxsMacros.h"
 
 OFXS_NAMESPACE_OFX_ENTER
 
@@ -567,7 +564,7 @@ DistortionModel3DEFishEye8::esa2plain(double x_esa_dn, double y_esa_dn, double *
     double arg_clip = (std::min)(1., arg);
     double phi = 2 * std::asin(arg_clip);
     double r_plain_dn;
-    if (phi >= M_PI / 2.0) {
+    if (phi >= OFXS_PI / 2.0) {
         r_plain_dn = 5.;
     } else {
         r_plain_dn = (std::min)( 5., f_dn * std::tan(phi) );
@@ -608,9 +605,9 @@ DistortionModel3DEStandard::DistortionModel3DEStandard(const OfxRectD& format,
 {
     //calc_m()
     double q = std::sqrt(1.0 + b);
-    double c = std::cos(phi * M_PI / 180.0);
-    double s = std::sin(phi * M_PI / 180.0);
-    //mat2_type para = tensq(vec2_type(cos(_phi * M_PI / 180.0),sin(_phi * M_PI / 180.0)));
+    double c = std::cos(phi * OFXS_PI / 180.0);
+    double s = std::sin(phi * OFXS_PI / 180.0);
+    //mat2_type para = tensq(vec2_type(cos(_phi * OFXS_PI / 180.0),sin(_phi * OFXS_PI / 180.0)));
     //m = _b * para + mat2_type(1.0);
     // m = [[mxx, mxy],[myx,myy]] (m is symmetric)
     _mxx = c*c*q + s*s/q;
@@ -669,8 +666,8 @@ DistortionModel3DEAnamorphic4::DistortionModel3DEAnamorphic4(const OfxRectD& for
                                                              double sqx,
                                                              double sqy)
 : DistortionModel3DEBase(format, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
-, _cosphi( std::cos(phi * M_PI / 180.0) )
-, _sinphi( std::sin(phi * M_PI / 180.0) )
+, _cosphi( std::cos(phi * OFXS_PI / 180.0) )
+, _sinphi( std::sin(phi * OFXS_PI / 180.0) )
 , _sqx(sqx)
 , _sqy(sqy)
 {

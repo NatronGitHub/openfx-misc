@@ -140,18 +140,19 @@ enum OperationEnum
 
 #define kParamBlack "black"
 #define kParamBlackLabel "Black"
-#define kParamBlackHint "Value in the Cineon file that corresponds to black."
+#define kParamBlackHint "Value in the Cineon file that corresponds to black. A channel where Black equals White is passed through unchanged."
 #define kParamBlackDefault 95.0
 
 #define kParamWhite "white"
 #define kParamWhiteLabel "White"
-#define kParamWhiteHint "Value in the Cineon file that corresponds to white."
+#define kParamWhiteHint "Value in the Cineon file that corresponds to white. A channel where Black equals White is passed through unchanged."
 #define kParamWhiteDefault 685.0
 
 #define kParamGamma "gamma"
 #define kParamGammaLabel "Gamma"
-#define kParamGammaHint "The film response gamma value."
+#define kParamGammaHint "The film response gamma value (minimum 0.001)."
 #define kParamGammaDefault 0.6
+#define kParamGammaMin 0.001
 
 using namespace OFX;
 
@@ -171,6 +172,7 @@ protected:
     double _gain[3];
     double _whitepoint[3];
     double _gamma[3];
+    bool _passThrough[3]; // black == white for this channel: the conversion is undefined, pass it through
 
     double log2lin(double xLog,
                    int c)
@@ -205,6 +207,13 @@ public:
         , _processB(false)
         // TODO: initialize plugin parameter values
     {
+        for (int c = 0; c < 3; ++c) {
+            _offset[c] = 0.;
+            _gain[c] = 1.;
+            _whitepoint[c] = 0.;
+            _gamma[c] = 1.;
+            _passThrough[c] = false;
+        }
     }
 
     void setSrcImg(const Image *v) {_srcImg = v; }
@@ -231,10 +240,15 @@ public:
         _processG = processG;
         _processB = processB;
         for (int c = 0; c < 3; ++c) {
-            _offset[c] = std::pow(10., (black[c] - white[c]) * 0.002 / gamma[c]);
-            _gain[c] = 1. / (1. - _offset[c]);
+            // gamma = 0 would divide by zero (projects may hold values below the
+            // param minimum, and hosts may not enforce the range)
+            const double g = (std::max)(gamma[c], kParamGammaMin);
+            // black == white gives offset = 1 and an infinite gain: pass the channel through
+            _passThrough[c] = (black[c] == white[c]);
+            _offset[c] = std::pow(10., (black[c] - white[c]) * 0.002 / g);
+            _gain[c] = _passThrough[c] ? 1. : 1. / (1. - _offset[c]);
             _whitepoint[c] = white[c];
-            _gamma[c] = gamma[c];
+            _gamma[c] = g;
         }
     }
 };
@@ -257,9 +271,10 @@ public:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
 #     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
+        // channels with black == white are passed through (copied from the source)
+        const bool r = _processR && !_passThrough[0] && (nComponents != 1);
+        const bool g = _processG && !_passThrough[1] && (nComponents >= 2);
+        const bool b = _processB && !_passThrough[2] && (nComponents >= 3);
         if (r) {
             if (g) {
                 if (b) {
@@ -361,9 +376,10 @@ public:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
 #     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
+        // channels with black == white are passed through (copied from the source)
+        const bool r = _processR && !_passThrough[0] && (nComponents != 1);
+        const bool g = _processG && !_passThrough[1] && (nComponents >= 2);
+        const bool b = _processB && !_passThrough[2] && (nComponents >= 3);
         if (r) {
             if (g) {
                 if (b) {
@@ -928,8 +944,8 @@ Log2LinPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         RGBParamDescriptor* param = desc.defineRGBParam(kParamGamma);
         param->setLabel(kParamGammaLabel);
         param->setHint(kParamGammaHint);
-        param->setRange(0, 0, 0, 1, 1, 1);
-        param->setDisplayRange(0, 0, 0, 1, 1, 1);
+        param->setRange(kParamGammaMin, kParamGammaMin, kParamGammaMin, 1, 1, 1);
+        param->setDisplayRange(kParamGammaMin, kParamGammaMin, kParamGammaMin, 1, 1, 1);
         param->setDefault(kParamGammaDefault, kParamGammaDefault, kParamGammaDefault);
         if (page) {
             page->addChild(*param);

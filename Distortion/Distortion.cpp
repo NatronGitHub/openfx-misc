@@ -3018,8 +3018,10 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     switch (_plugin) {
     case eDistortionPluginSTMap: {
-        if (_uvClip && _srcClip->isConnected()) {
-            // IDistort: RoD is the same as uv map
+        // test the UV clip, not the source clip, as getClipPreferences() does: the RoD of a
+        // disconnected UV clip is meaningless, and the source does not affect the geometry
+        if ( _uvClip && _uvClip->isConnected() ) {
+            // STMap: RoD is the same as uv map
             rod = _uvClip->getRegionOfDefinition(time);
 
             return true;
