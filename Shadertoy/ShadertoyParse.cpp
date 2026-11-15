@@ -165,9 +165,9 @@ getChannelInfo(const char* fragmentShader,
                     ++sstart;
                 }
                 if (isFilter) {
-                    if (std::strncmp(sstart, "nearest", 6) == 0) {
+                    if (std::strncmp(sstart, "nearest", 7) == 0) { // strlen("nearest") == 7
                         filter = ShadertoyPlugin::eFilterNearest;
-                        sstart += 6;
+                        sstart += 7;
                     } else if (std::strncmp(sstart, "linear", 6) == 0) {
                         filter = ShadertoyPlugin::eFilterLinear;
                         sstart += 6;
