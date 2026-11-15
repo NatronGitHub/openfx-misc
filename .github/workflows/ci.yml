@@ -49,8 +49,8 @@ jobs:
     name: Build macOS
     # GitHub-hosted arm64 (Apple silicon) runner. The plugins are built for
     # the native architecture (arm64) with the Xcode toolchain and SDK; they
-    # only need the system OpenGL framework, so no Homebrew or MacPorts
-    # packages are installed.
+    # only need the system OpenGL framework; GNU sed is installed for the
+    # bundle packaging script.
     runs-on: macos-15
     env:
       # By default, the Makefiles use the SDK version as the minimum macOS
@@ -61,6 +61,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
+      - name: Install GNU sed
+        # needed by openfx/Support/include/osxDeploy.sh, which packages the release bundles
+        run: brew install gnu-sed
       - name: Build (release)
         run: |
           make -j3 CONFIG=release TESTS=1 $MACOS_OPTIONS
