@@ -51,6 +51,7 @@ enum LuminanceMathEnum
     eLuminanceMathMaximum,
 };
 
+// The luminance of (r, g, b) with the formula selected by the Luminance Math parameter.
 template<typename T>
 T
 luminance(T r,

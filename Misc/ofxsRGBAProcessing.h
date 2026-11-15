@@ -32,6 +32,8 @@
 #include "ofxsMaskMix.h"
 
 namespace OFX {
+// Implementation of ofxsProcessRGBA() and ofxsProcessRGB(): each function turns one
+// runtime bool into a template argument, then calls the function for the next channel.
 namespace RGBAProcessingDetail {
 template <class PROC, bool processR, bool processG, bool processB>
 inline void
