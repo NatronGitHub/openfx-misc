@@ -35,6 +35,8 @@
 
 // Some hosts (DaVinci Resolve) call the CPU render action and we render with whatever OpenGL
 // context is current: this tells if there is one, since GL calls without one crash.
+// A current context may still be unusable by Shadertoy (e.g. a core-profile context, where the
+// legacy GL 2.1 calls fail): this only avoids the crash when there is no context at all.
 bool
 Shadertoy::ShadertoyPlugin::openGLContextIsCurrent()
 {

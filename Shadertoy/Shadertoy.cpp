@@ -1290,16 +1290,22 @@ ShadertoyPlugin::render(const RenderArguments &args)
 #if defined(OFX_SUPPORTS_OPENGLRENDER)
     openGLRender = args.openGLEnabled;
 
-    if (getImageEffectHostDescription()->hostName.compare(0, 14, "DaVinciResolve") == 0) {
-        // DaVinci Resolve advertises GL supported but doesn't enable it here :|
-        // DaVinci always executes the standard render, but when render is called an OpenGL
-        // context is attached, thus we can do off-screen rendering.
+    const bool isResolve = getImageEffectHostDescription()->hostName.compare(0, 14, "DaVinciResolve") == 0;
+    if (isResolve) {
+        // DaVinci Resolve (at least 19) does not advertise OpenGL render support in its host
+        // description, and always executes the standard (CPU) render (issue #69).
+        // On the Edit/Color pages, an OpenGL context is current when render is called,
+        // thus we can do off-screen rendering.
         // We execute the OpenGL code, but with args.openGLEnabled = false, which creates a
         // framebuffer and reads back the rendered image using glReadPixels.
         // The Fusion page renders from its own threads without a current context, and GL
         // calls then crash Resolve (issue #69): use OSMesa there, if available.
+        // A current context does not guarantee that Shadertoy can use it (e.g. a core-profile
+        // context on a Fusion worker thread would fail), this only avoids the crash.
         openGLRender = openGLContextIsCurrent();
 #ifndef HAVE_OSMESA
+        // Defensive: without OSMesa, describe() refuses the plugin on hosts that don't advertise
+        // OpenGL render support, so this only matters if a Resolve version advertises it.
         if (!openGLRender) {
             setPersistentMessage(Message::eMessageError, "", "No OpenGL context is available for rendering (e.g. on the DaVinci Resolve Fusion page). "
                                  "Use a Shadertoy plugin built with OSMesa CPU rendering.");
@@ -1309,7 +1315,14 @@ ShadertoyPlugin::render(const RenderArguments &args)
 
     // do the rendering
     if (openGLRender) {
-        return renderGL(args);
+        renderGL(args);
+#ifndef HAVE_OSMESA
+        if (isResolve) {
+            clearPersistentMessage(); // the "No OpenGL context" error above, if a previous render set it
+        }
+#endif
+
+        return;
     }
 #endif
 #ifdef HAVE_OSMESA
@@ -3240,7 +3253,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamEnableGPULabel);
         param->setHint(kParamEnableGPUHint);
         const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        // Resolve advertises OpenGL support in its host description, but never calls render with OpenGL enabled
+        // Resolve never calls render with OpenGL enabled (and Resolve 19 does not even advertise OpenGL render support, see issue #69)
         if ( hostDescription.supportsOpenGLRender && (hostDescription.hostName.compare(0, 14, "DaVinciResolve") != 0) ) {
             param->setDefault(true);
             if (hostDescription.APIVersionMajor * 100 + hostDescription.APIVersionMinor < 104) {
