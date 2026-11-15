@@ -246,6 +246,7 @@ public:
     /** @brief ctor */
     DiscBladesPlugin(OfxImageEffectHandle handle)
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
+        , _srcClip(NULL)
         , _radius(NULL)
         , _blades(NULL)
         , _rotation(NULL)
@@ -253,6 +254,8 @@ public:
         , _softness(NULL)
         , _offset(NULL)
     {
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) );
         _radius = fetchDoubleParam(kParamRadius);
         _blades = fetchIntParam(kParamBlades);
         _rotation = fetchDoubleParam(kParamRotation);
@@ -275,6 +278,7 @@ private:
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
+    Clip *_srcClip;
     DoubleParam *_radius;
     IntParam *_blades;
     DoubleParam *_rotation;
@@ -323,12 +327,19 @@ DiscBladesPlugin::setupAndProcess(DiscBladesProcessorBase &processor,
     _offset->getValueAtTime(time, offset.x, offset.y);
     OfxRectD rod = {0, 0, 0, 0};
     if ( !getRegionOfDefinition(time, rod) ) {
-        OfxPointD siz = getProjectSize();
-        OfxPointD off = getProjectOffset();
-        rod.x1 = off.x;
-        rod.x2 = off.x + siz.x;
-        rod.y1 = off.y;
-        rod.y2 = off.y + siz.y;
+        // "Default" extent: the host uses its default RoD, which in the general context is
+        // the Source RoD if Source is connected, else the project window (OFX spec,
+        // kOfxImageEffectActionGetRegionOfDefinition), so center the shape on that.
+        if ( _srcClip && _srcClip->isConnected() ) {
+            rod = _srcClip->getRegionOfDefinition(time);
+        } else {
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            rod.x1 = off.x;
+            rod.x2 = off.x + siz.x;
+            rod.y1 = off.y;
+            rod.y2 = off.y + siz.y;
+        }
     }
     processor.setValues(args.renderScale, dst->getPixelAspectRatio(), rod, offset, radius, blades, rotation, curvature, softness);
 
