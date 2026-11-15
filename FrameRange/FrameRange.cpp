@@ -48,6 +48,7 @@
 #endif
 
 using namespace OFX;
+using namespace OFX::FrameRangeBeforeAfter;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 

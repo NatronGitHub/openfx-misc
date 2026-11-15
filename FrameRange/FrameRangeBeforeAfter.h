@@ -26,6 +26,7 @@
 #define openfx_misc_FrameRangeBeforeAfter_h
 
 #include <cassert>
+#include <cmath>
 #include <string>
 
 #include "ofxsImageEffect.h"
@@ -44,6 +45,7 @@
 #define kParamBeforeAfterOptionBounceLegacy "Bounce", "Substitutes a reversed equal number of frames, creating a clip bounce.", "loop"
 
 namespace OFX {
+namespace FrameRangeBeforeAfter {
 
 // the option order is saved in projects: only append new options
 enum BeforeAfterEnum
@@ -104,7 +106,7 @@ frameLoop(int x,
 // Resolve the Before/After behaviour for time in the frame range [first, last].
 // Returns the behaviour that applies (eBeforeAfterOriginal within the frame range)
 // and sets *srcTime to the source frame to use (meaningless for eBeforeAfterBlack).
-// Loop and Bounce work on whole frames (time is truncated to an int).
+// Loop and Bounce work on whole frames (time is rounded down to an int).
 inline BeforeAfterEnum
 getBeforeAfterTime(int first,
                    int last,
@@ -125,10 +127,10 @@ getBeforeAfterTime(int first,
         *srcTime = (time < first) ? first : last;
         break;
     case eBeforeAfterLoop:
-        *srcTime = frameLoop(first, last, (int)time);
+        *srcTime = frameLoop( first, last, (int)std::floor(time) );
         break;
     case eBeforeAfterBounce:
-        *srcTime = frameBounce(first, last, (int)time);
+        *srcTime = frameBounce( first, last, (int)std::floor(time) );
         break;
     case eBeforeAfterOriginal:
     case eBeforeAfterBlack:
@@ -141,6 +143,7 @@ getBeforeAfterTime(int first,
 }
 
 // Define a non-animated Before or After choice param.
+// It is a clip preferences slave param because it may change kOfxImageEffectFrameVarying.
 inline void
 defineBeforeAfterParam(ImageEffectDescriptor &desc,
                        PageParamDescriptor *page,
@@ -170,11 +173,13 @@ defineBeforeAfterParam(ImageEffectDescriptor &desc,
     }
     param->setDefault( (int)defaultValue );
     param->setAnimates(false);
+    desc.addClipPreferencesSlaveParam(*param);
     if (page) {
         page->addChild(*param);
     }
 }
 
+} // namespace FrameRangeBeforeAfter
 } // namespace OFX
 
 #endif // openfx_misc_FrameRangeBeforeAfter_h
