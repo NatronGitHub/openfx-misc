@@ -3,6 +3,7 @@ PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
 ofxsLut.o \
 CImgBilateral.o \
 CImgBlur.o \
+CImgConvolve.o \
 CImgDenoise.o \
 CImgDilate.o \
 CImgDistance.o \
@@ -89,6 +90,7 @@ Smooth/net.sf.cimg.CImgSmooth.svg \
 VPATH += \
 Bilateral \
 Blur \
+Convolve \
 Denoise \
 Distance \
 Equalize \
@@ -116,6 +118,7 @@ CXXFLAGS += \
 -I. \
 -IBilateral \
 -IBlur \
+-IConvolve \
 -IDenoise \
 -IDistance \
 -IEqualize \
@@ -165,6 +168,8 @@ distclean: clean
 $(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImgOperator.h CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgConvolve.o: CImgConvolve.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImgFilter.h CImg.h
 
