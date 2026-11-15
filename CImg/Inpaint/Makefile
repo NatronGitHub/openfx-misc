@@ -24,7 +24,7 @@ include $(TOP_SRCDIR)/Makefile.master
 
 include $(TOP_SRCDIR)/CImg/CImgSubplugin.mk
 
-$(OBJECTPATH)/CImgInpant-gpl.o: CImgInpaint-gpl.cpp CImg.h inpaint.h
+$(OBJECTPATH)/CImgInpaint-gpl.o: CImgInpaint-gpl.cpp CImg.h inpaint.h
 
 inpaint.h:
 	cd .. && $(MAKE) Inpaint/inpaint.h
