@@ -238,7 +238,7 @@ getBboxInfo(const char* fragmentShader,
     } else if ( (std::strncmp(sstart, "iChannel", 8) == 0) || (std::strncmp(sstart, "ichannel", 8) == 0) ) {
         // get the channel number;
         int num = atoi(sstart + 8);
-        if ( (0 <= num) && (num <= SHADERTOY_NBINPUTS) ) {
+        if ( (0 <= num) && (num < SHADERTOY_NBINPUTS) ) { // valid channels are 0..SHADERTOY_NBINPUTS-1
             bbox = (ShadertoyPlugin::BBoxEnum)(ShadertoyPlugin::eBBoxIChannel + num);
         }
     }
