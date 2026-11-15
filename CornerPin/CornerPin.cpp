@@ -1116,7 +1116,10 @@ defineExtraMatrixRow(ImageEffectDescriptor &desc,
 {
     Double3DParamDescriptor* param = desc.defineDouble3DParam(name);
 
-    if ( getImageEffectHostDescription()->isNatron && (getImageEffectHostDescription()->versionMajor >= 2) && (getImageEffectHostDescription()->versionMinor >= 1) ) {
+    // Natron >= 2.1 (testing major and minor separately would fail for 3.0)
+    const ImageEffectHostDescription& host = *getImageEffectHostDescription();
+    if ( host.isNatron &&
+         ( (host.versionMajor > 2) || ( (host.versionMajor == 2) && (host.versionMinor >= 1) ) ) ) {
         param->setLabel(kGroupExtraMatrixLabel);
     } else {
         param->setLabels("", "", "");
