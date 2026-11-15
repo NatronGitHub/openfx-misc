@@ -12,9 +12,12 @@ on:
       - README.md
       - README-hosts.txt
 
+# One run per branch or PR. Superseded PR runs are cancelled, but every push to
+# master is built to completion, so each merge gets a CI result.
+# (github.job is empty at workflow level, so it is not part of the group.)
 concurrency:
-  group: ${{ github.workflow }}-${{ github.job }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build_linux:
@@ -22,7 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Install Ubuntu system packages
@@ -38,9 +41,41 @@ jobs:
         run: |
           make -j2 CONFIG=debug
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: openfx-misc-build-ubuntu_22-release
+          path: Bundle
+  build_macos:
+    name: Build macOS
+    # GitHub-hosted arm64 (Apple silicon) runner. The plugins are built for
+    # the native architecture (arm64) with the Xcode toolchain and SDK; they
+    # only need the system OpenGL framework; GNU sed is installed for the
+    # bundle packaging script.
+    runs-on: macos-15
+    env:
+      # By default, the Makefiles use the SDK version as the minimum macOS
+      # version, so that the bundles would only load on macOS 15 and later.
+      MACOS_OPTIONS: MACOSX=11.0
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install GNU sed
+        # needed by openfx/Support/include/osxDeploy.sh, which packages the release bundles
+        run: brew install gnu-sed
+      - name: Build (release)
+        run: |
+          make -j3 CONFIG=release TESTS=1 $MACOS_OPTIONS
+          mkdir -p Bundle
+          mv {CImg,Misc,Shadertoy,Test}/Darwin-64-release/*.ofx.bundle Bundle
+      - name: Build (debug)
+        run: |
+          make -j3 CONFIG=debug $MACOS_OPTIONS
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: openfx-misc-build-macos-release
           path: Bundle
   build_windows:
     name: Build Windows
@@ -48,9 +83,14 @@ jobs:
     defaults:
       run:
         shell: msys2 {0}
+    env:
+      # Options shared by the release builds. The MinGW runtime (libstdc++,
+      # libgcc, winpthread) is linked statically, so that the bundles also
+      # load in hosts that do not ship these DLLs.
+      RELEASE_OPTIONS: CONFIG=release LDFLAGS_ADD=-static
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Setup MinGW environment
@@ -61,14 +101,24 @@ jobs:
           install: git base-devel mingw-w64-x86_64-cc
       - name: Build (release)
         run: |
-          make -j2 CONFIG=release TESTS=1
+          make -j2 $RELEASE_OPTIONS TESTS=1
           mkdir -p Bundle
           mv {CImg,Misc,Shadertoy,Test}/MINGW64*-release/*.ofx.bundle Bundle
+      - name: Build separate plugins (release, nomulti)
+        run: |
+          make -j2 nomulti $RELEASE_OPTIONS
+          mkdir -p BundleNoMulti
+          mv */MINGW64*-release/*.ofx.bundle CImg/*/MINGW64*-release/*.ofx.bundle BundleNoMulti
       - name: Build (debug)
         run: |
           make -j2 CONFIG=debug
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: openfx-misc-build-windows-release
           path: Bundle
+      - name: Upload separate plugin artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: openfx-misc-build-windows-nomulti-release
+          path: BundleNoMulti
