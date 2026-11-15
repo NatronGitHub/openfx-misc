@@ -1137,6 +1137,22 @@ unpremult(CImg<cimgpix_t> &cimg)
 }
 
 
+// convert chromaticity (x,y) and luminance Y to the X and Z tristimulus values
+static inline void
+xyYToXYZ(float x,
+         float y,
+         float Y,
+         float *X,
+         float *Z)
+{
+    // y is zero where the chrominance is zero (e.g. black areas): avoid NaN
+    const float Yy = (y != 0.f) ? (Y / y) : 0.f;
+
+    *X = x * Yy;
+    *Z = (1.f - x - y) * Yy;
+}
+
+
 class CImgBlurPlugin
     : public CImgFilterPluginHelper<CImgBlurParams, false>
 {
@@ -1896,10 +1912,8 @@ public:
                 case eColorspaceRec709: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
-                        // avoid NaN where the chrominance is zero (e.g. black areas)
-                        float Yy = (*py != 0.f) ? (Y / *py) : 0.f;
-                        float X = *px * Yy;
-                        float Z = (1.f - *px - *py) * Yy;
+                        float X, Z;
+                        xyYToXYZ(*px, *py, Y, &X, &Z);
                         float r, g, b;
                         Color::xyz_to_rgb709(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1916,10 +1930,8 @@ public:
                 case eColorspaceRec2020: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
-                        // avoid NaN where the chrominance is zero (e.g. black areas)
-                        float Yy = (*py != 0.f) ? (Y / *py) : 0.f;
-                        float X = *px * Yy;
-                        float Z = (1.f - *px - *py) * Yy;
+                        float X, Z;
+                        xyYToXYZ(*px, *py, Y, &X, &Z);
                         float r, g, b;
                         Color::xyz_to_rgb2020(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1936,10 +1948,8 @@ public:
                 case eColorspaceACESAP0: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
-                        // avoid NaN where the chrominance is zero (e.g. black areas)
-                        float Yy = (*py != 0.f) ? (Y / *py) : 0.f;
-                        float X = *px * Yy;
-                        float Z = (1.f - *px - *py) * Yy;
+                        float X, Z;
+                        xyYToXYZ(*px, *py, Y, &X, &Z);
                         float r, g, b;
                         Color::xyz_to_rgbACESAP0(X, Y, Z, &r, &g, &b);
                         *pr = r;
@@ -1956,10 +1966,8 @@ public:
                 case eColorspaceACESAP1: {
                     for (unsigned long N = (unsigned long)cimg.width() * cimg.height() * cimg.depth(); N; --N) {
                         float Y = *pr;
-                        // avoid NaN where the chrominance is zero (e.g. black areas)
-                        float Yy = (*py != 0.f) ? (Y / *py) : 0.f;
-                        float X = *px * Yy;
-                        float Z = (1.f - *px - *py) * Yy;
+                        float X, Z;
+                        xyYToXYZ(*px, *py, Y, &X, &Z);
                         float r, g, b;
                         Color::xyz_to_rgbACESAP1(X, Y, Z, &r, &g, &b);
                         *pr = r;
