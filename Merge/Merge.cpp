@@ -140,7 +140,8 @@ enum MergePluginEnum
 // History:
 // 1.0: Original version
 // 2.0: After fixing https://github.com/NatronGitHub/Natron/issues/647
-// 3.0: With Alpha-only images, the A checkboxes (instead of the R checkboxes) of A and B control the alpha channel
+// 3.0: With Alpha-only images, the A checkboxes (instead of the R checkboxes) of A and B control the alpha channel.
+//      A inputs after the first one are merged as transparent black outside of their image (instead of being skipped).
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -532,14 +533,17 @@ private:
 
                         srcPixA = (const PIX *)  (_srcImgAs[i] ? _srcImgAs[i]->getPixelAddress(x, y) : 0);
 
-                        if (srcPixA) {
+                        // Since version 3, like the first A input, the other A inputs are
+                        // merged as transparent black outside of their image.
+                        // Before version 3, they were skipped there.
+                        if ( srcPixA || (_effect.getMajorVersion() >= 3) ) {
                             for (std::size_t c = 0; c < nComponents; ++c) {
 #                             ifdef DEBUG
                                 // check for NaN
-                                assert( !OFX::IsNaN(srcPixA[c]) );
+                                assert( !srcPixA || !OFX::IsNaN(srcPixA[c]) );
 #                             endif
                                 // all images are supposed to be black and transparent outside o
-                                tmpA[c] = _aChannels[alphaFromA ? 3 : c] ? ( (float)srcPixA[c] / maxValue ) : 0.f;
+                                tmpA[c] = (_aChannels[alphaFromA ? 3 : c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
 #                             ifdef DEBUG
                                 // check for NaN
                                 assert( !OFX::IsNaN(tmpA[c]) );
@@ -957,13 +961,26 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
             if (renderRotoMask) {
 #ifdef OFX_EXTENSIONS_NUKE
                 const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
-                if (rotoMaskA) {
+                // Since version 3, keep NULL images, so that a connected A input is merged
+                // as transparent black even if it has no image here.
+                if ( rotoMaskA || (getMajorVersion() >= 3) ) {
                     srcAs.rotoMaskImg.push_back(rotoMaskA);
                 }
 #endif
             } else {
                 const Image* srcA = _srcClipAs[i]->fetchImage(time);
-                if (srcA) {
+                if ( !srcA && (getMajorVersion() >= 3) ) {
+                    // Since version 3, keep NULL images, so that a connected A input is merged
+                    // as transparent black even if it has no image here.
+                    srcAs.images.push_back(srcA);
+#ifdef OFX_EXTENSIONS_NUKE
+                    if (_pluginType == eMergePluginRoto) {
+                        const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+                        // always push the rotoMask, even if NULL, so that indexes in srcAs.images and srcAs.rotoMaskImg correspond
+                        srcAs.rotoMaskImg.push_back(rotoMaskA);
+                    }
+#endif
+                } else if (srcA) {
                     srcAs.images.push_back(srcA);
 
 #                 ifndef NDEBUG
