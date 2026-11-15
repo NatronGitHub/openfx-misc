@@ -55,7 +55,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 3.0: fix Rice noise (used the first channel only, real and imaginary parts were identical),
-//              Poisson noise (wrong distribution), and Salt & Pepper noise (pattern depended on the tile)
+//              Poisson noise (wrong distribution), and Salt & Pepper noise (pattern depended on the tile,
+//              and the salt and pepper values were the max and min of each tile; they are now 1 and 0)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -86,7 +87,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamTypeHint "Type of additive noise."
 #define kParamTypeOptionGaussian "Gaussian", "Gaussian noise.", "gaussian"
 #define kParamTypeOptionUniform "Uniform", "Uniform noise.", "uniform"
-#define kParamTypeOptionSaltPepper "Salt & Pepper", "Salt & pepper noise.", "saltnpepper"
+#define kParamTypeOptionSaltPepperLegacy "Salt & Pepper", "Salt & pepper noise.", "saltnpepper"
+#define kParamTypeOptionSaltPepper "Salt & Pepper", "Salt & pepper noise: a fraction Sigma (in percent) of the pixel values is set to 0 (pepper) or 1 (salt).", "saltnpepper"
 #define kParamTypeOptionPoisson "Poisson", "Poisson noise. Image is divided by Sigma before computing noise, then remultiplied by Sigma.", "poisson"
 #define kParamTypeOptionRice "Rice", "Rician noise.", "rice"
 #define kParamTypeDefault eTypeGaussian
@@ -166,7 +168,9 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
     if (nsigma==0 && noise_type!=3) {
         return img;
     }
-    if (nsigma<0 || noise_type==2) {
+    if (nsigma<0 || (noise_type==2 && legacy)) {
+        // legacy: the salt and pepper values were the min and max of the tile being rendered,
+        // so they differed from tile to tile (kept so old projects render the same)
         m = (Tfloat)img.min_max(M);
     }
     if (nsigma<0) {
@@ -201,7 +205,13 @@ noise(CImg<T>&img, const double sigma, const unsigned int noise_type, unsigned i
             if (nsigma<0) {
                 nsigma = -nsigma;
             }
-            if (M==m) {
+            if (!legacy) {
+                // a render only sees its own tile (OFX: the render window), so the range of
+                // the whole image is not available: use black and white, which is what
+                // "salt and pepper" means, so that all tiles get the same values
+                m = 0;
+                M = cimg::type<T>::is_float()?(Tfloat)1:(Tfloat)cimg::type<T>::max();
+            } else if (M==m) {
                 m = 0;
                 M = cimg::type<T>::is_float()?(Tfloat)1:(Tfloat)cimg::type<T>::max();
             }
@@ -432,7 +442,12 @@ CImgNoisePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor& d
         assert(param->getNOptions() == eTypeUniform && param->getNOptions() == 1);
         param->appendOption(kParamTypeOptionUniform);
         assert(param->getNOptions() == eTypeSaltPepper && param->getNOptions() == 2);
-        param->appendOption(kParamTypeOptionSaltPepper);
+        if (majorVersion < 3) {
+            // version 2 used the min and max of each tile (kept so old projects render the same)
+            param->appendOption(kParamTypeOptionSaltPepperLegacy);
+        } else {
+            param->appendOption(kParamTypeOptionSaltPepper);
+        }
         assert(param->getNOptions() == eTypePoisson && param->getNOptions() == 3);
         param->appendOption(kParamTypeOptionPoisson);
         assert(param->getNOptions() == eTypeRice && param->getNOptions() == 4);
