@@ -29,10 +29,6 @@
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
-
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -306,12 +302,12 @@ public:
             _toleranceUpper = 1.;
             _softnessUpper = 1.;
             _despill = despill;
-            _despillClosing = std::tan( (90 - 0.5 * despillAngle) * M_PI / 180. );
+            _despillClosing = std::tan( (90 - 0.5 * despillAngle) * OFXS_PI / 180. );
         } else {
             _toleranceUpper = toleranceUpper;
             _softnessUpper = softnessUpper;
             _despill = (_keyerMode == eKeyerModeNone) ? despill : 0.;
-            _despillClosing = (_keyerMode == eKeyerModeNone) ? std::tan( (90 - 0.5 * despillAngle) * M_PI / 180. ) : 0.;
+            _despillClosing = (_keyerMode == eKeyerModeNone) ? std::tan( (90 - 0.5 * despillAngle) * OFXS_PI / 180. ) : 0.;
         }
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
