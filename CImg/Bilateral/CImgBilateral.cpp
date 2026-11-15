@@ -154,10 +154,7 @@ public:
     {
         int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x * params.iterations);
 
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        cimgPadRect(rect, delta_pix, delta_pix, roi);
     }
 
     virtual void render(const RenderArguments &args,
@@ -202,7 +199,7 @@ public:
 
     CImgBilateralGuidedPlugin(OfxImageEffectHandle handle,
                               int majorVersion)
-        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
+        : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
     {
         // versions < 3 ignored the Mix parameter
         _ignoreMix = (majorVersion < 3);
@@ -229,10 +226,7 @@ public:
     {
         int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x * params.iterations);
 
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        cimgPadRect(rect, delta_pix, delta_pix, roi);
     }
 
     virtual void render(const cimg_library::CImg<cimgpix_t>& srcA,
@@ -417,10 +411,7 @@ CImgBilateralGuidedPluginFactory<majorVersion>::describeInContext(ImageEffectDes
                                                                                   kSupportsRGB,
                                                                                   kSupportsXY,
                                                                                   kSupportsAlpha,
-                                                                                  kSupportsTiles,
-                                                                                  /*processRGB =*/ true,
-                                                                                  /*processAlpha =*/ false,
-                                                                                  /*processIsSecret =*/ false);
+                                                                                  kSupportsTiles);
 
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);

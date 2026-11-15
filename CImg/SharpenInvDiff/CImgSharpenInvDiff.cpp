@@ -121,10 +121,7 @@ public:
     {
         int delta_pix = 24 * params.iterations; // overlap is 24 in gmicol
 
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        cimgPadRect(rect, delta_pix, delta_pix, roi);
     }
 
     virtual void render(const RenderArguments & /*args*/,

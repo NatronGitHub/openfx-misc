@@ -133,12 +133,8 @@ public:
                         const CImgHistEQParams& /*params*/,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 0;
-
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        // does not support tiles: the whole image is processed anyway
+        *roi = rect;
     }
 
     virtual void render(const RenderArguments & /*args*/,

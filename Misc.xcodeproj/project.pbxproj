@@ -3614,6 +3614,7 @@
 		1E6B4DB71C43C0F3004478D5 /* TestOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestOpenGL.h; sourceTree = "<group>"; };
 		1E6B4DB81C43D9A5004478D5 /* CImgFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgFilter.h; sourceTree = "<group>"; };
 		1E6B4DB91C43D9B4004478D5 /* CImgOperator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgOperator.h; sourceTree = "<group>"; };
+		1EC0C0C11D00000000C0C0C1 /* CImgErodeDilate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgErodeDilate.h; path = Erode/CImgErodeDilate.h; sourceTree = "<group>"; };
 		1E6CC07F1A768B7200173EB3 /* ImageStatistics.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ImageStatistics.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E6CC0811A768BC800173EB3 /* ImageStatistics.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImageStatistics.cpp; sourceTree = "<group>"; };
 		1E6CC0831A768BC800173EB3 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -5021,6 +5022,7 @@
 				1ED61EF41EB8D7150059A800 /* CImgDistance.cpp */,
 				1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */,
 				1E868B7619E6E28E00B793BA /* CImgErode.cpp */,
+				1EC0C0C11D00000000C0C0C1 /* CImgErodeDilate.h */,
 				1ECF2F5119F2CB9F00E91A38 /* CImgErodeSmooth.cpp */,
 				1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */,
 				1E534AAC1D0FEC870007AD92 /* CImgExpression.md */,

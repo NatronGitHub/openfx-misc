@@ -142,22 +142,6 @@ inline void gImageEffectAbort();
 #ifdef PLUGIN_PACK_GPL2
 
 // include the inpaint and nlmeans cimg plugins
-#if 0 // not necessary since CImg cimmit 7c83bdad65ab7447220b54851a5a1035976777fa
-namespace cimg_library_openfx_misc {
-    namespace cimg {
-        //! Return the maximum between two values.
-        template<typename t>
-        inline t max(const t& a, const t& b) {
-            return (std::max)(a,b);
-        }
-        //! Return the minimum between two values.
-        template<typename t>
-        inline t min(const t& a, const t& b) {
-            return (std::min)(a,b);
-        }
-    }
-}
-#endif
 #define cimg_plugin "Inpaint/inpaint.h"
 //#define cimg_plugin1 "nlmeans.h"
 #endif
@@ -220,6 +204,20 @@ public:
 #endif
 
 
+// set *dst to rect, enlarged by dx pixels on the left and right sides and dy pixels on the bottom and top sides
+// (dst may be &rect)
+inline void
+cimgPadRect(const OfxRectI& rect,
+            int dx,
+            int dy,
+            OfxRectI* dst)
+{
+    dst->x1 = rect.x1 - dx;
+    dst->x2 = rect.x2 + dx;
+    dst->y1 = rect.y1 - dy;
+    dst->y2 = rect.y2 + dy;
+}
+
 class CImgFilterPluginHelperBase
     : public OFX::ImageEffect
 {
@@ -278,15 +276,18 @@ protected:
 #endif
 
 
-    void setupAndFill(OFX::PixelProcessorFilterBase & processor,
-                      const OfxRectI &renderWindow,
-                      const OfxPointD &renderScale,
-                      void *dstPixelData,
-                      const OfxRectI& dstBounds,
-                      OFX::PixelComponentEnum dstPixelComponents,
-                      int dstPixelComponentCount,
-                      OFX::BitDepthEnum dstPixelDepth,
-                      int dstRowBytes);
+    // Create the float pixel processors used by render() to copy images, given the
+    // components of the destination. They return NULL for unsupported component counts.
+    // plain copy
+    OFX::PixelProcessorFilterBase* createPixelCopier(int dstPixelComponentCount);
+    // source to temporary image: black fill if there is no source, else copy and unpremult RGBA
+    OFX::PixelProcessorFilterBase* createSrcToTmpCopier(bool hasSrc,
+                                                        OFX::PixelComponentEnum dstPixelComponents,
+                                                        int dstPixelComponentCount);
+    // temporary image to destination: copy, premult RGBA, mask and mix
+    OFX::PixelProcessorFilterBase* createTmpToDstCopier(OFX::PixelComponentEnum dstPixelComponents,
+                                                        int dstPixelComponentCount,
+                                                        bool doMasking);
 
     void setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                       double time,
@@ -455,46 +456,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         }
         checkBadRenderScaleOrField(src, args);
 #     endif
-#if 0
-    } else {
-        // src is considered black and transparent, just fill black to dst and return
-#pragma message WARN("BUG: even when src is black and transparent, the output may not be black (cf. NoiseCImg)")
-        void* dstPixelData = NULL;
-        OfxRectI dstBounds;
-        OFX::PixelComponentEnum dstPixelComponents;
-        OFX::BitDepthEnum dstBitDepth;
-        int dstRowBytes;
-        getImageData(dst.get(), &dstPixelData, &dstBounds, &dstPixelComponents, &dstBitDepth, &dstRowBytes);
-
-        int nComponents = dst->getPixelComponentCount();
-        switch (nComponents) {
-        case 1: {
-            OFX::BlackFiller<float, 1> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        case 2: {
-            OFX::BlackFiller<float, 2> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        case 3: {
-            OFX::BlackFiller<float, 3> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        case 4: {
-            OFX::BlackFiller<float, 4> fred(*this);
-            setupAndFill(fred, renderWindow, dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCOunt, dstBitDepth, dstRowBytes);
-            break;
-        }
-        default:
-            assert(false);
-            break;
-        } // switch
-
-        return;
-#endif
     }
 
     const void *srcPixelData;
@@ -654,16 +615,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     copyWindowE.y1 = processWindow.y1;
     copyWindowE.y2 = processWindow.y2;
     {
-        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if (dstPixelComponentCount == 4) {
-            fred.reset( new OFX::PixelCopier<float, 4>(*this) );
-        } else if (dstPixelComponentCount == 3) {
-            fred.reset( new OFX::PixelCopier<float, 3>(*this) );
-        } else if (dstPixelComponentCount == 2) {
-            fred.reset( new OFX::PixelCopier<float, 2>(*this) );
-        }  else if (dstPixelComponentCount == 1) {
-            fred.reset( new OFX::PixelCopier<float, 1>(*this) );
-        }
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createPixelCopier(dstPixelComponentCount) );
         assert( fred.get() );
         if ( fred.get() ) {
             setupAndCopy(*fred, time, copyWindowN, renderScale, src.get(), mask.get(),
@@ -716,32 +668,6 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         srcRowBytes = 0;
     }
 
-    // The following checks may be wrong, because the srcRoI may be outside of the region of definition of src.
-    // It is not an error: areas outside of srcRoD should be considered black and transparent.
-    // IF THE FOLLOWING CODE HAS TO BE DISACTIVATED, PLEASE COMMENT WHY.
-    // This was disactivated by commit c47d07669b78a71960b204989d9c36f746d14a4c, then reactivated.
-    // DISACTIVATED AGAIN by FD 9/12/2014: boundary conditions are now handled by pixelcopier, and interstection with dstRoD was added above
-#if 0 //def CIMGFILTER_INSTERSECT_ROI
-    OFX::Coords::rectIntersection(srcRoI, srcRoD, &srcRoI);
-    // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
-    assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
-           srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
-    if ( (srcBounds.x1 > srcRoI.x1) || (srcRoI.x2 > srcBounds.x2) ||
-         ( srcBounds.y1 > srcRoI.y1) || ( srcRoI.y2 > srcBounds.y2) ) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-
-    if ( doMasking && (mix != 1.) ) {
-        // the renderWindow should also be contained within srcBounds, since we are mixing
-        assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
-               srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
-        if ( (srcBounds.x1 > renderWindow.x1) || (renderWindow.x2 > srcBounds.x2) ||
-             ( srcBounds.y1 > renderWindow.y1) || ( renderWindow.y2 > srcBounds.y2) ) {
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
-    }
-#endif
-
 #if cimg_use_openmp!=0
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
@@ -775,27 +701,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         tmpData.reset( new OFX::ImageMemory(tmpSize, this) );
         tmpPixelData = (float*)tmpData->lock();
 
-        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if ( !src.get() ) {
-            // no src, fill with black & transparent
-            fred.reset( new OFX::BlackFiller<float>(*this, dstPixelComponentCount) );
-        } else {
-            if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-                fred.reset( new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this) );
-            } else if (dstPixelComponentCount == 4) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 4>(*this) );
-            } else if (dstPixelComponentCount == 3) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 3>(*this) );
-            } else if (dstPixelComponentCount == 2) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 2>(*this) );
-            }  else if (dstPixelComponentCount == 1) {
-                // just copy, no premult
-                fred.reset( new OFX::PixelCopier<float, 1>(*this) );
-            }
-        }
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createSrcToTmpCopier(src.get() != NULL, dstPixelComponents, dstPixelComponentCount) );
         assert( fred.get() );
         if ( fred.get() ) {
             setupAndCopy(*fred, time, srcRoI, renderScale, src.get(), mask.get(),
@@ -955,39 +861,8 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // 5- copy+premult+max+mix tmp to dst (only processWindow)
 
     {
-        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred;
-        if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-            fred.reset( new OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1>(*this) );
-        } else if (dstPixelComponentCount == 4) {
-            // just copy, no premult
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 4, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 4, 1, false>(*this) );
-            }
-        } else if (dstPixelComponentCount == 3) {
-            // just copy, no premult
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 3, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 3, 1, false>(*this) );
-            }
-        } else if (dstPixelComponentCount == 2) {
-            // just copy, no premult
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 2, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 2, 1, false>(*this) );
-            }
-        }  else if (dstPixelComponentCount == 1) {
-            // just copy, no premult
-            assert(srcPixelComponents == OFX::ePixelComponentAlpha);
-            if (doMasking) {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 1, 1, true>(*this) );
-            } else {
-                fred.reset( new OFX::PixelCopierMaskMix<float, 1, 1, false>(*this) );
-            }
-        }
+        assert(dstPixelComponentCount != 1 || srcPixelComponents == OFX::ePixelComponentAlpha);
+        OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createTmpToDstCopier(dstPixelComponents, dstPixelComponentCount, doMasking) );
         assert( fred.get() );
         if ( fred.get() ) {
             setupAndCopy(*fred, time, processWindow, renderScale, src.get(), mask.get(),
