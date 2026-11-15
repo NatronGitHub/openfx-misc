@@ -113,10 +113,6 @@
 #include "ofxsLut.h"
 #include "ofxsCoords.h"
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
-
 #define DISABLE_LM // define to disable luminance match (not yet implemented)
 #define DISABLE_AL // define to disable autolevels (not yet implemented)
 #define DISABLE_RGBAL // define to disable RGBA legal (not yet implemented)

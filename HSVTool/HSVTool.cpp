@@ -21,7 +21,6 @@
  * OFX HSVTool plugin.
  */
 
-#define _USE_MATH_DEFINES
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm>
@@ -47,10 +46,6 @@ namespace {
 typedef tthread::fast_mutex Mutex;
 typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 }
-#endif
-
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
 #endif
 
 using namespace OFX;
@@ -744,8 +739,8 @@ public:
             double meancosh = _sumcosh / _count;
 
             // angle mean and sdev from https://en.wikipedia.org/wiki/Directional_statistics#Measures_of_location_and_spread
-            return normalizeAngle(std::atan2(meansinh, meancosh) * 180 / M_PI);
-            //*huesdev = std::sqrt((std::max)(0., -std::log(meansinh*meansinh+meancosh*meancosh)))*180/M_PI;
+            return normalizeAngle(std::atan2(meansinh, meancosh) * 180 / OFXS_PI);
+            //*huesdev = std::sqrt((std::max)(0., -std::log(meansinh*meansinh+meancosh*meancosh)))*180/OFXS_PI;
         }
     }
 
@@ -818,8 +813,8 @@ private:
                 pixToHSV(dstPix, &hsv);
                 if ( (hsv.s > MIN_SATURATION) && (hsv.v > MIN_VALUE) ) {
                     // only take into account pixels that really have a hue
-                    sumsinhLine += std::sin(hsv.h * M_PI / 180);
-                    sumcoshLine += std::cos(hsv.h * M_PI / 180);
+                    sumsinhLine += std::sin(hsv.h * OFXS_PI / 180);
+                    sumcoshLine += std::cos(hsv.h * OFXS_PI / 180);
                     ++count;
                 }
 

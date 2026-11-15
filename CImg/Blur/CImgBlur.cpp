@@ -45,10 +45,6 @@
 #error "This plugin requires CImg 1.6.1, please upgrade CImg."
 #endif
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
-
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -2215,10 +2211,10 @@ public:
             case eFilterGaussian:
             case eFilterQuasiGaussian:
                 if (sx / 2.4 >= 0.1) {
-                    grad[0] *= 2. * M_PI * (sx/2.4) * (1. /* should be sx */ /2.4);
+                    grad[0] *= 2. * OFXS_PI * (sx/2.4) * (1. /* should be sx */ /2.4);
                 }
                 if (sy / 2.4 >= 0.1) {
-                    grad[1] *= 2. * M_PI * (sy/2.4) * (1. /* should be sy */ /2.4);
+                    grad[1] *= 2. * OFXS_PI * (sy/2.4) * (1. /* should be sy */ /2.4);
                 }
                 break;
         }
