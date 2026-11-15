@@ -111,6 +111,7 @@ CImg/RollingGuidance \
 CImg/SharpenInvDiff \
 CImg/SharpenShock \
 CImg/Smooth \
+CImg/ZDefocus \
 
 endif
 

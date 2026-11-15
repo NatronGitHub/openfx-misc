@@ -22,6 +22,7 @@ CImgRollingGuidance.o \
 CImgSharpenInvDiff.o \
 CImgSharpenShock.o \
 CImgSmooth.o \
+CImgZDefocus.o \
 CImgFilter.o \
 CImgOperator.o \
 
@@ -108,6 +109,7 @@ RollingGuidance \
 SharpenInvDiff \
 SharpenShock \
 Smooth \
+ZDefocus \
 
 TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.master
@@ -136,6 +138,7 @@ CXXFLAGS += \
 -ISharpenInvDiff \
 -ISharpenShock \
 -ISmooth \
+-IZDefocus \
 
 # openmp
 ifeq ($(OPENMP),1)
@@ -210,3 +213,5 @@ $(OBJECTPATH)/CImgSharpenInvDiff.o: CImgSharpenInvDiff.cpp CImgFilter.h CImg.h
 $(OBJECTPATH)/CImgSharpenShock.o: CImgSharpenShock.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgSmooth.o: CImgSmooth.cpp CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgZDefocus.o: CImgZDefocus.cpp CImgFilter.h CImg.h
