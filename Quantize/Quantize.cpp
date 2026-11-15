@@ -761,6 +761,10 @@ QuantizePlugin::setupAndProcess(QuantizeProcessorBase &processor,
     _processA->getValueAtTime(time, processA);
 
     double colors = _colors->getValueAtTime(time);
+    if (colors < kParamColorsMin) {
+        // fewer than 2 levels is meaningless and would divide by (colors - 1) <= 0
+        colors = kParamColorsMin;
+    }
     DitherEnum dither = (DitherEnum)_dither->getValueAtTime(time);
     bool staticSeed = _staticSeed->getValueAtTime(time);
     uint32_t seed = hash( (unsigned int)_seed->getValueAtTime(time) );
@@ -1061,7 +1065,7 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamColors);
         param->setLabel(kParamColorsLabel);
         param->setHint(kParamColorsHint);
-        param->setRange(0, DBL_MAX);
+        param->setRange(kParamColorsMin, DBL_MAX);
         param->setDisplayRange(kParamColorsMin, kParamColorsMax);
         param->setDefault(kParamColorsDefault);
         if (page) {

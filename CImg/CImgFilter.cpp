@@ -23,11 +23,6 @@ using namespace OFX;
 
 #if defined(HAVE_THREAD_LOCAL)
 thread_local ImageEffect *tls::gImageEffect = 0;
-#elif defined(HAVE_PTHREAD)
-#include <assert.h>
-#include <pthread.h>
-pthread_key_t tls::gImageEffect_key;
-pthread_once_t tls::gImageEffect_once = PTHREAD_ONCE_INIT;
 #endif
 
 

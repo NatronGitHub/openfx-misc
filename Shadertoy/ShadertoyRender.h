@@ -1238,6 +1238,47 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             _osmesa.pop_back();
         }
     }
+    // Detach the buffer and make osmesa available for other renders when leaving this function,
+    // even if an exception is thrown (else the OSMesaPrivate would leak).
+    struct OSMesaReleaser
+    {
+        OSMesaReleaser(OSMesaPrivate* o,
+                       std::list<OSMesaPrivate *>& l,
+                       Mutex* m)
+            : osmesa(o)
+            , list(l)
+            , mutex(m)
+        {
+        }
+
+        ~OSMesaReleaser()
+        {
+            release();
+        }
+
+        void release()
+        {
+            if (!osmesa) {
+                return;
+            }
+            // make sure the buffer is not referenced anymore
+            osmesa->setContext(0, 0, 0, 0, 0, eCPUDriverSoftPipe, NULL, 0, 0, 0, true);
+            OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
+            assert(OSMesaGetCurrentContext() == NULL);
+
+            // We're finished with this osmesa, make it available for other renders
+            {
+                AutoMutex lock(mutex);
+                list.push_back(osmesa);
+            }
+            osmesa = NULL;
+        }
+
+        OSMesaPrivate* osmesa;
+        std::list<OSMesaPrivate *>& list;
+        Mutex* mutex;
+    };
+    OSMesaReleaser osmesaReleaser( osmesa, _osmesa, _osmesaMutex.get() );
     if (OSMesaGetCurrentContext() != NULL) {
         DPRINT( ("render error: %s\n", "Mesa context still attached") );
         glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
@@ -2183,16 +2224,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 
 #ifdef USE_OSMESA
-    // make sure the buffer is not referenced anymore
-    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, cpuDriver, NULL, 0, 0, 0, true);
-    OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
-    assert(OSMesaGetCurrentContext() == NULL);
-
-    // We're finished with this osmesa, make it available for other renders
-    {
-        AutoMutex lock( _osmesaMutex.get() );
-        _osmesa.push_back(osmesa);
-    }
+    // detach the buffer and make osmesa available for other renders
+    osmesaReleaser.release();
 #endif // ifdef USE_OSMESA
 #ifdef DEBUG_TIME
     gettimeofday(&t2, NULL);
