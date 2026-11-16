@@ -602,33 +602,45 @@ elseif(MSVC)
     endif()
 # FreeBSD
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-    set(OFX_ARCH "FreeBSD-x86")
-    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64)$")
-        set(OFX_ARCH "FreeBSD-x86-64")
+    # the folder uses "uname -m" (arm64), as NatronGitHub/openfx#103 does, but on
+    # FreeBSD CMAKE_SYSTEM_PROCESSOR is "uname -p" (aarch64)
+    set(OFX_MACHINE "${CMAKE_SYSTEM_PROCESSOR}")
+    if(NOT CMAKE_CROSSCOMPILING)
+        execute_process(COMMAND uname -m OUTPUT_VARIABLE OFX_MACHINE OUTPUT_STRIP_TRAILING_WHITESPACE)
+    elseif("${OFX_MACHINE}" STREQUAL "aarch64")
+        set(OFX_MACHINE "arm64")
     endif()
-    if(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64|i.86|x86)$")
-        # non-x86 (e.g. aarch64): the OFX 1.5 bundle folder is FreeBSD-<uname -m>,
-        # the same as openfx/Support/Plugins/Makefile.master
-        set(OFX_ARCH "FreeBSD-${CMAKE_SYSTEM_PROCESSOR}")
+    if("${OFX_MACHINE}" MATCHES "^(x86_64|amd64)$")
+        set(OFX_ARCH "FreeBSD-x86-64")
+    elseif("${OFX_MACHINE}" MATCHES "^(i.86|x86)$")
+        set(OFX_ARCH "FreeBSD-x86")
+    elseif(NOT "${OFX_MACHINE}" STREQUAL "")
+        set(OFX_ARCH "FreeBSD-${OFX_MACHINE}")
     endif()
 # MacOS
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(OFX_ARCH "MacOS")
 # Linux
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    set(OFX_ARCH "Linux-x86")
-    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
-        set(OFX_ARCH "Linux-x86-64")
+    # non-x86: OFX 1.5 packaging (informational, not yet normative) says "On Linux,
+    # hosts should look in the subdir named by Linux-${uname -m} which for arm64 should
+    # be Linux-aarch64", as NatronGitHub/openfx#103 does. CMAKE_SYSTEM_PROCESSOR is
+    # "uname -m" for native builds; cross toolchains should use the same names.
+    set(OFX_MACHINE "${CMAKE_SYSTEM_PROCESSOR}")
+    if("${OFX_MACHINE}" STREQUAL "arm64")
+        set(OFX_MACHINE "aarch64")
     endif()
-    if(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64|i.86|x86)$")
-        # non-x86 (e.g. aarch64): the OFX 1.5 bundle folder is Linux-<uname -m>,
-        # the same as openfx/Support/Plugins/Makefile.master
-        set(OFX_ARCH "Linux-${CMAKE_SYSTEM_PROCESSOR}")
+    if("${OFX_MACHINE}" MATCHES "^(x86_64|amd64)$")
+        set(OFX_ARCH "Linux-x86-64")
+    elseif("${OFX_MACHINE}" MATCHES "^(i.86|x86)$")
+        set(OFX_ARCH "Linux-x86")
+    elseif(NOT "${OFX_MACHINE}" STREQUAL "")
+        set(OFX_ARCH "Linux-${OFX_MACHINE}")
     endif()
 endif()
 
 SET(OFX_ARCH_NAME ${OFX_ARCH} CACHE STRING "OpenFX target OS and architecture")
-IF("${OFX_ARCH_NAME}" EQUAL "UNKNOWN")
+IF("${OFX_ARCH_NAME}" STREQUAL "UNKNOWN")
   MESSAGE(SEND_ERROR "OFX_ARCH_NAME was not detected. Install targets will be unavailable. See http://openeffects.org/documentation/reference/ch02s02.html to pick an arch name.")
 ELSE()
   INSTALL(TARGETS Misc
