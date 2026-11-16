@@ -25,9 +25,6 @@
 #include <cmath>
 #include <algorithm>
 #include <cfloat> // DBL_MAX
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
@@ -104,7 +101,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
 #endif
 
-
 class DiscBladesProcessorBase
     : public ImageProcessor
 {
@@ -153,7 +149,7 @@ public:
         // radius is measured along y (x is already corrected by the PAR)
         _radius = (std::max)(0., radius) * renderScale.y;
         _blades = blades < 3 ? 0 : blades;
-        _rotation = rotation * M_PI / 180.;
+        _rotation = rotation * OFXS_PI / 180.;
         _curvature = (std::max)( 0., (std::min)(1., curvature) );
         _softness = (std::max)(0., softness) * _radius;
     }
@@ -168,12 +164,12 @@ public:
         // signed distance to the edge (positive inside), in pixels
         double d = _radius - r; // disc
         if ( (_blades >= 3) && (_curvature < 1.) ) {
-            const double sector = 2. * M_PI / _blades;
+            const double sector = 2. * OFXS_PI / _blades;
             double phi = std::atan2(dy, dx) - _rotation;
             // angle within the sector, in [0, sector)
             phi -= sector * std::floor(phi / sector);
             // distance to the polygon edge line of this sector
-            const double dline = _radius * std::cos(M_PI / _blades) - r * std::cos(phi - M_PI / _blades);
+            const double dline = _radius * std::cos(OFXS_PI / _blades) - r * std::cos(phi - OFXS_PI / _blades);
             d = (1. - _curvature) * dline + _curvature * d;
         }
         // antialiasing over one pixel, plus the soft edge inside the shape

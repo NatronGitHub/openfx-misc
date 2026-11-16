@@ -79,7 +79,7 @@ SET(OPENFX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/openfx)
 if(NOT EXISTS ${PROJECT_SOURCE_DIR}/openfx/include)
   message(FATAL_ERROR
     "\n submodule(s) are missing, please update your repository:\n"
-    "  > git submodule update -i\n")
+    "  > git submodule update --init --recursive\n")
 endif()
 
 # C++ Include directories

@@ -56,10 +56,6 @@
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
-
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -152,7 +148,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #else
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
 #endif
-
 
 struct RGBAValues
 {
@@ -541,7 +536,7 @@ private:
         const OfxPointD r = { _size.x / 2, _size.y / 2 };
         // size of a pixel (canonical)
         const OfxPointD pixSize = { par / rs.x, 1. / rs.y };
-        const double angleRad = _angle * M_PI / 180.;
+        const double angleRad = _angle * OFXS_PI / 180.;
         const double cosa = std::cos(angleRad);
         const double sina = std::sin(angleRad);
         const bool empty = (r.x <= 0.) || (r.y <= 0.);
@@ -1027,7 +1022,7 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
             // bounding box of the rotated ellipse (the softness is inside the ellipse)
             OfxPointD c = { (rod.x1 + rod.x2) / 2, (rod.y1 + rod.y2) / 2 };
             OfxPointD r = { (rod.x2 - rod.x1) / 2, (rod.y2 - rod.y1) / 2 };
-            double a = angle * M_PI / 180.;
+            double a = angle * OFXS_PI / 180.;
             double cosa = std::cos(a);
             double sina = std::sin(a);
             double hx = std::sqrt(r.x * r.x * cosa * cosa + r.y * r.y * sina * sina);

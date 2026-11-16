@@ -51,6 +51,7 @@
 #include "ofxsFilter.h"
 #include "ContactSheetLayout.h"
 #include "ofxsOGLHiDPI.h"
+#include "ofxsOverlayDraw.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -687,7 +688,7 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
     bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
     double screenPixelRatio = hiDPI ? 2 : 1;
 #ifdef OFX_EXTENSIONS_NATRON
-    screenPixelRatio *= args.screenPixelRatio;
+    screenPixelRatio *= OverlayDraw::hostScreenPixelRatio(args); // 1 if the host does not set it
     //hiDPI |= args.screenPixelRatio > 1;
 #endif
     //TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
