@@ -586,7 +586,7 @@ IF (MSVC)
 ENDIF ()
 
 # Bundle architecture folder (OFX packaging spec, ofxPackaging.rst): copied from openfx
-# cmake/OpenFX.cmake (NatronGitHub/openfx#105), so that the names match what HostSupport looks
+# cmake/OpenFX.cmake (NatronGitHub/openfx#105, #106), so that the names match what HostSupport looks
 # for and openfx Support/Plugins/Makefile.master. Keep the two in sync.
 SET(OFX_ARCH UNKNOWN)
 if(APPLE)
@@ -594,13 +594,20 @@ if(APPLE)
 elseif(WIN32)
     # MSVC: the target architecture (ARM64EC, ARM64, x64, X86); other compilers: pointer size
     string(TOUPPER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID};${CMAKE_GENERATOR_PLATFORM}" _OFX_WINARCH)
-    if(NOT CMAKE_CXX_COMPILER_ARCHITECTURE_ID AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(ARM64|arm64|aarch64)$")
-        # MinGW (MSYS2 CLANGARM64, llvm-mingw): the architecture ID is only set for MSVC
-        set(_OFX_WINARCH "ARM64")
+    if(NOT CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
+        # MinGW (MSYS2 CLANGARM64, llvm-mingw): the architecture ID is only set for MSVC, and
+        # CMAKE_SYSTEM_PROCESSOR is the build machine's unless a toolchain file sets it, so ask the compiler
+        include(CheckCXXSourceCompiles)
+        check_cxx_source_compiles("#if !defined(__aarch64__)\n#error not aarch64\n#endif\nint main() { return 0; }"
+                                  OFX_WIN_TARGET_IS_AARCH64)
+        if(OFX_WIN_TARGET_IS_AARCH64)
+            set(_OFX_WINARCH "ARM64")
+        endif()
     endif()
     if(_OFX_WINARCH MATCHES "ARM64EC" OR CMAKE_CXX_FLAGS MATCHES "/arm64EC")
         set(OFX_ARCH "Win-arm64ec") # normative (upstream main, 2026): Arm64EC (and Arm64X) plug-ins
-    elseif(_OFX_WINARCH MATCHES "ARM64|AARCH64") # MinGW: CMake >= 4.1 sets the ID to aarch64
+    elseif(_OFX_WINARCH MATCHES "ARM64|AARCH64")
+        # CMake >= 4.1 reports "aarch64" as the MinGW architecture ID
         set(OFX_ARCH "Win-arm64")   # reserved, not yet normative: native Arm64 hosts
     elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(OFX_ARCH "Win64")
