@@ -12,6 +12,12 @@ on:
 permissions:
   contents: read
 
+# A manual run cancels a run of the same branch still in progress, so that
+# two runs of these jobs never compete for runners.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     shell: bash -eo pipefail {0}
@@ -131,7 +137,11 @@ jobs:
         uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
         with:
           msystem: UCRT64
-          update: true
+          # No full system upgrade (pacman -Syuu) before installing: it makes
+          # each weekly run download and re-cache most of MSYS2. The packages
+          # below are still installed at their latest version, so the compiler
+          # is current; only the MSYS2 base system comes from the action.
+          update: false
           cache: true
           install: git base-devel mingw-w64-ucrt-x86_64-cc
       - name: Build
