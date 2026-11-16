@@ -50,7 +50,11 @@ endif()
 
 include(FindOpenGL REQUIRED)
 
-set (CMAKE_CXX_STANDARD 11)
+# C++ standard: C++17 by default (Natron RB-2.6 Qt5 builds); the code also builds as C++20
+# (Qt6 builds, RB-2.7): configure with -DCMAKE_CXX_STANDARD=20.
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
 
 option(BUILD_CIMG_PLUGINS "Build the CImg plugins (CImg.ofx.bundle)" ON)
 
