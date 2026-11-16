@@ -156,6 +156,7 @@ grouping).
 * Transform/RGBToYCbCr601, YCbCrToRGB601, RGBToYCbCr709 and YCbCrToRGB709: Convert to/from YCbCr color representation. 
 * Transform/RGBToYPbPr601, YPbPrToRGB601, RGBToYPbPr709 and YPbPrToRGB709: Convert to/from YPbPr color representation. 
 * Transform/RGBToYUV601, YUVToRGB601, RGBToYUV709 and YUVToRGB709: Convert to/from YUV color representation. 
+* Transform/RGBToYIQ, YIQToRGB, RGBToYDbDr and YDbDrToRGB: Convert to/from YIQ (NTSC) and YDbDr (SECAM) color representations.
 * Transform/RGB709ToLab and LabToRGB709: Convert to/from Lab color representation.
 * Transform/RGB709ToXYZ and XYZToRGB709: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.
@@ -189,7 +190,7 @@ grouping).
 * SmoothPatchBasedCImg: Denoise selected images by non-local patch averaging.
 * SmoothRollingGuidanceCImg: Filter out details under a given scale using the [Rolling Guidance filter](http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/).
 * SoftenCImg: Soften the input stream by reducing its Laplacian.
-* ZDefocusCImg: Depth-dependent defocus (depth of field), using a depth or disparity map, with Gaussian or disc aperture.
+* ZDefocusCImg: Depth-dependent defocus (depth of field), using a depth or disparity map, with Gaussian, antialiased disc, or custom (bokeh kernel from the Filter input, e.g. made with DiscBlades) aperture.
 
 ### Keyer
 
@@ -245,7 +246,11 @@ These plugins are compatible with the Sony Vegas and Nuke [multiview extensions]
 
 * ImageStatisticsOFX: Compute statistics over an image or a rectangular area.
 * NoOpOFX: Copies the input to the output. Useful for inspecting the properties of input and output clips.
-* TestRenderOFX: Test some rendering features of the OFX host.
+* TestRenderOFX: Test some rendering features of the OFX host: tiles, multiresolution and render scale (Test bundle, debug builds only).
+* TestIdentityLeftHalfOFX: Test the renderWindow passed to isIdentity. The right half must always be inverted, even after zooming on the left half and panning right (Test bundle).
+* TestGarbageOutsideRenderWindowOFX: A buggy plugin that writes magenta outside its renderWindow. Magenta in the result is a host bug (Test bundle, debug builds only).
+* TestInfiniteRoIOFX: Asks for an infinite region of interest. The host must not hang, run out of memory or crash (Test bundle).
+* TestInfiniteRoDOFX: Returns an infinite region of definition. The checkerboard around the input must be clipped by the host, typically to the project extent (Test bundle).
 
 Notes & Caveats
 ---------------

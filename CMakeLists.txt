@@ -373,7 +373,7 @@ endif()
 
 TARGET_COMPILE_DEFINITIONS(Misc PRIVATE OFX_EXTENSIONS_VEGAS OFX_EXTENSIONS_NUKE OFX_EXTENSIONS_NATRON OFX_EXTENSIONS_TUTTLE OFX_SUPPORTS_OPENGLRENDER NOMINMAX)
 #TARGET_LINK_LIBRARIES(Misc Support ${OPENGL_gl_LIBRARY})
-TARGET_LINK_LIBRARIES(Misc ${OPENGL_gl_LIBRARY})
+TARGET_LINK_LIBRARIES(Misc ${OPENGL_gl_LIBRARY} ${CMAKE_DL_LIBS}) # dl: Shadertoy looks up eglGetCurrentContext at runtime
 
 if(BUILD_CIMG_PLUGINS)
 # CImg.h and Inpaint/inpaint.h are not distributed with the sources.
@@ -435,6 +435,7 @@ file(WRITE "${CIMG_VERSION_STAMP}" "${CIMGVERSION}\n")
 FILE(GLOB CIMG_SOURCES
   "CImg/CImg.h"
   "CImg/CImgFilter.cpp"
+  "CImg/CImgFFTConvolve.h"
   "CImg/CImgFilter.h"
   "CImg/CImgOperator.cpp"
   "CImg/CImgOperator.h"

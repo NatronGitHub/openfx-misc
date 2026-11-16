@@ -31,6 +31,7 @@
 #include "ofxsCoords.h"
 
 #include "CImgFilter.h"
+#include "CImgFFTConvolve.h" // shared with ZDefocusCImg
 
 using namespace OFX;
 
@@ -123,17 +124,6 @@ enum CenterEnum
 };
 #define kParamCenterDefault eCenterFormat
 
-// kernel channel keys
-enum KernelKeyEnum
-{
-    eKernelR = 0,
-    eKernelG,
-    eKernelB,
-    eKernelA,
-    eKernelLuminance,
-    eKernelCount
-};
-
 /// Convolve plugin
 struct CImgConvolveParams
 {
@@ -169,37 +159,9 @@ public:
         params.par = 1.;
         params.formatCenter.x = params.formatCenter.y = 0.;
         if (params.filterConnected) {
-            params.filterRoD = _filterClip->getRegionOfDefinition(time);
             params.par = _filterClip->getPixelAspectRatio();
-            // the Filter format, in canonical coordinates (or the project window)
-            OfxRectD formatRect;
-            bool gotFormat = false;
-#ifdef OFX_EXTENSIONS_NATRON
-            OfxRectI format;
-            _filterClip->getFormat(format);
-            if ( !Coords::rectIsEmpty(format) ) {
-                // the format is in pixel coordinates at render scale 1
-                const OfxPointD rs1 = {1., 1.};
-                Coords::toCanonical(format, rs1, params.par, &formatRect);
-                gotFormat = true;
-            }
-#endif
-            if (!gotFormat) {
-                OfxPointD offset = getProjectOffset();
-                OfxPointD size = getProjectSize();
-                formatRect.x1 = offset.x;
-                formatRect.x2 = offset.x + size.x;
-                formatRect.y1 = offset.y;
-                formatRect.y2 = offset.y + size.y;
-            }
-            params.formatCenter.x = (formatRect.x1 + formatRect.x2) * 0.5;
-            params.formatCenter.y = (formatRect.y1 + formatRect.y2) * 0.5;
-            // an infinite Filter RoD (e.g. from a Constant generator) is clamped to the format
-            if ( Coords::rectIsInfinite(params.filterRoD) ) {
-                if ( !Coords::rectIntersection(params.filterRoD, formatRect, &params.filterRoD) ) {
-                    params.filterRoD.x1 = params.filterRoD.y1 = params.filterRoD.x2 = params.filterRoD.y2 = 0.;
-                }
-            }
+            // Filter RoD (clamped to the format if infinite, e.g. from a Constant generator) and format center
+            cimgGetFilterRoD(*this, _filterClip, time, &params.filterRoD, &params.formatCenter);
         }
         params.filterChannel = _filterChannel->getValueAtTime(time);
         params.center = _center->getValueAtTime(time);
@@ -336,7 +298,7 @@ public:
 
         // the channels to process (the cimg channels are the source components, see kSupportsComponentRemapping)
         std::vector<bool> processChannel(nc, true);
-        std::vector<int> channelKey(nc, eKernelLuminance);
+        std::vector<int> channelKey(nc, eCImgKernelLuminance);
         {
             const bool processR = _processR ? _processR->getValueAtTime(args.time) : true;
             const bool processG = _processG ? _processG->getValueAtTime(args.time) : true;
@@ -344,12 +306,12 @@ public:
             const bool processA = _processA ? _processA->getValueAtTime(args.time) : true;
             if (nc == 1) {
                 processChannel[0] = processA;
-                channelKey[0] = eKernelA;
+                channelKey[0] = eCImgKernelA;
             } else {
                 const bool p[4] = {processR, processG, processB, processA};
                 for (int c = 0; c < nc && c < 4; ++c) {
                     processChannel[c] = p[c];
-                    channelKey[c] = c; // eKernelR..eKernelA
+                    channelKey[c] = c; // eCImgKernelR..eCImgKernelA
                 }
             }
         }
@@ -380,25 +342,25 @@ public:
             int key = channelKey[c];
             switch ( (FilterChannelEnum)params.filterChannel ) {
             case eFilterChannelLuminance:
-                key = eKernelLuminance;
+                key = eCImgKernelLuminance;
                 break;
             case eFilterChannelAlpha:
-                key = eKernelA;
+                key = eCImgKernelA;
                 break;
             case eFilterChannelRGBA:
             default:
                 break;
             }
             if (fnc == 1) {
-                key = eKernelA; // alpha-only filter: use it for all channels
-            } else if ( (key == eKernelA) && (fnc != 4) ) {
-                key = eKernelLuminance; // no alpha in filter
-            } else if ( (key == eKernelB) && (fnc == 2) ) {
-                key = eKernelLuminance; // no blue in XY filter
+                key = eCImgKernelA; // alpha-only filter: use it for all channels
+            } else if ( (key == eCImgKernelA) && (fnc != 4) ) {
+                key = eCImgKernelLuminance; // no alpha in filter
+            } else if ( (key == eCImgKernelB) && (fnc == 2) ) {
+                key = eCImgKernelLuminance; // no blue in XY filter
             }
             channelKey[c] = key;
         }
-        bool keyUsed[eKernelCount] = {false, false, false, false, false};
+        bool keyUsed[eCImgKernelCount] = {false, false, false, false, false};
         for (int c = 0; c < nc; ++c) {
             if (processChannel[c]) {
                 keyUsed[channelKey[c]] = true;
@@ -408,23 +370,10 @@ public:
         // extract the kernels
         int kw = kernelRect.x2 - kernelRect.x1;
         int kh = kernelRect.y2 - kernelRect.y1;
-        std::vector<cimg_library::CImg<cimgpix_t> > kernels(eKernelCount);
-        for (int k = 0; k < eKernelCount; ++k) {
+        std::vector<cimg_library::CImg<cimgpix_t> > kernels(eCImgKernelCount);
+        for (int k = 0; k < eCImgKernelCount; ++k) {
             if (keyUsed[k]) {
-                kernels[k].assign(kw, kh, 1, 1, 0);
-            }
-        }
-        for (int y = kernelRect.y1; y < kernelRect.y2; ++y) {
-            for (int x = kernelRect.x1; x < kernelRect.x2; ++x) {
-                const float *pix = (const float*)filter->getPixelAddress(x, y);
-                if (!pix) {
-                    continue;
-                }
-                for (int k = 0; k < eKernelCount; ++k) {
-                    if (keyUsed[k]) {
-                        kernels[k](x - kernelRect.x1, y - kernelRect.y1) = kernelValue(pix, fnc, k);
-                    }
-                }
+                cimgExtractKernel(*filter, kernelRect, k, &kernels[k]);
             }
         }
         filter.reset(NULL);
@@ -438,7 +387,7 @@ public:
         for (int y = 0; y < kh; ++y) {
             for (int x = 0; x < kw; ++x) {
                 double w = 0.;
-                for (int k = 0; k < eKernelCount; ++k) {
+                for (int k = 0; k < eCImgKernelCount; ++k) {
                     if (keyUsed[k]) {
                         w += std::abs( (double)kernels[k](x, y) );
                     }
@@ -472,7 +421,7 @@ public:
 
         // crop the kernels
         if ( (bx1 > 0) || (by1 > 0) || (bx2 < kw - 1) || (by2 < kh - 1) ) {
-            for (int k = 0; k < eKernelCount; ++k) {
+            for (int k = 0; k < eCImgKernelCount; ++k) {
                 if (keyUsed[k]) {
                     kernels[k].crop(bx1, by1, bx2, by2);
                 }
@@ -488,14 +437,7 @@ public:
         const int mx = kernelRect.x1 - cx;
         const int my = kernelRect.y1 - cy;
 
-        // FFT size: power of two, large enough to hold the linear convolution
-        const int w = cimg.width();
-        const int h = cimg.height();
-        const unsigned int fw = (unsigned int)cimg_library::cimg::nearest_pow2( (unsigned int)(w + kw - 1) );
-        const unsigned int fh = (unsigned int)cimg_library::cimg::nearest_pow2( (unsigned int)(h + kh - 1) );
-        cimg_library::CImg<cimgpix_t> kre, kim, sre, sim;
-
-        for (int k = 0; k < eKernelCount; ++k) {
+        for (int k = 0; k < eCImgKernelCount; ++k) {
             if (!keyUsed[k]) {
                 continue;
             }
@@ -510,79 +452,15 @@ public:
                 // a filter image fetched at a lower render scale has fewer pixels: preserve the kernel sum
                 scale = 1. / (args.renderScale.x * args.renderScale.y);
             }
-
-            // FFT of the kernel, placed at the origin
-            kre.assign(fw, fh, 1, 1, 0);
-            kim.assign(fw, fh, 1, 1, 0);
-            kre.draw_image(0, 0, kernels[k]);
-            if (scale != 1.) {
-                kre *= (cimgpix_t)scale;
-            }
-            cimg_library::CImg<cimgpix_t>::FFT(kre, kim, false);
-            if ( abort() ) {
-                return;
-            }
-
-            // process the channels using this kernel, two by two (as real and imaginary parts,
-            // since the kernel is real, the convolution of a complex signal is the complex combination
-            // of the convolutions of its real and imaginary parts)
+            // the channels using this kernel
             std::vector<int> chans;
             for (int c = 0; c < nc; ++c) {
                 if (processChannel[c] && (channelKey[c] == k)) {
                     chans.push_back(c);
                 }
             }
-            for (std::size_t i = 0; i < chans.size(); i += 2) {
-                const int c0 = chans[i];
-                const int c1 = (i + 1 < chans.size()) ? chans[i + 1] : -1;
-                sre.assign(fw, fh, 1, 1, 0);
-                sim.assign(fw, fh, 1, 1, 0);
-                sre.draw_image( 0, 0, cimg.get_shared_channel(c0) );
-                if (c1 >= 0) {
-                    sim.draw_image( 0, 0, cimg.get_shared_channel(c1) );
-                }
-                cimg_library::CImg<cimgpix_t>::FFT(sre, sim, false);
-                if ( abort() ) {
-                    return;
-                }
-                // complex multiplication
-                {
-                    cimgpix_t *pr = sre.data();
-                    cimgpix_t *pi = sim.data();
-                    const cimgpix_t *qr = kre.data();
-                    const cimgpix_t *qi = kim.data();
-                    for (std::size_t n = (std::size_t)fw * fh; n; --n, ++pr, ++pi, ++qr, ++qi) {
-                        const cimgpix_t a = *pr, b = *pi;
-                        *pr = a * *qr - b * *qi;
-                        *pi = a * *qi + b * *qr;
-                    }
-                }
-                cimg_library::CImg<cimgpix_t>::FFT(sre, sim, true);
-                if ( abort() ) {
-                    return;
-                }
-                // out(i) = L(i - m), where L is the linear convolution of the source with the
-                // kernel placed at the origin.
-                for (int y = 0; y < h; ++y) {
-                    const int ly = y - my;
-                    const bool yin = (0 <= ly && ly < (int)fh);
-                    cimgpix_t *d0 = cimg.data(0, y, 0, c0);
-                    cimgpix_t *d1 = (c1 >= 0) ? cimg.data(0, y, 0, c1) : NULL;
-                    for (int x = 0; x < w; ++x) {
-                        const int lx = x - mx;
-                        if ( yin && (0 <= lx) && ( lx < (int)fw) ) {
-                            d0[x] = sre(lx, ly);
-                            if (d1) {
-                                d1[x] = sim(lx, ly);
-                            }
-                        } else {
-                            d0[x] = 0;
-                            if (d1) {
-                                d1[x] = 0;
-                            }
-                        }
-                    }
-                }
+            if ( !cimgConvolveFFT(cimg, chans, kernels[k], scale, mx, my, *this) ) {
+                return; // aborted
             }
         }
     } // render
@@ -602,32 +480,6 @@ private:
             if (processChannel[c]) {
                 cimg.get_shared_channel(c).fill(0);
             }
-        }
-    }
-
-    static inline float kernelValue(const float* pix,
-                                    int fnc,
-                                    int key)
-    {
-        if (fnc == 1) {
-            return pix[0];
-        }
-        switch (key) {
-        case eKernelR:
-            return pix[0];
-        case eKernelG:
-            return pix[1];
-        case eKernelB:
-            return (fnc >= 3) ? pix[2] : 0.f;
-        case eKernelA:
-            return (fnc >= 4) ? pix[3] : 0.f;
-        case eKernelLuminance:
-        default:
-            if (fnc >= 3) {
-                return 0.2126f * pix[0] + 0.7152f * pix[1] + 0.0722f * pix[2];
-            }
-
-            return pix[0];
         }
     }
 

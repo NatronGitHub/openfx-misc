@@ -22,7 +22,7 @@ include $(TOP_SRCDIR)/Makefile.master
 VPATH += $(TOP_SRCDIR)/CImg
 CXXFLAGS += -I$(TOP_SRCDIR)/CImg
 
-$(OBJECTPATH)/CImgZDefocus.o: CImgZDefocus.cpp CImgFilter.h CImg.h
+$(OBJECTPATH)/CImgZDefocus.o: CImgZDefocus.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
 
 CImg.h:
 	cd .. && $(MAKE) $@

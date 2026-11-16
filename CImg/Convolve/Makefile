@@ -25,7 +25,7 @@ include $(TOP_SRCDIR)/Makefile.master
 VPATH += $(TOP_SRCDIR)/CImg
 CXXFLAGS += -I$(TOP_SRCDIR)/CImg
 
-$(OBJECTPATH)/CImgConvolve.o: CImgConvolve.cpp  CImg.h
+$(OBJECTPATH)/CImgConvolve.o: CImgConvolve.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
 
 CImg.h:
 	cd .. && $(MAKE) $@
