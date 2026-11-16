@@ -74,7 +74,7 @@ jobs:
           # Apple clang defaults to C++14: pass the standard explicitly.
           - name: release # the macOS build of ci.yml
             options: CONFIG=release TESTS=1 CXXFLAGS_ADD=-std=c++17
-            rendertest: true
+            rendertest: release # the configuration to render
           - name: debug
             options: CONFIG=debug CXXFLAGS_ADD=-std=c++17
           - name: C++20
@@ -106,7 +106,7 @@ jobs:
       - name: Render test (hostDemo)
         if: matrix.rendertest
         timeout-minutes: 10
-        run: .github/tools/rendertest.sh
+        run: .github/tools/rendertest.sh {Misc,CImg}/Darwin-64-${{ matrix.rendertest }}
 
   linux:
     name: Ubuntu 24.04 ${{ matrix.name }}
@@ -120,7 +120,7 @@ jobs:
         include:
           - name: debug
             options: CONFIG=debug
-            rendertest: true
+            rendertest: debug # the configuration to render
           - name: nomulti
             options: nomulti CONFIG=release
           - name: C++20
@@ -144,7 +144,7 @@ jobs:
       - name: Render test (hostDemo)
         if: matrix.rendertest
         timeout-minutes: 10
-        run: .github/tools/rendertest.sh
+        run: .github/tools/rendertest.sh {Misc,CImg}/Linux-64-${{ matrix.rendertest }}
 
   linux_cmake:
     name: Ubuntu 24.04 CMake

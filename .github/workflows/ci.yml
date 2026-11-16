@@ -142,7 +142,7 @@ jobs:
         # Builds hostDemo from the openfx submodule, then renders the
         # generators and some filters at the three depths (about 2 minutes).
         timeout-minutes: 10
-        run: .github/tools/rendertest.sh
+        run: .github/tools/rendertest.sh {Misc,CImg}/Linux-64-release
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
         # Not Test: it is for developers, and is never installed.
