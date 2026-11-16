@@ -585,17 +585,21 @@ IF (MSVC)
   ENDIF ()
 ENDIF ()
 
-# Bundle architecture folder (OFX packaging spec, ofxPackaging.rst). Same rule as openfx
-# cmake/OpenFX.cmake (NatronGitHub/openfx#105), which matches what HostSupport looks for and
-# Support/Plugins/Makefile.master.
+# Bundle architecture folder (OFX packaging spec, ofxPackaging.rst): copied from openfx
+# cmake/OpenFX.cmake (NatronGitHub/openfx#105), so that the names match what HostSupport looks
+# for and openfx Support/Plugins/Makefile.master. Keep the two in sync.
 SET(OFX_ARCH UNKNOWN)
 if(APPLE)
     set(OFX_ARCH "MacOS") # universal or arch-specific: no arm64 folder
 elseif(WIN32)
     # MSVC: the target architecture (ARM64EC, ARM64, x64, X86); other compilers: pointer size
     string(TOUPPER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID};${CMAKE_GENERATOR_PLATFORM}" _OFX_WINARCH)
+    if(NOT CMAKE_CXX_COMPILER_ARCHITECTURE_ID AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(ARM64|arm64|aarch64)$")
+        # MinGW (MSYS2 CLANGARM64, llvm-mingw): the architecture ID is only set for MSVC
+        set(_OFX_WINARCH "ARM64")
+    endif()
     if(_OFX_WINARCH MATCHES "ARM64EC" OR CMAKE_CXX_FLAGS MATCHES "/arm64EC")
-        set(OFX_ARCH "Win-arm64ec") # Arm64EC (and Arm64X) plug-ins
+        set(OFX_ARCH "Win-arm64ec") # normative (upstream main, 2026): Arm64EC (and Arm64X) plug-ins
     elseif(_OFX_WINARCH MATCHES "ARM64")
         set(OFX_ARCH "Win-arm64")   # reserved, not yet normative: native Arm64 hosts
     elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -617,6 +621,13 @@ elseif(UNIX)
         else()
             set(OFX_ARCH "${_OFX_OS}-x86")
         endif()
+    elseif(_OFX_CPU MATCHES "^armv[2-6]" AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+        # pre-ARMv7 (HostSupport: __ARM_ARCH < 7)
+        if(_OFX_OS STREQUAL "FreeBSD")
+            set(OFX_ARCH "FreeBSD-armv6")
+        else()
+            set(OFX_ARCH "Linux-armv6l")
+        endif()
     elseif(_OFX_CPU MATCHES "^(aarch64|arm64|armv8l|arm.*)$")
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             set(OFX_ARCH "${_OFX_OS}-aarch64")
@@ -629,6 +640,14 @@ elseif(UNIX)
         set(OFX_ARCH "FreeBSD-riscv64")
     elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^powerpc")
         # uname -p: powerpc64, powerpc64le (uname -m only says powerpc)
+        # CMake < 3.20 (TestBigEndian supports CXX-only projects since 3.12)
+        if(NOT DEFINED CMAKE_CXX_BYTE_ORDER AND NOT CMAKE_VERSION VERSION_LESS 3.12)
+            include(TestBigEndian)
+            test_big_endian(_OFX_BIG_ENDIAN)
+            if(NOT _OFX_BIG_ENDIAN)
+                set(CMAKE_CXX_BYTE_ORDER "LITTLE_ENDIAN")
+            endif()
+        endif()
         if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND CMAKE_CXX_BYTE_ORDER STREQUAL "LITTLE_ENDIAN")
             set(OFX_ARCH "FreeBSD-powerpc64le")
         elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
