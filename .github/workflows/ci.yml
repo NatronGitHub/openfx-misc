@@ -147,6 +147,10 @@ jobs:
       # libgcc, winpthread) is linked statically, so that the bundles also
       # load in hosts that do not ship these DLLs.
       RELEASE_OPTIONS: CONFIG=release LDFLAGS_ADD=-static
+      # C++17 with GNU extensions: on MinGW, openfx's Makefile.master passes
+      # -U__STRICT_ANSI__, and with strict -std=c++17 the GCC 16 <limits> then
+      # uses __float128 literals (1.0Q) that only gnu++17 accepts.
+      STD_OPTIONS: CXXFLAGS_ADD=-std=gnu++17
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
