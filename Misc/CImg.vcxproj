@@ -79,6 +79,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\CImg;C:\Users\lex\Documents\GitHub\CImg;$(SolutionDir)..\SupportExt</AdditionalIncludeDirectories>
@@ -112,6 +113,7 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\CImg;C:\Users\lex\Documents\GitHub\CImg;$(SolutionDir)..\SupportExt</AdditionalIncludeDirectories>
@@ -145,6 +147,7 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -185,6 +188,7 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
