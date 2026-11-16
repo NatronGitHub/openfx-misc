@@ -79,6 +79,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\ContactSheet;$(SolutionDir)..\LayerContactSheet;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\ColorSuppress;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Despill;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\TimeBuffer;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;$(SolutionDir)..\SpriteSheet;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -159,6 +160,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\ContactSheet;$(SolutionDir)..\LayerContactSheet;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\ColorSuppress;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Despill;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\TimeBuffer;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -240,6 +242,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -326,6 +329,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>

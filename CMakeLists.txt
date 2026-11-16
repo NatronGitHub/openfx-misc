@@ -24,7 +24,7 @@ ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 ########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.12) # CXX_STANDARD 20 needs CMake 3.12
 PROJECT(OpenFXMisc CXX)
 ENABLE_TESTING()
 
@@ -51,9 +51,13 @@ endif()
 include(FindOpenGL REQUIRED)
 
 # C++ standard: C++17 by default (Natron RB-2.6 Qt5 builds); the code also builds as C++20
-# (Qt6 builds, RB-2.7): configure with -DCMAKE_CXX_STANDARD=20.
+# (Qt6 builds, RB-2.7): configure with -DCMAKE_CXX_STANDARD=20. Compiler extensions stay on
+# (gnu++17), as in the make build.
 if(NOT DEFINED CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
+endif()
+if(NOT DEFINED CMAKE_CXX_STANDARD_REQUIRED)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON) # fail instead of silently using an older standard
 endif()
 
 option(BUILD_CIMG_PLUGINS "Build the CImg plugins (CImg.ofx.bundle)" ON)
