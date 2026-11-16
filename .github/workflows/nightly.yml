@@ -6,7 +6,8 @@ name: Nightly extra builds
 # RB-2.7; ci.yml builds C++17), OpenMP, and CMake.
 # Each make build is followed by the same plugin load test as in ci.yml.
 # Frugal CI: the nightly run is skipped if master did not change since the last
-# successful nightly run, and jobs time out.
+# nightly run that succeeded or failed (a cancelled run does not count), and jobs
+# time out.
 on:
   schedule:
     - cron: '17 3 * * *' # every day at 03:17 UTC
@@ -42,12 +43,14 @@ jobs:
         run: |
           last=
           if [ "$GITHUB_EVENT_NAME" = schedule ]; then
-            last=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/nightly.yml/runs?event=schedule&status=success&per_page=1" \
-                     --jq '.workflow_runs[0].head_sha // empty')
+            # last scheduled run that built or failed (not cancelled): a known failure
+            # is not rebuilt every night until master changes (use workflow_dispatch to retry)
+            last=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/nightly.yml/runs?event=schedule&status=completed&per_page=20" \
+                     --jq '[.workflow_runs[] | select(.conclusion == "success" or .conclusion == "failure")][0].head_sha // empty')
           fi
           if [ -n "$last" ] && [ "$last" = "$GITHUB_SHA" ]; then
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "No change since the last successful nightly run ($last): skipping."
+            echo "No change since the last nightly run ($last): skipping."
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
