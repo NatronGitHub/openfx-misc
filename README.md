@@ -30,10 +30,7 @@ tags (tags that start with `Natron-` and contain `-rc`, `-beta` or `-alpha`, in 
 case, such as `Natron-2.6.0-RC1` or `Natron-2.6.0-beta1`; not final releases such
 as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
 
-1. Look at the latest
-   [release or pre-release](https://github.com/NatronGitHub/openfx-misc/releases)
-   of openfx-misc. If it has binaries attached, download the archive for your system
-   and go to step 3. Otherwise, go to the
+1. Go to the
    [GitHub Actions page](https://github.com/NatronGitHub/openfx-misc/actions/workflows/ci.yml)
    and click on the latest successful run that has artifacts (a pre-release tag such
    as `Natron-2.6.0-RC1`, or a run started with "Run workflow").
@@ -43,7 +40,8 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
      Ubuntu 24.04.
    - `openfx-misc-build-macos-release`: macOS plugins for Apple silicon (arm64),
      macOS 11 or later.
-   - `openfx-misc-build-windows-release`: Windows (64-bit, MSYS2 UCRT64) plugins.
+   - `openfx-misc-build-windows-release`: Windows (64-bit, MSYS2 UCRT64) plugins,
+     Windows 10 or later (they use the Universal C Runtime).
 
    Artifacts are deleted by GitHub after 90 days. If there is none, you can
    [compile the plugins](#installation) yourself (`make nomulti` builds one bundle
