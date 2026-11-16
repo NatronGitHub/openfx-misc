@@ -131,8 +131,6 @@ SupportExt/ofxsMacros.h
 SupportExt/ofxsMaskMix.h
 SupportExt/ofxsMatrix2D.h
 SupportExt/ofxsMerging.h
-SupportExt/ofxsMipmap.cpp
-SupportExt/ofxsMipmap.h
 SupportExt/ofxsOGLFontData.cpp
 SupportExt/ofxsOGLFontUtils.h
 SupportExt/ofxsOGLTextRenderer.cpp
