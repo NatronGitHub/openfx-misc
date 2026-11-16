@@ -585,57 +585,66 @@ IF (MSVC)
   ENDIF ()
 ENDIF ()
 
-# Find and set the arch name.
-# http://openeffects.org/documentation/reference/ch02s02.html
+# Bundle architecture folder (OFX packaging spec, ofxPackaging.rst). Same rule as openfx
+# cmake/OpenFX.cmake (NatronGitHub/openfx#105), which matches what HostSupport looks for and
+# Support/Plugins/Makefile.master.
 SET(OFX_ARCH UNKNOWN)
-# Win
-if(MINGW)
-    set(OFX_ARCH "Win32")
-    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+if(APPLE)
+    set(OFX_ARCH "MacOS") # universal or arch-specific: no arm64 folder
+elseif(WIN32)
+    # MSVC: the target architecture (ARM64EC, ARM64, x64, X86); other compilers: pointer size
+    string(TOUPPER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID};${CMAKE_GENERATOR_PLATFORM}" _OFX_WINARCH)
+    if(_OFX_WINARCH MATCHES "ARM64EC" OR CMAKE_CXX_FLAGS MATCHES "/arm64EC")
+        set(OFX_ARCH "Win-arm64ec") # Arm64EC (and Arm64X) plug-ins
+    elseif(_OFX_WINARCH MATCHES "ARM64")
+        set(OFX_ARCH "Win-arm64")   # reserved, not yet normative: native Arm64 hosts
+    elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(OFX_ARCH "Win64")
+    else()
+        set(OFX_ARCH "Win32")
     endif()
-# Visual Studio    
-elseif(MSVC)
-    set(OFX_ARCH "Win32")
-    if((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "IA64") OR (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64"))
-        set(OFX_ARCH "Win64")
+elseif(UNIX)
+    if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        set(_OFX_OS "FreeBSD")
+    else()
+        set(_OFX_OS "Linux")
     endif()
-# FreeBSD
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-    # the folder uses "uname -m" (arm64), as NatronGitHub/openfx#103 does, but on
-    # FreeBSD CMAKE_SYSTEM_PROCESSOR is "uname -p" (aarch64)
-    set(OFX_MACHINE "${CMAKE_SYSTEM_PROCESSOR}")
-    if(NOT CMAKE_CROSSCOMPILING)
-        execute_process(COMMAND uname -m OUTPUT_VARIABLE OFX_MACHINE OUTPUT_STRIP_TRAILING_WHITESPACE)
-    elseif("${OFX_MACHINE}" STREQUAL "aarch64")
-        set(OFX_MACHINE "arm64")
-    endif()
-    if("${OFX_MACHINE}" MATCHES "^(x86_64|amd64)$")
-        set(OFX_ARCH "FreeBSD-x86-64")
-    elseif("${OFX_MACHINE}" MATCHES "^(i.86|x86)$")
-        set(OFX_ARCH "FreeBSD-x86")
-    elseif(NOT "${OFX_MACHINE}" STREQUAL "")
-        set(OFX_ARCH "FreeBSD-${OFX_MACHINE}")
-    endif()
-# MacOS
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-    set(OFX_ARCH "MacOS")
-# Linux
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    # non-x86: OFX 1.5 packaging (informational, not yet normative) says "On Linux,
-    # hosts should look in the subdir named by Linux-${uname -m} which for arm64 should
-    # be Linux-aarch64", as NatronGitHub/openfx#103 does. CMAKE_SYSTEM_PROCESSOR is
-    # "uname -m" for native builds; cross toolchains should use the same names.
-    set(OFX_MACHINE "${CMAKE_SYSTEM_PROCESSOR}")
-    if("${OFX_MACHINE}" STREQUAL "arm64")
-        set(OFX_MACHINE "aarch64")
-    endif()
-    if("${OFX_MACHINE}" MATCHES "^(x86_64|amd64)$")
-        set(OFX_ARCH "Linux-x86-64")
-    elseif("${OFX_MACHINE}" MATCHES "^(i.86|x86)$")
-        set(OFX_ARCH "Linux-x86")
-    elseif(NOT "${OFX_MACHINE}" STREQUAL "")
-        set(OFX_ARCH "Linux-${OFX_MACHINE}")
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _OFX_CPU)
+    if(_OFX_CPU MATCHES "^(x86_64|amd64|i[3-6]86|x86)$")
+        # x86: use the pointer size, the userland may be 32-bit on a 64-bit kernel
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(OFX_ARCH "${_OFX_OS}-x86-64")
+        else()
+            set(OFX_ARCH "${_OFX_OS}-x86")
+        endif()
+    elseif(_OFX_CPU MATCHES "^(aarch64|arm64|armv8l|arm.*)$")
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(OFX_ARCH "${_OFX_OS}-aarch64")
+        elseif(_OFX_OS STREQUAL "FreeBSD")
+            set(OFX_ARCH "FreeBSD-armv7")
+        else()
+            set(OFX_ARCH "Linux-armv7l")
+        endif()
+    elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^riscv")
+        set(OFX_ARCH "FreeBSD-riscv64")
+    elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^powerpc")
+        # uname -p: powerpc64, powerpc64le (uname -m only says powerpc)
+        if(NOT DEFINED CMAKE_CXX_BYTE_ORDER) # CMake < 3.20
+            include(TestBigEndian)
+            test_big_endian(_OFX_BIG_ENDIAN)
+            if(NOT _OFX_BIG_ENDIAN)
+                set(CMAKE_CXX_BYTE_ORDER "LITTLE_ENDIAN")
+            endif()
+        endif()
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND CMAKE_CXX_BYTE_ORDER STREQUAL "LITTLE_ENDIAN")
+            set(OFX_ARCH "FreeBSD-powerpc64le")
+        elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(OFX_ARCH "FreeBSD-powerpc64")
+        else()
+            set(OFX_ARCH "FreeBSD-powerpc")
+        endif()
+    elseif(NOT _OFX_CPU STREQUAL "")
+        set(OFX_ARCH "${_OFX_OS}-${CMAKE_SYSTEM_PROCESSOR}") # Linux: uname -m (riscv64, ppc64le, s390x, ...)
     endif()
 endif()
 
