@@ -56,7 +56,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
-#define kSupportsMultipleClipDepths false
+// true: the output depth is chosen by the "Output Bit Depth" param (GeneratorPlugin::getClipPreferences sets it),
+// and the render only depends on the output depth; the OFX spec only lets a plugin set the output depth if this is 1
+#define kSupportsMultipleClipDepths true
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamColor "color"
