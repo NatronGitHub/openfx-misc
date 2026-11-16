@@ -26,7 +26,8 @@
 # - the --report JSON file shows a failed render, an output depth other than
 #   the requested one, or an error or fatal message from the plugin;
 # - the output at the first time does not have the expected mean value (mean=r,g,b,a,
-#   normalized to [0,1]), is constant though it should not be (nonconst), or
+#   normalized to [0,1]), does not have the expected components (comps=RGBA,
+#   RGB or Alpha), is constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
 #   renders the same image at different times (framesdiffer: --frames), or
 #   is the same image as an input (changed:Clip: the CRC32 of the output
@@ -179,6 +180,9 @@ if out0:
             # 0.01: byte and short inputs and outputs are quantized
             if len(want) != len(mean) or any(abs(a - b) > 0.01 for a, b in zip(mean, want)):
                 errors.append("t=0: mean %s, expected %s" % (",".join("%.4g" % v for v in mean), expect[5:]))
+        elif expect.startswith("comps="):
+            if out0["comps"] != expect[6:]:
+                errors.append("t=0: components %s, expected %s" % (out0["comps"], expect[6:]))
         elif expect == "framesdiffer":
             crcs = [(k.get("output") or {}).get("crc32") for k in renders]
             if len(set(crcs)) != len(crcs):
@@ -310,12 +314,17 @@ tests=(
     # Shuffle 3 swaps A and B on hosts without the multiplane suites: kept, so
     # that version 3 projects render the same
     "Shuffle 3 A and B|net.sf.openfx.ShufflePlugin|general|*|mean=0.7,0.2,0.5,0.4||-m 3 -i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8 outputR=2 outputG=7 outputB=0 outputA=9"
+    "Shuffle 3 B none|net.sf.openfx.ShufflePlugin|general|*|mean=0,0,0,0||-m 3 -i A=solid:0.1,0.2,0.3,0.4 -i B=none outputR=2 outputG=1 outputB=0 outputA=3"
+    "Shuffle 2 A and B|net.sf.openfx.ShufflePlugin|general|*|mean=0.3,0.6,0.1,0.8||-m 2 -i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8 outputR=2 outputG=7 outputB=0 outputA=9"
     "Shuffle 3 default|net.sf.openfx.ShufflePlugin|general|float|mean=0.1,0.2,0.3,0.4||-m 3 -i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8"
-    # the filter context: the A and B channels both read Source
+    # the filter context: the A and B channels both read Source (so these tests
+    # cannot detect an A/B swap). The Output components are those of Source
+    # (RGBA in hostDemo), whatever outputComponents (1: RGB).
     "Shuffle filter|net.sf.openfx.ShufflePlugin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1"
     "Shuffle filter swap|net.sf.openfx.ShufflePlugin|filter|*|mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle 3 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 3 -i Source=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle 2 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 2 -i Source=solid:0.25,0.5,0.75,1 outputR=2 outputB=0"
+    "Shuffle filter comps|net.sf.openfx.ShufflePlugin|filter|*|comps=RGBA+mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputComponents=1 outputR=8 outputB=6"
 )
 
 n=0 failed=() xfailed=()

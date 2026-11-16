@@ -43,8 +43,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Version 4 fixes a bug of version 3 on hosts that do not support the multiplane extension of Nuke and Natron (Nuke and Natron are not affected): " \
     "version 3 read the A channels from the B input and the B channels from the A input, and it was the identity of the A input " \
     "instead of the B input when the output channels were B.r, B.g, B.b and B.a (the default)."
-#define kPluginDescriptionVersion3 kPluginDescriptionVersion4 "\n" \
-    "This is version 3, kept so that existing projects render the same: use version 4 in new projects."
+#define kPluginDescriptionVersion3 "\n" \
+    "This is version 3, kept so that existing projects render the same: use version 4 in new projects." \
+    kPluginDescriptionVersion4
 #define kPluginIdentifier "net.sf.openfx.ShufflePlugin"
 // History:
 // version 1.0: initial version (see ShuffleClassic.cpp)
@@ -553,6 +554,7 @@ public:
                   unsigned int majorVersion)
         : MultiPlane::MultiPlaneEffect(handle)
         , _majorVersion(majorVersion)
+        , _isFilterContext(context == eContextFilter)
         , _dstClip(NULL)
         , _srcClipDefault(NULL)
         , _srcClipOther(NULL)
@@ -696,6 +698,18 @@ private:
 
     MultiPlane::ImagePlaneDesc getPlaneFromOutputComponents() const;
 
+    // The components of the color plane of the output: the outputComponents parameter, except in the filter
+    // context, where "a plugin cannot change the component type of the Output clip, it will always be the same
+    // as the Source clip" (ofxImageEffectContexts.rst).
+    PixelComponentEnum getOutputComponents(double time) const
+    {
+        if (_isFilterContext) {
+            return _srcClipDefault ? _srcClipDefault->getPixelComponents() : ePixelComponentNone;
+        }
+
+        return gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
+    }
+
     MultiPlane::ImagePlaneDesc getDstPixelComps();
 
     void updateOutputParamsVisibility(const MultiPlane::ImagePlaneDesc& plane);
@@ -706,6 +720,7 @@ private:
     void onMetadataChanged(MultiPlane::ImagePlaneDesc* dstPlaneOut);
 
     unsigned int _majorVersion;
+    bool _isFilterContext;
 
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -1009,9 +1024,10 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     }
     processor.setSrcImg(srcImgA, srcImgB);
 
-    PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
+    PixelComponentEnum outputComponents = _isFilterContext ? dstComponents : gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
     assert(dstComponents == outputComponents);
-    BitDepthEnum outputBitDepth = srcBitDepth;
+    // no input image (all inputs disconnected): the output depth is the one of the output image
+    BitDepthEnum outputBitDepth = (srcBitDepth != eBitDepthNone) ? srcBitDepth : dst->getPixelDepth();
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         outputBitDepth = gOutputBitDepthMap[_outputBitDepth->getValueAtTime(time)];
     }
@@ -1220,7 +1236,7 @@ ShufflePlugin::render(const RenderArguments &args)
     // (@see getClipPreferences).
     if (!gIsMultiPlanarV2 && !gIsMultiPlanarV1) {
         // set the components of _dstClip
-        PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
+        PixelComponentEnum outputComponents = _isFilterContext ? dstComponents : gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
         assert(dstComponents == outputComponents);
     }
 
@@ -1257,7 +1273,8 @@ ShufflePlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
     // get the components of _dstClip
 
-    if (!gIsMultiPlanarV2) {
+    if (!gIsMultiPlanarV2 && !_isFilterContext) {
+        // in the filter context, the Output components are those of Source (see getClipPreferences())
         PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
         if (dstComponents != outputComponents) {
             setPersistentMessage(Message::eMessageError, "", "Shuffle: OFX Host did not take into account output components");
@@ -1339,7 +1356,7 @@ ShufflePlugin::render(const RenderArguments &args)
 MultiPlane::ImagePlaneDesc
 ShufflePlugin::getPlaneFromOutputComponents() const
 {
-    PixelComponentEnum comps = gOutputComponentsMap[_outputComponents->getValue()];
+    PixelComponentEnum comps = _isFilterContext ? getOutputComponents(0.) : gOutputComponentsMap[_outputComponents->getValue()];
     switch (comps) {
         case OFX::ePixelComponentRGB:
             return MultiPlane::ImagePlaneDesc::getRGBComponents();
@@ -1425,7 +1442,11 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     PixelComponentEnum dstPixelComps;
     PixelComponentEnum srcDefaultComps = _srcClipDefault ? _srcClipDefault->getUnmappedPixelComponents() : ePixelComponentNone;
     PixelComponentEnum srcOtherComps = _srcClipOther ? _srcClipOther->getUnmappedPixelComponents() : ePixelComponentNone;
-    if (dstPlane.isColorPlane()) {
+    if (_isFilterContext) {
+        // "a plugin cannot change the component type of the Output clip, it will always be the same as the Source clip"
+        // (ofxImageEffectContexts.rst, The Filter Context)
+        dstPixelComps = srcDefaultComps;
+    } else if (dstPlane.isColorPlane()) {
         // If the output plane is the color plane, set the pixel components to one of the OpenFX defaults selected by the user
         dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
     } else {
@@ -1434,7 +1455,7 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         //dstPixelComps = mapStrToPixelComponentEnum(MultiPlane::ImagePlaneDesc::mapPlaneToOFXComponentsTypeString(colorPlaneMapped));
         dstPixelComps = srcDefaultComps;
     }
-    if (_dstClip) {
+    if ( _dstClip && (dstPixelComps != ePixelComponentNone) ) {
         clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
     }
     if (_srcClipDefault) {
@@ -1774,8 +1795,6 @@ ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
         desc.setPluginDescription(kPluginDescription);
     }
 
-    desc.addSupportedContext(eContextFilter);
-    desc.addSupportedContext(eContextGeneral);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
@@ -1896,6 +1915,13 @@ ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 #else
     gIsMultiPlanar = false;
 #endif
+
+    // The filter context is not supported with the multiplane suites: the A. and B. channel options
+    // cannot resolve to the single Source clip. Natron and Nuke instantiate Shuffle in the general context.
+    if (!gIsMultiPlanarV1 && !gIsMultiPlanarV2) {
+        desc.addSupportedContext(eContextFilter);
+    }
+    desc.addSupportedContext(eContextGeneral);
 } // ShufflePluginFactory::describe
 
 template<unsigned int majorVersion>
@@ -1983,6 +2009,10 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
         }
         param->setDefault(0);
         param->setAnimates(false);
+        if (context == eContextFilter) {
+            // the Output components are those of Source (see getClipPreferences())
+            param->setIsSecretAndDisabled(true);
+        }
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
