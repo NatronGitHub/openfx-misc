@@ -496,12 +496,12 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     _mix->getValue(mix);
 
 
-# ifndef NDEBUG
+    // the processor writes alpha when outputAlpha is set: refuse a non-RGBA output
+    // (a host may ignore the RGBA clip preference) instead of writing out of bounds
     if ( outputAlpha && (dst->getPixelComponentCount() != 4) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        setPersistentMessage(Message::eMessageError, "", "\"" kParamOutputSpillMapLabel "\" requires an RGBA output image");
         throwSuiteStatusException(kOfxStatFailed);
     }
-# endif
 
 
     processor.setValues(spillMix, spillExpand, redScale, greenScale, blueScale, brightNess, clampBlack, clampWhite, (float)mix, outputAlpha);

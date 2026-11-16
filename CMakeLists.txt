@@ -593,54 +593,99 @@ IF (MSVC)
   ENDIF ()
 ENDIF ()
 
-# Find and set the arch name.
-# http://openeffects.org/documentation/reference/ch02s02.html
+# Bundle architecture folder (OFX packaging spec, ofxPackaging.rst): copied from openfx
+# cmake/OpenFX.cmake (NatronGitHub/openfx master c1d69ca3), so that the names match what HostSupport
+# looks for and openfx Support/Plugins/Makefile.master. Keep the two in sync.
 SET(OFX_ARCH UNKNOWN)
-# Win
-if(MINGW)
-    set(OFX_ARCH "Win32")
-    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
-        set(OFX_ARCH "Win64")
-    endif()
-# Visual Studio    
-elseif(MSVC)
-    set(OFX_ARCH "Win32")
-    if((${CMAKE_SYSTEM_PROCESSOR} STREQUAL "IA64") OR (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64"))
-        set(OFX_ARCH "Win64")
-    endif()
-# FreeBSD
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-    set(OFX_ARCH "FreeBSD-x86")
-    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
-        set(OFX_ARCH "FreeBSD-x86-64")
-    endif()
-    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
-        if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-            set(OFX_ARCH FreeBSD-arm-64)
-        else()
-            set(OFX_ARCH FreeBSD-arm)
+if(APPLE)
+    set(OFX_ARCH "MacOS") # universal or arch-specific: no arm64 folder
+elseif(WIN32)
+    # MSVC: the target architecture (ARM64EC, ARM64, x64, X86); other compilers: pointer size
+    string(TOUPPER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID};${CMAKE_GENERATOR_PLATFORM}" _OFX_WINARCH)
+    if(NOT CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
+        # MinGW (MSYS2 CLANGARM64, llvm-mingw) on CMake < 4.1: the architecture ID is only set for MSVC, and
+        # CMAKE_SYSTEM_PROCESSOR is the build machine's unless a toolchain file sets it: ask the compiler for
+        # its target (CMAKE_CXX_COMPILER_TARGET, or `-dumpmachine`), e.g. aarch64-w64-mingw32 or
+        # arm64ec-w64-windows-gnu (llvm-mingw Arm64EC)
+        set(_OFX_TARGET "${CMAKE_CXX_COMPILER_TARGET}")
+        if(NOT _OFX_TARGET)
+            # CMAKE_CXX_COMPILER_ARG1 is one string (e.g. " --target=aarch64-w64-mingw32"): split it
+            # (UNIX_COMMAND works with any CMake version, for projects that copy this block)
+            separate_arguments(_OFX_CXX_ARGS UNIX_COMMAND "${CMAKE_CXX_COMPILER_ARG1}")
+            execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${_OFX_CXX_ARGS} -dumpmachine
+                            OUTPUT_VARIABLE _OFX_TARGET OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+        endif()
+        string(TOLOWER "${_OFX_TARGET}" _OFX_TARGET)
+        if(_OFX_TARGET MATCHES "^arm64ec")
+            set(_OFX_WINARCH "ARM64EC")
+        elseif(_OFX_TARGET MATCHES "^(aarch64|arm64)")
+            set(_OFX_WINARCH "ARM64")
         endif()
     endif()
-# MacOS
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-    set(OFX_ARCH "MacOS")
-# Linux
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    set(OFX_ARCH "Linux-x86")
-    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
-        set(OFX_ARCH "Linux-x86-64")
+    if(_OFX_WINARCH MATCHES "ARM64EC" OR CMAKE_CXX_FLAGS MATCHES "/arm64EC")
+        set(OFX_ARCH "Win-arm64ec") # normative (upstream main, 2026): Arm64EC (and Arm64X) plug-ins
+    elseif(_OFX_WINARCH MATCHES "ARM64|AARCH64")
+        # CMake >= 4.1 reports "aarch64" as the MinGW architecture ID
+        set(OFX_ARCH "Win-arm64")   # reserved, not yet normative: native Arm64 hosts
+        message(WARNING "Native Arm64 plug-in: installed to Win-arm64, a reserved, not yet normative folder. "
+                        "Current Windows-on-Arm hosts (Resolve, Vegas) are Arm64EC: build for Arm64EC for them.")
+    elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(OFX_ARCH "Win64")
+    else()
+        set(OFX_ARCH "Win32")
     endif()
-    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
-        if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-            set(OFX_ARCH Linux-arm-64)
+elseif(UNIX)
+    if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        set(_OFX_OS "FreeBSD")
+    else()
+        set(_OFX_OS "Linux")
+    endif()
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _OFX_CPU)
+    if(_OFX_CPU MATCHES "^(x86_64|amd64|i[3-6]86|x86)$")
+        # x86: use the pointer size, the userland may be 32-bit on a 64-bit kernel
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(OFX_ARCH "${_OFX_OS}-x86-64")
         else()
-            set(OFX_ARCH Linux-arm)
+            set(OFX_ARCH "${_OFX_OS}-x86")
         endif()
+    elseif(_OFX_OS STREQUAL "Linux" AND NOT _OFX_CPU STREQUAL "")
+        # the spec's name, literally: Linux-${uname -m} (CMAKE_SYSTEM_PROCESSOR is uname -m for native builds;
+        # cross toolchain files set it). HostSupport also searches the compiled architecture's name.
+        set(OFX_ARCH "Linux-${CMAKE_SYSTEM_PROCESSOR}")
+    elseif(_OFX_CPU MATCHES "^armv[2-6]" AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(OFX_ARCH "FreeBSD-armv6")
+    elseif(_OFX_CPU MATCHES "^(aarch64|arm64|armv8l|arm.*)$")
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(OFX_ARCH "FreeBSD-aarch64")
+        else()
+            set(OFX_ARCH "FreeBSD-armv7")
+        endif()
+    elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^riscv")
+        set(OFX_ARCH "FreeBSD-riscv64")
+    elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^powerpc")
+        # uname -p: powerpc64, powerpc64le (uname -m only says powerpc)
+        # CMake < 3.20 (TestBigEndian supports CXX-only projects since 3.12)
+        if(NOT DEFINED CMAKE_CXX_BYTE_ORDER AND NOT CMAKE_VERSION VERSION_LESS 3.12)
+            include(TestBigEndian)
+            test_big_endian(_OFX_BIG_ENDIAN)
+            if(NOT _OFX_BIG_ENDIAN)
+                set(CMAKE_CXX_BYTE_ORDER "LITTLE_ENDIAN")
+            endif()
+        endif()
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND CMAKE_CXX_BYTE_ORDER STREQUAL "LITTLE_ENDIAN")
+            set(OFX_ARCH "FreeBSD-powerpc64le")
+        elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(OFX_ARCH "FreeBSD-powerpc64")
+        else()
+            set(OFX_ARCH "FreeBSD-powerpc")
+        endif()
+    elseif(NOT _OFX_CPU STREQUAL "")
+        set(OFX_ARCH "${_OFX_OS}-${CMAKE_SYSTEM_PROCESSOR}") # Linux: uname -m (riscv64, ppc64le, s390x, ...)
     endif()
 endif()
 
 SET(OFX_ARCH_NAME ${OFX_ARCH} CACHE STRING "OpenFX target OS and architecture")
-IF("${OFX_ARCH_NAME}" EQUAL "UNKNOWN")
+IF("${OFX_ARCH_NAME}" STREQUAL "UNKNOWN")
   MESSAGE(SEND_ERROR "OFX_ARCH_NAME was not detected. Install targets will be unavailable. See http://openeffects.org/documentation/reference/ch02s02.html to pick an arch name.")
 ELSE()
   INSTALL(TARGETS Misc
