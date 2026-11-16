@@ -52,7 +52,7 @@ include(FindOpenGL REQUIRED)
 
 # C++ standard: C++17 by default (Natron RB-2.6 Qt5 builds); the code also builds as C++20
 # (Qt6 builds, RB-2.7): configure with -DCMAKE_CXX_STANDARD=20. Compiler extensions stay on
-# (gnu++17), as in the make build.
+# (gnu++17, the compilers' default); the make CI builds with strict -std=c++17/c++20.
 if(NOT DEFINED CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()

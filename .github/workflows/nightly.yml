@@ -165,6 +165,7 @@ jobs:
       matrix:
         include:
           # -static everywhere: loadtest.sh fails on a MinGW runtime DLL dependency.
+          # debug and nomulti pass no -std: they build with GCC's default (gnu++17).
           - name: debug
             options: CONFIG=debug LDFLAGS_ADD=-static
           - name: nomulti
