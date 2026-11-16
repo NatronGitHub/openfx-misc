@@ -95,8 +95,11 @@ SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 # /MP on MSVC
 ADD_COMPILE_OPTIONS($<$<CXX_COMPILER_ID:MSVC>:/MP>)
-
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+# MSVC: make __cplusplus report the selected standard (e.g. 201703L), not 199711L.
+# Without it, the "#if __cplusplus > 199711L" tests in SupportExt (tinythread.h,
+# fast_mutex.h, ofxsThreadSuite.cpp) and openfx Support (ofxsCore.h: OFX::auto_ptr,
+# OFX_THROW) take their pre-C++11 branches. Needs Visual Studio 2017 15.7 or later.
+ADD_COMPILE_OPTIONS($<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>)
 
 set(OFX_SUPPORT_HEADER_DIR "${OPENFX_PATH}/Support/include")
 set(OFX_SUPPORT_LIBRARY_DIR "${OPENFX_PATH}/Support/Library")
