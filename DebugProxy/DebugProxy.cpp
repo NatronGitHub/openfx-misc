@@ -25,7 +25,7 @@
 // the clip support code may be wrong. in case of crash, it can be easily disactivated
 #define OFX_DEBUG_PROXY_CLIPS
 
-#ifdef WIN32
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
 
