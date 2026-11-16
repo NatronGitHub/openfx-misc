@@ -101,8 +101,6 @@ ADD_COMPILE_OPTIONS($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 # OFX_THROW) take their pre-C++11 branches. Needs Visual Studio 2017 15.7 or later.
 ADD_COMPILE_OPTIONS($<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>)
 
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
-
 set(OFX_SUPPORT_HEADER_DIR "${OPENFX_PATH}/Support/include")
 set(OFX_SUPPORT_LIBRARY_DIR "${OPENFX_PATH}/Support/Library")
 

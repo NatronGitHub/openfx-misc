@@ -213,7 +213,7 @@ jobs:
     name: Windows MSVC 2022 CMake
     needs: changes
     if: needs.changes.outputs.run == 'true'
-    timeout-minutes: 45
+    timeout-minutes: 20
     runs-on: windows-2022
     steps:
       - name: Checkout branch
@@ -229,6 +229,8 @@ jobs:
       - name: Load test
         # ofxload is built with the runner's MinGW GCC (loadtest.sh uses GCC options);
         # it only loads the MSVC-built plugins through LoadLibrary (C entry points).
+        # This proves the DLLs load and register their plug-ins; it does not call
+        # setHost/mainEntry, so the threading code /Zc:__cplusplus switches is not run.
         run: |
           command -v g++ objdump
           CXX=g++ .github/tools/loadtest.sh cmake-install
