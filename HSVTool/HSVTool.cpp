@@ -1787,6 +1787,8 @@ private:
         if (enableRectangle) {
             return RectangleInteract::penUp(args);
         }
+        // the rectangle was turned off during the drag (if any): abandon it
+        abandonDrag();
 
         return false;
     }

@@ -217,7 +217,7 @@ ofxsMaskRoDExcludesRenderWindow(const IsIdentityArguments &args,
     OfxRectI maskRoD;
 
     return ( getImageEffectHostDescription()->supportsMultiResolution &&
-             ofxsMaskGetRoDPixel(maskClip, maskApply, maskInvert, args.time, args.renderScale, &maskRoD) &&
+             ofxsMaskGetRoDPixel(maskClip, maskApply, maskInvert, args.time, args.renderScale, &maskRoD, args.fieldToRender) &&
              !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) );
 }
 } // namespace OFX

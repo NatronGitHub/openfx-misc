@@ -536,7 +536,7 @@ CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args,
     // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
     OfxRectI maskRoD;
     if ( getImageEffectHostDescription()->supportsMultiResolution &&
-         ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, args.time, args.renderScale, &maskRoD) &&
+         ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, args.time, args.renderScale, &maskRoD, args.fieldToRender) &&
          !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
         // effect is identity if the renderWindow doesn't intersect the mask RoD
         identityClip = _srcClipB;
