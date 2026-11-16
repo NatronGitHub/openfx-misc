@@ -1,7 +1,8 @@
 name: Continous Integration tests
 
 # Every change gets exactly three builds (macOS, Linux, Windows) of the release
-# configuration, followed by a plugin load test.
+# configuration, followed by a plugin load test. macOS runs after Linux and
+# Windows pass, and is not required for merging.
 # Other variants (debug, nomulti, C++20, OpenMP, CMake) are in nightly.yml.
 #
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
@@ -61,6 +62,10 @@ defaults:
 jobs:
   build_macos:
     name: Build macOS 15 (arm64)
+    # macOS arm64 runners are scarce: start only once Linux and Windows have
+    # passed. Merging only requires Linux and Windows; macOS is informative here
+    # and is also built nightly (nightly.yml).
+    needs: [build_linux, build_windows]
     # no CI for draft pull requests
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     timeout-minutes: 30
