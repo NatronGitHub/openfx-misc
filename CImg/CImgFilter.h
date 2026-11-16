@@ -530,13 +530,12 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         //   Multiple resolution images mean...
         //    input and output images can be of any size
         //    input and output images can be offset from the origin
+        // The source RoD is at the origin, but the output RoD may differ from it: it is the one that
+        // getRegionOfDefinition() returned, which may be expanded (e.g. expandRoD in CImgBlur), and
+        // this is kept so that existing projects render the same.
         if ( src.get() ) {
             assert(srcRoD.x1 == 0);
             assert(srcRoD.y1 == 0);
-            assert(srcRoD.x1 == dstRoD.x1);
-            assert(srcRoD.x2 == dstRoD.x2);
-            assert(srcRoD.y1 == dstRoD.y1);
-            assert(srcRoD.y2 == dstRoD.y2); // crashes on Natron if kSupportsMultiResolution=0
         }
     }
 
