@@ -3990,8 +3990,6 @@
 		1ED537361A234D35007966D5 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1ED537381A234F12007966D5 /* ofxsLut.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsLut.cpp; sourceTree = "<group>"; };
 		1ED537391A234F12007966D5 /* ofxsLut.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsLut.h; sourceTree = "<group>"; };
-		1ED5373A1A234F12007966D5 /* ofxsMipmap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsMipmap.cpp; sourceTree = "<group>"; };
-		1ED5373B1A234F12007966D5 /* ofxsMipmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMipmap.h; sourceTree = "<group>"; };
 		1ED61EF41EB8D7150059A800 /* CImgDistance.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgDistance.cpp; path = Distance/CImgDistance.cpp; sourceTree = "<group>"; };
 		1ED7C78A25FEAE3E006EEBCC /* ofxsOGLHiDPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsOGLHiDPI.h; sourceTree = "<group>"; };
 		1ED851391AAB6229003F65A3 /* Distortion.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Distortion.cpp; sourceTree = "<group>"; };
@@ -5821,8 +5819,6 @@
 				1E9B5F4A198A51840095C8AA /* ofxsMaskMix.h */,
 				1E9B5F4B198A51840095C8AA /* ofxsMatrix2D.h */,
 				1E9B5F4C198A51840095C8AA /* ofxsMerging.h */,
-				1ED5373A1A234F12007966D5 /* ofxsMipmap.cpp */,
-				1ED5373B1A234F12007966D5 /* ofxsMipmap.h */,
 				AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */,
 				AC3525D71C216FCE0063F0C0 /* ofxsMultiPlane.h */,
 				1E534A0E1D0D9BAD0007AD92 /* ofxsOGLDebug.h */,
