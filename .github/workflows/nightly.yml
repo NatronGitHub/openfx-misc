@@ -113,8 +113,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # -static everywhere: loadtest.sh fails on a MinGW runtime DLL dependency.
           - name: debug
-            options: CONFIG=debug
+            options: CONFIG=debug LDFLAGS_ADD=-static
           - name: nomulti
             options: nomulti CONFIG=release LDFLAGS_ADD=-static
     steps:

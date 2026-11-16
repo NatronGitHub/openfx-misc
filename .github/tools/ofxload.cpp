@@ -27,12 +27,18 @@
  * Like a host, it loads each binary and calls the two entry points every OFX
  * plugin binary must export (see openfx/include/ofxCore.h), then prints the
  * identifier and version of each plugin. It fails if a binary cannot be loaded,
- * contains no plugin, or registers the same identifier+version twice, since a
- * host could then not tell these plugins apart.
+ * contains no plugin, returns an incomplete OfxPlugin, or if the same
+ * identifier+version is registered twice, in the same binary or in two of the
+ * binaries given, since a host that loads them all could not tell them apart.
+ *
+ * This is a registration-only test: it does not call setHost or mainEntry, so
+ * kOfxActionLoad and kOfxActionDescribe are never sent. It does not call
+ * OfxSetHost either, which the OFX C++ Support library does not export.
  */
 
 #include <cstdio>
-#include <set>
+#include <cstring>
+#include <map>
 #include <sstream>
 #include <string>
 
@@ -43,6 +49,7 @@
 #endif
 
 #include "ofxCore.h"
+#include "ofxImageEffect.h"
 
 typedef int (*GetNumberOfPluginsFunc)(void);
 typedef OfxPlugin* (*GetPluginFunc)(int nth);
@@ -59,7 +66,20 @@ static void* loadLibrary(std::string path)
     return (void*)LoadLibraryA(path.c_str());
 }
 static void* findSymbol(void* lib, const char* name) { return (void*)GetProcAddress((HMODULE)lib, name); }
-static std::string loadError() { std::ostringstream ss; ss << "error " << GetLastError(); return ss.str(); }
+static std::string loadError()
+{
+    DWORD code = GetLastError();
+    char* msg = NULL;
+    FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                   NULL, code, 0, (LPSTR)&msg, 0, NULL);
+    std::ostringstream ss;
+    ss << "error " << code;
+    if (msg) {
+        ss << ": " << msg; // ends with "\r\n"
+        LocalFree(msg);
+    }
+    return ss.str();
+}
 #else
 static void* loadLibrary(const std::string& path) { return dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL); }
 static void* findSymbol(void* lib, const char* name) { return dlsym(lib, name); }
@@ -72,8 +92,14 @@ int main(int argc, char** argv)
         std::fprintf(stderr, "Usage: %s <binary.ofx>...\n", argv[0]);
         return 2;
     }
+#ifdef _WIN32
+    // Report a missing DLL as a load error, instead of opening a dialog box
+    // that would block the CI job.
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
+#endif
     int errors = 0;
     int plugins = 0;
+    std::map<std::string, std::string> seen; // "identifier version" -> binary that registered it
     for (int a = 1; a < argc; ++a) {
         std::printf("%s\n", argv[a]);
         void* lib = loadLibrary(argv[a]);
@@ -96,20 +122,37 @@ int main(int argc, char** argv)
             std::printf("  ERROR: no plugin\n");
             ++errors;
         }
-        std::set<std::string> seen; // "identifier version" of each plugin in this binary
         for (int i = 0; i < n; ++i) {
             OfxPlugin* p = getPlugin(i);
-            if (!p || !p->pluginIdentifier) {
-                std::printf("  ERROR: plugin %d is NULL\n", i);
+            if (!p) {
+                std::printf("  ERROR: OfxGetPlugin(%d) returned NULL\n", i);
+                ++errors;
+                continue;
+            }
+            if (!p->pluginIdentifier) {
+                std::printf("  ERROR: plugin %d has a NULL pluginIdentifier\n", i);
                 ++errors;
                 continue;
             }
             std::ostringstream key;
             key << p->pluginIdentifier << ' ' << p->pluginVersionMajor << '.' << p->pluginVersionMinor;
-            bool duplicate = !seen.insert(key.str()).second;
-            std::printf("  %s%s\n", key.str().c_str(), duplicate ? "  ERROR: duplicate" : "");
-            errors += duplicate;
+            std::printf("  %s\n", key.str().c_str());
             ++plugins;
+            // All our plugins are image effects, and a host calls setHost and
+            // mainEntry on every plugin it loads.
+            if (!p->pluginApi || std::strcmp(p->pluginApi, kOfxImageEffectPluginApi) != 0) {
+                std::printf("    ERROR: pluginApi is %s, not %s\n", p->pluginApi ? p->pluginApi : "NULL", kOfxImageEffectPluginApi);
+                ++errors;
+            }
+            if (!p->setHost || !p->mainEntry) {
+                std::printf("    ERROR: setHost or mainEntry is NULL\n");
+                ++errors;
+            }
+            std::pair<std::map<std::string, std::string>::iterator, bool> ins = seen.insert(std::make_pair(key.str(), std::string(argv[a])));
+            if (!ins.second) {
+                std::printf("    ERROR: duplicate, also registered by %s\n", ins.first->second.c_str());
+                ++errors;
+            }
         }
         // The library is not unloaded: OFX hosts usually keep plugins loaded.
     }

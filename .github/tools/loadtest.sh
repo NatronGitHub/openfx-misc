@@ -24,4 +24,31 @@ if [ ${#binaries[@]} -eq 0 ]; then
     echo "no *.ofx.bundle/Contents/$arch/*.ofx found"
     exit 1
 fi
-./ofxload "${binaries[@]}"
+
+status=0
+# Windows: the MinGW runtime must be linked statically (LDFLAGS_ADD=-static),
+# since hosts do not ship these DLLs. ofxload would not notice, because MSYS2
+# puts them on PATH.
+if [ "$arch" = Win64 ]; then
+    command -v objdump > /dev/null || { echo "objdump not found"; exit 1; }
+    for f in "${binaries[@]}"; do
+        if objdump -p "$f" | grep -i -E 'DLL Name: *(libgcc_s|libstdc\+\+|libwinpthread)'; then
+            echo "ERROR: $f depends on the MinGW runtime DLLs above"
+            status=1
+        fi
+    done
+fi
+
+# Duplicate identifier+version are checked across all the binaries given to
+# one ofxload run. The Test bundle is checked on its own: it is for developers,
+# and in debug builds Misc also registers its TestRender plugins.
+installed=() tests=()
+for f in "${binaries[@]}"; do
+    case "$f" in
+        */Test.ofx.bundle/*) tests+=("$f") ;;
+        *) installed+=("$f") ;;
+    esac
+done
+[ ${#installed[@]} -eq 0 ] || ./ofxload "${installed[@]}" || status=1
+[ ${#tests[@]} -eq 0 ] || ./ofxload "${tests[@]}" || status=1
+exit $status
