@@ -15,7 +15,8 @@
 # directory (or in $HOSTDEMO_BUILD_DIR, kept between runs if set), so that the
 # openfx submodule stays clean.
 #
-# hostDemo renders the frames t=0 and t=1 of a PAL SD project (720x576) on
+# hostDemo renders the frames t=0 and t=1 (or --frames) of a PAL SD project
+# (720x576), at render scale 1 (or --scale), in the whole RoD (or --window), on
 # synthetic inputs (-i Clip=solid:r,g,b,a|ramp|checker:N|none), with the
 # depth and components that the clip preferences of the plugin map each
 # clip to. A render fails if:
@@ -24,8 +25,10 @@
 #   output images with NaN), or the plugin crashed;
 # - the --report JSON file shows a failed render, an output depth other than
 #   the requested one, or an error or fatal message from the plugin;
-# - the output at t=0 does not have the expected mean value (mean=r,g,b,a,
+# - the output at the first time does not have the expected mean value (mean=r,g,b,a,
 #   normalized to [0,1]), is constant though it should not be (nonconst), or
+#   is not the same region of the full render (tile: for a --window render),
+#   renders the same image at different times (framesdiffer: --frames), or
 #   is the same image as an input (changed:Clip: the CRC32 of the output
 #   must differ from the one of the input Clip, copied at the same depth by
 #   Invert with no channel to process; NoOp would be simpler, but its debug
@@ -135,7 +138,7 @@ cd "$work"
 # reasons of the failure, if any (exit status 1).
 check() {
     python3 -I - "$@" << 'EOF'
-import json, sys
+import array, json, sys
 path, depth, expects = sys.argv[1:4]
 refs = dict(a.split("=", 1) for a in sys.argv[4:])
 with open(path) as f:
@@ -147,8 +150,9 @@ for m in r.get("messages") or []:
     if m.get("type") in ("OfxMessageError", "OfxMessageFatal"):
         errors.append("%s %s: %s" % (m.get("kind"), m.get("type"), m.get("text")))
 renders = r.get("renders") or []
-if len(renders) != 2:
-    errors.append("%d renders, expected 2" % len(renders))
+nframes = int(refs.get("frames", 2))
+if len(renders) != nframes:
+    errors.append("%d renders, expected %d" % (len(renders), nframes))
 out0 = None
 for k in renders:
     o = k.get("output")
@@ -159,7 +163,7 @@ for k in renders:
         errors.append("t=%s: output depth %s, expected %s" % (k.get("time"), o["depth"], depth))
     if o["nan"]:
         errors.append("t=%s: %d unwritten (NaN) pixels" % (k.get("time"), o["nan"]))
-    if k.get("time") == 0:
+    if k is renders[0]:
         out0 = o
 desc = ""
 if out0:
@@ -175,6 +179,37 @@ if out0:
             # 0.01: byte and short inputs and outputs are quantized
             if len(want) != len(mean) or any(abs(a - b) > 0.01 for a, b in zip(mean, want)):
                 errors.append("t=0: mean %s, expected %s" % (",".join("%.4g" % v for v in mean), expect[5:]))
+        elif expect == "framesdiffer":
+            crcs = [(k.get("output") or {}).get("crc32") for k in renders]
+            if len(set(crcs)) != len(crcs):
+                errors.append("the same image at different times: %s" % crcs)
+        elif expect == "tile":
+            # the tile (render window) must be the same region of the full
+            # render (float RGB PFM files, bottom row first)
+            with open(refs["full"]) as f:
+                full = json.load(f)["renders"][0]["output"]
+            def pfm(path):
+                with open(path, "rb") as f:
+                    h = f.read().split(b"\n", 3)
+                w, hh = (int(v) for v in h[1].split())
+                a = array.array("f")
+                a.frombytes(h[3][:w * hh * 3 * 4])
+                if sys.byteorder != "little":
+                    a.byteswap()
+                return w, a
+            tw, tile = pfm(out0["files"][0])
+            fw, fpix = pfm(full["files"][0])
+            tb, fb = out0["bounds"], full["bounds"]
+            diff = 0
+            for y in range(tb[1], tb[3]):
+                for x in range(tb[0], tb[2]):
+                    i = ((y - tb[1]) * tw + x - tb[0]) * 3
+                    j = ((y - fb[1]) * fw + x - fb[0]) * 3
+                    if tile[i:i + 3] != fpix[j:j + 3]:
+                        diff += 1
+            if diff:
+                errors.append("%d pixels of the tile %s differ from the full render" % (diff, tb))
+            desc += " tile=%s" % ",".join(str(v) for v in tb)
         elif expect.startswith("changed:"):
             clip = expect[8:]
             if not refs.get(clip):
@@ -252,6 +287,16 @@ tests=(
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
     "Clamp|net.sf.openfx.Clamp|filter|*|mean=1,0,0.5,1||-i Source=solid:1.5,-0.5,0.5,1 -i Mask=none"
+    # render scale 0.5 (the means are those of the full-scale renders), tiles
+    # (--window: the same pixels as the full render), and a fractional time
+    "Radial scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-i Source=none -i Mask=none --scale 0.5"
+    "Transform scale 0.5|net.sf.openfx.TransformPlugin|filter|float|mean=0.31,0.31,0.31,0.31||-i Source=checker:32 rotate=30 scale=0.8,0.8 --scale 0.5"
+    "CImgBlur scale 0.5|net.sf.cimg.CImgBlur|filter|float|mean=0.497,0.497,0.497,0.497||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 --scale 0.5"
+    # filter=2: Box (FIR). The default IIR filters have an infinite support, so
+    # their tiles differ slightly (up to 0.003) from the full render.
+    "CImgBlur tile|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 filter=2 --frames 0 --window 100,100,300,250"
+    "Merge tile|net.sf.openfx.MergePlugin|filter|float|nonconst+tile||-i A=checker:16 -i B=ramp -i Mask=none --frames 0 --window 50,60,250,200"
+    "Rand t=0,0.5|net.sf.openfx.Noise|general|float|nonconst+framesdiffer||-i Source=none --frames 0,0.5"
     # Shuffle (version 3) swaps R and B. The A and B inputs are the same here,
     # since Shuffle 3 takes A for B on hosts without the multiplane suites (see
     # the known bugs below).
@@ -273,27 +318,56 @@ for t in "${tests[@]}"; do
     for depth in $depths; do
         n=$((n + 1))
         name="$label ($depth)"
-        # changed:Clip: the CRC32 of the input Clip, i.e. of a copy of it
-        refs=() refok=1
+        # the hostDemo options: the number of frames, the render scale (for the
+        # copies of the inputs), and the arguments without the render window
+        # (for the full render that a tile is compared to)
+        # shellcheck disable=SC2086
+        set -- $args
+        frames=2 scale=() nowindow=()
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --frames) f=${2//[^,]/}; frames=$(( ${#f} + 1 )) ;;
+                --scale) scale=(--scale "$2") ;;
+            esac
+            if [ "$1" = --window ]; then shift; else nowindow+=("$1"); fi
+            shift
+        done
+        refs=("frames=$frames") refok=1
         for e in ${expect//+/ }; do
-            case "$e" in changed:*) ;; *) continue ;; esac
-            clip=${e#changed:} spec=
-            # shellcheck disable=SC2086
-            set -- $args
-            while [ $# -gt 0 ]; do
-                [ "$1" = -i ] && case "$2" in "$clip="*) spec=${2#*=} ;; esac
-                shift
-            done
-            rm -f out.* ref.json
-            if [ -n "$spec" ] && hostdemo ref.log -p net.sf.openfx.Invert -c filter -d "$depth" \
-                   --format pfm -o out --report ref.json -i "Source=$spec" -i Mask=none \
-                   NatronOfxParamProcessR=0 NatronOfxParamProcessG=0 NatronOfxParamProcessB=0 NatronOfxParamProcessA=0; then
-                refs+=("$clip=$(crc32 ref.json)")
-            else
-                refok=0
-                printf 'FAIL  %-26s could not copy the %s input (%s) with Invert\n' "$name" "$clip" "$spec"
-                sed 's/^/  | /' ref.log 2> /dev/null || true
-            fi
+            case "$e" in
+                changed:*)
+                    # the CRC32 of the input Clip, i.e. of a copy of it
+                    clip=${e#changed:} spec=
+                    # shellcheck disable=SC2086
+                    set -- $args
+                    while [ $# -gt 0 ]; do
+                        [ "$1" = -i ] && case "$2" in "$clip="*) spec=${2#*=} ;; esac
+                        shift
+                    done
+                    rm -f out.* ref.json
+                    if [ -n "$spec" ] && hostdemo ref.log -p net.sf.openfx.Invert -c filter -d "$depth" \
+                           --format pfm -o out --report ref.json -i "Source=$spec" -i Mask=none "${scale[@]}" \
+                           NatronOfxParamProcessR=0 NatronOfxParamProcessG=0 NatronOfxParamProcessB=0 NatronOfxParamProcessA=0; then
+                        refs+=("$clip=$(crc32 ref.json)")
+                    else
+                        refok=0
+                        printf 'FAIL  %-26s could not copy the %s input (%s) with Invert\n' "$name" "$clip" "$spec"
+                        sed 's/^/  | /' ref.log 2> /dev/null || true
+                    fi
+                    ;;
+                tile)
+                    # the full render, without --window
+                    rm -f full.* full.json
+                    if hostdemo ref.log -p "$id" -c "$ctx" -d "$depth" --format pfm -o full \
+                           --report full.json "${nowindow[@]}"; then
+                        refs+=("full=full.json")
+                    else
+                        refok=0
+                        printf 'FAIL  %-26s the full render (without --window) failed\n' "$name"
+                        sed 's/^/  | /' ref.log
+                    fi
+                    ;;
+            esac
         done
         if [ $refok = 0 ]; then
             failed+=("$name")
@@ -333,7 +407,7 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* report.json ref.json
+rm -f out.* full.* report.json ref.json
 
 echo
 echo "rendertest: $((n - ${#failed[@]} - ${#xfailed[@]})) passed, ${#xfailed[@]} known bugs (XFAIL), ${#failed[@]} failed, $n renders in $(( $(date +%s) - start ))s"
