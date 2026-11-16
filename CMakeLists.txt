@@ -601,7 +601,10 @@ elseif(WIN32)
         # arm64ec-w64-windows-gnu (llvm-mingw Arm64EC)
         set(_OFX_TARGET "${CMAKE_CXX_COMPILER_TARGET}")
         if(NOT _OFX_TARGET)
-            execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} -dumpmachine
+            # CMAKE_CXX_COMPILER_ARG1 is one string (e.g. " --target=aarch64-w64-mingw32"): split it
+            # (UNIX_COMMAND works with any CMake version, for projects that copy this block)
+            separate_arguments(_OFX_CXX_ARGS UNIX_COMMAND "${CMAKE_CXX_COMPILER_ARG1}")
+            execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${_OFX_CXX_ARGS} -dumpmachine
                             OUTPUT_VARIABLE _OFX_TARGET OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
         endif()
         string(TOLOWER "${_OFX_TARGET}" _OFX_TARGET)
