@@ -62,15 +62,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Apple clang defaults to C++14: pass the standard explicitly.
           - name: debug
-            options: CONFIG=debug
+            options: CONFIG=debug CXXFLAGS_ADD=-std=c++17
           - name: C++20
             options: CONFIG=release CXXFLAGS_ADD=-std=c++20
           - name: OpenMP
             # Apple clang has no OpenMP runtime: use the MacPorts libomp.
             options: >-
               CONFIG=release
-              CXXFLAGS_ADD="-Xpreprocessor -fopenmp -I/opt/local/include/libomp"
+              CXXFLAGS_ADD="-std=c++17 -Xpreprocessor -fopenmp -I/opt/local/include/libomp"
               LDFLAGS_ADD="-L/opt/local/lib/libomp -lomp"
     steps:
       - name: Checkout branch
@@ -168,6 +169,10 @@ jobs:
             options: CONFIG=debug LDFLAGS_ADD=-static
           - name: nomulti
             options: nomulti CONFIG=release LDFLAGS_ADD=-static
+          # gnu++20, not c++20: openfx's Makefile.master passes -U__STRICT_ANSI__ on
+          # MinGW, and strict mode then fails in GCC's <limits> (as in ci.yml)
+          - name: C++20
+            options: CONFIG=release CXXFLAGS_ADD=-std=gnu++20 LDFLAGS_ADD=-static
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
