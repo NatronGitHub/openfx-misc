@@ -59,7 +59,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
-#define kSupportsMultipleClipDepths false
+// true: GeneratorPlugin sets the output depth from "Output Bit Depth", which the OFX spec
+// allows only if host and plugin both declare 1; the Source clip's images are never fetched
+#define kSupportsMultipleClipDepths true
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamBoxSize "boxSize"
