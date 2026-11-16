@@ -3,9 +3,9 @@ name: Nightly extra builds
 # Build variants that are not worth running on every push or pull request
 # (ci.yml only builds the release configuration on each OS):
 # debug, one bundle per plugin (nomulti), C++20 (Natron RB-2.6 with Qt6, and
-# RB-2.7; ci.yml builds C++17), OpenMP, and CMake, plus the per-PR macOS
-# release build (ci.yml runs it only after Linux and Windows pass, and merging
-# does not require it).
+# RB-2.7; ci.yml builds C++17), OpenMP, and CMake, plus the macOS release build
+# of ci.yml, which there only runs after Linux and Windows pass (this covers
+# master when the push run's macOS job was skipped or cancelled).
 # Each make build is followed by the same plugin load test as in ci.yml.
 # Frugal CI: the nightly run is skipped if master did not change since the last
 # nightly run that succeeded or failed (a cancelled run does not count), and jobs
@@ -68,8 +68,7 @@ jobs:
       matrix:
         include:
           # Apple clang defaults to C++14: pass the standard explicitly.
-          # release: the per-PR macOS build of ci.yml, which is not required for merging
-          - name: release
+          - name: release # the macOS build of ci.yml
             options: CONFIG=release TESTS=1 CXXFLAGS_ADD=-std=c++17
           - name: debug
             options: CONFIG=debug CXXFLAGS_ADD=-std=c++17
