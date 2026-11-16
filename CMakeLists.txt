@@ -595,12 +595,19 @@ elseif(WIN32)
     # MSVC: the target architecture (ARM64EC, ARM64, x64, X86); other compilers: pointer size
     string(TOUPPER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID};${CMAKE_GENERATOR_PLATFORM}" _OFX_WINARCH)
     if(NOT CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
-        # MinGW (MSYS2 CLANGARM64, llvm-mingw): the architecture ID is only set for MSVC, and
-        # CMAKE_SYSTEM_PROCESSOR is the build machine's unless a toolchain file sets it, so ask the compiler
-        include(CheckCXXSourceCompiles)
-        check_cxx_source_compiles("#if !defined(__aarch64__)\n#error not aarch64\n#endif\nint main() { return 0; }"
-                                  OFX_WIN_TARGET_IS_AARCH64)
-        if(OFX_WIN_TARGET_IS_AARCH64)
+        # MinGW (MSYS2 CLANGARM64, llvm-mingw) on CMake < 4.1: the architecture ID is only set for MSVC, and
+        # CMAKE_SYSTEM_PROCESSOR is the build machine's unless a toolchain file sets it: ask the compiler for
+        # its target (CMAKE_CXX_COMPILER_TARGET, or `-dumpmachine`), e.g. aarch64-w64-mingw32 or
+        # arm64ec-w64-windows-gnu (llvm-mingw Arm64EC)
+        set(_OFX_TARGET "${CMAKE_CXX_COMPILER_TARGET}")
+        if(NOT _OFX_TARGET)
+            execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} -dumpmachine
+                            OUTPUT_VARIABLE _OFX_TARGET OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+        endif()
+        string(TOLOWER "${_OFX_TARGET}" _OFX_TARGET)
+        if(_OFX_TARGET MATCHES "^arm64ec")
+            set(_OFX_WINARCH "ARM64EC")
+        elseif(_OFX_TARGET MATCHES "^(aarch64|arm64)")
             set(_OFX_WINARCH "ARM64")
         endif()
     endif()
