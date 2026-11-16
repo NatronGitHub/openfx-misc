@@ -12,6 +12,9 @@
 # The libraries each binary links are printed when they differ, but are not an error
 # (the Makefiles link OpenGL to every bundle; CMake only where it is used).
 # The binaries in Contents/Libraries (osxDeploy.sh) are compared by name only.
+# Contents/_CodeSignature (the bundle signature of CMake's OFX_DEPLOY_BUNDLES=ON on
+# macOS; make does not sign) is an expected difference when it is on one side only:
+# it is reported, but is not an error.
 # Run from the top of the source tree (ofxload is built from .github/tools/ofxload.cpp).
 # Exit status: 0 if the bundles match, 1 otherwise.
 set -eo pipefail
@@ -94,6 +97,17 @@ while IFS= read -r name; do
     bstatus=0
     (cd "$pa" && find . -mindepth 1 | sort) > "$work/fa"
     (cd "$pb" && find . -mindepth 1 | sort) > "$work/fb"
+    # a deploy signature on one side only: expected (compare the other files)
+    sig='^\./Contents/_CodeSignature(/|$)'
+    if [ "$(grep -cE "$sig" "$work/fa" || true)" = 0 ] || [ "$(grep -cE "$sig" "$work/fb" || true)" = 0 ]; then
+        for s in a b; do
+            if grep -qE "$sig" "$work/f$s"; then
+                echo "  expected: $name: Contents/_CodeSignature only in ${!s} (deploy signature)"
+                grep -vE "$sig" "$work/f$s" > "$work/f$s.tmp" || true
+                mv "$work/f$s.tmp" "$work/f$s"
+            fi
+        done
+    fi
     if ! diff "$work/fa" "$work/fb" > "$work/files.diff"; then
         echo "DIFF: $name: file lists (< $pa, > $pb):"
         sed 's/^/  /' "$work/files.diff"
