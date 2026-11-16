@@ -586,8 +586,8 @@ IF (MSVC)
 ENDIF ()
 
 # Bundle architecture folder (OFX packaging spec, ofxPackaging.rst): copied from openfx
-# cmake/OpenFX.cmake (NatronGitHub/openfx#105, #106), so that the names match what HostSupport looks
-# for and openfx Support/Plugins/Makefile.master. Keep the two in sync.
+# cmake/OpenFX.cmake (NatronGitHub/openfx master c1d69ca3), so that the names match what HostSupport
+# looks for and openfx Support/Plugins/Makefile.master. Keep the two in sync.
 SET(OFX_ARCH UNKNOWN)
 if(APPLE)
     set(OFX_ARCH "MacOS") # universal or arch-specific: no arm64 folder
@@ -619,6 +619,8 @@ elseif(WIN32)
     elseif(_OFX_WINARCH MATCHES "ARM64|AARCH64")
         # CMake >= 4.1 reports "aarch64" as the MinGW architecture ID
         set(OFX_ARCH "Win-arm64")   # reserved, not yet normative: native Arm64 hosts
+        message(WARNING "Native Arm64 plug-in: installed to Win-arm64, a reserved, not yet normative folder. "
+                        "Current Windows-on-Arm hosts (Resolve, Vegas) are Arm64EC: build for Arm64EC for them.")
     elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(OFX_ARCH "Win64")
     else()
@@ -638,20 +640,17 @@ elseif(UNIX)
         else()
             set(OFX_ARCH "${_OFX_OS}-x86")
         endif()
+    elseif(_OFX_OS STREQUAL "Linux" AND NOT _OFX_CPU STREQUAL "")
+        # the spec's name, literally: Linux-${uname -m} (CMAKE_SYSTEM_PROCESSOR is uname -m for native builds;
+        # cross toolchain files set it). HostSupport also searches the compiled architecture's name.
+        set(OFX_ARCH "Linux-${CMAKE_SYSTEM_PROCESSOR}")
     elseif(_OFX_CPU MATCHES "^armv[2-6]" AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-        # pre-ARMv7 (HostSupport: __ARM_ARCH < 7)
-        if(_OFX_OS STREQUAL "FreeBSD")
-            set(OFX_ARCH "FreeBSD-armv6")
-        else()
-            set(OFX_ARCH "Linux-armv6l")
-        endif()
+        set(OFX_ARCH "FreeBSD-armv6")
     elseif(_OFX_CPU MATCHES "^(aarch64|arm64|armv8l|arm.*)$")
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            set(OFX_ARCH "${_OFX_OS}-aarch64")
-        elseif(_OFX_OS STREQUAL "FreeBSD")
-            set(OFX_ARCH "FreeBSD-armv7")
+            set(OFX_ARCH "FreeBSD-aarch64")
         else()
-            set(OFX_ARCH "Linux-armv7l")
+            set(OFX_ARCH "FreeBSD-armv7")
         endif()
     elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^riscv")
         set(OFX_ARCH "FreeBSD-riscv64")
