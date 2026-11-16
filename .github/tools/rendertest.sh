@@ -281,7 +281,7 @@ tests=(
     "Merge over solid|net.sf.openfx.MergePlugin|filter|*|mean=0.5,0,0.5,1||-i A=solid:0.5,0,0,0.5 -i B=solid:0,0,1,1 -i Mask=none"
     "Merge over checker|net.sf.openfx.MergePlugin|filter|*|nonconst+changed:A+changed:B||-i A=checker:16 -i B=ramp -i Mask=none"
     "CImgBlur|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0"
-    "CImgBlur expandRoD|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source|debug:CImgFilter asserts that the output RoD is the source RoD on hosts without multiresolution, but expandRoD enlarges it~srcRoD.x1 == dstRoD.x1|-i Source=checker:8 -i Mask=none size=5,5"
+    "CImgBlur expandRoD|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5"
     "Transform|net.sf.openfx.TransformPlugin|filter|*|nonconst+changed:Source||-i Source=checker:32 rotate=30 scale=0.8,0.8"
     "Crop|net.sf.openfx.CropPlugin|filter|*|nonconst+changed:Source||-i Source=ramp bottomLeft=100,100 size=400,300"
     # saturation 0: the Rec.709 luminance
@@ -297,12 +297,25 @@ tests=(
     "CImgBlur tile|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 filter=2 --frames 0 --window 100,100,300,250"
     "Merge tile|net.sf.openfx.MergePlugin|filter|float|nonconst+tile||-i A=checker:16 -i B=ramp -i Mask=none --frames 0 --window 50,60,250,200"
     "Rand t=0,0.5|net.sf.openfx.Noise|general|float|nonconst+framesdiffer||-i Source=none --frames 0,0.5"
-    # Shuffle (version 3) swaps R and B. The A and B inputs are the same here,
-    # since Shuffle 3 takes A for B on hosts without the multiplane suites (see
-    # the known bugs below).
+    # Shuffle (version 4 unless -m) swaps R and B (outputR=8: B.b, outputB=6:
+    # B.r; 0-3: A.r-A.a, 6-9: B.r-B.a). After the first test, the A and B
+    # inputs differ, so that reading A for B (or B for A) fails.
     "Shuffle|net.sf.openfx.ShufflePlugin|general|*|mean=0.75,0.5,0.25,1||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
-    "Shuffle B|net.sf.openfx.ShufflePlugin|general|float|mean=0.75,0.5,0.25,1|Shuffle 3 without the multiplane suites renders A instead of B~t=0: mean 0.5,0.5,0.5,0.5,|-i A=ramp -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
-    "Shuffle filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.25,0.5,0.75,1|Shuffle in the filter context: crash in getRegionOfDefinition, render fails~Segmentation fault|-i Source=solid:0.25,0.5,0.75,1"
+    "Shuffle B|net.sf.openfx.ShufflePlugin|general|float|mean=0.75,0.5,0.25,1||-i A=ramp -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
+    # the default: the B input (identity)
+    "Shuffle default|net.sf.openfx.ShufflePlugin|general|*|mean=0.5,0.6,0.7,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8"
+    "Shuffle A and B|net.sf.openfx.ShufflePlugin|general|*|mean=0.3,0.6,0.1,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8 outputR=2 outputG=7 outputB=0 outputA=9"
+    # B (the default input) disconnected: A gives the depth of the images
+    "Shuffle B none|net.sf.openfx.ShufflePlugin|general|*|mean=0.3,0.2,0.1,0.4||-i A=solid:0.1,0.2,0.3,0.4 -i B=none outputR=2 outputG=1 outputB=0 outputA=3"
+    # Shuffle 3 swaps A and B on hosts without the multiplane suites: kept, so
+    # that version 3 projects render the same
+    "Shuffle 3 A and B|net.sf.openfx.ShufflePlugin|general|*|mean=0.7,0.2,0.5,0.4||-m 3 -i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8 outputR=2 outputG=7 outputB=0 outputA=9"
+    "Shuffle 3 default|net.sf.openfx.ShufflePlugin|general|float|mean=0.1,0.2,0.3,0.4||-m 3 -i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8"
+    # the filter context: the A and B channels both read Source
+    "Shuffle filter|net.sf.openfx.ShufflePlugin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1"
+    "Shuffle filter swap|net.sf.openfx.ShufflePlugin|filter|*|mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
+    "Shuffle 3 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 3 -i Source=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
+    "Shuffle 2 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 2 -i Source=solid:0.25,0.5,0.75,1 outputR=2 outputB=0"
 )
 
 n=0 failed=() xfailed=()
