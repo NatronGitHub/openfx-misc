@@ -168,10 +168,12 @@ jobs:
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
         # Not Test: it is for developers, and is never installed.
+        # The object directory is named after uname -s, which is MINGW64_NT-*
+        # or UCRT64_NT-* depending on the MSYS2 version: match any *_NT-*.
         run: |
           set -eo pipefail
           mkdir -p Bundle
-          mv {CImg,Misc,Shadertoy}/MINGW64*-release/*.ofx.bundle Bundle
+          mv {CImg,Misc,Shadertoy}/*_NT-*-release/*.ofx.bundle Bundle
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6

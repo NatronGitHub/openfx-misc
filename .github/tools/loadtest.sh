@@ -7,7 +7,7 @@ set -eo pipefail
 case "$(uname -s)" in
     Darwin) arch=MacOS; libs= ;;
     Linux) arch=Linux-x86-64; libs=-ldl ;;
-    MINGW*|MSYS*) arch=Win64; libs= ;;
+    *_NT-*) arch=Win64; libs= ;; # MSYS2: MINGW64_NT-*, UCRT64_NT-*, CLANG64_NT-*, MSYS_NT-*...
     *) echo "unsupported OS $(uname -s)"; exit 1 ;;
 esac
 
