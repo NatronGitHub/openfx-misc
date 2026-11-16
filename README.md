@@ -24,23 +24,28 @@ The easiest way to get these plugins is to install
 [Natron](https://natrongithub.github.io/): they are included in all Natron binary
 distributions, so there is nothing else to install.
 
-To use the plugins with another OpenFX host, you can download binaries built by the
-continuous integration:
+To use the plugins with another OpenFX host, download binaries built by the
+continuous integration. They are not kept for every change, only for pre-release
+tags (tags that start with `Natron-` and contain `-rc`, `-beta` or `-alpha`, in any
+case, such as `Natron-2.6.0-RC1` or `Natron-2.6.0-beta1`; not final releases such
+as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
 
-1. Go to the [GitHub Actions page](https://github.com/NatronGitHub/openfx-misc/actions)
-   of openfx-misc, and click on the latest successful run of the "Continous
-   Integration tests" workflow on the `master` branch.
+1. Go to the
+   [GitHub Actions page](https://github.com/NatronGitHub/openfx-misc/actions/workflows/ci.yml)
+   and click on the latest successful run that has artifacts (a pre-release tag such
+   as `Natron-2.6.0-RC1`, or a run started with "Run workflow").
 2. At the bottom of the page, in the "Artifacts" section, download the archive for
    your system (you must be logged in to GitHub):
-   - `openfx-misc-build-ubuntu_22-release`: Linux (64-bit) plugins.
+   - `openfx-misc-build-ubuntu_24-release`: Linux (64-bit) plugins, built on
+     Ubuntu 24.04.
    - `openfx-misc-build-macos-release`: macOS plugins for Apple silicon (arm64),
      macOS 11 or later.
-   - `openfx-misc-build-windows-release`: Windows (64-bit, MinGW-w64) plugins.
-   - `openfx-misc-build-windows-nomulti-release`: the same Windows plugins, with one
-     bundle per plugin, if you only need a few of them.
+   - `openfx-misc-build-windows-release`: Windows (64-bit, MSYS2 UCRT64) plugins,
+     Windows 10 or later (they use the Universal C Runtime).
 
-   Artifacts are deleted by GitHub after 90 days, so always use the latest successful
-   run.
+   Artifacts are deleted by GitHub after 90 days. If there is none, you can
+   [compile the plugins](#installation) yourself (`make nomulti` builds one bundle
+   per plugin, if you only need a few of them).
 3. Unzip the archive. It contains directories named `*.ofx.bundle` (for example
    `Misc.ofx.bundle`, `CImg.ofx.bundle`, `Shadertoy.ofx.bundle`).
 4. Copy these `*.ofx.bundle` directories into the standard OpenFX plugins

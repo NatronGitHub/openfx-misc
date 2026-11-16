@@ -1,56 +1,72 @@
 name: Continous Integration tests
 
+# Every change gets exactly three builds (macOS, Linux, Windows) of the release
+# configuration, followed by a plugin load test.
+# Other variants (debug, nomulti, C++20, OpenMP, CMake) are in nightly.yml.
+#
+# Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
+# Pushes are built only on master, RB-* and tags; feature branches are built
+# through their pull request (not twice). Draft pull requests are not built:
+# CI starts when the PR is marked ready. Superseded runs are cancelled, except
+# for tags. Jobs time out.
 on:
   push:
+    branches: [master, 'RB-*']
+    tags: ['*']
     paths-ignore:
+      - Documentation/**
+      - '**/*.md'
       - LICENSE
-      - README.md
       - README-hosts.txt
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
+      - Documentation/**
+      - '**/*.md'
       - LICENSE
-      - README.md
       - README-hosts.txt
+  workflow_dispatch:
 
-# One run per branch or PR. Superseded PR runs are cancelled, but every push to
-# master is built to completion, so each merge gets a CI result.
-# (github.job is empty at workflow level, so it is not part of the group.)
+permissions:
+  contents: read
+
+# Third-party actions are pinned to a commit SHA (version in the comment), since
+# a tag can be moved to other code. GitHub's own actions/* stay on version tags.
+# Checkouts use persist-credentials: false: no step needs to push.
+
+# One run per PR or branch; a new push cancels the previous run, except for tags.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  # Build as C++17, the standard of Natron RB-2.6 (Qt5). Without it, Apple clang
+  # would use its C++14 default. C++20 is built by nightly.yml.
+  STD_OPTIONS: CXXFLAGS_ADD=-std=c++17
+  # The release bundles are uploaded as artifacts only for manual runs
+  # ("Run workflow" on the Actions page) and for pre-release tags. This repo is
+  # tagged with the Natron version (Natron-2.5.0, Natron-2.0.0-RC1,
+  # Natron-2.3.16-beta2), so a pre-release tag is a Natron-* tag that contains
+  # -rc, -beta or -alpha. contains() is case-insensitive, so -RC1 matches too.
+  # Final releases such as Natron-2.5.0 do not match.
+  UPLOAD_ARTIFACTS: >-
+    ${{ github.event_name == 'workflow_dispatch' ||
+    (github.ref_type == 'tag' && startsWith(github.ref_name, 'Natron-') &&
+    (contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha'))) }}
+
+defaults:
+  run:
+    shell: bash -eo pipefail {0}
 
 jobs:
-  build_linux:
-    name: Build Ubuntu 22.04
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-      - name: Install Ubuntu system packages
-        run: |
-          sudo apt update
-          sudo apt-get install libglu1-mesa-dev libgl-dev
-      - name: Build (release)
-        run: |
-          make -j2 CONFIG=release TESTS=1
-          mkdir -p Bundle
-          mv {CImg,Misc,Shadertoy,Test}/Linux-64-release/*.ofx.bundle Bundle
-      - name: Build (debug)
-        run: |
-          make -j2 CONFIG=debug
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: openfx-misc-build-ubuntu_22-release
-          path: Bundle
   build_macos:
-    name: Build macOS
-    # GitHub-hosted arm64 (Apple silicon) runner. The plugins are built for
-    # the native architecture (arm64) with the Xcode toolchain and SDK; they
-    # only need the system OpenGL framework; GNU sed is installed for the
-    # bundle packaging script.
+    name: Build macOS 15 (arm64)
+    # no CI for draft pull requests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    timeout-minutes: 30
+    # GitHub-hosted arm64 (Apple silicon) runner. The plugins are built with
+    # the system Xcode clang and SDK, and only need the system OpenGL
+    # framework. MacPorts (never Homebrew) provides the other tools.
     runs-on: macos-15
     env:
       # By default, the Makefiles use the SDK version as the minimum macOS
@@ -61,64 +77,127 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
-      - name: Install GNU sed
-        # needed by openfx/Support/include/osxDeploy.sh, which packages the release bundles
-        run: brew install gnu-sed
+          persist-credentials: false
+      - name: Install MacPorts (cached) and GNU sed
+        # gsed is needed by openfx/Support/include/osxDeploy.sh, which
+        # packages the release bundles. See .github/parameters/setup-macports.yaml.
+        uses: melusina-org/setup-macports@103eded5f10979e927bffcd6d0b86cbbdb2c3bb3 # v1.1.6
+        with:
+          parameters: .github/parameters/setup-macports.yaml
+      - name: Use MacPorts, not Homebrew
+        run: |
+          PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
+          echo "PATH=/opt/local/bin:/opt/local/sbin:$PATH" >> "$GITHUB_ENV"
+      - name: Show tools
+        run: |
+          echo "PATH=$PATH"
+          command -v c++ gsed
+          c++ --version
       - name: Build (release)
+        run: make -j"$(getconf _NPROCESSORS_ONLN)" CONFIG=release TESTS=1 $MACOS_OPTIONS $STD_OPTIONS
+      - name: Load test
+        run: .github/tools/loadtest.sh
+      - name: Collect bundles
+        if: env.UPLOAD_ARTIFACTS == 'true'
+        # Not Test: it is for developers, and is never installed.
         run: |
-          make -j3 CONFIG=release TESTS=1 $MACOS_OPTIONS
           mkdir -p Bundle
-          mv {CImg,Misc,Shadertoy,Test}/Darwin-64-release/*.ofx.bundle Bundle
-      - name: Build (debug)
-        run: |
-          make -j3 CONFIG=debug $MACOS_OPTIONS
+          mv {CImg,Misc,Shadertoy}/Darwin-64-release/*.ofx.bundle Bundle
       - name: Upload artifacts
+        if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: openfx-misc-build-macos-release
           path: Bundle
+
+  build_linux:
+    name: Build Ubuntu 24.04
+    # no CI for draft pull requests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Install Ubuntu system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev
+      - name: Build (release)
+        run: make -j"$(nproc)" CONFIG=release TESTS=1 $STD_OPTIONS
+      - name: Load test
+        run: .github/tools/loadtest.sh
+      - name: Collect bundles
+        if: env.UPLOAD_ARTIFACTS == 'true'
+        # Not Test: it is for developers, and is never installed.
+        run: |
+          mkdir -p Bundle
+          mv {CImg,Misc,Shadertoy}/Linux-64-release/*.ofx.bundle Bundle
+      - name: Upload artifacts
+        if: env.UPLOAD_ARTIFACTS == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: openfx-misc-build-ubuntu_24-release
+          path: Bundle
+
   build_windows:
-    name: Build Windows
+    name: Build Windows (MSYS2 UCRT64)
+    # no CI for draft pull requests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    timeout-minutes: 30
     runs-on: windows-2022
     defaults:
       run:
+        # The msys2 shell has no pipefail option, so each run block starts
+        # with "set -eo pipefail".
         shell: msys2 {0}
     env:
       # Options shared by the release builds. The MinGW runtime (libstdc++,
       # libgcc, winpthread) is linked statically, so that the bundles also
       # load in hosts that do not ship these DLLs.
       RELEASE_OPTIONS: CONFIG=release LDFLAGS_ADD=-static
+      # C++17 with GNU extensions: on MinGW, openfx's Makefile.master passes
+      # -U__STRICT_ANSI__, and with strict -std=c++17 the GCC 16 <limits> then
+      # uses __float128 literals (1.0Q) that only gnu++17 accepts.
+      STD_OPTIONS: CXXFLAGS_ADD=-std=gnu++17
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
         with:
           submodules: recursive
-      - name: Setup MinGW environment
-        uses: msys2/setup-msys2@v2
+          persist-credentials: false
+      - name: Setup MSYS2 UCRT64 environment (cached)
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
         with:
-          msystem: mingw64
-          update: true
-          install: git base-devel mingw-w64-x86_64-cc
+          msystem: UCRT64
+          # Same options as nightly.yml, so that both share one cache (its key
+          # is derived from these options). update: false: see nightly.yml.
+          update: false
+          cache: true
+          install: git base-devel mingw-w64-ucrt-x86_64-cc
       - name: Build (release)
         run: |
-          make -j2 $RELEASE_OPTIONS TESTS=1
+          set -eo pipefail
+          make -j"$(nproc)" $RELEASE_OPTIONS TESTS=1 $STD_OPTIONS
+      - name: Load test
+        run: |
+          set -eo pipefail
+          .github/tools/loadtest.sh
+      - name: Collect bundles
+        if: env.UPLOAD_ARTIFACTS == 'true'
+        # Not Test: it is for developers, and is never installed.
+        # The object directory is named after uname -s, which is MINGW64_NT-*
+        # or UCRT64_NT-* depending on the MSYS2 version: match any *_NT-*.
+        run: |
+          set -eo pipefail
           mkdir -p Bundle
-          mv {CImg,Misc,Shadertoy,Test}/MINGW64*-release/*.ofx.bundle Bundle
-      - name: Build separate plugins (release, nomulti)
-        run: |
-          make -j2 nomulti $RELEASE_OPTIONS
-          mkdir -p BundleNoMulti
-          mv */MINGW64*-release/*.ofx.bundle CImg/*/MINGW64*-release/*.ofx.bundle BundleNoMulti
-      - name: Build (debug)
-        run: |
-          make -j2 CONFIG=debug
+          mv {CImg,Misc,Shadertoy}/*_NT-*-release/*.ofx.bundle Bundle
       - name: Upload artifacts
+        if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: openfx-misc-build-windows-release
           path: Bundle
-      - name: Upload separate plugin artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: openfx-misc-build-windows-nomulti-release
-          path: BundleNoMulti

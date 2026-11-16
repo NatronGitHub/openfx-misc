@@ -221,3 +221,7 @@ Shadertoy/presets/vid02.ogv
 Shadertoy/presets/vid03.webm
 
 *.bak
+
+# Load-test program built by .github/tools/loadtest.sh
+/ofxload
+/ofxload.exe

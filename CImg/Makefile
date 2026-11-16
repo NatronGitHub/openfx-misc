@@ -149,18 +149,25 @@ endif
 # CIMGVERSION is declared in CImgVersion.mk (also read by CMakeLists.txt)
 include $(TOP_SRCDIR)/CImg/CImgVersion.mk
 
+# -f: fail on an HTTP error, instead of saving the error page as the header
+# (and remove what was written, so that the next make tries again).
+# --retry 3 retries transient errors (timeouts, HTTP 408/429/5xx).
+# --retry-all-errors is not used: it needs curl >= 7.71, and older curl
+# (e.g. 7.29 on CentOS 7) rejects unknown options.
+CURL = curl -fsSL --retry 3
+
 CImg.h: Inpaint/inpaint.h
-	curl -L -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
+	$(CURL) -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h || { rm -f $@; exit 1; }
 #	patch -p0 -d. < CImg-2.0.0-anisotropic.patch
 #	patch -p0 -d. < CImg-1.7.1-omp.patch
 
 # Depend on CImgVersion.mk so that the headers are downloaded again when CIMGVERSION changes.
 Inpaint/inpaint.h: $(TOP_SRCDIR)/CImg/CImgVersion.mk
-	curl -L -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/inpaint.h
-	patch -p0 -d. < Inpaint/inpaint.h.patch
+	$(CURL) -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/inpaint.h || { rm -f $@; exit 1; }
+	patch -p0 -d. < Inpaint/inpaint.h.patch || { rm -f $@; exit 1; }
 
 #nlmeans.h:
-#	curl -L -s -S -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/nlmeans.h
+#	$(CURL) -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/nlmeans.h
 
 .PHONY: distclean
 

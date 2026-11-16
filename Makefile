@@ -1,7 +1,6 @@
 SUBDIRS = Misc Shadertoy
 
 SUBDIRS_NOMULTI = \
-TimeBuffer \
 Add \
 AdjustRoD \
 Anaglyph \
@@ -59,7 +58,6 @@ Premult \
 Radial \
 Ramp \
 Rand \
-ReConverge \
 Rectangle \
 Reformat \
 Retime \
@@ -82,6 +80,9 @@ TESTS ?= 0
 ifeq ($(CONFIG),debug)
   # DebugProxy is only useful to debug the communication between a host and a plugin
   SUBDIRS += DebugProxy
+  # ReConverge and TimeBuffer are only compiled in debug builds (#ifdef DEBUG):
+  # in other configurations, their bundle would contain no plugin.
+  SUBDIRS_NOMULTI += ReConverge TimeBuffer
   TESTS = 1
 endif
 ifeq ($(TESTS),1)

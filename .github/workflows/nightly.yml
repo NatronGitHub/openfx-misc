@@ -1,0 +1,200 @@
+name: Weekly extra builds
+
+# Build variants that are not worth running on every push or pull request
+# (ci.yml only builds the release configuration on each OS):
+# debug, one bundle per plugin (nomulti), C++20 (Natron RB-2.6 with Qt6, and
+# RB-2.7; ci.yml builds C++17), OpenMP, and CMake.
+# Each make build is followed by the same plugin load test as in ci.yml.
+# Frugal CI: the weekly run is skipped if master did not change since the last
+# successful weekly run, and jobs time out.
+on:
+  schedule:
+    - cron: '17 3 * * 0' # every Sunday at 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new run cancels a run of the same branch still in progress, so that two
+# runs of these jobs never compete for runners.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+defaults:
+  run:
+    shell: bash -eo pipefail {0}
+
+jobs:
+  # Skip the scheduled run if it would build the same commit as the last
+  # successful scheduled run. Manual runs always build.
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=
+          if [ "$GITHUB_EVENT_NAME" = schedule ]; then
+            last=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/nightly.yml/runs?event=schedule&status=success&per_page=1" \
+                     --jq '.workflow_runs[0].head_sha // empty')
+          fi
+          if [ -n "$last" ] && [ "$last" = "$GITHUB_SHA" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No change since the last successful weekly run ($last): skipping."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  macos:
+    name: macOS 15 ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    timeout-minutes: 30
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple clang defaults to C++14: pass the standard explicitly.
+          - name: debug
+            options: CONFIG=debug CXXFLAGS_ADD=-std=c++17
+          - name: C++20
+            options: CONFIG=release CXXFLAGS_ADD=-std=c++20
+          - name: OpenMP
+            # Apple clang has no OpenMP runtime: use the MacPorts libomp.
+            options: >-
+              CONFIG=release
+              CXXFLAGS_ADD="-std=c++17 -Xpreprocessor -fopenmp -I/opt/local/include/libomp"
+              LDFLAGS_ADD="-L/opt/local/lib/libomp -lomp"
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Install MacPorts (cached), GNU sed and libomp
+        uses: melusina-org/setup-macports@103eded5f10979e927bffcd6d0b86cbbdb2c3bb3 # v1.1.6
+        with:
+          parameters: .github/parameters/setup-macports.yaml
+      - name: Use MacPorts, not Homebrew
+        run: |
+          PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
+          echo "PATH=/opt/local/bin:/opt/local/sbin:$PATH" >> "$GITHUB_ENV"
+      - name: Build
+        run: make -j"$(getconf _NPROCESSORS_ONLN)" MACOSX=11.0 ${{ matrix.options }}
+      - name: Load test
+        run: .github/tools/loadtest.sh
+
+  linux:
+    name: Ubuntu 24.04 ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: debug
+            options: CONFIG=debug
+          - name: nomulti
+            options: nomulti CONFIG=release
+          - name: C++20
+            options: CONFIG=release CXXFLAGS_ADD=-std=c++20
+          - name: OpenMP
+            options: CONFIG=release CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Install Ubuntu system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev
+      - name: Build
+        run: make -j"$(nproc)" ${{ matrix.options }}
+      - name: Load test
+        run: .github/tools/loadtest.sh
+
+  linux_cmake:
+    name: Ubuntu 24.04 CMake
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Install Ubuntu system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+          cmake --install build --prefix "$PWD/cmake-install"
+      - name: Load test
+        run: .github/tools/loadtest.sh cmake-install
+
+  windows:
+    name: Windows (MSYS2 UCRT64) ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    timeout-minutes: 60
+    runs-on: windows-2022
+    defaults:
+      run:
+        # The msys2 shell has no pipefail option, so each run block starts
+        # with "set -eo pipefail".
+        shell: msys2 {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # -static everywhere: loadtest.sh fails on a MinGW runtime DLL dependency.
+          - name: debug
+            options: CONFIG=debug LDFLAGS_ADD=-static
+          - name: nomulti
+            options: nomulti CONFIG=release LDFLAGS_ADD=-static
+          # gnu++20, not c++20: openfx's Makefile.master passes -U__STRICT_ANSI__ on
+          # MinGW, and strict mode then fails in GCC's <limits> (as in ci.yml)
+          - name: C++20
+            options: CONFIG=release CXXFLAGS_ADD=-std=gnu++20 LDFLAGS_ADD=-static
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Setup MSYS2 UCRT64 environment (cached)
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+        with:
+          msystem: UCRT64
+          # No full system upgrade (pacman -Syuu) before installing: it makes
+          # each weekly run download and re-cache most of MSYS2. The packages
+          # below are still installed at their latest version, so the compiler
+          # is current; only the MSYS2 base system comes from the action.
+          update: false
+          cache: true
+          install: git base-devel mingw-w64-ucrt-x86_64-cc
+      - name: Build
+        run: |
+          set -eo pipefail
+          make -j"$(nproc)" ${{ matrix.options }}
+      - name: Load test
+        run: |
+          set -eo pipefail
+          .github/tools/loadtest.sh
