@@ -1,13 +1,17 @@
 name: Continous Integration tests
 
-# Every pull request and push to master gets exactly three builds (macOS, Linux, Windows)
-# of the release configuration, followed by a plugin load test.
+# Every change gets exactly three builds (macOS, Linux, Windows) of the release
+# configuration, followed by a plugin load test.
 # Other variants (debug, nomulti, C++20, OpenMP, CMake) are in nightly.yml.
+#
+# Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
+# Pushes are built only on master, RB-* and tags; feature branches are built
+# through their pull request (not twice). Draft pull requests are not built:
+# CI starts when the PR is marked ready. Superseded runs are cancelled, except
+# for tags. Jobs time out.
 on:
-  # Pushes are only built on master and tags: other branches are built by their
-  # pull request, so that a PR branch is not built twice.
   push:
-    branches: [master]
+    branches: [master, 'RB-*']
     tags: ['*']
     paths-ignore:
       - Documentation/**
@@ -15,6 +19,7 @@ on:
       - LICENSE
       - README-hosts.txt
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
       - Documentation/**
       - '**/*.md'
@@ -29,12 +34,10 @@ permissions:
 # a tag can be moved to other code. GitHub's own actions/* stay on version tags.
 # Checkouts use persist-credentials: false: no step needs to push.
 
-# One run per branch or PR. Superseded PR runs are cancelled, but every push to
-# master is built to completion, so each merge gets a CI result.
-# (github.job is empty at workflow level, so it is not part of the group.)
+# One run per PR or branch; a new push cancels the previous run, except for tags.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 env:
   # Build as C++17, the standard of Natron RB-2.6 (Qt5). Without it, Apple clang
@@ -58,6 +61,9 @@ defaults:
 jobs:
   build_macos:
     name: Build macOS 15 (arm64)
+    # no CI for draft pull requests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    timeout-minutes: 30
     # GitHub-hosted arm64 (Apple silicon) runner. The plugins are built with
     # the system Xcode clang and SDK, and only need the system OpenGL
     # framework. MacPorts (never Homebrew) provides the other tools.
@@ -106,6 +112,9 @@ jobs:
 
   build_linux:
     name: Build Ubuntu 24.04
+    # no CI for draft pull requests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    timeout-minutes: 20
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout branch
@@ -136,6 +145,9 @@ jobs:
 
   build_windows:
     name: Build Windows (MSYS2 UCRT64)
+    # no CI for draft pull requests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    timeout-minutes: 30
     runs-on: windows-2022
     defaults:
       run:
@@ -161,7 +173,9 @@ jobs:
         uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
         with:
           msystem: UCRT64
-          update: true
+          # Same options as nightly.yml, so that both share one cache (its key
+          # is derived from these options). update: false: see nightly.yml.
+          update: false
           cache: true
           install: git base-devel mingw-w64-ucrt-x86_64-cc
       - name: Build (release)

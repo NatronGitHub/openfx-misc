@@ -5,6 +5,8 @@ name: Weekly extra builds
 # debug, one bundle per plugin (nomulti), C++20 (Natron RB-2.6 with Qt6, and
 # RB-2.7; ci.yml builds C++17), OpenMP, and CMake.
 # Each make build is followed by the same plugin load test as in ci.yml.
+# Frugal CI: the weekly run is skipped if master did not change since the last
+# successful weekly run, and jobs time out.
 on:
   schedule:
     - cron: '17 3 * * 0' # every Sunday at 03:17 UTC
@@ -13,19 +15,48 @@ on:
 permissions:
   contents: read
 
-# A manual run cancels a run of the same branch still in progress, so that
-# two runs of these jobs never compete for runners.
+# A new run cancels a run of the same branch still in progress, so that two
+# runs of these jobs never compete for runners.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 defaults:
   run:
     shell: bash -eo pipefail {0}
 
 jobs:
+  # Skip the scheduled run if it would build the same commit as the last
+  # successful scheduled run. Manual runs always build.
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=
+          if [ "$GITHUB_EVENT_NAME" = schedule ]; then
+            last=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/nightly.yml/runs?event=schedule&status=success&per_page=1" \
+                     --jq '.workflow_runs[0].head_sha // empty')
+          fi
+          if [ -n "$last" ] && [ "$last" = "$GITHUB_SHA" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No change since the last successful weekly run ($last): skipping."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   macos:
     name: macOS 15 ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    timeout-minutes: 30
     runs-on: macos-15
     strategy:
       fail-fast: false
@@ -62,6 +93,9 @@ jobs:
 
   linux:
     name: Ubuntu 24.04 ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    timeout-minutes: 30
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -92,6 +126,9 @@ jobs:
 
   linux_cmake:
     name: Ubuntu 24.04 CMake
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    timeout-minutes: 20
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout branch
@@ -113,6 +150,9 @@ jobs:
 
   windows:
     name: Windows (MSYS2 UCRT64) ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    timeout-minutes: 60
     runs-on: windows-2022
     defaults:
       run:
