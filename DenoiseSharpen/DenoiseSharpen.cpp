@@ -97,9 +97,6 @@ typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 }
 #endif
 
-#ifndef M_LN2
-#define M_LN2       0.693147180559945309417232121458176568  /* loge(2)        */
-#endif
 
 using namespace OFX;
 #ifdef DEBUG_STDOUT
@@ -1123,7 +1120,7 @@ startLevelFromRenderScale(const OfxPointD& renderScale)
     double s = (std::min)(renderScale.x, renderScale.y);
 
     assert(0. < s && s <= 1.);
-    int retval = -(int)std::floor(std::log(s) / M_LN2);
+    int retval = -(int)std::floor(std::log(s) / OFXS_LN2);
     assert(retval >= 0);
 
     return retval;
@@ -2451,7 +2448,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     // The GIMP's wavelet sharpen uses a sharpen radius parameter which is counter-intuitive
     // and points to a level number. We convert from the Sharpen Size (simililar to the size in the
     // Laplacian or Sharpen plugins) to the radius using the following heuristic formula (radius=0 seems to correspond to size=8)
-    p.sharpen_radius = std::log(sharpenSize) / M_LN2 - 3.; // log(8)/log(2) = 3.
+    p.sharpen_radius = std::log(sharpenSize) / OFXS_LN2 - 3.; // log(8)/log(2) = 3.
     bool sharpenLuminance = _sharpenLuminance->getValueAtTime(time);
 
     if (!sharpenLuminance) {

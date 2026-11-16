@@ -41,9 +41,6 @@
 #include "ofxsMultiThread.h"
 #include "ofxsCoords.h"
 
-#ifndef M_LN2
-#define M_LN2       0.693147180559945309417232121458176568  /* loge(2)        */
-#endif
 
 // first, check that the file is used in a good way
 #if !defined(USE_OPENGL) && !defined(USE_OSMESA)
@@ -2146,10 +2143,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         unsigned int nCPUs = OFX::MultiThread::getNumCPUs();
         // - take the square root of nCPUs
         // - compute the next closest power of two -> this gives the number of tiles for the x dimension
-        int pow2_x = (int)std::ceil(std::log( std::sqrt(nCPUs) ) / M_LN2);
+        int pow2_x = (int)std::ceil(std::log( std::sqrt(nCPUs) ) / OFXS_LN2);
         tile_w = 64 * (1 << pow2_x);
         // - compute the next power of two for the other side
-        int pow2_y = (int)std::ceil(std::log( nCPUs / (double)(1 << pow2_x) ) / M_LN2);
+        int pow2_y = (int)std::ceil(std::log( nCPUs / (double)(1 << pow2_x) ) / OFXS_LN2);
         tile_h = 64 * (1 << pow2_y);
         //DPRINT( ("Shadertoy: tile size: %d %d for %d CPUs\n", tile_w, tile_h, nCPUs) );
     }
