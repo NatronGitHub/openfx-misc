@@ -7,6 +7,10 @@ name: Nightly extra builds
 # plus the macOS release build of ci.yml, which there only runs after Linux and
 # Windows pass (this covers master when the push run's macOS job was skipped or
 # cancelled). Each build is followed by the same plugin load test as in ci.yml.
+# The render test of ci.yml (Linux release) also runs after the macOS release
+# and the Linux debug builds (debug: with the plugins' assertions). It is not
+# run on Windows: hostDemo is built with the openfx Makefiles, which do not
+# support MSYS2.
 # Frugal CI: the nightly run is skipped if master did not change since the last
 # nightly run that succeeded or failed (a cancelled run does not count), and jobs
 # time out.
@@ -70,6 +74,7 @@ jobs:
           # Apple clang defaults to C++14: pass the standard explicitly.
           - name: release # the macOS build of ci.yml
             options: CONFIG=release TESTS=1 CXXFLAGS_ADD=-std=c++17
+            rendertest: release # the configuration to render
           - name: debug
             options: CONFIG=debug CXXFLAGS_ADD=-std=c++17
           - name: C++20
@@ -98,6 +103,10 @@ jobs:
         run: make -j"$(getconf _NPROCESSORS_ONLN)" MACOSX=11.0 ${{ matrix.options }}
       - name: Load test
         run: .github/tools/loadtest.sh
+      - name: Render test (hostDemo)
+        if: matrix.rendertest
+        timeout-minutes: 10
+        run: .github/tools/rendertest.sh {Misc,CImg}/Darwin-64-${{ matrix.rendertest }}
 
   linux:
     name: Ubuntu 24.04 ${{ matrix.name }}
@@ -111,6 +120,7 @@ jobs:
         include:
           - name: debug
             options: CONFIG=debug
+            rendertest: debug # the configuration to render
           - name: nomulti
             options: nomulti CONFIG=release
           - name: C++20
@@ -131,6 +141,10 @@ jobs:
         run: make -j"$(nproc)" ${{ matrix.options }}
       - name: Load test
         run: .github/tools/loadtest.sh
+      - name: Render test (hostDemo)
+        if: matrix.rendertest
+        timeout-minutes: 10
+        run: .github/tools/rendertest.sh {Misc,CImg}/Linux-64-${{ matrix.rendertest }}
 
   linux_cmake:
     name: Ubuntu 24.04 CMake
