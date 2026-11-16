@@ -41,7 +41,6 @@
 #include "ofxsMultiThread.h"
 #include "ofxsCoords.h"
 
-
 // first, check that the file is used in a good way
 #if !defined(USE_OPENGL) && !defined(USE_OSMESA)
 #error "USE_OPENGL or USE_OSMESA must be defined before including this file."
@@ -49,7 +48,6 @@
 #if defined(USE_OPENGL) && defined(USE_OSMESA)
 #error "include this file first only once, either with USE_OPENGL, or with USE_OSMESA"
 #endif
-
 
 #if defined(USE_OSMESA) || !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 #define GL_GLEXT_PROTOTYPES

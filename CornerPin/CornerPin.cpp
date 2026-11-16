@@ -62,6 +62,7 @@
 #include "ofxsThreadSuite.h"
 #include "ofxsOGLHiDPI.h"
 #include "ofxsPositionInteract.h"
+#include "ofxsOverlayDraw.h"
 
 using namespace OFX;
 
@@ -736,8 +737,9 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
     bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
     double screenPixelRatio = hiDPI ? 2 : 1;
 #ifdef OFX_EXTENSIONS_NATRON
-    screenPixelRatio *= OverlayDraw::hostScreenPixelRatio(args); // 1 if the host does not set it
-    hiDPI |= OverlayDraw::hostScreenPixelRatio(args) > 1;
+    const double hostRatio = OverlayDraw::hostScreenPixelRatio(args); // 1 if the host does not set it
+    screenPixelRatio *= hostRatio;
+    hiDPI |= hostRatio > 1;
 #endif
     TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
 

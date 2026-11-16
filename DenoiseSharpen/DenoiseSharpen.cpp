@@ -97,7 +97,6 @@ typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
 }
 #endif
 
-
 using namespace OFX;
 #ifdef DEBUG_STDOUT
 using std::cout;

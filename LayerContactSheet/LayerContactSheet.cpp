@@ -52,6 +52,7 @@
 #include "../ContactSheet/ContactSheetLayout.h"
 #include "ofxsOGLTextRenderer.h"
 #include "ofxsOGLHiDPI.h"
+#include "ofxsOverlayDraw.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -539,7 +540,7 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
     //double screenPixelRatio = hiDPI ? 2 : 1;
 #ifdef OFX_EXTENSIONS_NATRON
     //screenPixelRatio *= args.screenPixelRatio;
-    hiDPI |= args.screenPixelRatio > 1;
+    hiDPI |= OverlayDraw::hostScreenPixelRatio(args) > 1;
 #endif
     TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
 

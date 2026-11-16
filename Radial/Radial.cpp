@@ -56,7 +56,6 @@
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
-
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -149,7 +148,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #else
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
 #endif
-
 
 struct RGBAValues
 {
