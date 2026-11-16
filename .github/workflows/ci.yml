@@ -1,10 +1,14 @@
 name: Continous Integration tests
 
-# Every push and pull request gets exactly three builds (macOS, Linux, Windows)
+# Every pull request and push to master gets exactly three builds (macOS, Linux, Windows)
 # of the release configuration, followed by a plugin load test.
 # Other variants (debug, nomulti, C++23, OpenMP, CMake) are in nightly.yml.
 on:
+  # Pushes are only built on master and tags: other branches are built by their
+  # pull request, so that a PR branch is not built twice.
   push:
+    branches: [master]
+    tags: ['*']
     paths-ignore:
       - Documentation/**
       - '**/*.md'
