@@ -388,6 +388,8 @@ Use `--prefix <dir>` with `cmake --install` to install elsewhere. The main optio
 - `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`.
 - `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
   DebugProxy bundles, which are built by default in Debug builds only.
+- MinGW: `-DCMAKE_MODULE_LINKER_FLAGS=-static` links the MinGW runtime (libstdc++,
+  libgcc, winpthread, libgomp) statically, as the CI does, for hosts that do not ship it.
 - `-DUSE_OSMESA=ON` (`make -C Shadertoy OSMESA=1`): Shadertoy CPU rendering with a
   mangled OSMesa in `OSMESA_PATH` (default `/opt/osmesa`) and LLVM in `LLVM_PATH`
   (default `/opt/llvm`).

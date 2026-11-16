@@ -1,12 +1,14 @@
 name: Nightly extra builds
 
 # Build variants that are not worth running on every push or pull request
-# (ci.yml only builds the release configuration on each OS):
-# debug, one bundle per plugin (nomulti), C++20 (Natron RB-2.6 with Qt6, and
-# RB-2.7; ci.yml builds C++17), OpenMP, and CMake (Linux GCC, Windows MSVC),
-# plus the macOS release build of ci.yml, which there only runs after Linux and
-# Windows pass (this covers master when the push run's macOS job was skipped or
-# cancelled). Each build is followed by the same plugin load test as in ci.yml.
+# (ci.yml only builds the CMake release configuration on each OS), with CMake:
+# debug, C++20 (Natron RB-2.6 with Qt6, and RB-2.7; ci.yml builds C++17),
+# without OpenMP (ci.yml uses it if found), and Windows MSVC, plus the macOS
+# release build of ci.yml, which there only runs after Linux and Windows pass
+# (this covers master when the push run's macOS job was skipped or cancelled).
+# The Makefiles are still built, with one bundle per plugin (make nomulti), on
+# Linux and Windows, as long as Natron's build-plugins.sh uses them.
+# Each build is followed by the same plugin load test as in ci.yml.
 # The render test of ci.yml (Linux release) also runs after the macOS release
 # and the Linux debug builds (debug: with the plugins' assertions). It is not
 # run on Windows: hostDemo is built with the openfx Makefiles, which do not
@@ -71,27 +73,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Apple clang defaults to C++14: pass the standard explicitly.
+          # OpenMP: Apple clang uses the MacPorts libomp (OFX_USE_OPENMP, the default).
           - name: release # the macOS build of ci.yml
-            options: CONFIG=release TESTS=1 CXXFLAGS_ADD=-std=c++17
-            rendertest: release # the configuration to render
+            config: release
+            options: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON
+            rendertest: true
           - name: debug
-            options: CONFIG=debug CXXFLAGS_ADD=-std=c++17
+            config: debug
+            options: -DCMAKE_BUILD_TYPE=Debug
           - name: C++20
-            options: CONFIG=release CXXFLAGS_ADD=-std=c++20
-          - name: OpenMP
-            # Apple clang has no OpenMP runtime: use the MacPorts libomp.
-            options: >-
-              CONFIG=release
-              CXXFLAGS_ADD="-std=c++17 -Xpreprocessor -fopenmp -I/opt/local/include/libomp"
-              LDFLAGS_ADD="-L/opt/local/lib/libomp -lomp"
+            config: release
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20
+          - name: no OpenMP
+            config: release
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_USE_OPENMP=OFF
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
         with:
           submodules: recursive
           persist-credentials: false
-      - name: Install MacPorts (cached), GNU sed and libomp
+      - name: Install MacPorts (cached), CMake, GNU sed and libomp
         uses: melusina-org/setup-macports@103eded5f10979e927bffcd6d0b86cbbdb2c3bb3 # v1.1.6
         with:
           parameters: .github/parameters/setup-macports.yaml
@@ -100,13 +102,18 @@ jobs:
           PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
           echo "PATH=/opt/local/bin:/opt/local/sbin:$PATH" >> "$GITHUB_ENV"
       - name: Build
-        run: make -j"$(getconf _NPROCESSORS_ONLN)" MACOSX=11.0 ${{ matrix.options }}
+        # The install directory name ends with the configuration: rendertest.sh
+        # expects the debug assertions when it ends with -debug.
+        run: |
+          cmake -S . -B build -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 ${{ matrix.options }}
+          cmake --build build --parallel "$(getconf _NPROCESSORS_ONLN)"
+          cmake --install build --prefix "$PWD/install-${{ matrix.config }}"
       - name: Load test
-        run: .github/tools/loadtest.sh
+        run: .github/tools/loadtest.sh install-${{ matrix.config }}
       - name: Render test (hostDemo)
         if: matrix.rendertest
         timeout-minutes: 10
-        run: .github/tools/rendertest.sh {Misc,CImg}/Darwin-64-${{ matrix.rendertest }}
+        run: .github/tools/rendertest.sh install-${{ matrix.config }}
 
   linux:
     name: Ubuntu 24.04 ${{ matrix.name }}
@@ -119,14 +126,18 @@ jobs:
       matrix:
         include:
           - name: debug
-            options: CONFIG=debug
-            rendertest: debug # the configuration to render
-          - name: nomulti
-            options: nomulti CONFIG=release
+            config: debug
+            options: -DCMAKE_BUILD_TYPE=Debug
+            rendertest: true
           - name: C++20
-            options: CONFIG=release CXXFLAGS_ADD=-std=c++20
-          - name: OpenMP
-            options: CONFIG=release CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp
+            config: release
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20
+          - name: no OpenMP
+            config: release
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_USE_OPENMP=OFF
+          # the Makefiles, while Natron's build-plugins.sh uses them
+          - name: make nomulti
+            make: nomulti CONFIG=release
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -136,39 +147,25 @@ jobs:
       - name: Install Ubuntu system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglu1-mesa-dev libgl-dev
-      - name: Build
-        run: make -j"$(nproc)" ${{ matrix.options }}
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev cmake ninja-build
+      - name: Build (make)
+        if: matrix.make
+        run: make -j"$(nproc)" ${{ matrix.make }}
+      - name: Build (CMake)
+        if: ${{ !matrix.make }}
+        # The install directory name ends with the configuration: rendertest.sh
+        # expects the debug assertions when it ends with -debug.
+        run: |
+          cmake -S . -B build -G Ninja ${{ matrix.options }}
+          cmake --build build
+          cmake --install build --prefix "$PWD/install-${{ matrix.config }}"
       - name: Load test
-        run: .github/tools/loadtest.sh
+        # make: the source tree; CMake: the install tree
+        run: .github/tools/loadtest.sh ${{ matrix.make && ' ' || format('install-{0}', matrix.config) }}
       - name: Render test (hostDemo)
         if: matrix.rendertest
         timeout-minutes: 10
-        run: .github/tools/rendertest.sh {Misc,CImg}/Linux-64-${{ matrix.rendertest }}
-
-  linux_cmake:
-    name: Ubuntu 24.04 CMake
-    needs: changes
-    if: needs.changes.outputs.run == 'true'
-    timeout-minutes: 20
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-          persist-credentials: false
-      - name: Install Ubuntu system packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libglu1-mesa-dev libgl-dev
-      - name: Build
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build -j"$(nproc)"
-          cmake --install build --prefix "$PWD/cmake-install"
-      - name: Load test
-        run: .github/tools/loadtest.sh cmake-install
+        run: .github/tools/rendertest.sh install-${{ matrix.config }}
 
   windows:
     name: Windows (MSYS2 UCRT64) ${{ matrix.name }}
@@ -186,13 +183,15 @@ jobs:
       matrix:
         include:
           # -static everywhere: loadtest.sh fails on a MinGW runtime DLL dependency.
-          # debug and nomulti pass no -std: they build with GCC's default (gnu++17).
           - name: debug
-            options: CONFIG=debug LDFLAGS_ADD=-static
-          - name: nomulti
-            options: nomulti CONFIG=release LDFLAGS_ADD=-static
+            config: debug
+            options: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_LINKER_FLAGS=-static
           - name: C++20
-            options: CONFIG=release CXXFLAGS_ADD=-std=c++20 LDFLAGS_ADD=-static
+            config: release
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DCMAKE_MODULE_LINKER_FLAGS=-static
+          # the Makefiles, while Natron's build-plugins.sh uses them (GCC's default, gnu++17)
+          - name: make nomulti
+            make: nomulti CONFIG=release LDFLAGS_ADD=-static
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -209,15 +208,26 @@ jobs:
           # is current; only the MSYS2 base system comes from the action.
           update: false
           cache: true
-          install: git base-devel mingw-w64-ucrt-x86_64-cc
-      - name: Build
+          install: >-
+            git base-devel mingw-w64-ucrt-x86_64-cc
+            mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+      - name: Build (make)
+        if: matrix.make
         run: |
           set -eo pipefail
-          make -j"$(nproc)" ${{ matrix.options }}
+          make -j"$(nproc)" ${{ matrix.make }}
+      - name: Build (CMake)
+        if: ${{ !matrix.make }}
+        run: |
+          set -eo pipefail
+          cmake -S . -B build -G Ninja ${{ matrix.options }}
+          cmake --build build
+          cmake --install build --prefix "$PWD/install-${{ matrix.config }}"
       - name: Load test
+        # make: the source tree; CMake: the install tree
         run: |
           set -eo pipefail
-          .github/tools/loadtest.sh
+          .github/tools/loadtest.sh ${{ matrix.make && ' ' || format('install-{0}', matrix.config) }}
 
   # MSVC is not used by the CI's make builds (MinGW GCC), but the CMake build and
   # Misc/*.vcxproj support it: check that the sources build with Visual Studio 2022
