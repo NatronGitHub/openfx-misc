@@ -2,7 +2,7 @@ name: Continous Integration tests
 
 # Every pull request and push to master gets exactly three builds (macOS, Linux, Windows)
 # of the release configuration, followed by a plugin load test.
-# Other variants (debug, nomulti, C++23, OpenMP, CMake) are in nightly.yml.
+# Other variants (debug, nomulti, C++20, OpenMP, CMake) are in nightly.yml.
 on:
   # Pushes are only built on master and tags: other branches are built by their
   # pull request, so that a PR branch is not built twice.
@@ -37,6 +37,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
+  # Build as C++17, the standard of Natron RB-2.6 (Qt5). Without it, Apple clang
+  # would use its C++14 default. C++20 is built by nightly.yml.
+  STD_OPTIONS: CXXFLAGS_ADD=-std=c++17
   # The release bundles are uploaded as artifacts only for manual runs
   # ("Run workflow" on the Actions page) and for pre-release tags. This repo is
   # tagged with the Natron version (Natron-2.5.0, Natron-2.0.0-RC1,
@@ -85,7 +88,7 @@ jobs:
           command -v c++ gsed
           c++ --version
       - name: Build (release)
-        run: make -j"$(getconf _NPROCESSORS_ONLN)" CONFIG=release TESTS=1 $MACOS_OPTIONS
+        run: make -j"$(getconf _NPROCESSORS_ONLN)" CONFIG=release TESTS=1 $MACOS_OPTIONS $STD_OPTIONS
       - name: Load test
         run: .github/tools/loadtest.sh
       - name: Collect bundles
@@ -115,7 +118,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libglu1-mesa-dev libgl-dev
       - name: Build (release)
-        run: make -j"$(nproc)" CONFIG=release TESTS=1
+        run: make -j"$(nproc)" CONFIG=release TESTS=1 $STD_OPTIONS
       - name: Load test
         run: .github/tools/loadtest.sh
       - name: Collect bundles
@@ -160,7 +163,7 @@ jobs:
       - name: Build (release)
         run: |
           set -eo pipefail
-          make -j"$(nproc)" $RELEASE_OPTIONS TESTS=1
+          make -j"$(nproc)" $RELEASE_OPTIONS TESTS=1 $STD_OPTIONS
       - name: Load test
         run: |
           set -eo pipefail
