@@ -25,6 +25,10 @@ on:
 permissions:
   contents: read
 
+# Third-party actions are pinned to a commit SHA (version in the comment), since
+# a tag can be moved to other code. GitHub's own actions/* stay on version tags.
+# Checkouts use persist-credentials: false: no step needs to push.
+
 # One run per branch or PR. Superseded PR runs are cancelled, but every push to
 # master is built to completion, so each merge gets a CI result.
 # (github.job is empty at workflow level, so it is not part of the group.)
@@ -64,10 +68,11 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
+          persist-credentials: false
       - name: Install MacPorts (cached) and GNU sed
         # gsed is needed by openfx/Support/include/osxDeploy.sh, which
         # packages the release bundles. See .github/parameters/setup-macports.yaml.
-        uses: melusina-org/setup-macports@v1.1.6
+        uses: melusina-org/setup-macports@103eded5f10979e927bffcd6d0b86cbbdb2c3bb3 # v1.1.6
         with:
           parameters: .github/parameters/setup-macports.yaml
       - name: Use MacPorts, not Homebrew
@@ -104,6 +109,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
+          persist-credentials: false
       - name: Install Ubuntu system packages
         run: |
           sudo apt-get update
@@ -143,8 +149,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: recursive
+          persist-credentials: false
       - name: Setup MSYS2 UCRT64 environment (cached)
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
         with:
           msystem: UCRT64
           update: true
