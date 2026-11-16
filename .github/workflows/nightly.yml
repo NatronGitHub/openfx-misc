@@ -8,6 +8,8 @@ on:
   schedule:
     - cron: '17 3 * * 0' # every Sunday at 03:17 UTC
   workflow_dispatch:
+  # TEMPORARY: run once on PR #131 before merge; removed in the next commit.
+  pull_request:
 
 permissions:
   contents: read
