@@ -319,7 +319,7 @@ To fetch the latest sources from github, execute the following commands:
 
 	git clone https://github.com/NatronGitHub/openfx-misc.git
 	cd openfx-misc
-	git submodule update -i -r
+	git submodule update --init --recursive
 
 In order to get a specific tag, corresponding to a source release, do `git tag -l`
 to get the list of tags, and then `git checkout tags/<tag_name>`
