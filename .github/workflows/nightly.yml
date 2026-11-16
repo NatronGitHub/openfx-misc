@@ -169,10 +169,8 @@ jobs:
             options: CONFIG=debug LDFLAGS_ADD=-static
           - name: nomulti
             options: nomulti CONFIG=release LDFLAGS_ADD=-static
-          # gnu++20, not c++20: openfx's Makefile.master passes -U__STRICT_ANSI__ on
-          # MinGW, and strict mode then fails in GCC's <limits> (as in ci.yml)
           - name: C++20
-            options: CONFIG=release CXXFLAGS_ADD=-std=gnu++20 LDFLAGS_ADD=-static
+            options: CONFIG=release CXXFLAGS_ADD=-std=c++20 LDFLAGS_ADD=-static
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
