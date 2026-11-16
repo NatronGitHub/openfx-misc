@@ -30,9 +30,15 @@ concurrency:
 
 env:
   # The release bundles are uploaded as artifacts only for manual runs
-  # ("Run workflow" on the Actions page) and for pre-release tags, i.e. tags
-  # that start with "v" and contain a "-", such as v2.6.0-rc1 or v2.6.0-beta2.
-  UPLOAD_ARTIFACTS: ${{ github.event_name == 'workflow_dispatch' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && contains(github.ref_name, '-')) }}
+  # ("Run workflow" on the Actions page) and for pre-release tags. This repo is
+  # tagged with the Natron version (Natron-2.5.0, Natron-2.0.0-RC1,
+  # Natron-2.3.16-beta2), so a pre-release tag is a Natron-* tag that contains
+  # -rc, -beta or -alpha. contains() is case-insensitive, so -RC1 matches too.
+  # Final releases such as Natron-2.5.0 do not match.
+  UPLOAD_ARTIFACTS: >-
+    ${{ github.event_name == 'workflow_dispatch' ||
+    (github.ref_type == 'tag' && startsWith(github.ref_name, 'Natron-') &&
+    (contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha'))) }}
 
 defaults:
   run:

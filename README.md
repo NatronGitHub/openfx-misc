@@ -25,9 +25,10 @@ The easiest way to get these plugins is to install
 distributions, so there is nothing else to install.
 
 To use the plugins with another OpenFX host, download binaries built by the
-continuous integration. They are not built for every change, only for pre-release
-tags (tags such as `v2.6.0-rc1`, with a `-` after the version) and when a
-maintainer starts a build by hand:
+continuous integration. They are not kept for every change, only for pre-release
+tags (tags that start with `Natron-` and contain `-rc`, `-beta` or `-alpha`, in any
+case, such as `Natron-2.6.0-RC1` or `Natron-2.6.0-beta1`; not final releases such
+as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
 
 1. Look at the latest
    [release or pre-release](https://github.com/NatronGitHub/openfx-misc/releases)
@@ -35,7 +36,7 @@ maintainer starts a build by hand:
    and go to step 3. Otherwise, go to the
    [GitHub Actions page](https://github.com/NatronGitHub/openfx-misc/actions/workflows/ci.yml)
    and click on the latest successful run that has artifacts (a pre-release tag such
-   as `v2.6.0-rc1`, or a run started with "Run workflow").
+   as `Natron-2.6.0-RC1`, or a run started with "Run workflow").
 2. At the bottom of the page, in the "Artifacts" section, download the archive for
    your system (you must be logged in to GitHub):
    - `openfx-misc-build-ubuntu_24-release`: Linux (64-bit) plugins, built on
