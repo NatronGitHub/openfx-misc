@@ -603,15 +603,13 @@ elseif(MSVC)
 # FreeBSD
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
     set(OFX_ARCH "FreeBSD-x86")
-    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64)$")
         set(OFX_ARCH "FreeBSD-x86-64")
     endif()
-    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
-        if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-            set(OFX_ARCH FreeBSD-arm-64)
-        else()
-            set(OFX_ARCH FreeBSD-arm)
-        endif()
+    if(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64|i.86|x86)$")
+        # non-x86 (e.g. aarch64): the OFX 1.5 bundle folder is FreeBSD-<uname -m>,
+        # the same as openfx/Support/Plugins/Makefile.master
+        set(OFX_ARCH "FreeBSD-${CMAKE_SYSTEM_PROCESSOR}")
     endif()
 # MacOS
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
@@ -622,12 +620,10 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
         set(OFX_ARCH "Linux-x86-64")
     endif()
-    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
-        if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-            set(OFX_ARCH Linux-arm-64)
-        else()
-            set(OFX_ARCH Linux-arm)
-        endif()
+    if(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64|i.86|x86)$")
+        # non-x86 (e.g. aarch64): the OFX 1.5 bundle folder is Linux-<uname -m>,
+        # the same as openfx/Support/Plugins/Makefile.master
+        set(OFX_ARCH "Linux-${CMAKE_SYSTEM_PROCESSOR}")
     endif()
 endif()
 

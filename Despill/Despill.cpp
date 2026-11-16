@@ -498,7 +498,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
 
 # ifndef NDEBUG
     if ( outputAlpha && (dst->getPixelComponentCount() != 4) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        setPersistentMessage(Message::eMessageError, "", "Output Spill Alpha requires an RGBA output image");
         throwSuiteStatusException(kOfxStatFailed);
     }
 # endif
