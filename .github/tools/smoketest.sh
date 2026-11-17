@@ -100,8 +100,9 @@ XFAIL=(
 # ---------------------------------------------------------------------------
 
 case "$(uname -s)" in
+    # the bundle binaries are in Contents/<arch>: MacOS, Linux-x86-64, Linux-aarch64...
     Darwin) arch=MacOS ;;
-    Linux) arch=Linux-x86-64 ;;
+    Linux) arch='Linux-*' ;;
     *) echo "unsupported OS $(uname -s)"; exit 1 ;;
 esac
 
@@ -205,7 +206,9 @@ for b in "$plugins"/*.ofx.bundle; do
     # hostDemo run loads one binary
     mkdir -p "$work/path/$name"
     ln -s "$b" "$work/path/$name/"
-    "$work/ofxload" "$b/Contents/$arch/$name.ofx" |
+    # shellcheck disable=SC2086
+    binary=$(ls "$b"/Contents/$arch/"$name.ofx" | head -n 1)
+    "$work/ofxload" "$binary" |
         sed -n "s/^  \([^ ]*\) \([0-9]*\)\.[0-9]*$/$name \1 \2/p" >> "$work/plugins.txt"
 done
 if [ -n "$only" ]; then
