@@ -87,7 +87,6 @@ XFAIL=(
     "net.sf.openfx.TrackerPM@filter|create instance action failed \(status 9\)|the instance fetches the Mask clip, which describeInContext only defines in the general, paint and tracker contexts"
     "net.sf.openfx.PIK@filter/short|get region of definition action failed|the filter context has no Source clip (the spec mandates one), so HostSupport's default region of definition fails"
     "net.sf.openfx.PIK@filter/float|get region of definition action failed|the filter context has no Source clip (the spec mandates one), so HostSupport's default region of definition fails"
-    "net.sf.openfx.ImageStatistics|kOfxStatErrMissingHostFeature|render calls ValueParam::getKeyIndex, which hostDemo does not implement (kOfxStatErrMissingHostFeature), and does not handle the exception"
     # debug builds: failed assertions (an unconnected clip has the components kOfxImageComponentNone)
     "net.sf.openfx.DenoiseSharpen@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"
     "net.sf.openfx.Log2Lin@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"
@@ -95,7 +94,6 @@ XFAIL=(
     "net.sf.openfx.FrameBlend@filter|_fgMClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the FgM clip is Alpha, also when it is not connected (filter context)"
     "net.sf.openfx.ShufflePlugin:1@filter|_srcClipA && _srcClipB && _dstClip|debug:v1 (ShuffleClassic) is an identity in the filter context by default, and its render, which hostDemo calls anyway, asserts that the A and B clips exist (the filter context has Source only)"
     "net.sf.openfx.TimeBufferWrite|Pure virtual function called|debug:render fails (kOfxStatFailed) without a TimeBufferRead, then a pure virtual function is called (abort)"
-    "net.sf.openfx.TestPosition|killed by signal 11|Test bundle: SupportExt's Transform3x3Plugin only fetches the mix parameter if the Transform3x3 invert parameter exists, and getRegionsOfInterest dereferences it (NULL) when the mask is connected"
 )
 # ---------------------------------------------------------------------------
 
