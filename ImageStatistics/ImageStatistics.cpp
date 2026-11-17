@@ -143,7 +143,7 @@ enum SequenceRangeEnum
 
 #define kParamFrameRange "frameRange"
 #define kParamFrameRangeLabel "Frame Range"
-#define kParamFrameRangeHint "First and last frames analyzed by the Analyze Sequence buttons, if Sequence Range is Custom (both included, within the input frame range). When Custom is selected and Frame Range is still 1-1 (its default), it is set to the input frame range."
+#define kParamFrameRangeHint "First and last frames analyzed by the Analyze Sequence buttons, if Sequence Range is Custom (both included, within the input frame range). Each time Custom is selected while Frame Range is 1-1 (its default), it is set to the input frame range: to analyze frame 1 only, set Frame Range to 1-1 after selecting Custom."
 
 #define kParamInputRange "inputRange"
 #define kParamInputRangeLabel "Input Range"
@@ -1590,8 +1590,9 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         // Not restricted to user edits: the rectangle interact (plugin code) changes the
         // rectangle with kOfxChangePluginEdited, and btmLeft/size do not trigger a render
         // (setEvaluateOnChange(false)), so restricting this would stop Auto Update while
-        // dragging the rectangle, as in version 1.0.
-        doUpdate = _autoUpdate->getValueAtTime(time);
+        // dragging the rectangle, as in version 1.0. Other reasons (time changes) are ignored.
+        doUpdate = _autoUpdate->getValueAtTime(time) &&
+                   (args.reason == eChangeUserEdit || args.reason == eChangePluginEdit);
     }
     if ( userEdit && ( (paramName == kParamAutoCropMode) || (paramName == kParamAutoCropThreshold) ) &&
          _autoUpdate->getValueAtTime(time) ) {
@@ -1830,6 +1831,7 @@ ImageStatisticsPlugin::setFrameRangeToInputRange()
 {
     // as the Input Range button of FrameBlend
     OfxRangeD range;
+    range.min = range.max = 1.; // if getTimeBounds fails or there is no timeline suite
     if ( _srcClip && _srcClip->isConnected() ) {
         range = _srcClip->getFrameRange();
     } else {
