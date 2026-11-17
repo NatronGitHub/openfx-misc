@@ -208,9 +208,9 @@ jobs:
           # is current; only the MSYS2 base system comes from the action.
           update: false
           cache: true
-          install: >-
-            git base-devel mingw-w64-ucrt-x86_64-cc
-            mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+          # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
+          install: git base-devel
+          pacboy: cc:p cmake:p ninja:p
       - name: Build (make)
         if: matrix.make
         run: |
@@ -231,8 +231,8 @@ jobs:
 
   # MSVC is not used by the CI's make builds (MinGW GCC), but the CMake build and
   # Misc/*.vcxproj support it: check that the sources build with Visual Studio 2022
-  # (C++17, /Zc:__cplusplus from CMakeLists.txt). No cache: the job needs nothing
-  # beyond the runner image (CMake downloads CImg.h).
+  # (C++17, /Zc:__cplusplus from openfx::Api). The build needs nothing beyond the
+  # runner image (CMake downloads CImg.h); the load test uses the cached MSYS2 UCRT64.
   windows_msvc:
     name: Windows MSVC 2022 CMake
     needs: changes
@@ -250,11 +250,23 @@ jobs:
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64
           cmake --build build --config Release --parallel
           cmake --install build --config Release --prefix "$PWD/cmake-install"
+      - name: Setup MSYS2 UCRT64 environment (cached), for the load test
+        # the same options as the MSYS2 builds, so that all share one cache
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+        with:
+          msystem: UCRT64
+          update: false
+          cache: true
+          install: git base-devel
+          pacboy: cc:p cmake:p ninja:p
       - name: Load test
-        # ofxload is built with the runner's MinGW GCC (loadtest.sh uses GCC options);
-        # it only loads the MSVC-built plugins through LoadLibrary (C entry points).
-        # This proves the DLLs load and register their plug-ins; it does not call
-        # setHost/mainEntry, so the threading code /Zc:__cplusplus switches is not run.
+        # ofxload is built with the MSYS2 UCRT64 GCC (loadtest.sh uses GCC options),
+        # and objdump is MSYS2's; ofxload only loads the MSVC-built plugins through
+        # LoadLibrary (C entry points). This proves the DLLs load and register their
+        # plug-ins; it does not call setHost/mainEntry, so the threading code
+        # /Zc:__cplusplus switches is not run.
+        shell: msys2 {0}
         run: |
-          command -v g++ objdump
-          CXX=g++ .github/tools/loadtest.sh cmake-install
+          set -eo pipefail
+          command -v c++ objdump
+          .github/tools/loadtest.sh cmake-install

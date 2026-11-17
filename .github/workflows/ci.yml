@@ -196,9 +196,9 @@ jobs:
           # is derived from these options). update: false: see nightly.yml.
           update: false
           cache: true
-          install: >-
-            git base-devel mingw-w64-ucrt-x86_64-cc
-            mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+          # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
+          install: git base-devel
+          pacboy: cc:p cmake:p ninja:p
       - name: Build (release)
         run: |
           set -eo pipefail
