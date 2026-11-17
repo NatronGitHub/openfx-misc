@@ -127,8 +127,8 @@ option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into
 
 # ========================== compiler flags ==========================
 # Release: CMake's default flags (-O3 -DNDEBUG with GCC and Clang; Makefile.master uses
-# -O2 -DNDEBUG). For -O2: -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG" (or openfx's upcoming
-# OFX_OPTFLAG). Debug: -g, plus DEBUG (add_ofx_plugin) and -Wall -Wextra, as Makefile.master.
+# -O2 -DNDEBUG). For -O2: -DOFX_OPTFLAG=-O2 (openfx: appended to the plug-ins and
+# openfx::Support), or -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG" (all targets). Debug: -g, plus DEBUG (add_ofx_plugin) and -Wall -Wextra, as Makefile.master.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|Intel")
   add_compile_options($<$<CONFIG:Debug>:-Wall> $<$<CONFIG:Debug>:-Wextra>)
 endif()

@@ -381,7 +381,8 @@ earlier CMake build, which installed the bundles at the root of `CMAKE_INSTALL_P
 to the prefix (or absolute). The main options are:
 
 - `-DCMAKE_BUILD_TYPE=Release` (default; CMake's `-O3 -DNDEBUG`, where `make` uses
-  `-O2`: add `-DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG"` for that), `Debug` or
+  `-O2`: add `-DOFX_OPTFLAG=-O2` (openfx's option: the plugins and openfx::Support), or
+  `-DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG"` (all targets), for that), `Debug` or
   `RelWithDebInfo` (`make CONFIG=...`).
 - `-DOFX_CXX_STANDARD=17` (default) or `20`.
 - `-DOFX_USE_OPENMP=ON` (default): OpenMP in the CImg plugins and DenoiseSharpen, if
