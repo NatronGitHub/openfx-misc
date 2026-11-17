@@ -47,7 +47,7 @@ concurrency:
 env:
   # CMake options shared by the release builds: C++17 (OFX_CXX_STANDARD, the
   # default: the standard of Natron RB-2.6, Qt5; C++20 is built by nightly.yml),
-  # OpenMP if found (OFX_USE_OPENMP, the default), and the Test bundle.
+  # OpenMP (OFX_USE_OPENMP, the default; not on macOS, see MACOS_OPTIONS), and the Test bundle.
   CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
   # The release bundles are uploaded as artifacts only for manual runs
   # ("Run workflow" on the Actions page) and for pre-release tags. This repo is
@@ -82,7 +82,10 @@ jobs:
       # The bundles load on macOS 11 and later (by default, the SDK version).
       # OFX_DEPLOY_BUNDLES: osxDeploy.sh copies libomp into the bundles, as the
       # Makefiles do for release builds.
-      MACOS_OPTIONS: -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DOFX_DEPLOY_BUNDLES=ON
+      # No OpenMP (as the make CI): the bundles are deployed (OFX_DEPLOY_BUNDLES, osxDeploy.sh),
+      # and MacPorts' libomp is built for the runner's macOS (minos 15), so bundles with it
+      # would not load on macOS 11 to 14.
+      MACOS_OPTIONS: -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -114,10 +117,11 @@ jobs:
         run: .github/tools/loadtest.sh install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
-        # Not Test: it is for developers, and is never installed.
+        # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for
+        # developers, and is not uploaded.
         run: |
           mkdir -p Bundle
-          mv install/{CImg,Misc,Shadertoy}.ofx.bundle Bundle
+          mv install/OFX/Plugins/{CImg,Misc,Shadertoy}.ofx.bundle Bundle
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
@@ -155,10 +159,11 @@ jobs:
         run: .github/tools/rendertest.sh install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
-        # Not Test: it is for developers, and is never installed.
+        # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for
+        # developers, and is not uploaded.
         run: |
           mkdir -p Bundle
-          mv install/{CImg,Misc,Shadertoy}.ofx.bundle Bundle
+          mv install/OFX/Plugins/{CImg,Misc,Shadertoy}.ofx.bundle Bundle
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
@@ -178,9 +183,9 @@ jobs:
         # with "set -eo pipefail".
         shell: msys2 {0}
     env:
-      # The MinGW runtime (libstdc++, libgcc, winpthread, libgomp) is linked
-      # statically, so that the bundles also load in hosts that do not ship
-      # these DLLs.
+      # The MinGW runtime (libstdc++, libgcc, winpthread, and libgomp for OpenMP)
+      # is linked statically, so that the bundles also load in hosts that do not
+      # ship these DLLs (loadtest.sh checks it).
       WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static
     steps:
       - name: Checkout branch
@@ -198,7 +203,7 @@ jobs:
           cache: true
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p libgomp:p
       - name: Build (release)
         run: |
           set -eo pipefail
@@ -211,11 +216,12 @@ jobs:
           .github/tools/loadtest.sh install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
-        # Not Test: it is for developers, and is never installed.
+        # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for
+        # developers, and is not uploaded.
         run: |
           set -eo pipefail
           mkdir -p Bundle
-          mv install/{CImg,Misc,Shadertoy}.ofx.bundle Bundle
+          mv install/OFX/Plugins/{CImg,Misc,Shadertoy}.ofx.bundle Bundle
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6

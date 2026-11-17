@@ -3,7 +3,7 @@ name: Nightly extra builds
 # Build variants that are not worth running on every push or pull request
 # (ci.yml only builds the CMake release configuration on each OS), with CMake:
 # debug, C++20 (Natron RB-2.6 with Qt6, and RB-2.7; ci.yml builds C++17),
-# without OpenMP (ci.yml uses it if found), and Windows MSVC, plus the macOS
+# without OpenMP (ci.yml uses it on Linux and Windows), and Windows MSVC, plus the macOS
 # release build of ci.yml, which there only runs after Linux and Windows pass
 # (this covers master when the push run's macOS job was skipped or cancelled).
 # The Makefiles are still built, with one bundle per plugin (make nomulti), on
@@ -102,8 +102,7 @@ jobs:
           PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
           echo "PATH=/opt/local/bin:/opt/local/sbin:$PATH" >> "$GITHUB_ENV"
       - name: Build
-        # The install directory name ends with the configuration: rendertest.sh
-        # expects the debug assertions when it ends with -debug.
+        # The bundles are installed in install-<config>/OFX/Plugins.
         run: |
           cmake -S . -B build -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 ${{ matrix.options }}
           cmake --build build --parallel "$(getconf _NPROCESSORS_ONLN)"
@@ -113,7 +112,9 @@ jobs:
       - name: Render test (hostDemo)
         if: matrix.rendertest
         timeout-minutes: 10
-        run: .github/tools/rendertest.sh install-${{ matrix.config }}
+        run: |
+          [ "${{ matrix.config }}" != debug ] || export RENDERTEST_DEBUG=1
+          .github/tools/rendertest.sh install-${{ matrix.config }}
 
   linux:
     name: Ubuntu 24.04 ${{ matrix.name }}
@@ -153,8 +154,7 @@ jobs:
         run: make -j"$(nproc)" ${{ matrix.make }}
       - name: Build (CMake)
         if: ${{ !matrix.make }}
-        # The install directory name ends with the configuration: rendertest.sh
-        # expects the debug assertions when it ends with -debug.
+        # The bundles are installed in install-<config>/OFX/Plugins.
         run: |
           cmake -S . -B build -G Ninja ${{ matrix.options }}
           cmake --build build
@@ -165,7 +165,9 @@ jobs:
       - name: Render test (hostDemo)
         if: matrix.rendertest
         timeout-minutes: 10
-        run: .github/tools/rendertest.sh install-${{ matrix.config }}
+        run: |
+          [ "${{ matrix.config }}" != debug ] || export RENDERTEST_DEBUG=1
+          .github/tools/rendertest.sh install-${{ matrix.config }}
 
   windows:
     name: Windows (MSYS2 UCRT64) ${{ matrix.name }}
@@ -210,7 +212,7 @@ jobs:
           cache: true
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p libgomp:p
       - name: Build (make)
         if: matrix.make
         run: |
@@ -258,7 +260,7 @@ jobs:
           update: false
           cache: true
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p libgomp:p
       - name: Load test
         # ofxload is built with the MSYS2 UCRT64 GCC (loadtest.sh uses GCC options),
         # and objdump is MSYS2's; ofxload only loads the MSVC-built plugins through
