@@ -253,6 +253,14 @@ public:
                 // evaluate the parametric param
                 double value = _hueParam->getValue(c, _time, parametricPos);
 
+                // the curves are periodic (hue 6 is hue 0): some hosts return NaN at the period's end
+                // when there are keys at both 0 and 6 (NatronGitHub/Natron#1267), use the value at 0
+                if ( !std::isfinite(value) && (position == nbValues) ) {
+                    value = _hueParam->getValue(c, _time, 0.);
+                }
+                if ( !std::isfinite(value) ) {
+                    value = 0.;
+                }
                 // all the values (in HueCorrect) must be positive. We don't care if sat_thrsh goes above 1.
                 value = (std::max)(0., value);
                 // set that in the lut
@@ -376,7 +384,7 @@ private:
             // slow version
             double ret = _hueParam->getValue(c, _time, value);
 
-            return ret;
+            return std::isfinite(ret) ? ret : 0.;
         } else {
             double x = value / 6.;
             int i = (int)(x * nbValues);
