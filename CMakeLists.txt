@@ -114,8 +114,8 @@ set(LLVM_PATH "/opt/llvm" CACHE PATH "USE_OSMESA: LLVM prefix (bin/llvm-config)"
 
 # C++ standard: C++17 by default (Natron RB-2.6 Qt5 builds); the code also builds as C++20
 # (Qt6 builds, RB-2.7): configure with -DOFX_CXX_STANDARD=20 (or -DCMAKE_CXX_STANDARD=20).
-# Compiler extensions stay on (gnu++17, the compilers' default). openfx::Support is
-# compiled with the same standard.
+# add_ofx_plugin and openfx::Support use OFX_CXX_STANDARD, without compiler extensions
+# (-std=c++17, as the Makefile CI builds).
 if(DEFINED CACHE{CMAKE_CXX_STANDARD})
   set(OFX_CXX_STANDARD "${CMAKE_CXX_STANDARD}" CACHE STRING "C++ standard of the plug-ins (17, 20...)" FORCE)
 else()
@@ -126,26 +126,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON) # fail instead of silently using an older st
 
 # ========================== compiler flags ==========================
 # Makefile.master: release is -O2 -DNDEBUG, debug is -g -DDEBUG -Wall -Wextra
-# (DEBUG and NDEBUG are set by add_ofx_plugin). CMake's default release flags use -O3.
+# (DEBUG is set by add_ofx_plugin). CMake's default release flags use -O3.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|Intel")
   if(CMAKE_CXX_FLAGS_RELEASE STREQUAL "-O3 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
   endif()
   add_compile_options($<$<CONFIG:Debug>:-Wall> $<$<CONFIG:Debug>:-Wextra>)
 endif()
-# The following are set before add_subdirectory(openfx), so that openfx::Support
-# is compiled with them too.
-if(MINGW)
-  # openfx/Support/Plugins/Makefile.master: C99 printf, and the math constants (M_PI...)
-  add_compile_definitions(_USE_MATH_DEFINES __USE_MINGW_ANSI_STDIO=1)
-endif()
+# openfx::Api adds the MinGW definitions of Makefile.master (_USE_MATH_DEFINES,
+# __USE_MINGW_ANSI_STDIO=1) and MSVC's /Zc:__cplusplus.
 if(MSVC)
   ADD_COMPILE_OPTIONS(/MP)
-  # MSVC: make __cplusplus report the selected standard (e.g. 201703L), not 199711L.
-  # Without it, the "#if __cplusplus > 199711L" tests in SupportExt (tinythread.h,
-  # fast_mutex.h, ofxsThreadSuite.cpp) and openfx Support (ofxsCore.h: OFX::auto_ptr,
-  # OFX_THROW) take their pre-C++11 branches. Needs Visual Studio 2017 15.7 or later.
-  ADD_COMPILE_OPTIONS(/Zc:__cplusplus)
   add_compile_definitions(NOMINMAX)
   # If the build system is at least Windows Vista (6.0),
   # compile for Windows Vista, to get interruptible CImg plugins (see CImgFilter.h)
@@ -163,13 +154,15 @@ endif()
 # VEGAS, TUTTLE) and OFX_SUPPORTS_OPENGLRENDER options of openfx default to what the
 # Makefiles use, and are usage requirements of these targets.
 # EXCLUDE_FROM_ALL: only what the bundles link is built, and openfx is not installed.
-# HostSupport is only needed by DebugProxy (OFX_BUILD_HOSTSUPPORT, in openfx's upcoming
-# CMakeLists.txt; CMP0077: option() uses this variable)
+# HostSupport is only needed by DebugProxy (openfx's OFX_BUILD_HOSTSUPPORT option;
+# CMP0077: option() uses this variable)
 set(OFX_BUILD_HOSTSUPPORT ${BUILD_DEBUGPROXY})
+# openfx's functions run with openfx's policies (3.16): normalize "./<bundle>" install
+# destinations (PLUGIN_INSTALLDIR=.) without a CMP0177 warning
+set(CMAKE_POLICY_DEFAULT_CMP0177 NEW)
 add_subdirectory(openfx EXCLUDE_FROM_ALL)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/openfx/cmake" "${PROJECT_SOURCE_DIR}/cmake")
-include(OpenFX)       # in this directory too: ARCHDIR, OFX_PLUGIN_BUILD_DIR
-include(OpenFXMisc)   # the plug-in helpers openfx does not have yet
+# add_ofx_plugin, ofx_plugin_resources, ofx_target_openmp, ofx_deploy_bundle and ARCHDIR
+# come from openfx/cmake/OpenFX.cmake (included by openfx's CMakeLists.txt).
 message(STATUS "    OFX architecture:  ${ARCHDIR}")
 message(STATUS "    Install directory: ${CMAKE_INSTALL_PREFIX}/${PLUGIN_INSTALLDIR}")
 
