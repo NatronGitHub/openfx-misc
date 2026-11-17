@@ -102,10 +102,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "expands, especially when the image rotates.\n" \
     "\n" \
     "In the viewer, click a point to select and drag it, shift-click to add a " \
-    "point to the selection or remove it, drag from empty space to select the " \
-    "points inside a rectangle (with shift, they are added to the selection), " \
-    "and drag any selected point to move all the selected points together. " \
-    "A click on empty space or Escape clears the selection.\n" \
+    "point to the selection or remove it, and drag any selected point to move " \
+    "all the selected points together. Escape clears the selection. In Natron, " \
+    "the viewer selection rectangle also selects the points inside it (Ctrl+drag " \
+    "adds them to the selection), and a click on empty space clears the " \
+    "selection.\n" \
     "\n" \
     "This plugin concatenates transforms.\n" \
     "See also: https://web.archive.org/web/20220627032200/http://www.opticalenquiry.com/nuke/index.php?title=CornerPin"
@@ -113,7 +114,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.CornerPinPlugin"
 #define kPluginMaskedIdentifier "net.sf.openfx.CornerPinMaskedPlugin"
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// 2.1: overlay point selection, host selection rectangle param (Natron)
 
 #define POINT_SIZE 5
 #define POINT_TOLERANCE 6
@@ -210,8 +212,19 @@ public:
         , _extraMatrixRow2(NULL)
         , _extraMatrixRow3(NULL)
         , _srcClipChanged(NULL)
+        , _overlayPoints(NULL)
+#ifdef OFX_EXTENSIONS_NATRON
+        , _selectionRectangleState(NULL)
+        , _selectionRectangleLastState(0)
+#endif
         , _majorVersion(majorVersion)
     {
+        for (int i = 0; i < 4; ++i) {
+            _overlaySelected[i] = false;
+#ifdef OFX_EXTENSIONS_NATRON
+            _overlaySelectedOnRectangleStart[i] = false;
+#endif
+        }
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
             _to[i] = fetchDouble2DParam(kParamTo[i]);
@@ -227,6 +240,15 @@ public:
 
         _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
+        _overlayPoints = fetchChoiceParam(kParamOverlayPoints);
+        assert(_overlayPoints);
+#ifdef OFX_EXTENSIONS_NATRON
+        // only declared on Natron, see CornerPinPluginDescribeInContext()
+        if ( paramExists(kNatronOfxParamSelectionRectangleState) ) {
+            _selectionRectangleState = fetchIntParam(kNatronOfxParamSelectionRectangleState);
+            assert(_selectionRectangleState);
+        }
+#endif
 
         // honor kParamDefaultsNormalised
         if ( paramExists(kParamDefaultsNormalised) ) {
@@ -252,7 +274,17 @@ public:
         }
     }
 
+    /**
+     * @brief The points selected in the viewer overlay (shared by the overlay
+     * interacts of this instance, and updated by the host selection rectangle).
+     **/
+    bool* overlaySelected() { return _overlaySelected; }
+
 private:
+#ifdef OFX_EXTENSIONS_NATRON
+    /// Update the overlay selection from the host selection rectangle (Natron extension).
+    void selectionRectangleChanged(double time);
+#endif
 
     Matrix3x3 getExtraMatrix(OfxTime time) const
     {
@@ -289,6 +321,13 @@ private:
     Double3DParam* _extraMatrixRow3;
     Double2DParam* _from[4];
     BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    ChoiceParam* _overlayPoints;
+#ifdef OFX_EXTENSIONS_NATRON
+    IntParam* _selectionRectangleState; // NULL if the host is not Natron
+    int _selectionRectangleLastState; // the last value of _selectionRectangleState
+    bool _overlaySelectedOnRectangleStart[4]; // the selection when the rectangle started
+#endif
+    bool _overlaySelected[4];
     unsigned int _majorVersion;
 };
 
@@ -466,6 +505,17 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
 {
     const double time = args.time;
 
+#ifdef OFX_EXTENSIONS_NATRON
+    if (paramName == kNatronOfxParamSelectionRectangleState) {
+        // not a rendering parameter: only the overlay selection changes
+        if (_selectionRectangleState) {
+            selectionRectangleChanged(time);
+        }
+
+        return;
+    }
+#endif
+
     // If any parameter is set by the user, set srcClipChanged to true so that from/to is not reset when
     // connecting the input.
     //printf("srcClipChanged=%s\n", _srcClipChanged->getValue() ? "true" : "false");
@@ -543,6 +593,62 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
     }
 } // CornerPinPlugin::changedParam
 
+#ifdef OFX_EXTENSIONS_NATRON
+// ofxNatron.h, extension 7: "To advertise to the host that we are interested in the selection state of
+// the rectangle, we declare a Int parameter with the name kNatronOfxParamSelectionRectangleState. The
+// host notifies the plug-in of the selection state change via the kOfxActionInstanceChanged action.
+// The value of the parameter can be 3-fold:
+//     0 meaning that the selection has been cleared by the user
+//     1 meaning that the selection is being actively edited by the user (i.e: during pen motion)
+//     2 meaning that the selection is finilized by the user (i.e: during pen up)
+// The property kNatronOfxImageEffectSelectionRectangle will be updated prior to calling the
+// kOfxActionInstanceChanged action for this parameter by the host, indicating the region covered by
+// the selection rectangle."
+void
+CornerPinPlugin::selectionRectangleChanged(double time)
+{
+    const int state = _selectionRectangleState->getValue();
+
+    if (state == 0) {
+        // the selection was cleared by the user (Natron: a click or drag on empty space
+        // without Ctrl, before the new rectangle starts)
+        for (int i = 0; i < 4; ++i) {
+            _overlaySelected[i] = false;
+        }
+    } else {
+        if (_selectionRectangleLastState != 1) {
+            // A new rectangle adds to the current selection. Natron's convention: a drag
+            // without Ctrl first clears the selection (state 0), so the rectangle replaces
+            // it; Ctrl+drag sends no state 0, so the rectangle adds to the selection.
+            for (int i = 0; i < 4; ++i) {
+                _overlaySelectedOnRectangleStart[i] = _overlaySelected[i];
+            }
+        }
+        // kNatronOfxImageEffectSelectionRectangle is a double x 4 property, in canonical coordinates,
+        // read without truncation by ImageEffect::getSelectionRectangle().
+        const OfxRectD r = getSelectionRectangle();
+        const double x1 = (std::min)(r.x1, r.x2);
+        const double x2 = (std::max)(r.x1, r.x2);
+        const double y1 = (std::min)(r.y1, r.y2);
+        const double y2 = (std::max)(r.y1, r.y2);
+        int v;
+        _overlayPoints->getValueAtTime(time, v);
+        const bool useFrom = (v == 1);
+        for (int i = 0; i < 4; ++i) {
+            bool enable;
+            _enable[i]->getValueAtTime(time, enable);
+            OfxPointD p;
+            (useFrom ? _from[i] : _to[i])->getValueAtTime(time, p.x, p.y);
+            // a disabled point can't be selected
+            const bool inside = enable && x1 <= p.x && p.x <= x2 && y1 <= p.y && p.y <= y2;
+            _overlaySelected[i] = (_overlaySelectedOnRectangleStart[i] && enable) || inside;
+        }
+    }
+    _selectionRectangleLastState = state;
+    redrawOverlays();
+}
+#endif // OFX_EXTENSIONS_NATRON
+
 void
 CornerPinPlugin::changedClip(const InstanceChangedArgs &args,
                              const std::string &clipName)
@@ -576,16 +682,18 @@ CornerPinPlugin::changedClip(const InstanceChangedArgs &args,
 // - click on a point: select it (and only it, unless it is already selected)
 //   and drag the selected points;
 // - shift-click on a point: add it to, or remove it from, the selection;
-// - drag from empty space: rubber band selection of the points inside it
-//   (shift adds them to the selection); a click on empty space clears the
-//   selection;
 // - Escape: clear the selection;
 // - a disabled point (the "enable" checkbox) can't be selected.
+// Pen events on empty space are not trapped, so that the host can use them (e.g. Natron's
+// viewer menu, user RoI and selection rectangle). On Natron, the host selection rectangle
+// selects the points inside it (see CornerPinPlugin::selectionRectangleChanged()).
+// The selection is stored in the plugin instance, so that it is shared by all the
+// interacts (views) and the host selection rectangle.
 //
 // The OFX pen actions do not carry the keyboard modifiers (ofxInteract.h: the
 // inArgs of kOfxInteractActionPenDown are the effect instance, pixel scale,
 // background colour, time, render scale, pen position, pen viewport position and
-// pen pressure), so the modifier state is tracked from the kOfxPropKeySym of
+// pen pressure), so the shift state is tracked from the kOfxPropKeySym of
 // kOfxInteractActionKeyDown/KeyUp, as RectangleInteract and
 // TransformInteractHelper do, and reset on kOfxInteractActionLoseFocus.
 class CornerPinTransformInteract
@@ -604,16 +712,13 @@ public:
         , _mouseState(eMouseStateIdle)
         , _dragging(-1)
         , _hovering(-1)
+        , _selected(NULL)
         , _lastMousePos()
-        , _rubberBandStart()
-        , _rubberBandEnd()
         , _modifierStateShift(0)
-        , _modifierStateCtrl(0)
-        , _modifierStateAlt(0)
-        , _modifierStateMeta(0)
         , _dragMoved(false)
     {
         assert(_plugin);
+        _selected = _plugin->overlaySelected();
         for (int i = 0; i < 4; ++i) {
             _to[i] = _plugin->fetchDouble2DParam(kParamTo[i]);
             _from[i] = _plugin->fetchDouble2DParam(kParamFrom[i]);
@@ -640,11 +745,7 @@ public:
             _toDrag[i].x = _toDrag[i].y = 0;
             _fromDrag[i].x = _fromDrag[i].y = 0;
             _enableDrag[i] = false;
-            _selected[i] = false;
-            _selectedOnPress[i] = false;
         }
-        _rubberBandStart.x = _rubberBandStart.y = 0.;
-        _rubberBandEnd = _rubberBandStart;
         _useFromDrag = false;
         _interactiveDrag = false;
     }
@@ -663,7 +764,6 @@ private:
     {
         eMouseStateIdle = 0,
         eMouseStateDraggingPoints, // dragging the selected points
-        eMouseStateRubberBand,     // drawing a rubber band selection rectangle
     };
 
     /**
@@ -712,21 +812,6 @@ private:
         }
     }
 
-    /// The selection is the selection at pen down plus the enabled points inside the rubber band.
-    void selectInRubberBand(const OfxPointD p[4],
-                            const bool enable[4])
-    {
-        const double x1 = (std::min)(_rubberBandStart.x, _rubberBandEnd.x);
-        const double x2 = (std::max)(_rubberBandStart.x, _rubberBandEnd.x);
-        const double y1 = (std::min)(_rubberBandStart.y, _rubberBandEnd.y);
-        const double y2 = (std::max)(_rubberBandStart.y, _rubberBandEnd.y);
-
-        for (int i = 0; i < 4; ++i) {
-            const bool inside = enable[i] && x1 <= p[i].x && p[i].x <= x2 && y1 <= p[i].y && p[i].y <= y2;
-            _selected[i] = _selectedOnPress[i] || inside;
-        }
-    }
-
     bool hasSelection() const
     {
         return _selected[0] || _selected[1] || _selected[2] || _selected[3];
@@ -769,17 +854,12 @@ private:
     }
 
     /**
-     * @brief Abandon a drag or rubber band in progress, without changing the
-     * parameters, and reset the hover state. Called when the interact loses
+     * @brief Abandon a drag in progress, without changing the parameters, and
+     * reset the hover state. Called when the interact loses
      * focus (the host may never send the pen up), or on a pen down during a drag.
      **/
     void abandonDrag()
     {
-        if (_mouseState == eMouseStateRubberBand) {
-            for (int i = 0; i < 4; ++i) {
-                _selected[i] = _selectedOnPress[i];
-            }
-        }
         _mouseState = eMouseStateIdle;
         _dragging = -1;
         _hovering = -1;
@@ -810,15 +890,9 @@ private:
     MouseStateEnum _mouseState;
     int _dragging; // -1: idle, else the point number under the pen when the drag started
     int _hovering; // -1: idle, else hovering point number
-    bool _selected[4]; // the selected points
-    bool _selectedOnPress[4]; // the selection when the rubber band started
+    bool* _selected; // the selected points (4), stored in the plugin instance
     OfxPointD _lastMousePos;
-    OfxPointD _rubberBandStart;
-    OfxPointD _rubberBandEnd;
     int _modifierStateShift;
-    int _modifierStateCtrl;
-    int _modifierStateAlt;
-    int _modifierStateMeta;
     OfxPointD _toDrag[4];
     OfxPointD _fromDrag[4];
     bool _enableDrag[4];
@@ -996,20 +1070,6 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
             }
         }
 
-        if (_mouseState == eMouseStateRubberBand) {
-            // the rubber band selection rectangle, dashed
-            glLineWidth(1.f * screenPixelRatio);
-            glEnable(GL_LINE_STIPPLE);
-            glLineStipple( (GLint)std::max(1., screenPixelRatio) * 2, 0xAAAA );
-            glBegin(GL_LINE_LOOP);
-            glVertex2d(_rubberBandStart.x, _rubberBandStart.y);
-            glVertex2d(_rubberBandEnd.x, _rubberBandStart.y);
-            glVertex2d(_rubberBandEnd.x, _rubberBandEnd.y);
-            glVertex2d(_rubberBandStart.x, _rubberBandEnd.y);
-            glEnd();
-            glDisable(GL_LINE_STIPPLE);
-            glLineWidth(1.5f * screenPixelRatio);
-        }
     }
 
     //glPopAttrib();
@@ -1031,19 +1091,6 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
 
     OfxPointD p[4];
     getOverlayPoints(to, from, enable, useFrom, p);
-
-    if (_mouseState == eMouseStateRubberBand) {
-        _rubberBandEnd = args.penPosition;
-        selectInRubberBand(p, enable);
-        _hovering = -1;
-        _effect->redrawOverlays();
-        _lastMousePos = args.penPosition;
-#ifdef OFX_EXTENSIONS_NATRON
-        setCursor(kOfxInteractCursorDefault);
-#endif
-
-        return true;
-    }
 
     const bool draggingPoints = (_mouseState == eMouseStateDraggingPoints);
     bool valuesChanged = false;
@@ -1174,48 +1221,15 @@ CornerPinTransformInteract::penDown(const PenArgs &args)
         return true;
     }
 
-    // Click on empty space.
-    // Leave the clicks with Ctrl, Alt or Meta to the host (e.g. Natron's Ctrl-click
-    // color picker, Ctrl+Shift-drag rectangle color picker).
-    if ( (_modifierStateCtrl > 0) || (_modifierStateAlt > 0) || (_modifierStateMeta > 0) ) {
-        return false;
-    }
-    // Start a rubber band selection: without shift, it replaces the selection,
-    // so a simple click clears the selection.
-    if (!shift) {
-        clearSelection();
-    }
-    for (int i = 0; i < 4; ++i) {
-        _selectedOnPress[i] = _selected[i];
-    }
-    _mouseState = eMouseStateRubberBand;
-    _rubberBandStart = args.penPosition;
-    _rubberBandEnd = args.penPosition;
-    _hovering = -1;
-    _effect->redrawOverlays();
-
-    return true;
+    // Pen down on empty space: not trapped, so that the host can use it (Natron: viewer menu,
+    // user RoI handles, selection rectangle, Ctrl-click color picker...). On Natron, the host
+    // selection rectangle clears or sets the selection (CornerPinPlugin::selectionRectangleChanged()).
+    return false;
 } // CornerPinTransformInteract::penDown
 
 bool
-CornerPinTransformInteract::penUp(const PenArgs &args)
+CornerPinTransformInteract::penUp(const PenArgs & /*args*/)
 {
-    if (_mouseState == eMouseStateRubberBand) {
-        OfxPointD to[4];
-        OfxPointD from[4];
-        bool enable[4];
-        bool useFrom;
-        getPoints(args.time, to, from, enable, &useFrom);
-        OfxPointD p[4];
-        getOverlayPoints(to, from, enable, useFrom, p);
-        _rubberBandEnd = args.penPosition;
-        selectInRubberBand(p, enable);
-        _mouseState = eMouseStateIdle;
-        _effect->redrawOverlays();
-
-        return true;
-    }
-
     if (_mouseState != eMouseStateDraggingPoints) {
         return false;
     }
@@ -1235,32 +1249,17 @@ CornerPinTransformInteract::penUp(const PenArgs &args)
     return true;
 }
 
-// keyDown updates the modifier state, and Escape clears the selection
+// keyDown updates the shift state, and Escape clears the selection
 bool
 CornerPinTransformInteract::keyDown(const KeyArgs &args)
 {
-    // Note that on the Mac:
-    // cmd/apple/cloverleaf is kOfxKey_Control_L
-    // ctrl is kOfxKey_Meta_L
-    // alt/option is kOfxKey_Alt_L
-    // the two shift (or control...) keys may be pressed consecutively, be aware about this
+    // the two shift keys may be pressed consecutively, be aware about this
     if ( (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) {
         ++_modifierStateShift;
     }
-    if ( (args.keySymbol == kOfxKey_Control_L) || (args.keySymbol == kOfxKey_Control_R) ) {
-        ++_modifierStateCtrl;
-    }
-    if ( (args.keySymbol == kOfxKey_Alt_L) || (args.keySymbol == kOfxKey_Alt_R) ) {
-        ++_modifierStateAlt;
-    }
-    if ( (args.keySymbol == kOfxKey_Meta_L) || (args.keySymbol == kOfxKey_Meta_R) ) {
-        ++_modifierStateMeta;
-    }
 
-    if ( (args.keySymbol == kOfxKey_Escape) && (_mouseState != eMouseStateDraggingPoints) &&
-         ( hasSelection() || (_mouseState == eMouseStateRubberBand) ) ) {
+    if ( (args.keySymbol == kOfxKey_Escape) && (_mouseState != eMouseStateDraggingPoints) && hasSelection() ) {
         clearSelection();
-        _mouseState = eMouseStateIdle;
         _effect->redrawOverlays();
 
         return true;
@@ -1270,22 +1269,13 @@ CornerPinTransformInteract::keyDown(const KeyArgs &args)
     return false;
 }
 
-// keyUp just updates the modifier state
+// keyUp just updates the shift state
 bool
 CornerPinTransformInteract::keyUp(const KeyArgs &args)
 {
     // we may have missed a keypress
     if ( ( (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) && (_modifierStateShift > 0) ) {
         --_modifierStateShift;
-    }
-    if ( ( (args.keySymbol == kOfxKey_Control_L) || (args.keySymbol == kOfxKey_Control_R) ) && (_modifierStateCtrl > 0) ) {
-        --_modifierStateCtrl;
-    }
-    if ( ( (args.keySymbol == kOfxKey_Alt_L) || (args.keySymbol == kOfxKey_Alt_R) ) && (_modifierStateAlt > 0) ) {
-        --_modifierStateAlt;
-    }
-    if ( ( (args.keySymbol == kOfxKey_Meta_L) || (args.keySymbol == kOfxKey_Meta_R) ) && (_modifierStateMeta > 0) ) {
-        --_modifierStateMeta;
     }
 
     // modifiers are not "caught"
@@ -1302,9 +1292,6 @@ CornerPinTransformInteract::loseFocus(const FocusArgs & /*args*/)
     abandonDrag();
     // reset the modifiers state: the key up may be sent to another interact
     _modifierStateShift = 0;
-    _modifierStateCtrl = 0;
-    _modifierStateAlt = 0;
-    _modifierStateMeta = 0;
 }
 
 class CornerPinOverlayDescriptor
@@ -1597,6 +1584,25 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
     // HiDPI
     hiDPIDescribeParams(desc, NULL, page);
 
+#ifdef OFX_EXTENSIONS_NATRON
+    // Use the host selection rectangle to select the overlay points (ofxNatron.h, extension 7).
+    // Only on Natron: other hosts would show or save this parameter.
+    if (getImageEffectHostDescription()->isNatron) {
+        IntParamDescriptor* param = desc.defineIntParam(kNatronOfxParamSelectionRectangleState);
+        param->setDefault(0);
+        param->setRange(0, 2);
+        param->setDisplayRange(0, 2);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false); // not used by the render: no re-render, no hash change
+        param->setIsPersistent(false);
+        param->setCanUndo(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+#endif
+
     // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
     if (!gHostSupportsDefaultCoordinateSystem) {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDefaultsNormalised);
@@ -1714,8 +1720,9 @@ CornerPinMaskedPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle 
 static CornerPinPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
 static CornerPinMaskedPluginFactory<kPluginVersionMajor> p2(kPluginMaskedIdentifier, kPluginVersionMinor);
 // version 1: "Invert" composes the extra matrix as homo3x3 * extraMat
-static CornerPinPluginFactory<1> p1v1(kPluginIdentifier, 0);
-static CornerPinMaskedPluginFactory<1> p2v1(kPluginMaskedIdentifier, 0);
+// 1.1: overlay point selection, host selection rectangle param (Natron)
+static CornerPinPluginFactory<1> p1v1(kPluginIdentifier, 1);
+static CornerPinMaskedPluginFactory<1> p2v1(kPluginMaskedIdentifier, 1);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p1v1)
