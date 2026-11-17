@@ -35,6 +35,7 @@
 
 #include <cmath>
 #include <cfloat> // DBL_MAX
+#include <algorithm>
 #include <vector>
 #ifdef DEBUG
 #include <iostream>
@@ -99,6 +100,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "interpolated between their 'from' position and their 'to' position, which " \
     "may result in unrealistic image motion, where the image shrinks and " \
     "expands, especially when the image rotates.\n" \
+    "\n" \
+    "In the viewer, click a point to select and drag it, shift-click to add a " \
+    "point to the selection or remove it, drag from empty space to select the " \
+    "points inside a rectangle (with shift, they are added to the selection), " \
+    "and drag any selected point to move all the selected points together. " \
+    "A click on empty space or Escape clears the selection.\n" \
     "\n" \
     "This plugin concatenates transforms.\n" \
     "See also: https://web.archive.org/web/20220627032200/http://www.opticalenquiry.com/nuke/index.php?title=CornerPin"
@@ -563,6 +570,24 @@ CornerPinPlugin::changedClip(const InstanceChangedArgs &args,
     }
 }
 
+// The viewer overlay of CornerPin.
+//
+// Selection and drag (NatronGitHub/openfx-misc#144):
+// - click on a point: select it (and only it, unless it is already selected)
+//   and drag the selected points;
+// - shift-click on a point: add it to, or remove it from, the selection;
+// - drag from empty space: rubber band selection of the points inside it
+//   (shift adds them to the selection); a click on empty space clears the
+//   selection;
+// - Escape: clear the selection;
+// - a disabled point (the "enable" checkbox) can't be selected.
+//
+// The OFX pen actions do not carry the keyboard modifiers (ofxInteract.h: the
+// inArgs of kOfxInteractActionPenDown are the effect instance, pixel scale,
+// background colour, time, render scale, pen position, pen viewport position and
+// pen pressure), so the modifier state is tracked from the kOfxPropKeySym of
+// kOfxInteractActionKeyDown/KeyUp, as RectangleInteract and
+// TransformInteractHelper do, and reset on kOfxInteractActionLoseFocus.
 class CornerPinTransformInteract
     : public OverlayInteract
 {
@@ -576,9 +601,17 @@ public:
         , _overlayPoints(NULL)
         , _interactive(NULL)
         , _hiDPI(NULL)
+        , _mouseState(eMouseStateIdle)
         , _dragging(-1)
         , _hovering(-1)
         , _lastMousePos()
+        , _rubberBandStart()
+        , _rubberBandEnd()
+        , _modifierStateShift(0)
+        , _modifierStateCtrl(0)
+        , _modifierStateAlt(0)
+        , _modifierStateMeta(0)
+        , _dragMoved(false)
     {
         assert(_plugin);
         for (int i = 0; i < 4; ++i) {
@@ -607,7 +640,11 @@ public:
             _toDrag[i].x = _toDrag[i].y = 0;
             _fromDrag[i].x = _fromDrag[i].y = 0;
             _enableDrag[i] = false;
+            _selected[i] = false;
+            _selectedOnPress[i] = false;
         }
+        _rubberBandStart.x = _rubberBandStart.y = 0.;
+        _rubberBandEnd = _rubberBandStart;
         _useFromDrag = false;
         _interactiveDrag = false;
     }
@@ -617,11 +654,138 @@ public:
     virtual bool penMotion(const PenArgs &args) OVERRIDE FINAL;
     virtual bool penDown(const PenArgs &args) OVERRIDE FINAL;
     virtual bool penUp(const PenArgs &args) OVERRIDE FINAL;
-    //virtual bool keyDown(const KeyArgs &args) OVERRIDE FINAL;
-    //virtual bool keyUp(const KeyArgs &args) OVERRIDE FINAL;
+    virtual bool keyDown(const KeyArgs &args) OVERRIDE FINAL;
+    virtual bool keyUp(const KeyArgs &args) OVERRIDE FINAL;
     virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
 
 private:
+    enum MouseStateEnum
+    {
+        eMouseStateIdle = 0,
+        eMouseStateDraggingPoints, // dragging the selected points
+        eMouseStateRubberBand,     // drawing a rubber band selection rectangle
+    };
+
+    /**
+     * @brief Get the "to" and "from" points, their "enable" state, and whether the
+     * overlay shows the "from" points: from the parameters at time, or from the
+     * drag copies while dragging points.
+     **/
+    void getPoints(double time,
+                   OfxPointD to[4],
+                   OfxPointD from[4],
+                   bool enable[4],
+                   bool* useFrom) const
+    {
+        if (_mouseState != eMouseStateDraggingPoints) {
+            for (int i = 0; i < 4; ++i) {
+                _to[i]->getValueAtTime(time, to[i].x, to[i].y);
+                _from[i]->getValueAtTime(time, from[i].x, from[i].y);
+                _enable[i]->getValueAtTime(time, enable[i]);
+            }
+            int v;
+            _overlayPoints->getValueAtTime(time, v);
+            *useFrom = (v == 1);
+        } else {
+            for (int i = 0; i < 4; ++i) {
+                to[i] = _toDrag[i];
+                from[i] = _fromDrag[i];
+                enable[i] = _enableDrag[i];
+            }
+            *useFrom = _useFromDrag;
+        }
+    }
+
+    /// The points shown by the overlay ("to" or "from"). p[i] is only set if enable[i].
+    static void getOverlayPoints(const OfxPointD to[4],
+                                 const OfxPointD from[4],
+                                 const bool enable[4],
+                                 bool useFrom,
+                                 OfxPointD p[4])
+    {
+        for (int i = 0; i < 4; ++i) {
+            if (enable[i]) {
+                p[i] = useFrom ? from[i] : to[i];
+            } else {
+                p[i].x = p[i].y = 0.;
+            }
+        }
+    }
+
+    /// The selection is the selection at pen down plus the enabled points inside the rubber band.
+    void selectInRubberBand(const OfxPointD p[4],
+                            const bool enable[4])
+    {
+        const double x1 = (std::min)(_rubberBandStart.x, _rubberBandEnd.x);
+        const double x2 = (std::max)(_rubberBandStart.x, _rubberBandEnd.x);
+        const double y1 = (std::min)(_rubberBandStart.y, _rubberBandEnd.y);
+        const double y2 = (std::max)(_rubberBandStart.y, _rubberBandEnd.y);
+
+        for (int i = 0; i < 4; ++i) {
+            const bool inside = enable[i] && x1 <= p[i].x && p[i].x <= x2 && y1 <= p[i].y && p[i].y <= y2;
+            _selected[i] = _selectedOnPress[i] || inside;
+        }
+    }
+
+    bool hasSelection() const
+    {
+        return _selected[0] || _selected[1] || _selected[2] || _selected[3];
+    }
+
+    void clearSelection()
+    {
+        for (int i = 0; i < 4; ++i) {
+            _selected[i] = false;
+        }
+    }
+
+    /// Set the dragged points from the drag copies, in a single undo/redo block if there are several.
+    void setDraggedValues()
+    {
+        int n = 0;
+        for (int i = 0; i < 4; ++i) {
+            if (_selected[i] && _enableDrag[i]) {
+                ++n;
+            }
+        }
+        if (n == 0) {
+            return;
+        }
+        // ofxParam.h, paramEditBegin: "If a plugin calls paramSetValue/paramSetValueAtTime on one or
+        // more parameters, either from custom GUI interaction or some analysis of imagery etc.. this is
+        // used to indicate the start of a set of a parameter changes that should be considered part of
+        // a single undo/redo block."
+        ImageEffect::EditBlock eb(*_effect, "Move CornerPin points", n > 1);
+        // no need to redraw overlay since it is slave to the paramaters
+        for (int i = 0; i < 4; ++i) {
+            if (_selected[i] && _enableDrag[i]) {
+                if (_useFromDrag) {
+                    _from[i]->setValue(_fromDrag[i].x, _fromDrag[i].y);
+                } else {
+                    _to[i]->setValue(_toDrag[i].x, _toDrag[i].y);
+                }
+            }
+        }
+    }
+
+    /**
+     * @brief Abandon a drag or rubber band in progress, without changing the
+     * parameters, and reset the hover state. Called when the interact loses
+     * focus (the host may never send the pen up), or on a pen down during a drag.
+     **/
+    void abandonDrag()
+    {
+        if (_mouseState == eMouseStateRubberBand) {
+            for (int i = 0; i < 4; ++i) {
+                _selected[i] = _selectedOnPress[i];
+            }
+        }
+        _mouseState = eMouseStateIdle;
+        _dragging = -1;
+        _hovering = -1;
+        _interactiveDrag = false;
+        _dragMoved = false;
+    }
 
     /**
      * @brief Returns true if the points that should be used by the overlay are
@@ -643,14 +807,24 @@ private:
     ChoiceParam* _overlayPoints;
     BooleanParam* _interactive;
     BooleanParam* _hiDPI;
-    int _dragging; // -1: idle, else dragging point number
+    MouseStateEnum _mouseState;
+    int _dragging; // -1: idle, else the point number under the pen when the drag started
     int _hovering; // -1: idle, else hovering point number
+    bool _selected[4]; // the selected points
+    bool _selectedOnPress[4]; // the selection when the rubber band started
     OfxPointD _lastMousePos;
+    OfxPointD _rubberBandStart;
+    OfxPointD _rubberBandEnd;
+    int _modifierStateShift;
+    int _modifierStateCtrl;
+    int _modifierStateAlt;
+    int _modifierStateMeta;
     OfxPointD _toDrag[4];
     OfxPointD _fromDrag[4];
     bool _enableDrag[4];
     bool _useFromDrag;
     bool _interactiveDrag;
+    bool _dragMoved; // the selected points were moved since pen down
 };
 
 static bool
@@ -716,23 +890,7 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
     bool enable[4];
     bool useFrom;
 
-    if (_dragging == -1) {
-        for (int i = 0; i < 4; ++i) {
-            _to[i]->getValueAtTime(time, to[i].x, to[i].y);
-            _from[i]->getValueAtTime(time, from[i].x, from[i].y);
-            _enable[i]->getValueAtTime(time, enable[i]);
-        }
-        int v;
-        _overlayPoints->getValueAtTime(time, v);
-        useFrom = (v == 1);
-    } else {
-        for (int i = 0; i < 4; ++i) {
-            to[i] = _toDrag[i];
-            from[i] = _fromDrag[i];
-            enable[i] = _enableDrag[i];
-        }
-        useFrom = _useFromDrag;
-    }
+    getPoints(time, to, from, enable, &useFrom);
 
     bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
     double screenPixelRatio = hiDPI ? 2 : 1;
@@ -821,6 +979,9 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
             if (enable[i]) {
                 if ( (_hovering == i) || (_dragging == i) ) {
                     glColor3f(0.f * l, 1.f * l, 0.f * l);
+                } else if (_selected[i]) {
+                    // selected points are highlighted
+                    glColor3f(1.f * l, 0.75f * l, 0.f * l);
                 } else {
                     glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
                 }
@@ -833,6 +994,21 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
             if (enable[i]) {
                 TextRenderer::bitmapString(p[i].x, p[i].y + POINT_SIZE * screenPixelRatio, useFrom ? kParamFrom[i] : kParamTo[i], font);
             }
+        }
+
+        if (_mouseState == eMouseStateRubberBand) {
+            // the rubber band selection rectangle, dashed
+            glLineWidth(1.f * screenPixelRatio);
+            glEnable(GL_LINE_STIPPLE);
+            glLineStipple( (GLint)std::max(1., screenPixelRatio) * 2, 0xAAAA );
+            glBegin(GL_LINE_LOOP);
+            glVertex2d(_rubberBandStart.x, _rubberBandStart.y);
+            glVertex2d(_rubberBandEnd.x, _rubberBandStart.y);
+            glVertex2d(_rubberBandEnd.x, _rubberBandEnd.y);
+            glVertex2d(_rubberBandStart.x, _rubberBandEnd.y);
+            glEnd();
+            glDisable(GL_LINE_STIPPLE);
+            glLineWidth(1.5f * screenPixelRatio);
         }
     }
 
@@ -851,81 +1027,63 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
     bool enable[4];
     bool useFrom;
 
-    if (_dragging == -1) { // mouse is released
-        for (int i = 0; i < 4; ++i) {
-            _to[i]->getValueAtTime(time, to[i].x, to[i].y);
-            _from[i]->getValueAtTime(time, from[i].x, from[i].y);
-            _enable[i]->getValueAtTime(time, enable[i]);
-        }
-        int v;
-        _overlayPoints->getValueAtTime(time, v);
-        useFrom = (v == 1);
-    } else {
-        for (int i = 0; i < 4; ++i) {
-            to[i] = _toDrag[i];
-            from[i] = _fromDrag[i];
-            enable[i] = _enableDrag[i];
-        }
-        useFrom = _useFromDrag;
-    }
+    getPoints(time, to, from, enable, &useFrom);
 
     OfxPointD p[4];
-    //OfxPointD q[4];
-    int enableBegin = 4;
-    int enableEnd = 0;
-    for (int i = 0; i < 4; ++i) {
-        if (enable[i]) {
-            if (useFrom) {
-                p[i] = from[i];
-                //q[i] = to[i];
-            } else {
-                //q[i] = from[i];
-                p[i] = to[i];
-            }
-            if (i < enableBegin) {
-                enableBegin = i;
-            }
-            if (i + 1 > enableEnd) {
-                enableEnd = i + 1;
-            }
-        }
+    getOverlayPoints(to, from, enable, useFrom, p);
+
+    if (_mouseState == eMouseStateRubberBand) {
+        _rubberBandEnd = args.penPosition;
+        selectInRubberBand(p, enable);
+        _hovering = -1;
+        _effect->redrawOverlays();
+        _lastMousePos = args.penPosition;
+#ifdef OFX_EXTENSIONS_NATRON
+        setCursor(kOfxInteractCursorDefault);
+#endif
+
+        return true;
     }
 
+    const bool draggingPoints = (_mouseState == eMouseStateDraggingPoints);
     bool valuesChanged = false;
     OfxPointD delta;
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
+    const bool moved = (delta.x != 0.) || (delta.y != 0.);
 
     int newHovering = -1;
 
-    for (int i = enableBegin; i < enableEnd; ++i) {
+    for (int i = 0; i < 4; ++i) {
         if (enable[i]) {
-            if (_dragging == i) {
-                if (useFrom) {
-                    from[i].x += delta.x;
-                    from[i].y += delta.y;
-                    _fromDrag[i] = from[i];
-                } else {
-                    to[i].x += delta.x;
-                    to[i].y += delta.y;
-                    _toDrag[i] = to[i];
+            if (draggingPoints && _selected[i]) {
+                // all the selected points move by the same delta
+                if (moved) {
+                    if (useFrom) {
+                        from[i].x += delta.x;
+                        from[i].y += delta.y;
+                        _fromDrag[i] = from[i];
+                    } else {
+                        to[i].x += delta.x;
+                        to[i].y += delta.y;
+                        _toDrag[i] = to[i];
+                    }
+                    valuesChanged = true;
                 }
-                valuesChanged = true;
             } else if ( isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale) ) {
                 newHovering = i;
             }
         }
     }
+    if (valuesChanged) {
+        _dragMoved = true;
+    }
     bool redraw = _hovering != newHovering;
     _hovering = newHovering;
 
-    if ( (_dragging != -1) && _interactiveDrag && valuesChanged ) {
+    if (draggingPoints && _interactiveDrag && valuesChanged) {
         // no need to redraw overlay since it is slave to the paramaters
-        if (useFrom) {
-            _from[_dragging]->setValue(from[_dragging].x, from[_dragging].y);
-        } else {
-            _to[_dragging]->setValue(to[_dragging].x, to[_dragging].y);
-        }
+        setDraggedValues();
     } else if (redraw || valuesChanged) {
         _effect->redrawOverlays();
     }
@@ -933,13 +1091,14 @@ CornerPinTransformInteract::penMotion(const PenArgs &args)
     _lastMousePos = args.penPosition;
 
 #ifdef OFX_EXTENSIONS_NATRON
-    // The host reads the cursor whatever penMotion returns, so the return value is unchanged.
+    // The host reads the cursor whatever penMotion returns.
     // setCursor() does nothing on hosts without interact cursors.
-    const bool overPoint = (_dragging != -1) || (_hovering != -1);
+    const bool overPoint = draggingPoints || (_hovering != -1);
     setCursor(overPoint ? kOfxInteractCursorMove : kOfxInteractCursorDefault);
 #endif
 
-    return valuesChanged;
+    // trap the pen motion during a drag
+    return draggingPoints;
 } // CornerPinTransformInteract::penMotion
 
 bool
@@ -947,106 +1106,205 @@ CornerPinTransformInteract::penDown(const PenArgs &args)
 {
     const OfxPointD &pscale = args.pixelScale;
     const double time = args.time;
+
+    if (_mouseState != eMouseStateIdle) {
+        // the host did not send the pen up of the previous drag
+        abandonDrag();
+    }
+
     OfxPointD to[4];
     OfxPointD from[4];
     bool enable[4];
     bool useFrom;
 
-    if (_dragging == -1) {
-        for (int i = 0; i < 4; ++i) {
-            _to[i]->getValueAtTime(time, to[i].x, to[i].y);
-            _from[i]->getValueAtTime(time, from[i].x, from[i].y);
-            _enable[i]->getValueAtTime(time, enable[i]);
-        }
-        int v;
-        _overlayPoints->getValueAtTime(time, v);
-        useFrom = (v == 1);
-        if (_interactive) {
-            _interactive->getValueAtTime(time, _interactiveDrag);
-        }
-    } else {
-        for (int i = 0; i < 4; ++i) {
-            to[i] = _toDrag[i];
-            from[i] = _fromDrag[i];
-            enable[i] = _enableDrag[i];
-        }
-        useFrom = _useFromDrag;
+    getPoints(time, to, from, enable, &useFrom);
+    if (_interactive) {
+        _interactive->getValueAtTime(time, _interactiveDrag);
     }
 
     OfxPointD p[4];
-    //OfxPointD q[4];
-    int enableBegin = 4;
-    int enableEnd = 0;
+    getOverlayPoints(to, from, enable, useFrom, p);
+
+    // a disabled point can't be selected
     for (int i = 0; i < 4; ++i) {
-        if (enable[i]) {
-            if (useFrom) {
-                p[i] = from[i];
-                //q[i] = to[i];
-            } else {
-                //q[i] = from[i];
-                p[i] = to[i];
-            }
-            if (i < enableBegin) {
-                enableBegin = i;
-            }
-            if (i + 1 > enableEnd) {
-                enableEnd = i + 1;
-            }
+        if (!enable[i]) {
+            _selected[i] = false;
         }
     }
 
-    bool didSomething = false;
+    // the point under the pen (the last one, if several points are nearby)
+    int hit = -1;
+    for (int i = 0; i < 4; ++i) {
+        if ( enable[i] && isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale) ) {
+            hit = i;
+        }
+    }
 
-    for (int i = enableBegin; i < enableEnd; ++i) {
-        if (enable[i]) {
-            if ( isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale) ) {
-                _dragging = i;
-                didSomething = true;
+    const bool shift = (_modifierStateShift > 0);
+    _lastMousePos = args.penPosition;
+    _useFromDrag = useFrom;
+
+    if (hit != -1) {
+        if (shift) {
+            // shift-click toggles the point in the selection
+            _selected[hit] = !_selected[hit];
+            if (!_selected[hit]) {
+                // the point was removed from the selection: nothing to drag
+                _hovering = hit;
+                _effect->redrawOverlays();
+
+                return true;
             }
+        } else if (!_selected[hit]) {
+            // click on a point which is not selected: select only that point
+            clearSelection();
+            _selected[hit] = true;
+        }
+        // drag the selected points
+        _mouseState = eMouseStateDraggingPoints;
+        _dragging = hit;
+        _dragMoved = false;
+        for (int i = 0; i < 4; ++i) {
             _toDrag[i] = to[i];
             _fromDrag[i] = from[i];
             _enableDrag[i] = enable[i];
         }
-    }
-    _useFromDrag = useFrom;
-
-    if (didSomething) {
         _effect->redrawOverlays();
+
+        return true;
     }
 
-    _lastMousePos = args.penPosition;
+    // Click on empty space.
+    // Leave the clicks with Ctrl, Alt or Meta to the host (e.g. Natron's Ctrl-click
+    // color picker, Ctrl+Shift-drag rectangle color picker).
+    if ( (_modifierStateCtrl > 0) || (_modifierStateAlt > 0) || (_modifierStateMeta > 0) ) {
+        return false;
+    }
+    // Start a rubber band selection: without shift, it replaces the selection,
+    // so a simple click clears the selection.
+    if (!shift) {
+        clearSelection();
+    }
+    for (int i = 0; i < 4; ++i) {
+        _selectedOnPress[i] = _selected[i];
+    }
+    _mouseState = eMouseStateRubberBand;
+    _rubberBandStart = args.penPosition;
+    _rubberBandEnd = args.penPosition;
+    _hovering = -1;
+    _effect->redrawOverlays();
 
-    return didSomething;
+    return true;
 } // CornerPinTransformInteract::penDown
 
 bool
-CornerPinTransformInteract::penUp(const PenArgs & /*args*/)
+CornerPinTransformInteract::penUp(const PenArgs &args)
 {
-    bool didSomething = _dragging != -1;
+    if (_mouseState == eMouseStateRubberBand) {
+        OfxPointD to[4];
+        OfxPointD from[4];
+        bool enable[4];
+        bool useFrom;
+        getPoints(args.time, to, from, enable, &useFrom);
+        OfxPointD p[4];
+        getOverlayPoints(to, from, enable, useFrom, p);
+        _rubberBandEnd = args.penPosition;
+        selectInRubberBand(p, enable);
+        _mouseState = eMouseStateIdle;
+        _effect->redrawOverlays();
 
-    if ( !_interactiveDrag && (_dragging != -1) ) {
+        return true;
+    }
+
+    if (_mouseState != eMouseStateDraggingPoints) {
+        return false;
+    }
+
+    if (!_interactiveDrag && _dragMoved) {
+        // set all the moved points at once
         // no need to redraw overlay since it is slave to the paramaters
-        if (_useFromDrag) {
-            _from[_dragging]->setValue(_fromDrag[_dragging].x, _fromDrag[_dragging].y);
-        } else {
-            _to[_dragging]->setValue(_toDrag[_dragging].x, _toDrag[_dragging].y);
-        }
-    } else if (didSomething) {
+        setDraggedValues();
+    } else {
         _effect->redrawOverlays();
     }
 
+    _mouseState = eMouseStateIdle;
     _dragging = -1;
+    _dragMoved = false;
 
-    return didSomething;
+    return true;
+}
+
+// keyDown updates the modifier state, and Escape clears the selection
+bool
+CornerPinTransformInteract::keyDown(const KeyArgs &args)
+{
+    // Note that on the Mac:
+    // cmd/apple/cloverleaf is kOfxKey_Control_L
+    // ctrl is kOfxKey_Meta_L
+    // alt/option is kOfxKey_Alt_L
+    // the two shift (or control...) keys may be pressed consecutively, be aware about this
+    if ( (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) {
+        ++_modifierStateShift;
+    }
+    if ( (args.keySymbol == kOfxKey_Control_L) || (args.keySymbol == kOfxKey_Control_R) ) {
+        ++_modifierStateCtrl;
+    }
+    if ( (args.keySymbol == kOfxKey_Alt_L) || (args.keySymbol == kOfxKey_Alt_R) ) {
+        ++_modifierStateAlt;
+    }
+    if ( (args.keySymbol == kOfxKey_Meta_L) || (args.keySymbol == kOfxKey_Meta_R) ) {
+        ++_modifierStateMeta;
+    }
+
+    if ( (args.keySymbol == kOfxKey_Escape) && (_mouseState != eMouseStateDraggingPoints) &&
+         ( hasSelection() || (_mouseState == eMouseStateRubberBand) ) ) {
+        clearSelection();
+        _mouseState = eMouseStateIdle;
+        _effect->redrawOverlays();
+
+        return true;
+    }
+
+    // modifiers are not "caught"
+    return false;
+}
+
+// keyUp just updates the modifier state
+bool
+CornerPinTransformInteract::keyUp(const KeyArgs &args)
+{
+    // we may have missed a keypress
+    if ( ( (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) && (_modifierStateShift > 0) ) {
+        --_modifierStateShift;
+    }
+    if ( ( (args.keySymbol == kOfxKey_Control_L) || (args.keySymbol == kOfxKey_Control_R) ) && (_modifierStateCtrl > 0) ) {
+        --_modifierStateCtrl;
+    }
+    if ( ( (args.keySymbol == kOfxKey_Alt_L) || (args.keySymbol == kOfxKey_Alt_R) ) && (_modifierStateAlt > 0) ) {
+        --_modifierStateAlt;
+    }
+    if ( ( (args.keySymbol == kOfxKey_Meta_L) || (args.keySymbol == kOfxKey_Meta_R) ) && (_modifierStateMeta > 0) ) {
+        --_modifierStateMeta;
+    }
+
+    // modifiers are not "caught"
+    return false;
 }
 
 /** @brief Called when the interact is loses input focus */
 void
 CornerPinTransformInteract::loseFocus(const FocusArgs & /*args*/)
 {
-    _dragging = -1;
-    _hovering = -1;
-    _interactiveDrag = false;
+    // a drag is abandoned if the focus is lost (the host may never send the
+    // pen up), as in RectangleInteract and TransformInteractHelper. The
+    // selection is kept.
+    abandonDrag();
+    // reset the modifiers state: the key up may be sent to another interact
+    _modifierStateShift = 0;
+    _modifierStateCtrl = 0;
+    _modifierStateAlt = 0;
+    _modifierStateMeta = 0;
 }
 
 class CornerPinOverlayDescriptor
