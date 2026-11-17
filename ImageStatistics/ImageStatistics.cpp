@@ -80,12 +80,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "position and value of the pixels with the maximum and minimum luminance values can be computed.\n" \
     "The color values of the minimum and maximum luma pixels for an image sequence " \
     "can be used as black and white point in a Grade node to remove flicker from the same sequence.\n" \
-    "The Auto Crop analysis computes the bounding box of the pixels that are not black (see Auto Crop Mode and " \
-    "Auto Crop Threshold), as a Bottom Left corner and a Size in canonical coordinates, the same parameters as " \
-    "the Crop node: link the Bottom Left and Size parameters of a Crop node to Auto Crop Bottom Left and Auto Crop " \
-    "Size (or set expressions on them) to crop the image to that box. Analyzing the sequence animates the box.\n" \
+    "The Auto Crop analysis computes the bounding box of the pixels in which the absolute value of one of the " \
+    "values tested by Auto Crop Mode is above Auto Crop Threshold: by default, the pixels that are not black " \
+    "(R, G or B not zero; alpha is ignored). The box is given as a Bottom Left corner and a Size in canonical " \
+    "coordinates, the same parameters as the Crop node: link the Bottom Left and Size parameters of a Crop node to " \
+    "Auto Crop Bottom Left and Auto Crop Size (or set expressions on them) to crop the image to that box. " \
+    "Analyzing the sequence animates the box.\n" \
     "The Analyze Sequence buttons analyze the frames given by Sequence Range: the frame range of the input " \
-    "(the default), the timeline (project) frame range, or a custom range."
+    "(the default), the timeline (project) frame range, or a custom range, within the frame range of the input."
 #define kPluginIdentifier "net.sf.openfx.ImageStatistics"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
@@ -119,7 +121,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamClearSequence "clearSequence"
 #define kParamClearSequenceLabel "Clear Sequence"
-#define kParamClearSequenceHint "Clear analysis for all frames from the sequence."
+#define kParamClearSequenceHint "Clear analysis for all frames from the sequence: delete all the keys, whatever the Sequence Range."
 
 #define kParamAutoUpdate "autoUpdate"
 #define kParamAutoUpdateLabel "Auto Update"
@@ -127,10 +129,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSequenceRange "sequenceRange"
 #define kParamSequenceRangeLabel "Sequence Range"
-#define kParamSequenceRangeHint "Frames analyzed by the Analyze Sequence buttons."
+#define kParamSequenceRangeHint "Frames analyzed by the Analyze Sequence buttons. The Timeline and Custom ranges are intersected with the frame range of the Source input: frames for which the input has no valid data are not analyzed."
 #define kParamSequenceRangeOptionInput "Input", "The frame range of the Source input (as in versions before 1.1).", "input"
-#define kParamSequenceRangeOptionTimeline "Timeline", "The frame range of the host timeline (e.g. the project frame range). If the host does not give it, the frame range of the Source input.", "timeline"
-#define kParamSequenceRangeOptionCustom "Custom", "From the first to the last frame of Frame Range.", "custom"
+#define kParamSequenceRangeOptionTimeline "Timeline", "The frame range of the host timeline (e.g. the project frame range), within the input frame range. If the host does not give it, the frame range of the Source input.", "timeline"
+#define kParamSequenceRangeOptionCustom "Custom", "From the first to the last frame of Frame Range, within the input frame range.", "custom"
 
 enum SequenceRangeEnum
 {
@@ -141,11 +143,11 @@ enum SequenceRangeEnum
 
 #define kParamFrameRange "frameRange"
 #define kParamFrameRangeLabel "Frame Range"
-#define kParamFrameRangeHint "First and last frames analyzed by the Analyze Sequence buttons, if Sequence Range is Custom (both included)."
+#define kParamFrameRangeHint "First and last frames analyzed by the Analyze Sequence buttons, if Sequence Range is Custom (both included, within the input frame range). When Custom is selected and Frame Range is still 1-1 (its default), it is set to the input frame range."
 
 #define kParamInputRange "inputRange"
 #define kParamInputRangeLabel "Input Range"
-#define kParamInputRangeHint "Set the frame range to the frame range of the Source input."
+#define kParamInputRangeHint "Set the frame range to the frame range of the Source input (or to the timeline range if Source is not connected)."
 
 #define kParamGroupRGBA "RGBA"
 
@@ -203,7 +205,7 @@ enum SequenceRangeEnum
 
 #define kParamClearSequenceHSVL "clearSequenceHSVL"
 #define kParamClearSequenceHSVLLabel "Clear Sequence"
-#define kParamClearSequenceHSVLHint "Clear HSVL analysis for all frames from the sequence."
+#define kParamClearSequenceHSVLHint "Clear HSVL analysis for all frames from the sequence: delete all the keys, whatever the Sequence Range."
 
 #define kParamStatHSVLMin "statHSVLMin"
 #define kParamStatHSVLMinLabel "HSVL Min."
@@ -258,7 +260,7 @@ enum SequenceRangeEnum
 
 #define kParamClearSequenceLuma "clearSequenceLuma"
 #define kParamClearSequenceLumaLabel "Clear Sequence"
-#define kParamClearSequenceLumaHint "Clear luma analysis for all frames from the sequence."
+#define kParamClearSequenceLumaHint "Clear luma analysis for all frames from the sequence: delete all the keys, whatever the Sequence Range."
 
 #define kParamLuminanceMath "luminanceMath"
 #define kParamLuminanceMathLabel "Luminance Math"
@@ -306,15 +308,15 @@ static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNo
 #define kParamAutoCropMode "autoCropMode"
 #define kParamAutoCropModeLabel "Auto Crop Mode"
 #define kParamAutoCropModeHint "The values that are compared with Auto Crop Threshold: a pixel is in the auto crop box if the absolute value of one of them is strictly greater than the threshold. Integer images are normalized to [0,1]."
-#define kParamAutoCropModeOptionRGBA "RGBA", "Any of the R, G, B and A components (a pixel that is not zero).", "rgba"
-#define kParamAutoCropModeOptionRGB "RGB", "Any of the R, G and B components (a pixel that is not black). Alpha images give an empty box.", "rgb"
-#define kParamAutoCropModeOptionAlpha "Alpha", "The alpha component. RGB images, which are opaque, give the whole analyzed area.", "alpha"
-#define kParamAutoCropModeOptionLuminance "Luminance", "The luminance, computed with Luminance Math (in the Min/Max Luma tab). Alpha images give an empty box.", "luminance"
+#define kParamAutoCropModeOptionRGB "RGB", "Tests R, G and B: the pixels that are not black, whatever their alpha (the default). Alpha images give an empty box.", "rgb"
+#define kParamAutoCropModeOptionRGBA "RGBA", "Tests R, G, B and A: the pixels that are not zero. Opaque pixels (alpha not zero) are always in the box, so an opaque image gives the whole analyzed area.", "rgba"
+#define kParamAutoCropModeOptionAlpha "Alpha", "Tests A only: the pixels that are not transparent. RGB images, which are opaque, give the whole analyzed area.", "alpha"
+#define kParamAutoCropModeOptionLuminance "Luminance", "Tests the luminance of R, G and B, computed with Luminance Math (in the Min/Max Luma tab). Alpha images give an empty box.", "luminance"
 
 enum AutoCropModeEnum
 {
-    eAutoCropModeRGBA = 0,
-    eAutoCropModeRGB,
+    eAutoCropModeRGB = 0,
+    eAutoCropModeRGBA,
     eAutoCropModeAlpha,
     eAutoCropModeLuminance,
 };
@@ -345,7 +347,7 @@ enum AutoCropModeEnum
 
 #define kParamClearSequenceAutoCrop "clearSequenceAutoCrop"
 #define kParamClearSequenceAutoCropLabel "Clear Sequence"
-#define kParamClearSequenceAutoCropHint "Clear auto crop analysis for all frames from the sequence."
+#define kParamClearSequenceAutoCropHint "Clear auto crop analysis for all frames from the sequence: delete all the keys, whatever the Sequence Range."
 
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
@@ -605,7 +607,7 @@ private:
         std::fill(sum, sum + nValues, 0.);
         unsigned long count = 0;
 
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.x2 <= _dstImg->getBounds().x2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -692,7 +694,7 @@ private:
         std::fill(sum_p2, sum_p2 + nValues, 0.);
         unsigned long count = 0;
 
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.x2 <= _dstImg->getBounds().x2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -802,7 +804,7 @@ private:
         std::fill(sum_p4, sum_p4 + nValues, 0.);
         unsigned long count = 0;
 
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.x2 <= _dstImg->getBounds().x2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -982,7 +984,7 @@ private:
         double minVal[nComponents] = {0.};
         double minLuma = +std::numeric_limits<double>::infinity();
 
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.x2 <= _dstImg->getBounds().x2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -1034,7 +1036,7 @@ private:
 public:
     ImageAutoCropProcessor(ImageEffect &instance)
         : ImageStatisticsProcessorBase(instance)
-        , _mode(eAutoCropModeRGBA)
+        , _mode(eAutoCropModeRGB)
         , _threshold(0.)
         , _luminanceMath(eLuminanceMathRec709)
     {
@@ -1127,7 +1129,7 @@ private:
         box.x1 = box.y1 = INT_MAX;
         box.x2 = box.y2 = INT_MIN;
 
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.x2 <= _dstImg->getBounds().x2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -1295,6 +1297,9 @@ private:
 
     // the frames analyzed by the Analyze Sequence buttons (first and last included)
     void getSequenceRange(int *first, int *last);
+
+    // set kParamFrameRange to the input range (or the timeline range if Source is not connected)
+    void setFrameRangeToInputRange();
 
     /* set up and run a processor */
     void setupAndProcess(ImageStatisticsProcessorBase &processor, const Image* srcImg, double time, const OfxRectI &analysisWindow, const OfxPointD& renderScale, const Results &prevResults, Results *results);
@@ -1556,6 +1561,11 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
     bool doAnalyzeSequenceAutoCrop = false;
     OfxRectI analysisWindow;
     const double time = args.time;
+    // ofxImageClip.rst: "Images may be fetched from an attached clip [...] in the
+    // kOfxActionInstanceChanged and kOfxActionEndInstanceChanged actions with a
+    // kOfxPropChangeReason of kOfxChangeUserEdited": analyze only on user edits, except for the
+    // Auto Update of the rectangle (see below).
+    const bool userEdit = (args.reason == eChangeUserEdit);
 
     if (paramName == kParamRestrictToRectangle) {
         // update visibility
@@ -1566,48 +1576,67 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         if (_hiDPI) {
             _hiDPI->setIsSecretAndDisabled(!restrictToRectangle);
         }
-        doUpdate = true;
+        doUpdate = userEdit;
     }
     if (paramName == kParamAutoUpdate) {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(time);
         doUpdate = _autoUpdate->getValueAtTime(time);
         _interactive->setIsSecretAndDisabled(!restrictToRectangle || !doUpdate);
+        doUpdate = doUpdate && userEdit;
     }
     if (//paramName == kParamRectangleInteractBtmLeft ||
         // only trigger on kParamRectangleInteractSize (the last one changed)
         paramName == kParamRectangleInteractSize) {
+        // Not restricted to user edits: the rectangle interact (plugin code) changes the
+        // rectangle with kOfxChangePluginEdited, and btmLeft/size do not trigger a render
+        // (setEvaluateOnChange(false)), so restricting this would stop Auto Update while
+        // dragging the rectangle, as in version 1.0.
         doUpdate = _autoUpdate->getValueAtTime(time);
     }
-    if (paramName == kParamAnalyzeFrame) {
-        doAnalyzeRGBA = true;
+    if ( userEdit && ( (paramName == kParamAutoCropMode) || (paramName == kParamAutoCropThreshold) ) &&
+         _autoUpdate->getValueAtTime(time) ) {
+        // re-analyze the auto crop box if it has a key at this frame
+        doAnalyzeAutoCrop = ( _autoCropSize->getKeyIndex(time, eKeySearchNear) != -1 );
     }
-    if (paramName == kParamAnalyzeSequence) {
-        doAnalyzeSequenceRGBA = true;
-    }
-    if (paramName == kParamAnalyzeFrameHSVL) {
-        doAnalyzeHSVL = true;
-    }
-    if (paramName == kParamAnalyzeSequenceHSVL) {
-        doAnalyzeSequenceHSVL = true;
-    }
-    if (paramName == kParamAnalyzeFrameLuma) {
-        doAnalyzeLuma = true;
-    }
-    if (paramName == kParamAnalyzeSequenceLuma) {
-        doAnalyzeSequenceLuma = true;
-    }
-    if (paramName == kParamAnalyzeFrameAutoCrop) {
-        doAnalyzeAutoCrop = true;
-    }
-    if (paramName == kParamAnalyzeSequenceAutoCrop) {
-        doAnalyzeSequenceAutoCrop = true;
+    if (userEdit) {
+        if (paramName == kParamAnalyzeFrame) {
+            doAnalyzeRGBA = true;
+        }
+        if (paramName == kParamAnalyzeSequence) {
+            doAnalyzeSequenceRGBA = true;
+        }
+        if (paramName == kParamAnalyzeFrameHSVL) {
+            doAnalyzeHSVL = true;
+        }
+        if (paramName == kParamAnalyzeSequenceHSVL) {
+            doAnalyzeSequenceHSVL = true;
+        }
+        if (paramName == kParamAnalyzeFrameLuma) {
+            doAnalyzeLuma = true;
+        }
+        if (paramName == kParamAnalyzeSequenceLuma) {
+            doAnalyzeSequenceLuma = true;
+        }
+        if (paramName == kParamAnalyzeFrameAutoCrop) {
+            doAnalyzeAutoCrop = true;
+        }
+        if (paramName == kParamAnalyzeSequenceAutoCrop) {
+            doAnalyzeSequenceAutoCrop = true;
+        }
     }
     if (paramName == kParamSequenceRange) {
         updateSequenceRangeVisibility();
+        if ( userEdit && ( (SequenceRangeEnum)_sequenceRange->getValue() == eSequenceRangeCustom ) ) {
+            // the first time Custom is selected, start from the input range
+            int f1, f2;
+            _frameRange->getValue(f1, f2);
+            if ( (f1 == 1) && (f2 == 1) ) {
+                setFrameRangeToInputRange();
+            }
+        }
     }
-    if ( (paramName == kParamInputRange) && _srcClip ) {
-        OfxRangeD range = _srcClip->getFrameRange();
-        _frameRange->setValue( (int)std::ceil(range.min), (int)std::floor(range.max) );
+    if ( (paramName == kParamInputRange) && userEdit ) {
+        setFrameRangeToInputRange();
     }
     if (paramName == kParamClearFrame) {
         _statMin->deleteKeyAtTime(args.time);
@@ -1712,7 +1741,8 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         EditBlock eb(*this, "analyzeSequence");
         int tmin, tmax;
         getSequenceRange(&tmin, &tmax);
-        for (int t = tmin; t <= tmax; ++t) {
+        // t is wider than int, so that ++t cannot overflow if tmax is INT_MAX
+        for (long long t = tmin; t <= tmax; ++t) {
             // only fetch the analyzed region
             OfxRectD fetchRect;
             bool fetch = computeFetchRect(t, &fetchRect);
@@ -1736,7 +1766,7 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
                 }
             }
             if (tmax != tmin) {
-                if ( !progressUpdate( (t - tmin) / (double)(tmax - tmin) ) ) {
+                if ( !progressUpdate( ( (double)t - tmin ) / ( (double)tmax - tmin ) ) ) {
                     break;
                 }
             }
@@ -1783,8 +1813,31 @@ ImageStatisticsPlugin::getSequenceRange(int *first,
         break;
     }
     }
-    *first = (int)std::ceil(range.min);
-    *last = (int)std::floor(range.max);
+    if (sequenceRange != eSequenceRangeInput) {
+        // only analyze frames for which the input "can produce valid data"
+        // (kOfxImageEffectPropFrameRange)
+        OfxRangeD input = _srcClip->getFrameRange();
+        range.min = (std::max)(range.min, input.min);
+        range.max = (std::min)(range.max, input.max);
+    }
+    // clamp before converting to int (an empty range gives first > last)
+    *first = (int)(std::max)( (double)INT_MIN, (std::min)( (double)INT_MAX, std::ceil(range.min) ) );
+    *last = (int)(std::max)( (double)INT_MIN, (std::min)( (double)INT_MAX, std::floor(range.max) ) );
+}
+
+void
+ImageStatisticsPlugin::setFrameRangeToInputRange()
+{
+    // as the Input Range button of FrameBlend
+    OfxRangeD range;
+    if ( _srcClip && _srcClip->isConnected() ) {
+        range = _srcClip->getFrameRange();
+    } else {
+        timeLineGetBounds(range.min, range.max);
+    }
+    range.min = (std::max)( (double)INT_MIN, (std::min)( (double)INT_MAX, std::ceil(range.min) ) );
+    range.max = (std::max)( (double)INT_MIN, (std::min)( (double)INT_MAX, std::floor(range.max) ) );
+    _frameRange->setValue( (int)range.min, (int)range.max );
 }
 
 /* set up and run a processor */
@@ -2083,7 +2136,12 @@ ImageStatisticsPluginFactory::describe(ImageEffectDescriptor &desc)
 
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setTemporalClipAccess(false);
+    // The Analyze Sequence buttons fetch Source images at other times than the current one
+    // (ofxImageClip.rst: "it is an error for a plugin to attempt random temporal image access if
+    // it has not flagged that it wishes to do so"). Only flag it if the host supports it ("it is an
+    // error for a plugin to attempt random temporal image access if the host does not support it"),
+    // so that the plugin still loads on the other hosts.
+    desc.setTemporalClipAccess(getImageEffectHostDescription()->temporalClipAccess);
     desc.setRenderTwiceAlways(true);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
@@ -2121,7 +2179,7 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
-    srcClip->setTemporalClipAccess(false);
+    srcClip->setTemporalClipAccess(getImageEffectHostDescription()->temporalClipAccess); // see describe()
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
     srcClip->setOptional(false);
@@ -2750,15 +2808,16 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamAutoCropMode);
             param->setLabel(kParamAutoCropModeLabel);
             param->setHint(kParamAutoCropModeHint);
-            assert(param->getNOptions() == eAutoCropModeRGBA);
-            param->appendOption(kParamAutoCropModeOptionRGBA);
             assert(param->getNOptions() == eAutoCropModeRGB);
             param->appendOption(kParamAutoCropModeOptionRGB);
+            assert(param->getNOptions() == eAutoCropModeRGBA);
+            param->appendOption(kParamAutoCropModeOptionRGBA);
             assert(param->getNOptions() == eAutoCropModeAlpha);
             param->appendOption(kParamAutoCropModeOptionAlpha);
             assert(param->getNOptions() == eAutoCropModeLuminance);
             param->appendOption(kParamAutoCropModeOptionLuminance);
-            param->setDefault( (int)eAutoCropModeRGBA );
+            param->setDefault( (int)eAutoCropModeRGB );
+            param->setEvaluateOnChange(false); // re-analyzed in changedParam()
             if (group) {
                 param->setParent(*group);
             }
@@ -2777,6 +2836,7 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setDisplayRange(0., 1.);
             param->setIncrement(0.01);
             param->setDigits(4);
+            param->setEvaluateOnChange(false); // re-analyzed in changedParam()
             if (group) {
                 param->setParent(*group);
             }
@@ -2795,7 +2855,7 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
-            param->setDigits(0);
+            param->setDigits(2); // fractional if the pixel aspect ratio is not 1
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             if (group) {
@@ -2817,7 +2877,7 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
-            param->setDigits(0);
+            param->setDigits(2); // fractional if the pixel aspect ratio is not 1
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             if (group) {
