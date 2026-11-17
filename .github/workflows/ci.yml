@@ -183,10 +183,11 @@ jobs:
         # with "set -eo pipefail".
         shell: msys2 {0}
     env:
-      # The MinGW runtime (libstdc++, libgcc, winpthread, and libgomp for OpenMP)
-      # is linked statically, so that the bundles also load in hosts that do not
-      # ship these DLLs (loadtest.sh checks it).
-      WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static
+      # The MinGW runtime (libstdc++, libgcc, winpthread) is linked statically, so
+      # that the bundles also load in hosts that do not ship these DLLs (loadtest.sh
+      # checks it). No OpenMP (as the make CI): with MSYS2's libgomp, -static still
+      # leaves a libgomp-1.dll dependency (rejected by loadtest.sh, CI run 44066372220).
+      WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -203,7 +204,7 @@ jobs:
           cache: true
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p libgomp:p
+          pacboy: cc:p cmake:p ninja:p
       - name: Build (release)
         run: |
           set -eo pipefail

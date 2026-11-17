@@ -3,7 +3,7 @@ name: Nightly extra builds
 # Build variants that are not worth running on every push or pull request
 # (ci.yml only builds the CMake release configuration on each OS), with CMake:
 # debug, C++20 (Natron RB-2.6 with Qt6, and RB-2.7; ci.yml builds C++17),
-# without OpenMP (ci.yml uses it on Linux and Windows), and Windows MSVC, plus the macOS
+# without OpenMP (ci.yml uses it on Linux), and Windows MSVC, plus the macOS
 # release build of ci.yml, which there only runs after Linux and Windows pass
 # (this covers master when the push run's macOS job was skipped or cancelled).
 # The Makefiles are still built, with one bundle per plugin (make nomulti), on
@@ -185,12 +185,13 @@ jobs:
       matrix:
         include:
           # -static everywhere: loadtest.sh fails on a MinGW runtime DLL dependency.
+          # No OpenMP: -static still leaves a libgomp-1.dll dependency (see ci.yml).
           - name: debug
             config: debug
-            options: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_LINKER_FLAGS=-static
+            options: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
           - name: C++20
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DCMAKE_MODULE_LINKER_FLAGS=-static
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
           # the Makefiles, while Natron's build-plugins.sh uses them (GCC's default, gnu++17)
           - name: make nomulti
             make: nomulti CONFIG=release LDFLAGS_ADD=-static
@@ -212,7 +213,7 @@ jobs:
           cache: true
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p libgomp:p
+          pacboy: cc:p cmake:p ninja:p
       - name: Build (make)
         if: matrix.make
         run: |
@@ -260,7 +261,7 @@ jobs:
           update: false
           cache: true
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p libgomp:p
+          pacboy: cc:p cmake:p ninja:p
       - name: Load test
         # ofxload is built with the MSYS2 UCRT64 GCC (loadtest.sh uses GCC options),
         # and objdump is MSYS2's; ofxload only loads the MSVC-built plugins through

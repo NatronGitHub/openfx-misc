@@ -388,7 +388,9 @@ to the prefix (or absolute). The main options are:
   found (`make OPENMP=1`). With Apple clang, install libomp with MacPorts
   (`sudo port install libomp`), or give the prefix of another libomp with
   `-DOFX_LIBOMP_ROOT=<prefix>`. With MSYS2, install libgomp
-  (`pacman -S ${MINGW_PACKAGE_PREFIX}-libgomp`). MSVC builds do not use OpenMP.
+  (`pacman -S ${MINGW_PACKAGE_PREFIX}-libgomp`); the bundles then need `libgomp-1.dll`
+  even with `-static`, so the CI builds Windows without OpenMP. MSVC
+  builds do not use OpenMP.
 - `-DOFX_DEPLOY_BUNDLES=ON`: at install, copy the non-system libraries into the bundles
   (on macOS, `osxDeploy.sh`, which needs GNU sed (`sudo port install gsed`), as
   `make CONFIG=release` does). The bundles then also need these libraries' minimum
@@ -398,7 +400,7 @@ to the prefix (or absolute). The main options are:
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
   build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.
 - MinGW: `-DCMAKE_MODULE_LINKER_FLAGS=-static` links the MinGW runtime (libstdc++,
-  libgcc, winpthread, libgomp) statically, as the CI does, for hosts that do not ship it.
+  libgcc, winpthread) statically, as the CI does, for hosts that do not ship it.
 - `-DUSE_OSMESA=ON` (`make -C Shadertoy OSMESA=1`): Shadertoy CPU rendering with a
   mangled OSMesa in `OSMESA_PATH` (default `/opt/osmesa`) and LLVM in `LLVM_PATH`
   (default `/opt/llvm`).
