@@ -2,20 +2,20 @@
 # Headless render smoke test used by the CI: build hostDemo (the OFX test host
 # of the openfx submodule) and render a representative set of plugins (all the
 # generators and some common filters) at the byte, short and float depths.
-# Linux and macOS only: hostDemo is built with the openfx Makefiles, and the
-# checks need python3.
+# Linux and macOS only (the checks need python3).
 #
 # Usage (from the top of the source tree): .github/tools/rendertest.sh [DIR...]
 # The plugins are the *.ofx.bundle found under the DIRs, which should be the
 # build directories of one configuration, e.g. Misc/Linux-64-release
 # CImg/Linux-64-release. Without DIRs, the *-$CONFIG directories of the source
 # tree are used (CONFIG=release by default). A bundle found twice is an error.
-# Set HOSTDEMO to an existing hostDemo binary to skip its build. Otherwise,
-# hostDemo and its expat are built out of the openfx tree, in a temporary
-# directory (or in $HOSTDEMO_BUILD_DIR, kept between runs if set), so that the
-# openfx submodule stays clean.
+# hostDemo is $HOSTDEMO if set, else DIR/bin/hostDemo (installed by openfx-misc's
+# CMake with -DOFX_BUILD_HOSTDEMO=ON), else it is built with openfx's CMake out of
+# the openfx tree, in a temporary directory (or in $HOSTDEMO_BUILD_DIR, kept
+# between runs if set), so that the openfx submodule stays clean.
 #
-# hostDemo renders the frames t=0 and t=1 (or --frames) of a PAL SD project
+# hostDemo renders the frames t=0 and t=1 (or --frames), both views of a stereo
+# frame (hostDemo is built with the OFX_EXTENSIONS_* of the plugins), of a PAL SD project
 # (720x576), at render scale 1 (or --scale), in the whole RoD (or --window), on
 # synthetic inputs (-i Clip=solid:r,g,b,a|ramp|checker:N|none), with the
 # depth and components that the clip preferences of the plugin map each
@@ -89,45 +89,34 @@ echo "OFX_PLUGIN_PATH=$OFX_PLUGIN_PATH"
 case ":$OFX_PLUGIN_PATH:" in *-debug:*) debug=1 ;; *) debug=0 ;; esac
 [ -z "$RENDERTEST_DEBUG" ] || debug=$RENDERTEST_DEBUG
 
+# hostDemo: $HOSTDEMO, else DIR/bin/hostDemo (a CMake install tree of openfx-misc configured
+# with -DOFX_BUILD_HOSTDEMO=ON), else built here with openfx's CMake (BUILD_EXAMPLE_HOSTS).
+if [ -z "$HOSTDEMO" ]; then
+    for d in "$@"; do
+        if [ -x "$d/bin/hostDemo" ]; then
+            HOSTDEMO=$d/bin/hostDemo
+            break
+        fi
+    done
+fi
 if [ -n "$HOSTDEMO" ]; then
     # absolute, since the renders run in $work
     HOSTDEMO=$(cd "$(dirname "$HOSTDEMO")" && pwd)/$(basename "$HOSTDEMO")
 else
-    # Build hostDemo with the openfx Makefiles (as openfx's CI does, in
-    # openfx/.github/scripts/make-build-test.sh), with all the outputs in $b:
-    # expat is configured out of its tree, and the Makefile variables that
-    # name the output directories are set on the command line. hostDemo is
-    # built without the OFX_EXTENSIONS_* flags, so it renders a single view.
-    hs=$top/openfx/HostSupport
+    # Build hostDemo with openfx's CMake, out of the openfx tree (so that the submodule stays
+    # clean), with the OFX_EXTENSIONS_* that openfx-misc uses (openfx's defaults), as
+    # -DOFX_BUILD_HOSTDEMO=ON does: it renders the two views of a stereo frame.
     b=${HOSTDEMO_BUILD_DIR:-$work/hostdemo}
     mkdir -p "$b"
     b=$(cd "$b" && pwd)
-    expat=$(cd "$hs" && echo expat-*)
     jobs=$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 2)
     log=$b/build.log
     echo "Building hostDemo in $b..."
     {
-        if [ ! -f "$b/hs/libexpat.a" ]; then
-            # git checkout gives the files arbitrary mtimes, which may make
-            # expat's Makefile try to re-run aclocal/automake
-            ( cd "$hs/$expat" && touch aclocal.m4 && sleep 1 &&
-                  touch configure Makefile.in ./*/Makefile.in expat_config.h.in )
-            mkdir -p "$b/expat" "$b/hs"
-            ( cd "$b/expat" &&
-                  "$hs/$expat/configure" --disable-shared --without-docbook \
-                      --without-examples --without-tests CFLAGS=-O2 &&
-                  make -j"$jobs" -C lib )
-            cp "$b/expat/lib/.libs/libexpat.a" "$b/hs/"
-        fi
-        make -C "$hs" -j"$jobs" DST_DIR="$b/hs" "$b/hs/libofxHost.a"
-        # CXXFLAGS: the INCFLAGS and OPTIMISE of examples/Makefile, plus the
-        # library path (its link command uses -L../$(DST_DIR))
-        make -C "$hs/examples" -j"$jobs" DST_DIR="$b/examples" \
-            OFXSLIB="$b/hs/libofxHost.a" EXPAT_LIB_PATH="$b/hs" \
-            CXXFLAGS="-I../include -I../../include -I../$expat/lib -O2 -Wall -L$b/hs" \
-            "$b/examples/hostDemo"
+        cmake -S "$top/openfx" -B "$b" -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLE_HOSTS=ON &&
+            cmake --build "$b" --target hostDemo --parallel "$jobs"
     } > "$log" 2>&1 || { tail -n 50 "$log"; echo "hostDemo build failed"; exit 1; }
-    HOSTDEMO=$b/examples/hostDemo
+    HOSTDEMO=$b/HostSupport/examples/hostDemo
     echo "hostDemo built in $(( $(date +%s) - start ))s"
 fi
 [ -x "$HOSTDEMO" ] || { echo "hostDemo not found: $HOSTDEMO"; exit 1; }
@@ -154,8 +143,11 @@ for m in r.get("messages") or []:
         errors.append("%s %s: %s" % (m.get("kind"), m.get("type"), m.get("text")))
 renders = r.get("renders") or []
 nframes = int(refs.get("frames", 2))
-if len(renders) != nframes:
-    errors.append("%d renders, expected %d" % (len(renders), nframes))
+# a stereo hostDemo renders views 0 and 1 of each frame: the expectations are
+# checked on view 0
+nviews = max([k.get("view") or 0 for k in renders] + [0]) + 1
+if len(renders) != nframes * nviews:
+    errors.append("%d renders, expected %d frames of %d views" % (len(renders), nframes, nviews))
 out0 = None
 for k in renders:
     o = k.get("output")
@@ -168,6 +160,7 @@ for k in renders:
         errors.append("t=%s: %d unwritten (NaN) pixels" % (k.get("time"), o["nan"]))
     if k is renders[0]:
         out0 = o
+renders = [k for k in renders if not k.get("view")]
 desc = ""
 if out0:
     scale = {"byte": 255., "short": 65535., "float": 1.}[out0["depth"]]
@@ -237,7 +230,7 @@ EOF
 crc32() {
     python3 -I -c 'import json, sys
 r = json.load(open(sys.argv[1]))
-print([k for k in r["renders"] if k["time"] == 0][0]["output"]["crc32"])' "$1"
+print([k for k in r["renders"] if k["time"] == 0 and not k.get("view")][0]["output"]["crc32"])' "$1"
 }
 
 # hostdemo LOG ARGS...: run hostDemo with its output in LOG. The subshell

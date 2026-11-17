@@ -404,6 +404,13 @@ to the prefix (or absolute). The main options are:
 - `-DUSE_OSMESA=ON` (`make -C Shadertoy OSMESA=1`): Shadertoy CPU rendering with a
   mangled OSMesa in `OSMESA_PATH` (default `/opt/osmesa`) and LLVM in `LLVM_PATH`
   (default `/opt/llvm`).
+- `-DOFX_BUILD_HOSTDEMO=ON`: also build openfx's test host `hostDemo` and install it into
+  `<prefix>/bin`, for the render tests: `.github/tools/rendertest.sh <prefix>` (checks
+  the outputs of a few plugins) and `.github/tools/smoketest.sh <prefix>` (renders every
+  plugin with its default parameters).
+- `-DOFXMISC_SUPPORTEXT_DIR=<dir>`: build with the openfx-supportext sources in `<dir>`
+  instead of the `SupportExt` submodule (`smoketest.sh --supportext <dir> <prefix>`
+  builds and tests that).
 
 ### OS X, using Xcode
 

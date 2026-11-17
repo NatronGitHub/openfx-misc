@@ -9,10 +9,10 @@ name: Nightly extra builds
 # The Makefiles are still built, with one bundle per plugin (make nomulti), on
 # Linux and Windows, as long as Natron's build-plugins.sh uses them.
 # Each build is followed by the same plugin load test as in ci.yml.
-# The render test of ci.yml (Linux release) also runs after the macOS release
-# and the Linux debug builds (debug: with the plugins' assertions). It is not
-# run on Windows: hostDemo is built with the openfx Makefiles, which do not
-# support MSYS2.
+# The render and smoke tests of ci.yml (Linux release) also run after the macOS
+# release and the Linux debug builds (debug: with the plugins' assertions), with
+# hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. They are not run on Windows (the
+# scripts need python3 and symbolic links).
 # Frugal CI: the nightly run is skipped if master did not change since the last
 # nightly run that succeeded or failed (a cancelled run does not count), and jobs
 # time out.
@@ -77,7 +77,7 @@ jobs:
           # minos 15, so deployed bundles with it would not load on macOS 11 to 14).
           - name: release # the macOS build of ci.yml
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF
+            options: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
           - name: debug
             config: debug
@@ -117,6 +117,12 @@ jobs:
         run: |
           [ "${{ matrix.config }}" != debug ] || export RENDERTEST_DEBUG=1
           .github/tools/rendertest.sh install-${{ matrix.config }}
+      - name: Smoke test (hostDemo, all plug-ins)
+        if: matrix.rendertest
+        timeout-minutes: 15
+        run: |
+          [ "${{ matrix.config }}" != debug ] || export SMOKETEST_DEBUG=1
+          .github/tools/smoketest.sh install-${{ matrix.config }}
 
   linux:
     name: Ubuntu 24.04 ${{ matrix.name }}
@@ -130,7 +136,7 @@ jobs:
         include:
           - name: debug
             config: debug
-            options: -DCMAKE_BUILD_TYPE=Debug
+            options: -DCMAKE_BUILD_TYPE=Debug -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
           - name: C++20
             config: release
@@ -171,6 +177,12 @@ jobs:
         run: |
           [ "${{ matrix.config }}" != debug ] || export RENDERTEST_DEBUG=1
           .github/tools/rendertest.sh install-${{ matrix.config }}
+      - name: Smoke test (hostDemo, all plug-ins)
+        if: matrix.rendertest
+        timeout-minutes: 15
+        run: |
+          [ "${{ matrix.config }}" != debug ] || export SMOKETEST_DEBUG=1
+          .github/tools/smoketest.sh install-${{ matrix.config }}
 
   windows:
     name: Windows (MSYS2 UCRT64) ${{ matrix.name }}

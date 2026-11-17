@@ -40,6 +40,11 @@
 #      OSMesa in OSMESA_PATH (default /opt/osmesa) and LLVM in LLVM_PATH (default /opt/llvm)
 #   --prefix /usr (Linux) or /Library (macOS) at install: the bundles go to <prefix>/OFX/Plugins
 #   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX (OFX/Plugins)
+#   -DOFX_BUILD_HOSTDEMO=ON (default OFF): also build openfx's test host hostDemo (openfx's
+#      BUILD_EXAMPLE_HOSTS) and install it into <prefix>/bin, for the CI's render tests
+#      (.github/tools/rendertest.sh and smoketest.sh)
+#   -DOFXMISC_SUPPORTEXT_DIR=<dir>: the openfx-supportext sources to build with (default: the
+#      SupportExt submodule), e.g. a SupportExt pull request in SupportExt's CI
 ########################################################################
 IF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 MESSAGE(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
@@ -80,9 +85,17 @@ endif()
 # is openfx's OFX/Plugins (cmake/OpenFX.cmake): "cmake --install build --prefix /usr" installs
 # into /usr/OFX/Plugins and "--prefix /Library" into /Library/OFX/Plugins, as "make install".
 
+# The SupportExt sources: the submodule, or another checkout (SupportExt's CI tests its pull
+# requests with openfx-misc)
+set(OFXMISC_SUPPORTEXT_DIR "${PROJECT_SOURCE_DIR}/SupportExt" CACHE PATH "The openfx-supportext sources (default: the SupportExt submodule)")
+get_filename_component(OFXMISC_SUPPORTEXT_DIR "${OFXMISC_SUPPORTEXT_DIR}" ABSOLUTE BASE_DIR "${CMAKE_BINARY_DIR}")
+if(NOT OFXMISC_SUPPORTEXT_DIR STREQUAL "${PROJECT_SOURCE_DIR}/SupportExt")
+  message(STATUS "    SupportExt:        ${OFXMISC_SUPPORTEXT_DIR}")
+endif()
+
 # Check that submodule have been initialized and updated
 if(NOT EXISTS ${PROJECT_SOURCE_DIR}/openfx/include OR NOT EXISTS ${PROJECT_SOURCE_DIR}/openfx/cmake/OpenFX.cmake
-   OR NOT EXISTS ${PROJECT_SOURCE_DIR}/SupportExt/ofxsMacros.h)
+   OR NOT EXISTS ${OFXMISC_SUPPORTEXT_DIR}/ofxsMacros.h)
   message(FATAL_ERROR
     "\n submodule(s) are missing, please update your repository:\n"
     "  > git submodule update --init --recursive\n")
@@ -106,6 +119,7 @@ option(BUILD_DEBUGPROXY "Build the DebugProxy bundle (wraps the plugin given by 
 option(USE_OSMESA "Shadertoy: CPU rendering with OSMesa (OSMESA_PATH) and LLVM (LLVM_PATH)" OFF)
 set(OSMESA_PATH "/opt/osmesa" CACHE PATH "USE_OSMESA: OSMesa prefix (mangled OSMesa, libMangledOSMesa32)")
 set(LLVM_PATH "/opt/llvm" CACHE PATH "USE_OSMESA: LLVM prefix (bin/llvm-config)")
+option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into <prefix>/bin (CI render tests)" OFF)
 
 # C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
 # Qt5), or 20 (Qt6, RB-2.7): -DOFX_CXX_STANDARD=20. It is used by add_ofx_plugin and
@@ -139,10 +153,23 @@ endif()
 # VEGAS, TUTTLE) and OFX_SUPPORTS_OPENGLRENDER options of openfx default to what the
 # Makefiles use, and are usage requirements of these targets.
 # EXCLUDE_FROM_ALL: only what the bundles link is built, and openfx is not installed.
-# HostSupport is only needed by DebugProxy (openfx's OFX_BUILD_HOSTSUPPORT option;
-# CMP0077: option() uses this variable)
-set(OFX_BUILD_HOSTSUPPORT ${BUILD_DEBUGPROXY})
+# HostSupport is only needed by DebugProxy and hostDemo (OFX_BUILD_HOSTDEMO, openfx's
+# BUILD_EXAMPLE_HOSTS). These are openfx options (CMP0077: option() uses these variables).
+if(BUILD_DEBUGPROXY OR OFX_BUILD_HOSTDEMO)
+  set(OFX_BUILD_HOSTSUPPORT ON)
+else()
+  set(OFX_BUILD_HOSTSUPPORT OFF)
+endif()
+set(BUILD_EXAMPLE_HOSTS ${OFX_BUILD_HOSTDEMO})
 add_subdirectory(openfx EXCLUDE_FROM_ALL)
+if(OFX_BUILD_HOSTDEMO)
+  # hostDemo is built with the same OFX_EXTENSIONS_* as the plug-ins (so it renders the two
+  # views of a stereo frame), and is installed next to the bundles' OFX directory
+  add_custom_target(hostdemo ALL)
+  add_dependencies(hostdemo hostDemo)
+  # openfx's install rules are not used (EXCLUDE_FROM_ALL, and openfx's OFX_INSTALL is OFF)
+  install(PROGRAMS $<TARGET_FILE:hostDemo> DESTINATION bin)
+endif()
 # add_ofx_plugin, ofx_plugin_resources, ofx_target_openmp, ofx_deploy_bundle and ARCHDIR
 # come from openfx/cmake/OpenFX.cmake (included by openfx's CMakeLists.txt).
 message(STATUS "    OFX architecture:  ${ARCHDIR}")
@@ -159,7 +186,7 @@ find_package(OpenGL REQUIRED)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/openfx/Support/Plugins/include)
 
 # supportext_add_sources(): the SupportExt sources of each bundle, compiled with its flags
-include(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt/cmake/SupportExt.cmake)
+include(${OFXMISC_SUPPORTEXT_DIR}/cmake/SupportExt.cmake)
 
 ########################################################################
 # Misc.ofx.bundle (Misc/Makefile)
@@ -603,6 +630,6 @@ if(BUILD_DEBUGPROXY)
   # not linked with openfx::Support: it uses HostSupport's ofxhBinary and ofxhUtilities
   add_ofx_plugin(DebugProxy INFO_PLIST DebugProxy/Info.plist SOURCES DebugProxy/DebugProxy.cpp)
   target_link_libraries(DebugProxy PRIVATE openfx::HostSupport)
-  target_include_directories(DebugProxy PRIVATE SupportExt) # ofxsMacros.h
+  target_include_directories(DebugProxy PRIVATE ${OFXMISC_SUPPORTEXT_DIR}) # ofxsMacros.h
   ofx_deploy_bundle(DebugProxy)
 endif()
