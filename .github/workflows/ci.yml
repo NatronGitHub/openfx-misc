@@ -1,12 +1,13 @@
 name: Continous Integration tests
 
-# Every change gets up to three builds (Linux, Windows, then macOS) of the
-# release configuration, each followed by a plugin load test. The Linux build
-# is also followed by a headless render test (.github/tools/rendertest.sh,
-# with openfx's hostDemo); nightly.yml runs it on macOS too. macOS runs only
-# after Linux and Windows pass, and is informative: a red or missing macOS check
-# does not block merging (macOS arm64 runners are scarce).
-# Other variants (debug, nomulti, C++20, OpenMP, CMake) are in nightly.yml.
+# Every change gets up to three CMake builds (Linux, Windows, then macOS) of the
+# release configuration (with the Test bundle), each installed and followed by a
+# plugin load test of the install tree. The Linux build is also followed by a
+# headless render test (.github/tools/rendertest.sh, with openfx's hostDemo);
+# nightly.yml runs it on macOS too. macOS runs only after Linux and Windows pass,
+# and is informative: a red or missing macOS check does not block merging (macOS
+# arm64 runners are scarce).
+# Other variants (debug, C++20, no OpenMP, MSVC, and make nomulti) are in nightly.yml.
 #
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
 # Pushes are built only on master, RB-* and tags; feature branches are built
@@ -44,9 +45,10 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 env:
-  # Build as C++17, the standard of Natron RB-2.6 (Qt5). Without it, Apple clang
-  # would use its C++14 default. C++20 is built by nightly.yml.
-  STD_OPTIONS: CXXFLAGS_ADD=-std=c++17
+  # CMake options shared by the release builds: C++17 (OFX_CXX_STANDARD, the
+  # default: the standard of Natron RB-2.6, Qt5; C++20 is built by nightly.yml),
+  # OpenMP (OFX_USE_OPENMP, the default; not on macOS, see MACOS_OPTIONS), and the Test bundle.
+  CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
   # The release bundles are uploaded as artifacts only for manual runs
   # ("Run workflow" on the Actions page) and for pre-release tags. This repo is
   # tagged with the Natron version (Natron-2.5.0, Natron-2.0.0-RC1,
@@ -77,16 +79,18 @@ jobs:
     # framework. MacPorts (never Homebrew) provides the other tools.
     runs-on: macos-15
     env:
-      # By default, the Makefiles use the SDK version as the minimum macOS
-      # version, so that the bundles would only load on macOS 15 and later.
-      MACOS_OPTIONS: MACOSX=11.0
+      # The bundles load on macOS 11 and later (by default, the SDK version).
+      # No OpenMP (as the make CI): the bundles are deployed (OFX_DEPLOY_BUNDLES, osxDeploy.sh),
+      # and MacPorts' libomp is built for the runner's macOS (minos 15), so bundles with it
+      # would not load on macOS 11 to 14.
+      MACOS_OPTIONS: -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
         with:
           submodules: recursive
           persist-credentials: false
-      - name: Install MacPorts (cached) and GNU sed
+      - name: Install MacPorts (cached), CMake, GNU sed and libomp
         # gsed is needed by openfx/Support/include/osxDeploy.sh, which
         # packages the release bundles. See .github/parameters/setup-macports.yaml.
         uses: melusina-org/setup-macports@103eded5f10979e927bffcd6d0b86cbbdb2c3bb3 # v1.1.6
@@ -99,18 +103,23 @@ jobs:
       - name: Show tools
         run: |
           echo "PATH=$PATH"
-          command -v c++ gsed
+          command -v c++ gsed cmake
           c++ --version
+          cmake --version
       - name: Build (release)
-        run: make -j"$(getconf _NPROCESSORS_ONLN)" CONFIG=release TESTS=1 $MACOS_OPTIONS $STD_OPTIONS
+        run: |
+          cmake -S . -B build $CMAKE_OPTIONS $MACOS_OPTIONS
+          cmake --build build --parallel "$(getconf _NPROCESSORS_ONLN)"
+          cmake --install build --prefix "$PWD/install"
       - name: Load test
-        run: .github/tools/loadtest.sh
+        run: .github/tools/loadtest.sh install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
-        # Not Test: it is for developers, and is never installed.
+        # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for
+        # developers, and is not uploaded.
         run: |
           mkdir -p Bundle
-          mv {CImg,Misc,Shadertoy}/Darwin-64-release/*.ofx.bundle Bundle
+          mv install/OFX/Plugins/{CImg,Misc,Shadertoy}.ofx.bundle Bundle
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
@@ -133,22 +142,26 @@ jobs:
       - name: Install Ubuntu system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglu1-mesa-dev libgl-dev
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev cmake ninja-build
       - name: Build (release)
-        run: make -j"$(nproc)" CONFIG=release TESTS=1 $STD_OPTIONS
+        run: |
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS
+          cmake --build build
+          cmake --install build --prefix "$PWD/install"
       - name: Load test
-        run: .github/tools/loadtest.sh
+        run: .github/tools/loadtest.sh install
       - name: Render test (hostDemo)
         # Builds hostDemo from the openfx submodule, then renders the
         # generators and some filters at the three depths (about 2 minutes).
         timeout-minutes: 10
-        run: .github/tools/rendertest.sh {Misc,CImg}/Linux-64-release
+        run: .github/tools/rendertest.sh install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
-        # Not Test: it is for developers, and is never installed.
+        # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for
+        # developers, and is not uploaded.
         run: |
           mkdir -p Bundle
-          mv {CImg,Misc,Shadertoy}/Linux-64-release/*.ofx.bundle Bundle
+          mv install/OFX/Plugins/{CImg,Misc,Shadertoy}.ofx.bundle Bundle
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
@@ -168,10 +181,11 @@ jobs:
         # with "set -eo pipefail".
         shell: msys2 {0}
     env:
-      # Options shared by the release builds. The MinGW runtime (libstdc++,
-      # libgcc, winpthread) is linked statically, so that the bundles also
-      # load in hosts that do not ship these DLLs.
-      RELEASE_OPTIONS: CONFIG=release LDFLAGS_ADD=-static
+      # The MinGW runtime (libstdc++, libgcc, winpthread) is linked statically, so
+      # that the bundles also load in hosts that do not ship these DLLs (loadtest.sh
+      # checks it). No OpenMP (as the make CI): with MSYS2's libgomp, -static still
+      # leaves a libgomp-1.dll dependency (rejected by loadtest.sh, CI run 44066372220).
+      WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -186,24 +200,27 @@ jobs:
           # is derived from these options). update: false: see nightly.yml.
           update: false
           cache: true
-          install: git base-devel mingw-w64-ucrt-x86_64-cc
+          # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
+          install: git base-devel
+          pacboy: cc:p cmake:p ninja:p
       - name: Build (release)
         run: |
           set -eo pipefail
-          make -j"$(nproc)" $RELEASE_OPTIONS TESTS=1 $STD_OPTIONS
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS $WINDOWS_OPTIONS
+          cmake --build build
+          cmake --install build --prefix "$PWD/install"
       - name: Load test
         run: |
           set -eo pipefail
-          .github/tools/loadtest.sh
+          .github/tools/loadtest.sh install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
-        # Not Test: it is for developers, and is never installed.
-        # The object directory is named after uname -s, which is MINGW64_NT-*
-        # or UCRT64_NT-* depending on the MSYS2 version: match any *_NT-*.
+        # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for
+        # developers, and is not uploaded.
         run: |
           set -eo pipefail
           mkdir -p Bundle
-          mv {CImg,Misc,Shadertoy}/*_NT-*-release/*.ofx.bundle Bundle
+          mv install/OFX/Plugins/{CImg,Misc,Shadertoy}.ofx.bundle Bundle
       - name: Upload artifacts
         if: env.UPLOAD_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6

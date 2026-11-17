@@ -15,10 +15,11 @@ tools=$(dirname "$0")
 "${CXX:-c++}" -std=c++11 -Wall -Iopenfx/include "$tools/ofxload.cpp" -o ofxload $libs
 
 # Skip the openfx submodule (not our plugins) and DebugProxy (debug builds
-# only), which wraps the plugin named by $OFX_DEBUGPROXY_BINARY.
+# only), which wraps the plugin named by $OFX_DEBUGPROXY_BINARY. DebugProxy is
+# also matched by bundle name, for install trees (cmake --install).
 binaries=()
 while IFS= read -r f; do binaries+=("$f"); done < <(
-    find "${@:-.}" \( -path ./openfx -o -path ./DebugProxy \) -prune -o \
+    find "${@:-.}" \( -path ./openfx -o -path ./DebugProxy -o -name DebugProxy.ofx.bundle \) -prune -o \
          -path "*.ofx.bundle/Contents/$arch/*.ofx" -print | sort)
 if [ ${#binaries[@]} -eq 0 ]; then
     echo "no *.ofx.bundle/Contents/$arch/*.ofx found"
@@ -32,7 +33,7 @@ status=0
 if [ "$arch" = Win64 ]; then
     command -v objdump > /dev/null || { echo "objdump not found"; exit 1; }
     for f in "${binaries[@]}"; do
-        if objdump -p "$f" | grep -i -E 'DLL Name: *(libgcc_s|libstdc\+\+|libwinpthread)'; then
+        if objdump -p "$f" | grep -i -E 'DLL Name: *(libgcc_s|libstdc\+\+|libwinpthread|libgomp)'; then
             echo "ERROR: $f depends on the MinGW runtime DLLs above"
             status=1
         fi

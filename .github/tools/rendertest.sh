@@ -84,8 +84,10 @@ fi
 OFX_PLUGIN_PATH=$(IFS=:; echo "${dirs[*]}")
 export OFX_PLUGIN_PATH
 echo "OFX_PLUGIN_PATH=$OFX_PLUGIN_PATH"
-# debug builds (*-debug directories) have the plugins' assertions
+# debug builds (*-debug directories, or RENDERTEST_DEBUG=1, e.g. for a CMake install
+# tree) have the plugins' assertions
 case ":$OFX_PLUGIN_PATH:" in *-debug:*) debug=1 ;; *) debug=0 ;; esac
+[ -z "$RENDERTEST_DEBUG" ] || debug=$RENDERTEST_DEBUG
 
 if [ -n "$HOSTDEMO" ]; then
     # absolute, since the renders run in $work
