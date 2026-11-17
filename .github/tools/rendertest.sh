@@ -34,6 +34,10 @@
 #   must differ from the one of the input Clip, copied at the same depth by
 #   Invert with no channel to process; NoOp would be simpler, but its debug
 #   builds fail when rendered, since it is always an identity).
+# - the parameters after the run (the results of an analysis: -s button presses
+#   a push button) do not have the expected value at t=0 (value:NAME=v,...),
+#   number of keys (keys:NAME=N) or first and last key times
+#   (keyrange:NAME=first,last).
 # The output images are not compared to reference images.
 # Known plugin bugs are expected failures (XFAIL), with the message that their
 # failure must show; a crash of an XFAIL render (e.g. a segmentation fault)
@@ -123,6 +127,19 @@ fi
 
 cd "$work"
 
+# The input files (little-endian PFM, bottom row first): autocrop.pfm is a 64x48
+# PF (RGB, so opaque), black except a white 32x16 rectangle at (10,8).
+python3 -I - << 'EOF2'
+import struct
+w, h = 64, 48
+pix = []
+for y in range(h):
+    for x in range(w):
+        pix += [1. if 10 <= x < 42 and 8 <= y < 24 else 0.] * 3
+with open("autocrop.pfm", "wb") as f:
+    f.write(b"PF\n%d %d\n-1.0\n" % (w, h) + struct.pack("<%df" % len(pix), *pix))
+EOF2
+
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
 # hostDemo run (format: openfx/HostSupport/examples/python/README.md). EXPECT
 # is one or more expectations separated by "+"; changed:Clip needs the CRC32
@@ -209,6 +226,38 @@ if out0:
             if diff:
                 errors.append("%d pixels of the tile %s differ from the full render" % (diff, tb))
             desc += " tile=%s" % ",".join(str(v) for v in tb)
+        elif expect.startswith(("value:", "keys:", "keyrange:")):
+            # the parameters after the run (analysis results): value:NAME=v,... (the
+            # value at t=0; with keys, also the one of the t=0 render), keys:NAME=N (the
+            # number of keys), keyrange:NAME=first,last (the first and last key times)
+            kind, rest = expect.split(":", 1)
+            pname, want = rest.split("=", 1)
+            p = (r.get("params") or {}).get(pname)
+            if p is None:
+                errors.append("no parameter " + pname)
+                continue
+            keys = p.get("keys") or []
+            if kind == "value":
+                want = [float(v) for v in want.split(",")]
+                def close(got):
+                    got = got if isinstance(got, list) else [got]
+                    return (len(got) == len(want) and
+                            all(abs(a - b) <= 1e-4 * max(1., abs(b)) for a, b in zip(got, want)))
+                if not close(p.get("value")):
+                    errors.append("%s = %s, expected %s" % (pname, p.get("value"), rest.split("=", 1)[1]))
+                k0 = [k for k in renders if k.get("time") == 0]
+                if keys and k0 and not close((k0[0].get("params") or {}).get(pname)):
+                    errors.append("t=0 render: %s = %s, expected %s" % (pname, (k0[0].get("params") or {}).get(pname),
+                                                                       rest.split("=", 1)[1]))
+                desc += " %s=%s" % (pname, ",".join("%.6g" % v for v in want))
+            elif kind == "keys":
+                if len(keys) != int(want):
+                    errors.append("%s: %d keys, expected %s" % (pname, len(keys), want))
+                desc += " %s:%dkeys" % (pname, len(keys))
+            else:
+                first, last = (float(v) for v in want.split(","))
+                if not keys or keys[0][0] != first or keys[-1][0] != last:
+                    errors.append("%s: keys at %s, expected %s..%s" % (pname, [k[0] for k in keys], first, last))
         elif expect.startswith("changed:"):
             clip = expect[8:]
             if not refs.get(clip):
@@ -320,6 +369,22 @@ tests=(
     "Shuffle 3 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 3 -i Source=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle 2 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 2 -i Source=solid:0.25,0.5,0.75,1 outputR=2 outputB=0"
     "Shuffle filter comps|net.sf.openfx.ShufflePlugin|filter|*|comps=RGBA+mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputComponents=1 outputR=8 outputB=6"
+    # ImageStatistics: the analysis buttons (pressed with -s, instanceChanged with
+    # kOfxChangeUserEdited) set keys at the analyzed frames; the output is the input.
+    # hostDemo's input frame range is 0..25. HSVL: hue in degrees, L=(min+max)/2. The ramp is (x+0.5)/720.
+    "ImageStatistics frame|net.sf.openfx.ImageStatistics|filter|float|mean=0.25,0.5,0.75,1+value:statMean=0.25,0.5,0.75,1+keys:statMean=1+keys:statHSVLMean=0+value:autoCropMode=0||-i Source=solid:0.25,0.5,0.75,1 -s analyzeFrame"
+    "ImageStatistics frame t=1|net.sf.openfx.ImageStatistics|filter|float|value:statMax=0.999306,0.999306,0.999306,0.999306+keys:statMax=1+keyrange:statMax=1,1||-i Source=ramp -s analyzeFrame@1"
+    "ImageStatistics HSVL|net.sf.openfx.ImageStatistics|filter|float|value:statHSVLMean=210,0.666667,0.75,0.5+keys:statHSVLMean=1+keys:statMean=0||-i Source=solid:0.25,0.5,0.75,1 -s analyzeFrameHSVL"
+    "ImageStatistics sequence|net.sf.openfx.ImageStatistics|filter|float|keys:statMean=26+keyrange:statMean=0,25||--frames 0,1,2 -i Source=ramp -s analyzeSequence"
+    # Custom with Frame Range 1-1 (its default) starts from the input range
+    "ImageStatistics custom|net.sf.openfx.ImageStatistics|filter|float|value:frameRange=0,25||-i Source=ramp sequenceRange=Custom"
+    "ImageStatistics custom 5-7|net.sf.openfx.ImageStatistics|filter|float|keys:statMean=3+keyrange:statMean=5,7||-i Source=ramp frameRange=5,7 sequenceRange=Custom -s analyzeSequence"
+    # the box of the non-black pixels, in canonical coordinates: the file pixels
+    # (110,58)-(142,74) at the project PAR 768/720 (x * 16/15). RGBA: the
+    # pixels are opaque, so the box is the whole input (100,50)-(164,98).
+    "ImageStatistics auto crop|net.sf.openfx.ImageStatistics|filter|float|value:autoCropBottomLeft=117.333333,58+value:autoCropSize=34.133333,16+keys:autoCropSize=1||-i Source=file:autocrop.pfm@100,50 -s analyzeFrameAutoCrop"
+    "ImageStatistics auto crop RGBA|net.sf.openfx.ImageStatistics|filter|float|value:autoCropBottomLeft=106.666667,50+value:autoCropSize=68.266667,48||-i Source=file:autocrop.pfm@100,50 autoCropMode=RGBA -s analyzeFrameAutoCrop"
+    "ImageStatistics auto crop seq|net.sf.openfx.ImageStatistics|filter|float|value:autoCropSize=34.133333,16+keys:autoCropBottomLeft=26+keys:autoCropSize=26+keyrange:autoCropSize=0,25||-i Source=file:autocrop.pfm@100,50 -s analyzeSequenceAutoCrop"
 )
 
 n=0 failed=() xfailed=()
@@ -424,7 +489,7 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* full.* report.json ref.json
+rm -f out.* full.* report.json ref.json autocrop.pfm
 
 echo
 echo "rendertest: $((n - ${#failed[@]} - ${#xfailed[@]})) passed, ${#xfailed[@]} known bugs (XFAIL), ${#failed[@]} failed, $n renders in $(( $(date +%s) - start ))s"
