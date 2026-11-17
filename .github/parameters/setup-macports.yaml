@@ -6,5 +6,7 @@ prefix: '/opt/local'
 ports:
   # GNU sed, needed by openfx/Support/include/osxDeploy.sh (release bundles)
   - name: gsed
-  # OpenMP runtime for Apple clang (nightly OpenMP build)
+  # OpenMP runtime for Apple clang (OFX_USE_OPENMP, the CMake default)
   - name: libomp
+  # CMake (the runner's /usr/local/bin/cmake is not on PATH: MacPorts only)
+  - name: cmake

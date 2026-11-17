@@ -15,7 +15,31 @@
 # You should have received a copy of the GNU General Public License
 # along with openfx-misc.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 # ***** END LICENSE BLOCK *****
-
+########################################################################
+# CMake build of the openfx-misc bundles. It builds what the Makefiles build:
+# - Misc.ofx.bundle (Misc/Makefile), CImg.ofx.bundle (CImg/Makefile, BUILD_CIMG_PLUGINS)
+#   and Shadertoy.ofx.bundle (Shadertoy/Makefile, BUILD_SHADERTOY);
+# - in Debug builds only (make CONFIG=debug): Test.ofx.bundle (Test/Makefile,
+#   BUILD_TESTING, also make TESTS=1) and DebugProxy.ofx.bundle (BUILD_DEBUGPROXY);
+# with the bundle layout of openfx/Support/Plugins/Makefile.master, assembled in
+# <build>/Plugins and installed by "cmake --install" into ${CMAKE_INSTALL_PREFIX}/OFX/Plugins
+# (openfx's PLUGIN_INSTALLDIR): use --prefix /usr (Linux) or /Library (macOS) to get the
+# directories of "make install".
+# The "make nomulti" bundles (one per plug-in directory) are only built by make.
+#
+# Options:
+#   -DCMAKE_BUILD_TYPE=Release|Debug|RelWithDebInfo (default: Release)
+#   -DOFX_CXX_STANDARD=17 (default) or 20
+#   -DOFX_USE_OPENMP=ON|OFF (default ON): OpenMP in the CImg plug-ins and DenoiseSharpen
+#      ("make OPENMP=1"). Apple clang uses MacPorts' libomp (port install libomp).
+#   -DOFX_DEPLOY_BUNDLES=ON: at install, copy the non-system libraries into the bundles
+#      (macOS: osxDeploy.sh, as "make CONFIG=release" does; needs gsed)
+#   -DBUILD_CIMG_PLUGINS=OFF ("make HAVE_CIMG=0"), -DBUILD_SHADERTOY=OFF
+#   -DBUILD_TESTING=ON|OFF, -DBUILD_DEBUGPROXY=ON|OFF (default: ON in Debug builds)
+#   -DUSE_OSMESA=ON ("make -C Shadertoy OSMESA=1"): Shadertoy CPU rendering with a mangled
+#      OSMesa in OSMESA_PATH (default /opt/osmesa) and LLVM in LLVM_PATH (default /opt/llvm)
+#   --prefix /usr (Linux) or /Library (macOS) at install: the bundles go to <prefix>/OFX/Plugins
+#   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX (OFX/Plugins)
 ########################################################################
 IF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 MESSAGE(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
@@ -24,9 +48,8 @@ ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 ########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12) # CXX_STANDARD 20 needs CMake 3.12
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16...3.31) # 3.16: openfx's CMakeLists.txt; policies up to 3.31 (CMP0177)
 PROJECT(OpenFXMisc CXX)
-ENABLE_TESTING()
 
 # ========================== build platform ==========================
 
@@ -44,181 +67,132 @@ endif()
 if(CMAKE_GENERATOR MATCHES Xcode)
   MESSAGE (STATUS "    Xcode:"          ${XCODE_VERSION})
 endif()
-if(NOT CMAKE_GENERATOR MATCHES "Xcode|Visual Studio")
+
+get_property(_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(NOT _multi_config AND NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type (Release, Debug, RelWithDebInfo)" FORCE)
+endif()
+if(NOT _multi_config)
   MESSAGE (STATUS "    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
 
-include(FindOpenGL REQUIRED)
-
-# C++ standard: C++17 by default (Natron RB-2.6 Qt5 builds); the code also builds as C++20
-# (Qt6 builds, RB-2.7): configure with -DCMAKE_CXX_STANDARD=20. Compiler extensions stay on
-# (gnu++17, the compilers' default); the make CI builds with strict -std=c++17/c++20.
-if(NOT DEFINED CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-endif()
-if(NOT DEFINED CMAKE_CXX_STANDARD_REQUIRED)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON) # fail instead of silently using an older standard
-endif()
-
-option(BUILD_CIMG_PLUGINS "Build the CImg plugins (CImg.ofx.bundle)" ON)
-
-# Use -Ofast when applicable (implies -ffast-math)
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Wextra -Ofast -DNDEBUG")
-    set (CMAKE_C_FLAGS_RELEASE   "-Wall -Wextra -Ofast -DNDEBUG")
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Ofast -DNDEBUG")
-    set (CMAKE_C_FLAGS_RELEASE   "-Wall -Ofast -DNDEBUG")
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set (CMAKE_CXX_FLAGS_RELEASE "-Wall -Wextra -Ofast -DNDEBUG")
-    set (CMAKE_C_FLAGS_RELEASE   "-Wall -Wextra -Ofast -DNDEBUG")
-endif()
-SET(OPENFX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/openfx)
+# Install: the bundles go to ${CMAKE_INSTALL_PREFIX}/${PLUGIN_INSTALLDIR}, where PLUGIN_INSTALLDIR
+# is openfx's OFX/Plugins (cmake/OpenFX.cmake): "cmake --install build --prefix /usr" installs
+# into /usr/OFX/Plugins and "--prefix /Library" into /Library/OFX/Plugins, as "make install".
 
 # Check that submodule have been initialized and updated
-if(NOT EXISTS ${PROJECT_SOURCE_DIR}/openfx/include)
+if(NOT EXISTS ${PROJECT_SOURCE_DIR}/openfx/include OR NOT EXISTS ${PROJECT_SOURCE_DIR}/openfx/cmake/OpenFX.cmake
+   OR NOT EXISTS ${PROJECT_SOURCE_DIR}/SupportExt/ofxsMacros.h)
   message(FATAL_ERROR
     "\n submodule(s) are missing, please update your repository:\n"
     "  > git submodule update --init --recursive\n")
 endif()
 
-# C++ Include directories
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Misc)
-INCLUDE_DIRECTORIES(${OPENFX_PATH}/include)
-INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/include)
-INCLUDE_DIRECTORIES(${OPENFX_PATH}/Support/Plugins/include)
+# ========================== options ==========================
 
-# Define "DEBUG" on debug builds
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+option(BUILD_CIMG_PLUGINS "Build the CImg plugins (CImg.ofx.bundle)" ON)
+option(BUILD_SHADERTOY "Build the Shadertoy plugin (Shadertoy.ofx.bundle, needs OpenGL)" ON)
+# Debug-only bundles, as "make CONFIG=debug" (Test also with "make TESTS=1"). The defaults
+# follow CMAKE_BUILD_TYPE at the first configure; set BUILD_TESTING and BUILD_DEBUGPROXY
+# explicitly when changing CMAKE_BUILD_TYPE in an existing build directory.
+string(TOUPPER "${CMAKE_BUILD_TYPE}" _build_type)
+if(_build_type STREQUAL "DEBUG")
+  set(_debug_build ON)
+else()
+  set(_debug_build OFF)
+endif()
+option(BUILD_TESTING "Build the Test bundle (host tests, for developers)" ${_debug_build})
+option(BUILD_DEBUGPROXY "Build the DebugProxy bundle (wraps the plugin given by OFX_DEBUGPROXY_BINARY)" ${_debug_build})
+option(USE_OSMESA "Shadertoy: CPU rendering with OSMesa (OSMESA_PATH) and LLVM (LLVM_PATH)" OFF)
+set(OSMESA_PATH "/opt/osmesa" CACHE PATH "USE_OSMESA: OSMesa prefix (mangled OSMesa, libMangledOSMesa32)")
+set(LLVM_PATH "/opt/llvm" CACHE PATH "USE_OSMESA: LLVM prefix (bin/llvm-config)")
 
-# /MP on MSVC
-ADD_COMPILE_OPTIONS($<$<CXX_COMPILER_ID:MSVC>:/MP>)
-# MSVC: make __cplusplus report the selected standard (e.g. 201703L), not 199711L.
-# Without it, the "#if __cplusplus > 199711L" tests in SupportExt (tinythread.h,
-# fast_mutex.h, ofxsThreadSuite.cpp) and openfx Support (ofxsCore.h: OFX::auto_ptr,
-# OFX_THROW) take their pre-C++11 branches. Needs Visual Studio 2017 15.7 or later.
-ADD_COMPILE_OPTIONS($<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>)
+# C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
+# Qt5), or 20 (Qt6, RB-2.7): -DOFX_CXX_STANDARD=20. It is used by add_ofx_plugin and
+# openfx::Support, without compiler extensions (-std=c++17, as the Makefile CI builds).
 
-set(OFX_SUPPORT_HEADER_DIR "${OPENFX_PATH}/Support/include")
-set(OFX_SUPPORT_LIBRARY_DIR "${OPENFX_PATH}/Support/Library")
+# ========================== compiler flags ==========================
+# Release: CMake's default flags (-O3 -DNDEBUG with GCC and Clang; Makefile.master uses
+# -O2 -DNDEBUG). For -O2: -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG" (or openfx's upcoming
+# OFX_OPTFLAG). Debug: -g, plus DEBUG (add_ofx_plugin) and -Wall -Wextra, as Makefile.master.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|Intel")
+  add_compile_options($<$<CONFIG:Debug>:-Wall> $<$<CONFIG:Debug>:-Wextra>)
+endif()
+# openfx::Api adds the MinGW definitions of Makefile.master (_USE_MATH_DEFINES,
+# __USE_MINGW_ANSI_STDIO=1) and MSVC's /Zc:__cplusplus.
+if(MSVC)
+  ADD_COMPILE_OPTIONS(/MP)
+  add_compile_definitions(NOMINMAX)
+  # If the build system is at least Windows Vista (6.0),
+  # compile for Windows Vista, to get interruptible CImg plugins (see CImgFilter.h)
+  IF (NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 6.0) # Windows Vista
+    add_compile_definitions(_WIN32_WINNT=0x0600 WINVER=0x0600)
+    MESSAGE(STATUS "CImg plugins should be interruptible")
+  ELSE ()
+    MESSAGE(STATUS "CImg plugins may not be interruptible")
+  ENDIF ()
+endif()
 
-FILE(GLOB SUPPORT_SOURCES
-    "${OFX_SUPPORT_HEADER_DIR}/*.h"
+# ========================== openfx ==========================
+# openfx::Support (the C++ Support library, static), openfx::HostSupport (DebugProxy),
+# add_ofx_plugin and ARCHDIR (cmake/OpenFX.cmake). The OFX_EXTENSIONS_* (NATRON, NUKE,
+# VEGAS, TUTTLE) and OFX_SUPPORTS_OPENGLRENDER options of openfx default to what the
+# Makefiles use, and are usage requirements of these targets.
+# EXCLUDE_FROM_ALL: only what the bundles link is built, and openfx is not installed.
+# HostSupport is only needed by DebugProxy (openfx's OFX_BUILD_HOSTSUPPORT option;
+# CMP0077: option() uses this variable)
+set(OFX_BUILD_HOSTSUPPORT ${BUILD_DEBUGPROXY})
+add_subdirectory(openfx EXCLUDE_FROM_ALL)
+# add_ofx_plugin, ofx_plugin_resources, ofx_target_openmp, ofx_deploy_bundle and ARCHDIR
+# come from openfx/cmake/OpenFX.cmake (included by openfx's CMakeLists.txt).
+message(STATUS "    OFX architecture:  ${ARCHDIR}")
+message(STATUS "    Install directory: ${CMAKE_INSTALL_PREFIX}/${PLUGIN_INSTALLDIR}")
 
-    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsCore.cpp"
-    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsImageEffect.cpp"
-    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsInteract.cpp"
-    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsLog.cpp"
-    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsMultiThread.cpp"
-    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsParams.cpp"
-    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsProperty.cpp"
-    "${OFX_SUPPORT_LIBRARY_DIR}/ofxsPropertyValidation.cpp"
-    "${OFX_SUPPORT_LIBRARY_DIR}/*.h"
-)
+# Linux: link libGL, as the Makefiles (-lGL), not GLVND's libOpenGL and libGLX
+if(NOT DEFINED OpenGL_GL_PREFERENCE)
+  set(OpenGL_GL_PREFERENCE LEGACY)
+endif()
+find_package(OpenGL REQUIRED)
 
-#ADD_LIBRARY(Support STATIC )
-#TARGET_COMPILE_DEFINITIONS(Support PRIVATE OFX_SUPPORTS_OPENGLRENDER OFX_EXTENSIONS_TUTTLE OFX_EXTENSIONS_NUKE OFX_EXTENSIONS_NATRON OFX_EXTENSIONS_VEGAS NOMINMAX)
+# Include directory of Makefile.master (ofxsProcessing.H...); SupportExt's comes with
+# supportext_add_sources, Misc's (Misc/Makefile) is on the Misc target
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/openfx/Support/Plugins/include)
 
-FILE(GLOB MISC_SOURCES
-  "Add/*.cpp"
-  "AdjustRoD/*.cpp"
-  "Anaglyph/*.cpp"
-  "AppendClip/*.cpp"
-  "Card3D/*.cpp"
-  "CheckerBoard/*.cpp"
-  "ChromaKeyer/*.cpp"
-  "Clamp/*.cpp"
-  "ClipTest/*.cpp"
-  "ColorBars/*.cpp"
-  "ColorCorrect/*.cpp"
-  "ColorLookup/*.cpp"
-  "ColorMatrix/*.cpp"
-  "ColorSuppress/*.cpp"
-  "ColorTransform/*.cpp"
-  "ColorWheel/*.cpp"
-  "Constant/*.cpp"
-  "ContactSheet/*.cpp"
-  "CopyRectangle/*.cpp"
-  "CornerPin/*.cpp"
-  "Crop/*.cpp"
-  "Deinterlace/*.cpp"
-  "DenoiseSharpen/*.cpp"
-  "Despill/*.cpp"
-  "Difference/*.cpp"
-  "DiscBlades/*.cpp"
-  "Dissolve/*.cpp"
-  "Distortion/*.cpp"
-  "FrameBlend/*.cpp"
-  "FrameHold/*.cpp"
-  "FrameRange/*.cpp"
-  "Gamma/*.cpp"
-  "GodRays/*.cpp"
-  "Grade/*.cpp"
-  "HSVTool/*.cpp"
-  "HueCorrect/*.cpp"
-  "ImageStatistics/*.cpp"
-  "Invert/*.cpp"
-  "JoinViews/*.cpp"
-  "KeyMix/*.cpp"
-  "Keyer/*.cpp"
-  "LayerContactSheet/*.cpp"
-  "Log2Lin/*.cpp"
-  "MatteMonitor/*.cpp"
-  "Merge/*.cpp"
-  "Mirror/*.cpp"
-  "MixViews/*.cpp"
-  "Multiply/*.cpp"
-  "NoOp/*.cpp"
-  "OneView/*.cpp"
-  "PIK/*.cpp"
-  "PLogLin/*.cpp"
-  "Position/*.cpp"
-  "Premult/*.cpp"
-  "Quantize/*.cpp"
-  "Radial/*.cpp"
-  "Ramp/*.cpp"
-  "Rand/*.cpp"
-  "ReConverge/*.cpp"
-  "Rectangle/*.cpp"
-  "Reformat/*.cpp"
-  "Retime/*.cpp"
-  "Roto/*.cpp"
-  "Saturation/*.cpp"
-  "Shadertoy/*.cpp"
-  "Shadertoy/*.h"
-  "Shuffle/*.cpp"
-  "SideBySide/*.cpp"
-  "SlitScan/*.cpp"
-  "SpriteSheet/*.cpp"
-  "Switch/*.cpp"
-  "Threshold/*.cpp"
-  "TimeBlur/*.cpp"
-  "TimeBuffer/*.cpp"
-  "TimeDissolve/*.cpp"
-  "TimeOffset/*.cpp"
-  "TrackerPM/*.cpp"
-  "Transform/*.cpp"
-  "VectorToColor/*.cpp"
-  "SupportExt/tinythread.cpp"
-  "SupportExt/ofxsThreadSuite.cpp"
-  "SupportExt/ofxsFileOpen.cpp"
-  "SupportExt/ofxsGenerator.cpp"
-  "SupportExt/ofxsLut.cpp"
-  "SupportExt/ofxsMultiPlane.cpp"
-  "SupportExt/ofxsOGLTextRenderer.cpp"
-  "SupportExt/ofxsOGLFontData.cpp"
-  "SupportExt/ofxsRamp.cpp"
-  "SupportExt/ofxsShutter.cpp"
-  "SupportExt/ofxsTracking.cpp"
-  "SupportExt/ofxsTransform3x3.cpp"
-  "SupportExt/ofxsTransformInteract.cpp"
-  "SupportExt/ofxsRectangleInteract.cpp"
-  "SupportExt/*.h"
-)
+# supportext_add_sources(): the SupportExt sources of each bundle, compiled with its flags
+include(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt/cmake/SupportExt.cmake)
 
-FILE(GLOB MISC_RESOURCES
+########################################################################
+# Misc.ofx.bundle (Misc/Makefile)
+########################################################################
+# Every plug-in directory listed in Misc/Makefile (all but CImg, Shadertoy and DebugProxy).
+# Test only contributes TestRender (debug builds); ReConverge, TestRender and TimeBuffer
+# are compiled out in other builds (#ifdef DEBUG).
+set(MISC_PLUGIN_DIRS
+  Add AdjustRoD Anaglyph AppendClip Card3D CheckerBoard ChromaKeyer Clamp ClipTest
+  ColorBars ColorCorrect ColorLookup ColorMatrix ColorSuppress ColorTransform ColorWheel
+  Constant ContactSheet CopyRectangle CornerPin Crop Deinterlace DenoiseSharpen Despill
+  Difference DiscBlades Dissolve Distortion FrameBlend FrameHold FrameRange Gamma GodRays
+  Grade HSVTool HueCorrect ImageStatistics Invert JoinViews KeyMix Keyer LayerContactSheet
+  Log2Lin MatteMonitor Merge Mirror MixViews Multiply NoOp OneView PIK PLogLin Position
+  Premult Quantize Radial Ramp Rand ReConverge Rectangle Reformat Retime Roto Saturation
+  Shuffle SideBySide SlitScan SpriteSheet Switch Threshold TimeBlur TimeBuffer
+  TimeDissolve TimeOffset TrackerPM Transform VectorToColor)
+set(MISC_SOURCES Misc/randomGenerator.cpp Test/TestRender.cpp)
+foreach(_dir IN LISTS MISC_PLUGIN_DIRS)
+  file(GLOB _srcs "${_dir}/*.cpp")
+  list(APPEND MISC_SOURCES ${_srcs})
+endforeach()
+
+add_ofx_plugin(Misc INFO_PLIST Misc/Info.plist SOURCES ${MISC_SOURCES})
+# the sources of Misc/Makefile; POSITION_INTERACT: CornerPin, Transform... (header-only)
+supportext_add_sources(Misc COMPONENTS THREADS FILEOPEN GENERATOR LUT MULTIPLANE TEXT RAMP SHUTTER
+  TRACKING TRANSFORM3X3 TRANSFORM_INTERACT RECTANGLE_INTERACT POSITION_INTERACT)
+# openfx::Support and OpenGL::GL come with supportext_add_sources
+target_include_directories(Misc PRIVATE Misc ${MISC_PLUGIN_DIRS} Test)
+if(NOT MSVC) # MSVC has OpenMP 2.0 only
+  ofx_target_openmp(Misc) # DenoiseSharpen (Misc/Makefile: OPENMP=1)
+endif()
+ofx_plugin_resources(Misc
   "Add/net.sf.openfx.AddPlugin.png"
   "AdjustRoD/net.sf.openfx.AdjustRoDPlugin.png"
   "AdjustRoD/net.sf.openfx.AdjustRoDPlugin.svg"
@@ -365,32 +339,104 @@ FILE(GLOB MISC_RESOURCES
   "VectorToColor/net.sf.openfx.VectorToColorPlugin.png"
   "VectorToColor/net.sf.openfx.VectorToColorPlugin.svg"
 )
+ofx_deploy_bundle(Misc)
 
-ADD_LIBRARY(Misc SHARED ${MISC_SOURCES} ${SUPPORT_SOURCES})
-SET_TARGET_PROPERTIES(Misc PROPERTIES PREFIX "")
-SET_TARGET_PROPERTIES(Misc PROPERTIES SUFFIX ".ofx")
-
-# Add extra flags to the link step of the plugin
-if(APPLE)
-    set_target_properties(Misc PROPERTIES LINK_FLAGS "-fvisibility=hidden -Wl,-exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
-    set_target_properties(Misc PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
-elseif(MINGW)
-    set_target_properties(Misc PROPERTIES LINK_FLAGS "-shared -fvisibility=hidden -Xlinker --version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD" OR ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-# Linux & FreeBSD
-    set_target_properties(Misc PROPERTIES LINK_FLAGS "-Wl,-fvisibility=hidden,--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
-    set_target_properties(Misc PROPERTIES INSTALL_RPATH "$ORIGIN/../../Libraries")
+########################################################################
+# Shadertoy.ofx.bundle (Shadertoy/Makefile)
+########################################################################
+if(BUILD_SHADERTOY)
+  add_ofx_plugin(Shadertoy INFO_PLIST Shadertoy/Info.plist SOURCES
+    Shadertoy/Shadertoy.cpp Shadertoy/ShadertoyParse.cpp
+    Shadertoy/ShadertoyRenderGL.cpp Shadertoy/ShadertoyRenderMesa.cpp)
+  supportext_add_sources(Shadertoy COMPONENTS THREADS) # as Shadertoy/Makefile
+  target_link_libraries(Shadertoy PRIVATE OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup
+  if(USE_OSMESA)
+    # Shadertoy/Makefile with OSMESA=1: -DHAVE_OSMESA, OSMesa's headers for ShadertoyRenderMesa.cpp
+    # only, and -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `llvm-config ...`.
+    # Natron's build-plugins.sh may instead give OSMESA_INCLUDES and OSMESA_LIBRARIES (all the
+    # link flags, LLVM included).
+    target_compile_definitions(Shadertoy PRIVATE HAVE_OSMESA)
+    # The OSMesa (and LLVM) link flags go in the imported target OSMesa::OSMesa (SupportExt's
+    # convention); its include directories are only used by ShadertoyRenderMesa.cpp, as in
+    # Shadertoy/Makefile.
+    if(DEFINED OSMESA_LIBRARIES)
+      if(NOT DEFINED OSMESA_INCLUDES)
+        set(OSMESA_INCLUDES "${OSMESA_PATH}/include")
+      endif()
+      separate_arguments(_osmesa_libs UNIX_COMMAND "${OSMESA_LIBRARIES}")
+      set(_osmesa_includes ${OSMESA_INCLUDES})
+    else()
+      find_package(PkgConfig)
+      if(PKG_CONFIG_FOUND)
+        # only OSMESA_PATH's osmesa.pc, not the system's (PKG_CONFIG_LIBDIR replaces the default path)
+        set(_pkg_config_path "$ENV{PKG_CONFIG_PATH}")
+        set(_pkg_config_libdir "$ENV{PKG_CONFIG_LIBDIR}")
+        set(ENV{PKG_CONFIG_PATH} "")
+        set(ENV{PKG_CONFIG_LIBDIR} "${OSMESA_PATH}/lib/pkgconfig:${OSMESA_PATH}/lib64/pkgconfig")
+        pkg_check_modules(PC_OSMESA IMPORTED_TARGET osmesa) # not OSMESA_: OSMESA_LIBRARIES is an input
+        set(ENV{PKG_CONFIG_PATH} "${_pkg_config_path}")
+        set(ENV{PKG_CONFIG_LIBDIR} "${_pkg_config_libdir}")
+      endif()
+      if(TARGET PkgConfig::PC_OSMESA)
+        get_target_property(_osmesa_includes PkgConfig::PC_OSMESA INTERFACE_INCLUDE_DIRECTORIES)
+        get_target_property(_osmesa_libs PkgConfig::PC_OSMESA INTERFACE_LINK_LIBRARIES)
+        get_target_property(_osmesa_opts PkgConfig::PC_OSMESA INTERFACE_LINK_OPTIONS)
+        if(_osmesa_opts)
+          list(PREPEND _osmesa_libs ${_osmesa_opts})
+        endif()
+      else()
+        message(STATUS "osmesa.pc not found or unusable in ${OSMESA_PATH} (only that prefix is searched, so its Requires must be there too): using ${OSMESA_PATH}/include and -lMangledOSMesa32")
+        set(_osmesa_includes "${OSMESA_PATH}/include")
+        set(_osmesa_libs "-L${OSMESA_PATH}/lib" -lMangledOSMesa32)
+      endif()
+      if(NOT EXISTS "${_osmesa_includes}/GL/osmesa.h")
+        message(FATAL_ERROR "USE_OSMESA: ${_osmesa_includes}/GL/osmesa.h not found (set OSMESA_PATH)")
+      endif()
+      # LLVM, as in Shadertoy/Makefile
+      set(_llvm_config "${LLVM_PATH}/bin/llvm-config")
+      if(NOT EXISTS "${_llvm_config}")
+        message(FATAL_ERROR "USE_OSMESA: ${_llvm_config} not found (set LLVM_PATH)")
+      endif()
+      execute_process(COMMAND "${_llvm_config}" --version OUTPUT_VARIABLE _llvm_version
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+      if(_llvm_version VERSION_GREATER_EQUAL 15)
+        # Recent Mesa (e.g. 25.0) needs LLVM >= 15 and more LLVM components.
+        # --link-static: also link LLVM statically if it was built in shared mode (Homebrew, MacPorts).
+        set(_llvm_config_flags --link-static --ldflags --libs bitwriter engine mcdisassembler mcjit core
+            executionengine scalaropts transformutils instcombine coroutines native passes --system-libs)
+      else()
+        set(_llvm_config_flags --ldflags --libs engine mcjit mcdisassembler --system-libs)
+      endif()
+      execute_process(COMMAND "${_llvm_config}" ${_llvm_config_flags} OUTPUT_VARIABLE _llvm_libs
+                      RESULT_VARIABLE _r OUTPUT_STRIP_TRAILING_WHITESPACE)
+      if(NOT _r EQUAL 0)
+        message(FATAL_ERROR "USE_OSMESA: ${_llvm_config} ${_llvm_config_flags} failed")
+      endif()
+      string(REPLACE "\n" " " _llvm_libs "${_llvm_libs}")
+      separate_arguments(_llvm_libs UNIX_COMMAND "${_llvm_libs}")
+      list(APPEND _osmesa_libs -lz ${_llvm_libs})
+      message(STATUS "Shadertoy: OSMesa in ${OSMESA_PATH}, LLVM ${_llvm_version} in ${LLVM_PATH}")
+    endif()
+    add_library(OSMesa::OSMesa INTERFACE IMPORTED)
+    set_target_properties(OSMesa::OSMesa PROPERTIES INTERFACE_LINK_LIBRARIES "${_osmesa_libs}")
+    set_property(SOURCE Shadertoy/ShadertoyRenderMesa.cpp APPEND PROPERTY INCLUDE_DIRECTORIES ${_osmesa_includes})
+    target_link_libraries(Shadertoy PRIVATE OSMesa::OSMesa)
+  endif()
+  ofx_plugin_resources(Shadertoy Shadertoy/net.sf.openfx.Shadertoy.png Shadertoy/net.sf.openfx.Shadertoy.svg)
+  ofx_plugin_resources(Shadertoy Shadertoy/presets) # with its contents, as "cp -r presets"
+  ofx_deploy_bundle(Shadertoy)
 endif()
 
-TARGET_COMPILE_DEFINITIONS(Misc PRIVATE OFX_EXTENSIONS_VEGAS OFX_EXTENSIONS_NUKE OFX_EXTENSIONS_NATRON OFX_EXTENSIONS_TUTTLE OFX_SUPPORTS_OPENGLRENDER NOMINMAX)
-#TARGET_LINK_LIBRARIES(Misc Support ${OPENGL_gl_LIBRARY})
-TARGET_LINK_LIBRARIES(Misc ${OPENGL_gl_LIBRARY} ${CMAKE_DL_LIBS}) # dl: Shadertoy looks up eglGetCurrentContext at runtime
-
+########################################################################
+# CImg.ofx.bundle (CImg/Makefile)
+########################################################################
 if(BUILD_CIMG_PLUGINS)
 # CImg.h and Inpaint/inpaint.h are not distributed with the sources.
 # Download them at the version used by CImg/Makefile (see CImg/CImgVersion.mk)
 # if they are missing, as "cd CImg && make CImg.h" would do.
 set(CIMG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/CImg")
+# reconfigure (and download again) when CIMGVERSION changes, as CImg/Makefile does
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CIMG_DIR}/CImgVersion.mk")
 file(STRINGS "${CIMG_DIR}/CImgVersion.mk" CIMGVERSION REGEX "^CIMGVERSION *=")
 string(REGEX REPLACE "^CIMGVERSION *= *([0-9a-fA-F]+).*$" "\\1" CIMGVERSION "${CIMGVERSION}")
 if(NOT CIMGVERSION MATCHES "^[0-9a-fA-F]+$")
@@ -443,7 +489,7 @@ if(NOT EXISTS "${CIMG_DIR}/CImg.h")
 endif()
 file(WRITE "${CIMG_VERSION_STAMP}" "${CIMGVERSION}\n")
 
-FILE(GLOB CIMG_SOURCES
+add_ofx_plugin(CImg INFO_PLIST CImg/Info.plist SOURCES
   "CImg/CImg.h"
   "CImg/CImgFilter.cpp"
   "CImg/CImgFFTConvolve.h"
@@ -475,24 +521,18 @@ FILE(GLOB CIMG_SOURCES
   "CImg/SharpenShock/CImgSharpenShock.cpp"
   "CImg/Smooth/CImgSmooth.cpp"
   "CImg/ZDefocus/CImgZDefocus.cpp"
-  "SupportExt/tinythread.cpp"
-  "SupportExt/ofxsThreadSuite.cpp"
-#  "SupportExt/ofxsFileOpen.cpp"
-#  "SupportExt/ofxsGenerator.cpp"
-  "SupportExt/ofxsLut.cpp"
-#  "SupportExt/ofxsMultiPlane.cpp"
-#  "SupportExt/ofxsOGLTextRenderer.cpp"
-#  "SupportExt/ofxsOGLFontData.cpp"
-#  "SupportExt/ofxsRamp.cpp"
-#  "SupportExt/ofxsShutter.cpp"
-#  "SupportExt/ofxsTracking.cpp"
-#  "SupportExt/ofxsTransform3x3.cpp"
-#  "SupportExt/ofxsTransformInteract.cpp"
-#  "SupportExt/ofxsRectangleInteract.cpp"
-  "SupportExt/*.h"
 )
-
-FILE(GLOB CIMG_RESOURCES
+supportext_add_sources(CImg COMPONENTS THREADS LUT) # as CImg/Makefile (ofxsLut: ChromaBlur)
+target_include_directories(CImg PRIVATE ${CIMG_DIR})
+if(NOT MSVC)
+  # MSVC is OpenMP 2.0 and has issues, see https://github.com/dtschump/CImg/issues/208
+  # and https://msdn.microsoft.com/fr-fr/library/ff520162.aspx
+  ofx_target_openmp(CImg)
+  if(TARGET OpenMP::OpenMP_CXX)
+    target_compile_definitions(CImg PRIVATE cimg_use_openmp) # CImg/Makefile: OPENMP=1
+  endif()
+endif()
+ofx_plugin_resources(CImg
   "CImg/Bilateral/net.sf.cimg.CImgBilateral.png"
   "CImg/Bilateral/net.sf.cimg.CImgBilateral.svg"
   "CImg/Blur/net.sf.cimg.CImgBlur.png"
@@ -541,184 +581,28 @@ FILE(GLOB CIMG_RESOURCES
   "CImg/Smooth/net.sf.cimg.CImgSmooth.png"
   "CImg/Smooth/net.sf.cimg.CImgSmooth.svg"
 )
-
-
-ADD_LIBRARY(CImg SHARED ${CIMG_SOURCES} ${SUPPORT_SOURCES})
-TARGET_INCLUDE_DIRECTORIES(CImg PRIVATE ${CIMG_DIR})
-SET_TARGET_PROPERTIES(CImg PROPERTIES PREFIX "")
-SET_TARGET_PROPERTIES(CImg PROPERTIES SUFFIX ".ofx")
-
-# Add extra flags to the link step of the plugin
-if(APPLE)
-    set_target_properties(CImg PROPERTIES LINK_FLAGS "-fvisibility=hidden -Wl,-exported_symbols_list,${OFX_SUPPORT_HEADER_DIR}/osxSymbols")
-    set_target_properties(CImg PROPERTIES INSTALL_RPATH "@loader_path/../Frameworks;@loader_path/../Libraries")
-elseif(WIN32)
-    set_target_properties(CImg PROPERTIES LINK_FLAGS "-fvisibility=hidden,--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
-else()
-# Linux & FreeBSD
-    set_target_properties(CImg PROPERTIES LINK_FLAGS "-Wl,-fvisibility=hidden,--version-script=${OFX_SUPPORT_HEADER_DIR}/linuxSymbols")
-    set_target_properties(CImg PROPERTIES INSTALL_RPATH "$ORIGIN/../../Libraries")
-endif()
-
-TARGET_COMPILE_DEFINITIONS(CImg PRIVATE OFX_EXTENSIONS_VEGAS OFX_EXTENSIONS_NUKE OFX_EXTENSIONS_NATRON OFX_EXTENSIONS_TUTTLE OFX_SUPPORTS_OPENGLRENDER NOMINMAX)
-#TARGET_LINK_LIBRARIES(CImg Support)
-TARGET_LINK_LIBRARIES(CImg)
-
-# Find OpenMP
-# To compile on homebrew:
-# env CXX=/usr/local/opt/llvm/bin/clang++ CC=/usr/local/opt/llvm/bin/clang LDFLAGS=-L/usr/local/opt/llvm/lib cmake ..
-find_package(OpenMP)
-# MSVC is OpenMP 2.0 and has issues, see https://github.com/dtschump/CImg/issues/208 and https://msdn.microsoft.com/fr-fr/library/ff520162.aspx
-if (OPENMP_FOUND AND NOT MSVC)
-#if (OPENMP_FOUND)
-    #include_directories("${OPENMP_INCLUDES}")
-    #link_directories("${OPENMP_LIBRARIES}")
-    # set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    # set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    # set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_SHARED_LINKER_FLAGS}")
-    # set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-    SET_TARGET_PROPERTIES(CImg PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
-    SET_TARGET_PROPERTIES(CImg PROPERTIES LINK_FLAGS "${OpenMP_EXE_LINKER_FLAGS}")
-    TARGET_LINK_LIBRARIES(CImg ${OpenMP_CXX_LIB_NAMES})
-endif(OPENMP_FOUND AND NOT MSVC)
+ofx_deploy_bundle(CImg)
 endif(BUILD_CIMG_PLUGINS)
 
-IF (MSVC)
-  # Some files require this option. This breaks compatibility with older linkers.
-  SET_TARGET_PROPERTIES(Misc PROPERTIES COMPILE_FLAGS "/bigobj")
-  # If the build system is at least Windows Vista (6.0),
-  # compile for Windows Vista, to get interruptible CImg plugins (see CImgFilter.h)
-  IF (NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 6.0) # Windows Vista
-    ADD_DEFINITIONS(-D_WIN32_WINNT=0x0600 -DWINVER=0x0600)
-    MESSAGE(STATUS "CImg plugins should be interruptible")
-  ELSE ()
-    MESSAGE(STATUS "CImg plugins may not be interruptible")
-  ENDIF ()
-ENDIF ()
-
-# Bundle architecture folder (OFX packaging spec, ofxPackaging.rst): copied from openfx
-# cmake/OpenFX.cmake (NatronGitHub/openfx master c1d69ca3), so that the names match what HostSupport
-# looks for and openfx Support/Plugins/Makefile.master. Keep the two in sync.
-SET(OFX_ARCH UNKNOWN)
-if(APPLE)
-    set(OFX_ARCH "MacOS") # universal or arch-specific: no arm64 folder
-elseif(WIN32)
-    # MSVC: the target architecture (ARM64EC, ARM64, x64, X86); other compilers: pointer size
-    string(TOUPPER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID};${CMAKE_GENERATOR_PLATFORM}" _OFX_WINARCH)
-    if(NOT CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
-        # MinGW (MSYS2 CLANGARM64, llvm-mingw) on CMake < 4.1: the architecture ID is only set for MSVC, and
-        # CMAKE_SYSTEM_PROCESSOR is the build machine's unless a toolchain file sets it: ask the compiler for
-        # its target (CMAKE_CXX_COMPILER_TARGET, or `-dumpmachine`), e.g. aarch64-w64-mingw32 or
-        # arm64ec-w64-windows-gnu (llvm-mingw Arm64EC)
-        set(_OFX_TARGET "${CMAKE_CXX_COMPILER_TARGET}")
-        if(NOT _OFX_TARGET)
-            # CMAKE_CXX_COMPILER_ARG1 is one string (e.g. " --target=aarch64-w64-mingw32"): split it
-            # (UNIX_COMMAND works with any CMake version, for projects that copy this block)
-            separate_arguments(_OFX_CXX_ARGS UNIX_COMMAND "${CMAKE_CXX_COMPILER_ARG1}")
-            execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${_OFX_CXX_ARGS} -dumpmachine
-                            OUTPUT_VARIABLE _OFX_TARGET OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-        endif()
-        string(TOLOWER "${_OFX_TARGET}" _OFX_TARGET)
-        if(_OFX_TARGET MATCHES "^arm64ec")
-            set(_OFX_WINARCH "ARM64EC")
-        elseif(_OFX_TARGET MATCHES "^(aarch64|arm64)")
-            set(_OFX_WINARCH "ARM64")
-        endif()
-    endif()
-    if(_OFX_WINARCH MATCHES "ARM64EC" OR CMAKE_CXX_FLAGS MATCHES "/arm64EC")
-        set(OFX_ARCH "Win-arm64ec") # normative (upstream main, 2026): Arm64EC (and Arm64X) plug-ins
-    elseif(_OFX_WINARCH MATCHES "ARM64|AARCH64")
-        # CMake >= 4.1 reports "aarch64" as the MinGW architecture ID
-        set(OFX_ARCH "Win-arm64")   # reserved, not yet normative: native Arm64 hosts
-        message(WARNING "Native Arm64 plug-in: installed to Win-arm64, a reserved, not yet normative folder. "
-                        "Current Windows-on-Arm hosts (Resolve, Vegas) are Arm64EC: build for Arm64EC for them.")
-    elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(OFX_ARCH "Win64")
-    else()
-        set(OFX_ARCH "Win32")
-    endif()
-elseif(UNIX)
-    if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-        set(_OFX_OS "FreeBSD")
-    else()
-        set(_OFX_OS "Linux")
-    endif()
-    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _OFX_CPU)
-    if(_OFX_CPU MATCHES "^(x86_64|amd64|i[3-6]86|x86)$")
-        # x86: use the pointer size, the userland may be 32-bit on a 64-bit kernel
-        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            set(OFX_ARCH "${_OFX_OS}-x86-64")
-        else()
-            set(OFX_ARCH "${_OFX_OS}-x86")
-        endif()
-    elseif(_OFX_OS STREQUAL "Linux" AND NOT _OFX_CPU STREQUAL "")
-        # the spec's name, literally: Linux-${uname -m} (CMAKE_SYSTEM_PROCESSOR is uname -m for native builds;
-        # cross toolchain files set it). HostSupport also searches the compiled architecture's name.
-        set(OFX_ARCH "Linux-${CMAKE_SYSTEM_PROCESSOR}")
-    elseif(_OFX_CPU MATCHES "^armv[2-6]" AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(OFX_ARCH "FreeBSD-armv6")
-    elseif(_OFX_CPU MATCHES "^(aarch64|arm64|armv8l|arm.*)$")
-        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            set(OFX_ARCH "FreeBSD-aarch64")
-        else()
-            set(OFX_ARCH "FreeBSD-armv7")
-        endif()
-    elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^riscv")
-        set(OFX_ARCH "FreeBSD-riscv64")
-    elseif(_OFX_OS STREQUAL "FreeBSD" AND _OFX_CPU MATCHES "^powerpc")
-        # uname -p: powerpc64, powerpc64le (uname -m only says powerpc)
-        # CMake < 3.20 (TestBigEndian supports CXX-only projects since 3.12)
-        if(NOT DEFINED CMAKE_CXX_BYTE_ORDER AND NOT CMAKE_VERSION VERSION_LESS 3.12)
-            include(TestBigEndian)
-            test_big_endian(_OFX_BIG_ENDIAN)
-            if(NOT _OFX_BIG_ENDIAN)
-                set(CMAKE_CXX_BYTE_ORDER "LITTLE_ENDIAN")
-            endif()
-        endif()
-        if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND CMAKE_CXX_BYTE_ORDER STREQUAL "LITTLE_ENDIAN")
-            set(OFX_ARCH "FreeBSD-powerpc64le")
-        elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            set(OFX_ARCH "FreeBSD-powerpc64")
-        else()
-            set(OFX_ARCH "FreeBSD-powerpc")
-        endif()
-    elseif(NOT _OFX_CPU STREQUAL "")
-        set(OFX_ARCH "${_OFX_OS}-${CMAKE_SYSTEM_PROCESSOR}") # Linux: uname -m (riscv64, ppc64le, s390x, ...)
-    endif()
+########################################################################
+# Test.ofx.bundle (Test/Makefile; make CONFIG=debug or TESTS=1)
+########################################################################
+if(BUILD_TESTING)
+  add_ofx_plugin(Test INFO_PLIST Test/Info.plist SOURCES
+    Test/TestRender.cpp Test/TestPosition.cpp Test/TestGroups.cpp Test/TestHostBehaviour.cpp
+    Test/TestOpenGL.cpp Test/TestOpenGLRenderGL.cpp Test/TestOpenGLRenderMesa.cpp)
+  supportext_add_sources(Test COMPONENTS THREADS TRANSFORM3X3) # + SHUTTER, as Test/Makefile
+  target_link_libraries(Test PRIVATE OpenGL::GL)
+  ofx_deploy_bundle(Test)
 endif()
 
-SET(OFX_ARCH_NAME ${OFX_ARCH} CACHE STRING "OpenFX target OS and architecture")
-IF("${OFX_ARCH_NAME}" STREQUAL "UNKNOWN")
-  MESSAGE(SEND_ERROR "OFX_ARCH_NAME was not detected. Install targets will be unavailable. See http://openeffects.org/documentation/reference/ch02s02.html to pick an arch name.")
-ELSE()
-  INSTALL(TARGETS Misc
-    RUNTIME DESTINATION Misc.ofx.bundle/Contents/${OFX_ARCH_NAME}
-    LIBRARY DESTINATION Misc.ofx.bundle/Contents/${OFX_ARCH_NAME}
-  )
-
-  INSTALL(DIRECTORY "Shadertoy/presets"
-    DESTINATION Misc.ofx.bundle/Contents/Resources
-  )
-
-  INSTALL(FILES ${MISC_RESOURCES}
-    DESTINATION Misc.ofx.bundle/Contents/Resources
-  )
-
-  INSTALL(FILES Info.plist
-    DESTINATION Misc.ofx.bundle/Contents
-  )
-  if(BUILD_CIMG_PLUGINS)
-    INSTALL(TARGETS CImg
-      RUNTIME DESTINATION CImg.ofx.bundle/Contents/${OFX_ARCH_NAME}
-      LIBRARY DESTINATION CImg.ofx.bundle/Contents/${OFX_ARCH_NAME}
-    )
-
-    INSTALL(FILES ${CIMG_RESOURCES}
-      DESTINATION CImg.ofx.bundle/Contents/Resources
-    )
-
-    INSTALL(FILES CImg/Info.plist
-      DESTINATION CImg.ofx.bundle/Contents
-    )
-  endif()
-ENDIF()
+########################################################################
+# DebugProxy.ofx.bundle (DebugProxy/Makefile; make CONFIG=debug)
+########################################################################
+if(BUILD_DEBUGPROXY)
+  # not linked with openfx::Support: it uses HostSupport's ofxhBinary and ofxhUtilities
+  add_ofx_plugin(DebugProxy INFO_PLIST DebugProxy/Info.plist SOURCES DebugProxy/DebugProxy.cpp)
+  target_link_libraries(DebugProxy PRIVATE openfx::HostSupport)
+  target_include_directories(DebugProxy PRIVATE SupportExt) # ofxsMacros.h
+  ofx_deploy_bundle(DebugProxy)
+endif()

@@ -304,11 +304,11 @@ Installation
 To install prebuilt binaries, see [Binaries](#binaries) above. This section
 explains how to compile the plugins from source.
 
-If you want to compile the plugins from source, the recommended way is to use the
-provided Makefiles (this is what the continuous integration and the Natron binaries
-use, on Linux, macOS, and Windows with MSYS2/MinGW-w64). The CMake build, the Xcode
-project, and the Visual Studio project are alternatives, which may not always be up
-to date.
+The plugins can be compiled with CMake or with the provided Makefiles, on Linux,
+macOS, and Windows (MSYS2/MinGW-w64; CMake also supports Visual Studio). Both build
+the same bundles; Natron is moving all its builds to CMake (see
+[Natron#1181](https://github.com/NatronGitHub/Natron/issues/1181)). The Xcode project
+and the Visual Studio project are alternatives, which may not always be up to date.
 
 Whichever method you use, the compiled `*.ofx.bundle` directories must end up in
 the standard OpenFX plugins directory (listed in step 4 of [Binaries](#binaries)).
@@ -359,22 +359,51 @@ compiling:
 
 	sudo make install [options]
 
-### Using CMake (alternative)
+### Using CMake
 
-CMake is supported as an alternative to the Makefiles. It only builds the combined
-`Misc` and `CImg` bundles, and only out-of-tree builds are allowed.
-`CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded at configure time if missing
-(at the version given in `CImg/CImgVersion.mk`), and the CImg plugins can be disabled
-with `-DBUILD_CIMG_PLUGINS=OFF`. By default, `make install` copies the bundles directly
-into `CMAKE_INSTALL_PREFIX`, which is `/usr/local` on Unix, so set it to the OpenFX
-plugins directory:
+CMake builds the same bundles as the Makefiles (`make nomulti` is make-only): `Misc`,
+`CImg` and `Shadertoy`, plus `Test` and `DebugProxy` in Debug builds. Only out-of-tree
+builds are allowed. `CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded at
+configure time if missing (at the version given in `CImg/CImgVersion.mk`, again when it
+changes). The bundles are assembled in `<build>/Plugins`, and `cmake --install` copies
+them into `<prefix>/OFX/Plugins` (openfx's `PLUGIN_INSTALLDIR`, relative to
+`CMAKE_INSTALL_PREFIX`). For the OpenFX plugins directory (as `make install`), use the
+prefix `/usr` on Linux and `/Library` on macOS:
 
-	mkdir build && cd build
-	cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/OFX/Plugins
-	make
-	sudo make install
+	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+	cmake --build build --parallel
+	sudo cmake --install build --prefix /usr     # Linux: /usr/OFX/Plugins
+	sudo cmake --install build --prefix /Library # macOS: /Library/OFX/Plugins
 
-Use `-DCMAKE_INSTALL_PREFIX=/Library/OFX/Plugins` on macOS.
+On Windows, use `--prefix "C:/Program Files/Common Files"`. This is a change from the
+earlier CMake build, which installed the bundles at the root of `CMAKE_INSTALL_PREFIX`
+(`/usr/local` by default); `-DPLUGIN_INSTALLDIR=<dir>` sets another directory, relative
+to the prefix (or absolute). The main options are:
+
+- `-DCMAKE_BUILD_TYPE=Release` (default; CMake's `-O3 -DNDEBUG`, where `make` uses
+  `-O2`: add `-DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG"` for that), `Debug` or
+  `RelWithDebInfo` (`make CONFIG=...`).
+- `-DOFX_CXX_STANDARD=17` (default) or `20`.
+- `-DOFX_USE_OPENMP=ON` (default): OpenMP in the CImg plugins and DenoiseSharpen, if
+  found (`make OPENMP=1`). With Apple clang, install libomp with MacPorts
+  (`sudo port install libomp`), or give the prefix of another libomp with
+  `-DOFX_LIBOMP_ROOT=<prefix>`. With MSYS2, install libgomp
+  (`pacman -S ${MINGW_PACKAGE_PREFIX}-libgomp`); the bundles then need `libgomp-1.dll`
+  even with `-static`, so the CI builds Windows without OpenMP. MSVC
+  builds do not use OpenMP.
+- `-DOFX_DEPLOY_BUNDLES=ON`: at install, copy the non-system libraries into the bundles
+  (on macOS, `osxDeploy.sh`, which needs GNU sed (`sudo port install gsed`), as
+  `make CONFIG=release` does). The bundles then also need these libraries' minimum
+  macOS version (e.g. MacPorts' libomp is built for the build machine's macOS).
+- `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`.
+- `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
+  DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
+  build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.
+- MinGW: `-DCMAKE_MODULE_LINKER_FLAGS=-static` links the MinGW runtime (libstdc++,
+  libgcc, winpthread) statically, as the CI does, for hosts that do not ship it.
+- `-DUSE_OSMESA=ON` (`make -C Shadertoy OSMESA=1`): Shadertoy CPU rendering with a
+  mangled OSMesa in `OSMESA_PATH` (default `/opt/osmesa`) and LLVM in `LLVM_PATH`
+  (default `/opt/llvm`).
 
 ### OS X, using Xcode
 
