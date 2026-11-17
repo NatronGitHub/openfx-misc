@@ -8,13 +8,16 @@
 # - the file and directory lists;
 # - the contents of every file but the binaries (Info.plist, Resources, ...);
 # - for each binary (Contents/<arch>/*.ofx): the exported symbols, the rpath, and
-#   the plug-ins it registers (identifier and version, with ofxload.cpp);
-# The libraries each binary links are printed when they differ, but are not an error
-# (the Makefiles link OpenGL to every bundle; CMake only where it is used).
+#   the plug-ins it registers (identifier and version, with ofxload.cpp), which must
+#   be at least one, without an ofxload error (except DebugProxy, which registers the
+#   plug-ins of $OFX_DEBUGPROXY_BINARY);
+# - the libraries each binary links: a difference is an error, except for OpenGL and
+#   pthread (the Makefiles link OpenGL to every bundle, CMake only where it is used;
+#   SupportExt's Threads::Threads links libpthread with glibc < 2.34), which is printed.
 # The binaries in Contents/Libraries (osxDeploy.sh) are compared by name only.
-# Contents/_CodeSignature (the bundle signature of CMake's OFX_DEPLOY_BUNDLES=ON on
-# macOS; make does not sign) is an expected difference when it is on one side only:
-# it is reported, but is not an error.
+# Contents/_CodeSignature on one side only is an expected difference, reported but not
+# an error: openfx's CMake signs the installed macOS bundles (with or without
+# OFX_DEPLOY_BUNDLES), make does not.
 # Run from the top of the source tree (ofxload is built from .github/tools/ofxload.cpp).
 # Exit status: 0 if the bundles match, 1 otherwise.
 set -eo pipefail
@@ -97,12 +100,12 @@ while IFS= read -r name; do
     bstatus=0
     (cd "$pa" && find . -mindepth 1 | sort) > "$work/fa"
     (cd "$pb" && find . -mindepth 1 | sort) > "$work/fb"
-    # a deploy signature on one side only: expected (compare the other files)
+    # a bundle signature on one side only: expected (compare the other files)
     sig='^\./Contents/_CodeSignature(/|$)'
     if [ "$(grep -cE "$sig" "$work/fa" || true)" = 0 ] || [ "$(grep -cE "$sig" "$work/fb" || true)" = 0 ]; then
         for s in a b; do
             if grep -qE "$sig" "$work/f$s"; then
-                echo "  expected: $name: Contents/_CodeSignature only in ${!s} (deploy signature)"
+                echo "  expected: $name: Contents/_CodeSignature only in ${!s} (bundle signature)"
                 grep -vE "$sig" "$work/f$s" > "$work/f$s.tmp" || true
                 mv "$work/f$s.tmp" "$work/f$s"
             fi
@@ -130,10 +133,26 @@ while IFS= read -r name; do
                     fi
                 done
                 echo "  $name: $f: $(grep -vc ERROR "$work/xa" || true) plug-ins, $(symbols "$pa/$f" | tr '\n' ' ')"
+                if [ "$name" != DebugProxy.ofx.bundle ]; then
+                    for pp in "$pa" "$pb"; do
+                        plugins "$pp/$f" > "$work/xp"
+                        if grep -q ERROR "$work/xp" || ! grep -qv ERROR "$work/xp"; then
+                            echo "DIFF: $name: $f: no plug-in, or an ofxload error, in $pp:"
+                            grep ERROR "$work/xp" | sed 's/^/  /' || true
+                            bstatus=1
+                        fi
+                    done
+                fi
                 linked "$pa/$f" > "$work/xa"
                 linked "$pb/$f" > "$work/xb"
                 if ! diff "$work/xa" "$work/xb" > "$work/x.diff"; then
-                    echo "  note: $name: $f: linked libraries differ (< $pa, > $pb):"
+                    allowed='^[<>] (OpenGL|libGL\.so.*|libOpenGL\.so.*|libGLX\.so.*|opengl32\.dll|libpthread\.so.*)$'
+                    if grep -E '^[<>] ' "$work/x.diff" | grep -viqE "$allowed"; then
+                        echo "DIFF: $name: $f: linked libraries (< $pa, > $pb):"
+                        bstatus=1
+                    else
+                        echo "  note: $name: $f: linked libraries differ (OpenGL, pthread) (< $pa, > $pb):"
+                    fi
                     sed 's/^/    /' "$work/x.diff"
                 fi
                 ;;

@@ -33,7 +33,7 @@ status=0
 if [ "$arch" = Win64 ]; then
     command -v objdump > /dev/null || { echo "objdump not found"; exit 1; }
     for f in "${binaries[@]}"; do
-        if objdump -p "$f" | grep -i -E 'DLL Name: *(libgcc_s|libstdc\+\+|libwinpthread)'; then
+        if objdump -p "$f" | grep -i -E 'DLL Name: *(libgcc_s|libstdc\+\+|libwinpthread|libgomp)'; then
             echo "ERROR: $f depends on the MinGW runtime DLLs above"
             status=1
         fi
