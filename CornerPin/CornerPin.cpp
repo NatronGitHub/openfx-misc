@@ -103,10 +103,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "In the viewer, click a point to select and drag it, shift-click to add a " \
     "point to the selection or remove it, and drag any selected point to move " \
-    "all the selected points together. Escape clears the selection. In Natron, " \
-    "the viewer selection rectangle also selects the points inside it (Ctrl+drag " \
-    "adds them to the selection), and a click on empty space clears the " \
-    "selection.\n" \
+    "all the selected points together. Escape clears the selection, or cancels " \
+    "a drag in progress.\n" \
+    "In Natron 2.6.x with NatronGitHub/Natron#1196, the viewer selection " \
+    "rectangle of the node whose overlay is shown also selects the points inside " \
+    "it (shift+drag adds them to the selection), and a click on empty space " \
+    "clears the selection. Without it, and in other hosts, only click, " \
+    "shift-click and Escape select points.\n" \
     "\n" \
     "This plugin concatenates transforms.\n" \
     "See also: https://web.archive.org/web/20220627032200/http://www.opticalenquiry.com/nuke/index.php?title=CornerPin"
@@ -118,6 +121,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 2.1: overlay point selection, host selection rectangle param (Natron)
 
 #define POINT_SIZE 5
+// Pick tolerance in screen pixels, through kOfxInteractPropPixelScale. As in RectangleInteract and
+// TransformInteractHelper, it is not scaled by the screen pixel ratio (unlike POINT_SIZE when drawing).
 #define POINT_TOLERANCE 6
 
 #define kGroupTo "to"
@@ -217,6 +222,7 @@ public:
         , _selectionRectangleState(NULL)
         , _selectionRectangleLastState(0)
 #endif
+        , _overlayShiftCount(0)
         , _majorVersion(majorVersion)
     {
         for (int i = 0; i < 4; ++i) {
@@ -280,6 +286,13 @@ public:
      **/
     bool* overlaySelected() { return _overlaySelected; }
 
+    /**
+     * @brief The number of shift keys held, counted from the key events of the overlay
+     * interacts (the pen actions carry no modifiers), shared by all of them and the host
+     * selection rectangle.
+     **/
+    int& overlayShiftCount() { return _overlayShiftCount; }
+
 private:
 #ifdef OFX_EXTENSIONS_NATRON
     /// Update the overlay selection from the host selection rectangle (Natron extension).
@@ -328,6 +341,7 @@ private:
     bool _overlaySelectedOnRectangleStart[4]; // the selection when the rectangle started
 #endif
     bool _overlaySelected[4];
+    int _overlayShiftCount;
     unsigned int _majorVersion;
 };
 
@@ -610,16 +624,23 @@ CornerPinPlugin::selectionRectangleChanged(double time)
     const int state = _selectionRectangleState->getValue();
 
     if (state == 0) {
-        // the selection was cleared by the user (Natron: a click or drag on empty space
-        // without Ctrl, before the new rectangle starts)
-        for (int i = 0; i < 4; ++i) {
-            _overlaySelected[i] = false;
+        // The selection was cleared by the user: Natron sends 0 on a click or drag on empty
+        // space, before the new rectangle starts. The notification carries no modifiers: as in
+        // Natron's RotoPaint, shift (tracked from the overlay key events) keeps the selection,
+        // so that the following rectangle adds to it.
+        if (_overlayShiftCount <= 0) {
+            for (int i = 0; i < 4; ++i) {
+                _overlaySelected[i] = false;
+            }
         }
     } else {
         if (_selectionRectangleLastState != 1) {
-            // A new rectangle adds to the current selection. Natron's convention: a drag
-            // without Ctrl first clears the selection (state 0), so the rectangle replaces
-            // it; Ctrl+drag sends no state 0, so the rectangle adds to the selection.
+            // A new rectangle adds to the selection it starts with (empty after a 0 without
+            // shift, so the rectangle replaces the selection).
+            // If a rectangle ends without a 2 (e.g. the host abandons it), a next rectangle that
+            // is not preceded by a 0 continues the stale one: it adds to the base of the abandoned
+            // rectangle, not to its last result. A 0 resets this (Natron#1196 sends a 0 on every
+            // press on empty space, so this should not happen there).
             for (int i = 0; i < 4; ++i) {
                 _overlaySelectedOnRectangleStart[i] = _overlaySelected[i];
             }
@@ -714,8 +735,9 @@ public:
         , _hovering(-1)
         , _selected(NULL)
         , _lastMousePos()
-        , _modifierStateShift(0)
+        , _modifierStateShift( _plugin->overlayShiftCount() )
         , _dragMoved(false)
+        , _penDownTrapped(false)
     {
         assert(_plugin);
         _selected = _plugin->overlaySelected();
@@ -744,6 +766,8 @@ public:
         for (int i = 0; i < 4; ++i) {
             _toDrag[i].x = _toDrag[i].y = 0;
             _fromDrag[i].x = _fromDrag[i].y = 0;
+            _toOrig[i] = _toDrag[i];
+            _fromOrig[i] = _fromDrag[i];
             _enableDrag[i] = false;
         }
         _useFromDrag = false;
@@ -840,6 +864,9 @@ private:
         // more parameters, either from custom GUI interaction or some analysis of imagery etc.. this is
         // used to indicate the start of a set of a parameter changes that should be considered part of
         // a single undo/redo block."
+        // With Interactive Update, this is called on each pen motion: the block is not kept open
+        // from pen down to pen up, because Natron's paramEditBegin also blocks evaluation (renders)
+        // until paramEditEnd (KnobHolder::beginChanges()), which would defeat Interactive Update.
         ImageEffect::EditBlock eb(*_effect, "Move CornerPin points", n > 1);
         // no need to redraw overlay since it is slave to the paramaters
         for (int i = 0; i < 4; ++i) {
@@ -865,6 +892,28 @@ private:
         _hovering = -1;
         _interactiveDrag = false;
         _dragMoved = false;
+        _penDownTrapped = false;
+    }
+
+    /**
+     * @brief Cancel a point drag in progress (Escape): the points go back to where
+     * they were at pen down. Without Interactive Update, the parameters were not
+     * changed yet; with it, they are set back to their values at pen down.
+     * The selection is kept, and the matching pen up is still trapped.
+     **/
+    void cancelDrag()
+    {
+        if ( _interactiveDrag && _dragMoved ) {
+            for (int i = 0; i < 4; ++i) {
+                _toDrag[i] = _toOrig[i];
+                _fromDrag[i] = _fromOrig[i];
+            }
+            setDraggedValues();
+        }
+        const bool penDownTrapped = _penDownTrapped;
+        abandonDrag();
+        _penDownTrapped = penDownTrapped;
+        _effect->redrawOverlays();
     }
 
     /**
@@ -892,13 +941,16 @@ private:
     int _hovering; // -1: idle, else hovering point number
     bool* _selected; // the selected points (4), stored in the plugin instance
     OfxPointD _lastMousePos;
-    int _modifierStateShift;
+    int& _modifierStateShift; // shared by the interacts of the plugin instance
     OfxPointD _toDrag[4];
     OfxPointD _fromDrag[4];
     bool _enableDrag[4];
     bool _useFromDrag;
     bool _interactiveDrag;
     bool _dragMoved; // the selected points were moved since pen down
+    bool _penDownTrapped; // the last pen down was trapped: trap the matching pen up
+    OfxPointD _toOrig[4]; // the points at pen down, restored if the drag is cancelled
+    OfxPointD _fromOrig[4];
 };
 
 static bool
@@ -1190,6 +1242,7 @@ CornerPinTransformInteract::penDown(const PenArgs &args)
     const bool shift = (_modifierStateShift > 0);
     _lastMousePos = args.penPosition;
     _useFromDrag = useFrom;
+    _penDownTrapped = (hit != -1);
 
     if (hit != -1) {
         if (shift) {
@@ -1214,6 +1267,8 @@ CornerPinTransformInteract::penDown(const PenArgs &args)
         for (int i = 0; i < 4; ++i) {
             _toDrag[i] = to[i];
             _fromDrag[i] = from[i];
+            _toOrig[i] = to[i];
+            _fromOrig[i] = from[i];
             _enableDrag[i] = enable[i];
         }
         _effect->redrawOverlays();
@@ -1222,7 +1277,7 @@ CornerPinTransformInteract::penDown(const PenArgs &args)
     }
 
     // Pen down on empty space: not trapped, so that the host can use it (Natron: viewer menu,
-    // user RoI handles, selection rectangle, Ctrl-click color picker...). On Natron, the host
+    // user RoI handles, selection rectangle, color pickers...). On Natron, the host
     // selection rectangle clears or sets the selection (CornerPinPlugin::selectionRectangleChanged()).
     return false;
 } // CornerPinTransformInteract::penDown
@@ -1231,7 +1286,11 @@ bool
 CornerPinTransformInteract::penUp(const PenArgs & /*args*/)
 {
     if (_mouseState != eMouseStateDraggingPoints) {
-        return false;
+        // trap the pen up of a trapped pen down (shift-click deselect, cancelled drag)
+        const bool trapped = _penDownTrapped;
+        _penDownTrapped = false;
+
+        return trapped;
     }
 
     if (!_interactiveDrag && _dragMoved) {
@@ -1245,11 +1304,12 @@ CornerPinTransformInteract::penUp(const PenArgs & /*args*/)
     _mouseState = eMouseStateIdle;
     _dragging = -1;
     _dragMoved = false;
+    _penDownTrapped = false;
 
     return true;
 }
 
-// keyDown updates the shift state, and Escape clears the selection
+// keyDown updates the shift state, and Escape cancels a drag or clears the selection
 bool
 CornerPinTransformInteract::keyDown(const KeyArgs &args)
 {
@@ -1258,11 +1318,19 @@ CornerPinTransformInteract::keyDown(const KeyArgs &args)
         ++_modifierStateShift;
     }
 
-    if ( (args.keySymbol == kOfxKey_Escape) && (_mouseState != eMouseStateDraggingPoints) && hasSelection() ) {
-        clearSelection();
-        _effect->redrawOverlays();
+    if (args.keySymbol == kOfxKey_Escape) {
+        if (_mouseState == eMouseStateDraggingPoints) {
+            // trapped, so that the host does not also clear its selection during the drag
+            cancelDrag();
 
-        return true;
+            return true;
+        }
+        if ( hasSelection() ) {
+            clearSelection();
+            _effect->redrawOverlays();
+
+            return true;
+        }
     }
 
     // modifiers are not "caught"
