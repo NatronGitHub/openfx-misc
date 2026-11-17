@@ -177,12 +177,8 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Misc)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/openfx/Support/Plugins/include)
 
-# Add SupportExt sources to a bundle, so that they are compiled with its flags.
-function(openfx_misc_supportext TARGET)
-  foreach(_src IN LISTS ARGN)
-    target_sources(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/SupportExt/${_src}.cpp")
-  endforeach()
-endfunction()
+# supportext_add_sources(): the SupportExt sources of each bundle, compiled with its flags
+include(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt/cmake/SupportExt.cmake)
 
 ########################################################################
 # Misc.ofx.bundle (Misc/Makefile)
@@ -207,10 +203,9 @@ foreach(_dir IN LISTS MISC_PLUGIN_DIRS)
 endforeach()
 
 add_ofx_plugin(Misc INFO_PLIST Misc/Info.plist SOURCES ${MISC_SOURCES})
-openfx_misc_supportext(Misc
-  ofxsThreadSuite tinythread ofxsFileOpen ofxsGenerator ofxsLut ofxsMultiPlane
-  ofxsOGLTextRenderer ofxsOGLFontData ofxsRamp ofxsShutter ofxsTracking
-  ofxsTransform3x3 ofxsTransformInteract ofxsRectangleInteract)
+# the sources of Misc/Makefile; POSITION_INTERACT: CornerPin, Transform... (header-only)
+supportext_add_sources(Misc COMPONENTS THREADS FILEOPEN GENERATOR LUT MULTIPLANE TEXT RAMP SHUTTER
+  TRACKING TRANSFORM3X3 TRANSFORM_INTERACT RECTANGLE_INTERACT POSITION_INTERACT)
 target_include_directories(Misc PRIVATE ${MISC_PLUGIN_DIRS} Test)
 target_link_libraries(Misc PRIVATE openfx::Support OpenGL::GL)
 if(NOT MSVC) # MSVC has OpenMP 2.0 only
@@ -372,7 +367,7 @@ if(BUILD_SHADERTOY)
   add_ofx_plugin(Shadertoy INFO_PLIST Shadertoy/Info.plist SOURCES
     Shadertoy/Shadertoy.cpp Shadertoy/ShadertoyParse.cpp
     Shadertoy/ShadertoyRenderGL.cpp Shadertoy/ShadertoyRenderMesa.cpp)
-  openfx_misc_supportext(Shadertoy ofxsThreadSuite tinythread)
+  supportext_add_sources(Shadertoy COMPONENTS THREADS) # as Shadertoy/Makefile
   target_link_libraries(Shadertoy PRIVATE openfx::Support OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup
   if(USE_OSMESA)
     # Shadertoy/Makefile with OSMESA=1: -DHAVE_OSMESA, OSMesa's headers for ShadertoyRenderMesa.cpp
@@ -543,7 +538,7 @@ add_ofx_plugin(CImg INFO_PLIST CImg/Info.plist SOURCES
   "CImg/Smooth/CImgSmooth.cpp"
   "CImg/ZDefocus/CImgZDefocus.cpp"
 )
-openfx_misc_supportext(CImg ofxsThreadSuite tinythread ofxsLut) # ofxsLut: ChromaBlur
+supportext_add_sources(CImg COMPONENTS THREADS LUT) # as CImg/Makefile (ofxsLut: ChromaBlur)
 target_include_directories(CImg PRIVATE ${CIMG_DIR})
 target_link_libraries(CImg PRIVATE openfx::Support)
 if(NOT MSVC)
@@ -613,7 +608,7 @@ if(BUILD_TESTING)
   add_ofx_plugin(Test INFO_PLIST Test/Info.plist SOURCES
     Test/TestRender.cpp Test/TestPosition.cpp Test/TestGroups.cpp Test/TestHostBehaviour.cpp
     Test/TestOpenGL.cpp Test/TestOpenGLRenderGL.cpp Test/TestOpenGLRenderMesa.cpp)
-  openfx_misc_supportext(Test ofxsThreadSuite tinythread ofxsTransform3x3 ofxsShutter)
+  supportext_add_sources(Test COMPONENTS THREADS TRANSFORM3X3) # + SHUTTER, as Test/Makefile
   target_link_libraries(Test PRIVATE openfx::Support OpenGL::GL)
   ofx_deploy_bundle(Test)
 endif()
