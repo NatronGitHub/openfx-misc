@@ -54,6 +54,9 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
+// whether the host supports periodic parametric params (set in describeInContext)
+static bool gParametricPeriodic = false;
+
 #define kPluginName "HueCorrectOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
@@ -259,18 +262,18 @@ public:
                 // evaluate the parametric param
                 double value = _hueParam->getValue(c, _time, parametricPos);
 
-                // the curves are periodic (hue 6 is hue 0): some hosts return NaN at the period's end
-                // when there are keys at both 0 and 6 (NatronGitHub/Natron#1267), use the value at 0
-                if ( !std::isfinite(value) && (position == nbValues) ) {
-                    value = _hueParam->getValue(c, _time, 0.);
-                }
-                if ( !std::isfinite(value) ) {
-                    value = 0.;
-                }
                 // all the values (in HueCorrect) must be positive. We don't care if sat_thrsh goes above 1.
                 value = (std::max)(0., value);
                 // set that in the lut
                 _hue[c][position] = value;
+            }
+            // the curves are periodic (hue 6 is hue 0) on hosts that support it: use the value at 0
+            // for the end of the period, which some hosts evaluate wrongly when a curve has keys at
+            // both 0 and 6 (NatronGitHub/Natron#1267: NaN, which becomes 0 in the max() above, or
+            // may stay NaN with -ffast-math). This doesn't depend on detecting NaN, which
+            // -ffinite-math-only builds can't do.
+            if (gParametricPeriodic) {
+                _hue[c][nbValues] = _hue[c][0];
             }
         }
     }
@@ -396,7 +399,7 @@ private:
             // slow version
             double ret = _hueParam->getValue(c, _time, value);
 
-            return std::isfinite(ret) ? ret : 0.;
+            return ret;
         } else {
             double x = value / 6.;
             int i = (int)(x * nbValues);
@@ -944,6 +947,7 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setRange(0.0, 6.0);
 
 
+        gParametricPeriodic = param->supportsPeriodic();
         int plast = param->supportsPeriodic() ? 5 : 6;
         // set a default curve
         for (int c = 0; c < kCurveNb; ++c) {
@@ -1186,18 +1190,18 @@ public:
                 // evaluate the parametric param
                 double value = _hueParam->getValue(c, _time, parametricPos);
 
-                // the curves are periodic (hue 6 is hue 0): some hosts return NaN at the period's end
-                // when there are keys at both 0 and 6 (NatronGitHub/Natron#1267), use the value at 0
-                if ( !std::isfinite(value) && (position == nbValues) ) {
-                    value = _hueParam->getValue(c, _time, 0.);
-                }
-                if ( !std::isfinite(value) ) {
-                    value = 0.;
-                }
                 // all the values (in HueKeyer) must be positive. We don't care if sat_thrsh goes above 1.
                 value = (std::max)(0., value);
                 // set that in the lut
                 _hue[c][position] = value;
+            }
+            // the curves are periodic (hue 6 is hue 0) on hosts that support it: use the value at 0
+            // for the end of the period, which some hosts evaluate wrongly when a curve has keys at
+            // both 0 and 6 (NatronGitHub/Natron#1267: NaN, which becomes 0 in the max() above, or
+            // may stay NaN with -ffast-math). This doesn't depend on detecting NaN, which
+            // -ffinite-math-only builds can't do.
+            if (gParametricPeriodic) {
+                _hue[c][nbValues] = _hue[c][0];
             }
         }
     }
@@ -1259,7 +1263,7 @@ private:
             // slow version
             double ret = _hueParam->getValue(c, _time, value);
 
-            return std::isfinite(ret) ? ret : 0.;
+            return ret;
         } else {
             double x = value / 6.;
             int i = (int)(x * nbValues);
@@ -1523,6 +1527,7 @@ HueKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDimensionDisplayRange(0., 1., kCurveKeyerSatThrsh);
 
 
+        gParametricPeriodic = param->supportsPeriodic();
         int plast = param->supportsPeriodic() ? 5 : 6;
         // set a default curve
         for (int c = 0; c < kCurveKeyerNb; ++c) {
