@@ -22,13 +22,14 @@
 # - in Debug builds only (make CONFIG=debug): Test.ofx.bundle (Test/Makefile,
 #   BUILD_TESTING, also make TESTS=1) and DebugProxy.ofx.bundle (BUILD_DEBUGPROXY);
 # with the bundle layout of openfx/Support/Plugins/Makefile.master, assembled in
-# <build>/Plugins and installed by "cmake --install" into CMAKE_INSTALL_PREFIX, which
-# defaults to the OpenFX plug-in directory (as "make install").
+# <build>/Plugins and installed by "cmake --install" into ${CMAKE_INSTALL_PREFIX}/OFX/Plugins
+# (openfx's PLUGIN_INSTALLDIR): use --prefix /usr (Linux) or /Library (macOS) to get the
+# directories of "make install".
 # The "make nomulti" bundles (one per plug-in directory) are only built by make.
 #
 # Options:
 #   -DCMAKE_BUILD_TYPE=Release|Debug|RelWithDebInfo (default: Release)
-#   -DOFX_CXX_STANDARD=17 (default) or 20 (-DCMAKE_CXX_STANDARD works too)
+#   -DOFX_CXX_STANDARD=17 (default) or 20
 #   -DOFX_USE_OPENMP=ON|OFF (default ON): OpenMP in the CImg plug-ins and DenoiseSharpen
 #      ("make OPENMP=1"). Apple clang uses MacPorts' libomp (port install libomp).
 #   -DOFX_DEPLOY_BUNDLES=ON: at install, copy the non-system libraries into the bundles
@@ -37,7 +38,8 @@
 #   -DBUILD_TESTING=ON|OFF, -DBUILD_DEBUGPROXY=ON|OFF (default: ON in Debug builds)
 #   -DUSE_OSMESA=ON ("make -C Shadertoy OSMESA=1"): Shadertoy CPU rendering with a mangled
 #      OSMesa in OSMESA_PATH (default /opt/osmesa) and LLVM in LLVM_PATH (default /opt/llvm)
-#   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX
+#   --prefix /usr (Linux) or /Library (macOS) at install: the bundles go to <prefix>/OFX/Plugins
+#   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX (OFX/Plugins)
 ########################################################################
 IF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 MESSAGE(FATAL_ERROR "Prevented in-tree built. This is bad practice.")
@@ -74,19 +76,9 @@ if(NOT _multi_config)
   MESSAGE (STATUS "    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
 
-# "make install" installs into the OpenFX plug-in directory (Makefile.master PLUGINPATH)
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  if(APPLE)
-    set(_ofx_plugin_path "/Library/OFX/Plugins")
-  elseif(WIN32)
-    set(_ofx_plugin_path "C:/Program Files/Common Files/OFX/Plugins")
-  else()
-    set(_ofx_plugin_path "/usr/OFX/Plugins")
-  endif()
-  set(CMAKE_INSTALL_PREFIX "${_ofx_plugin_path}" CACHE PATH "Install prefix (the OpenFX plug-in directory)" FORCE)
-endif()
-# the bundles go to the root of CMAKE_INSTALL_PREFIX (openfx's default is an absolute path)
-set(PLUGIN_INSTALLDIR "." CACHE PATH "Bundle install directory, relative to CMAKE_INSTALL_PREFIX (or absolute)")
+# Install: the bundles go to ${CMAKE_INSTALL_PREFIX}/${PLUGIN_INSTALLDIR}, where PLUGIN_INSTALLDIR
+# is openfx's OFX/Plugins (cmake/OpenFX.cmake): "cmake --install build --prefix /usr" installs
+# into /usr/OFX/Plugins and "--prefix /Library" into /Library/OFX/Plugins, as "make install".
 
 # Check that submodule have been initialized and updated
 if(NOT EXISTS ${PROJECT_SOURCE_DIR}/openfx/include OR NOT EXISTS ${PROJECT_SOURCE_DIR}/openfx/cmake/OpenFX.cmake
@@ -100,8 +92,11 @@ endif()
 
 option(BUILD_CIMG_PLUGINS "Build the CImg plugins (CImg.ofx.bundle)" ON)
 option(BUILD_SHADERTOY "Build the Shadertoy plugin (Shadertoy.ofx.bundle, needs OpenGL)" ON)
-# Debug-only bundles, as "make CONFIG=debug" (Test also with "make TESTS=1")
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+# Debug-only bundles, as "make CONFIG=debug" (Test also with "make TESTS=1"). The defaults
+# follow CMAKE_BUILD_TYPE at the first configure; set BUILD_TESTING and BUILD_DEBUGPROXY
+# explicitly when changing CMAKE_BUILD_TYPE in an existing build directory.
+string(TOUPPER "${CMAKE_BUILD_TYPE}" _build_type)
+if(_build_type STREQUAL "DEBUG")
   set(_debug_build ON)
 else()
   set(_debug_build OFF)
@@ -112,17 +107,9 @@ option(USE_OSMESA "Shadertoy: CPU rendering with OSMesa (OSMESA_PATH) and LLVM (
 set(OSMESA_PATH "/opt/osmesa" CACHE PATH "USE_OSMESA: OSMesa prefix (mangled OSMesa, libMangledOSMesa32)")
 set(LLVM_PATH "/opt/llvm" CACHE PATH "USE_OSMESA: LLVM prefix (bin/llvm-config)")
 
-# C++ standard: C++17 by default (Natron RB-2.6 Qt5 builds); the code also builds as C++20
-# (Qt6 builds, RB-2.7): configure with -DOFX_CXX_STANDARD=20 (or -DCMAKE_CXX_STANDARD=20).
-# add_ofx_plugin and openfx::Support use OFX_CXX_STANDARD, without compiler extensions
-# (-std=c++17, as the Makefile CI builds).
-if(DEFINED CACHE{CMAKE_CXX_STANDARD})
-  set(OFX_CXX_STANDARD "${CMAKE_CXX_STANDARD}" CACHE STRING "C++ standard of the plug-ins (17, 20...)" FORCE)
-else()
-  set(OFX_CXX_STANDARD 17 CACHE STRING "C++ standard of the plug-ins (17, 20...)")
-endif()
-set(CMAKE_CXX_STANDARD ${OFX_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON) # fail instead of silently using an older standard
+# C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
+# Qt5), or 20 (Qt6, RB-2.7): -DOFX_CXX_STANDARD=20. It is used by add_ofx_plugin and
+# openfx::Support, without compiler extensions (-std=c++17, as the Makefile CI builds).
 
 # ========================== compiler flags ==========================
 # Release: CMake's default flags (-O3 -DNDEBUG with GCC and Clang; Makefile.master uses
@@ -155,9 +142,6 @@ endif()
 # HostSupport is only needed by DebugProxy (openfx's OFX_BUILD_HOSTSUPPORT option;
 # CMP0077: option() uses this variable)
 set(OFX_BUILD_HOSTSUPPORT ${BUILD_DEBUGPROXY})
-# openfx's functions run with openfx's policies (3.16): normalize "./<bundle>" install
-# destinations (PLUGIN_INSTALLDIR=.) without a CMP0177 warning
-set(CMAKE_POLICY_DEFAULT_CMP0177 NEW)
 add_subdirectory(openfx EXCLUDE_FROM_ALL)
 # add_ofx_plugin, ofx_plugin_resources, ofx_target_openmp, ofx_deploy_bundle and ARCHDIR
 # come from openfx/cmake/OpenFX.cmake (included by openfx's CMakeLists.txt).
@@ -170,9 +154,8 @@ if(NOT DEFINED OpenGL_GL_PREFERENCE)
 endif()
 find_package(OpenGL REQUIRED)
 
-# Include directories of Makefile.master and Misc/Makefile
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/SupportExt)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/Misc)
+# Include directory of Makefile.master (ofxsProcessing.H...); SupportExt's comes with
+# supportext_add_sources, Misc's (Misc/Makefile) is on the Misc target
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/openfx/Support/Plugins/include)
 
 # supportext_add_sources(): the SupportExt sources of each bundle, compiled with its flags
@@ -204,8 +187,8 @@ add_ofx_plugin(Misc INFO_PLIST Misc/Info.plist SOURCES ${MISC_SOURCES})
 # the sources of Misc/Makefile; POSITION_INTERACT: CornerPin, Transform... (header-only)
 supportext_add_sources(Misc COMPONENTS THREADS FILEOPEN GENERATOR LUT MULTIPLANE TEXT RAMP SHUTTER
   TRACKING TRANSFORM3X3 TRANSFORM_INTERACT RECTANGLE_INTERACT POSITION_INTERACT)
-target_include_directories(Misc PRIVATE ${MISC_PLUGIN_DIRS} Test)
-target_link_libraries(Misc PRIVATE openfx::Support OpenGL::GL)
+# openfx::Support and OpenGL::GL come with supportext_add_sources
+target_include_directories(Misc PRIVATE Misc ${MISC_PLUGIN_DIRS} Test)
 if(NOT MSVC) # MSVC has OpenMP 2.0 only
   ofx_target_openmp(Misc) # DenoiseSharpen (Misc/Makefile: OPENMP=1)
 endif()
@@ -366,13 +349,16 @@ if(BUILD_SHADERTOY)
     Shadertoy/Shadertoy.cpp Shadertoy/ShadertoyParse.cpp
     Shadertoy/ShadertoyRenderGL.cpp Shadertoy/ShadertoyRenderMesa.cpp)
   supportext_add_sources(Shadertoy COMPONENTS THREADS) # as Shadertoy/Makefile
-  target_link_libraries(Shadertoy PRIVATE openfx::Support OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup
+  target_link_libraries(Shadertoy PRIVATE OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup
   if(USE_OSMESA)
     # Shadertoy/Makefile with OSMESA=1: -DHAVE_OSMESA, OSMesa's headers for ShadertoyRenderMesa.cpp
     # only, and -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `llvm-config ...`.
     # Natron's build-plugins.sh may instead give OSMESA_INCLUDES and OSMESA_LIBRARIES (all the
     # link flags, LLVM included).
     target_compile_definitions(Shadertoy PRIVATE HAVE_OSMESA)
+    # The OSMesa (and LLVM) link flags go in the imported target OSMesa::OSMesa (SupportExt's
+    # convention); its include directories are only used by ShadertoyRenderMesa.cpp, as in
+    # Shadertoy/Makefile.
     if(DEFINED OSMESA_LIBRARIES)
       if(NOT DEFINED OSMESA_INCLUDES)
         set(OSMESA_INCLUDES "${OSMESA_PATH}/include")
@@ -382,14 +368,22 @@ if(BUILD_SHADERTOY)
     else()
       find_package(PkgConfig)
       if(PKG_CONFIG_FOUND)
+        # only OSMESA_PATH's osmesa.pc, not the system's (PKG_CONFIG_LIBDIR replaces the default path)
         set(_pkg_config_path "$ENV{PKG_CONFIG_PATH}")
-        set(ENV{PKG_CONFIG_PATH} "${OSMESA_PATH}/lib/pkgconfig:${OSMESA_PATH}/lib64/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+        set(_pkg_config_libdir "$ENV{PKG_CONFIG_LIBDIR}")
+        set(ENV{PKG_CONFIG_PATH} "")
+        set(ENV{PKG_CONFIG_LIBDIR} "${OSMESA_PATH}/lib/pkgconfig:${OSMESA_PATH}/lib64/pkgconfig")
         pkg_check_modules(PC_OSMESA IMPORTED_TARGET osmesa) # not OSMESA_: OSMESA_LIBRARIES is an input
         set(ENV{PKG_CONFIG_PATH} "${_pkg_config_path}")
+        set(ENV{PKG_CONFIG_LIBDIR} "${_pkg_config_libdir}")
       endif()
       if(TARGET PkgConfig::PC_OSMESA)
         get_target_property(_osmesa_includes PkgConfig::PC_OSMESA INTERFACE_INCLUDE_DIRECTORIES)
-        set(_osmesa_libs PkgConfig::PC_OSMESA)
+        get_target_property(_osmesa_libs PkgConfig::PC_OSMESA INTERFACE_LINK_LIBRARIES)
+        get_target_property(_osmesa_opts PkgConfig::PC_OSMESA INTERFACE_LINK_OPTIONS)
+        if(_osmesa_opts)
+          list(PREPEND _osmesa_libs ${_osmesa_opts})
+        endif()
       else()
         message(STATUS "osmesa.pc not found in ${OSMESA_PATH}: using ${OSMESA_PATH}/include and -lMangledOSMesa32")
         set(_osmesa_includes "${OSMESA_PATH}/include")
@@ -423,23 +417,13 @@ if(BUILD_SHADERTOY)
       list(APPEND _osmesa_libs -lz ${_llvm_libs})
       message(STATUS "Shadertoy: OSMesa in ${OSMESA_PATH}, LLVM ${_llvm_version} in ${LLVM_PATH}")
     endif()
+    add_library(OSMesa::OSMesa INTERFACE IMPORTED)
+    set_target_properties(OSMesa::OSMesa PROPERTIES INTERFACE_LINK_LIBRARIES "${_osmesa_libs}")
     set_property(SOURCE Shadertoy/ShadertoyRenderMesa.cpp APPEND PROPERTY INCLUDE_DIRECTORIES ${_osmesa_includes})
-    target_link_libraries(Shadertoy PRIVATE ${_osmesa_libs})
+    target_link_libraries(Shadertoy PRIVATE OSMesa::OSMesa)
   endif()
   ofx_plugin_resources(Shadertoy Shadertoy/net.sf.openfx.Shadertoy.png Shadertoy/net.sf.openfx.Shadertoy.svg)
-  # the presets directory, as "cp -r presets" in Makefile.master
-  file(GLOB _presets LIST_DIRECTORIES false RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/Shadertoy"
-       "${CMAKE_CURRENT_SOURCE_DIR}/Shadertoy/presets/*" "${CMAKE_CURRENT_SOURCE_DIR}/Shadertoy/presets/*/*")
-  set(_preset_dirs)
-  foreach(_p IN LISTS _presets)
-    get_filename_component(_d "${_p}" DIRECTORY)
-    list(APPEND _preset_dirs "${_d}")
-  endforeach()
-  list(REMOVE_DUPLICATES _preset_dirs)
-  foreach(_d IN LISTS _preset_dirs)
-    file(GLOB _files LIST_DIRECTORIES false "${CMAKE_CURRENT_SOURCE_DIR}/Shadertoy/${_d}/*")
-    ofx_plugin_resources(Shadertoy DESTINATION "${_d}" ${_files})
-  endforeach()
+  ofx_plugin_resources(Shadertoy Shadertoy/presets) # with its contents, as "cp -r presets"
   ofx_deploy_bundle(Shadertoy)
 endif()
 
@@ -451,6 +435,8 @@ if(BUILD_CIMG_PLUGINS)
 # Download them at the version used by CImg/Makefile (see CImg/CImgVersion.mk)
 # if they are missing, as "cd CImg && make CImg.h" would do.
 set(CIMG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/CImg")
+# reconfigure (and download again) when CIMGVERSION changes, as CImg/Makefile does
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CIMG_DIR}/CImgVersion.mk")
 file(STRINGS "${CIMG_DIR}/CImgVersion.mk" CIMGVERSION REGEX "^CIMGVERSION *=")
 string(REGEX REPLACE "^CIMGVERSION *= *([0-9a-fA-F]+).*$" "\\1" CIMGVERSION "${CIMGVERSION}")
 if(NOT CIMGVERSION MATCHES "^[0-9a-fA-F]+$")
@@ -538,7 +524,6 @@ add_ofx_plugin(CImg INFO_PLIST CImg/Info.plist SOURCES
 )
 supportext_add_sources(CImg COMPONENTS THREADS LUT) # as CImg/Makefile (ofxsLut: ChromaBlur)
 target_include_directories(CImg PRIVATE ${CIMG_DIR})
-target_link_libraries(CImg PRIVATE openfx::Support)
 if(NOT MSVC)
   # MSVC is OpenMP 2.0 and has issues, see https://github.com/dtschump/CImg/issues/208
   # and https://msdn.microsoft.com/fr-fr/library/ff520162.aspx
@@ -607,7 +592,7 @@ if(BUILD_TESTING)
     Test/TestRender.cpp Test/TestPosition.cpp Test/TestGroups.cpp Test/TestHostBehaviour.cpp
     Test/TestOpenGL.cpp Test/TestOpenGLRenderGL.cpp Test/TestOpenGLRenderMesa.cpp)
   supportext_add_sources(Test COMPONENTS THREADS TRANSFORM3X3) # + SHUTTER, as Test/Makefile
-  target_link_libraries(Test PRIVATE openfx::Support OpenGL::GL)
+  target_link_libraries(Test PRIVATE OpenGL::GL)
   ofx_deploy_bundle(Test)
 endif()
 
@@ -618,5 +603,6 @@ if(BUILD_DEBUGPROXY)
   # not linked with openfx::Support: it uses HostSupport's ofxhBinary and ofxhUtilities
   add_ofx_plugin(DebugProxy INFO_PLIST DebugProxy/Info.plist SOURCES DebugProxy/DebugProxy.cpp)
   target_link_libraries(DebugProxy PRIVATE openfx::HostSupport)
+  target_include_directories(DebugProxy PRIVATE SupportExt) # ofxsMacros.h
   ofx_deploy_bundle(DebugProxy)
 endif()
