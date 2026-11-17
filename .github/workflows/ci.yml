@@ -80,8 +80,6 @@ jobs:
     runs-on: macos-15
     env:
       # The bundles load on macOS 11 and later (by default, the SDK version).
-      # OFX_DEPLOY_BUNDLES: osxDeploy.sh copies libomp into the bundles, as the
-      # Makefiles do for release builds.
       # No OpenMP (as the make CI): the bundles are deployed (OFX_DEPLOY_BUNDLES, osxDeploy.sh),
       # and MacPorts' libomp is built for the runner's macOS (minos 15), so bundles with it
       # would not load on macOS 11 to 14.

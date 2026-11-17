@@ -73,10 +73,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # OpenMP: Apple clang uses the MacPorts libomp (OFX_USE_OPENMP, the default).
+          # release: the macOS build of ci.yml (deployed, no OpenMP: MacPorts' libomp has
+          # minos 15, so deployed bundles with it would not load on macOS 11 to 14).
           - name: release # the macOS build of ci.yml
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON
+            options: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF
             rendertest: true
           - name: debug
             config: debug
@@ -84,9 +85,10 @@ jobs:
           - name: C++20
             config: release
             options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20
-          - name: no OpenMP
+          # OpenMP: Apple clang with the MacPorts libomp (not deployed)
+          - name: OpenMP
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DOFX_USE_OPENMP=OFF
+            options: -DCMAKE_BUILD_TYPE=Release
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -133,9 +135,10 @@ jobs:
           - name: C++20
             config: release
             options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20
-          - name: no OpenMP
+          # OpenMP: Apple clang with the MacPorts libomp (not deployed)
+          - name: OpenMP
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DOFX_USE_OPENMP=OFF
+            options: -DCMAKE_BUILD_TYPE=Release
           # the Makefiles, while Natron's build-plugins.sh uses them
           - name: make nomulti
             make: nomulti CONFIG=release
