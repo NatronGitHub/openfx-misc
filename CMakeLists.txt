@@ -125,12 +125,10 @@ set(CMAKE_CXX_STANDARD ${OFX_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # fail instead of silently using an older standard
 
 # ========================== compiler flags ==========================
-# Makefile.master: release is -O2 -DNDEBUG, debug is -g -DDEBUG -Wall -Wextra
-# (DEBUG is set by add_ofx_plugin). CMake's default release flags use -O3.
+# Release: CMake's default flags (-O3 -DNDEBUG with GCC and Clang; Makefile.master uses
+# -O2 -DNDEBUG). For -O2: -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG" (or openfx's upcoming
+# OFX_OPTFLAG). Debug: -g, plus DEBUG (add_ofx_plugin) and -Wall -Wextra, as Makefile.master.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|Intel")
-  if(CMAKE_CXX_FLAGS_RELEASE STREQUAL "-O3 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-  endif()
   add_compile_options($<$<CONFIG:Debug>:-Wall> $<$<CONFIG:Debug>:-Wextra>)
 endif()
 # openfx::Api adds the MinGW definitions of Makefile.master (_USE_MATH_DEFINES,
