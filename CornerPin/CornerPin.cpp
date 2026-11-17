@@ -108,8 +108,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "In Natron 2.6.x with NatronGitHub/Natron#1196, the viewer selection " \
     "rectangle of the node whose overlay is shown also selects the points inside " \
     "it (shift+drag adds them to the selection), and a click on empty space " \
-    "clears the selection. Without it, and in other hosts, only click, " \
-    "shift-click and Escape select points.\n" \
+    "clears the selection (also when the overlay of another node is shown). " \
+    "Without it, and in other hosts, only click, shift-click and Escape select " \
+    "points.\n" \
     "\n" \
     "This plugin concatenates transforms.\n" \
     "See also: https://web.archive.org/web/20220627032200/http://www.opticalenquiry.com/nuke/index.php?title=CornerPin"
@@ -625,7 +626,9 @@ CornerPinPlugin::selectionRectangleChanged(double time)
 
     if (state == 0) {
         // The selection was cleared by the user: Natron sends 0 on a click or drag on empty
-        // space, before the new rectangle starts. The notification carries no modifiers: as in
+        // space, before the new rectangle starts. Natron#1196 sends it to every node (as for
+        // RotoPaint), while the rectangle updates (1, 2) only go to the node whose overlay is
+        // shown. The notification carries no modifiers: as in
         // Natron's RotoPaint, shift (tracked from the overlay key events) keeps the selection,
         // so that the following rectangle adds to it.
         if (_overlayShiftCount <= 0) {
