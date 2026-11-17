@@ -105,12 +105,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "point to the selection or remove it, and drag any selected point to move " \
     "all the selected points together. Escape clears the selection, or cancels " \
     "a drag in progress.\n" \
-    "In Natron 2.6.x with NatronGitHub/Natron#1196, the viewer selection " \
-    "rectangle of the node whose overlay is shown also selects the points inside " \
-    "it (shift+drag adds them to the selection), and a click on empty space " \
-    "clears the selection (also when the overlay of another node is shown). " \
-    "Without it, and in other hosts, only click, shift-click and Escape select " \
-    "points.\n" \
+    "In Natron versions with the fixed selection rectangle " \
+    "(NatronGitHub/Natron#1196), the viewer selection rectangle also selects the " \
+    "points of the CornerPin whose overlay is shown (shift+drag adds them to the " \
+    "selection), and a click on empty space clears the selection (also when the " \
+    "overlay of another node is shown). In other Natron versions and in other " \
+    "hosts, only click, shift-click and Escape select points.\n" \
     "\n" \
     "This plugin concatenates transforms.\n" \
     "See also: https://web.archive.org/web/20220627032200/http://www.opticalenquiry.com/nuke/index.php?title=CornerPin"
@@ -223,7 +223,8 @@ public:
         , _selectionRectangleState(NULL)
         , _selectionRectangleLastState(0)
 #endif
-        , _overlayShiftCount(0)
+        , _overlayShiftL(false)
+        , _overlayShiftR(false)
         , _majorVersion(majorVersion)
     {
         for (int i = 0; i < 4; ++i) {
@@ -288,11 +289,23 @@ public:
     bool* overlaySelected() { return _overlaySelected; }
 
     /**
-     * @brief The number of shift keys held, counted from the key events of the overlay
-     * interacts (the pen actions carry no modifiers), shared by all of them and the host
-     * selection rectangle.
+     * @brief The state of the shift keys, from the key events of the overlay interacts (the
+     * pen actions carry no modifiers), shared by all of them and the host selection rectangle.
+     * One flag per key, not a count: hosts may send keyDown again on auto-repeat (e.g. Natron
+     * on Windows, where modifier keys repeat), which would leave a count stuck above 0.
      **/
-    int& overlayShiftCount() { return _overlayShiftCount; }
+    void setOverlayShiftKey(int keySymbol, bool down)
+    {
+        if (keySymbol == kOfxKey_Shift_L) {
+            _overlayShiftL = down;
+        } else if (keySymbol == kOfxKey_Shift_R) {
+            _overlayShiftR = down;
+        }
+    }
+
+    bool overlayShift() const { return _overlayShiftL || _overlayShiftR; }
+
+    void resetOverlayShift() { _overlayShiftL = _overlayShiftR = false; }
 
 private:
 #ifdef OFX_EXTENSIONS_NATRON
@@ -342,7 +355,8 @@ private:
     bool _overlaySelectedOnRectangleStart[4]; // the selection when the rectangle started
 #endif
     bool _overlaySelected[4];
-    int _overlayShiftCount;
+    bool _overlayShiftL; // left shift key held
+    bool _overlayShiftR; // right shift key held
     unsigned int _majorVersion;
 };
 
@@ -631,7 +645,7 @@ CornerPinPlugin::selectionRectangleChanged(double time)
         // shown. The notification carries no modifiers: as in
         // Natron's RotoPaint, shift (tracked from the overlay key events) keeps the selection,
         // so that the following rectangle adds to it.
-        if (_overlayShiftCount <= 0) {
+        if ( !overlayShift() ) {
             for (int i = 0; i < 4; ++i) {
                 _overlaySelected[i] = false;
             }
@@ -738,7 +752,6 @@ public:
         , _hovering(-1)
         , _selected(NULL)
         , _lastMousePos()
-        , _modifierStateShift( _plugin->overlayShiftCount() )
         , _dragMoved(false)
         , _penDownTrapped(false)
     {
@@ -903,6 +916,9 @@ private:
      * they were at pen down. Without Interactive Update, the parameters were not
      * changed yet; with it, they are set back to their values at pen down.
      * The selection is kept, and the matching pen up is still trapped.
+     * With Interactive Update, the restore is itself a parameter change (an undo step,
+     * in one block), and on animated parameters setValue() sets a key at the current
+     * time: if the drag created that key, the key stays, with the pen-down value.
      **/
     void cancelDrag()
     {
@@ -944,7 +960,6 @@ private:
     int _hovering; // -1: idle, else hovering point number
     bool* _selected; // the selected points (4), stored in the plugin instance
     OfxPointD _lastMousePos;
-    int& _modifierStateShift; // shared by the interacts of the plugin instance
     OfxPointD _toDrag[4];
     OfxPointD _fromDrag[4];
     bool _enableDrag[4];
@@ -1242,7 +1257,7 @@ CornerPinTransformInteract::penDown(const PenArgs &args)
         }
     }
 
-    const bool shift = (_modifierStateShift > 0);
+    const bool shift = _plugin->overlayShift();
     _lastMousePos = args.penPosition;
     _useFromDrag = useFrom;
     _penDownTrapped = (hit != -1);
@@ -1316,9 +1331,9 @@ CornerPinTransformInteract::penUp(const PenArgs & /*args*/)
 bool
 CornerPinTransformInteract::keyDown(const KeyArgs &args)
 {
-    // the two shift keys may be pressed consecutively, be aware about this
+    // one flag per shift key, so that an auto-repeated keyDown does not count twice
     if ( (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) {
-        ++_modifierStateShift;
+        _plugin->setOverlayShiftKey(args.keySymbol, true);
     }
 
     if (args.keySymbol == kOfxKey_Escape) {
@@ -1344,9 +1359,8 @@ CornerPinTransformInteract::keyDown(const KeyArgs &args)
 bool
 CornerPinTransformInteract::keyUp(const KeyArgs &args)
 {
-    // we may have missed a keypress
-    if ( ( (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) && (_modifierStateShift > 0) ) {
-        --_modifierStateShift;
+    if ( (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) {
+        _plugin->setOverlayShiftKey(args.keySymbol, false);
     }
 
     // modifiers are not "caught"
@@ -1361,8 +1375,8 @@ CornerPinTransformInteract::loseFocus(const FocusArgs & /*args*/)
     // pen up), as in RectangleInteract and TransformInteractHelper. The
     // selection is kept.
     abandonDrag();
-    // reset the modifiers state: the key up may be sent to another interact
-    _modifierStateShift = 0;
+    // reset the shift state: the key up may be sent to another interact
+    _plugin->resetOverlayShift();
 }
 
 class CornerPinOverlayDescriptor
