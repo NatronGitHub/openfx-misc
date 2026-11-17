@@ -244,7 +244,7 @@ These plugins are compatible with the Sony Vegas and Nuke [multiview extensions]
 
 ### Other
 
-* ImageStatisticsOFX: Compute statistics over an image or a rectangular area.
+* ImageStatisticsOFX: Compute statistics over an image or a rectangular area, over a frame or a frame range, and the auto crop box (bounding box of the non-black pixels).
 * NoOpOFX: Copies the input to the output. Useful for inspecting the properties of input and output clips.
 * TestRenderOFX: Test some rendering features of the OFX host: tiles, multiresolution and render scale (Test bundle, debug builds only).
 * TestIdentityLeftHalfOFX: Test the renderWindow passed to isIdentity. The right half must always be inverted, even after zooming on the left half and panning right (Test bundle).
