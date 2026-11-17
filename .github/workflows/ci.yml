@@ -259,9 +259,11 @@ jobs:
           CXX: g++-14
         run: |
           for o in 2 3; do
-            if [ $o = 2 ]; then flags=(-DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG"); else flags=(); fi
+            # -O2: openfx's OFX_OPTFLAG (appended after CMake's -O3 to the plug-ins and
+            # openfx::Support; hostDemo stays at -O3)
+            if [ $o = 2 ]; then flags=(-DOFX_OPTFLAG=-O2); else flags=(); fi
             cmake -S . -B build-O$o -G Ninja $CMAKE_OPTIONS -DOFX_BUILD_HOSTDEMO=ON "${flags[@]}" > configure-O$o.log
-            grep -E 'CMAKE_CXX_FLAGS_RELEASE:' build-O$o/CMakeCache.txt
+            grep -E '^(CMAKE_CXX_FLAGS_RELEASE|OFX_OPTFLAG):' build-O$o/CMakeCache.txt
             s=$(date +%s)
             cmake --build build-O$o > build-O$o.log
             echo "O$o build time: $(( $(date +%s) - s ))s" | tee -a times.txt
