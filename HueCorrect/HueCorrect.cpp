@@ -261,6 +261,11 @@ public:
 
                 // evaluate the parametric param
                 double value = _hueParam->getValue(c, _time, parametricPos);
+                // a non-finite value (some hosts return inf or NaN with keys at both 0 and 6,
+                // NatronGitHub/Natron#1267) would give NaN pixels: use 0, as for negative values
+                if ( !std::isfinite(value) ) {
+                    value = 0.;
+                }
 
                 // all the values (in HueCorrect) must be positive. We don't care if sat_thrsh goes above 1.
                 value = (std::max)(0., value);
@@ -269,9 +274,8 @@ public:
             }
             // the curves are periodic (hue 6 is hue 0) on hosts that support it: use the value at 0
             // for the end of the period, which some hosts evaluate wrongly when a curve has keys at
-            // both 0 and 6 (NatronGitHub/Natron#1267: NaN, which becomes 0 in the max() above, or
-            // may stay NaN with -ffast-math). This doesn't depend on detecting NaN, which
-            // -ffinite-math-only builds can't do.
+            // both 0 and 6 (NatronGitHub/Natron#1267). This doesn't rely on detecting non-finite
+            // values, which -ffast-math builds can't do.
             if (gParametricPeriodic) {
                 _hue[c][nbValues] = _hue[c][0];
             }
@@ -1189,6 +1193,11 @@ public:
 
                 // evaluate the parametric param
                 double value = _hueParam->getValue(c, _time, parametricPos);
+                // a non-finite value (some hosts return inf or NaN with keys at both 0 and 6,
+                // NatronGitHub/Natron#1267) would give NaN pixels: use 0, as for negative values
+                if ( !std::isfinite(value) ) {
+                    value = 0.;
+                }
 
                 // all the values (in HueKeyer) must be positive. We don't care if sat_thrsh goes above 1.
                 value = (std::max)(0., value);
@@ -1197,9 +1206,8 @@ public:
             }
             // the curves are periodic (hue 6 is hue 0) on hosts that support it: use the value at 0
             // for the end of the period, which some hosts evaluate wrongly when a curve has keys at
-            // both 0 and 6 (NatronGitHub/Natron#1267: NaN, which becomes 0 in the max() above, or
-            // may stay NaN with -ffast-math). This doesn't depend on detecting NaN, which
-            // -ffinite-math-only builds can't do.
+            // both 0 and 6 (NatronGitHub/Natron#1267). This doesn't rely on detecting non-finite
+            // values, which -ffast-math builds can't do.
             if (gParametricPeriodic) {
                 _hue[c][nbValues] = _hue[c][0];
             }
