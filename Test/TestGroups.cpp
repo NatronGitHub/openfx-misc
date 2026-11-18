@@ -584,8 +584,8 @@ void
 TestGroupsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                            ContextEnum context)
 {
-    // Source clip only in the filter context
-    // create the mandated source clip
+    // The Source clip is defined in every context: the filter and paint contexts mandate it, it is
+    // also mandatory in the general context, and it is optional in the generator context (below)
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);

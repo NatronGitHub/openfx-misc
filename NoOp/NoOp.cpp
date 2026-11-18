@@ -644,6 +644,8 @@ appendClipInfo(std::ostringstream& oss,
         oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
     } catch (const OFX::Exception::PropertyUnknownToHost& e) {
         oss << "\n[error: the host does not support the property " << e.what() << "]";
+    } catch (const OFX::Exception::PropertyValueIllegalToHost& e) {
+        oss << "\n[error: the value of the property " << e.what() << " is illegal to the host]";
     } catch (const OFX::Exception::Suite& e) {
         oss << "\n[error: a host function returned " << e.what() << "]";
     } catch (const std::exception& e) {

@@ -223,6 +223,10 @@ cimgPadRect(const OfxRectI& rect,
     dst->y2 = rect.y2 + dy;
 }
 
+#define kCImgFilterBitDepthUnsupportedMessage \
+    "This plug-in only supports 32-bit floating-point images, but the host gave it images of another bit depth. " \
+    "Please set the pixel format (bit depth) of the host project to 32-bit floating point."
+
 class CImgFilterPluginHelperBase
     : public OFX::ImageEffect
 {
@@ -258,6 +262,12 @@ public:
                                      bool hasMask = true);
 
 protected:
+    // The CImg plug-ins only support float images (they only declare eBitDepthFloat). If the host
+    // gives another depth anyway, post an error message that explains it and throw kOfxStatFailed
+    // (the render action doc: "kOfxStatFailed, something wrong, but no error code appropriate,
+    // plugin to post message"). A later successful render clears the message.
+    void throwBitDepthUnsupported();
+
 #ifdef CIMG_DEBUG
     static void printRectI(const char*name,
                            const OfxRectI& rect)
@@ -453,14 +463,14 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // kOfxImageEffectPropSupportedPixelDepths (e.g. giving 8-bit images) would otherwise make them
     // write past the end of the image buffers.
     if (dstBitDepth != OFX::eBitDepthFloat) {
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwBitDepthUnsupported();
     }
 
     OFX::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                          _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         if (src->getPixelDepth() != dstBitDepth) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwBitDepthUnsupported();
         }
 #     ifndef NDEBUG
         OFX::PixelComponentEnum srcPixelComponents = src->getPixelComponents();
@@ -578,7 +588,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         checkBadRenderScaleOrField(mask, args);
         // the mask is also accessed as float
         if (mask->getPixelDepth() != OFX::eBitDepthFloat) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwBitDepthUnsupported();
         }
 
         if (_supportsTiles) {
@@ -601,6 +611,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             }
         }
     }
+    // all the images are float: clear the message of throwBitDepthUnsupported() if a previous
+    // render posted it (the plug-in may post another message below while processing)
+    clearPersistentMessage();
 
     Params params;
     getValuesAtTime(time, params);
@@ -878,7 +891,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // 5- copy+premult+max+mix tmp to dst (only processWindow)
 
     {
-        assert(dstPixelComponentCount != 1 || srcPixelComponents == OFX::ePixelComponentAlpha);
+        // in the generator context there may be no source clip (srcPixelComponents is then
+        // ePixelComponentNone)
+        assert(dstPixelComponentCount != 1 || !src.get() || srcPixelComponents == OFX::ePixelComponentAlpha);
         OFX::auto_ptr<OFX::PixelProcessorFilterBase> fred( createTmpToDstCopier(dstPixelComponents, dstPixelComponentCount, doMasking) );
         assert( fred.get() );
         if ( fred.get() ) {

@@ -147,6 +147,13 @@ CImgFilterPluginHelperBase::changedClip(const InstanceChangedArgs &args,
 }
 
 void
+CImgFilterPluginHelperBase::throwBitDepthUnsupported()
+{
+    setPersistentMessage(Message::eMessageError, "", kCImgFilterBitDepthUnsupportedMessage);
+    throwSuiteStatusException(kOfxStatFailed);
+}
+
+void
 CImgFilterPluginHelperBase::changedParam(const InstanceChangedArgs &args,
                                          const std::string &paramName)
 {

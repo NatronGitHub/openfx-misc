@@ -97,7 +97,28 @@ fitRod(const OfxRectD& srcFormatCanonical,
     }
 }
 
+#define kContactSheetBitDepthUnsupportedMessage \
+    "This plug-in only supports 32-bit floating-point images, but the host gave it images of another bit depth. " \
+    "Please set the pixel format (bit depth) of the host project to 32-bit floating point."
+
+// The plugins only declare eBitDepthFloat, and the pixels are accessed as float: check it in
+// release builds too, since a host that ignores kOfxImageEffectPropSupportedPixelDepths
+// (e.g. giving 8-bit images) would otherwise make drawImage() write past the end of the buffers.
+// If img is not float, post an error message that explains it and throw kOfxStatFailed (the
+// render action doc: "kOfxStatFailed, something wrong, but no error code appropriate, plugin to
+// post message"). render() clears the message once the output image is float.
+inline void
+checkBitDepth(ImageEffect& effect,
+              const Image& img)
+{
+    if (img.getPixelDepth() != eBitDepthFloat) {
+        effect.setPersistentMessage(Message::eMessageError, "", kContactSheetBitDepthUnsupportedMessage);
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+}
+
 // Resize the whole (float) src image into the imageRoD area of the (float) dst image.
+// The caller must check both depths with checkBitDepth().
 inline void
 drawImage(const Image* src,
           Image* dst,
@@ -105,12 +126,7 @@ drawImage(const Image* src,
           const OfxPointD& renderScale,
           double dstPar)
 {
-    // The plugins only declare eBitDepthFloat, and the pixels are accessed as float: check it in
-    // release builds too, since a host that ignores kOfxImageEffectPropSupportedPixelDepths
-    // (e.g. giving 8-bit images) would otherwise make this write past the end of the buffers.
-    if ( (dst->getPixelDepth() != eBitDepthFloat) || (src->getPixelDepth() != eBitDepthFloat) ) {
-        throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
+    assert(dst->getPixelDepth() == eBitDepthFloat && src->getPixelDepth() == eBitDepthFloat);
     const OfxRectI& dstBounds = dst->getBounds();
     float* b = (float*)dst->getPixelData();
     const size_t bwidth = dstBounds.x2 - dstBounds.x1;

@@ -285,7 +285,7 @@ Caveats/Bugs (see https://github.com/NatronGitHub/openfx-misc/issues/66):
 - crashes are caught by the VEGAS crash handler: Windows Event Viewer does not log them, and no crash dump is available. The OFX log of debug builds and the "More Information" logs of the crash handler are the only sources of information.
 - VEGAS Pro 15 and later (MAGIX) were tested with recent openfx-misc builds, but their host description is not documented yet (the host name may differ from com.sonycreativesoftware.vegas):
   - Shadertoy: VEGAS Pro 15 finds no plugin in Shadertoy.ofx, and VEGAS Pro 2027 reports that OfxImageEffectActionDescribeInContext fails in all contexts (Shadertoy needs OpenGL render when it is built without OSMesa).
-  - float-only plugins (all CImg plugins, ContactSheet) misbehaved or crashed. They now fail cleanly (kOfxStatErrUnsupported) if the host gives them images that are not float, instead of writing past the end of the image buffers.
+  - float-only plugins (all CImg plugins, ContactSheet, LayerContactSheet) misbehaved or crashed. If the host gives them images that are not float, they now fail cleanly instead of writing past the end of the image buffers: render returns kOfxStatFailed and posts a persistent error message that asks to set the project pixel format to 32-bit floating point (the message is cleared by the next successful render).
 
 * Blackmagic Fusion
 

@@ -63,7 +63,7 @@ CImgOperatorPluginHelperBase::getSrcImageData(const Image* img,
     }
     // the images are accessed as float, check the depth in release builds too
     if (img->getPixelDepth() != dstBitDepth) {
-        throwSuiteStatusException(kOfxStatErrImageFormat);
+        throwBitDepthUnsupported();
     }
 # ifndef NDEBUG
     if (img->getPixelComponents() != dstPixelComponents) {
