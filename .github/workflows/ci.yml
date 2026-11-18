@@ -80,11 +80,12 @@ jobs:
     # framework. MacPorts (never Homebrew) provides the other tools.
     runs-on: macos-15
     env:
-      # The bundles load on macOS 11 and later (by default, the SDK version).
+      # The bundles load on macOS 14 and later (CMakeLists.txt's default
+      # CMAKE_OSX_DEPLOYMENT_TARGET), as the binary releases (release.yml).
       # No OpenMP (as the make CI): the bundles are deployed (OFX_DEPLOY_BUNDLES, osxDeploy.sh),
       # and MacPorts' libomp is built for the runner's macOS (minos 15), so bundles with it
-      # would not load on macOS 11 to 14.
-      MACOS_OPTIONS: -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF
+      # would not load on macOS 14.
+      MACOS_OPTIONS: -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5

@@ -63,6 +63,10 @@ ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 # Project setup
 ########################################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16...3.31) # 3.16: openfx's CMakeLists.txt; policies up to 3.31 (CMP0177)
+# macOS: the bundles load on macOS 14 and later (Natron 2.6), unless -DCMAKE_OSX_DEPLOYMENT_TARGET
+# (or MACOSX_DEPLOYMENT_TARGET at the first configure) says otherwise. Set before the first
+# project(), which reads it (openfx's cmake/OpenFX.cmake is included later and can't set it).
+set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "Minimum macOS version")
 PROJECT(OpenFXMisc CXX)
 
 # ========================== build platform ==========================

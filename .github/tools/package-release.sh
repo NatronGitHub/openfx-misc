@@ -19,8 +19,7 @@
 #   --full: Misc and CImg; --shadertoy-gl and --shadertoy-osmesa: Shadertoy;
 #   --denoisesharpen: DenoiseSharpen. The full set gets the Shadertoy of --shadertoy-osmesa;
 #   without it (no OSMesa build for this platform), the OpenGL-only one, and the OSMesa download
-#   is not made. --osmesa-min-macos V: the minimum macOS of the OSMesa Shadertoy, if it is
-#   higher than the other bundles' (11.0), for the README.
+#   is not made.
 # PLATFORM: linux-x86_64, windows-x86_64, macos-universal... (linux-*, windows-*, macos-*).
 set -eo pipefail
 
@@ -29,7 +28,7 @@ usage() {
     exit 2
 }
 
-version='' platform='' out='' full='' stgl='' stmesa='' ds='' mesamacos=''
+version='' platform='' out='' full='' stgl='' stmesa='' ds=''
 while [ $# -gt 0 ]; do
     case "$1" in
         --version) version=$2; shift 2 ;;
@@ -39,7 +38,6 @@ while [ $# -gt 0 ]; do
         --shadertoy-gl) stgl=$2; shift 2 ;;
         --shadertoy-osmesa) stmesa=$2; shift 2 ;;
         --denoisesharpen) ds=$2; shift 2 ;;
-        --osmesa-min-macos) mesamacos=$2; shift 2 ;;
         *) usage ;;
     esac
 done
@@ -107,15 +105,11 @@ EOF
     case "$os" in
         macOS)
             cat << 'EOF'
-The bundles are universal (arm64 and x86_64), for macOS 11 or later. They are
+The bundles are universal (arm64 and x86_64), for macOS 14 or later. They are
 not notarized: if the host refuses to load them, remove the quarantine
 attribute after copying, e.g.:
   sudo xattr -dr com.apple.quarantine /Library/OFX/Plugins/*.ofx.bundle
 EOF
-            if [ -n "$stmesa" ] && [ -n "$mesamacos" ]; then
-                echo "The Shadertoy with OSMesa (also in the full set) needs macOS $mesamacos or later: on"
-                echo "older macOS versions, use the OpenGL-only Shadertoy download instead."
-            fi
             ;;
         Linux) cat << 'EOF'
 The bundles are built on Rocky Linux 9 for x86_64. They need these system

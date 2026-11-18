@@ -29,13 +29,13 @@ distributions, so there is nothing else to install.
 To use the plugins with another OpenFX host, download them from the
 [GitHub releases](https://github.com/NatronGitHub/openfx-misc/releases) (built by
 `.github/workflows/release.yml` from the release tags). There are four downloads for
-each platform (Linux x86_64, built on Rocky Linux 9; Windows x86_64; macOS 11 or later,
+each platform (Linux x86_64, built on Rocky Linux 9; Windows x86_64; macOS 14 or later,
 universal):
 
 - `openfx-misc-<version>-<platform>`: the full set, the same bundles as in Natron:
   `Misc.ofx.bundle`, `CImg.ofx.bundle` and `Shadertoy.ofx.bundle`. Shadertoy is the
   OSMesa variant (it can also render on the CPU, when the host has no OpenGL rendering)
-  where it is built: always on Linux, and on macOS (macOS 14 or later for that bundle) and
+  where it is built: always on Linux, and on macOS and
   Windows when the release uses a prebuilt OSMesa from
   [osmesa-install](https://github.com/devernay/osmesa-install); OpenGL only otherwise.
 - `openfx-misc-Shadertoy-OpenGL-<version>-<platform>`: `Shadertoy.ofx.bundle` alone,
@@ -74,7 +74,7 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
    - `openfx-misc-build-ubuntu_24-release`: Linux (64-bit) plugins, built on
      Ubuntu 24.04.
    - `openfx-misc-build-macos-release`: macOS plugins for Apple silicon (arm64),
-     macOS 11 or later.
+     macOS 14 or later.
    - `openfx-misc-build-windows-release`: Windows (64-bit, MSYS2 UCRT64) plugins,
      Windows 10 or later (they use the Universal C Runtime).
 
