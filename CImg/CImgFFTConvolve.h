@@ -31,6 +31,44 @@
 
 #include "CImgFilter.h" // CImg.h, cimgpix_t
 
+// -Dcimg_use_pocketfft (CImgFFT.mk, CMakeLists.txt) only works with a CImg.h patched by
+// patches/cimg-pocketfft.sh, which then includes pocketfft_hdronly.h (include guard
+// POCKETFFT_HDRONLY_H). An unpatched CImg.h (e.g. one made with FFT=pow2 or fftw3, then used by a
+// standalone build of a subdirectory with the default FFT=pocketfft) would silently use CImg's own
+// power-of-two FFT: fail instead.
+#if defined(cimg_use_pocketfft) && !defined(cimg_use_fftw3) && !defined(POCKETFFT_HDRONLY_H)
+#error "CImg.h is not patched for pocketfft (run make -C CImg sources)"
+#endif
+
+#if defined(cimg_use_fftw3) && !defined(cimg_use_fftw3_singlethread)
+#include <mutex> // std::call_once
+#include <fftw3.h>
+#endif
+
+// To be called by the load action (the factory's load()) of the plug-ins that use the FFT:
+// ConvolveCImg, ZDefocusCImg, and ExpressionCImg (the math parser's fft()).
+// With FFT=fftw3 (opt-in): FFTW is a shared library (Natron's SDK, MacPorts, MSYS2) with a single
+// global planner, which other plug-ins of the host process use too, e.g. openfx-gmic's GMIC.ofx,
+// whose CImg plans under another mutex than ours (cimg::mutex(12) of our cimg_library namespace).
+// fftw_make_planner_thread_safe() (FFTW >= 3.3.5, in libfftw3_threads; checked by CMakeLists.txt
+// and CImg/CImgFFT.mk) makes FFTW serialize the creation and destruction of plans process-wide,
+// for all its users. Done once per process (std::call_once), at load, before any render, as in
+// openfx-gmic (NatronGitHub/openfx-gmic#93). fftw_init_threads() was already called by CImg's
+// static FFTW3_static: calling it again does nothing. CImg keeps its own mutex. FFTW's cleanup
+// functions don't take the planner lock: patches/cimg-fftw-no-cleanup.sh removes the
+// fftw_cleanup_threads() that CImg called after each FFT (GreycLab/CImg#500).
+inline void
+cimgFFTLoad()
+{
+#if defined(cimg_use_fftw3) && !defined(cimg_use_fftw3_singlethread)
+    static std::once_flag once;
+    std::call_once(once, [] {
+        fftw_init_threads();
+        fftw_make_planner_thread_safe();
+    });
+#endif
+}
+
 // kernel channels that can be extracted from a Filter pixel
 enum CImgKernelChannelEnum
 {
@@ -133,10 +171,46 @@ cimgGetFilterRoD(const OFX::ImageEffect& effect,
     }
 }
 
+// The size of the FFT that holds a linear convolution of size n (the image size plus the kernel
+// size minus one): any size >= n gives the exact linear convolution, since the zero padding
+// prevents the circular wrap-around.
+// With FFTW (cimg_use_fftw3) or pocketfft (cimg_use_pocketfft), which handle any size, this is
+// the smallest 5-smooth number (2^a 3^b 5^c) >= n: these sizes are fast, while a size with a large
+// prime factor is several times slower. CImg's own FFT only handles powers of two (it throws
+// "non 2^N dimension" otherwise), which may need up to twice as many samples along each axis
+// (e.g. 4096 for 2049).
+static inline unsigned int
+cimgFFTSize(unsigned int n)
+{
+#if defined(cimg_use_fftw3) || defined(cimg_use_pocketfft)
+    if (n <= 1) {
+        return 1;
+    }
+    unsigned int best = (unsigned int)cimg_library::cimg::nearest_pow2(n); // a 2-smooth upper bound
+    for (unsigned long long p5 = 1; p5 < best; p5 *= 5) {
+        for (unsigned long long p35 = p5; p35 < best; p35 *= 3) {
+            // the smallest p35 * 2^a >= n
+            unsigned long long m = p35;
+            while (m < n) {
+                m *= 2;
+            }
+            if (m < best) {
+                best = (unsigned int)m;
+            }
+        }
+    }
+
+    return best;
+#else
+
+    return (unsigned int)cimg_library::cimg::nearest_pow2(n);
+#endif
+}
+
 // Convolve the channels chans of img (in place) by kernel * scale, using the FFT.
 // (mx, my) is the offset of the first kernel pixel w.r.t. the kernel origin (the pixel that does
 // not shift the image). Pixels outside of img are zero: the FFT is computed on the zero-padded
-// image, which gives the exact linear convolution.
+// image (see cimgFFTSize()), which gives the exact linear convolution.
 // Returns false if the effect was aborted (img is then partially processed).
 static inline bool
 cimgConvolveFFT(cimg_library::CImg<cimgpix_t>& img,
@@ -151,9 +225,9 @@ cimgConvolveFFT(cimg_library::CImg<cimgpix_t>& img,
     const int h = img.height();
     const int kw = kernel.width();
     const int kh = kernel.height();
-    // FFT size: power of two, large enough to hold the linear convolution
-    const unsigned int fw = (unsigned int)cimg_library::cimg::nearest_pow2( (unsigned int)(w + kw - 1) );
-    const unsigned int fh = (unsigned int)cimg_library::cimg::nearest_pow2( (unsigned int)(h + kh - 1) );
+    // FFT size: large enough to hold the linear convolution
+    const unsigned int fw = cimgFFTSize( (unsigned int)(w + kw - 1) );
+    const unsigned int fh = cimgFFTSize( (unsigned int)(h + kh - 1) );
 
     // FFT of the kernel, placed at the origin
     cimg_library::CImg<cimgpix_t> kre(fw, fh, 1, 1, 0), kim(fw, fh, 1, 1, 0);

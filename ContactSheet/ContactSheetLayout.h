@@ -82,6 +82,15 @@ fitRod(const OfxRectD& srcFormatCanonical,
     OfxRectD cRoD = { cellRoD.x1 + gap / 2, cellRoD.y1 + gap/2, cellRoD.x2 - (gap + 1) / 2, cellRoD.y2 - (gap + 1) / 2};
     double cw = (std::max)(1., cRoD.x2 - cRoD.x1);
     double ch = (std::max)(1., cRoD.y2 - cRoD.y1);
+    if ( (sw <= 0.) || (sh <= 0.) ) {
+        // empty source format (e.g. a disconnected input): an empty image area, instead of
+        // *f = ch / 0 and f * sw = inf * 0 = NaN
+        *f = 1.;
+        imageRoD->x1 = imageRoD->x2 = cRoD.x1;
+        imageRoD->y1 = imageRoD->y2 = cRoD.y1;
+
+        return;
+    }
     bool fitwidth = sw * ch > sh * cw;
     *f = fitwidth ? (cw/sw) : (ch / sh);
     if (center) {

@@ -39,6 +39,7 @@
 #include "ofxsCopier.h"
 
 #include "CImgFilter.h"
+#include "CImgFFTConvolve.h" // cimgFFTLoad(): the math parser's fft() uses FFTW with FFT=fftw3
 
 using namespace OFX;
 
@@ -332,7 +333,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgExpressionPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactory(CImgExpressionPluginFactory, {ofxsThreadSuiteCheck(); cimgFFTLoad();}, {});
 
 void
 CImgExpressionPluginFactory::describe(ImageEffectDescriptor& desc)

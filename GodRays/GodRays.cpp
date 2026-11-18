@@ -46,7 +46,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier "net.sf.openfx.GodRays"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// 1.1: a Gamma of magnitude below 1e-8 (e.g. 0) interpolates the colors geometrically, the limit of the "gamma"
+//      interpolation (it computed pow(x, 1/gamma) of x = 1 up to rounding: the colors were 1, or infinite
+//      if x rounded above 1, NaN audit)
 
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
@@ -179,7 +182,11 @@ private:
 #endif
                            bool max) OVERRIDE FINAL
     {
-        GodRaysProcessorBase::setValues(invtransform, invtransformsize, blackOutside, motionblur, mix, fromColor, toColor, gamma, steps, max);
+        GodRaysProcessorBase::setValues(invtransform, invtransformsize, blackOutside, motionblur, mix, fromColor, toColor, gamma,
+#ifdef USE_STEPS
+                                        steps,
+#endif
+                                        max);
 
         _color.resize(invtransformsize);
 #ifdef GODRAYS_LINEAR_INTERPOLATION
@@ -200,6 +207,9 @@ private:
             }
         }
 #else
+        // the "gamma"-interpolation is done in double precision: for |gamma| >= kGammaMin, its rounding
+        // error is at most DBL_EPSILON / kGammaMin, about 2e-8 in relative value
+        const double kGammaMin = 1e-8;
         // exponential decrease for gamma = 1, less than exponential for gamma > 1
         for (int c = 0; c < nComponents; ++c) {
             int ci = (nComponents == 1) ? 3 : c;
@@ -210,6 +220,12 @@ private:
                 double col = col1 * std::pow(col2 / col1, (invtransformsize - 1 - i) / (double)invtransformsize);
                 if ( (g == 1.) || (col1 == col2) ) {
                     _color[i][c] = col;
+                } else if (std::abs(g) < kGammaMin) {
+                    // the limit for g -> 0 of the "gamma"-interpolation below (a power mean) is the geometric
+                    // mean. pow(..., 1. / g) would give infinity or 0 for a tiny g, since the mean of
+                    // pow(col1, g) and pow(col2, g) is 1 up to rounding.
+                    double alpha = (col - col2) / (col1 - col2);
+                    _color[i][c] = std::pow(col1, alpha) * std::pow(col2, 1 - alpha);
                 } else {
                     // "gamma"-interpolation
                     // reinterpret the color descrease in a different gamma space
@@ -400,7 +416,21 @@ private:
                             // - the error should be less than motionblur*maxValue/100
                             // - the total number of iterations should be less than motionblur*100
                             if (maxsamples < maxIt) {
-                                maxsamples = (std::max)( maxsamples, (std::min)( (int)(var[c] / maxErr2), maxIt ) );
+                                // compare in double before converting to int: var / maxErr2 can exceed
+                                // the int range for HDR images (UB: INT_MIN on x86, which kept the
+                                // minimum number of samples, saturation on arm64), as in SupportExt's
+                                // Transform3x3Processor. maxErr2 is 0 only if motionblur * maxValue / 1000
+                                // underflows when squared (no 0/0 or x/0): then take the most samples.
+                                if (maxErr2 <= 0.) {
+                                    maxsamples = maxIt;
+                                } else {
+                                    const double n = var[c] / maxErr2;
+                                    if ( n >= (double)maxIt ) {
+                                        maxsamples = maxIt;
+                                    } else if ( n > (double)maxsamples ) {
+                                        maxsamples = (int)n;
+                                    }
+                                }
                             }
                         }
                     }

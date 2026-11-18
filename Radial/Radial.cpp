@@ -435,14 +435,15 @@ private:
                     p_closer.y -= 0.5;
                     p_farther.y += 0.5;
                 }
-                double dx_closer = (p_closer.x - c.x) / r.x;
-                double dy_closer = (p_closer.y - c.y) / r.y;
-                double dx_farther = (p_farther.x - c.x) / r.x;
-                double dy_farther = (p_farther.y - c.y) / r.y;
-
-
                 // a zero or negative radius would give NaN or garbage: treat it as outside
-                if ( (r.x <= 0.) || (r.y <= 0.) || (dx_closer >= 1) || (dy_closer >= 1) ) {
+                // (and do not divide by it)
+                const bool empty = (r.x <= 0.) || (r.y <= 0.);
+                double dx_closer = empty ? 0. : (p_closer.x - c.x) / r.x;
+                double dy_closer = empty ? 0. : (p_closer.y - c.y) / r.y;
+                double dx_farther = empty ? 0. : (p_farther.x - c.x) / r.x;
+                double dy_farther = empty ? 0. : (p_farther.y - c.y) / r.y;
+
+                if ( empty || (dx_closer >= 1) || (dy_closer >= 1) ) {
                     // outside
                     tmpPix[0] = (float)_color0.r;
                     tmpPix[1] = (float)_color0.g;
