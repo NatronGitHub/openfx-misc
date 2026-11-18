@@ -60,7 +60,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.0: the frames blended are the lower bound of the range, then one frame out of frameInterval up to the upper bound
 //              (version 2 aligned them on the last frame and dropped the lower bound, e.g. only frame 2 for range 0..2 with interval 2)
 // version 3.1: Min and Max give 0 where no frame has a source pixel (they gave an infinite value, and NaN
-//              with a mask or Mix, NaN audit)
+//              with a mask or Mix), and Decay is clamped to [0,1], its range, on hosts that do not enforce it
+//              (NaN audit)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
