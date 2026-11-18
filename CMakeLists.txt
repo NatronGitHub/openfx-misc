@@ -42,7 +42,9 @@
 #   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX (OFX/Plugins)
 #   -DOFX_BUILD_HOSTDEMO=ON (default OFF): also build openfx's test host hostDemo (openfx's
 #      BUILD_EXAMPLE_HOSTS) and install it into <prefix>/bin, for the CI's render tests
-#      (.github/tools/rendertest.sh and smoketest.sh)
+#      (.github/tools/rendertest.sh and smoketest.sh). Needs the system expat (openfx's
+#      HostSupport): libexpat1-dev, MSYS2 mingw-w64-ucrt-x86_64-expat, vcpkg expat; on macOS,
+#      the SDK's or MacPorts' expat
 #   -DOFXMISC_SUPPORTEXT_DIR=<dir>: the openfx-supportext sources to build with (default: the
 #      SupportExt submodule), e.g. a SupportExt pull request in SupportExt's CI
 ########################################################################
@@ -148,14 +150,15 @@ if(MSVC)
 endif()
 
 # ========================== openfx ==========================
-# openfx::Support (the C++ Support library, static), openfx::HostSupport (DebugProxy),
+# openfx::Support (the C++ Support library, static), openfx::HostSupport (hostDemo),
 # add_ofx_plugin and ARCHDIR (cmake/OpenFX.cmake). The OFX_EXTENSIONS_* (NATRON, NUKE,
 # VEGAS, TUTTLE) and OFX_SUPPORTS_OPENGLRENDER options of openfx default to what the
 # Makefiles use, and are usage requirements of these targets.
 # EXCLUDE_FROM_ALL: only what the bundles link is built, and openfx is not installed.
-# HostSupport is only needed by DebugProxy and hostDemo (OFX_BUILD_HOSTDEMO, openfx's
-# BUILD_EXAMPLE_HOSTS). These are openfx options (CMP0077: option() uses these variables).
-if(BUILD_DEBUGPROXY OR OFX_BUILD_HOSTDEMO)
+# HostSupport is only needed by hostDemo (OFX_BUILD_HOSTDEMO, openfx's BUILD_EXAMPLE_HOSTS),
+# and it needs the system expat (find_package(EXPAT)); DebugProxy compiles the two HostSupport
+# sources it uses. These are openfx options (CMP0077: option() uses these variables).
+if(OFX_BUILD_HOSTDEMO)
   set(OFX_BUILD_HOSTSUPPORT ON)
 else()
   set(OFX_BUILD_HOSTSUPPORT OFF)
@@ -633,9 +636,13 @@ endif()
 # DebugProxy.ofx.bundle (DebugProxy/Makefile; make CONFIG=debug)
 ########################################################################
 if(BUILD_DEBUGPROXY)
-  # not linked with openfx::Support: it uses HostSupport's ofxhBinary and ofxhUtilities
-  add_ofx_plugin(DebugProxy INFO_PLIST DebugProxy/Info.plist SOURCES DebugProxy/DebugProxy.cpp)
-  target_link_libraries(DebugProxy PRIVATE openfx::HostSupport)
-  target_include_directories(DebugProxy PRIVATE ${OFXMISC_SUPPORTEXT_DIR}) # ofxsMacros.h
+  # not linked with openfx::Support: it uses HostSupport's ofxhBinary and ofxhUtilities, compiled
+  # here as in DebugProxy/Makefile, and not openfx::HostSupport, which would link expat (for its
+  # plug-in cache, which DebugProxy doesn't use) into the bundle, and deploy it
+  add_ofx_plugin(DebugProxy INFO_PLIST DebugProxy/Info.plist SOURCES DebugProxy/DebugProxy.cpp
+    openfx/HostSupport/src/ofxhBinary.cpp openfx/HostSupport/src/ofxhUtilities.cpp)
+  target_include_directories(DebugProxy PRIVATE openfx/HostSupport/include
+    ${OFXMISC_SUPPORTEXT_DIR}) # ofxsMacros.h
+  target_link_libraries(DebugProxy PRIVATE ${CMAKE_DL_LIBS})
   ofx_deploy_bundle(DebugProxy)
 endif()
