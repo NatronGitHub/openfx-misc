@@ -46,6 +46,9 @@
 #      OSMesa in OSMESA_PATH (default /opt/osmesa) and LLVM in LLVM_PATH (default /opt/llvm)
 #   --prefix /usr (Linux) or /Library (macOS) at install: the bundles go to <prefix>/OFX/Plugins
 #   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX (OFX/Plugins)
+#   -DOFXMISC_BUNDLE_LIBGOMP=ON (Linux, GCC; default OFF): copy libgomp.so.1 next to the binary of
+#      each bundle that uses OpenMP (Contents/<ARCHDIR>), found through an install rpath $ORIGIN,
+#      for the binary releases (openfx's ofx_deploy_bundle only deploys on macOS)
 #   -DOFX_BUILD_HOSTDEMO=ON (default OFF): also build openfx's test host hostDemo (openfx's
 #      BUILD_EXAMPLE_HOSTS) and install it into <prefix>/bin, for the CI's render tests
 #      (.github/tools/rendertest.sh and smoketest.sh)
@@ -127,6 +130,7 @@ option(USE_OSMESA "Shadertoy: CPU rendering with OSMesa (OSMESA_PATH) and LLVM (
 set(OSMESA_PATH "/opt/osmesa" CACHE PATH "USE_OSMESA: OSMesa prefix (mangled OSMesa, libMangledOSMesa32)")
 set(LLVM_PATH "/opt/llvm" CACHE PATH "USE_OSMESA: LLVM prefix (bin/llvm-config)")
 option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into <prefix>/bin (CI render tests)" OFF)
+option(OFXMISC_BUNDLE_LIBGOMP "Linux: copy libgomp.so.1 into the bundles that use OpenMP, found with the rpath \$ORIGIN" OFF)
 
 # C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
 # Qt5), or 20 (Qt6, RB-2.7): -DOFX_CXX_STANDARD=20. It is used by add_ofx_plugin and
@@ -201,6 +205,38 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/openfx/Support/Plugins/include)
 # supportext_add_sources(): the SupportExt sources of each bundle, compiled with its flags
 include(${OFXMISC_SUPPORTEXT_DIR}/cmake/SupportExt.cmake)
 
+# OFXMISC_BUNDLE_LIBGOMP: the libgomp.so.1 that GCC links with -fopenmp (its real file), copied
+# as Contents/<ARCHDIR>/libgomp.so.1 into the bundles of ofxmisc_bundle_libgomp(), whose binary gets
+# the rpath $ORIGIN (INSTALL_RPATH and BUILD_RPATH, managed by CMake: a -Wl,-rpath link flag would
+# be mixed with the rpaths that CMake rewrites at install). Linux only: openfx's ofx_deploy_bundle
+# bundles the libraries on macOS, and the Windows builds link statically, without OpenMP.
+if(OFXMISC_BUNDLE_LIBGOMP)
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(FATAL_ERROR "OFXMISC_BUNDLE_LIBGOMP=ON needs Linux and GCC")
+  endif()
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgomp.so.1
+                  OUTPUT_VARIABLE _libgomp OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT IS_ABSOLUTE "${_libgomp}" OR NOT EXISTS "${_libgomp}")
+    message(FATAL_ERROR "OFXMISC_BUNDLE_LIBGOMP: ${CMAKE_CXX_COMPILER} -print-file-name=libgomp.so.1 gave \"${_libgomp}\"")
+  endif()
+  get_filename_component(OFXMISC_LIBGOMP "${_libgomp}" REALPATH)
+  message(STATUS "    Bundled libgomp:   ${OFXMISC_LIBGOMP}")
+endif()
+function(ofxmisc_bundle_libgomp TARGET)
+  if(NOT OFXMISC_BUNDLE_LIBGOMP OR NOT TARGET OpenMP::OpenMP_CXX)
+    return()
+  endif()
+  get_target_property(_name ${TARGET} OFX_BUNDLE_NAME)
+  get_target_property(_bundle ${TARGET} OFX_BUNDLE_DIR)
+  set_property(TARGET ${TARGET} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
+  set_property(TARGET ${TARGET} APPEND PROPERTY BUILD_RPATH "$ORIGIN")
+  add_custom_command(TARGET ${TARGET} POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OFXMISC_LIBGOMP}" "${_bundle}/Contents/${ARCHDIR}/libgomp.so.1"
+    VERBATIM)
+  install(FILES "${OFXMISC_LIBGOMP}" DESTINATION "${PLUGIN_INSTALLDIR}/${_name}.ofx.bundle/Contents/${ARCHDIR}"
+          RENAME libgomp.so.1)
+endfunction()
+
 ########################################################################
 # Misc.ofx.bundle (Misc/Makefile)
 ########################################################################
@@ -232,6 +268,7 @@ supportext_add_sources(Misc COMPONENTS THREADS FILEOPEN GENERATOR LUT MULTIPLANE
 target_include_directories(Misc PRIVATE Misc ${MISC_PLUGIN_DIRS} Test)
 if(NOT MSVC) # MSVC has OpenMP 2.0 only
   ofx_target_openmp(Misc) # DenoiseSharpen (Misc/Makefile: OPENMP=1)
+  ofxmisc_bundle_libgomp(Misc)
 endif()
 ofx_plugin_resources(Misc
   "Add/net.sf.openfx.AddPlugin.png"
@@ -405,6 +442,7 @@ foreach(_dir IN LISTS OFXMISC_STANDALONE_BUNDLES)
   target_include_directories(${_dir} PRIVATE ${_dir})
   if(_sb_OPENMP AND NOT MSVC) # as Misc: MSVC has OpenMP 2.0 only
     ofx_target_openmp(${_dir})
+    ofxmisc_bundle_libgomp(${_dir})
   endif()
   if(_sb_RESOURCES)
     ofx_plugin_resources(${_dir} ${_sb_RESOURCES})
@@ -444,7 +482,11 @@ if(BUILD_SHADERTOY)
         set(_pkg_config_path "$ENV{PKG_CONFIG_PATH}")
         set(_pkg_config_libdir "$ENV{PKG_CONFIG_LIBDIR}")
         set(ENV{PKG_CONFIG_PATH} "")
-        set(ENV{PKG_CONFIG_LIBDIR} "${OSMESA_PATH}/lib/pkgconfig:${OSMESA_PATH}/lib64/pkgconfig")
+        if(WIN32) # MSYS2's pkgconf is a native program: ';' separator (the paths have drive letters)
+          set(ENV{PKG_CONFIG_LIBDIR} "${OSMESA_PATH}/lib/pkgconfig;${OSMESA_PATH}/lib64/pkgconfig")
+        else()
+          set(ENV{PKG_CONFIG_LIBDIR} "${OSMESA_PATH}/lib/pkgconfig:${OSMESA_PATH}/lib64/pkgconfig")
+        endif()
         pkg_check_modules(PC_OSMESA IMPORTED_TARGET osmesa) # not OSMESA_: OSMESA_LIBRARIES is an input
         set(ENV{PKG_CONFIG_PATH} "${_pkg_config_path}")
         set(ENV{PKG_CONFIG_LIBDIR} "${_pkg_config_libdir}")
@@ -456,6 +498,11 @@ if(BUILD_SHADERTOY)
         if(_osmesa_opts)
           list(PREPEND _osmesa_libs ${_osmesa_opts})
         endif()
+        if(EXISTS "${OSMESA_PATH}/lib/libMangledOSMesa32.a" AND PC_OSMESA_STATIC_LDFLAGS)
+          # the static library (osmesa-install's default): also its Libs.private (pkg-config
+          # --static), e.g. -lsynchronization -lws2_32 on Windows
+          set(_osmesa_libs ${PC_OSMESA_STATIC_LDFLAGS})
+        endif()
       else()
         message(STATUS "osmesa.pc not found or unusable in ${OSMESA_PATH} (only that prefix is searched, so its Requires must be there too): using ${OSMESA_PATH}/include and -lMangledOSMesa32")
         set(_osmesa_includes "${OSMESA_PATH}/include")
@@ -466,6 +513,9 @@ if(BUILD_SHADERTOY)
       endif()
       # LLVM, as in Shadertoy/Makefile
       set(_llvm_config "${LLVM_PATH}/bin/llvm-config")
+      if(WIN32 AND NOT EXISTS "${_llvm_config}" AND EXISTS "${_llvm_config}.exe")
+        set(_llvm_config "${_llvm_config}.exe")
+      endif()
       if(NOT EXISTS "${_llvm_config}")
         message(FATAL_ERROR "USE_OSMESA: ${_llvm_config} not found (set LLVM_PATH)")
       endif()
@@ -600,6 +650,7 @@ if(NOT MSVC)
   # MSVC is OpenMP 2.0 and has issues, see https://github.com/dtschump/CImg/issues/208
   # and https://msdn.microsoft.com/fr-fr/library/ff520162.aspx
   ofx_target_openmp(CImg)
+  ofxmisc_bundle_libgomp(CImg)
   if(TARGET OpenMP::OpenMP_CXX)
     target_compile_definitions(CImg PRIVATE cimg_use_openmp) # CImg/Makefile: OPENMP=1
   endif()

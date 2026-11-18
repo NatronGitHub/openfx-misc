@@ -9,17 +9,25 @@ name: Binary release
 #                                                     (the OSMesa variant where it is built)
 #   openfx-misc-Shadertoy-OpenGL-<version>-<platform>  Shadertoy.ofx alone, OpenGL only
 #   openfx-misc-Shadertoy-OSMesa-<version>-<platform>  Shadertoy.ofx alone, OpenGL + OSMesa
-#                                                     (the bundle of the full set; Linux only)
+#                                                     (the bundle of the full set)
 #   openfx-misc-DenoiseSharpen-<version>-<platform>    DenoiseSharpen.ofx alone
 #                                                     (-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen)
 # The standalone bundles have the same plug-ins (identifiers and versions) as the full
 # set: users install one or the other, never both, and only one Shadertoy.
 #
-# OSMesa (Shadertoy's CPU rendering) needs a mangled OSMesa and LLVM. Only the Linux job
-# builds it (.github/tools/build-osmesa.sh: Mesa 25.0.7 with Rocky Linux 8's static LLVM,
-# cached): on macOS, the bundles are universal and OSMesa would need a universal LLVM
-# built from source (hours); on Windows (UCRT64), osmesa-install is not tested. There,
-# the full set has the OpenGL-only Shadertoy and there is no OSMesa download.
+# OSMesa (Shadertoy's CPU rendering) needs a mangled OSMesa and LLVM:
+# - Linux builds it (.github/tools/build-osmesa.sh: Mesa 25.0.7 with Rocky Linux 8's
+#   static LLVM, cached).
+# - macOS and Windows download the prebuilt OSMesa + LLVM of an osmesa-install binary
+#   release (.github/tools/fetch-osmesa.sh), whose tag is the "osmesa_release" input of a
+#   manual run, or else the OSMESA_INSTALL_RELEASE repository variable (for tag pushes):
+#     https://github.com/devernay/osmesa-install/releases/download/<TAG>/osmesa-install-<TAG>-<PLATFORM>.tar.xz
+#   with PLATFORM macos-arm64 and macos-x86_64 (merged with lipo; else macos-universal) and
+#   windows-ucrt64-x86_64, and their SHA256 listed in .github/parameters/osmesa-install.sha256.
+#   The prebuilt macOS binaries need macOS 14, so the OSMesa Shadertoy targets macOS 14 (the
+#   other bundles, and the OpenGL-only Shadertoy, macOS 11). Without a tag, there is no
+#   OSMesa variant on macOS and Windows: the full set has the OpenGL-only Shadertoy, and
+#   there is no OSMesa download.
 #
 # Frugal CI (NatronGitHub runners are shared by all repos): this workflow never runs on
 # pushes to branches or on pull requests, only on release tags (Natron-*, the Natron
@@ -27,6 +35,10 @@ name: Binary release
 # workflow"). A manual run without a tag only uploads the archives as workflow
 # artifacts; with the "tag" input (an existing tag), it builds that tag and makes (or
 # updates) its draft release. This workflow never creates tags (gh release --verify-tag).
+#
+# TODO: once openfx's per-plug-in install components (NatronGitHub/openfx#155) are in the
+# openfx submodule, install each bundle with "cmake --install build --component <Bundle>"
+# into its own prefix, instead of moving the standalone bundles after "cmake --install".
 on:
   push:
     tags: ['Natron-*', 'openfx-misc-*']
@@ -34,6 +46,10 @@ on:
     inputs:
       tag:
         description: 'Existing tag to build and attach to a draft release (empty: build the selected branch, artifacts only)'
+        required: false
+        default: ''
+      osmesa_release:
+        description: 'osmesa-install release tag with prebuilt OSMesa for macOS and Windows (empty: the OSMESA_INSTALL_RELEASE variable; if both are empty, no OSMesa Shadertoy on macOS and Windows)'
         required: false
         default: ''
 
@@ -52,13 +68,15 @@ concurrency:
 env:
   # The tag of the release: the pushed tag, or the "tag" input of a manual run
   RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+  # The osmesa-install release of the prebuilt OSMesa (macOS, Windows); empty: none
+  OSMESA_RELEASE: ${{ inputs.osmesa_release || vars.OSMESA_INSTALL_RELEASE }}
   # Release builds (C++17, the default), without the Test bundle; the bundles are
   # deployed (OFX_DEPLOY_BUNDLES: on macOS, osxDeploy.sh copies the non-system libraries
   # into the bundles); hostDemo is built for the smoke test (installed in <prefix>/bin,
   # not packaged). DenoiseSharpen is also built as a standalone bundle.
   CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DOFX_BUILD_HOSTDEMO=ON -DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen
-  # The Shadertoy-only build (Shadertoy, OpenGL only, where the full set has OSMesa)
-  SHADERTOY_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF -DUSE_OSMESA=OFF
+  # The Shadertoy-only builds (without Misc and CImg)
+  SHADERTOY_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF
   # The bundles that the smoke test of the full set expects (no Test bundle)
   SMOKETEST_FULL: Misc:168 CImg:40 Shadertoy:1
 
@@ -70,8 +88,9 @@ jobs:
   build_linux:
     name: Linux x86_64 (Rocky Linux 8)
     # Natron's Linux baseline: Rocky Linux 8 (glibc 2.28) with gcc-toolset-14, so that
-    # the bundles load on the systems Natron supports. OpenMP (DenoiseSharpen, CImg) uses
-    # the system's libgomp.so.1.
+    # the bundles load on the systems Natron supports. The libgomp.so.1 of OpenMP
+    # (DenoiseSharpen in Misc and standalone, CImg) is copied into these bundles, next to
+    # their binary, found through the rpath $ORIGIN (-DOFXMISC_BUNDLE_LIBGOMP=ON).
     timeout-minutes: 120
     runs-on: ubuntu-24.04
     container: rockylinux/rockylinux:8
@@ -86,7 +105,7 @@ jobs:
           dnf config-manager --set-enabled powertools
           dnf -y -q install gcc-toolset-14-gcc-c++ cmake ninja-build git patch xz bzip2 curl \
               python3.11 python3.11-pip bison flex zlib-devel libzstd-devel libxml2-devel llvm-devel llvm-static \
-              pkgconf-pkg-config perl file which diffutils findutils
+              pkgconf-pkg-config perl file which diffutils findutils binutils
           python3.11 -m pip install -q meson mako pyyaml packaging
           alternatives --set python3 /usr/bin/python3.11
           # gcc-toolset-14 in the next steps
@@ -126,22 +145,39 @@ jobs:
         # --as-needed: Shadertoy only links the libraries of llvm-config --system-libs that
         # LLVM's code in it uses (not libxml2)
         run: |
-          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DUSE_OSMESA=ON -DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr \
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DOFXMISC_BUNDLE_LIBGOMP=ON \
+              -DUSE_OSMESA=ON -DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr \
               -DCMAKE_MODULE_LINKER_FLAGS=-Wl,--as-needed
           cmake --build build
           cmake --install build --prefix "$PWD/install"
       - name: Build Shadertoy (OpenGL only)
         run: |
-          cmake -S . -B build-shadertoy -G Ninja $SHADERTOY_OPTIONS
+          cmake -S . -B build-shadertoy -G Ninja $SHADERTOY_OPTIONS -DUSE_OSMESA=OFF
           cmake --build build-shadertoy
           cmake --install build-shadertoy --prefix "$PWD/install-shadertoy"
       - name: Separate the standalone bundles
         # DenoiseSharpen.ofx.bundle and Misc.ofx.bundle have the same plug-in: each is
-        # tested and packaged on its own
+        # tested and packaged on its own (TODO: install components, see above)
         run: |
           mkdir -p install-denoisesharpen/OFX/Plugins
           mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
           ldd install/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx install-*/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx
+      - name: Check the bundled libgomp
+        # Misc, CImg and DenoiseSharpen have Contents/Linux-x86-64/libgomp.so.1 and the
+        # RUNPATH $ORIGIN, and their libgomp.so.1 resolves to that copy
+        run: |
+          for f in install/OFX/Plugins/Misc.ofx.bundle/Contents/Linux-x86-64/Misc.ofx \
+                   install/OFX/Plugins/CImg.ofx.bundle/Contents/Linux-x86-64/CImg.ofx \
+                   install-denoisesharpen/OFX/Plugins/DenoiseSharpen.ofx.bundle/Contents/Linux-x86-64/DenoiseSharpen.ofx; do
+            dir=$(cd "$(dirname "$f")" && pwd)
+            test -f "$dir/libgomp.so.1"
+            readelf -d "$f" | grep -E 'RUNPATH|RPATH' | grep -F '$ORIGIN'
+            if ! ldd "$f" | grep -F "libgomp.so.1 => $dir/libgomp.so.1"; then
+              echo "ERROR: $f does not load $dir/libgomp.so.1:"
+              ldd "$f"
+              exit 1
+            fi
+          done
       - name: Load test
         run: |
           .github/tools/loadtest.sh install
@@ -170,11 +206,12 @@ jobs:
     timeout-minutes: 60
     # GitHub-hosted arm64 runner; universal bundles (CMAKE_OSX_ARCHITECTURES), built with
     # the system Xcode clang and SDK, for macOS 11 and later. No OpenMP (as ci.yml:
-    # MacPorts' libomp is built for the runner's macOS) and no OSMesa (see above): the
-    # bundles only need system libraries. MacPorts (never Homebrew) provides the tools.
+    # MacPorts' libomp is built for the runner's macOS): the bundles only need system
+    # libraries. MacPorts (never Homebrew) provides the tools. With OSMESA_RELEASE, a
+    # Shadertoy-only build with the prebuilt OSMesa, for macOS 14 (see above).
     runs-on: macos-15
     env:
-      MACOS_OPTIONS: -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DOFX_USE_OPENMP=OFF -DCMAKE_OSX_ARCHITECTURES=arm64;x86_64
+      MACOS_OPTIONS: -DOFX_USE_OPENMP=OFF -DCMAKE_OSX_ARCHITECTURES=arm64;x86_64
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -195,10 +232,49 @@ jobs:
       - name: Build the full set and DenoiseSharpen
         # Shadertoy is OpenGL only: it is also the standalone Shadertoy (OpenGL)
         run: |
-          cmake -S . -B build $CMAKE_OPTIONS $MACOS_OPTIONS
+          cmake -S . -B build $CMAKE_OPTIONS $MACOS_OPTIONS -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
           cmake --build build --parallel "$(getconf _NPROCESSORS_ONLN)"
           cmake --install build --prefix "$PWD/install"
+      - name: Build Shadertoy with OSMesa (prebuilt OSMesa, macOS 14)
+        if: env.OSMESA_RELEASE != ''
+        # Preferred: one build per architecture with the macos-arm64 and macos-x86_64 assets,
+        # merged with lipo (the OSMesa and LLVM libraries are static: the bundle has no other
+        # library) and signed ad hoc again. A universal build (macos-universal asset) needs a
+        # universal LLVM with both targets, whose llvm-config "native" component (CMake's LLVM
+        # link flags) only names the runner's arm64 target: it is only used when the per-arch
+        # assets are not listed. (Linking universal against arm64-only libraries fails: the
+        # x86_64 slice has undefined symbols.)
+        run: |
+          build() { # build ARCHS PLATFORM PREFIX
+            .github/tools/fetch-osmesa.sh "$OSMESA_RELEASE" "$2" "$PWD/osmesa-$2"
+            cmake -S . -B "build-osmesa-$2" $SHADERTOY_OPTIONS -DOFX_USE_OPENMP=OFF \
+                "-DCMAKE_OSX_ARCHITECTURES=$1" -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 -DOFX_DEPLOY_STRICT_MINOS=ON \
+                -DUSE_OSMESA=ON "-DOSMESA_PATH=$PWD/osmesa-$2/osmesa" "-DLLVM_PATH=$PWD/osmesa-$2/llvm"
+            cmake --build "build-osmesa-$2" --parallel "$(getconf _NPROCESSORS_ONLN)"
+            cmake --install "build-osmesa-$2" --prefix "$3"
+          }
+          if ! .github/tools/fetch-osmesa.sh --check "$OSMESA_RELEASE" macos-arm64 ||
+             ! .github/tools/fetch-osmesa.sh --check "$OSMESA_RELEASE" macos-x86_64; then
+            build "arm64;x86_64" macos-universal "$PWD/install-shadertoy-osmesa"
+          else
+            build arm64 macos-arm64 "$PWD/install-osmesa-arm64"
+            build x86_64 macos-x86_64 "$PWD/install-osmesa-x86_64"
+            mkdir -p install-shadertoy-osmesa/OFX/Plugins
+            cp -R install-osmesa-arm64/OFX/Plugins/Shadertoy.ofx.bundle install-shadertoy-osmesa/OFX/Plugins/
+            b=install-shadertoy-osmesa/OFX/Plugins/Shadertoy.ofx.bundle
+            lipo -create install-osmesa-arm64/OFX/Plugins/Shadertoy.ofx.bundle/Contents/MacOS/Shadertoy.ofx \
+                install-osmesa-x86_64/OFX/Plugins/Shadertoy.ofx.bundle/Contents/MacOS/Shadertoy.ofx \
+                -output "$b/Contents/MacOS/Shadertoy.ofx"
+            codesign -f -s - "$b/Contents/MacOS/Shadertoy.ofx"
+            codesign -f -s - "$b"
+            codesign --verify --strict "$b"
+          fi
+          f=install-shadertoy-osmesa/OFX/Plugins/Shadertoy.ofx.bundle/Contents/MacOS/Shadertoy.ofx
+          lipo -archs "$f" | grep -w arm64 | grep -w x86_64
+          otool -L "$f"
+          echo "SHADERTOY_OSMESA=--shadertoy-osmesa install-shadertoy-osmesa/OFX/Plugins --osmesa-min-macos 14.0" >> "$GITHUB_ENV"
       - name: Separate the standalone bundles
+        # (TODO: install components, see above)
         run: |
           mkdir -p install-denoisesharpen/OFX/Plugins
           mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
@@ -207,6 +283,7 @@ jobs:
         run: |
           .github/tools/loadtest.sh install
           .github/tools/loadtest.sh install-denoisesharpen
+          [ ! -d install-shadertoy-osmesa ] || .github/tools/loadtest.sh install-shadertoy-osmesa
       - name: Smoke test (hostDemo, all plug-ins)
         timeout-minutes: 20
         run: |
@@ -216,7 +293,7 @@ jobs:
         run: |
           .github/tools/package-release.sh \
               --platform macos-universal --out dist \
-              --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins \
+              --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins ${SHADERTOY_OSMESA:-} \
               --denoisesharpen install-denoisesharpen/OFX/Plugins
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
@@ -235,8 +312,8 @@ jobs:
         # with "set -eo pipefail".
         shell: msys2 {0}
     env:
-      # As ci.yml: the MinGW runtime is linked statically (loadtest.sh checks it), no OpenMP
-      # (MSYS2's libgomp would still be a DLL dependency), and no OSMesa (see above).
+      # As ci.yml: the MinGW runtime is linked statically (loadtest.sh checks it), and no
+      # OpenMP (MSYS2's libgomp would still be a DLL dependency).
       WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
     steps:
       - name: Checkout
@@ -254,31 +331,50 @@ jobs:
           # zip: for the archives
           install: git base-devel zip
           pacboy: cc:p cmake:p ninja:p
-      - name: Build the full set and DenoiseSharpen
-        # Shadertoy is OpenGL only: it is also the standalone Shadertoy (OpenGL).
-        # hostDemo (OFX_BUILD_HOSTDEMO) is built but not used: smoketest.sh does not run
-        # on Windows.
+      - name: Download the prebuilt OSMesa
+        if: env.OSMESA_RELEASE != ''
+        # The UCRT64 build (a MINGW64 one would not link: another C runtime). Native
+        # paths (cygpath -m) for CMake and the compiler.
         run: |
           set -eo pipefail
-          cmake -S . -B build -G Ninja $CMAKE_OPTIONS $WINDOWS_OPTIONS
+          .github/tools/fetch-osmesa.sh "$OSMESA_RELEASE" windows-ucrt64-x86_64 "$PWD/osmesa"
+          echo "OSMESA_OPTIONS=-DUSE_OSMESA=ON -DOSMESA_PATH=$(cygpath -m "$PWD/osmesa/osmesa") -DLLVM_PATH=$(cygpath -m "$PWD/osmesa/llvm")" >> "$GITHUB_ENV"
+          echo "SHADERTOY_OSMESA=--shadertoy-osmesa install/OFX/Plugins" >> "$GITHUB_ENV"
+      - name: Build the full set and DenoiseSharpen
+        # Shadertoy has OSMesa with OSMESA_RELEASE, else it is OpenGL only (and is also the
+        # standalone Shadertoy (OpenGL)). hostDemo (OFX_BUILD_HOSTDEMO) is built but not
+        # used: smoketest.sh does not run on Windows.
+        run: |
+          set -eo pipefail
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS $WINDOWS_OPTIONS ${OSMESA_OPTIONS:-}
           cmake --build build
           cmake --install build --prefix "$PWD/install"
+      - name: Build Shadertoy (OpenGL only)
+        if: env.OSMESA_RELEASE != ''
+        run: |
+          set -eo pipefail
+          cmake -S . -B build-shadertoy -G Ninja $SHADERTOY_OPTIONS $WINDOWS_OPTIONS -DUSE_OSMESA=OFF
+          cmake --build build-shadertoy
+          cmake --install build-shadertoy --prefix "$PWD/install-shadertoy"
       - name: Separate the standalone bundles
+        # (TODO: install components, see above)
         run: |
           set -eo pipefail
           mkdir -p install-denoisesharpen/OFX/Plugins
           mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
+          [ -d install-shadertoy ] || cp -R install install-shadertoy # (OpenGL only: the full set's)
       - name: Load test
         run: |
           set -eo pipefail
           .github/tools/loadtest.sh install
           .github/tools/loadtest.sh install-denoisesharpen
+          [ -z "$OSMESA_RELEASE" ] || .github/tools/loadtest.sh install-shadertoy
       - name: Package
         run: |
           set -eo pipefail
           .github/tools/package-release.sh \
               --platform windows-x86_64 --out dist \
-              --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins \
+              --full install/OFX/Plugins --shadertoy-gl install-shadertoy/OFX/Plugins ${SHADERTOY_OSMESA:-} \
               --denoisesharpen install-denoisesharpen/OFX/Plugins
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
@@ -323,13 +419,14 @@ jobs:
           fi
           prerelease=
           case "$tag" in *-[rR][cC]*|*-beta*|*-alpha*) prerelease=--prerelease ;; esac
+          osmesa=$(cd dist && ls openfx-misc-Shadertoy-OSMesa-* | sed -e 's/^openfx-misc-Shadertoy-OSMesa-.*-\(linux\|macos\|windows\)-.*/\1/' | sort -u | paste -sd, - | sed 's/,/, /g')
           cat > notes.md << EOF
           openfx-misc binaries of \`$tag\`, for Linux x86_64 (Rocky Linux 8 and later), Windows x86_64 and macOS 11 or later (universal).
 
           Downloads, per platform:
-          - \`openfx-misc-<version>-<platform>\`: the full set, as shipped with Natron: \`Misc.ofx.bundle\`, \`CImg.ofx.bundle\` and \`Shadertoy.ofx.bundle\` (with OSMesa CPU rendering on Linux, OpenGL only on macOS and Windows).
+          - \`openfx-misc-<version>-<platform>\`: the full set, as shipped with Natron: \`Misc.ofx.bundle\`, \`CImg.ofx.bundle\` and \`Shadertoy.ofx.bundle\` (with OSMesa CPU rendering where it is built: $osmesa; OpenGL only elsewhere).
           - \`openfx-misc-Shadertoy-OpenGL-<version>-<platform>\`: \`Shadertoy.ofx.bundle\` alone, OpenGL only.
-          - \`openfx-misc-Shadertoy-OSMesa-<version>-<platform>\` (Linux): \`Shadertoy.ofx.bundle\` alone, OpenGL + OSMesa, the one of the full set.
+          - \`openfx-misc-Shadertoy-OSMesa-<version>-<platform>\` ($osmesa): \`Shadertoy.ofx.bundle\` alone, OpenGL + OSMesa, the one of the full set (on macOS, for macOS 14 or later).
           - \`openfx-misc-DenoiseSharpen-<version>-<platform>\`: \`DenoiseSharpen.ofx.bundle\` alone (DenoiseSharpen is also in \`Misc.ofx.bundle\`).
 
           **Install either the full set or standalone bundles, not both**: they contain the same plug-ins, with the same identifiers and versions. The two Shadertoy downloads are mutually exclusive. Each archive has a README.txt with the installation directories. Natron users don't need these: Natron includes them.

@@ -1,8 +1,8 @@
 #!/bin/bash
 # Package the openfx-misc binary release downloads of one platform (release.yml):
-#   openfx-misc-<VERSION>-<PLATFORM>                   the full set: Misc, CImg and Shadertoy
-#                                                      (the Shadertoy of --full: OSMesa if available),
-#                                                      the bundles that Natron ships
+#   openfx-misc-<VERSION>-<PLATFORM>                   the full set: Misc and CImg of --full, and
+#                                                      Shadertoy (OSMesa if available, else OpenGL
+#                                                      only), the bundles that Natron ships
 #   openfx-misc-Shadertoy-OpenGL-<VERSION>-<PLATFORM>  Shadertoy alone, OpenGL only
 #   openfx-misc-Shadertoy-OSMesa-<VERSION>-<PLATFORM>  Shadertoy alone, OpenGL + OSMesa (CPU
 #                                                      rendering): the Shadertoy of the full set
@@ -16,9 +16,11 @@
 # VERSION: by default, $RELEASE_TAG without its Natron- or openfx-misc- prefix (Natron-2.6.0:
 #   2.6.0), else <date>-<commit> (from $GITHUB_SHA, or git).
 # Each input DIR holds the *.ofx.bundle directories (e.g. an install prefix's OFX/Plugins):
-#   --full: Misc, CImg and Shadertoy; --shadertoy-gl and --shadertoy-osmesa: Shadertoy;
-#   --denoisesharpen: DenoiseSharpen. Without --shadertoy-osmesa, the platform has no OSMesa
-#   build: the full set has the OpenGL-only Shadertoy, and the OSMesa download is not made.
+#   --full: Misc and CImg; --shadertoy-gl and --shadertoy-osmesa: Shadertoy;
+#   --denoisesharpen: DenoiseSharpen. The full set gets the Shadertoy of --shadertoy-osmesa;
+#   without it (no OSMesa build for this platform), the OpenGL-only one, and the OSMesa download
+#   is not made. --osmesa-min-macos V: the minimum macOS of the OSMesa Shadertoy, if it is
+#   higher than the other bundles' (11.0), for the README.
 # PLATFORM: linux-x86_64, windows-x86_64, macos-universal... (linux-*, windows-*, macos-*).
 set -eo pipefail
 
@@ -27,7 +29,7 @@ usage() {
     exit 2
 }
 
-version='' platform='' out='' full='' stgl='' stmesa='' ds=''
+version='' platform='' out='' full='' stgl='' stmesa='' ds='' mesamacos=''
 while [ $# -gt 0 ]; do
     case "$1" in
         --version) version=$2; shift 2 ;;
@@ -37,6 +39,7 @@ while [ $# -gt 0 ]; do
         --shadertoy-gl) stgl=$2; shift 2 ;;
         --shadertoy-osmesa) stmesa=$2; shift 2 ;;
         --denoisesharpen) ds=$2; shift 2 ;;
+        --osmesa-min-macos) mesamacos=$2; shift 2 ;;
         *) usage ;;
     esac
 done
@@ -102,18 +105,23 @@ or into a directory listed in the OFX_PLUGIN_PATH environment variable
 (directories separated by '$pathsep'), and restart the host.
 EOF
     case "$os" in
-        macOS) cat << 'EOF'
+        macOS)
+            cat << 'EOF'
 The bundles are universal (arm64 and x86_64), for macOS 11 or later. They are
 not notarized: if the host refuses to load them, remove the quarantine
 attribute after copying, e.g.:
   sudo xattr -dr com.apple.quarantine /Library/OFX/Plugins/*.ofx.bundle
 EOF
+            if [ -n "$stmesa" ] && [ -n "$mesamacos" ]; then
+                echo "The Shadertoy with OSMesa (also in the full set) needs macOS $mesamacos or later: on"
+                echo "older macOS versions, use the OpenGL-only Shadertoy download instead."
+            fi
             ;;
         Linux) cat << 'EOF'
 The bundles are built on Rocky Linux 8 (glibc 2.28) for x86_64. They need the
-system's OpenGL library (libGL.so.1) and GCC's OpenMP runtime (libgomp.so.1,
-for DenoiseSharpen and the CImg plug-ins); the OSMesa Shadertoy also needs
-libz.so.1 and libzstd.so.1.
+system's OpenGL library (libGL.so.1); the OSMesa Shadertoy also needs libz.so.1
+and libzstd.so.1. GCC's OpenMP runtime (libgomp.so.1, used by DenoiseSharpen
+and the CImg plug-ins) is included in the bundles that use it.
 EOF
             ;;
         Windows) cat << 'EOF'
@@ -144,17 +152,17 @@ Natron already includes all these plug-ins: Natron users don't need them.
 EOF
 }
 
-# package NAME CONTENTS SRC BUNDLE...: the download NAME, with the BUNDLEs of directory SRC
+# package NAME CONTENTS BUNDLE...: the download NAME, with the BUNDLE directories (*.ofx.bundle)
 package() {
-    local name=$1 contents=$2 src=$3 b
-    shift 3
+    local name=$1 contents=$2 b
+    shift 2
     mkdir "$work/$name"
     for b in "$@"; do
-        if [ ! -d "$src/$b.ofx.bundle" ]; then
-            echo "ERROR: $src/$b.ofx.bundle not found (for $name)"
+        if [ ! -d "$b" ]; then
+            echo "ERROR: $b not found (for $name)"
             exit 1
         fi
-        cp -R "$src/$b.ofx.bundle" "$work/$name/"
+        cp -R "$b" "$work/$name/"
     done
     readme "$name" "$contents" > "$work/$name/README.txt"
     [ "$os" != Windows ] || sed -i 's/$/\r/' "$work/$name/README.txt"
@@ -165,23 +173,25 @@ package() {
         # COPYFILE_DISABLE: no ._* AppleDouble files (macOS tar)
         (cd "$work" && COPYFILE_DISABLE=1 tar -czf "$out/$name.$ext" "$name")
     fi
-    echo "$out/$name.$ext: $* + README.txt"
+    echo "$out/$name.$ext: $(cd "$work/$name" && echo *.ofx.bundle) + README.txt"
 }
+
+shadertoy_src=${stmesa:-$stgl}
 
 package "openfx-misc-$version-$platform" \
 "- Misc.ofx.bundle: the Misc plug-ins (DenoiseSharpen included)
 - CImg.ofx.bundle: the CImg plug-ins
 - $shadertoy_full" \
-    "$full" Misc CImg Shadertoy
+    "$full/Misc.ofx.bundle" "$full/CImg.ofx.bundle" "$shadertoy_src/Shadertoy.ofx.bundle"
 package "openfx-misc-Shadertoy-OpenGL-$version-$platform" \
 "- Shadertoy.ofx.bundle: Shadertoy, OpenGL only (the host must support OpenGL rendering)" \
-    "$stgl" Shadertoy
+    "$stgl/Shadertoy.ofx.bundle"
 if [ -n "$stmesa" ]; then
     package "openfx-misc-Shadertoy-OSMesa-$version-$platform" \
 "- Shadertoy.ofx.bundle: Shadertoy, OpenGL + OSMesa (CPU rendering when the host has
   no OpenGL render), the same bundle as in the full set" \
-        "$stmesa" Shadertoy
+        "$stmesa/Shadertoy.ofx.bundle"
 fi
 package "openfx-misc-DenoiseSharpen-$version-$platform" \
 "- DenoiseSharpen.ofx.bundle: DenoiseSharpen alone (the same plug-in as in Misc.ofx.bundle)" \
-    "$ds" DenoiseSharpen
+    "$ds/DenoiseSharpen.ofx.bundle"

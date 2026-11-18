@@ -35,11 +35,13 @@ universal):
 - `openfx-misc-<version>-<platform>`: the full set, the same bundles as in Natron:
   `Misc.ofx.bundle`, `CImg.ofx.bundle` and `Shadertoy.ofx.bundle`. Shadertoy is the
   OSMesa variant (it can also render on the CPU, when the host has no OpenGL rendering)
-  where it is built (Linux), OpenGL only elsewhere.
+  where it is built: always on Linux, and on macOS (macOS 14 or later for that bundle) and
+  Windows when the release uses a prebuilt OSMesa from
+  [osmesa-install](https://github.com/devernay/osmesa-install); OpenGL only otherwise.
 - `openfx-misc-Shadertoy-OpenGL-<version>-<platform>`: `Shadertoy.ofx.bundle` alone,
   OpenGL only.
-- `openfx-misc-Shadertoy-OSMesa-<version>-<platform>` (Linux only): `Shadertoy.ofx.bundle`
-  alone, OpenGL + OSMesa: the bundle of the full set.
+- `openfx-misc-Shadertoy-OSMesa-<version>-<platform>` (where OSMesa is built):
+  `Shadertoy.ofx.bundle` alone, OpenGL + OSMesa: the bundle of the full set.
 - `openfx-misc-DenoiseSharpen-<version>-<platform>`: `DenoiseSharpen.ofx.bundle`, with
   only the DenoiseSharpen plugin.
 
@@ -430,6 +432,9 @@ to the prefix (or absolute). The main options are:
 - `-DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen"`: also build these Misc plugins as
   standalone bundles (`DenoiseSharpen.ofx.bundle`, as `make nomulti`), for the binary
   releases. They have the same plugins as `Misc.ofx.bundle`: install one or the other.
+- `-DOFXMISC_BUNDLE_LIBGOMP=ON` (Linux, GCC): copy `libgomp.so.1` next to the binary of the
+  bundles that use OpenMP (`Contents/Linux-x86-64/`), with the rpath `$ORIGIN`, so that
+  they do not need the system's OpenMP runtime (the binary releases).
 - `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
   build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.
