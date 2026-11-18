@@ -44,8 +44,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.Log2Lin"
 // History:
 // version 1.0: initial version
+// version 1.1: also pass through the channels where black and white are almost equal (the offset rounds to 1)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -173,7 +174,7 @@ protected:
     double _gain[3];
     double _whitepoint[3];
     double _gamma[3];
-    bool _passThrough[3]; // black == white for this channel: the conversion is undefined, pass it through
+    bool _passThrough[3]; // black == white (offset == 1) for this channel: the conversion is undefined, pass it through
 
     double log2lin(double xLog,
                    int c)
@@ -244,9 +245,11 @@ public:
             // gamma = 0 would divide by zero (projects may hold values below the
             // param minimum, and hosts may not enforce the range)
             const double g = (std::max)(gamma[c], kParamGammaMin);
-            // black == white gives offset = 1 and an infinite gain: pass the channel through
-            _passThrough[c] = (black[c] == white[c]);
             _offset[c] = std::pow(10., (black[c] - white[c]) * 0.002 / g);
+            // black == white gives offset = 1 and an infinite gain: pass the channel through.
+            // Test the offset rather than black == white: it also rounds to 1 when black and
+            // white are almost equal.
+            _passThrough[c] = (_offset[c] == 1.);
             _gain[c] = _passThrough[c] ? 1. : 1. / (1. - _offset[c]);
             _whitepoint[c] = white[c];
             _gamma[c] = g;
@@ -428,7 +431,7 @@ public:
                 ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                                _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
-        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         // TODO: fetch noise parameters
 

@@ -22,7 +22,7 @@
  */
 
 #include <cmath>
-#include <cfloat> // DBL_MAX
+#include <cfloat> // DBL_MAX, FLT_MAX
 #include <limits>
 #include <algorithm>
 
@@ -75,8 +75,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: gamma <= 0 gives FLT_MAX instead of +inf above 1 (NaN after premultiplying by alpha = 0);
+//              Normalize with no analyzed pixel leaves the black and white points unchanged
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -170,8 +172,9 @@ struct RGBAValues
 struct Results
 {
     Results()
-    : min( std::numeric_limits<double>::infinity() )
-    , max( -std::numeric_limits<double>::infinity() )
+    : valid(false)
+    , min(DBL_MAX) // finite sentinels: -ffinite-math-only makes infinities undefined
+    , max(-DBL_MAX)
     //, mean(0.)
     //, sdev( std::numeric_limits<double>::infinity() )
     //, skewness( std::numeric_limits<double>::infinity() )
@@ -182,6 +185,7 @@ struct Results
         //maxPos.x = maxPos.y = minPos.x = minPos.y = 0.;
     }
 
+    bool valid; // false if no pixel was analyzed: min and max are then DBL_MAX and -DBL_MAX
     RGBAValues min;
     RGBAValues max;
     //RGBAValues mean;
@@ -264,8 +268,8 @@ public:
     ImageMinMaxProcessor(ImageEffect &instance)
     : ImageStatisticsProcessorBase(instance)
     {
-        std::fill( _min, _min + nComponents, +std::numeric_limits<double>::infinity() );
-        std::fill( _max, _max + nComponents, -std::numeric_limits<double>::infinity() );
+        std::fill( _min, _min + nComponents, +DBL_MAX );
+        std::fill( _max, _max + nComponents, -DBL_MAX );
     }
 
     ~ImageMinMaxProcessor()
@@ -280,6 +284,7 @@ public:
         if (_count > 0) {
             toRGBA<double, nComponents, 1>(_min, &results->min);
             toRGBA<double, nComponents, 1>(_max, &results->max);
+            results->valid = true;
         }
     }
 
@@ -302,8 +307,8 @@ private:
         unused(rs);
         double min[nComponents], max[nComponents];
 
-        std::fill( min, min + nComponents, +std::numeric_limits<double>::infinity() );
-        std::fill( max, max + nComponents, -std::numeric_limits<double>::infinity() );
+        std::fill( min, min + nComponents, +DBL_MAX );
+        std::fill( max, max + nComponents, -DBL_MAX );
         unsigned long count = 0;
 
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.x2 <= _dstImg->getBounds().x2 &&
@@ -423,12 +428,15 @@ public:
 
         A = (A * *v) + B;
         if (gamma <= 0) {
+            // the limit of pow(A, 1/gamma) when gamma -> 0+. Above 1, it is +infinity, but an
+            // infinite value gives NaN when it is premultiplied by alpha = 0: use the largest
+            // float instead (also when gamma is negative, as before)
             if (A < 1.) {
                 *v = 0.;
             } else if (A == 1.) {
                 *v = 1.;
             } else {
-                *v = std::numeric_limits<double>::infinity();
+                *v = FLT_MAX;
             }
 
             return;
@@ -746,6 +754,12 @@ private:
         } else {
             // coverity[dead_error_line]
             throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+        if (!results.valid) {
+            // no pixel was analyzed (empty image, or aborted): min and max are the sentinels. They
+            // used to be +inf and -inf, which gave NaN in the grade formula (A * blackpoint with
+            // A = 0 and blackpoint = +inf)
+            return;
         }
         EditBlock eb(*this, kParamNormalize);
         _blackPoint->setValue(results.min.r, results.min.g, results.min.b, results.min.a);

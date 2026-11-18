@@ -157,8 +157,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "- https://compositingmentor.com/2014/07/19/advanced-keying-breakdown-alpha-1-4-ibk-stacked-technique/"
 
 #define kPluginIdentifier "net.sf.openfx.PIK"
+// version 1.0: initial version
+// version 1.1: a soft replace color with zero luminance is replaced by white, as black is (instead of NaN)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -594,10 +596,12 @@ public:
             _screenReplaceColor[2] = screenReplaceColor.b;
             // only normalize if the replace method is soft color
             if (screenReplace == eReplaceSoftColor) {
-                if ( (_screenReplaceColor[0] == 0) && (_screenReplaceColor[1] == 0) && (_screenReplaceColor[2] == 0) ) {
+                l = luminance(_colorspace, _screenReplaceColor);
+                if (l == 0.) {
+                    // black, or a color with zero luminance (with negative components), which
+                    // can't be normalized (0/0 is NaN): use white, as for black
                     _screenReplaceColor[0] = _screenReplaceColor[1] = _screenReplaceColor[2] = 1.;
                 } else {
-                    l = luminance(_colorspace, _screenReplaceColor);
                     _screenReplaceColor[0] /= l;
                     _screenReplaceColor[1] /= l;
                     _screenReplaceColor[2] /= l;
@@ -612,10 +616,12 @@ public:
             _insideReplaceColor[2] = insideReplaceColor.b;
             // only normalize if the replace method is soft color
             if (insideReplace == eReplaceSoftColor) {
-                if ( (_insideReplaceColor[0] == 0) && (_insideReplaceColor[1] == 0) && (_insideReplaceColor[2] == 0) ) {
+                l = luminance(_colorspace, _insideReplaceColor);
+                if (l == 0.) {
+                    // black, or a color with zero luminance (with negative components), which
+                    // can't be normalized (0/0 is NaN): use white, as for black
                     _insideReplaceColor[0] = _insideReplaceColor[1] = _insideReplaceColor[2] = 1.;
                 } else {
-                    l = luminance(_colorspace, _insideReplaceColor);
                     _insideReplaceColor[0] /= l;
                     _insideReplaceColor[1] /= l;
                     _insideReplaceColor[2] /= l;

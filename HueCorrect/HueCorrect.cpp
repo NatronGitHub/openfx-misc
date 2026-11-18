@@ -81,8 +81,13 @@ static bool gParametricPeriodic = false;
 // History:
 // version 1.0 (deprecated, in HueCorrect1.cpp): initial version
 // version 2.0: add Hue vs Hue support
+// version 2.1: curve values above kCurveValueMax are replaced by 0, without detecting non-finite values;
+//              HueKeyer: a zero sat_thrsh no longer divides by zero
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+
+// curve values above this (or infinite) are invalid, and replaced by 0
+#define kCurveValueMax 1e6
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -261,9 +266,11 @@ public:
 
                 // evaluate the parametric param
                 double value = _hueParam->getValue(c, _time, parametricPos);
-                // a non-finite value (some hosts return inf or NaN with keys at both 0 and 6,
-                // NatronGitHub/Natron#1267) would give NaN pixels: use 0, as for negative values
-                if ( !std::isfinite(value) ) {
+                // a huge or infinite value (some hosts return inf or NaN with keys at both 0
+                // and 6, NatronGitHub/Natron#1267) would give NaN pixels: use 0, as for negative
+                // values (below). This domain check also works with -ffast-math. NaN is not
+                // detected, but in IEEE arithmetic std::max(0., NaN) below gives 0.
+                if (value > kCurveValueMax) {
                     value = 0.;
                 }
 
@@ -408,6 +415,9 @@ private:
             double x = value / 6.;
             int i = (int)(x * nbValues);
             assert(0 <= i && i <= nbValues);
+            // a NaN input pixel gives a NaN hue, and an undefined i (INT_MIN on x86): keep
+            // the LUT index in range
+            i = (std::max)( 0, (std::min)(i, nbValues) );
             double alpha = (std::max)( 0., (std::min)(x * nbValues - i, 1.) );
             double a = _hue[c][i];
             double b = (i  < nbValues) ? _hue[c][i + 1] : 0.f;
@@ -1193,9 +1203,11 @@ public:
 
                 // evaluate the parametric param
                 double value = _hueParam->getValue(c, _time, parametricPos);
-                // a non-finite value (some hosts return inf or NaN with keys at both 0 and 6,
-                // NatronGitHub/Natron#1267) would give NaN pixels: use 0, as for negative values
-                if ( !std::isfinite(value) ) {
+                // a huge or infinite value (some hosts return inf or NaN with keys at both 0
+                // and 6, NatronGitHub/Natron#1267) would give NaN pixels: use 0, as for negative
+                // values (below). This domain check also works with -ffast-math. NaN is not
+                // detected, but in IEEE arithmetic std::max(0., NaN) below gives 0.
+                if (value > kCurveValueMax) {
                     value = 0.;
                 }
 
@@ -1252,6 +1264,11 @@ private:
                         a = 0.;
                     } else if (s >= sat_thrsh) {
                         a = amount;
+                    } else if (sat_thrsh <= 0.) {
+                        // s < sat_thrsh <= 0 (s is negative if all the components are negative):
+                        // the ramp below sat_thrsh is empty, and the division would give -inf
+                        // or NaN. sat_thrsh is in the LUT, which holds non-negative values.
+                        a = 0.;
                     } else {
                         a = amount * s / sat_thrsh;
                     }
@@ -1276,6 +1293,9 @@ private:
             double x = value / 6.;
             int i = (int)(x * nbValues);
             assert(0 <= i && i <= nbValues);
+            // a NaN input pixel gives a NaN hue, and an undefined i (INT_MIN on x86): keep
+            // the LUT index in range
+            i = (std::max)( 0, (std::min)(i, nbValues) );
             double alpha = (std::max)( 0., (std::min)(x * nbValues - i, 1.) );
             double a = _hue[c][i];
             double b = (i  < nbValues) ? _hue[c][i + 1] : 0.f;
