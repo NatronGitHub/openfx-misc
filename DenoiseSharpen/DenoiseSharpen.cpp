@@ -136,7 +136,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or highlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero..\n" \
     "\n" \
-    "The analysis warns if the analysis area is likely to give wrong noise levels: a color channel has many clipped values, or the area contains details or texture rather than flat areas, or the AnalysisMask leaves too few pixels. The warning is shown in the \"Analysis Warning\" parameter (hidden when there is no warning), until the next analysis or a change of the color model.\n" \
+    "The analysis warns if the analysis area is likely to give wrong noise levels: a color channel has many clipped values, or the area contains details or texture rather than flat areas, or the AnalysisMask leaves too few pixels. The warning is shown in the \"Analysis Warning\" parameter (hidden when there is no warning), until the next analysis or a change of the color model. The coarse wavelet levels see the image up to about 15 pixels (linear wavelet) or 30 pixels (B3 spline wavelet) outside the AnalysisMask, so masking out an edge may not clear a warning about very low frequencies: the mask should also leave out a margin of that width around the edges.\n" \
     "\n" \
     "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, and noise analysis can only be performed on areas which also contain details, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
     "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it commes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
@@ -276,7 +276,7 @@ enum ColorModelEnum
 
 #define kParamAnalysisWarning "analysisWarning"
 #define kParamAnalysisWarningLabel "Analysis Warning"
-#define kParamAnalysisWarningHint "Set by \"Analyze Noise Levels\" if the analysis region is likely to give wrong noise levels: a channel has many clipped values, or the region contains details or texture rather than flat areas, or the AnalysisMask leaves too few pixels. Empty (and hidden) if the last analysis found no problem. The analysis results are not changed: the noise levels may still be used, but it is better to analyze a flat area, free from details, shadows, highlights and clipped values."
+#define kParamAnalysisWarningHint "Set by \"Analyze Noise Levels\" if the analysis region is likely to give wrong noise levels: a channel has many clipped values, or the region contains details or texture rather than flat areas, or the AnalysisMask leaves too few pixels. Empty (and hidden) if the last analysis found no problem. The coarse wavelet levels see up to about 15 pixels (linear) or 30 pixels (B3 spline) outside the AnalysisMask, so a mask may not clear a warning about very low frequencies. The analysis results are not changed: the noise levels may still be used, but it is better to analyze a flat area, free from details, shadows, highlights and clipped values."
 
 // Noise analysis checks (issue #142). These only produce a warning: the analysis results never depend on them.
 // The thresholds below are initial values, chosen from simulations, to be tuned from user feedback.
@@ -300,12 +300,15 @@ enum ColorModelEnum
 // Details or texture: for Gaussian noise (white or spatially correlated), the absolute values of the wavelet detail
 // coefficients of each level are half-normal, so the ratio of their 90th percentile to their median is
 // 1.6449/0.6745 = 2.44. Edges, details and texture give heavy tails (a larger ratio). Simulations on 80x80 regions
-// (100 trials each) gave a maximum ratio of 2.9 for white, blurred (correlated) and 8-bit quantized Gaussian noise
-// and 2.9 for Laplacian noise, versus 3 to 30 for a region with an edge, a soft edge, flat shapes, or clipped
-// values. The finest level (High frequencies) is not checked: quantized low noise (below one code value) gives a
-// ratio above 4 there. A level whose median is zero is not checked either: its noise estimate is zero, so it cannot
-// be overestimated. Smooth Gaussian-like textures cannot be distinguished from correlated noise this way, and are
-// not detected.
+// (100 trials each, with the linear wavelet) gave a maximum ratio of 2.9 for white, blurred (correlated) and 8-bit
+// quantized Gaussian noise and 2.9 for Laplacian noise, versus 3 to 30 for a region with an edge, a soft edge, flat
+// shapes, or clipped values. With the B3 spline wavelet, the coarsest level (Very Low frequencies) has fewer
+// independent coefficients: an independent simulation of pure noise on 80x80 regions gave ratios up to 3.20 there
+// (2.94 with the linear wavelet), so the margin to the threshold is smaller with B3, and a false warning about very
+// low frequencies is possible on small analysis windows with B3. The finest level (High frequencies) is not
+// checked: quantized low noise (below one code value) gives a ratio above 4 there. A level whose median is zero is
+// not checked either: its noise estimate is zero, so it cannot be overestimated. Smooth Gaussian-like textures
+// cannot be distinguished from correlated noise this way, and are not detected.
 #define kAnalysisDetailRatioMax 3.5
 #define kAnalysisDetailQuantile 0.9
 
@@ -3141,6 +3144,10 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 # endif
     EditBlock eb(*this, kParamAnalyzeNoiseLevels);
+
+    // clear the previous warning first: it described another region (or other inputs), and a failed or aborted
+    // analysis (no source, window too small, out of memory, abort) must not leave it
+    setAnalysisWarning( std::string() );
 
     // instantiate the render code based on the pixel depth of the dst clip
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
