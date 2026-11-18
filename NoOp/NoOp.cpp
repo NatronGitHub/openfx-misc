@@ -581,6 +581,76 @@ fieldOrderString(FieldEnum e)
     }
 }
 
+// Append the properties of clip c to oss. A property or suite call that fails (e.g. a property
+// that the host does not support) stops the listing of this clip and is reported in the message,
+// instead of aborting the whole action (see https://github.com/NatronGitHub/openfx-misc/issues/66).
+static void
+appendClipInfo(std::ostringstream& oss,
+               Clip &c,
+               double time)
+{
+    try {
+        oss << pixelComponentString( c.getPixelComponentsProperty() );
+        oss << bitDepthString( c.getPixelDepth() );
+        oss << " (unmapped: ";
+        oss << pixelComponentString( c.getUnmappedPixelComponentsProperty() );
+        oss << bitDepthString( c.getUnmappedPixelDepth() );
+        oss << ")\npremultiplication: ";
+        oss << premultString( c.getPreMultiplication() );
+#ifdef OFX_EXTENSIONS_VEGAS
+        oss << "\npixel order: ";
+        oss << pixelOrderString( c.getPixelOrder() );
+#endif
+        oss << "\nfield order: ";
+        oss << fieldOrderString( c.getFieldOrder() );
+        oss << "\n";
+        oss << (c.isConnected() ? "connected" : "not connected");
+        oss << "\n";
+        oss << (c.hasContinuousSamples() ? "continuous samples" : "discontinuous samples");
+#ifdef OFX_EXTENSIONS_NATRON
+        oss << "\nformat: ";
+        OfxRectI format;
+        c.getFormat(format);
+        oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
+        if ( (format.x1 != 0) && (format.y1 != 0) ) {
+            if (format.x1 < 0) {
+                oss << format.x1;
+            } else {
+                oss << '+' << format.x1;
+            }
+            if (format.y1 < 0) {
+                oss << format.y1;
+            } else {
+                oss << '+' << format.y1;
+            }
+        }
+#endif
+        oss << "\npixel aspect ratio: ";
+        oss << c.getPixelAspectRatio();
+        oss << "\nframe rate: ";
+        oss << c.getFrameRate();
+        oss << " (unmapped: ";
+        oss << c.getUnmappedFrameRate();
+        oss << ")";
+        OfxRangeD range = c.getFrameRange();
+        oss << "\nframe range: ";
+        oss << range.min << "..." << range.max;
+        oss << " (unmapped: ";
+        range = c.getUnmappedFrameRange();
+        oss << range.min << "..." << range.max;
+        oss << ")";
+        oss << "\nregion of definition: ";
+        OfxRectD rod = c.getRegionOfDefinition(time);
+        oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
+    } catch (const OFX::Exception::PropertyUnknownToHost& e) {
+        oss << "\n[error: the host does not support the property " << e.what() << "]";
+    } catch (const OFX::Exception::Suite& e) {
+        oss << "\n[error: a host function returned " << e.what() << "]";
+    } catch (const std::exception& e) {
+        oss << "\n[error: " << e.what() << "]";
+    }
+}
+
 void
 NoOpPlugin::changedParam(const InstanceChangedArgs &args,
                          const std::string &paramName)
@@ -651,118 +721,14 @@ NoOpPlugin::changedParam(const InstanceChangedArgs &args,
         if (!_srcClip) {
             oss << "N/A";
         } else {
-            Clip &c = *_srcClip;
-            oss << pixelComponentString( c.getPixelComponentsProperty() );
-            oss << bitDepthString( c.getPixelDepth() );
-            oss << " (unmapped: ";
-            oss << pixelComponentString( c.getUnmappedPixelComponentsProperty() );
-            oss << bitDepthString( c.getUnmappedPixelDepth() );
-            oss << ")\npremultiplication: ";
-            oss << premultString( c.getPreMultiplication() );
-#ifdef OFX_EXTENSIONS_VEGAS
-            oss << "\npixel order: ";
-            oss << pixelOrderString( c.getPixelOrder() );
-#endif
-            oss << "\nfield order: ";
-            oss << fieldOrderString( c.getFieldOrder() );
-            oss << "\n";
-            oss << (c.isConnected() ? "connected" : "not connected");
-            oss << "\n";
-            oss << (c.hasContinuousSamples() ? "continuous samples" : "discontinuous samples");
-#ifdef OFX_EXTENSIONS_NATRON
-            oss << "\nformat: ";
-            OfxRectI format;
-            c.getFormat(format);
-            oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
-            if ( (format.x1 != 0) && (format.y1 != 0) ) {
-                if (format.x1 < 0) {
-                    oss << format.x1;
-                } else {
-                    oss << '+' << format.x1;
-                }
-                if (format.y1 < 0) {
-                    oss << format.y1;
-                } else {
-                    oss << '+' << format.y1;
-                }
-            }
-#endif
-            oss << "\npixel aspect ratio: ";
-            oss << c.getPixelAspectRatio();
-            oss << "\nframe rate: ";
-            oss << c.getFrameRate();
-            oss << " (unmapped: ";
-            oss << c.getUnmappedFrameRate();
-            oss << ")";
-            OfxRangeD range = c.getFrameRange();
-            oss << "\nframe range: ";
-            oss << range.min << "..." << range.max;
-            oss << " (unmapped: ";
-            range = c.getUnmappedFrameRange();
-            oss << range.min << "..." << range.max;
-            oss << ")";
-            oss << "\nregion of definition: ";
-            OfxRectD rod = c.getRegionOfDefinition(args.time);
-            oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
+            appendClipInfo(oss, *_srcClip, args.time);
         }
         oss << "\n\n";
         oss << "Output: ";
         if (!_dstClip) {
             oss << "N/A";
         } else {
-            Clip &c = *_dstClip;
-            oss << pixelComponentString( c.getPixelComponentsProperty() );
-            oss << bitDepthString( c.getPixelDepth() );
-            oss << " (unmapped: ";
-            oss << pixelComponentString( c.getUnmappedPixelComponentsProperty() );
-            oss << bitDepthString( c.getUnmappedPixelDepth() );
-            oss << ")\npremultiplication: ";
-            oss << premultString( c.getPreMultiplication() );
-#ifdef OFX_EXTENSIONS_VEGAS
-            oss << "\npixel order: ";
-            oss << pixelOrderString( c.getPixelOrder() );
-#endif
-            oss << "\nfield order: ";
-            oss << fieldOrderString( c.getFieldOrder() );
-            oss << "\n";
-            oss << (c.isConnected() ? "connected" : "not connected");
-            oss << "\n";
-            oss << (c.hasContinuousSamples() ? "continuous samples" : "discontinuous samples");
-#ifdef OFX_EXTENSIONS_NATRON
-            oss << "\nformat: ";
-            OfxRectI format;
-            c.getFormat(format);
-            oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
-            if ( (format.x1 != 0) && (format.y1 != 0) ) {
-                if (format.x1 < 0) {
-                    oss << format.x1;
-                } else {
-                    oss << '+' << format.x1;
-                }
-                if (format.y1 < 0) {
-                    oss << format.y1;
-                } else {
-                    oss << '+' << format.y1;
-                }
-            }
-#endif
-            oss << "\npixel aspect ratio: ";
-            oss << c.getPixelAspectRatio();
-            oss << "\nframe rate: ";
-            oss << c.getFrameRate();
-            oss << " (unmapped: ";
-            oss << c.getUnmappedFrameRate();
-            oss << ")";
-            OfxRangeD range = c.getFrameRange();
-            oss << "\nframe range: ";
-            oss << range.min << "..." << range.max;
-            oss << " (unmapped: ";
-            range = c.getUnmappedFrameRange();
-            oss << range.min << "..." << range.max;
-            oss << ")";
-            oss << "\nregion of definition: ";
-            OfxRectD rod = c.getRegionOfDefinition(args.time);
-            oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
+            appendClipInfo(oss, *_dstClip, args.time);
         }
         oss << "\n\n";
         oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
