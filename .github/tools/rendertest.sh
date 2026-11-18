@@ -26,7 +26,9 @@
 # - the --report JSON file shows a failed render, an output depth other than
 #   the requested one, or an error or fatal message from the plugin;
 # - the output at the first time does not have the expected mean value (mean=r,g,b,a,
-#   normalized to [0,1]), does not have the expected components (comps=RGBA,
+#   normalized to [0,1], within 0.01 or within the tolerance given by tol=),
+#   the effect is not an identity at all times though it should be (identity:
+#   the isIdentity action), does not have the expected components (comps=RGBA,
 #   RGB or Alpha), is constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
 #   renders the same image at different times (framesdiffer: --frames), or
@@ -173,15 +175,26 @@ if out0:
     scale = {"byte": 255., "short": 65535., "float": 1.}[out0["depth"]]
     mean = [v / scale for v in out0["mean"]]
     desc = "%s %s mean=%s" % (out0["depth"], out0["comps"], ",".join("%.3g" % v for v in mean))
+    # the tolerance of mean=. 0.01 by default: byte and short inputs and outputs
+    # are quantized
+    tol = 0.01
+    for expect in expects.split("+"):
+        if expect.startswith("tol="):
+            tol = float(expect[4:])
     for expect in expects.split("+"):
         if expect == "nonconst":
             if out0["min"] == out0["max"]:
                 errors.append("t=0: constant output, expected an image")
+        elif expect.startswith("tol="):
+            pass
         elif expect.startswith("mean="):
             want = [float(v) for v in expect[5:].split(",")]
-            # 0.01: byte and short inputs and outputs are quantized
-            if len(want) != len(mean) or any(abs(a - b) > 0.01 for a, b in zip(mean, want)):
-                errors.append("t=0: mean %s, expected %s" % (",".join("%.4g" % v for v in mean), expect[5:]))
+            if len(want) != len(mean) or any(abs(a - b) > tol for a, b in zip(mean, want)):
+                errors.append("t=0: mean %s, expected %s (tolerance %g)" % (",".join("%.7g" % v for v in mean), expect[5:], tol))
+        elif expect == "identity":
+            ids = [(k.get("isIdentity") or {}).get("identity") for k in renders]
+            if not all(ids):
+                errors.append("not an identity at all times: %s" % ids)
         elif expect.startswith("comps="):
             if out0["comps"] != expect[6:]:
                 errors.append("t=0: components %s, expected %s" % (out0["comps"], expect[6:]))
@@ -293,6 +306,24 @@ tests=(
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
     "Clamp|net.sf.openfx.Clamp|filter|*|mean=1,0,0.5,1||-i Source=solid:1.5,-0.5,0.5,1 -i Mask=none"
+    # WhiteBalance. The default (source = target = 6504 K) is an identity.
+    "WhiteBalance default|net.sf.openfx.WhiteBalance|filter|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "WhiteBalance ramp masked|net.sf.openfx.WhiteBalance|filter|*|nonconst+changed:Source||-i Source=ramp -i Mask=checker:32 sourceTemperature=3200"
+    # D65 (6504 K) to D50 (5003 K), Bradford, in XYZ (workingSpace=5): the
+    # columns of Lindbloom's Bradford D65->D50 matrix
+    # (http://www.brucelindbloom.com/Eqn_ChromAdapt.html). The CIE daylight
+    # D65 and D50 differ from Lindbloom's whites by less than 1e-4.
+    "WhiteBalance Bradford X|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=1.0478112,0.0295424,-0.0092345,1||-i Source=solid:1,0,0,1 -i Mask=none workingSpace=5 targetTemperature=5003"
+    "WhiteBalance Bradford Y|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=0.0228866,0.9904844,0.0150436,1||-i Source=solid:0,1,0,1 -i Mask=none workingSpace=5 targetTemperature=5003"
+    "WhiteBalance Bradford Z|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=-0.0501270,-0.0170491,0.7521316,1||-i Source=solid:0,0,1,1 -i Mask=none workingSpace=5 targetTemperature=5003"
+    # round trip in Rec. 709: the white of 3200 K with a +0.01 tint (Planckian
+    # locus) to the white of 6504 K (daylight locus), and back. The RGB values
+    # of these whites (Y=1) were computed independently (numpy).
+    "WhiteBalance 3200K to D65|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=0.9994219,1.0002588,0.9991391,1||-i Source=solid:1.6013659,0.903962,0.1800995,1 -i Mask=none sourceTemperature=3200 sourceTint=0.01"
+    "WhiteBalance D65 to 3200K|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=1.6013659,0.903962,0.1800995,1||-i Source=solid:0.9994219,1.0002588,0.9991391,1 -i Mask=none targetTemperature=3200 targetTint=0.01"
+    # a neutral color (the 3200 K white in Rec. 2020) becomes gray (the
+    # working space white), keeping the luminance
+    "WhiteBalance neutral|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=0.5,0.5,0.5,1||-i Source=solid:0.6764015,0.458127,0.1972952,1 -i Mask=none workingSpace=1 sourceWhite=1 neutral=1.3528031,0.916254,0.3945904 targetWhite=1"
     # render scale 0.5 (the means are those of the full-scale renders), tiles
     # (--window: the same pixels as the full render), and a fractional time
     "Radial scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-i Source=none -i Mask=none --scale 0.5"

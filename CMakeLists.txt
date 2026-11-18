@@ -176,7 +176,7 @@ set(MISC_PLUGIN_DIRS
   Log2Lin MatteMonitor Merge Mirror MixViews Multiply NoOp OneView PIK PLogLin Position
   Premult Quantize Radial Ramp Rand ReConverge Rectangle Reformat Retime Roto Saturation
   Shuffle SideBySide SlitScan SpriteSheet Switch Threshold TimeBlur TimeBuffer
-  TimeDissolve TimeOffset TrackerPM Transform VectorToColor)
+  TimeDissolve TimeOffset TrackerPM Transform VectorToColor WhiteBalance)
 set(MISC_SOURCES Misc/randomGenerator.cpp Test/TestRender.cpp)
 foreach(_dir IN LISTS MISC_PLUGIN_DIRS)
   file(GLOB _srcs "${_dir}/*.cpp")
@@ -338,6 +338,8 @@ ofx_plugin_resources(Misc
   "Transform/net.sf.openfx.TransformPlugin.svg"
   "VectorToColor/net.sf.openfx.VectorToColorPlugin.png"
   "VectorToColor/net.sf.openfx.VectorToColorPlugin.svg"
+  "WhiteBalance/net.sf.openfx.WhiteBalance.png"
+  "WhiteBalance/net.sf.openfx.WhiteBalance.svg"
 )
 ofx_deploy_bundle(Misc)
 

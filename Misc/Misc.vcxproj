@@ -156,6 +156,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.DirBlur.png $(OutDir)$(ProjectNam
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\WhiteBalance\net.sf.openfx.WhiteBalance.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -239,6 +240,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.DirBlur.png $(OutDir)$(ProjectNam
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\WhiteBalance\net.sf.openfx.WhiteBalance.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -327,6 +329,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.DirBlur.png $(OutDir)$(ProjectNam
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\WhiteBalance\net.sf.openfx.WhiteBalance.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -415,6 +418,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.DirBlur.png $(OutDir)$(ProjectNam
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\WhiteBalance\net.sf.openfx.WhiteBalance.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -489,6 +493,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="..\TrackerPM\TrackerPM.cpp" />
     <ClCompile Include="..\Transform\Transform.cpp" />
     <ClCompile Include="..\VectorToColor\VectorToColor.cpp" />
+    <ClCompile Include="..\WhiteBalance\WhiteBalance.cpp" />
     <ClCompile Include="PluginRegistrationCombined.cpp" />
     <ClCompile Include="randomGenerator.cpp" />
   </ItemGroup>
