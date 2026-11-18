@@ -175,7 +175,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
     const int dstPixelComponentCount = dst->getPixelComponentCount();
-    assert(dstBitDepth == OFX::eBitDepthFloat); // only float is supported for now (others are untested)
+    // Only float is supported (the plugins only declare eBitDepthFloat), and the images are accessed
+    // as float: check it in release builds too (see CImgFilterPluginHelper::render()).
+    if (dstBitDepth != OFX::eBitDepthFloat) {
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
 
     OFX::auto_ptr<const OFX::Image> srcA( ( _srcAClip && _srcAClip->isConnected() ) ?
                                           _srcAClip->fetchImage(args.time) : 0 );
