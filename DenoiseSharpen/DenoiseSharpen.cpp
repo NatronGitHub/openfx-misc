@@ -134,12 +134,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, \"Lock Noise Analysis\" is checked in order to avoid modifying the essential parameters by mistake.\n" \
     "\n" \
-    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or highlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero..\n" \
+    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or highlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero.\n" \
     "\n" \
-    "The analysis warns if the analysis area is likely to give wrong noise levels: a color channel has many clipped values, or the area contains details or texture rather than flat areas, or the AnalysisMask leaves too few pixels. The warning is shown in the \"Analysis Warning\" parameter (hidden when there is no warning), until the next analysis or a change of the color model. The coarse wavelet levels see the image up to about 15 pixels (linear wavelet) or 30 pixels (B3 spline wavelet) outside the AnalysisMask, so masking out an edge may not clear a warning about very low frequencies: the mask should also leave out a margin of that width around the edges.\n" \
+    "The analysis warns if the analysis area is likely to give wrong noise levels: a color channel has many clipped values, or the area contains details or texture rather than flat areas (only the processed channels are checked), or the AnalysisMask leaves too few pixels. The warning is shown in the \"Analysis Warning\" parameter (hidden when there is no warning), until the next analysis or a change of the color model or of B3 Spline Interpolation. The coarse wavelet levels see the image up to about 15 pixels (linear wavelet) or 30 pixels (B3 spline wavelet) outside the AnalysisMask, so masking out an edge may not clear a warning about very low frequencies: the mask should also leave out a margin of that width around the edges.\n" \
     "\n" \
     "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, and noise analysis can only be performed on areas which also contain details, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
-    "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it commes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
+    "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it comes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
     "\n" \
     "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left and only image details remain in the sharpened image. You can then reset the Sharpen Amount to zero, unless you actually want to enhance the contrast of your denoised footage.\n" \
     "\n" \
@@ -3091,6 +3091,12 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
         updateSecret();
     } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
+    } else if ( (paramName == kParamAnalysisWarning) && _analysisWarning ) {
+        // keep the visibility in sync with the value after an undo, a paste, a reset to the default, or a script
+        // (setIsSecret is a property change, so this does not call changedParam again)
+        std::string warning;
+        _analysisWarning->getValue(warning);
+        _analysisWarning->setIsSecret( warning.empty() );
     } else if ( (paramName == kParamColorModel) || (paramName == kParamB3) ) {
         updateLabels();
         if (args.reason == eChangeUserEdit) {
@@ -3445,14 +3451,27 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
                 if (highClipped) {
                     problems << vmax[c];
                 }
-                problems << ")\n";
+                problems << ")";
+                if (premult && lowClipped && (vmin[c] == 0.f)) {
+                    // with Premultiplied checked, transparent pixels (alpha = 0) are unpremultiplied to 0
+                    problems << " or transparent";
+                }
+                problems << "\n";
             }
         }
     }
 
     // set noise levels
 
-    // the channels that contain details or texture, at which frequencies (see kAnalysisDetailRatioMax)
+    // the channels that contain details or texture, at which frequencies (see kAnalysisDetailRatioMax).
+    // Only the processed channels are checked (as in updateSecret: in YCbCr and Lab, the three color channels are
+    // processed if any of R, G, B is): e.g. a soft alpha edge does not matter if alpha is not processed.
+    bool processDetail[4] = { _processR->getValueAtTime(time), _processG->getValueAtTime(time),
+                              _processB->getValueAtTime(time), _processA->getValueAtTime(time) };
+    if ( (colorModel == eColorModelYCbCr) || (colorModel == eColorModelLab) ) {
+        const bool processColor = processDetail[0] || processDetail[1] || processDetail[2];
+        processDetail[0] = processDetail[1] = processDetail[2] = processColor;
+    }
     std::ostringstream detailChannels;
     if (nComponents != 1) {
         // process color channels
@@ -3466,7 +3485,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
             for (unsigned f = 0; f < 4; ++f) {
                 _noiseLevel[c][f]->setValue(sigma_n[f]);
             }
-            appendDetailChannel(detailChannels, analysisChannelName(colorModel, c), detail);
+            if (processDetail[c]) {
+                appendDetailChannel(detailChannels, analysisChannelName(colorModel, c), detail);
+            }
         }
     }
     if (nComponents != 3) {
@@ -3480,7 +3501,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
         for (unsigned f = 0; f < 4; ++f) {
             _noiseLevel[3][f]->setValue(sigma_n[f]);
         }
-        appendDetailChannel(detailChannels, analysisChannelName(colorModel, 3), detail);
+        if (processDetail[3]) {
+            appendDetailChannel(detailChannels, analysisChannelName(colorModel, 3), detail);
+        }
     }
     if ( !detailChannels.str().empty() ) {
         problems << "- the region contains details or texture in " << detailChannels.str() << "\n";
