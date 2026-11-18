@@ -24,5 +24,14 @@ CXXFLAGS += -I$(TOP_SRCDIR)/CImg
 
 $(OBJECTPATH)/CImgZDefocus.o: CImgZDefocus.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
 
+# CImg.h and, with FFT=pocketfft, pocketfft_hdronly.h, made by ../Makefile with this FFT (an existing
+# CImg.h made with another FFT is not remade: CImgFFTConvolve.h then fails with an #error)
 CImg.h:
-	cd .. && $(MAKE) $@
+	cd .. && $(MAKE) sources
+
+# LICENSE and FFT (see ../license.mk): the FFT flags, and pocketfft
+include $(TOP_SRCDIR)/CImg/CImgFFT.mk
+ifeq ($(FFT),pocketfft)
+$(FFT_HEADERS) $(FFT_RESOURCES):
+	cd .. && $(MAKE) sources
+endif

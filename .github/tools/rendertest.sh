@@ -2,9 +2,12 @@
 # Headless render smoke test used by the CI: build hostDemo (the OFX test host
 # of the openfx submodule) and render a representative set of plugins (all the
 # generators and some common filters) at the byte, short and float depths.
-# Linux and macOS only (the checks need python3).
+# Linux, macOS and Windows (MSYS2, e.g. UCRT64, with its python and a hostDemo from
+# -DOFX_BUILD_HOSTDEMO=ON, which needs its expat). The checks need python3.
 #
 # Usage (from the top of the source tree): .github/tools/rendertest.sh [DIR...]
+# RENDERTEST_ONLY=ERE: only the renders whose label (the first field of the test
+# list below) matches the extended regular expression ERE, e.g. ^CImgConvolve.
 # The plugins are the *.ofx.bundle found under the DIRs, which should be the
 # build directories of one configuration, e.g. Misc/Linux-64-release
 # CImg/Linux-64-release. Without DIRs, the *-$CONFIG directories of the source
@@ -45,7 +48,8 @@
 set -eo pipefail
 
 case "$(uname -s)" in
-    Darwin|Linux) ;;
+    Darwin|Linux) windows=0 ;;
+    *_NT-*) windows=1 ;; # MSYS2: MINGW64_NT-*, UCRT64_NT-*, CLANG64_NT-*...
     *) echo "unsupported OS $(uname -s)"; exit 1 ;;
 esac
 
@@ -86,6 +90,8 @@ if [ ${#dirs[@]} -eq 0 ]; then
     exit 1
 fi
 OFX_PLUGIN_PATH=$(IFS=:; echo "${dirs[*]}")
+# Windows: a native list (C:\...;D:\...), for the native hostDemo
+[ $windows = 0 ] || OFX_PLUGIN_PATH=$(cygpath -w -p "$OFX_PLUGIN_PATH")
 export OFX_PLUGIN_PATH
 echo "OFX_PLUGIN_PATH=$OFX_PLUGIN_PATH"
 # debug builds (*-debug directories, or RENDERTEST_DEBUG=1, e.g. for a CMake install
@@ -100,6 +106,9 @@ if [ -z "$HOSTDEMO" ]; then
     for d in "$@"; do
         if [ -x "$d/bin/hostDemo" ]; then
             HOSTDEMO=$d/bin/hostDemo
+            break
+        elif [ -x "$d/bin/hostDemo.exe" ]; then
+            HOSTDEMO=$d/bin/hostDemo.exe
             break
         fi
     done
@@ -139,6 +148,15 @@ for y in range(h):
         pix += [1. if 10 <= x < 42 and 8 <= y < 24 else 0.] * 3
 with open("autocrop.pfm", "wb") as f:
     f.write(b"PF\n%d %d\n-1.0\n" % (w, h) + struct.pack("<%df" % len(pix), *pix))
+# convsrc.pfm: a 720x576 PF (not a power of two) with pseudo-random values in [0,1), different in
+# each channel; convk.pfm: a 7x5 PF kernel, positive, not symmetric, different in each channel
+# (for the "conv" check: an exact linear convolution)
+def pfm(name, w, h, val):
+    pix = [val(x, y, c) for y in range(h) for x in range(w) for c in range(3)]
+    with open(name, "wb") as f:
+        f.write(b"PF\n%d %d\n-1.0\n" % (w, h) + struct.pack("<%df" % len(pix), *pix))
+pfm("convsrc.pfm", 720, 576, lambda x, y, c: ((x * 7919 + y * 104729 + c * 4099) % 1009) / 1009.)
+pfm("convk.pfm", 7, 5, lambda x, y, c: 1. + ((x * 3 + y * 5 + c * 7) % 11))
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -184,8 +202,11 @@ renders = [k for k in renders if not k.get("view")]
 desc = ""
 if out0:
     scale = {"byte": 255., "short": 65535., "float": 1.}[out0["depth"]]
-    mean = [v / scale for v in out0["mean"]]
-    desc = "%s %s mean=%s" % (out0["depth"], out0["comps"], ",".join("%.3g" % v for v in mean))
+    # hostDemo's mean (also min and max) of a channel is null if it has no finite value
+    # (an empty image, or all NaN), and JSON writes an infinite mean as null too
+    mean = [None if v is None else v / scale for v in out0["mean"]]
+    fmt = lambda f, v: "null" if v is None else f % v
+    desc = "%s %s mean=%s" % (out0["depth"], out0["comps"], ",".join(fmt("%.3g", v) for v in mean))
     for expect in expects.split("+"):
         if expect == "nonconst":
             if out0["min"] == out0["max"]:
@@ -193,7 +214,10 @@ if out0:
         elif expect.startswith("mean="):
             want = [float(v) for v in expect[5:].split(",")]
             # 0.01: byte and short inputs and outputs are quantized
-            if len(want) != len(mean) or any(abs(a - b) > 0.01 for a, b in zip(mean, want)):
+            if None in mean:
+                errors.append("t=0: no mean for channel(s) %s (null: no finite value, or an infinite mean), expected %s"
+                              % (",".join(str(c) for c, v in enumerate(mean) if v is None), expect[5:]))
+            elif len(want) != len(mean) or any(abs(a - b) > 0.01 for a, b in zip(mean, want)):
                 errors.append("t=0: mean %s, expected %s" % (",".join("%.4g" % v for v in mean), expect[5:]))
         elif expect.startswith("comps="):
             if out0["comps"] != expect[6:]:
@@ -229,6 +253,57 @@ if out0:
             if diff:
                 errors.append("%d pixels of the tile %s differ from the full render" % (diff, tb))
             desc += " tile=%s" % ",".join(str(v) for v in tb)
+        elif expect.startswith("conv="):
+            # conv=SRC,KERNEL (float RGB PFM files, bottom row first): the output (RGB) must be the
+            # linear convolution of SRC (at 0,0, zero outside) by KERNEL (its RGB channels, each
+            # normalized by its sum), with the kernel origin at pixel (kw//2, kh//2) of KERNEL
+            # (filterCenter=2, the center of its RoD), on the rendered part of the RoD. Checked on
+            # every 7th pixel and on the borders of the output, within 1e-4.
+            def readpfm(path):
+                with open(path, "rb") as f:
+                    h = f.read().split(b"\n", 3)
+                w, hh = (int(v) for v in h[1].split())
+                a = array.array("f")
+                a.frombytes(h[3][:w * hh * 3 * 4])
+                if sys.byteorder != "little":
+                    a.byteswap()
+                return w, hh, a
+            sw, sh, src = readpfm(expect[5:].split(",")[0])
+            kw, kh, ker = readpfm(expect[5:].split(",")[1])
+            ow, oh, out = readpfm(out0["files"][0])
+            ob = out0["bounds"]
+            cx, cy = kw // 2, kh // 2
+            # the output RoD is the source RoD expanded by the kernel, but hostDemo may render
+            # only a part of it (the project): the pixels outside SRC are checked if rendered
+            want = [-cx, -cy, sw + kw - 1 - cx, sh + kh - 1 - cy]
+            if not (want[0] <= ob[0] < ob[2] <= want[2] and want[1] <= ob[1] < ob[3] <= want[3]):
+                errors.append("output bounds %s, not within %s" % (ob, want))
+            else:
+                ksum = [sum(ker[c::3]) for c in range(3)]
+                xs = sorted(set(range(ob[0], ob[2], 7)) | {ob[0], ob[0] + 1, ob[2] - 2, ob[2] - 1})
+                ys = sorted(set(range(ob[1], ob[3], 7)) | {ob[1], ob[1] + 1, ob[3] - 2, ob[3] - 1})
+                pts = {(x, y) for x in xs for y in ys}
+                pts |= {(x, y) for x in range(ob[0], ob[2]) for y in (ob[1], ob[3] - 1)}
+                pts |= {(x, y) for y in range(ob[1], ob[3]) for x in (ob[0], ob[2] - 1)}
+                maxerr, worst = 0., None
+                for x, y in pts:
+                    for c in range(3):
+                        v = 0.
+                        for j in range(kh):
+                            sy = y + cy - j
+                            if 0 <= sy < sh:
+                                for i in range(kw):
+                                    sx = x + cx - i
+                                    if 0 <= sx < sw:
+                                        v += ker[(j * kw + i) * 3 + c] * src[(sy * sw + sx) * 3 + c]
+                        v /= ksum[c]
+                        err = abs(out[((y - ob[1]) * ow + x - ob[0]) * 3 + c] - v)
+                        if err > maxerr:
+                            maxerr, worst = err, (x, y, c, v)
+                if maxerr > 1e-4:
+                    errors.append("not the linear convolution: error %.3g at (x,y,c)=%s (expected %.6g)" %
+                                  (maxerr, worst[:3], worst[3]))
+                desc += " conv: max error %.2g on %d pixels" % (maxerr, len(pts))
         elif expect.startswith(("value:", "keys:", "keyrange:")):
             # the parameters after the run (analysis results): value:NAME=v,... (the
             # value at t=0; with keys, also the one of the t=0 render), keys:NAME=N (the
@@ -284,7 +359,8 @@ EOF
 crc32() {
     python3 -I -c 'import json, sys
 r = json.load(open(sys.argv[1]))
-print([k for k in r["renders"] if k["time"] == 0 and not k.get("view")][0]["output"]["crc32"])' "$1"
+print([k for k in r["renders"] if k["time"] == 0 and not k.get("view")][0]["output"]["crc32"])' "$1" |
+        tr -d '\r' # Windows: the CRLF of python's print
 }
 
 # hostdemo LOG ARGS...: run hostDemo with its output in LOG. The subshell
@@ -340,6 +416,12 @@ tests=(
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
     "Clamp|net.sf.openfx.Clamp|filter|*|mean=1,0,0.5,1||-i Source=solid:1.5,-0.5,0.5,1 -i Mask=none"
+    # ColorTransform on the degenerate inputs that gave NaN or inf before openfx-supportext#55
+    # (hue in [0,1]): HSL with l=0 and s!=0 (0/0 in hsl_to_rgb); RGB->HSI with a subnormal
+    # sum (3/sum overflows, inf*0); RGB->HSL near white (2-(max+min) rounds to 0: s=inf)
+    "HSLToRGB l=0|net.sf.openfx.HSLToRGB|filter|*|mean=0,0,0,1||-i Source=solid:0.3,0.5,0,1"
+    "RGBToHSI subnormal|net.sf.openfx.RGBToHSI|filter|float|mean=0,1,0,1||-i Source=solid:1e-40,0,0,1"
+    "RGBToHSL near white|net.sf.openfx.RGBToHSL|filter|float|mean=0.1667,1,1,1||-i Source=solid:1,1,0.99999994,1"
     # degenerate inputs that used to give NaN (or inf) pixels, which check() rejects. Grade:
     # gamma 0 maps values above 1 to FLT_MAX (was +inf), premultiplied by alpha 0 (was NaN).
     "Grade gamma 0 alpha 0|net.sf.openfx.GradePlugin|filter|*|mean=0,0,0,0||-i Source=solid:2,0.5,1,0 -i Mask=none gamma=0,0,0,0 premult=1"
@@ -363,6 +445,33 @@ tests=(
     # PIK: a soft screen replace color with zero Rec.709 luminance (was 0/0 = NaN where alpha
     # is raised to 1 by Clip White, or a huge color with FMA contraction, e.g. on arm64): white
     "PIK replace color lum 0|net.sf.openfx.PIK|general|float|comps=RGBA+mean=0.0045,0.0045,0.0045,1||-i Fg=solid:0,0,0.25,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0,0,1 screenClipMax=0.5 screenReplaceColor=0.072175,0,-0.2126729"
+    # PIK (version 2 unless -m): the Colorspace (1: Rec. 2020, 2: ACES AP0, 3: ACES AP1) also
+    # gives the luminance of the Soft Color screen and inside replace colors, and the conversion of
+    # Bg for Use Bg Luminance/Chroma; version 1 always used Rec. 709 there, and is kept so that old
+    # projects render the same. A partial key (Clip Black/White), a colored alpha bias and replace
+    # colors, and an inside mask.
+    "PIK 1 AP0 soft colors|net.sf.openfx.PIK|general|float|mean=0.3371,0.2247,1.0113,0.5||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=solid:0.15,0.65,0.2,1 -i Bg=none screenType=0 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenClipMin=0.1 screenClipMax=0.6 colorspace=2 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    "PIK AP0 soft colors|net.sf.openfx.PIK|general|float|mean=0.4982,0.3321,1.4946,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=solid:0.15,0.65,0.2,1 -i Bg=none screenType=0 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenClipMin=0.1 screenClipMax=0.6 colorspace=2 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    # the same with screenType=2 (Pick) and Rec. 2020
+    "PIK 1 Rec.2020 soft colors|net.sf.openfx.PIK|general|float|mean=0.2435,0.2943,0.1309,0.52||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    "PIK Rec.2020 soft colors|net.sf.openfx.PIK|general|float|mean=0.2319,0.29,0.128,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    # Rec. 709, or neutral (gray) replace colors: version 2 renders as version 1
+    "PIK Rec.709 soft colors|net.sf.openfx.PIK|general|float|mean=0.2518,0.2974,0.133,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=0 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    "PIK AP0 gray soft colors|net.sf.openfx.PIK|general|float|mean=0.258,0.2649,0.2717,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=2 alphaBias=0.5,0.5,0.5 screenReplaceColor=0.7,0.7,0.7 insideReplaceColor=0.4,0.4,0.4"
+    # ACES AP0: bluish replace colors have a tiny or negative AP0 luminance (0,0.1,1: 6.7e-4;
+    # 0,0.099,1 and 0,0,1: negative), which gave huge or negated colors (means of 14.5 and -219):
+    # they are normalized with their Rec. 709 luminance, as in version 1
+    "PIK AP0 bluish soft colors|net.sf.openfx.PIK|general|float|mean=0.0275,0.194,1.6536,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=2 screenReplaceColor=0,0.1,1 insideReplaceColor=0,0.099,1"
+    "PIK AP0 blue soft colors|net.sf.openfx.PIK|general|float|mean=0.0275,0.0343,3.2353,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=2 screenReplaceColor=0,0,1 insideReplaceColor=0,0,1"
+    # Use Bg Luminance and Chroma: version 2 converts Bg with the Colorspace too (version 1:
+    # always Rec. 709), so that Rec. 2020 differs and Rec. 709 is the same
+    "PIK 1 Rec.2020 Bg lum/chroma|net.sf.openfx.PIK|general|float|mean=0.4303,0.392,0.2097,0.52||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=solid:0.6,0.3,0.2,1 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 ubl=1 ubc=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    "PIK Rec.2020 Bg lum/chroma|net.sf.openfx.PIK|general|float|mean=0.4695,0.3811,0.1991,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=solid:0.6,0.3,0.2,1 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 ubl=1 ubc=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    "PIK Rec.709 Bg lum/chroma|net.sf.openfx.PIK|general|float|mean=0.5012,0.3865,0.2059,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=solid:0.6,0.3,0.2,1 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=0 ubl=1 ubc=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    # show=2 (Clean Plate) with a Pick screen: the screen color divided by the alpha bias, which
+    # is always normalized with Rec. 709, so that all versions and colorspaces give the same output
+    "PIK 1 AP1 clean plate|net.sf.openfx.PIK|general|float|mean=0.3182,0.7158,0.3182,1||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.9,0.15 colorspace=3 alphaBias=0.2,0.8,0.3 show=2"
+    "PIK AP1 clean plate|net.sf.openfx.PIK|general|float|mean=0.3182,0.7158,0.3182,1||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.9,0.15 colorspace=3 alphaBias=0.2,0.8,0.3 show=2"
     # render scale 0.5 (the means are those of the full-scale renders), tiles
     # (--window: the same pixels as the full render), and a fractional time
     "Radial scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-i Source=none -i Mask=none --scale 0.5"
@@ -415,12 +524,54 @@ tests=(
     # pixels are opaque, so the box is the whole input (100,50)-(164,98).
     "ImageStatistics auto crop|net.sf.openfx.ImageStatistics|filter|float|value:autoCropBottomLeft=117.333333,58+value:autoCropSize=34.133333,16+keys:autoCropSize=1||-i Source=file:autocrop.pfm@100,50 -s analyzeFrameAutoCrop"
     "ImageStatistics auto crop RGBA|net.sf.openfx.ImageStatistics|filter|float|value:autoCropBottomLeft=106.666667,50+value:autoCropSize=68.266667,48||-i Source=file:autocrop.pfm@100,50 autoCropMode=RGBA -s analyzeFrameAutoCrop"
+    # Degenerate inputs that used to give NaN or infinite values (NaN audit): the outputs must be
+    # finite (a NaN output pixel fails hostDemo). A 2-pixel analysis (size 1x1 at PAR 768/720) has
+    # no skewness and kurtosis: 0 (it was infinity).
+    "ImageStatistics 2 pixels|net.sf.openfx.ImageStatistics|filter|float|value:statSkewness=0,0,0,0+value:statKurtosis=0,0,0,0||-i Source=ramp restrictToRectangle=1 bottomLeft=100,100 size=1,1 -s analyzeFrame"
+    # LensDistortion STMap output (u, v, 1, 1): PFBarrel squeeze 0, 3DE Classic filmback width 0 and
+    # 3DE Standard cylindric bending b=-2 (sqrt(1+b)) gave a NaN RoD (nothing rendered). Models: 1
+    # PFBarrel, 2 3DE Classic, 5 3DE4 Radial Standard Degree 4.
+    "LensDistortion PFBarrel squeeze 0|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=1 pfSqueeze=0 outputMode=STMap"
+    "LensDistortion 3DE filmback 0|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=2 tde4_filmback_width_cm=0 outputMode=STMap"
+    "LensDistortion 3DE b=-2|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=5 tde4_B_Cylindric_Bending=-2 outputMode=STMap"
+    # FrameBlend Min/Max where no frame is used (FgM > 0 everywhere): 0 (it was +-infinity)
+    "FrameBlend Min no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Min"
+    "FrameBlend Max no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Max"
+    "FrameBlend Min|net.sf.openfx.FrameBlend|filter|*|mean=0.5,0.25,0.75,1||-i Source=solid:0.5,0.25,0.75,1 -i FgM=none -i Mask=none operation=Min frameRange=-2,0"
+    # GodRays with gamma 0 computed pow(x, 1/0) of x = 1 up to rounding: the colors were 1 (or
+    # infinite); they are now interpolated geometrically from fromColor to toColor
+    "GodRays gamma 0|net.sf.openfx.GodRays|filter|float|mean=0.209,0.264,0.310,0.351||-i Source=checker:16 scale=0.7,0.7 fromColor=1,1,1,1 toColor=0.2,0.3,0.4,0.5 gamma=0,0,0,0"
+    # Rand with density 0 computed 0/0 for its noise level
+    "Rand density 0|net.sf.openfx.Noise|general|*|mean=0,0,0,0||-i Source=none density=0"
     "ImageStatistics auto crop seq|net.sf.openfx.ImageStatistics|filter|float|value:autoCropSize=34.133333,16+keys:autoCropBottomLeft=26+keys:autoCropSize=26+keyrange:autoCropSize=0,25||-i Source=file:autocrop.pfm@100,50 -s analyzeSequenceAutoCrop"
+    # The CImg.h patches (CImg/patches, from openfx-gmic). A math parser macro whose body ends
+    # with an argument (cimg-math-macro-overread.sh: read past the end of the body).
+    "CImgExpression macro|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=f(a)=0.25+a;f(0.25)"
+    # J() with linear interpolation and periodic boundaries, and cubic and Neumann, 500 pixels
+    # below the image: the Source values; cubic and Dirichlet, half a pixel right: zero, except in
+    # the top 76 rows (cimg-ij-boundary.sh; without it, a segmentation fault)
+    "CImgExpression J periodic|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,1,2)"
+    "CImgExpression J Neumann|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,2,1)"
+    "CImgExpression J Dirichlet|net.sf.cimg.CImgExpression|filter|float|mean=0.033,0.066,0.099,0.132||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0.5,-500,0,2,0)"
+    # symmetric_eigen() on the rank-deficient structure tensors of flat images and ramps
+    # (cimg-symmetric-eigen.sh: NaN eigenvectors when the compiler contracts to FMAs): no NaN
+    # output pixels (the float outputs are checked for NaN)
+    "CImgSmooth flat|net.sf.cimg.CImgSmooth|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "CImgSmooth ramp|net.sf.cimg.CImgSmooth|filter|float|mean=0.5,0.5,0.5,0.5+nonconst||-i Source=ramp -i Mask=none"
+    "CImgSharpenShock flat|net.sf.cimg.CImgSharpenShock|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "CImgSharpenShock ramp|net.sf.cimg.CImgSharpenShock|filter|float|nonconst||-i Source=ramp -i Mask=none"
+    # FFT convolution of a 720x576 image (not a power of two: with FFTW or pocketfft, the FFT is
+    # not padded to 1024x1024) by a 7x5 kernel: the exact linear convolution, without a CImg
+    # "non 2^N dimension" error, whatever the FFT library (CImgFFTConvolve.h)
+    "CImgConvolve 720x576|net.sf.cimg.CImgConvolve|filter|float|conv=convsrc.pfm,convk.pfm||--frames 0 -i Source=file:convsrc.pfm -i Filter=file:convk.pfm -i Mask=none filterCenter=2"
 )
 
 n=0 failed=() xfailed=()
 for t in "${tests[@]}"; do
     IFS='|' read -r label id ctx depths expect bug args <<< "$t"
+    if [ -n "$RENDERTEST_ONLY" ] && ! echo "$label" | grep -E -e "$RENDERTEST_ONLY" > /dev/null; then
+        continue
+    fi
     [ "$depths" != '*' ] || depths="byte short float"
     case "$bug" in debug:*) [ $debug = 1 ] && bug=${bug#debug:} || bug= ;; esac
     bugmsg=
@@ -520,8 +671,12 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* full.* report.json ref.json autocrop.pfm
+rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm
 
+if [ $n = 0 ]; then
+    echo "no render matches RENDERTEST_ONLY=$RENDERTEST_ONLY"
+    exit 1
+fi
 echo
 echo "rendertest: $((n - ${#failed[@]} - ${#xfailed[@]})) passed, ${#xfailed[@]} known bugs (XFAIL), ${#failed[@]} failed, $n renders in $(( $(date +%s) - start ))s"
 if [ ${#failed[@]} -ne 0 ]; then

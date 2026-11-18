@@ -2447,7 +2447,9 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     // The GIMP's wavelet sharpen uses a sharpen radius parameter which is counter-intuitive
     // and points to a level number. We convert from the Sharpen Size (simililar to the size in the
     // Laplacian or Sharpen plugins) to the radius using the following heuristic formula (radius=0 seems to correspond to size=8)
-    p.sharpen_radius = std::log(sharpenSize) / OFXS_LN2 - 3.; // log(8)/log(2) = 3.
+    // Sharpen Size may be 0 (its range is [0,DBL_MAX]): log(0) = -inf would be fed to exp() in wavelet_denoise.
+    // The sharpen weight exp(-(level - radius)^2 / 1.5) is 0 for sizes up to 1e-30 (radius < -100) anyway.
+    p.sharpen_radius = std::log( (std::max)(1e-30, sharpenSize) ) / OFXS_LN2 - 3.; // log(8)/log(2) = 3.
     bool sharpenLuminance = _sharpenLuminance->getValueAtTime(time);
 
     if (!sharpenLuminance) {

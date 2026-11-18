@@ -72,7 +72,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier "net.sf.openfx.Card3D"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit)
 
 #define kParamSrcClipChanged "srcClipChanged"
 
@@ -900,9 +901,13 @@ PosMatParam::importChan()
         _rotate->setValueAtTime(it->frame, it->rx, it->ry, it->rz);
         if (_type == ePosMatCamera && _projection && _projection->_camFocalLength) {
             double vaperture = _projection->_camVAperture->getValueAtTime(it->frame);
-            double focal = 0.5 * vaperture / std::tan(0.5 * (it->vfov * OFXS_PI / 180));
-
-            _projection->_camFocalLength->setValueAtTime(it->frame, focal);
+            double tanHalfVFov = std::tan(0.5 * (it->vfov * OFXS_PI / 180));
+            // a field of view outside (0,180) degrees in the file (e.g. 0 or a missing value) has no
+            // focal length (it would be infinite or NaN): set no key
+            if (tanHalfVFov > 0.) {
+                double focal = 0.5 * vaperture / tanHalfVFov;
+                _projection->_camFocalLength->setValueAtTime(it->frame, focal);
+            }
         }
     }
 }
@@ -1034,7 +1039,8 @@ PosMatParam::importBoujou()
                 l.rz = 0.;
             } else {
                 l.rx = std::atan2(rot21, -rot22) * 180. / OFXS_PI;
-                l.ry = -std::asin(rot20) * 180. / OFXS_PI;
+                // the matrix read from the file may have |rot20| slightly above 1 (rounding): clamp to the domain of asin
+                l.ry = -std::asin( (std::max)( -1., (std::min)(rot20, 1.) ) ) * 180. / OFXS_PI;
                 l.rz = std::atan2(rot10,rot00) * 180. / OFXS_PI;
             }
             lines.push_back(l);

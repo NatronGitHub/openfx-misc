@@ -24,4 +24,4 @@ include $(TOP_SRCDIR)/Makefile.master
 
 include $(TOP_SRCDIR)/CImg/CImgSubplugin.mk
 
-$(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp  CImg.h
+$(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
