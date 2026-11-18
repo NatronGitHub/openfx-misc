@@ -159,8 +159,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.PIK"
 // version 1.0: initial version
 // version 1.1: a soft replace color with (almost) zero luminance is replaced by white, as black is (instead of NaN)
-// version 2.0: the Colorspace parameter also applies to the normalization of the alpha bias (and of the
-//              despill bias) and of the Soft Color screen and inside replace colors. Version 1 always used
+// version 2.0: the Colorspace parameter also applies to the normalization of the Soft Color screen and inside
+//              replace colors (with a Rec. 709 fallback for colors with a tiny or negative luminance, e.g. bluish
+//              colors in ACES AP0) and to the conversion of Bg for "Use Bg Luminance/Chroma". Version 1 always used
 //              Rec. 709 there, whatever the Colorspace, and is kept (deprecated) so that old projects render the same.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -359,8 +360,8 @@ enum ReplaceEnum
 
 #define kParamColorspace "colorspace"
 #define kParamColorspaceLabel "Colorspace"
-#define kParamColorspaceHint "Formula used to compute luminance and chrominance from RGB values for the \"Use Bg Luminance\" and \"Use Bg Choma\" options, and the luminance used to normalize the Alpha Bias, the Despill Bias and the Soft Color replace colors."
-#define kParamColorspaceHintV1 "Formula used to compute luminance and chrominance from RGB values for the \"Use Bg Luminance\" and \"Use Bg Choma\" options. In this version (1.x) of the plug-in, the Alpha Bias, the Despill Bias and the Soft Color replace colors are always normalized using the Rec. 709 luminance, whatever the Colorspace: use version 2 for the Colorspace to apply to them too."
+#define kParamColorspaceHint "Formula used to compute luminance and chrominance from RGB values: the luminance of the Soft Color replace colors and the Fg luminance they are matched to, and the luminance and chrominance of the output and of Bg for the \"Use Bg Luminance\" and \"Use Bg Chroma\" options."
+#define kParamColorspaceHintV1 "Formula used to compute luminance and chrominance from RGB values: the Fg luminance that the Soft Color replace colors are matched to, and the luminance and chrominance of the output for the \"Use Bg Luminance\" and \"Use Bg Chroma\" options. In this version (1.x) of the plug-in, the luminance of the Soft Color replace colors and the luminance and chrominance of Bg always use Rec. 709, whatever the Colorspace: use version 2 for the Colorspace to apply to them too."
 #define kParamColorspaceOptionRec709 "Rec. 709", "Use Rec. 709 with D65 illuminant.", "rec709"
 #define kParamColorspaceOptionRec2020 "Rec. 2020", "Use Rec. 2020 with D65 illuminant.", "rec2020"
 #define kParamColorspaceOptionACESAP0 "ACES AP0", "Use ACES AP0 with ACES (approx. D60) illuminant.", "acesap0"
@@ -474,6 +475,7 @@ protected:
     bool _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
     ColorspaceEnum _colorspace;
     OutputModeEnum _outputMode;
+    bool _legacyColorspace; // PIK 1.x: Rec. 709 for the Soft Color replace colors and the Bg conversion
 
 public:
 
@@ -509,6 +511,7 @@ public:
         , _ubc(kParamUBCDefault)
         , _colorspace(eColorspaceRec709)
         , _outputMode(eOutputModePremultiplied)
+        , _legacyColorspace(false)
     {
         _color[0] = _color[1] = _color[2] = 0.;
         _alphaBias[0] = _alphaBias[1] = _alphaBias[2] = 0.;
@@ -560,25 +563,18 @@ public:
                    bool ubc, // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
                    ColorspaceEnum colorspace,
                    OutputModeEnum outputMode,
-                   bool legacyColorspaceNormalization) // PIK 1.x: normalize the biases and replace colors using Rec. 709
+                   bool legacyColorspace) // PIK 1.x: the replace colors and Bg always use Rec. 709
     {
         _colorspace = colorspace;
-        // the colorspace used to normalize the biases and the soft replace colors:
-        // PIK 1.x always used Rec. 709 there (the Colorspace parameter was only set after the normalization)
-        const ColorspaceEnum normColorspace = legacyColorspaceNormalization ? eColorspaceRec709 : colorspace;
-        // all colors are normalized with unit luminance
+        _legacyColorspace = legacyColorspace;
+        // all colors are normalized with unit luminance.
+        // The biases are always normalized with the Rec. 709 luminance, whatever the Colorspace (as in
+        // PIK 1.x, where the Colorspace parameter was only set after the normalization): this cancels out
+        // in the key and the despill, but not in the Clean Plate output with a Pick screen (C = color / alpha bias).
         _alphaBias[0] = (float)(std::max)(0.0001, alphaBias.r);
         _alphaBias[1] = (float)(std::max)(0.0001, alphaBias.g);
         _alphaBias[2] = (float)(std::max)(0.0001, alphaBias.b);
-        float l = luminance(normColorspace, _alphaBias);
-        if ( !(l > kReplaceColorLuminanceMin) ) {
-            // ACES AP0 has a negative blue coefficient: the luminance of a (strongly blue) bias
-            // may be zero or negative, which would give infinite biases or flip their sign (and
-            // disable the key). The normalization of the biases cancels out in the key and the
-            // despill (they divide PFg and C, then C is multiplied by the despill bias), so use
-            // the Rec. 709 luminance, which is positive (the components are at least 0.0001).
-            l = luminance(eColorspaceRec709, _alphaBias);
-        }
+        float l = luminance(eColorspaceRec709, _alphaBias);
         _alphaBias[0] /= l;
         _alphaBias[1] /= l;
         _alphaBias[2] /= l;
@@ -619,16 +615,7 @@ public:
             _screenReplaceColor[2] = screenReplaceColor.b;
             // only normalize if the replace method is soft color
             if (screenReplace == eReplaceSoftColor) {
-                l = luminance(normColorspace, _screenReplaceColor);
-                if (std::abs(l) < kReplaceColorLuminanceMin) {
-                    // black, or a color with (almost) zero luminance (with negative components),
-                    // which can't be normalized (0/0 is NaN, or a huge color): use white, as for black
-                    _screenReplaceColor[0] = _screenReplaceColor[1] = _screenReplaceColor[2] = 1.;
-                } else {
-                    _screenReplaceColor[0] /= l;
-                    _screenReplaceColor[1] /= l;
-                    _screenReplaceColor[2] /= l;
-                }
+                normalizeReplaceColor(_screenReplaceColor);
             }
         }
         _sourceAlpha = sourceAlpha;
@@ -639,16 +626,7 @@ public:
             _insideReplaceColor[2] = insideReplaceColor.b;
             // only normalize if the replace method is soft color
             if (insideReplace == eReplaceSoftColor) {
-                l = luminance(normColorspace, _insideReplaceColor);
-                if (std::abs(l) < kReplaceColorLuminanceMin) {
-                    // black, or a color with (almost) zero luminance (with negative components),
-                    // which can't be normalized (0/0 is NaN, or a huge color): use white, as for black
-                    _insideReplaceColor[0] = _insideReplaceColor[1] = _insideReplaceColor[2] = 1.;
-                } else {
-                    _insideReplaceColor[0] /= l;
-                    _insideReplaceColor[1] /= l;
-                    _insideReplaceColor[2] /= l;
-                }
+                normalizeReplaceColor(_insideReplaceColor);
             }
         }
         _noKey = noKey;
@@ -656,6 +634,35 @@ public:
         _ubc = ubc;
         _outputMode = outputMode;
     } // setValues
+
+private:
+    // normalize a Soft Color replace color to unit luminance
+    void normalizeReplaceColor(float color[3]) const
+    {
+        float l;
+        if (_legacyColorspace) {
+            // PIK 1.x: always the Rec. 709 luminance
+            l = luminance(eColorspaceRec709, color);
+        } else {
+            l = luminance(_colorspace, color);
+            // ACES AP0 has a negative blue coefficient, so that the luminance of an ordinary bluish
+            // color may be tiny or negative (e.g. 0,0.1,1), giving a huge or negated color:
+            // use the Rec. 709 luminance (all coefficients positive) for such a color. With
+            // Rec. 709, this computes the same luminance again, so that it renders as PIK 1.x.
+            if ( !( l > 1e-3 * (std::abs(color[0]) + std::abs(color[1]) + std::abs(color[2])) ) ) {
+                l = luminance(eColorspaceRec709, color);
+            }
+        }
+        if (std::abs(l) < kReplaceColorLuminanceMin) {
+            // black, or a color with (almost) zero luminance (with negative components),
+            // which can't be normalized (0/0 is NaN, or a huge color): use white, as for black
+            color[0] = color[1] = color[2] = 1.;
+        } else {
+            color[0] /= l;
+            color[1] /= l;
+            color[2] /= l;
+        }
+    }
 };
 
 
@@ -1300,7 +1307,25 @@ private:
                     float bg_Y, bg_x, bg_y;
                     {
                         float X, Y, Z, x, y, XYZ, invXYZ;
-                        Color::rgb709_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                        // PIK 1.x: Bg was always converted from Rec. 709
+                        switch (_legacyColorspace ? eColorspaceRec709 : _colorspace) {
+                        case eColorspaceRec709:
+                        default:
+                            Color::rgb709_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                            break;
+
+                        case eColorspaceRec2020:
+                            Color::rgb2020_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                            break;
+
+                        case eColorspaceACESAP0:
+                            Color::rgbACESAP0_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                            break;
+
+                        case eColorspaceACESAP1:
+                            Color::rgbACESAP1_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                            break;
+                        }
                         XYZ = X + Y + Z;
                         invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
                         // convert to xyY
@@ -1848,7 +1873,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha,
                         screenClipMin, screenClipMax, screenReplace, screenReplaceColor,
                         sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode,
-                        /*legacyColorspaceNormalization=*/_majorVersion < 2);
+                        /*legacyColorspace=*/_majorVersion < 2);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( /*!noKey &&*/ !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
