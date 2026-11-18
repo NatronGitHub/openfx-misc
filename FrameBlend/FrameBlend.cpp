@@ -59,8 +59,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 3.0: the frames blended are the lower bound of the range, then one frame out of frameInterval up to the upper bound
 //              (version 2 aligned them on the last frame and dropped the lower bound, e.g. only frame 2 for range 0..2 with interval 2)
+// version 3.1: Min and Max give 0 where no frame has a source pixel (they gave an infinite value, and NaN
+//              with a mask or Mix, NaN audit)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -165,6 +167,7 @@ protected:
     float *_accumulatorData;
     unsigned short *_countData;
     float *_sumWeightsData;
+    unsigned char *_touchedData; // Min/Max: whether a source pixel was already accumulated
     const Image *_maskImg;
     bool _processR;
     bool _processG;
@@ -187,6 +190,7 @@ public:
         , _accumulatorData(NULL)
         , _countData(NULL)
         , _sumWeightsData(NULL)
+        , _touchedData(NULL)
         , _maskImg(NULL)
         , _processR(true)
         , _processG(true)
@@ -208,8 +212,9 @@ public:
 
     void setAccumulators(float *accumulatorData,
                          unsigned short *countData,
-                         float* sumWeightsData)
-    {_accumulatorData = accumulatorData; _countData = countData; _sumWeightsData = sumWeightsData; }
+                         float* sumWeightsData,
+                         unsigned char* touchedData)
+    {_accumulatorData = accumulatorData; _countData = countData; _sumWeightsData = sumWeightsData; _touchedData = touchedData; }
 
     void setMaskImg(const Image *v,
                     bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
@@ -334,6 +339,9 @@ private:
         assert(!_lastPass || _dstPixelData);
         assert( _srcImgs.size() == _fgMImgs.size() );
         float tmpPix[nComponents];
+        // Min and Max take the first source pixel as is (no infinite initial value, which the decay would
+        // multiply and which would be output where no frame has a pixel): touched tells if there was one.
+        const bool minMax = (operation == eOperationMin) || (operation == eOperationMax);
         float initVal = 0.;
         if (!_accumulatorData) {
             switch (operation) {
@@ -341,10 +349,8 @@ private:
                 initVal = 0.;
                 break;
             case eOperationMin:
-                initVal = std::numeric_limits<float>::infinity();
-                break;
             case eOperationMax:
-                initVal = -std::numeric_limits<float>::infinity();
+                initVal = 0.; // the output where no frame has a source pixel
                 break;
             case eOperationSum:
                 initVal = 0.;
@@ -376,6 +382,7 @@ private:
                                      (x - _renderWindow.x1) );
                 int count = _countData ? _countData[renderPix] : 0;
                 float sumWeights = _sumWeightsData ? _sumWeightsData[renderPix] : 0;
+                bool touched = _touchedData ? (_touchedData[renderPix] != 0) : false;
                 if (_accumulatorData) {
                     std::copy(&_accumulatorData[renderPix * nComponents], &_accumulatorData[renderPix * nComponents + nComponents], tmpPix);
                 } else {
@@ -385,7 +392,7 @@ private:
                 for (unsigned i = 0; i < _srcImgs.size(); ++i) {
                     const PIX *fgMPix = (const PIX *)  (_fgMImgs[i] ? _fgMImgs[i]->getPixelAddress(x, y) : 0);
                     if ( !fgMPix || (*fgMPix <= 0) ) {
-                        if (_decay > 0.) {
+                        if ( (_decay > 0.) && (!minMax || touched) ) {
                             for (int c = 0; c < nComponents; ++c) {
                                 tmpPix[c] *= (1. - _decay);
                             }
@@ -414,10 +421,10 @@ private:
                                     tmpPix[c] = MergeImages2D::plusFunc((float)srcPixi[c], tmpPix[c]); // compute average in the end
                                     break;
                                 case eOperationMin:
-                                    tmpPix[c] = MergeImages2D::darkenFunc((float)srcPixi[c], tmpPix[c]);
+                                    tmpPix[c] = touched ? MergeImages2D::darkenFunc((float)srcPixi[c], tmpPix[c]) : (float)srcPixi[c];
                                     break;
                                 case eOperationMax:
-                                    tmpPix[c] = MergeImages2D::lightenFunc((float)srcPixi[c], tmpPix[c]);
+                                    tmpPix[c] = touched ? MergeImages2D::lightenFunc((float)srcPixi[c], tmpPix[c]) : (float)srcPixi[c];
                                     break;
                                 case eOperationSum:
                                     tmpPix[c] = MergeImages2D::plusFunc((float)srcPixi[c], tmpPix[c]);
@@ -430,6 +437,7 @@ private:
                                     break;
                                 }
                             }
+                            touched = true;
                         }
                         ++count;
                         sumWeights += 1;
@@ -441,6 +449,9 @@ private:
                     }
                     if (_sumWeightsData) {
                         _sumWeightsData[renderPix] = sumWeights;
+                    }
+                    if (_touchedData) {
+                        _touchedData[renderPix] = touched;
                     }
                     if (_accumulatorData) {
                         std::copy(tmpPix, tmpPix + nComponents, &_accumulatorData[renderPix * nComponents]);
@@ -716,7 +727,8 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
 
     double mix = 1.;
     _mix->getValueAtTime(time, mix);
-    double decay = _decay->getValueAtTime(time);
+    // the range of Decay is [0,1], which hosts may not enforce: outside, sumWeights could be 0 with count > 0
+    double decay = (std::max)( 0., (std::min)(_decay->getValueAtTime(time), 1.) );
     bool outputCount = false;
     if ( (dstComponents == ePixelComponentRGBA) || (dstComponents == ePixelComponentAlpha) ) {
         _outputCount->getValueAtTime(time, outputCount);
@@ -749,6 +761,8 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     unsigned short *countData = NULL;
     auto_ptr<ImageMemory> sumWeights;
     float *sumWeightsData = NULL;
+    auto_ptr<ImageMemory> touched;
+    unsigned char *touchedData = NULL;
 
     // compute range
     int first, interval, n;
@@ -784,13 +798,9 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
                 case eOperationAverage:
                 case eOperationSum:
                 case eOperationOver:
-                    std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 0.);
-                    break;
-                case eOperationMin:
-                    std::fill( accumulatorData, accumulatorData + nPixels * dstNComponents, std::numeric_limits<float>::infinity() );
-                    break;
+                case eOperationMin: // see touchedData
                 case eOperationMax:
-                    std::fill( accumulatorData, accumulatorData + nPixels * dstNComponents, -std::numeric_limits<float>::infinity() );
+                    std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 0.);
                     break;
                 case eOperationProduct:
                     std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 1.);
@@ -808,6 +818,12 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
                 sumWeights.reset( new ImageMemory(nPixels * sizeof(float), this) );
                 sumWeightsData = (float*)sumWeights->lock();
                 std::fill(sumWeightsData, sumWeightsData + nPixels, 0);
+            }
+            // Initialize touched image if operator is min or max
+            if ( !touchedData && ( (operation == eOperationMin) || (operation == eOperationMax) ) ) {
+                touched.reset( new ImageMemory(nPixels * sizeof(unsigned char), this) );
+                touchedData = (unsigned char*)touched->lock();
+                std::fill(touchedData, touchedData + nPixels, 0);
             }
         }
 
@@ -852,7 +868,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
         processor.setFgMImgs(fgMImgs.images);
         // set the render window
         processor.setRenderWindow(renderWindow, args.renderScale);
-        processor.setAccumulators(accumulatorData, countData, sumWeightsData);
+        processor.setAccumulators(accumulatorData, countData, sumWeightsData, touchedData);
 
         processor.setValues(processR, processG, processB, processA,
                             lastPass, decay, outputCount, mix);

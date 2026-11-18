@@ -140,7 +140,10 @@ mapSourceTime(int first,
 {
     const double frame = std::floor(*t);
 
-    if ( !(std::fabs(frame) < kMaxBeforeAfterFrame) ) { // also false for NaN
+    // a range check (the int conversions in getBeforeAfterTime() must not overflow). The source time is
+    // computed from host values (the speed integral, the warp curve, the retimer source time) without
+    // creating NaN; the plugin does not rely on this test to detect a NaN from the host.
+    if ( !(std::fabs(frame) < kMaxBeforeAfterFrame) ) {
         return eBeforeAfterOriginal;
     }
     double mapped;
