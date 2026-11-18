@@ -3122,15 +3122,7 @@ DenoiseSharpenPlugin::setAnalysisWarning(const std::string& warning)
         _analysisWarning->setIsSecret( warning.empty() );
     }
     if ( !warning.empty() ) {
-        // the message is a printf format (ofxMessage.h): escape the '%'
-        std::string format;
-        for (std::string::const_iterator it = warning.begin(); it != warning.end(); ++it) {
-            format += *it;
-            if (*it == '%') {
-                format += '%';
-            }
-        }
-        sendMessage(Message::eMessageWarning, "", format);
+        sendMessage(Message::eMessageWarning, "", warning); // the Support library passes it as "%s" (openfx#133)
     }
 }
 
