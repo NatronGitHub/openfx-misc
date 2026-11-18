@@ -173,7 +173,7 @@ set(MISC_PLUGIN_DIRS
   Constant ContactSheet CopyRectangle CornerPin Crop Deinterlace DenoiseSharpen Despill
   Difference DiscBlades Dissolve Distortion FrameBlend FrameHold FrameRange Gamma GodRays
   Grade HSVTool HueCorrect ImageStatistics Invert JoinViews KeyMix Keyer LayerContactSheet
-  Log2Lin MatteMonitor Merge Mirror MixViews Multiply NoOp OneView PIK PLogLin Position
+  LayerRename Log2Lin MatteMonitor Merge Mirror MixViews Multiply NoOp OneView PIK PLogLin Position
   Premult Quantize Radial Ramp Rand ReConverge Rectangle Reformat Retime Roto Saturation
   Shuffle SideBySide SlitScan SpriteSheet Switch Threshold TimeBlur TimeBuffer
   TimeDissolve TimeOffset TrackerPM Transform VectorToColor)
