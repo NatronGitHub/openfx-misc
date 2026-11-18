@@ -390,7 +390,9 @@ if(BUILD_SHADERTOY)
     Shadertoy/ShadertoyRenderGL.cpp Shadertoy/ShadertoyRenderMesa.cpp)
   supportext_add_sources(Shadertoy COMPONENTS THREADS) # as Shadertoy/Makefile
   target_link_libraries(Shadertoy PRIVATE OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup
-  target_include_directories(Shadertoy PRIVATE ${OFXMISC_GLEXT_INCLUDE_DIR}) # MSVC: GL/glext.h
+  # MSVC: GL/glext.h. With USE_OSMESA on MSVC, this bundled (2017) glext.h would come before
+  # Mesa's for ShadertoyRenderMesa.cpp; that case is theoretical (Natron's OSMesa builds use MinGW).
+  target_include_directories(Shadertoy PRIVATE ${OFXMISC_GLEXT_INCLUDE_DIR})
   if(USE_OSMESA)
     # Shadertoy/Makefile with OSMESA=1: -DHAVE_OSMESA, OSMesa's headers for ShadertoyRenderMesa.cpp
     # only, and -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `llvm-config ...`.
