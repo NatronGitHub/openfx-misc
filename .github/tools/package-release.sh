@@ -105,6 +105,7 @@ EOF
     case "$os" in
         macOS)
             cat << 'EOF'
+
 The bundles are universal (arm64 and x86_64), for macOS 14 or later. They are
 not notarized: if the host refuses to load them, remove the quarantine
 attribute after copying, e.g.:
@@ -112,14 +113,17 @@ attribute after copying, e.g.:
 EOF
             ;;
         Linux) cat << 'EOF'
+
 The bundles are built on Rocky Linux 9 for x86_64. They need these system
 libraries, which are never included: glibc 2.34 or later, libstdc++ and
 libgcc_s (GCC 11 or later), the OpenGL library (libGL.so.1), and GCC's OpenMP
-runtime (libgomp.so.1, for DenoiseSharpen and the CImg plug-ins; e.g. the
-libgomp package). Any other library is in the bundle (<bundle>.ofx.bundle/Libraries).
+runtime (libgomp.so.1, e.g. the libgomp package), which Misc.ofx (DenoiseSharpen),
+CImg.ofx and the standalone DenoiseSharpen.ofx need. Any other library is in the
+bundle (<bundle>.ofx.bundle/Libraries).
 EOF
             ;;
         Windows) cat << 'EOF'
+
 The bundles are 64-bit, for Windows 10 or later, with the MinGW runtime linked
 statically (no extra DLL is needed).
 EOF
@@ -137,12 +141,14 @@ DenoiseSharpen is in Misc.ofx.bundle), and a host must not find the same
 plug-in twice.
 EOF
     if [ -n "$stmesa" ]; then cat << 'EOF'
+
 The two Shadertoy downloads (OpenGL only, and OpenGL + OSMesa) are mutually
 exclusive too: they are both Shadertoy.ofx.bundle. The OSMesa one is the one in
 the full set.
 EOF
     fi
     cat << 'EOF'
+
 Natron already includes all these plug-ins: Natron users don't need them.
 EOF
 }

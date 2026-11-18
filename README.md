@@ -46,9 +46,10 @@ universal):
   only the DenoiseSharpen plugin.
 
 The Linux bundles are built on Rocky Linux 9 (Natron 2.6's baseline), and need glibc 2.34
-or later, the system's libstdc++ (GCC 11 or later), `libGL.so.1` (OpenGL) and `libgomp.so.1` (GCC's OpenMP runtime,
-for DenoiseSharpen and the CImg plugins): these system libraries are never bundled. Any
-other library is inside the bundle (`<bundle>.ofx.bundle/Libraries`).
+or later, the system's libstdc++ (GCC 11 or later), `libGL.so.1` (OpenGL) and `libgomp.so.1`
+(GCC's OpenMP runtime, needed by `Misc.ofx` (DenoiseSharpen), `CImg.ofx` and the standalone
+`DenoiseSharpen.ofx`): these system libraries are never bundled. Any other library is
+inside the bundle (`<bundle>.ofx.bundle/Libraries`).
 
 **Install either the full set or standalone bundles, not both**: the standalone
 bundles contain the same plugins, with the same identifiers and versions, as the full
@@ -457,7 +458,10 @@ to the prefix (or absolute). The main options are:
   libgcc, winpthread) statically, as the CI does, for hosts that do not ship it.
 - `-DUSE_OSMESA=ON` (`make -C Shadertoy OSMESA=1`): Shadertoy CPU rendering with a
   mangled OSMesa in `OSMESA_PATH` (default `/opt/osmesa`) and LLVM in `LLVM_PATH`
-  (default `/opt/llvm`).
+  (default `/opt/llvm`). With `-DOSMESA_PKGCONFIG_STATIC=ON` (as the binary releases),
+  the static `libMangledOSMesa32.a` is linked with the flags of `pkg-config --static`
+  (the `Libs.private` of `OSMESA_PATH`'s `osmesa.pc`); by default, those of
+  `pkg-config --libs`.
 - `-DOFX_BUILD_HOSTDEMO=ON`: also build openfx's test host `hostDemo` and install it into
   `<prefix>/bin`, for the render tests: `.github/tools/rendertest.sh <prefix>` (checks
   the outputs of a few plugins) and `.github/tools/smoketest.sh <prefix>` (renders every

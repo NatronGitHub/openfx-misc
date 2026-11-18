@@ -44,6 +44,11 @@
 #   -DBUILD_TESTING=ON|OFF, -DBUILD_DEBUGPROXY=ON|OFF (default: ON in Debug builds)
 #   -DUSE_OSMESA=ON ("make -C Shadertoy OSMESA=1"): Shadertoy CPU rendering with a mangled
 #      OSMesa in OSMESA_PATH (default /opt/osmesa) and LLVM in LLVM_PATH (default /opt/llvm)
+#   -DOSMESA_PKGCONFIG_STATIC=ON (default OFF): with USE_OSMESA and OSMESA_PATH's osmesa.pc, link
+#      the static libMangledOSMesa32.a with all the flags of "pkg-config --static" (its
+#      Libs.private, e.g. -lsynchronization -lws2_32 on Windows), as the binary releases
+#      (release.yml) do with osmesa-install's OSMesa. Off: the flags of "pkg-config --libs" (the
+#      osmesa.pc of a Natron SDK may have Libs.private with paths of the machine that built it).
 #   --prefix /usr (Linux) or /Library (macOS) at install: the bundles go to <prefix>/OFX/Plugins
 #   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX (OFX/Plugins)
 #   -DOFX_BUILD_HOSTDEMO=ON (default OFF): also build openfx's test host hostDemo (openfx's
@@ -63,10 +68,14 @@ ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 # Project setup
 ########################################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16...3.31) # 3.16: openfx's CMakeLists.txt; policies up to 3.31 (CMP0177)
-# macOS: the bundles load on macOS 14 and later (Natron 2.6), unless -DCMAKE_OSX_DEPLOYMENT_TARGET
-# (or MACOSX_DEPLOYMENT_TARGET at the first configure) says otherwise. Set before the first
-# project(), which reads it (openfx's cmake/OpenFX.cmake is included later and can't set it).
-set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "Minimum macOS version")
+# macOS: the bundles load on macOS 14 and later (Natron 2.6) by default. -DCMAKE_OSX_DEPLOYMENT_TARGET,
+# or the MACOSX_DEPLOYMENT_TARGET environment variable (which CMake reads at the first configure),
+# overrides it: the default is only set when neither is given (nor a toolchain file or a
+# cross-compiling CMAKE_SYSTEM_NAME), as openfx does. It must be set before the first project(),
+# which reads it (openfx's cmake/OpenFX.cmake is included later and can't set it).
+if(CMAKE_HOST_APPLE AND NOT CMAKE_TOOLCHAIN_FILE AND NOT CMAKE_SYSTEM_NAME AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET AND "$ENV{MACOSX_DEPLOYMENT_TARGET}" STREQUAL "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "Minimum macOS version")
+endif()
 PROJECT(OpenFXMisc CXX)
 
 # ========================== build platform ==========================
@@ -133,6 +142,7 @@ option(BUILD_DEBUGPROXY "Build the DebugProxy bundle (wraps the plugin given by 
 option(USE_OSMESA "Shadertoy: CPU rendering with OSMesa (OSMESA_PATH) and LLVM (LLVM_PATH)" OFF)
 set(OSMESA_PATH "/opt/osmesa" CACHE PATH "USE_OSMESA: OSMesa prefix (mangled OSMesa, libMangledOSMesa32)")
 set(LLVM_PATH "/opt/llvm" CACHE PATH "USE_OSMESA: LLVM prefix (bin/llvm-config)")
+option(OSMESA_PKGCONFIG_STATIC "USE_OSMESA: link the static OSMesa with the flags of pkg-config --static (osmesa.pc's Libs.private)" OFF)
 option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into <prefix>/bin (CI render tests)" OFF)
 
 # C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
@@ -479,9 +489,10 @@ if(BUILD_SHADERTOY)
         if(_osmesa_opts)
           list(PREPEND _osmesa_libs ${_osmesa_opts})
         endif()
-        if(EXISTS "${OSMESA_PATH}/lib/libMangledOSMesa32.a" AND PC_OSMESA_STATIC_LDFLAGS)
+        if(OSMESA_PKGCONFIG_STATIC AND EXISTS "${OSMESA_PATH}/lib/libMangledOSMesa32.a" AND PC_OSMESA_STATIC_LDFLAGS)
           # the static library (osmesa-install's default): also its Libs.private (pkg-config
-          # --static), e.g. -lsynchronization -lws2_32 on Windows
+          # --static), e.g. -lsynchronization -lws2_32 on Windows. Only with OSMESA_PKGCONFIG_STATIC
+          # (release.yml): a Natron SDK's osmesa.pc may have build-machine paths there.
           set(_osmesa_libs ${PC_OSMESA_STATIC_LDFLAGS})
         endif()
       else()

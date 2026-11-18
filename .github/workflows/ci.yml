@@ -11,14 +11,24 @@ name: Continous Integration tests
 # Other variants (debug, C++20, no OpenMP, MSVC, and make nomulti) are in nightly.yml.
 #
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
-# Pushes are built only on master, RB-* and tags; feature branches are built
+# Pushes are built only on master, RB-* and tags (not the final release tags,
+# which release.yml builds); feature branches are built
 # through their pull request (not twice). Draft pull requests are not built:
 # CI starts when the PR is marked ready. Superseded runs are cancelled, except
 # for tags. Jobs time out.
 on:
   push:
     branches: [master, 'RB-*']
-    tags: ['*']
+    # Not the release tags (Natron-*, openfx-misc-*): release.yml builds them. Except the
+    # Natron-* pre-release tags (-rc, -beta, -alpha, in any case), whose CI artifacts are kept
+    # (UPLOAD_ARTIFACTS below, README.md's "Development builds"). Later patterns win.
+    tags:
+      - '*'
+      - '!Natron-*'
+      - '!openfx-misc-*'
+      - 'Natron-*-[rR][cC]*'
+      - 'Natron-*-[bB][eE][tT][aA]*'
+      - 'Natron-*-[aA][lL][pP][hH][aA]*'
     paths-ignore:
       - Documentation/**
       - '**/*.md'

@@ -1,0 +1,17 @@
+# The Python build tools of release.yml's Linux job (build-osmesa.sh: Mesa's meson build), for
+# Rocky Linux 9's python3.11 (x86_64, and aarch64 for local tests), installed with
+#   python3.11 -m pip install --require-hashes --only-binary :all: -r <this file>
+# Every package (dependencies included) is pinned to a version and to the SHA256 of its wheels
+# (https://pypi.org/pypi/<package>/<version>/json). To update one, change both.
+meson==1.12.1 \
+    --hash=sha256:930bc7542cbd9f57009e182fd014eba48cf1a0180a7b9006d2d32d8f168d8b02
+mako==1.4.3 \
+    --hash=sha256:723296007c870bfd6b3f0c3230dba7198096e5269297ebf5e4eff9e7ffa39d4f
+markupsafe==3.0.4 \
+    --hash=sha256:6da83a088f8ef93b2d483a8232a4dbf4d69d3d8496b568a03c56becac43e1808 \
+    --hash=sha256:849dd2bb0e5e4ab2b71c7191726a4a8d5aa8a610daa584728cbee0b710ddc4ef
+pyyaml==6.0.3 \
+    --hash=sha256:b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d \
+    --hash=sha256:10892704fc220243f5305762e276552a0395f7beb4dbf9b14ec8fd43b57f126c
+packaging==26.3 \
+    --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
