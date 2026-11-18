@@ -184,8 +184,11 @@ renders = [k for k in renders if not k.get("view")]
 desc = ""
 if out0:
     scale = {"byte": 255., "short": 65535., "float": 1.}[out0["depth"]]
-    mean = [v / scale for v in out0["mean"]]
-    desc = "%s %s mean=%s" % (out0["depth"], out0["comps"], ",".join("%.3g" % v for v in mean))
+    # hostDemo's mean (also min and max) of a channel is null if it has no finite value
+    # (an empty image, or all NaN), and JSON writes an infinite mean as null too
+    mean = [None if v is None else v / scale for v in out0["mean"]]
+    fmt = lambda f, v: "null" if v is None else f % v
+    desc = "%s %s mean=%s" % (out0["depth"], out0["comps"], ",".join(fmt("%.3g", v) for v in mean))
     for expect in expects.split("+"):
         if expect == "nonconst":
             if out0["min"] == out0["max"]:
@@ -193,7 +196,10 @@ if out0:
         elif expect.startswith("mean="):
             want = [float(v) for v in expect[5:].split(",")]
             # 0.01: byte and short inputs and outputs are quantized
-            if len(want) != len(mean) or any(abs(a - b) > 0.01 for a, b in zip(mean, want)):
+            if None in mean:
+                errors.append("t=0: no mean for channel(s) %s (null: no finite value, or an infinite mean), expected %s"
+                              % (",".join(str(c) for c, v in enumerate(mean) if v is None), expect[5:]))
+            elif len(want) != len(mean) or any(abs(a - b) > 0.01 for a, b in zip(mean, want)):
                 errors.append("t=0: mean %s, expected %s" % (",".join("%.4g" % v for v in mean), expect[5:]))
         elif expect.startswith("comps="):
             if out0["comps"] != expect[6:]:
@@ -340,6 +346,12 @@ tests=(
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
     "Clamp|net.sf.openfx.Clamp|filter|*|mean=1,0,0.5,1||-i Source=solid:1.5,-0.5,0.5,1 -i Mask=none"
+    # ColorTransform on the degenerate inputs that gave NaN or inf before openfx-supportext#55
+    # (hue in [0,1]): HSL with l=0 and s!=0 (0/0 in hsl_to_rgb); RGB->HSI with a subnormal
+    # sum (3/sum overflows, inf*0); RGB->HSL near white (2-(max+min) rounds to 0: s=inf)
+    "HSLToRGB l=0|net.sf.openfx.HSLToRGB|filter|*|mean=0,0,0,1||-i Source=solid:0.3,0.5,0,1"
+    "RGBToHSI subnormal|net.sf.openfx.RGBToHSI|filter|float|mean=0,1,0,1||-i Source=solid:1e-40,0,0,1"
+    "RGBToHSL near white|net.sf.openfx.RGBToHSL|filter|float|mean=0.1667,1,1,1||-i Source=solid:1,1,0.99999994,1"
     # render scale 0.5 (the means are those of the full-scale renders), tiles
     # (--window: the same pixels as the full render), and a fractional time
     "Radial scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-i Source=none -i Mask=none --scale 0.5"
