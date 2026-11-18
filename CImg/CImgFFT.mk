@@ -10,10 +10,18 @@ FFT_LINKFLAGS =
 FFT_HEADERS =
 FFT_RESOURCES =
 ifeq ($(FFT),fftw3)
-# FFTW (GPL), multithreaded (CImg only uses its double precision library, libfftw3, and plans
-# under its own lock): as openfx-gmic's GMIC_OFX/Makefile
+# FFTW (GPL, opt-in), multithreaded (CImg only uses its double precision library, libfftw3, and
+# plans under its own lock): as openfx-gmic's GMIC_OFX/Makefile, with fftw3_threads first (it uses
+# fftw3: the order matters for static links, e.g. MinGW -static)
 FFT_CXXFLAGS = `pkg-config --cflags fftw3` -Dcimg_use_fftw3
-FFT_LINKFLAGS = `pkg-config --libs fftw3` -lfftw3_threads
+FFT_LINKFLAGS = -lfftw3_threads `pkg-config --libs fftw3`
+# FFTW >= 3.3.5: fftw_make_planner_thread_safe() (cimgFFTLoad(), CImgFFTConvolve.h), as openfx-gmic
+# (NatronGitHub/openfx-gmic#93). Only checked when compiling (not for clean or sources).
+ifeq ($(filter clean distclean sources CImg.h,$(MAKECMDGOALS)),)
+ifneq ($(shell pkg-config --atleast-version=3.3.5 fftw3 && echo ok),ok)
+$(error FFT=fftw3 needs FFTW >= 3.3.5 (pkg-config fftw3: $(shell pkg-config --modversion fftw3 2>&1)): install it, or use the default FFT=pocketfft)
+endif
+endif
 endif
 ifeq ($(FFT),pocketfft)
 # pocketfft (BSD-3-Clause), header-only, multithreaded (std::thread): patches/cimg-pocketfft.sh.

@@ -940,7 +940,7 @@ ZDefocusPlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(ZDefocusPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactory(ZDefocusPluginFactory, {ofxsThreadSuiteCheck(); cimgFFTLoad();}, {});
 
 void
 ZDefocusPluginFactory::describe(ImageEffectDescriptor &desc)

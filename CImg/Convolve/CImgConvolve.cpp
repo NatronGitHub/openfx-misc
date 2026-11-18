@@ -492,7 +492,7 @@ private:
 };
 
 
-mDeclarePluginFactory(CImgConvolvePluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactory(CImgConvolvePluginFactory, {ofxsThreadSuiteCheck(); cimgFFTLoad();}, {});
 
 void
 CImgConvolvePluginFactory::describe(ImageEffectDescriptor& desc)

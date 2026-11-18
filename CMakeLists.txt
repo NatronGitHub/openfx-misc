@@ -36,10 +36,10 @@
 #      (macOS: osxDeploy.sh, as "make CONFIG=release" does; needs gsed)
 #   -DBUILD_CIMG_PLUGINS=OFF ("make HAVE_CIMG=0"), -DBUILD_SHADERTOY=OFF
 #   -DOFX_LICENSE=GPL (default) or COMMERCIAL ("make LICENSE=...", Natron's NATRON_LICENSE, as in
-#      openfx-gmic): COMMERCIAL builds do not use FFTW (GPL)
-#   -DFFT=fftw3|pocketfft|pow2 ("make FFT=..."): the FFT of ConvolveCImg and ZDefocusCImg. Default:
-#      fftw3 (FFTW, found with pkg-config) for GPL, pocketfft (header-only, downloaded) for
-#      COMMERCIAL; pow2 is CImg's own FFT (images padded to a power of two: slower)
+#      openfx-gmic): COMMERCIAL builds refuse FFT=fftw3 (FFTW is GPL)
+#   -DFFT=pocketfft|pow2|fftw3 ("make FFT=..."): the FFT of ConvolveCImg and ZDefocusCImg: pocketfft
+#      (default: header-only, downloaded), pow2 (CImg's own FFT, images padded to a power of two:
+#      slower), or fftw3 (opt-in, GPL only: FFTW >= 3.3.5, found with pkg-config)
 #   -DBUILD_TESTING=ON|OFF, -DBUILD_DEBUGPROXY=ON|OFF (default: ON in Debug builds)
 #   -DUSE_OSMESA=ON ("make -C Shadertoy OSMESA=1"): Shadertoy CPU rendering with a mangled
 #      OSMesa in OSMESA_PATH (default /opt/osmesa) and LLVM in LLVM_PATH (default /opt/llvm)
@@ -470,26 +470,26 @@ endif()
 ########################################################################
 if(BUILD_CIMG_PLUGINS)
 # Licence and FFT backend of the CImg plug-ins, as CImg/license.mk (LICENSE and FFT), with the same
-# names, values and rules as openfx-gmic's CMakeLists.txt (OFX_LICENSE and FFT), plus FFT=pow2.
+# names, values and rules as openfx-gmic's CMakeLists.txt (OFX_LICENSE and FFT), plus FFT=pow2,
+# except that pocketfft is the default for all licences (no dependency, no global FFTW planner
+# shared with other plug-ins, and faster than FFTW in our benchmarks).
 # OFX_LICENSE: GPL (default), or COMMERCIAL (Natron's NATRON_LICENSE), which does not use FFTW (GPL).
 # FFT: the library of the Fourier transforms of ConvolveCImg and ZDefocusCImg (CImgFFTConvolve.h):
-# fftw3 (FFTW, GPL, multithreaded), pocketfft (BSD-3-Clause, header-only, downloaded at
+# fftw3 (FFTW, GPL, multithreaded, opt-in), pocketfft (BSD-3-Clause, header-only, downloaded at
 # POCKETFFTCOMMIT, through CImg/patches/cimg-pocketfft.sh), or pow2 (CImg's own FFT, which only
 # handles power-of-two sizes: the images are padded to the next power of two). Empty (default):
-# fftw3 for GPL builds, pocketfft for COMMERCIAL ones, which can't use FFTW.
+# pocketfft. COMMERCIAL builds can't use FFTW.
 set(OFX_LICENSE "GPL" CACHE STRING "GPL, or COMMERCIAL (no FFTW)")
 set_property(CACHE OFX_LICENSE PROPERTY STRINGS GPL COMMERCIAL)
 if(NOT OFX_LICENSE MATCHES "^(GPL|COMMERCIAL)$")
   message(FATAL_ERROR "OFX_LICENSE must be GPL or COMMERCIAL, not \"${OFX_LICENSE}\"")
 endif()
-set(FFT "" CACHE STRING "FFT of the CImg plug-ins: fftw3, pocketfft or pow2 (empty: fftw3 for GPL, pocketfft for COMMERCIAL)")
-set_property(CACHE FFT PROPERTY STRINGS "" fftw3 pocketfft pow2)
+set(FFT "" CACHE STRING "FFT of the CImg plug-ins: pocketfft (empty: the default), pow2, or fftw3 (GPL only)")
+set_property(CACHE FFT PROPERTY STRINGS "" pocketfft pow2 fftw3)
 if(FFT)
   set(CIMG_FFT "${FFT}")
-elseif(OFX_LICENSE STREQUAL "COMMERCIAL")
-  set(CIMG_FFT pocketfft)
 else()
-  set(CIMG_FFT fftw3)
+  set(CIMG_FFT pocketfft)
 endif()
 if(NOT CIMG_FFT MATCHES "^(fftw3|pocketfft|pow2)$")
   message(FATAL_ERROR "FFT must be fftw3, pocketfft or pow2, not \"${CIMG_FFT}\"")
@@ -706,8 +706,17 @@ if(CIMG_FFT STREQUAL "fftw3")
   # (libfftw3), and creates its plans under its own lock. Linked with -l flags (pkg-config's
   # LDFLAGS), not full paths, so that -static (MinGW) links the static libraries.
   find_package(PkgConfig)
+  # FFTW >= 3.3.5: fftw_make_planner_thread_safe() (cimgFFTLoad(), CImg/CImgFFTConvolve.h), as
+  # openfx-gmic (NatronGitHub/openfx-gmic#93)
   if(PKG_CONFIG_FOUND)
-    pkg_check_modules(FFTW3 fftw3)
+    pkg_check_modules(FFTW3 "fftw3>=3.3.5")
+    if(NOT FFTW3_FOUND)
+      pkg_check_modules(_FFTW3_ANY QUIET fftw3)
+      if(_FFTW3_ANY_FOUND)
+        message(FATAL_ERROR "FFTW ${_FFTW3_ANY_VERSION} is too old: FFT=fftw3 needs FFTW >= 3.3.5 "
+          "(fftw_make_planner_thread_safe), or use the default FFT=pocketfft")
+      endif()
+    endif()
   endif()
   if(FFTW3_FOUND)
     pkg_get_variable(_fftw3_libdir fftw3 libdir)
@@ -727,15 +736,28 @@ if(CIMG_FFT STREQUAL "fftw3")
     find_library(FFTW3_LIBRARY NAMES fftw3 libfftw3-3)
     find_library(FFTW3_THREADS_LIBRARY NAMES fftw3_threads)
     if(NOT FFTW3_INCLUDE_DIR OR NOT FFTW3_LIBRARY)
-      message(FATAL_ERROR "FFTW3 (FFT=fftw3, the default for OFX_LICENSE=GPL) not found: install it "
+      message(FATAL_ERROR "FFTW3 (FFT=fftw3) not found: install it "
         "(MacPorts: fftw-3, MSYS2: \${MINGW_PACKAGE_PREFIX}-fftw, Ubuntu: libfftw3-dev), or configure "
         "with -DFFT=pocketfft (or pow2)")
     endif()
     target_include_directories(CImg PRIVATE ${FFTW3_INCLUDE_DIR})
+    set(_fftw3_check_libs ${FFTW3_LIBRARY})
     if(FFTW3_THREADS_LIBRARY)
-      target_link_libraries(CImg PRIVATE ${FFTW3_THREADS_LIBRARY})
+      list(PREPEND _fftw3_check_libs ${FFTW3_THREADS_LIBRARY})
     endif()
-    target_link_libraries(CImg PRIVATE ${FFTW3_LIBRARY})
+    # no version from pkg-config: check for fftw_make_planner_thread_safe() (FFTW >= 3.3.5)
+    include(CheckCXXSourceCompiles)
+    set(CMAKE_REQUIRED_INCLUDES ${FFTW3_INCLUDE_DIR})
+    set(CMAKE_REQUIRED_LIBRARIES ${_fftw3_check_libs})
+    check_cxx_source_compiles("#include <fftw3.h>
+int main() { fftw_make_planner_thread_safe(); return 0; }" CIMG_FFTW3_HAS_PLANNER_THREAD_SAFE)
+    unset(CMAKE_REQUIRED_INCLUDES)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+    if(NOT CIMG_FFTW3_HAS_PLANNER_THREAD_SAFE)
+      message(FATAL_ERROR "FFTW in ${FFTW3_INCLUDE_DIR} has no fftw_make_planner_thread_safe(): "
+        "FFT=fftw3 needs FFTW >= 3.3.5 with its threads library, or use the default FFT=pocketfft")
+    endif()
+    target_link_libraries(CImg PRIVATE ${_fftw3_check_libs})
   endif()
   target_compile_definitions(CImg PRIVATE cimg_use_fftw3)
 elseif(CIMG_FFT STREQUAL "pocketfft")

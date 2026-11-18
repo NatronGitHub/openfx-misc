@@ -31,6 +31,34 @@
 
 #include "CImgFilter.h" // CImg.h, cimgpix_t
 
+#if defined(cimg_use_fftw3) && !defined(cimg_use_fftw3_singlethread)
+#include <mutex> // std::call_once
+#include <fftw3.h>
+#endif
+
+// To be called by the load action (the factory's load()) of the plug-ins that use the FFT.
+// With FFT=fftw3 (opt-in): FFTW is a shared library (Natron's SDK, MacPorts, MSYS2) with a single
+// global planner, which other plug-ins of the host process use too, e.g. openfx-gmic's GMIC.ofx,
+// whose CImg plans under another mutex than ours (cimg::mutex(12) of our cimg_library namespace).
+// fftw_make_planner_thread_safe() (FFTW >= 3.3.5, in libfftw3_threads; checked by CMakeLists.txt
+// and CImg/CImgFFT.mk) makes FFTW serialize the creation and destruction of plans process-wide,
+// for all its users. Done once per process (std::call_once), at load, before any render, as in
+// openfx-gmic (NatronGitHub/openfx-gmic#93). fftw_init_threads() was already called by CImg's
+// static FFTW3_static: calling it again does nothing. CImg keeps its own mutex. FFTW's cleanup
+// functions don't take the planner lock: patches/cimg-fftw-no-cleanup.sh removes the
+// fftw_cleanup_threads() that CImg called after each FFT (GreycLab/CImg#500).
+inline void
+cimgFFTLoad()
+{
+#if defined(cimg_use_fftw3) && !defined(cimg_use_fftw3_singlethread)
+    static std::once_flag once;
+    std::call_once(once, [] {
+        fftw_init_threads();
+        fftw_make_planner_thread_safe();
+    });
+#endif
+}
+
 // kernel channels that can be extracted from a Filter pixel
 enum CImgKernelChannelEnum
 {

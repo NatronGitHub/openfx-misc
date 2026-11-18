@@ -42,11 +42,14 @@ CIMGVERSION=81f0dd58ac6a178e8d2d20153827af76fe65357a
 #   GreycLab/CImg 41e121c)
 # - cimg-symmetric-eigen.sh: NaN eigenvectors of rank-deficient symmetric matrices
 #   (GreycLab/gmic#221, backport of GreycLab/CImg e3de7b0)
+# - cimg-fftw-no-cleanup.sh: with FFTW (FFT=fftw3), CImg's FFTs called fftw_cleanup_threads() after
+#   each FFT, which frees FFTW's process-wide planner while another plug-in of the host (e.g.
+#   openfx-gmic) may be using it (GreycLab/CImg#500); no effect on the pocketfft and pow2 code
 # - cimg-pocketfft.sh: FFTs of any size with pocketfft, when cimg_use_pocketfft is defined
 #   (GreycLab/CImg#497, merged upstream after 4.0.7)
 # CMakeLists.txt reads these variables: keep each on one line, as a plain "NAME=value" assignment.
-CIMG_PATCHES_FROM=780671f3f6ad4418802b840720f8f40e1d25451b
-CIMG_PATCHES=patches/cimg-math-macro-overread.sh patches/cimg-omp-rand.sh patches/cimg-ij-boundary.sh patches/cimg-symmetric-eigen.sh
+CIMG_PATCHES_FROM=cbc444b41c29c4b8c283632fd303a41fe91931ed
+CIMG_PATCHES=patches/cimg-math-macro-overread.sh patches/cimg-omp-rand.sh patches/cimg-ij-boundary.sh patches/cimg-symmetric-eigen.sh patches/cimg-fftw-no-cleanup.sh
 CIMG_PATCHES_POCKETFFT=patches/cimg-pocketfft.sh
 
 # pocketfft (FFT=pocketfft), C++ header-only version, at a pinned commit of its 'cpp' branch: the

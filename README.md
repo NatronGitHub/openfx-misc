@@ -84,10 +84,10 @@ along with openfx-misc.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 
 Third-party code: the CImg plugins use [CImg](https://github.com/GreycLab/CImg)
 (CeCILL-C or CeCILL), downloaded at build time (see below), and, for their Fourier transforms
-(ConvolveCImg, ZDefocusCImg), either [FFTW](https://www.fftw.org) (GPL, the default
-for GPL builds) or [pocketfft](https://github.com/mreineck/pocketfft) (BSD-3-Clause,
-header-only, the default for COMMERCIAL builds). Builds with pocketfft include its
-licence, `Licence_pocketfft.txt`, in `CImg.ofx.bundle/Contents/Resources`.
+(ConvolveCImg, ZDefocusCImg), [pocketfft](https://github.com/mreineck/pocketfft)
+(BSD-3-Clause, header-only, downloaded at build time; the default), or optionally
+[FFTW](https://www.fftw.org) (GPL, opt-in). Builds with pocketfft include its licence,
+`Licence_pocketfft.txt`, in `CImg.ofx.bundle/Contents/Resources`.
 
 Contents
 --------
@@ -356,15 +356,21 @@ binary (OS X only).
 See the file `Makefile.master`in the toplevel directory for other useful
 flags/variables.
 
-The CImg plugins also take `LICENSE=GPL` (default) or `LICENSE=COMMERCIAL` (Natron's
-`NATRON_LICENSE`: no FFTW, which is GPL), and `FFT=fftw3|pocketfft|pow2`, the library
-of the Fourier transforms of ConvolveCImg and ZDefocusCImg (see `CImg/license.mk`):
-`fftw3` (FFTW, found with `pkg-config fftw3`, plus `fftw3_threads`; the default for
-GPL builds: install MacPorts' `fftw-3`, MSYS2's `${MINGW_PACKAGE_PREFIX}-fftw` or
-Ubuntu's `libfftw3-dev`), `pocketfft` (header-only, downloaded at a pinned commit; the
-default for COMMERCIAL builds, and refused with FFTW for them), or `pow2` (CImg's own
-FFT, with no library: the images are padded to a power of two, which is slower and
-uses more memory).
+The CImg plugins also take `FFT=pocketfft|pow2|fftw3`, the library of the Fourier
+transforms of ConvolveCImg and ZDefocusCImg (see `CImg/license.mk`):
+- `pocketfft` (default): header-only, downloaded at a pinned commit, any image size.
+  It has no dependency and no global state shared with other plugins, and it was faster
+  than FFTW in our benchmarks.
+- `pow2`: CImg's own FFT, with no library. The images are padded to a power of two,
+  which is slower and uses more memory.
+- `fftw3`: FFTW, opt-in and GPL only. It needs FFTW >= 3.3.5, found with
+  `pkg-config fftw3`, plus `fftw3_threads` (MacPorts' `fftw-3`, MSYS2's
+  `${MINGW_PACKAGE_PREFIX}-fftw`, Ubuntu's `libfftw3-dev`). FFTW is a shared library
+  with a single global planner that other plugins in the same host (e.g. openfx-gmic)
+  also use, so the plugins make its planner thread-safe at load.
+
+`LICENSE=GPL` (default) or `LICENSE=COMMERCIAL` (Natron's `NATRON_LICENSE`, as in
+openfx-gmic) only matters for FFTW: COMMERCIAL builds refuse `FFT=fftw3`.
 
 `CImg/CImg.h` (and `CImg/Inpaint/inpaint.h`) are downloaded by `make -C CImg sources`
 (run by the top-level `make`) at the version given in `CImg/CImgVersion.mk`, and
@@ -425,10 +431,9 @@ to the prefix (or absolute). The main options are:
   `make CONFIG=release` does). The bundles then also need these libraries' minimum
   macOS version (e.g. MacPorts' libomp is built for the build machine's macOS).
 - `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`.
-- `-DOFX_LICENSE=GPL` (default) or `COMMERCIAL` (`make LICENSE=...`, as openfx-gmic's
-  option), and `-DFFT=fftw3|pocketfft|pow2` (`make FFT=...`): the FFT of the CImg
-  plugins, see above (default: `fftw3` for GPL, `pocketfft` for COMMERCIAL;
-  COMMERCIAL refuses `fftw3`). With MSVC, the CImg.h patches need a POSIX `sh` in the
+- `-DFFT=pocketfft|pow2|fftw3` (`make FFT=...`): the FFT of the CImg plugins, see above
+  (default `pocketfft`; `fftw3` is opt-in), and `-DOFX_LICENSE=GPL` (default) or
+  `COMMERCIAL` (`make LICENSE=...`, as openfx-gmic's option), which refuses `fftw3`. With MSVC, the CImg.h patches need a POSIX `sh` in the
   `PATH` (e.g. Git for Windows'), or `-DCIMG_PATCH_SH=<path>`.
 - `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
