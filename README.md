@@ -1,4 +1,4 @@
-OpenFX-Misc [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/NatronGitHub/openfx-misc/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-misc/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-misc?ref=Thin+badge) [![Build Status](https://api.travis-ci.org/devernay/openfx-misc.png?branch=master)](https://travis-ci.org/devernay/openfx-misc) [![Coverity Scan Build Status](https://scan.coverity.com/projects/2945/badge.svg)](https://scan.coverity.com/projects/2945 "Coverity Badge")
+OpenFX-Misc [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/NatronGitHub/openfx-misc/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-misc/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-misc?ref=Thin+badge) [![CI](https://github.com/NatronGitHub/openfx-misc/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/NatronGitHub/openfx-misc/actions/workflows/ci.yml) [![Coverity Scan Build Status](https://scan.coverity.com/projects/2945/badge.svg)](https://scan.coverity.com/projects/2945 "Coverity Badge")
 ===========
 
 Miscellaneous OFX / OpenFX / Open Effects plugins.
@@ -346,7 +346,14 @@ Another common option is `BITS=32`for compiling a 32-bits version,
 `BITS=64` for a 64-bits version, and `BITS=Universal` for a universal
 binary (OS X only).
 
-See the file `Makefile.master`in the toplevel directory for other useful
+The Makefiles do not choose a C++ standard: they use the compiler's default
+(`gnu++17` for GCC >= 11 and Clang >= 16, but `gnu++14` for Apple clang), whereas the CMake, Xcode and Visual Studio
+builds use C++17 by default. The code must compile as C++17 and C++20. To choose the
+standard, add it to the compiler command or to the flags, for example
+`make CXX="g++ -std=c++20"` (as Natron's build scripts do) or
+`make CXXFLAGS_ADD=-std=c++20`.
+
+See the file `Makefile.master` in the toplevel directory for other useful
 flags/variables.
 
 The compiled plugins are placed in subdirectories named after the
