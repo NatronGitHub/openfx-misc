@@ -338,7 +338,7 @@ void
 CImgExpressionPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabel(kPluginName);
+    desc.setLabels(kPluginName, "G'MIC Expr", kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     if ( desc.getPropertySet().propGetDimension(kNatronOfxPropDescriptionIsMarkdown, false) ) {
         desc.setPluginDescription(kPluginDescriptionMarkdown, false);
