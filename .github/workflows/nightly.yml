@@ -14,8 +14,9 @@ name: Nightly extra builds
 # is FFT=pow2. The cimg_patches job checks that CImg.h is still patched as openfx-gmic's.
 # The render and smoke tests of ci.yml (Linux release) also run after the macOS
 # release and the Linux debug builds (debug: with the plugins' assertions), with
-# hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. They are not run on Windows (the
-# scripts need python3 and symbolic links).
+# hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. On Windows (MSYS2 CMake builds), only the
+# CImgConvolve render test runs (RENDERTEST_ONLY), as a check of the pocketfft unload
+# deadlock (POCKETFFT_NO_MULTITHREADING); smoketest.sh does not run on Windows.
 # Frugal CI: the nightly run is skipped if master did not change since the last
 # nightly run that succeeded or failed (a cancelled run does not count), and jobs
 # time out.
@@ -165,7 +166,7 @@ jobs:
           # C++20, and Natron's COMMERCIAL licence (OFX_LICENSE=COMMERCIAL), with the render tests
           - name: C++20 COMMERCIAL
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DOFX_LICENSE=COMMERCIAL -DOFX_BUILD_HOSTDEMO=ON
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DOFX_LICENSE=COMMERCIAL -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
           # OpenMP (GCC's libgomp)
           - name: OpenMP
@@ -175,7 +176,7 @@ jobs:
           # (the FFT convolution test of rendertest.sh)
           - name: FFTW
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DFFT=fftw3 -DOFX_BUILD_HOSTDEMO=ON
+            options: -DCMAKE_BUILD_TYPE=Release -DFFT=fftw3 -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
             packages: libfftw3-dev pkg-config
           # the Makefiles, while Natron's build-plugins.sh uses them
