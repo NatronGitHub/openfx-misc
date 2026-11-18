@@ -156,6 +156,20 @@ jobs:
           cmake --install build --prefix "$PWD/install"
       - name: Load test
         run: .github/tools/loadtest.sh install
+      - name: Check bundles (linuxCheckBundle.sh)
+        # openfx's bundle checker: no bundled system libraries, $ORIGIN-only RUNPATH, no
+        # GLIBC_PRIVATE. Ubuntu 24.04 is newer than the release baseline (EL9), so the
+        # symbol-version limits are off here (the release build checks them), and
+        # --no-needed because this build links the distribution's libraries.
+        env:
+          OFX_ABI_GLIBC: 99
+          OFX_ABI_GLIBCXX: 99
+          OFX_ABI_CXXABI: 99
+          OFX_ABI_GCC: 99
+          OFX_ABI_GOMP: 99
+          OFX_ABI_LIBATOMIC: 99
+          OFX_ABI_ZLIB: 99
+        run: openfx/Support/include/linuxCheckBundle.sh --no-needed install/OFX/Plugins
       - name: Render test (hostDemo)
         # Renders the generators and some filters at the three depths, and checks
         # the outputs (21 s in CI).
