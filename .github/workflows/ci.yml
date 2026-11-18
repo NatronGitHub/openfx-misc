@@ -3,10 +3,11 @@ name: Continous Integration tests
 # Every change gets up to three CMake builds (Linux, Windows, then macOS) of the
 # release configuration (with the Test bundle), each installed and followed by a
 # plugin load test of the install tree. The Linux build is also followed by a
-# headless render test (.github/tools/rendertest.sh, with openfx's hostDemo);
-# nightly.yml runs it on macOS too. macOS runs only after Linux and Windows pass,
-# and is informative: a red or missing macOS check does not block merging (macOS
-# arm64 runners are scarce).
+# headless render test (.github/tools/rendertest.sh, with openfx's hostDemo,
+# built with -DOFX_BUILD_HOSTDEMO=ON) and a smoke test that renders every plug-in
+# (.github/tools/smoketest.sh); nightly.yml runs them on macOS too. macOS runs
+# only after Linux and Windows pass, and is informative: a red or missing macOS
+# check does not block merging (macOS arm64 runners are scarce).
 # Other variants (debug, C++20, no OpenMP, MSVC, and make nomulti) are in nightly.yml.
 #
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
@@ -144,17 +145,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libglu1-mesa-dev libgl-dev cmake ninja-build
       - name: Build (release)
+        # OFX_BUILD_HOSTDEMO: openfx's hostDemo, in install/bin, for the render tests
         run: |
-          cmake -S . -B build -G Ninja $CMAKE_OPTIONS
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DOFX_BUILD_HOSTDEMO=ON
           cmake --build build
           cmake --install build --prefix "$PWD/install"
       - name: Load test
         run: .github/tools/loadtest.sh install
       - name: Render test (hostDemo)
-        # Builds hostDemo from the openfx submodule, then renders the
-        # generators and some filters at the three depths (about 2 minutes).
+        # Renders the generators and some filters at the three depths, and checks
+        # the outputs (21 s in CI).
         timeout-minutes: 10
         run: .github/tools/rendertest.sh install
+      - name: Smoke test (hostDemo, all plug-ins)
+        # Renders every plug-in with its default parameters, in its most general
+        # context (--quick: general, else filter; nightly.yml renders both), at each
+        # supported depth (38 s in CI).
+        timeout-minutes: 10
+        run: .github/tools/smoketest.sh --quick install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
         # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for

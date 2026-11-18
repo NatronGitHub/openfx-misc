@@ -381,7 +381,8 @@ earlier CMake build, which installed the bundles at the root of `CMAKE_INSTALL_P
 to the prefix (or absolute). The main options are:
 
 - `-DCMAKE_BUILD_TYPE=Release` (default; CMake's `-O3 -DNDEBUG`, where `make` uses
-  `-O2`: add `-DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG"` for that), `Debug` or
+  `-O2`: add `-DOFX_OPTFLAG=-O2` (openfx's option: the plugins and openfx::Support), or
+  `-DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG"` (all targets), for that), `Debug` or
   `RelWithDebInfo` (`make CONFIG=...`).
 - `-DOFX_CXX_STANDARD=17` (default) or `20`.
 - `-DOFX_USE_OPENMP=ON` (default): OpenMP in the CImg plugins and DenoiseSharpen, if
@@ -404,6 +405,13 @@ to the prefix (or absolute). The main options are:
 - `-DUSE_OSMESA=ON` (`make -C Shadertoy OSMESA=1`): Shadertoy CPU rendering with a
   mangled OSMesa in `OSMESA_PATH` (default `/opt/osmesa`) and LLVM in `LLVM_PATH`
   (default `/opt/llvm`).
+- `-DOFX_BUILD_HOSTDEMO=ON`: also build openfx's test host `hostDemo` and install it into
+  `<prefix>/bin`, for the render tests: `.github/tools/rendertest.sh <prefix>` (checks
+  the outputs of a few plugins) and `.github/tools/smoketest.sh <prefix>` (renders every
+  plugin with its default parameters).
+- `-DOFXMISC_SUPPORTEXT_DIR=<dir>`: build with the openfx-supportext sources in `<dir>`
+  instead of the `SupportExt` submodule (`smoketest.sh --supportext <dir> <prefix>`
+  builds and tests that).
 
 ### OS X, using Xcode
 

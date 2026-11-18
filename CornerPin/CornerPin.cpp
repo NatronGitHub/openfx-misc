@@ -223,8 +223,6 @@ public:
         , _selectionRectangleState(NULL)
         , _selectionRectangleLastState(0)
 #endif
-        , _overlayShiftL(false)
-        , _overlayShiftR(false)
         , _majorVersion(majorVersion)
     {
         for (int i = 0; i < 4; ++i) {
@@ -288,25 +286,6 @@ public:
      **/
     bool* overlaySelected() { return _overlaySelected; }
 
-    /**
-     * @brief The state of the shift keys, from the key events of the overlay interacts (the
-     * pen actions carry no modifiers), shared by all of them and the host selection rectangle.
-     * One flag per key, not a count: hosts may send keyDown again on auto-repeat (e.g. Natron
-     * on Windows, where modifier keys repeat), which would leave a count stuck above 0.
-     **/
-    void setOverlayShiftKey(int keySymbol, bool down)
-    {
-        if (keySymbol == kOfxKey_Shift_L) {
-            _overlayShiftL = down;
-        } else if (keySymbol == kOfxKey_Shift_R) {
-            _overlayShiftR = down;
-        }
-    }
-
-    bool overlayShift() const { return _overlayShiftL || _overlayShiftR; }
-
-    void resetOverlayShift() { _overlayShiftL = _overlayShiftR = false; }
-
 private:
 #ifdef OFX_EXTENSIONS_NATRON
     /// Update the overlay selection from the host selection rectangle (Natron extension).
@@ -355,8 +334,6 @@ private:
     bool _overlaySelectedOnRectangleStart[4]; // the selection when the rectangle started
 #endif
     bool _overlaySelected[4];
-    bool _overlayShiftL; // left shift key held
-    bool _overlayShiftR; // right shift key held
     unsigned int _majorVersion;
 };
 
@@ -625,14 +602,16 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
 #ifdef OFX_EXTENSIONS_NATRON
 // ofxNatron.h, extension 7: "To advertise to the host that we are interested in the selection state of
 // the rectangle, we declare a Int parameter with the name kNatronOfxParamSelectionRectangleState. The
-// host notifies the plug-in of the selection state change via the kOfxActionInstanceChanged action.
+// host notifies the plug-in of the selection state change via the kOfxActionInstanceChanged action,
+// with kOfxPropChangeReason = kOfxChangeUserEdited (not kOfxChangePluginEdited).
 // The value of the parameter can be 3-fold:
 //     0 meaning that the selection has been cleared by the user
-//     1 meaning that the selection is being actively edited by the user (i.e: during pen motion)
-//     2 meaning that the selection is finilized by the user (i.e: during pen up)
-// The property kNatronOfxImageEffectSelectionRectangle will be updated prior to calling the
-// kOfxActionInstanceChanged action for this parameter by the host, indicating the region covered by
-// the selection rectangle."
+//     1 meaning that the selection is being actively edited by the user (e.g. during pen motion)
+//     2 meaning that the selection is finalized by the user (e.g. on pen up)
+// The property kNatronOfxImageEffectSelectionRectangle is updated on the effect instance before the
+// host calls the kOfxActionInstanceChanged action for this parameter, indicating the region covered
+// by the selection rectangle, in canonical coordinates (those of kOfxInteractPropPenPosition), with
+// x1 <= x2 and y1 <= y2; it is (0,0,0,0) after a clear."
 void
 CornerPinPlugin::selectionRectangleChanged(double time)
 {
@@ -642,10 +621,19 @@ CornerPinPlugin::selectionRectangleChanged(double time)
         // The selection was cleared by the user: Natron sends 0 on a click or drag on empty
         // space, before the new rectangle starts. Natron#1196 sends it to every node (as for
         // RotoPaint), while the rectangle updates (1, 2) only go to the node whose overlay is
-        // shown. The notification carries no modifiers: as in
-        // Natron's RotoPaint, shift (tracked from the overlay key events) keeps the selection,
-        // so that the following rectangle adds to it.
-        if ( !overlayShift() ) {
+        // shown. As in Natron's RotoPaint, shift keeps the selection, so that the following
+        // rectangle adds to it. ofxNatron.h, extension 7: "Keyboard modifiers: the
+        // instanceChanged action gives none. A plug-in that keeps its selection on a clear when
+        // a modifier is held [...] uses the modifiers of the last action of its overlay
+        // interact [...]. The Support library's OFX::ImageEffect::getKeyModifiers() returns that
+        // state, also during kOfxActionInstanceChanged", and "A host that supports 13) sends the
+        // action that causes a clear to the displayed overlay interacts before it calls
+        // kOfxActionInstanceChanged: the kOfxInteractActionPenDown of the pen down that starts
+        // the rectangle (which no overlay caught)". So isShiftDown() is the state of the
+        // overlay's last action, i.e. the pen down that started the rectangle (the host's
+        // kNatronOfxInteractPropKeyModifiers, or the state Support tracked from the overlay key
+        // actions on other hosts).
+        if ( !isShiftDown() ) {
             for (int i = 0; i < 4; ++i) {
                 _overlaySelected[i] = false;
             }
@@ -731,9 +719,11 @@ CornerPinPlugin::changedClip(const InstanceChangedArgs &args,
 // The OFX pen actions do not carry the keyboard modifiers (ofxInteract.h: the
 // inArgs of kOfxInteractActionPenDown are the effect instance, pixel scale,
 // background colour, time, render scale, pen position, pen viewport position and
-// pen pressure), so the shift state is tracked from the kOfxPropKeySym of
-// kOfxInteractActionKeyDown/KeyUp, as RectangleInteract and
-// TransformInteractHelper do, and reset on kOfxInteractActionLoseFocus.
+// pen pressure). The shift state comes from ImageEffect::isShiftDown() (ofxNatron.h,
+// extension 13): the host's kNatronOfxInteractPropKeyModifiers if it passes it, else
+// the Support library tracks the modifier key events of the overlay interacts of the
+// instance, and resets them on kOfxInteractActionLoseFocus. It is per instance, so
+// shared by all the overlay interacts and the host selection rectangle.
 class CornerPinTransformInteract
     : public OverlayInteract
 {
@@ -796,7 +786,6 @@ public:
     virtual bool penDown(const PenArgs &args) OVERRIDE FINAL;
     virtual bool penUp(const PenArgs &args) OVERRIDE FINAL;
     virtual bool keyDown(const KeyArgs &args) OVERRIDE FINAL;
-    virtual bool keyUp(const KeyArgs &args) OVERRIDE FINAL;
     virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
 
 private:
@@ -1257,7 +1246,7 @@ CornerPinTransformInteract::penDown(const PenArgs &args)
         }
     }
 
-    const bool shift = _plugin->overlayShift();
+    const bool shift = _plugin->isShiftDown();
     _lastMousePos = args.penPosition;
     _useFromDrag = useFrom;
     _penDownTrapped = (hit != -1);
@@ -1327,15 +1316,10 @@ CornerPinTransformInteract::penUp(const PenArgs & /*args*/)
     return true;
 }
 
-// keyDown updates the shift state, and Escape cancels a drag or clears the selection
+// Escape cancels a drag or clears the selection
 bool
 CornerPinTransformInteract::keyDown(const KeyArgs &args)
 {
-    // one flag per shift key, so that an auto-repeated keyDown does not count twice
-    if ( (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) {
-        _plugin->setOverlayShiftKey(args.keySymbol, true);
-    }
-
     if (args.keySymbol == kOfxKey_Escape) {
         if (_mouseState == eMouseStateDraggingPoints) {
             // trapped, so that the host does not also clear its selection during the drag
@@ -1355,18 +1339,6 @@ CornerPinTransformInteract::keyDown(const KeyArgs &args)
     return false;
 }
 
-// keyUp just updates the shift state
-bool
-CornerPinTransformInteract::keyUp(const KeyArgs &args)
-{
-    if ( (args.keySymbol == kOfxKey_Shift_L) || (args.keySymbol == kOfxKey_Shift_R) ) {
-        _plugin->setOverlayShiftKey(args.keySymbol, false);
-    }
-
-    // modifiers are not "caught"
-    return false;
-}
-
 /** @brief Called when the interact is loses input focus */
 void
 CornerPinTransformInteract::loseFocus(const FocusArgs & /*args*/)
@@ -1375,8 +1347,6 @@ CornerPinTransformInteract::loseFocus(const FocusArgs & /*args*/)
     // pen up), as in RectangleInteract and TransformInteractHelper. The
     // selection is kept.
     abandonDrag();
-    // reset the shift state: the key up may be sent to another interact
-    _plugin->resetOverlayShift();
 }
 
 class CornerPinOverlayDescriptor
