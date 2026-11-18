@@ -9,10 +9,14 @@ name: Nightly extra builds
 # The Makefiles are still built, with one bundle per plugin (make nomulti), on
 # Linux and Windows, as long as Natron's build-plugins.sh uses them.
 # Each build is followed by the same plugin load test as in ci.yml.
+# The CImg plug-ins: ci.yml builds their default FFT (pocketfft); here, Linux C++20 is COMMERCIAL
+# (pocketfft), Linux FFTW builds the opt-in FFT=fftw3 (GPL) with the render tests, and macOS OpenMP
+# is FFT=pow2. The cimg_patches job checks that CImg.h is still patched as openfx-gmic's.
 # The render and smoke tests of ci.yml (Linux release) also run after the macOS
 # release and the Linux debug builds (debug: with the plugins' assertions), with
-# hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. They are not run on Windows (the
-# scripts need python3 and symbolic links).
+# hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. On Windows (MSYS2 CMake builds), only the
+# CImgConvolve render test runs (RENDERTEST_ONLY), as a check of the pocketfft unload
+# deadlock (POCKETFFT_NO_MULTITHREADING); smoketest.sh does not run on Windows.
 # Frugal CI: the nightly run is skipped if master did not change since the last
 # nightly run that succeeded or failed (a cancelled run does not count), and jobs
 # time out.
@@ -63,6 +67,25 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
+  # CImg.h is patched as openfx-gmic's (CImg/CImgVersion.mk): check that CImg/patches are still
+  # byte-identical to openfx-gmic's patches at master, that they are applied in the same order,
+  # that the pocketfft pin is the same, and that CIMGVERSION is the CImg tag of its GMICVER (a few
+  # seconds, no build). It runs every night, without needs: changes, since the drift it catches
+  # comes from openfx-gmic, not from this repository.
+  cimg_patches:
+    name: CImg.h patches (openfx-gmic)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Compare with openfx-gmic master
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/tools/check-cimg-patches.sh master
+
   macos:
     name: macOS 15 ${{ matrix.name }}
     needs: changes
@@ -85,10 +108,11 @@ jobs:
           - name: C++20
             config: release
             options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20
-          # OpenMP: Apple clang with the MacPorts libomp (not deployed)
-          - name: OpenMP
+          # OpenMP: Apple clang with the MacPorts libomp (not deployed). FFT=pow2: CImg's own FFT
+          # (no FFT library), the configuration of the rare builds without one.
+          - name: OpenMP pow2
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release
+            options: -DCMAKE_BUILD_TYPE=Release -DFFT=pow2
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -139,13 +163,22 @@ jobs:
             config: debug
             options: -DCMAKE_BUILD_TYPE=Debug -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
-          - name: C++20
+          # C++20, and Natron's COMMERCIAL licence (OFX_LICENSE=COMMERCIAL), with the render tests
+          - name: C++20 COMMERCIAL
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20
-          # OpenMP: Apple clang with the MacPorts libomp (not deployed)
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DOFX_LICENSE=COMMERCIAL -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
+            rendertest: true
+          # OpenMP (GCC's libgomp)
           - name: OpenMP
             config: release
             options: -DCMAKE_BUILD_TYPE=Release
+          # the opt-in FFTW (FFT=fftw3, GPL only, Ubuntu's libfftw3-dev), with the render tests
+          # (the FFT convolution test of rendertest.sh)
+          - name: FFTW
+            config: release
+            options: -DCMAKE_BUILD_TYPE=Release -DFFT=fftw3 -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
+            rendertest: true
+            packages: libfftw3-dev pkg-config
           # the Makefiles, while Natron's build-plugins.sh uses them
           - name: make nomulti
             make: nomulti CONFIG=release
@@ -159,7 +192,7 @@ jobs:
         # libexpat1-dev: openfx's HostSupport (hostDemo, debug) uses the system expat
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglu1-mesa-dev libgl-dev libexpat1-dev cmake ninja-build
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev libexpat1-dev cmake ninja-build ${{ matrix.packages }}
       - name: Build (make)
         if: matrix.make
         run: make -j"$(nproc)" ${{ matrix.make }}
@@ -207,10 +240,10 @@ jobs:
           # No OpenMP: -static still leaves a libgomp-1.dll dependency (see ci.yml).
           - name: debug
             config: debug
-            options: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
+            options: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
           - name: C++20
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
           # the Makefiles, while Natron's build-plugins.sh uses them (GCC's default, gnu++17)
           - name: make nomulti
             make: nomulti CONFIG=release LDFLAGS_ADD=-static
@@ -232,7 +265,7 @@ jobs:
           cache: true
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p expat:p python:p
       - name: Build (make)
         if: matrix.make
         run: |
@@ -250,6 +283,14 @@ jobs:
         run: |
           set -eo pipefail
           .github/tools/loadtest.sh ${{ matrix.make && ' ' || format('install-{0}', matrix.config) }}
+      - name: Render test (hostDemo, FFT convolution)
+        # as ci.yml: a hang at hostDemo's exit (pocketfft's thread pool, openfx-gmic#94) fails
+        # at the step timeout. CMake only (hostDemo from -DOFX_BUILD_HOSTDEMO=ON).
+        if: ${{ !matrix.make }}
+        timeout-minutes: 5
+        run: |
+          set -eo pipefail
+          RENDERTEST_ONLY='^CImgConvolve' .github/tools/rendertest.sh install-${{ matrix.config }}
 
   # MSVC is not used by the CI's make builds (MinGW GCC), but the CMake build and
   # Misc/*.vcxproj support it: check that the sources build with Visual Studio 2022
@@ -268,6 +309,7 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Build
+        # (the patches of CImg.h use Git for Windows' sh)
         run: |
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64
           cmake --build build --config Release --parallel
@@ -280,7 +322,7 @@ jobs:
           update: false
           cache: true
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p expat:p python:p
       - name: Load test
         # ofxload is built with the MSYS2 UCRT64 GCC (loadtest.sh uses GCC options),
         # and objdump is MSYS2's; ofxload only loads the MSVC-built plugins through
