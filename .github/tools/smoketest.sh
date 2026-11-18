@@ -14,8 +14,8 @@
 # Options:
 #   --supportext DIR  first build openfx-misc (the source tree of this script) in
 #                     Release with the SupportExt sources of DIR instead of the
-#                     submodule (-DOFXMISC_SUPPORTEXT_DIR=DIR -DOFX_BUILD_HOSTDEMO=ON,
-#                     plus $CMAKE_ARGS), and install it into PREFIX
+#                     submodule (-DOFXMISC_SUPPORTEXT_DIR=DIR -DOFX_BUILD_HOSTDEMO=ON
+#                     -DBUILD_TESTING=ON, plus $CMAKE_ARGS), and install it into PREFIX
 #   --build DIR       the build directory of --supportext (default: a temporary one)
 #   --out DIR         keep the outputs (gzipped PFM files), reports and logs in DIR
 #   --only REGEX      only the plug-ins whose identifier matches REGEX (the whole
@@ -25,8 +25,10 @@
 #   -j N              run N renders at a time (default: the number of CPUs)
 # Environment: HOSTDEMO (the hostDemo binary, default PREFIX/bin/hostDemo),
 # CXX (to build ofxload.cpp, default c++), CMAKE_ARGS (--supportext),
-# SMOKETEST_TIMEOUT (seconds per render, default 120),
-# SMOKETEST_DEBUG=1 (a debug build: also expect the "debug:" known bugs).
+# SMOKETEST_TIMEOUT (seconds per describe or render, default 120),
+# SMOKETEST_DEBUG=1 (a debug build: also use the "debug:" entries of the lists below),
+# SMOKETEST_BUNDLES (the expected bundles, see BUNDLES below; e.g. "Misc:0" for a build
+# with -DBUILD_CIMG_PLUGINS=OFF -DBUILD_SHADERTOY=OFF -DBUILD_TESTING=OFF).
 # Linux and macOS (needs python3 and perl).
 #
 # Each render is one hostDemo run (--no-std-paths --no-cache: only the bundle of
@@ -46,27 +48,60 @@
 #   crashed), or takes more than SMOKETEST_TIMEOUT seconds; the --report JSON
 #   shows a missing render or output, or an error or fatal message from the
 #   plug-in; or an output file is missing or empty.
-# Two cases are not failures: an identity effect (isIdentity) that does not
-# write its output when hostDemo renders it anyway (the spec says the host
-# should not call render then; hostDemo stops at that render), and an empty
-# region of definition (nothing to render, e.g. FrameRange outside its range).
-# The plug-ins that cannot run in hostDemo (OpenGL only, ...) are in the SKIP
-# list below, with the reason. Known bugs are expected failures (XFAIL, in the
-# XFAIL list), with the message that their failure must show: an XFAIL render
-# that passes (XPASS) fails the test, so that the list is updated.
+# - a bundle of BUNDLES is missing, or has fewer plug-ins than its minimum;
+# - an entry of SKIP, IDENTITY or XFAIL is stale (see below).
+# Two cases are not failures: an identity effect (isIdentity) of the IDENTITY list
+# that does not write its output when hostDemo renders it anyway (the spec says
+# the host should not call render then; hostDemo stops at that render), and an
+# empty region of definition (nothing to render, e.g. FrameRange outside its
+# range). The plug-ins that cannot run in hostDemo (OpenGL only, ...) are in the
+# SKIP list below, with the reason. Known bugs are expected failures (XFAIL, in
+# the XFAIL list, each with its GitHub issue), with the message that their
+# failure must show: an XFAIL render that passes (XPASS) fails the test, so that
+# the list is updated.
+# Stale entries fail the test, so that the lists stay exact: a SKIP entry that
+# matches no plug-in (except with --only), and, in full mode only (not --quick,
+# not --only; --quick does not render every context), an IDENTITY or XFAIL entry
+# that matches no identity render or no expected failure. With SMOKETEST_BUNDLES
+# (a partial build), stale entries are only a warning.
 set -eo pipefail
 
 # ---------------------------------------------------------------------------
 # The plug-ins that are not tested: "identifier regex|reason" (the whole identifier).
+# The expected bundles: "name:minimum number of plug-ins (identifier and major version)"
+# (the counts of a release build; debug builds have more). A missing bundle, or one with
+# fewer plug-ins, fails the test (raise or lower the minimum when plug-ins are added or
+# removed). Other bundles (DebugProxy) are not required. SMOKETEST_BUNDLES replaces it.
+BUNDLES=(Misc:168 CImg:40 Shadertoy:1 Test:6)
+# shellcheck disable=SC2206
+[ -z "$SMOKETEST_BUNDLES" ] || BUNDLES=($SMOKETEST_BUNDLES)
+# The plug-ins that are not tested: "identifier regex|reason" (the whole identifier; a
+# "debug:" reason is only used in debug builds).
 SKIP=(
     "net.sf.openfx.Shadertoy|OpenGL only: hostDemo has no OpenGL render suite (describe fails)"
     "net.sf.openfx.TestOpenGL|OpenGL only (Test bundle): hostDemo has no OpenGL render suite (describe fails)"
     "net.sf.openfx.ColorLookupPlugin|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
     "net.sf.openfx.HueCorrect|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
     "net.sf.openfx.HueKeyer|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
-    "net.sf.openfx.TimeBufferRead|debug builds only: reads the buffer of a TimeBufferWrite instance of the same name, in the same host process (getClipPreferences fails: No TimeBuffer exists with name \"\")"
+    "net.sf.openfx.TimeBufferRead|debug:reads the buffer of a TimeBufferWrite instance of the same name, in the same host process (getClipPreferences fails: No TimeBuffer exists with name \"\")"
 )
-# (the entries of SKIP, INPUTS and XFAIL are split at "|": no "|" in the regexes)
+# The plug-ins that are identity effects with their default parameters, and do not write
+# their output when hostDemo renders them anyway: "identifier regex[:major][@context]|why"
+# (a "debug:" reason is only used in debug builds). Another identity render without an
+# output fails, so that a plug-in that becomes an identity by default is noticed.
+IDENTITY=(
+    "net.sf.openfx.FrameHold|always an identity: the Source at another time"
+    "net.sf.openfx.timeOffset|always an identity: the Source at another time"
+    "net.sf.openfx.TrackerPM@general|trackers are identity effects (SupportExt's GenericTrackerPlugin)"
+    "net.sf.openfx.ShufflePlugin:1@filter|the default channels are those of A, which is the Source in the filter context"
+    # debug builds: render posts "OFX Host should not render" and fails (kOfxStatFailed) when
+    # it is called for an identity (release builds copy the input)
+    "net.sf.openfx.NoOpPlugin@filter|debug:an identity unless Force Copy is set"
+    "net.sf.openfx.NoTimeBlurPlugin@filter|debug:always an identity: the Source at another time"
+    "net.sf.openfx.Retime|debug:an identity at the default speed (1: whole source frames)"
+    "net.sf.openfx.TestGroups|debug:an identity unless Force Copy is set (Test bundle)"
+)
+# (the entries of SKIP, IDENTITY, INPUTS and XFAIL are split at "|": no "|" in the regexes)
 # Inputs that replace the default ones: "identifier regex[@context]|Clip=spec ...".
 # DATA is the directory of the files made below (square32.pfm: a 32x32 white Pf,
 # box5.pfm: a 5x5 white PF).
@@ -76,18 +111,24 @@ INPUTS=(
     # inpaint a 32x32 square, not half of the image (minutes)
     "eu.cimg.Inpaint@general|Mask=file:DATA/square32.pfm@344,272"
 )
-# Known bugs: "identifier regex[:major][@context][/depth]|expected message (Python re,
-# searched in the failure summary and the hostDemo log)|description" (context: filter or
-# general, depth: byte, short or float; a "debug:" description is only expected in debug
-# builds). The entries without a context and depth also apply to describe failures.
+# Known bugs, each tracked by a GitHub issue: "identifier regex[:major][@context][/depth]|
+# expected message (Python re, searched in the failure summary and the hostDemo log)|
+# description" (context: filter or general, depth: byte, short or float; a "debug:"
+# description is only expected in debug builds). The entries without a depth also apply
+# to describe failures: the entries without a context to hostDemo --describe failures,
+# those with a context to the describeInContext failures of that context.
 XFAIL=(
-    "net.sf.openfx.Premult:2|describe in context action failed|v2 describes the multi-plane parameters when the host has the plane suite V2 and dynamic choices, but SupportExt's MultiPlane (describeInContextAddPlaneChannelChoice) also requires kFnOfxImageEffectPropMultiPlanar, and throws"
-    "net.sf.openfx.Unpremult:2|describe in context action failed|v2 describes the multi-plane parameters when the host has the plane suite V2 and dynamic choices, but SupportExt's MultiPlane (describeInContextAddPlaneChannelChoice) also requires kFnOfxImageEffectPropMultiPlanar, and throws"
+    # issue #166
+    "net.sf.openfx.Premult:2|describe in context action failed|v2 describes the multi-plane parameters when the host has the plane suite V2 and dynamic choices, but not kFnOfxImageEffectPropMultiPlanar (Premult.cpp does not check isMultiPlanar), and SupportExt's MultiPlane (describeInContextAddPlaneChannelChoice) throws"
+    "net.sf.openfx.Unpremult:2|describe in context action failed|v2 describes the multi-plane parameters when the host has the plane suite V2 and dynamic choices, but not kFnOfxImageEffectPropMultiPlanar (Premult.cpp does not check isMultiPlanar), and SupportExt's MultiPlane (describeInContextAddPlaneChannelChoice) throws"
+    # issue #163
     "net.sf.openfx.switchPlugin|create instance action failed \(status 9\)|on hosts other than Natron, describeInContext defines 2 source clips, but the instance fetches kClipSourceCount (16): fetchClip(\"2\") throws kOfxStatErrBadHandle"
+    # issue #164
     "net.sf.openfx.TrackerPM@filter|create instance action failed \(status 9\)|the instance fetches the Mask clip, which describeInContext only defines in the general, paint and tracker contexts"
-    "net.sf.openfx.PIK@filter/short|get region of definition action failed|the filter context has no Source clip (the spec mandates one), so HostSupport's default region of definition fails"
-    "net.sf.openfx.PIK@filter/float|get region of definition action failed|the filter context has no Source clip (the spec mandates one), so HostSupport's default region of definition fails"
-    # debug builds: failed assertions (an unconnected clip has the components kOfxImageComponentNone)
+    # issue #165 (PIK supports short and float only)
+    "net.sf.openfx.PIK@filter|get region of definition action failed|the filter context has no Source clip (the spec mandates one), so HostSupport's default region of definition fails"
+    # issue #167: debug builds, failed assertions (an unconnected clip has the components
+    # kOfxImageComponentNone)
     "net.sf.openfx.DenoiseSharpen@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"
     "net.sf.openfx.Log2Lin@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"
     "net.sf.openfx.PLogLin@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"
@@ -104,7 +145,38 @@ case "$(uname -s)" in
     *) echo "unsupported OS $(uname -s)"; exit 1 ;;
 esac
 
-# The worker: render one job (a line of jobs.txt, see below), in its own directory.
+SMOKETEST_TIMEOUT=${SMOKETEST_TIMEOUT:-120}
+
+# watchdog LOG BUNDLE HOSTDEMO-ARGS...: run hostDemo with only BUNDLE in OFX_PLUGIN_PATH
+# and its output in LOG, killed by SIGALRM after SMOKETEST_TIMEOUT seconds (perl's alarm
+# survives exec), and set $status to its exit status. The caller sends its stderr to LOG,
+# for the shell's message about a crash.
+watchdog() {
+    local log=$1 bundle=$2
+    shift 2
+    status=0
+    ( OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$bundle exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' \
+          "$SMOKETEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@" ) > "$log" 2>&1 || status=$?
+    if [ "$status" = 142 ]; then
+        echo "timeout: killed after ${SMOKETEST_TIMEOUT}s" >> "$log"
+    elif [ "$status" -gt 128 ]; then
+        echo "killed by signal $((status - 128))" >> "$log"
+    fi
+}
+
+# The workers (run by xargs), each in its own directory: describe one plug-in (a line of
+# plugins.txt: "bundle identifier major"), or render one job (a line of jobs.txt, see
+# below). They write a status file, which the main script checks.
+if [ "$1" = --describe-job ]; then
+    read -r bundle id major <<< "$2"
+    d=$SMOKETEST_WORK/describe/$id-v$major
+    mkdir -p "$d"
+    cd "$d"
+    exec 2>> describe.log
+    watchdog describe.log "$bundle" -p "$id" -m "$major" --describe describe.json
+    echo "$status" > status
+    exit 0
+fi
 if [ "$1" = --render-job ]; then
     IFS='|' read -r name bundle id major ctx depth inputs <<< "$2"
     d=$SMOKETEST_WORK/jobs/$name
@@ -114,16 +186,9 @@ if [ "$1" = --render-job ]; then
     IFS=';' read -r -a specs <<< "$inputs"
     for i in "${specs[@]}"; do [ -z "$i" ] || args+=(-i "$i"); done
     start=$(date +%s)
-    # A render that takes more than SMOKETEST_TIMEOUT seconds is killed by SIGALRM
-    # (perl's alarm survives exec). The shell's message about a crash goes to the log.
     exec 2>> run.log
-    status=0
-    ( OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$bundle exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' \
-          "${SMOKETEST_TIMEOUT:-120}" "$HOSTDEMO" --no-std-paths --no-cache --quiet \
-          -p "$id" -m "$major" -c "$ctx" -d "$depth" --format pfm -o out --report report.json \
-          "${args[@]}" ) > run.log 2>&1 || status=$?
-    [ "$status" != 142 ] || echo "timeout: killed after ${SMOKETEST_TIMEOUT:-120}s" >> run.log
-    [ "$status" -lt 129 ] || echo "killed by signal $((status - 128))" >> run.log
+    watchdog run.log "$bundle" -p "$id" -m "$major" -c "$ctx" -d "$depth" --format pfm -o out \
+             --report report.json "${args[@]}"
     echo "$status $(( $(date +%s) - start ))" > status
     # The output files and their sizes. The files are removed (about 25 MB per render),
     # or compressed for --out.
@@ -166,7 +231,7 @@ if [ -n "$supportext" ]; then
     echo "Building openfx-misc with the SupportExt of $supportext in $build..."
     # $CMAKE_ARGS is split into words on purpose
     # shellcheck disable=SC2086
-    cmake -S "$top" -B "$build" "${gen[@]}" -DCMAKE_BUILD_TYPE=Release -DOFX_BUILD_HOSTDEMO=ON \
+    cmake -S "$top" -B "$build" "${gen[@]}" -DCMAKE_BUILD_TYPE=Release -DOFX_BUILD_HOSTDEMO=ON -DBUILD_TESTING=ON \
           -DOFXMISC_SUPPORTEXT_DIR="$supportext" $CMAKE_ARGS > "$work/configure.log" 2>&1 \
         || { cat "$work/configure.log"; echo "configure failed"; exit 1; }
     cmake --build "$build" --parallel "$jobs" > "$work/build.log" 2>&1 \
@@ -204,11 +269,40 @@ for b in "$plugins"/*.ofx.bundle; do
     # hostDemo run loads one binary
     mkdir -p "$work/path/$name"
     ln -s "$b" "$work/path/$name/"
+    binary=
     # shellcheck disable=SC2086
-    binary=$(ls "$b"/Contents/$arch/"$name.ofx" | head -n 1)
-    "$work/ofxload" "$binary" |
-        sed -n "s/^  \([^ ]*\) \([0-9]*\)\.[0-9]*$/$name \1 \2/p" >> "$work/plugins.txt"
+    for f in "$b"/Contents/$arch/"$name.ofx"; do
+        if [ -f "$f" ]; then binary=$f; break; fi
+    done
+    if [ -z "$binary" ]; then
+        echo "smoketest: $b has no binary Contents/$arch/$name.ofx"
+        exit 1
+    fi
+    status=0
+    listing=$("$work/ofxload" "$binary" 2>&1) || status=$?
+    if [ "$status" != 0 ]; then
+        printf '%s\n' "$listing"
+        echo "smoketest: ofxload failed on $binary (exit status $status, see above): the bundle does not load, or its plug-ins are invalid"
+        exit 1
+    fi
+    printf '%s\n' "$listing" | sed -n "s/^  \([^ ]*\) \([0-9]*\)\.[0-9]*$/$name \1 \2/p" >> "$work/plugins.txt"
 done
+# The expected bundles and their minimum number of plug-ins
+python3 -I - "$work/plugins.txt" "${BUNDLES[@]}" << 'EOF' || { echo "smoketest: missing bundles or plug-ins in $plugins (BUNDLES in $0, or SMOKETEST_BUNDLES)"; exit 1; }
+import collections, sys
+n = collections.Counter(l.split()[0] for l in open(sys.argv[1]))
+print("bundles: " + ", ".join("%s %d" % i for i in sorted(n.items())))
+bad = False
+for b in sys.argv[2:]:
+    name, _, least = b.partition(":")
+    if name not in n:
+        print("FAIL  %s.ofx.bundle: missing" % name)
+        bad = True
+    elif n[name] < int(least or 1):
+        print("FAIL  %s.ofx.bundle: %d plug-ins, expected at least %s" % (name, n[name], least))
+        bad = True
+sys.exit(1 if bad else 0)
+EOF
 if [ -n "$only" ]; then
     python3 -I -c 'import re, sys
 for l in open(sys.argv[1]):
@@ -218,6 +312,12 @@ for l in open(sys.argv[1]):
 fi
 [ -s "$work/plugins.txt" ] || { echo "no plug-in found in $plugins${only:+ matching $only}"; exit 1; }
 echo "$(wc -l < "$work/plugins.txt" | tr -d ' ') plug-ins (identifier and major version) in $(ls "$work/path" | wc -l | tr -d ' ') bundles"
+
+# The lists, for the Python scripts below (one entry per line)
+printf '%s\n' "${SKIP[@]}" > "$work/skip.txt"
+printf '%s\n' "${INPUTS[@]}" > "$work/inputs.txt"
+printf '%s\n' "${XFAIL[@]}" > "$work/xfail.txt"
+printf '%s\n' "${IDENTITY[@]}" > "$work/identity.txt"
 
 # The input files of INPUTS (little-endian PFM, bottom row first)
 python3 -I - "$work/data" << 'EOF'
@@ -230,46 +330,61 @@ pfm("square32.pfm", "Pf", 32, 32, 1.)
 pfm("box5.pfm", "PF", 5, 5, 1.)
 EOF
 
-# Describe each plug-in (in parallel)
-export HOSTDEMO SMOKETEST_WORK=$work
+# Describe each plug-in (in parallel). A worker that fails (xargs exit status 123)
+# leaves no status file: its plug-ins fail below.
+export HOSTDEMO SMOKETEST_WORK=$work SMOKETEST_TIMEOUT
 [ -z "$out" ] || export SMOKETEST_KEEP=1
-# shellcheck disable=SC2016
-tr '\n' '\0' < "$work/plugins.txt" | xargs -0 -n 1 -P "$jobs" bash -c '
-    set -- $1
-    d=$SMOKETEST_WORK/describe/$2-v$3
-    mkdir -p "$d" && cd "$d"
-    ( OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$1 exec "$HOSTDEMO" --no-std-paths --no-cache --quiet \
-          -p "$2" -m "$3" --describe describe.json ) > describe.log 2>&1
-    echo $? > status' _
+failed_workers=
+tr '\n' '\0' < "$work/plugins.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --describe-job ||
+    failed_workers="describe (xargs exit status $?)"
 
 # The render jobs, one per line: "name|bundle|id|major|context|depth|Clip=spec;..."
-python3 -I - "$work" "$quick" "${#SKIP[@]}" "${SKIP[@]}" "${INPUTS[@]}" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
+python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
 import json, os, re, sys
-work, quick, nskip = sys.argv[1], sys.argv[2] == "1", int(sys.argv[3])
-skip = [s.split("|", 1) for s in sys.argv[4:4 + nskip]]
+work, quick, debug = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1"
+def entries(name):
+    return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
+skip = []
+for s in entries("skip.txt"):
+    rx, reason = s.split("|", 1)
+    if reason.startswith("debug:"):
+        if not debug:
+            continue
+        reason = reason[6:]
+    skip.append((rx, reason))
 overrides = []
-for s in sys.argv[4 + nskip:]:
+for s in entries("inputs.txt"):
     m = re.fullmatch(r"([^@|]*)(?:@(filter|general))?\|(.*)", s)
     if not m:
         sys.exit("bad INPUTS entry: " + s)
     overrides.append((m.group(1), m.group(2), m.group(3).replace("DATA", os.path.join(work, "data")).split()))
 depths = {"OfxBitDepthByte": "byte", "OfxBitDepthShort": "short", "OfxBitDepthFloat": "float"}
+def text(path):
+    try:
+        return open(path, errors="replace").read().strip().replace("\n", " / ")
+    except OSError:
+        return "(no log)"
+# describe-results.txt: "SKIP|tag|identifier||reason" or "FAIL|tag|identifier|context|message"
+# (context: empty for hostDemo --describe failures)
 for line in open(os.path.join(work, "plugins.txt")):
     bundle, pid, major = line.split()
     reason = next((r for rx, r in skip if re.fullmatch(rx, pid)), None)
     tag = "%s v%s" % (pid, major)
     if reason:
-        print("SKIP|%s|%s|%s" % (tag, pid, reason), file=sys.stderr)
+        print("SKIP|%s|%s||%s" % (tag, pid, reason), file=sys.stderr)
         continue
     d = os.path.join(work, "describe", "%s-v%s" % (pid, major))
-    status = open(os.path.join(d, "status")).read().strip()
+    try:
+        status = open(os.path.join(d, "status")).read().strip()
+    except OSError:
+        status = "unknown: the describe worker failed"
     try:
         desc = json.load(open(os.path.join(d, "describe.json")))
     except (OSError, ValueError):
         desc = None
     if status != "0" or not desc or not desc.get("ok"):
-        log = open(os.path.join(d, "describe.log"), errors="replace").read().strip().replace("\n", " / ")
-        print("FAIL|%s|%s|describe failed (exit status %s): %s" % (tag, pid, status, log), file=sys.stderr)
+        print("FAIL|%s|%s||describe failed (exit status %s): %s"
+              % (tag, pid, status, text(os.path.join(d, "describe.log"))), file=sys.stderr)
         continue
     contexts = desc["contexts"]
     generator = "OfxImageEffectContextGenerator" in contexts
@@ -279,7 +394,9 @@ for line in open(os.path.join(work, "plugins.txt")):
         if c is None or (quick and ctx == "filter" and "OfxImageEffectContextGeneral" in contexts):
             continue
         if not c.get("ok"):
-            print("FAIL|%s|%s|describeInContext(%s) failed" % (tag, pid, ctx), file=sys.stderr)
+            print("FAIL|%s|%s|%s|describeInContext(%s) failed: %s"
+                  % (tag, pid, ctx, ctx, text(os.path.join(d, "describe.log"))), file=sys.stderr)
+            n += 1  # not also "no render"
             continue
         inputs, k = {}, 0
         for clip in c["clips"]:
@@ -309,36 +426,63 @@ for line in open(os.path.join(work, "plugins.txt")):
                                                      depth, ins))
             n += 1
     if n == 0:
-        print("FAIL|%s|%s|no render: no filter or general context, or no supported depth (contexts: %s)"
+        print("FAIL|%s|%s||no render: no filter or general context, or no supported depth (contexts: %s)"
               % (tag, pid, " ".join(contexts)), file=sys.stderr)
 EOF
     { cat "$work/describe-results.txt"; echo "smoketest: listing the renders failed"; exit 1; }
 nrenders=$(wc -l < "$work/jobs.txt" | tr -d ' ')
 echo "$nrenders renders, $jobs at a time..."
 
-# Render (in parallel)
-tr '\n' '\0' < "$work/jobs.txt" | xargs -0 -n 1 -P "$jobs" "$0" --render-job
+# Render (in parallel). As above, a failed worker leaves no status file.
+tr '\n' '\0' < "$work/jobs.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --render-job ||
+    failed_workers="$failed_workers${failed_workers:+, }render (xargs exit status $?)"
 
 # Check the renders and print the results
+mode=full
+[ "$quick" = 0 ] || mode=quick
+[ -z "$only" ] || mode=only
+[ -z "$SMOKETEST_BUNDLES" ] || mode=$mode-partial
 status=0
-python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "${XFAIL[@]}" << 'EOF' || status=$?
+python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "$mode" << 'EOF' || status=$?
 import json, os, re, sys
-work, debug = sys.argv[1], sys.argv[2] == "1"
+work, debug, mode = sys.argv[1], sys.argv[2] == "1", sys.argv[3]
+def entries(name):
+    return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
+def debug_only(desc):
+    # (keep, desc): the "debug:" entries are only used in debug builds
+    if desc.startswith("debug:"):
+        return debug, desc[6:]
+    return True, desc
 xfail = []
-for x in sys.argv[3:]:
+for x in entries("xfail.txt"):
     m = re.fullmatch(r"([^:@/|]*)(?::([0-9]+))?(?:@(filter|general))?(?:/(byte|short|float))?\|([^|]*)\|(.*)", x)
     if not m:
         sys.exit("bad XFAIL entry: " + x)
     rx, major, ctx, depth, msg, desc = m.groups()
-    if desc.startswith("debug:"):
-        if not debug:
-            continue
-        desc = desc[6:]
-    xfail.append((rx, major, ctx, depth, msg, desc))
+    keep, desc = debug_only(desc)
+    if keep:
+        xfail.append((rx, major, ctx, depth, msg, desc, x))
+identity = []
+for x in entries("identity.txt"):
+    m = re.fullmatch(r"([^:@|]*)(?::([0-9]+))?(?:@(filter|general))?\|(.*)", x)
+    if not m:
+        sys.exit("bad IDENTITY entry: " + x)
+    if debug_only(m.group(4))[0]:
+        identity.append(m.groups() + (x,))
+skip = []
+for x in entries("skip.txt"):
+    rx, reason = x.split("|", 1)
+    keep, reason = debug_only(reason)
+    if keep:
+        skip.append((rx, x))
+used = set()  # the entries of XFAIL, IDENTITY and SKIP that were used
 order = ["ok", "SKIP", "XFAIL", "XPASS", "FAIL"]
 plugins = {}  # plug-in (identifier and major version) -> worst result
 nrender = dict((k, 0) for k in order)
 notes = {"identity": set(), "empty RoD": set()}
+# hostDemo is built with the OFX_EXTENSIONS_* of the plug-ins (-DOFX_BUILD_HOSTDEMO=ON):
+# it always renders both views of a stereo frame (the report has no view count)
+VIEWS = 2
 
 
 def note(tag, res):
@@ -351,61 +495,87 @@ def known(pid, major, ctx, depth):
                  and x[2] in (None, ctx) and x[3] in (None, depth)), None)
 
 
-def result(tag, name, errors, log, x):
+def expected_identity(pid, major, ctx):
+    return next((x for x in identity if re.fullmatch(x[0], pid) and x[1] in (None, major)
+                 and x[2] in (None, ctx)), None)
+
+
+def result(errors, log, x):
     summary = "; ".join(errors[:4]) + (" (+%d)" % (len(errors) - 4) if len(errors) > 4 else "")
     if x:
         if not errors:
             return "XPASS", "known bug fixed? Update the XFAIL list of smoketest.sh: " + x[5]
         if re.search(x[4], summary + "\n" + log):
+            used.add(x[6])
             return "XFAIL", x[5]
         return "FAIL", "%s (known bug, but not the expected message \"%s\": %s)" % (summary, x[4], x[5])
     return ("FAIL", summary) if errors else ("ok", "")
 
 
+def read(path, default=None):
+    try:
+        return open(path, errors="replace").read()
+    except OSError:
+        return default
+
+
+for line in open(os.path.join(work, "plugins.txt")):
+    pid = line.split()[1]
+    for rx, x in skip:
+        if re.fullmatch(rx, pid):
+            used.add(x)
 for line in open(os.path.join(work, "describe-results.txt")):
-    kind, tag, pid, msg = line.rstrip("\n").split("|", 3)
+    kind, tag, pid, ctx, msg = line.rstrip("\n").split("|", 4)
     if kind == "SKIP":
         res = "SKIP"
     else:
         major = tag.rsplit(" v", 1)[1]
-        x = known(pid, major, None, None)
-        res, msg = result(tag, tag, [msg], "", x if x and x[2] is None and x[3] is None else None)
-    print("%-5s %-50s %s" % (res, tag, msg))
+        # a describe failure: the XFAIL entries without a depth, and without a context
+        # (hostDemo --describe failed) or with this context (describeInContext failed)
+        res, msg = result([msg], "", known(pid, major, ctx or None, None))
+    print("%-5s %-50s %s" % (res, tag + (" " + ctx if ctx else ""), msg))
     note(tag, res)
 times = []
 for line in open(os.path.join(work, "jobs.txt")):
     name, bundle, pid, major, ctx, depth, inputs = line.rstrip("\n").split("|")
     tag = "%s v%s" % (pid, major)
     d = os.path.join(work, "jobs", name)
-    status, secs = open(os.path.join(d, "status")).read().split()
-    times.append((int(secs), name))
-    log = open(os.path.join(d, "run.log"), errors="replace").read()
-    sizes = dict((l.split()[0], int(l.split()[1])) for l in open(os.path.join(d, "files.txt")))
+    log = read(os.path.join(d, "run.log"), "")
     errors = []
-    try:
-        r = json.load(open(os.path.join(d, "report.json")))
-    except (OSError, ValueError) as e:
-        r = None
-        errors.append("hostDemo exit status %s, no report (%s)" % (status, e.__class__.__name__))
+    st = (read(os.path.join(d, "status")) or "").split()
+    if len(st) != 2:
+        # the worker failed (set -e) before it wrote its status
+        status, r = "unknown", None
+        errors.append("the render worker failed (no status)")
+    else:
+        status, secs = st
+        times.append((int(secs), name))
+        sizes = dict((l.split()[0], int(l.split()[1]))
+                     for l in (read(os.path.join(d, "files.txt")) or "").splitlines() if l.strip())
+        try:
+            r = json.load(open(os.path.join(d, "report.json")))
+        except (OSError, ValueError) as e:
+            r = None
+            errors.append("hostDemo exit status %s, no report (%s)" % (status, e.__class__.__name__))
+    ident_x = expected_identity(pid, major, ctx)
     if r is not None:
         for a in r.get("actions") or []:
             if not a.get("ok"):
                 errors.append("action %s failed (%s)" % (a.get("action"), a.get("status")))
         renders = r.get("renders") or []
-        identity = any((k.get("isIdentity") or {}).get("identity") for k in renders)
+        is_identity = any((k.get("isIdentity") or {}).get("identity") for k in renders)
         for m in r.get("messages") or []:
             # the debug builds of identity effects post "OFX Host should not render"
             # when hostDemo renders them anyway
-            if identity and "should not render" in (m.get("text") or ""):
+            if is_identity and "should not render" in (m.get("text") or ""):
                 continue
             if m.get("type") in ("OfxMessageError", "OfxMessageFatal"):
                 errors.append("%s %s: %s" % (m.get("kind"), m.get("type"), m.get("text")))
         frames = r.get("frames") or [0, 1]
-        views = max([k.get("view") or 0 for k in renders] + [0]) + 1
         stopped = False  # hostDemo stopped at an identity render
         for k in renders:
             o = k.get("output")
-            at = "t=%s%s" % (k.get("time"), "" if views == 1 else " view %s" % k.get("view"))
+            at = "t=%s view %s" % (k.get("time"), k.get("view"))
             rod = (k.get("regionOfDefinition") or {})
             ident = (k.get("isIdentity") or {}).get("identity")
             if not o:
@@ -415,7 +585,14 @@ for line in open(os.path.join(work, "jobs.txt")):
                     continue
                 if ident and k.get("render") is not None:
                     # rendered anyway: the plug-in may not write the output (or fail)
-                    notes["identity"].add(tag)
+                    if ident_x:
+                        used.add(ident_x[4])
+                        notes["identity"].add(tag)
+                        stopped = True
+                        continue
+                    errors.append("%s: an identity (isIdentity: %s) without an output, not in the IDENTITY list"
+                                  " of smoketest.sh: render %s" % (at, json.dumps(k.get("isIdentity")),
+                                                                   json.dumps(k.get("render"))))
                     stopped = True
                     continue
                 errors.append("%s: render failed: %s" % (at, json.dumps(k.get("render"))))
@@ -429,15 +606,20 @@ for line in open(os.path.join(work, "jobs.txt")):
             for f in o.get("files") or []:
                 if not sizes.get(f):
                     errors.append("%s: missing output file %s" % (at, f))
-        if len(renders) != len(frames) * views and not stopped:
-            errors.append("%d renders, expected %d" % (len(renders), len(frames) * views))
+        want = [(t, v) for t in frames for v in range(VIEWS)]
+        got = [(k.get("time"), k.get("view") or 0) for k in renders]
+        if got != want and not stopped:
+            errors.append("renders (time, view) %s, expected %s" % (got, want))
         if status != "0" and not stopped and not errors:
             errors.append("hostDemo exit status %s" % status)
     if status not in ("0", "1") and r is not None:
         errors.insert(0, "hostDemo exit status %s" % status)
     if status == "0" and r is not None and not r.get("ok"):
         errors.append("report: not ok")
-    res, msg = result(tag, name, errors, log, known(pid, major, ctx, depth))
+    res, msg = result(errors, log, known(pid, major, ctx, depth))
+    if res == "XFAIL" and ident_x:
+        # e.g. debug builds: the identity render asserts (XFAIL), so it has no report
+        used.add(ident_x[4])
     nrender[res] += 1
     note(tag, res)
     if res != "ok":
@@ -453,16 +635,34 @@ for k, v in notes.items():
     if v:
         print("not failures (%s): %s" % (k, ", ".join(sorted(v))))
 print("slowest renders: " + ", ".join("%s %ds" % (n, s) for s, n in times[:5]))
+# Stale entries: SKIP unless --only; XFAIL and IDENTITY in full mode only (--quick does
+# not render every context). They fail, except with SMOKETEST_BUNDLES (a partial build).
+stale = []
+if not mode.startswith("only"):
+    stale += ["SKIP     " + x for rx, x in skip if x not in used]
+if mode.startswith("full"):
+    stale += ["XFAIL    " + x[6] for x in xfail if x[6] not in used]
+    stale += ["IDENTITY " + x[4] for x in identity if x[4] not in used]
+for x in stale:
+    print("%s stale entry (matches nothing in this run: remove it from smoketest.sh): %s"
+          % ("WARNING:" if mode.endswith("partial") else "FAIL ", x))
 count = dict((k, sum(1 for v in plugins.values() if v == k)) for k in order)
 print("smoketest: %d plug-ins: %d ok, %d skipped, %d with known bugs (XFAIL), %d failed, %d XPASS"
       % (len(plugins), count["ok"], count["SKIP"], count["XFAIL"], count["FAIL"], count["XPASS"]))
 print("smoketest: %d renders: %d ok, %d XFAIL, %d XPASS, %d FAIL"
-      % (len(times), nrender["ok"], nrender["XFAIL"], nrender["XPASS"], nrender["FAIL"]))
+      % (nrender["ok"] + nrender["XFAIL"] + nrender["XPASS"] + nrender["FAIL"], nrender["ok"],
+         nrender["XFAIL"], nrender["XPASS"], nrender["FAIL"]))
 bad = sorted(t for t, v in plugins.items() if v in ("FAIL", "XPASS"))
 if bad:
     print("failed: " + ", ".join(bad))
-    sys.exit(1)
+if stale and not mode.endswith("partial"):
+    print("failed: %d stale entries" % len(stale))
+sys.exit(1 if bad or (stale and not mode.endswith("partial")) else 0)
 EOF
+if [ -n "$failed_workers" ]; then
+    echo "smoketest: workers failed: $failed_workers (their plug-ins or renders fail above: no status)"
+    status=1
+fi
 if [ -n "$out" ]; then
     mkdir -p "$out"
     rm -rf "$out/jobs" "$out/describe"
