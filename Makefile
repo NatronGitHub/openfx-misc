@@ -43,6 +43,7 @@ JoinViews \
 Keyer \
 KeyMix \
 LayerContactSheet \
+LayerRename \
 Log2Lin \
 MatteMonitor \
 Merge \

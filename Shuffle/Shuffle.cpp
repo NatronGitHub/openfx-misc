@@ -216,10 +216,10 @@ template<int numvals>
 static int
 floatToInt(float value)
 {
-    if (value <= 0) {
-        return 0;
-    } else if (value >= 1.) {
-        return numvals - 1;
+    // NaN fails both comparisons and gives 0, without a NaN test (which -ffast-math could remove)
+    // (a NaN reaching the int conversion below would be undefined behaviour)
+    if ( !( (value > 0) && (value < 1.) ) ) {
+        return (value >= 1.) ? (numvals - 1) : 0;
     }
 
     return value * (numvals - 1) + 0.5f;
