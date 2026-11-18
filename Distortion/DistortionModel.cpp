@@ -27,6 +27,23 @@
 
 OFXS_NAMESPACE_OFX_ENTER
 
+// Domain guards (no NaN or infinity may be produced, see the NaN audit):
+// a denominator whose magnitude is below kDenomMin (e.g. a zero squeeze, filmback, pixel aspect
+// or format size, or a radial factor that vanishes at some radius) is replaced by +-kDenomMin.
+// Larger values are returned unchanged, so that non-degenerate parameters give the same result.
+// A point mapped through such a denominator is more than 1e8 image sizes away, i.e. outside.
+#define kDenomMin 1e-8
+
+static inline double
+nonZero(double x)
+{
+    if (std::abs(x) >= kDenomMin) {
+        return x;
+    }
+
+    return (x < 0.) ? -kDenomMin : kDenomMin;
+}
+
 // parameters for Newton method:
 #define EPSJAC 1.e-3 // epsilon for Jacobian calculation
 #define EPSCONV 1.e-4 // epsilon for convergence test
@@ -172,7 +189,7 @@ DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
                                          double squeeze,
                                          double ax,
                                          double ay)
-: _par(par)
+: _par( nonZero(par) )
 , _k1(k1)
 , _k2(k2)
 , _cx(cx)
@@ -183,7 +200,7 @@ DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
 {
     double fx = (format.x2 - format.x1) / 2.;
     double fy = (format.y2 - format.y1) / 2.;
-    _f = (std::max)(fx, fy); // TODO: distortion scaling param for LensDistortion?
+    _f = nonZero( (std::max)(fx, fy) ); // TODO: distortion scaling param for LensDistortion?
     _xSrcCenter = (format.x1 + format.x2) / 2.;
     _ySrcCenter = (format.y1 + format.y2) / 2.;
 }
@@ -217,11 +234,12 @@ undistort_nuke(double xd,
     double r2 = x2 + y2;
     double k2r2pk1 = k2 * r2 + k1;
     //double kry = 1 + ((k2r2pk1 + ay)*x2 + k2r2pk1*y2);
-    double kry = 1 + (k2r2pk1 * r2 + ay * x2);
+    // kry and krx vanish at some radius if k1 or k2 is negative
+    double kry = nonZero(1 + (k2r2pk1 * r2 + ay * x2));
 
     *yu = (y / kry) + cy;
     //double krx = 1 + (k2r2pk1*x2 + (k2r2pk1 + ax)*y2)/squeeze;
-    double krx = 1 + (k2r2pk1 * r2 + ax * y2) / squeeze;
+    double krx = nonZero(1 + (k2r2pk1 * r2 + ax * y2) / squeeze); // squeeze >= 0.001 (getDistortionModel)
     *xu = (x / krx) + cx;
 }
 
@@ -262,7 +280,7 @@ DistortionModelPFBarrel::DistortionModelPFBarrel(const OfxRectD& format,
 , _c5(c5)
 , _xp(xp)
 , _yp(yp)
-, _squeeze(squeeze)
+, _squeeze( nonZero(squeeze) ) // the squeeze parameter may be 0
 {
     /*
      double fx = (format.x2 - format.x1) / 2.;
@@ -273,7 +291,7 @@ DistortionModelPFBarrel::DistortionModelPFBarrel(const OfxRectD& format,
      */
     _fw = format.x2 - format.x1;
     _fh = format.y2 - format.y1;
-    _normx = std::sqrt(2.0/(_fw * _fw + _fh * _fh));
+    _normx = std::sqrt( 2.0 / nonZero(_fw * _fw + _fh * _fh) ); // the format may be empty
 }
 
 // function used to undistort a point or distort an image
@@ -341,23 +359,23 @@ DistortionModel3DEBase::DistortionModel3DEBase(const OfxRectD& format,
                                                double pa)
 : _format(format)
 , _rs(renderScale)
-, _w(format.x2 - format.x1)
-, _h(format.y2 - format.y1)
+, _w( nonZero(format.x2 - format.x1) ) // the format may be empty
+, _h( nonZero(format.y2 - format.y1) )
 , _xa_fov_unit(xa_fov_unit)
 , _ya_fov_unit(ya_fov_unit)
 , _xb_fov_unit(xb_fov_unit)
 , _yb_fov_unit(yb_fov_unit)
-, _xd_fov_unit(_xb_fov_unit - _xa_fov_unit)
-, _yd_fov_unit(_yb_fov_unit - _ya_fov_unit)
+, _xd_fov_unit( nonZero(_xb_fov_unit - _xa_fov_unit) ) // the fov may be empty
+, _yd_fov_unit( nonZero(_yb_fov_unit - _ya_fov_unit) )
 , _fl_cm(fl_cm)
 , _fd_cm(fd_cm)
-, _w_fb_cm(w_fb_cm)
-, _h_fb_cm(h_fb_cm)
+, _w_fb_cm( nonZero(w_fb_cm) ) // the filmback size parameters may be 0
+, _h_fb_cm( nonZero(h_fb_cm) )
 , _x_lco_cm(x_lco_cm)
 , _y_lco_cm(y_lco_cm)
-, _pa(pa)
+, _pa( nonZero(pa) ) // the pixel aspect parameter may be 0
 {
-    _r_fb_cm = std::sqrt(w_fb_cm * w_fb_cm + h_fb_cm * h_fb_cm) / 2.0;
+    _r_fb_cm = std::sqrt(_w_fb_cm * _w_fb_cm + _h_fb_cm * _h_fb_cm) / 2.0; // > 0
 }
 
 
@@ -384,7 +402,7 @@ DistortionModel3DEClassic::DistortionModel3DEClassic(const OfxRectD& format,
                                                      double qu)
 : DistortionModel3DEBase(format, renderScale, xa_fov_unit, ya_fov_unit, xb_fov_unit, yb_fov_unit, fl_cm, fd_cm, w_fb_cm, h_fb_cm, x_lco_cm, y_lco_cm, pa)
 , _ld(ld)
-, _sq(sq)
+, _sq( nonZero(sq) ) // the anamorphic squeeze parameter may be 0
 , _cx(cx)
 , _cy(cy)
 , _qu(qu)
@@ -551,7 +569,7 @@ DistortionModel3DEFishEye8::undistort_dn(double xd, double yd, double* xu, doubl
 void
 DistortionModel3DEFishEye8::esa2plain(double x_esa_dn, double y_esa_dn, double *x_plain_dn, double *y_plain_dn) const
 {
-    double f_dn = _fl_cm / _r_fb_cm;
+    double f_dn = nonZero(_fl_cm / _r_fb_cm); // the focal length parameter may be 0
     // Remove fisheye projection
     double r_esa_dn = std::sqrt(x_esa_dn * x_esa_dn + y_esa_dn * y_esa_dn);
     if (r_esa_dn <= 0) {
@@ -560,8 +578,8 @@ DistortionModel3DEFishEye8::esa2plain(double x_esa_dn, double y_esa_dn, double *
         return;
     }
     double arg = r_esa_dn / (2 * f_dn);
-    // Black areas, undefined.
-    double arg_clip = (std::min)(1., arg);
+    // Black areas, undefined. Clamp to the domain of asin (f_dn < 0 if the host ignores the range of the focal length).
+    double arg_clip = (std::max)( -1., (std::min)(1., arg) );
     double phi = 2 * std::asin(arg_clip);
     double r_plain_dn;
     if (phi >= OFXS_PI / 2.0) {
@@ -604,7 +622,8 @@ DistortionModel3DEStandard::DistortionModel3DEStandard(const OfxRectD& format,
 , _v3(v3)
 {
     //calc_m()
-    double q = std::sqrt(1.0 + b);
+    // b <= -1 has no meaning (and gives sqrt of a negative number or a division by zero): clamp 1 + b
+    double q = std::sqrt( (std::max)(kDenomMin * kDenomMin, 1.0 + b) );
     double c = std::cos(phi * OFXS_PI / 180.0);
     double s = std::sin(phi * OFXS_PI / 180.0);
     //mat2_type para = tensq(vec2_type(cos(_phi * OFXS_PI / 180.0),sin(_phi * OFXS_PI / 180.0)));
@@ -750,7 +769,7 @@ DistortionModelPanoTools::DistortionModelPanoTools(const OfxRectD& format,
                                                    double g,
                                                    double t)
 : _rs(renderScale)
-, _par(par)
+, _par( nonZero(par) )
 , _a(a)
 , _b(b)
 , _c(c)
@@ -762,11 +781,11 @@ DistortionModelPanoTools::DistortionModelPanoTools(const OfxRectD& format,
     // Normalized means here that the largest circle that completely fits into an image is said to have radius=1.0 . (In other words, radius=1.0 is half the smaller side of the image.)
     double fx = format.x2 - format.x1;
     double fy = format.y2 - format.y1;
-    _f = (std::min)(fx, fy)  / 2.;
+    _f = nonZero( (std::min)(fx, fy)  / 2. ); // the format may be empty
     _xSrcCenter = (format.x1 + format.x2) / 2.;
     _ySrcCenter = (format.y1 + format.y2) / 2.;
-    _g /= fy;
-    _t /= fx;
+    _g /= nonZero(fy);
+    _t /= nonZero(fx);
 }
 
 

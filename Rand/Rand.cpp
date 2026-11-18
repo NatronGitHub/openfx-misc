@@ -55,7 +55,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription "Generate a random field of noise. The field does not resample if you change the resolution or density (you can animate the density without pixels randomly changing)."
 #define kPluginIdentifier "net.sf.openfx.Noise" // don't ever change the plugin ID
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// 1.1: Density 0 no longer computes 0/0 (NaN noise level), NaN audit
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -292,8 +293,11 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor,
     // noise level depends on the render scale
     // (the following formula is for Gaussian noise only, but we use it as an approximation)
     double densityRS = (std::min)( 1., density / (args.renderScale.x * args.renderScale.y) );
-    float noiseLevel = (float)( noise * (density / densityRS) * std::sqrt(args.renderScale.x) );
-    float mean = (float)(noise * (density / densityRS) / 2.);
+    // density / densityRS is renderScale.x * renderScale.y if densityRS < 1: use this limit for density <= 0
+    // (0/0). The density range is [0,1].
+    const double densityRatio = (densityRS > 0.) ? (density / densityRS) : (args.renderScale.x * args.renderScale.y);
+    float noiseLevel = (float)( noise * densityRatio * std::sqrt(args.renderScale.x) );
+    float mean = (float)(noise * densityRatio / 2.);
 
     processor.setValues(noiseLevel, densityRS, mean, seed);
 

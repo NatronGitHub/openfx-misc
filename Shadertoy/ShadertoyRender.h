@@ -2138,7 +2138,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #ifdef USE_OSMESA
     glEnable(GL_SCISSOR_TEST); // for Mesa tiled rendering only
     {
-        unsigned int nCPUs = OFX::MultiThread::getNumCPUs();
+        // at least 1: a host may report 0 CPUs, and log(0) = -inf would be converted to int
+        unsigned int nCPUs = (std::max)(1u, OFX::MultiThread::getNumCPUs());
         // - take the square root of nCPUs
         // - compute the next closest power of two -> this gives the number of tiles for the x dimension
         int pow2_x = (int)std::ceil(std::log( std::sqrt(nCPUs) ) / OFXS_LN2);
