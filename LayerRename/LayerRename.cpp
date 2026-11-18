@@ -42,6 +42,25 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
+// Names of the planes that have a special meaning for hosts (motion vectors, disparity, color):
+// a renamed layer must not take one of them, or it would be confused with that plane.
+static bool
+isReservedPlaneName(const std::string& name)
+{
+    static const char* const reserved[] = {
+        "Color", "RGBA", "RGB", "Alpha",
+        "Forward", "Backward", "DisparityLeft", "DisparityRight",
+        NULL
+    };
+    for (const char* const* r = reserved; *r != NULL; ++r) {
+        if (name == *r) {
+            return true;
+        }
+    }
+    // the OFX plane identifiers (kFnOfxImagePlane*), e.g. "uk.co.thefoundry.OfxImagePlaneColour"
+    return name.compare(0, 30, "uk.co.thefoundry.OfxImagePlane") == 0;
+}
+
 #define kPluginName "LayerRenameOFX"
 #define kPluginGrouping "Channel"
 #define kPluginDescription \
@@ -59,7 +78,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The Color layer itself is always kept, since every image has one. " \
     "The motion vector (Forward, Backward) and disparity (DisparityLeft, DisparityRight) layers are never renamed.\n" \
     "\n" \
-    "If a new name is empty, or is already used by another layer of the output (a layer that is not renamed, " \
+    "If a new name is empty, is the name of a special layer (Color, RGBA, RGB, Alpha, Forward, Backward, DisparityLeft, DisparityRight), or is already used by another layer of the output (a layer that is not renamed, " \
     "or a layer renamed before it, in the input order), the layer keeps its original name, and a warning is displayed. " \
     "If that name was also taken by a renamed layer, the layer is removed from the output.\n" \
     "\n" \
@@ -366,6 +385,8 @@ LayerRenamePlugin::getPlaneRenames(double time,
                     (c.newName.find(kNatronPlaneSeparatorChannelsLabel) != std::string::npos) ||
                     (c.newName.find(kNatronPlaneSeparatorChannel) != std::string::npos) ) {
             problem = "invalid name";
+        } else if ( isReservedPlaneName(c.newName) ) {
+            problem = "reserved name";
         } else if ( taken.count(c.newName) ) {
             problem = "name already used";
         }
@@ -648,6 +669,7 @@ LayerRenamePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamFindLabel);
         param->setHint(kParamFindHint);
         param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param); // the output planes depend on it
         if (page) {
             page->addChild(*param);
         }
@@ -657,6 +679,7 @@ LayerRenamePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamReplaceLabel);
         param->setHint(kParamReplaceHint);
         param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param); // the output planes depend on it
         if (page) {
             page->addChild(*param);
         }
@@ -673,6 +696,7 @@ LayerRenamePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamMatchOptionRegex);
         param->setDefault( (int)eMatchPrefix );
         param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param); // the output planes depend on it
         if (page) {
             page->addChild(*param);
         }
@@ -683,6 +707,7 @@ LayerRenamePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamRenameColorHint);
         param->setDefault(false);
         param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param); // the output planes depend on it
         if (page) {
             page->addChild(*param);
         }
