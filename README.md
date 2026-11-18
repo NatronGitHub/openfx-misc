@@ -332,7 +332,7 @@ terminal:
 - `make [options]` to compile as a single combined plugin (see below
   for valid options).
 - `make nomulti [options]` to compile as separate plugins (useful if
-only a few plugins are is needed, for example). `make` can also be
+only a few plugins are needed, for example). `make` can also be
 executed in any plugin's directory.
 - `make [options] CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp` to compile
   with OpenMP support (available for CImg-based plugins and DenoiseSharpen).
@@ -346,18 +346,23 @@ Another common option is `BITS=32`for compiling a 32-bits version,
 `BITS=64` for a 64-bits version, and `BITS=Universal` for a universal
 binary (OS X only).
 
-The Makefiles do not choose a C++ standard: they use the compiler's default
-(`gnu++17` for GCC >= 11 and Clang >= 16, but `gnu++14` for Apple clang), whereas the CMake, Xcode and Visual Studio
-builds use C++17 by default. The code must compile as C++17 and C++20. To choose the
-standard, add it to the compiler command or to the flags, for example
-`make CXX="g++ -std=c++20"` (as Natron's build scripts do) or
-`make CXXFLAGS_ADD=-std=c++20`.
+The Makefiles do not choose a C++ standard: they use the compiler's
+default (`gnu++17` for GCC >= 11 and Clang >= 16, but `gnu++14` for
+Apple clang), whereas the CMake, Xcode and Visual Studio builds use
+C++17 by default. The code must compile as C++17 and C++20. To choose
+the standard, add it to the compiler command or to the flags, for
+example `make CXX="g++ -std=c++20"` (as Natron's build scripts do) or
+`make CXXFLAGS_ADD=-std=c++20`. On macOS, pass `-std=c++17` (or
+`-std=c++20`) so that make builds match the supported standards.
+`CXXFLAGS_ADD` given on the command line replaces any other value
+(e.g. `-fopenmp`), so the two must be combined:
+`make CXXFLAGS_ADD="-fopenmp -std=c++20" LDFLAGS_ADD=-fopenmp`.
 
 See the file `Makefile.master` in the toplevel directory for other useful
 flags/variables.
 
 The compiled plugins are placed in subdirectories named after the
-configuration, for example Linux-64-realease for a 64-bits Linux
+configuration, for example `Linux-64-release` for a 64-bits Linux
 compilation. In each of these directories, a `*.bundle` directory is
 created, which has to be moved to the proper place
 (`/usr/OFX/Plugins`on Linux, or `/Library/OFX/Plugins`on OS X), using

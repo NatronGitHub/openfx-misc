@@ -123,7 +123,8 @@ option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into
 
 # C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
 # Qt5), or 20 (Qt6, RB-2.7): -DOFX_CXX_STANDARD=20. It is used by add_ofx_plugin and
-# openfx::Support, without compiler extensions (-std=c++17, as the Makefile CI builds).
+# openfx::Support, without compiler extensions (-std=c++17, not -std=gnu++17). The Makefiles
+# pass no -std: they use the compiler's default, or the -std that Natron passes in CXX.
 
 # ========================== compiler flags ==========================
 # Release: CMake's default flags (-O3 -DNDEBUG with GCC and Clang; Makefile.master uses
