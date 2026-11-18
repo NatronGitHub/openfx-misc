@@ -10,3 +10,7 @@ ports:
   - name: libomp
   # CMake (the runner's /usr/local/bin/cmake is not on PATH: MacPorts only)
   - name: cmake
+  # expat for openfx's HostSupport (hostDemo: OFX_BUILD_HOSTDEMO). MacPorts' cmake already
+  # depends on it; FindEXPAT prefers it to the SDK's. hostDemo is not deployed, so its
+  # minimum macOS does not matter.
+  - name: expat

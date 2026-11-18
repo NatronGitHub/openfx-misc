@@ -94,7 +94,8 @@ case ":$OFX_PLUGIN_PATH:" in *-debug:*) debug=1 ;; *) debug=0 ;; esac
 [ -z "$RENDERTEST_DEBUG" ] || debug=$RENDERTEST_DEBUG
 
 # hostDemo: $HOSTDEMO, else DIR/bin/hostDemo (a CMake install tree of openfx-misc configured
-# with -DOFX_BUILD_HOSTDEMO=ON), else built here with openfx's CMake (BUILD_EXAMPLE_HOSTS).
+# with -DOFX_BUILD_HOSTDEMO=ON), else built here with openfx's CMake (BUILD_EXAMPLE_HOSTS;
+# HostSupport needs the system expat).
 if [ -z "$HOSTDEMO" ]; then
     for d in "$@"; do
         if [ -x "$d/bin/hostDemo" ]; then
