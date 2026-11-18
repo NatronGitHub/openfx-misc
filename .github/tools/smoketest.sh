@@ -28,7 +28,13 @@
 # SMOKETEST_TIMEOUT (seconds per describe or render, default 120),
 # SMOKETEST_DEBUG=1 (a debug build: also use the "debug:" entries of the lists below),
 # SMOKETEST_BUNDLES (the expected bundles, see BUNDLES below; e.g. "Misc:0" for a build
-# with -DBUILD_CIMG_PLUGINS=OFF -DBUILD_SHADERTOY=OFF -DBUILD_TESTING=OFF).
+# with -DBUILD_CIMG_PLUGINS=OFF -DBUILD_SHADERTOY=OFF -DBUILD_TESTING=OFF),
+# SMOKETEST_XPASS_OK=1 (accept the known bugs that were fixed: an XFAIL entry that passes
+# (XPASS) is reported but does not fail, one whose failure no longer shows the expected
+# message is an XFAIL "(message changed)", and stale entries are only a warning; for
+# SupportExt's CI, so that a SupportExt pull request that fixes a bug of the XFAIL list
+# (e.g. Premult:2 and Unpremult:2, issue #166) passes, while the CI of openfx-misc, which
+# still has the old SupportExt submodule, keeps the entry; the default is strict).
 # Linux and macOS (needs python3 and perl).
 #
 # Each render is one hostDemo run (--no-std-paths --no-cache: only the bundle of
@@ -38,8 +44,9 @@
 # first input clip, checker:16 for the second one, a solid colour for the
 # others; the optional clips of generators (plug-ins with a generator context)
 # are disconnected; masks are disconnected in the filter context and get a
-# checker:32 in the general context; INPUTS below overrides these. A plug-in
-# fails if:
+# checker:32 in the general context; INPUTS below overrides these. PARAMS below adds
+# renders with other parameters (e.g. for the plug-ins that are identities by
+# default). A plug-in fails if:
 # - hostDemo --describe fails (load, describe or describeInContext), or the
 #   plug-in supports neither the filter nor the general context;
 # - a render fails: hostDemo fails (an action failed: createInstance,
@@ -49,7 +56,8 @@
 #   shows a missing render or output, or an error or fatal message from the
 #   plug-in; or an output file is missing or empty.
 # - a bundle of BUNDLES is missing, or has fewer plug-ins than its minimum;
-# - an entry of SKIP, IDENTITY or XFAIL is stale (see below).
+# - a PARAMS render is an identity (see PARAMS below);
+# - an entry of SKIP, IDENTITY, PARAMS or XFAIL is stale (see below).
 # Two cases are not failures: an identity effect (isIdentity) of the IDENTITY list
 # that does not write its output when hostDemo renders it anyway (the spec says
 # the host should not call render then; hostDemo stops at that render), and an
@@ -58,12 +66,12 @@
 # SKIP list below, with the reason. Known bugs are expected failures (XFAIL, in
 # the XFAIL list, each with its GitHub issue), with the message that their
 # failure must show: an XFAIL render that passes (XPASS) fails the test, so that
-# the list is updated.
+# the list is updated (except with SMOKETEST_XPASS_OK=1).
 # Stale entries fail the test, so that the lists stay exact: a SKIP entry that
-# matches no plug-in (except with --only), and, in full mode only (not --quick,
+# matches no plug-in and a PARAMS entry that adds no render (except with --only), and, in full mode only (not --quick,
 # not --only; --quick does not render every context), an IDENTITY or XFAIL entry
 # that matches no identity render or no expected failure. With SMOKETEST_BUNDLES
-# (a partial build), stale entries are only a warning.
+# (a partial build) or SMOKETEST_XPASS_OK=1, stale entries are only a warning.
 set -eo pipefail
 
 # ---------------------------------------------------------------------------
@@ -101,7 +109,7 @@ IDENTITY=(
     "net.sf.openfx.Retime|debug:an identity at the default speed (1: whole source frames)"
     "net.sf.openfx.TestGroups|debug:an identity unless Force Copy is set (Test bundle)"
 )
-# (the entries of SKIP, IDENTITY, INPUTS and XFAIL are split at "|": no "|" in the regexes)
+# (the entries of SKIP, IDENTITY, INPUTS, PARAMS and XFAIL are split at "|": no "|" in the regexes)
 # Inputs that replace the default ones: "identifier regex[@context]|Clip=spec ...".
 # DATA is the directory of the files made below (square32.pfm: a 32x32 white Pf,
 # box5.pfm: a 5x5 white PF).
@@ -110,6 +118,22 @@ INPUTS=(
     "net.sf.cimg.CImgConvolve|Filter=file:DATA/box5.pfm"
     # inpaint a 32x32 square, not half of the image (minutes)
     "eu.cimg.Inpaint@general|Mask=file:DATA/square32.pfm@344,272"
+)
+# Parameter overrides: "identifier regex[:major][@context][/depth]|argument ...", where the
+# arguments are hostDemo's (name=value[,value...], -s name@t=value for a key; split into words).
+# Each entry adds one render of each matching plug-in with these parameters, besides the renders
+# with the default parameters, also with --quick: in the given context (default: general if the
+# plug-in has it, else filter), at the given depth (default: float, or the highest supported
+# one). It must not be an identity: it fails if isIdentity is true, or if its output at t=0 is
+# the one of the default render (same context and depth), so that it cannot silently become an
+# identity (e.g. a renamed parameter fails: hostDemo rejects unknown parameters).
+PARAMS=(
+    # Transform, Position and CornerPin are identities with their default parameters: render
+    # SupportExt's Transform3x3 (filtering, motion blur)
+    "net.sf.openfx.TransformPlugin|rotate=30 scale=0.5,0.5"
+    "net.sf.openfx.TransformPlugin/float|motionBlur=1 -s translate@0=10,5 -s translate@1=30,15"
+    "net.sf.openfx.Position|translate=10,5"
+    "net.sf.openfx.CornerPinPlugin|to1=40,30 to2=680,10 to3=700,560 to4=20,540"
 )
 # Known bugs, each tracked by a GitHub issue: "identifier regex[:major][@context][/depth]|
 # expected message (Python re, searched in the failure summary and the hostDemo log)|
@@ -178,13 +202,16 @@ if [ "$1" = --describe-job ]; then
     exit 0
 fi
 if [ "$1" = --render-job ]; then
-    IFS='|' read -r name bundle id major ctx depth inputs <<< "$2"
+    IFS='|' read -r name bundle id major ctx depth inputs _ params <<< "$2"
     d=$SMOKETEST_WORK/jobs/$name
     mkdir -p "$d"
     cd "$d"
     args=()
     IFS=';' read -r -a specs <<< "$inputs"
     for i in "${specs[@]}"; do [ -z "$i" ] || args+=(-i "$i"); done
+    # the parameter overrides of PARAMS (hostDemo arguments)
+    IFS=';' read -r -a words <<< "$params"
+    for i in "${words[@]}"; do [ -z "$i" ] || args+=("$i"); done
     start=$(date +%s)
     exec 2>> run.log
     watchdog run.log "$bundle" -p "$id" -m "$major" -c "$ctx" -d "$depth" --format pfm -o out \
@@ -316,6 +343,7 @@ echo "$(wc -l < "$work/plugins.txt" | tr -d ' ') plug-ins (identifier and major 
 # The lists, for the Python scripts below (one entry per line)
 printf '%s\n' "${SKIP[@]}" > "$work/skip.txt"
 printf '%s\n' "${INPUTS[@]}" > "$work/inputs.txt"
+printf '%s\n' "${PARAMS[@]}" > "$work/params.txt"
 printf '%s\n' "${XFAIL[@]}" > "$work/xfail.txt"
 printf '%s\n' "${IDENTITY[@]}" > "$work/identity.txt"
 
@@ -338,7 +366,8 @@ failed_workers=
 tr '\n' '\0' < "$work/plugins.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --describe-job ||
     failed_workers="describe (xargs exit status $?)"
 
-# The render jobs, one per line: "name|bundle|id|major|context|depth|Clip=spec;..."
+# The render jobs, one per line: "name|bundle|id|major|context|depth|Clip=spec;...|
+# PARAMS entry number|hostDemo argument;..." (the last two are empty for a default render)
 python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
 import json, os, re, sys
 work, quick, debug = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1"
@@ -358,6 +387,12 @@ for s in entries("inputs.txt"):
     if not m:
         sys.exit("bad INPUTS entry: " + s)
     overrides.append((m.group(1), m.group(2), m.group(3).replace("DATA", os.path.join(work, "data")).split()))
+params = []
+for s in entries("params.txt"):
+    m = re.fullmatch(r"([^:@/|]*)(?::([0-9]+))?(?:@(filter|general))?(?:/(byte|short|float))?\|(.*)", s)
+    if not m or not m.group(5).split():
+        sys.exit("bad PARAMS entry: " + s)
+    params.append(m.groups()[:4] + (m.group(5).split(),))
 depths = {"OfxBitDepthByte": "byte", "OfxBitDepthShort": "short", "OfxBitDepthFloat": "float"}
 def text(path):
     try:
@@ -389,9 +424,13 @@ for line in open(os.path.join(work, "plugins.txt")):
     contexts = desc["contexts"]
     generator = "OfxImageEffectContextGenerator" in contexts
     n = 0
+    info = {}  # context -> (inputs, depths), for PARAMS
     for ctx in ("filter", "general"):
         c = contexts.get("OfxImageEffectContext" + ctx.capitalize())
-        if c is None or (quick and ctx == "filter" and "OfxImageEffectContextGeneral" in contexts):
+        if c is None:
+            continue
+        skipped = quick and ctx == "filter" and "OfxImageEffectContextGeneral" in contexts
+        if skipped and not c.get("ok"):
             continue
         if not c.get("ok"):
             print("FAIL|%s|%s|%s|describeInContext(%s) failed: %s"
@@ -420,11 +459,29 @@ for line in open(os.path.join(work, "plugins.txt")):
                     if name in inputs:
                         inputs[name] = spec
         ins = ";".join("%s=%s" % i for i in inputs.items())
-        for depth in sorted(set(depths[p] for p in c["flags"]["supportedPixelDepths"] if p in depths),
-                            key=["byte", "short", "float"].index):
-            print("%s-v%s-%s-%s|%s|%s|%s|%s|%s|%s" % (pid, major, ctx, depth, bundle, pid, major, ctx,
-                                                     depth, ins))
+        ds = sorted(set(depths[p] for p in c["flags"]["supportedPixelDepths"] if p in depths),
+                    key=["byte", "short", "float"].index)
+        info[ctx] = (ins, ds)
+        if skipped:
+            continue
+        for depth in ds:
+            print("%s-v%s-%s-%s|%s|%s|%s|%s|%s|%s||" % (pid, major, ctx, depth, bundle, pid, major, ctx,
+                                                       depth, ins))
             n += 1
+    # PARAMS: one more render per entry, in the given context (default: general if the
+    # plug-in has it, else filter) and at the given depth (default: float, or the highest
+    # supported one)
+    for i, (rx, pmajor, pctx, pdepth, words) in enumerate(params):
+        if not re.fullmatch(rx, pid) or pmajor not in (None, major):
+            continue
+        ctx = pctx or ("general" if "general" in info else "filter")
+        if ctx not in info or not info[ctx][1] or (pdepth and pdepth not in info[ctx][1]):
+            continue
+        ins, ds = info[ctx]
+        depth = pdepth or ds[-1]
+        print("%s-v%s-%s-%s-params%d|%s|%s|%s|%s|%s|%s|%d|%s" % (pid, major, ctx, depth, i + 1, bundle, pid,
+                                                              major, ctx, depth, ins, i + 1, ";".join(words)))
+        n += 1
     if n == 0:
         print("FAIL|%s|%s||no render: no filter or general context, or no supported depth (contexts: %s)"
               % (tag, pid, " ".join(contexts)), file=sys.stderr)
@@ -443,9 +500,11 @@ mode=full
 [ -z "$only" ] || mode=only
 [ -z "$SMOKETEST_BUNDLES" ] || mode=$mode-partial
 status=0
-python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "$mode" << 'EOF' || status=$?
+python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "$mode" "${SMOKETEST_XPASS_OK:-0}" << 'EOF' || status=$?
 import json, os, re, sys
-work, debug, mode = sys.argv[1], sys.argv[2] == "1", sys.argv[3]
+work, debug, mode, xpass_ok = sys.argv[1], sys.argv[2] == "1", sys.argv[3], sys.argv[4] == "1"
+# stale entries are only a warning with SMOKETEST_BUNDLES (a partial build) or SMOKETEST_XPASS_OK
+lenient = mode.endswith("partial") or xpass_ok
 def entries(name):
     return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
 def debug_only(desc):
@@ -476,6 +535,7 @@ for x in entries("skip.txt"):
     if keep:
         skip.append((rx, x))
 used = set()  # the entries of XFAIL, IDENTITY and SKIP that were used
+params_used = set()  # the numbers of the PARAMS entries that were rendered
 order = ["ok", "SKIP", "XFAIL", "XPASS", "FAIL"]
 plugins = {}  # plug-in (identifier and major version) -> worst result
 nrender = dict((k, 0) for k in order)
@@ -504,12 +564,34 @@ def result(errors, log, x):
     summary = "; ".join(errors[:4]) + (" (+%d)" % (len(errors) - 4) if len(errors) > 4 else "")
     if x:
         if not errors:
+            if xpass_ok:
+                used.add(x[6])
+                return "XPASS", "known bug fixed (accepted: SMOKETEST_XPASS_OK): " + x[5]
             return "XPASS", "known bug fixed? Update the XFAIL list of smoketest.sh: " + x[5]
         if re.search(x[4], summary + "\n" + log):
             used.add(x[6])
             return "XFAIL", x[5]
+        if xpass_ok:
+            used.add(x[6])
+            return "XFAIL", "(message changed, accepted: SMOKETEST_XPASS_OK) %s (known bug, expected message \"%s\": %s)" % (
+                summary, x[4], x[5])
         return "FAIL", "%s (known bug, but not the expected message \"%s\": %s)" % (summary, x[4], x[5])
     return ("FAIL", summary) if errors else ("ok", "")
+
+
+def read_json(path):
+    try:
+        return json.load(open(path))
+    except (OSError, ValueError):
+        return None
+
+
+def crc0(r):
+    # the CRC32 of the output at t=0, view 0, in a report
+    for k in (r or {}).get("renders") or []:
+        if k.get("time") == 0 and not k.get("view"):
+            return (k.get("output") or {}).get("crc32")
+    return None
 
 
 def read(path, default=None):
@@ -537,7 +619,9 @@ for line in open(os.path.join(work, "describe-results.txt")):
     note(tag, res)
 times = []
 for line in open(os.path.join(work, "jobs.txt")):
-    name, bundle, pid, major, ctx, depth, inputs = line.rstrip("\n").split("|")
+    name, bundle, pid, major, ctx, depth, inputs, pnum, pwords = line.rstrip("\n").split("|")
+    if pnum:
+        params_used.add(int(pnum))
     tag = "%s v%s" % (pid, major)
     d = os.path.join(work, "jobs", name)
     log = read(os.path.join(d, "run.log"), "")
@@ -610,6 +694,17 @@ for line in open(os.path.join(work, "jobs.txt")):
         got = [(k.get("time"), k.get("view") or 0) for k in renders]
         if got != want and not stopped:
             errors.append("renders (time, view) %s, expected %s" % (got, want))
+        if pnum:
+            # a PARAMS render must not be an identity: not isIdentity, and not the output of
+            # the default render at t=0 (view 0)
+            if is_identity:
+                errors.append("an identity with the parameters of PARAMS (%s): change them"
+                              % " ".join(pwords.split(";")))
+            crc, base = crc0(r), crc0(read_json(os.path.join(work, "jobs", name.rsplit("-params", 1)[0],
+                                                             "report.json")))
+            if crc and crc == base:
+                errors.append("t=0: the output is the one of the default parameters (CRC32 %s) with the"
+                              " parameters of PARAMS (%s): change them" % (crc, " ".join(pwords.split(";"))))
         if status != "0" and not stopped and not errors:
             errors.append("hostDemo exit status %s" % status)
     if status not in ("0", "1") and r is not None:
@@ -624,11 +719,12 @@ for line in open(os.path.join(work, "jobs.txt")):
     note(tag, res)
     if res != "ok":
         print("%-5s %-50s %s" % (res, name, msg))
-    if res in ("FAIL", "XPASS"):
+    if res == "FAIL" or (res == "XPASS" and not xpass_ok):
         for l in log.strip().splitlines()[-15:]:
             print("  | " + l)
-        print("  | (cd %s && OFX_PLUGIN_PATH=<%s bundle dir> hostDemo --no-std-paths --no-cache -p %s -m %s -c %s -d %s%s)"
-              % (name, bundle, pid, major, ctx, depth, "".join(" -i " + i for i in inputs.split(";") if i)))
+        print("  | (cd %s && OFX_PLUGIN_PATH=<%s bundle dir> hostDemo --no-std-paths --no-cache -p %s -m %s -c %s -d %s%s%s)"
+              % (name, bundle, pid, major, ctx, depth, "".join(" -i " + i for i in inputs.split(";") if i),
+                 "".join(" " + w for w in pwords.split(";") if w)))
 times.sort(reverse=True)
 print()
 for k, v in notes.items():
@@ -640,24 +736,25 @@ print("slowest renders: " + ", ".join("%s %ds" % (n, s) for s, n in times[:5]))
 stale = []
 if not mode.startswith("only"):
     stale += ["SKIP     " + x for rx, x in skip if x not in used]
+    stale += ["PARAMS   " + x for i, x in enumerate(entries("params.txt")) if i + 1 not in params_used]
 if mode.startswith("full"):
     stale += ["XFAIL    " + x[6] for x in xfail if x[6] not in used]
     stale += ["IDENTITY " + x[4] for x in identity if x[4] not in used]
 for x in stale:
     print("%s stale entry (matches nothing in this run: remove it from smoketest.sh): %s"
-          % ("WARNING:" if mode.endswith("partial") else "FAIL ", x))
+          % ("WARNING:" if lenient else "FAIL ", x))
 count = dict((k, sum(1 for v in plugins.values() if v == k)) for k in order)
 print("smoketest: %d plug-ins: %d ok, %d skipped, %d with known bugs (XFAIL), %d failed, %d XPASS"
       % (len(plugins), count["ok"], count["SKIP"], count["XFAIL"], count["FAIL"], count["XPASS"]))
 print("smoketest: %d renders: %d ok, %d XFAIL, %d XPASS, %d FAIL"
       % (nrender["ok"] + nrender["XFAIL"] + nrender["XPASS"] + nrender["FAIL"], nrender["ok"],
          nrender["XFAIL"], nrender["XPASS"], nrender["FAIL"]))
-bad = sorted(t for t, v in plugins.items() if v in ("FAIL", "XPASS"))
+bad = sorted(t for t, v in plugins.items() if v == "FAIL" or (v == "XPASS" and not xpass_ok))
 if bad:
     print("failed: " + ", ".join(bad))
-if stale and not mode.endswith("partial"):
+if stale and not lenient:
     print("failed: %d stale entries" % len(stale))
-sys.exit(1 if bad or (stale and not mode.endswith("partial")) else 0)
+sys.exit(1 if bad or (stale and not lenient) else 0)
 EOF
 if [ -n "$failed_workers" ]; then
     echo "smoketest: workers failed: $failed_workers (their plug-ins or renders fail above: no status)"
