@@ -358,6 +358,9 @@ tests=(
     # the default: the B input (identity)
     "Shuffle default|net.sf.openfx.ShufflePlugin|general|*|mean=0.5,0.6,0.7,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8"
     "Shuffle A and B|net.sf.openfx.ShufflePlugin|general|*|mean=0.3,0.6,0.1,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8 outputR=2 outputG=7 outputB=0 outputA=9"
+    # LayerRename: hostDemo has no multiplane suite, so it is an identity
+    # (the planes themselves can only be tested in Natron)
+    "LayerRename|net.sf.openfx.LayerRename|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 find=scene. renameColor=1"
     # B (the default input) disconnected: A gives the depth of the images
     "Shuffle B none|net.sf.openfx.ShufflePlugin|general|*|mean=0.3,0.2,0.1,0.4||-i A=solid:0.1,0.2,0.3,0.4 -i B=none outputR=2 outputG=1 outputB=0 outputA=3"
     # Shuffle 3 swaps A and B on hosts without the multiplane suites: kept, so

@@ -126,7 +126,8 @@ option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into
 
 # C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
 # Qt5), or 20 (Qt6, RB-2.7): -DOFX_CXX_STANDARD=20. It is used by add_ofx_plugin and
-# openfx::Support, without compiler extensions (-std=c++17, as the Makefile CI builds).
+# openfx::Support, without compiler extensions (-std=c++17, not -std=gnu++17). The Makefiles
+# pass no -std: they use the compiler's default, or the -std that Natron passes in CXX.
 
 # ========================== compiler flags ==========================
 # Release: CMake's default flags (-O3 -DNDEBUG with GCC and Clang; Makefile.master uses
@@ -191,6 +192,13 @@ if(NOT DEFINED OpenGL_GL_PREFERENCE)
 endif()
 find_package(OpenGL REQUIRED)
 
+# The Windows SDK has GL/gl.h (OpenGL 1.1) but no GL/glext.h (MinGW-w64 and the Linux/Mesa
+# GL headers have one): MSVC builds use the copy bundled in GL/ (Khronos glext.h, no
+# KHR/khrplatform.h needed), for ColorLookup (Misc), Shadertoy and TestOpenGL (Test).
+if(MSVC)
+  set(OFXMISC_GLEXT_INCLUDE_DIR ${PROJECT_SOURCE_DIR})
+endif()
+
 # Include directory of Makefile.master (ofxsProcessing.H...); SupportExt's comes with
 # supportext_add_sources, Misc's (Misc/Makefile) is on the Misc target
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/openfx/Support/Plugins/include)
@@ -210,7 +218,7 @@ set(MISC_PLUGIN_DIRS
   Constant ContactSheet CopyRectangle CornerPin Crop Deinterlace DenoiseSharpen Despill
   Difference DiscBlades Dissolve Distortion FrameBlend FrameHold FrameRange Gamma GodRays
   Grade HSVTool HueCorrect ImageStatistics Invert JoinViews KeyMix Keyer LayerContactSheet
-  Log2Lin MatteMonitor Merge Mirror MixViews Multiply NoOp OneView PIK PLogLin Position
+  LayerRename Log2Lin MatteMonitor Merge Mirror MixViews Multiply NoOp OneView PIK PLogLin Position
   Premult Quantize Radial Ramp Rand ReConverge Rectangle Reformat Retime Roto Saturation
   Shuffle SideBySide SlitScan SpriteSheet Switch Threshold TimeBlur TimeBuffer
   TimeDissolve TimeOffset TrackerPM Transform VectorToColor)
@@ -225,7 +233,7 @@ add_ofx_plugin(Misc INFO_PLIST Misc/Info.plist SOURCES ${MISC_SOURCES})
 supportext_add_sources(Misc COMPONENTS THREADS FILEOPEN GENERATOR LUT MULTIPLANE TEXT RAMP SHUTTER
   TRACKING TRANSFORM3X3 TRANSFORM_INTERACT RECTANGLE_INTERACT POSITION_INTERACT)
 # openfx::Support and OpenGL::GL come with supportext_add_sources
-target_include_directories(Misc PRIVATE Misc ${MISC_PLUGIN_DIRS} Test)
+target_include_directories(Misc PRIVATE Misc ${MISC_PLUGIN_DIRS} Test ${OFXMISC_GLEXT_INCLUDE_DIR})
 if(NOT MSVC) # MSVC has OpenMP 2.0 only
   ofx_target_openmp(Misc) # DenoiseSharpen (Misc/Makefile: OPENMP=1)
 endif()
@@ -387,6 +395,9 @@ if(BUILD_SHADERTOY)
     Shadertoy/ShadertoyRenderGL.cpp Shadertoy/ShadertoyRenderMesa.cpp)
   supportext_add_sources(Shadertoy COMPONENTS THREADS) # as Shadertoy/Makefile
   target_link_libraries(Shadertoy PRIVATE OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup
+  # MSVC: GL/glext.h. With USE_OSMESA on MSVC, this bundled (2017) glext.h would come before
+  # Mesa's for ShadertoyRenderMesa.cpp; that case is theoretical (Natron's OSMesa builds use MinGW).
+  target_include_directories(Shadertoy PRIVATE ${OFXMISC_GLEXT_INCLUDE_DIR})
   if(USE_OSMESA)
     # Shadertoy/Makefile with OSMESA=1: -DHAVE_OSMESA, OSMesa's headers for ShadertoyRenderMesa.cpp
     # only, and -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `llvm-config ...`.
@@ -630,6 +641,7 @@ if(BUILD_TESTING)
     Test/TestOpenGL.cpp Test/TestOpenGLRenderGL.cpp Test/TestOpenGLRenderMesa.cpp)
   supportext_add_sources(Test COMPONENTS THREADS TRANSFORM3X3) # + SHUTTER, as Test/Makefile
   target_link_libraries(Test PRIVATE OpenGL::GL)
+  target_include_directories(Test PRIVATE ${OFXMISC_GLEXT_INCLUDE_DIR}) # MSVC: GL/glext.h
   ofx_deploy_bundle(Test)
 endif()
 
