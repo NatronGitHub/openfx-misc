@@ -721,7 +721,7 @@ public:
                 // red is at parametricPos = 1
                 float h = (parametricPos - 1) / 6;
                 float r, g, b;
-                Color::hsv_to_rgb( h, s, v, &r, &g, &b );
+                Color::hsv_to_rgb( h, s, v, &r, &g, &b, true ); // the overlay strip extends beyond one hue period
                 glColor3f(r, g, b);
                 glVertex2f(parametricPos+9, _yMin-(_yMax-_yMin));
                 glVertex2f(parametricPos-9, _yMax+(_yMax-_yMin));
@@ -770,7 +770,7 @@ public:
             // red is at parametricPos = 1
             float h = (parametricPos - 1) / 6;
             float r, g, b;
-            Color::hsv_to_rgb( h, s, v, &r, &g, &b );
+            Color::hsv_to_rgb( h, s, v, &r, &g, &b, true ); // the overlay strip extends beyond one hue period
             glColor3f(r, g, b);
             glVertex2f(parametricPos, _yMin);
             glVertex2f(parametricPos, _yMax);

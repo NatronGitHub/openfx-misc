@@ -165,8 +165,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 2.0 RGBToYPbPr601, RGBToYPbPr709, RGBToYUV601, RGBToYUV709, RGB709ToLab, XYZToLab only:
 //     only support float images, because their output may be negative (version 1 clamps negative
 //     values to 0 on 8-bit and 16-bit images). The other conversions are still version 1.0.
+// 1.1/2.1 HSVToRGB, HSLToRGB, HSIToRGB wrap the hue into the hue circle (bug fix: HSV and HSL gave
+//     magenta for hues in [-1, -5/6) mod 1, and HSI was not periodic for out-of-range hues)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 #define kPluginSignedOutputVersionMajor 2 // version of the conversions with a signed output (see signedOutput())
 
 #define kSupportsTiles 1
@@ -374,7 +376,7 @@ public:
                     break;
 
                 case eColorTransformHSVToRGB:
-                    Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], true);
                     // Use linear color values, see comment above
                     break;
 
@@ -384,7 +386,7 @@ public:
                     break;
 
                 case eColorTransformHSLToRGB:
-                    Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], true);
                     // Use linear color values, see comment above
                     break;
 
@@ -394,7 +396,7 @@ public:
                     break;
 
                 case eColorTransformHSIToRGB:
-                    Color::hsi_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    Color::hsi_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], true);
                     // Use linear color values, see comment above
                     break;
 
