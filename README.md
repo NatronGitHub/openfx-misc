@@ -421,7 +421,11 @@ to the prefix (or absolute). The main options are:
 - `-DOFX_BUILD_HOSTDEMO=ON`: also build openfx's test host `hostDemo` and install it into
   `<prefix>/bin`, for the render tests: `.github/tools/rendertest.sh <prefix>` (checks
   the outputs of a few plugins) and `.github/tools/smoketest.sh <prefix>` (renders every
-  plugin with its default parameters).
+  plugin with its default parameters). hostDemo uses openfx's HostSupport library, which
+  needs the system expat: `libexpat1-dev` (Debian, Ubuntu), `expat-devel` (Rocky, Fedora),
+  MSYS2 `mingw-w64-ucrt-x86_64-expat`, vcpkg `expat`; on macOS, MacPorts' `expat`
+  (`sudo port install expat`) or else the SDK's. The bundles, including DebugProxy, do not
+  need expat.
 - `-DOFXMISC_SUPPORTEXT_DIR=<dir>`: build with the openfx-supportext sources in `<dir>`
   instead of the `SupportExt` submodule (`smoketest.sh --supportext <dir> <prefix>`
   builds and tests that).
