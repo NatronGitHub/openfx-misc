@@ -1,4 +1,4 @@
-OpenFX-Misc [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/NatronGitHub/openfx-misc/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-misc/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-misc?ref=Thin+badge) [![Build Status](https://api.travis-ci.org/devernay/openfx-misc.png?branch=master)](https://travis-ci.org/devernay/openfx-misc) [![Coverity Scan Build Status](https://scan.coverity.com/projects/2945/badge.svg)](https://scan.coverity.com/projects/2945 "Coverity Badge")
+OpenFX-Misc [![GPL2 License](http://img.shields.io/:license-gpl2-blue.svg?style=flat-square)](https://github.com/NatronGitHub/openfx-misc/blob/master/LICENSE) [![Open Hub](https://www.openhub.net/p/openfx-misc/widgets/project_thin_badge?format=gif&ref=Thin+badge)](https://www.openhub.net/p/openfx-misc?ref=Thin+badge) [![CI](https://github.com/NatronGitHub/openfx-misc/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/NatronGitHub/openfx-misc/actions/workflows/ci.yml)
 ===========
 
 Miscellaneous OFX / OpenFX / Open Effects plugins.
@@ -126,6 +126,7 @@ grouping).
 
 ### Channel
 
+* LayerRenameOFX: Rename the layers of the input with find and replace (on hosts that support multiple planes, e.g. Natron).
 * ShuffleOFX: Rearrange channels from one or two inputs, and convert to a different bit depth (on hosts that support it).
 
 ### Color
@@ -174,7 +175,7 @@ grouping).
 * EdgeExtend: Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte.
 * ErodeBlurCImg: Erode or dilate a mask by smoothing.
 * ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
-* GMICExpr: Quickly generate or process image from mathematical formula evaluated for each pixel.
+* G'MIC Expression: Quickly generate or process image from mathematical formula evaluated for each pixel.
 * GodRays: Average an image over a range of transforms, or create crepuscular rays.
 * InpaintCImg: Inpaint the areas indicated by the Mask input using patch-based inpainting.
 * Matrix3x3 and Matrix5x5: Apply a filter given by a 3x3 or 5x5 matrix.
@@ -332,7 +333,7 @@ terminal:
 - `make [options]` to compile as a single combined plugin (see below
   for valid options).
 - `make nomulti [options]` to compile as separate plugins (useful if
-only a few plugins are is needed, for example). `make` can also be
+only a few plugins are needed, for example). `make` can also be
 executed in any plugin's directory.
 - `make [options] CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp` to compile
   with OpenMP support (available for CImg-based plugins and DenoiseSharpen).
@@ -346,11 +347,23 @@ Another common option is `BITS=32`for compiling a 32-bits version,
 `BITS=64` for a 64-bits version, and `BITS=Universal` for a universal
 binary (OS X only).
 
-See the file `Makefile.master`in the toplevel directory for other useful
+The Makefiles do not choose a C++ standard: they use the compiler's
+default (`gnu++17` for GCC >= 11 and Clang >= 16, but `gnu++14` for
+Apple clang), whereas the CMake, Xcode and Visual Studio builds use
+C++17 by default. The code must compile as C++17 and C++20. To choose
+the standard, add it to the compiler command or to the flags, for
+example `make CXX="g++ -std=c++20"` (as Natron's build scripts do) or
+`make CXXFLAGS_ADD=-std=c++20`. On macOS, pass `-std=c++17` (or
+`-std=c++20`) so that make builds match the supported standards.
+`CXXFLAGS_ADD` given on the command line replaces any other value
+(e.g. `-fopenmp`), so the two must be combined:
+`make CXXFLAGS_ADD="-fopenmp -std=c++20" LDFLAGS_ADD=-fopenmp`.
+
+See the file `Makefile.master` in the toplevel directory for other useful
 flags/variables.
 
 The compiled plugins are placed in subdirectories named after the
-configuration, for example Linux-64-realease for a 64-bits Linux
+configuration, for example `Linux-64-release` for a 64-bits Linux
 compilation. In each of these directories, a `*.bundle` directory is
 created, which has to be moved to the proper place
 (`/usr/OFX/Plugins`on Linux, or `/Library/OFX/Plugins`on OS X), using
@@ -408,7 +421,11 @@ to the prefix (or absolute). The main options are:
 - `-DOFX_BUILD_HOSTDEMO=ON`: also build openfx's test host `hostDemo` and install it into
   `<prefix>/bin`, for the render tests: `.github/tools/rendertest.sh <prefix>` (checks
   the outputs of a few plugins) and `.github/tools/smoketest.sh <prefix>` (renders every
-  plugin with its default parameters).
+  plugin with its default parameters). hostDemo uses openfx's HostSupport library, which
+  needs the system expat: `libexpat1-dev` (Debian, Ubuntu), `expat-devel` (Rocky, Fedora),
+  MSYS2 `mingw-w64-ucrt-x86_64-expat`, vcpkg `expat`; on macOS, MacPorts' `expat`
+  (`sudo port install expat`) or else the SDK's. The bundles, including DebugProxy, do not
+  need expat.
 - `-DOFXMISC_SUPPORTEXT_DIR=<dir>`: build with the openfx-supportext sources in `<dir>`
   instead of the `SupportExt` submodule (`smoketest.sh --supportext <dir> <prefix>`
   builds and tests that).
