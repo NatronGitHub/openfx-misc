@@ -159,8 +159,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.PIK"
 // version 1.0: initial version
 // version 1.1: a soft replace color with (almost) zero luminance is replaced by white, as black is (instead of NaN)
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 2.0: the Colorspace parameter also applies to the normalization of the alpha bias (and of the
+//              despill bias) and of the Soft Color screen and inside replace colors. Version 1 always used
+//              Rec. 709 there, whatever the Colorspace, and is kept (deprecated) so that old projects render the same.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 // a Soft Color replace color is normalized to unit luminance. Below this luminance (in absolute
 // value), it is replaced by white, as black is. Real replace colors are far above it; it is also
@@ -356,7 +359,8 @@ enum ReplaceEnum
 
 #define kParamColorspace "colorspace"
 #define kParamColorspaceLabel "Colorspace"
-#define kParamColorspaceHint "Formula used to compute luminance and chrominance from RGB values for the \"Use Bg Luminance\" and \"Use Bg Choma\" options."
+#define kParamColorspaceHint "Formula used to compute luminance and chrominance from RGB values for the \"Use Bg Luminance\" and \"Use Bg Choma\" options, and the luminance used to normalize the Alpha Bias, the Despill Bias and the Soft Color replace colors."
+#define kParamColorspaceHintV1 "Formula used to compute luminance and chrominance from RGB values for the \"Use Bg Luminance\" and \"Use Bg Choma\" options. In this version (1.x) of the plug-in, the Alpha Bias, the Despill Bias and the Soft Color replace colors are always normalized using the Rec. 709 luminance, whatever the Colorspace: use version 2 for the Colorspace to apply to them too."
 #define kParamColorspaceOptionRec709 "Rec. 709", "Use Rec. 709 with D65 illuminant.", "rec709"
 #define kParamColorspaceOptionRec2020 "Rec. 2020", "Use Rec. 2020 with D65 illuminant.", "rec2020"
 #define kParamColorspaceOptionACESAP0 "ACES AP0", "Use ACES AP0 with ACES (approx. D60) illuminant.", "acesap0"
@@ -555,13 +559,26 @@ public:
                    bool ubl, // Use Bg Lum: Have the output rgb be biased by the bg luminance.
                    bool ubc, // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
                    ColorspaceEnum colorspace,
-                   OutputModeEnum outputMode)
+                   OutputModeEnum outputMode,
+                   bool legacyColorspaceNormalization) // PIK 1.x: normalize the biases and replace colors using Rec. 709
     {
+        _colorspace = colorspace;
+        // the colorspace used to normalize the biases and the soft replace colors:
+        // PIK 1.x always used Rec. 709 there (the Colorspace parameter was only set after the normalization)
+        const ColorspaceEnum normColorspace = legacyColorspaceNormalization ? eColorspaceRec709 : colorspace;
         // all colors are normalized with unit luminance
         _alphaBias[0] = (float)(std::max)(0.0001, alphaBias.r);
         _alphaBias[1] = (float)(std::max)(0.0001, alphaBias.g);
         _alphaBias[2] = (float)(std::max)(0.0001, alphaBias.b);
-        float l = luminance(_colorspace, _alphaBias);
+        float l = luminance(normColorspace, _alphaBias);
+        if ( !(l > kReplaceColorLuminanceMin) ) {
+            // ACES AP0 has a negative blue coefficient: the luminance of a (strongly blue) bias
+            // may be zero or negative, which would give infinite biases or flip their sign (and
+            // disable the key). The normalization of the biases cancels out in the key and the
+            // despill (they divide PFg and C, then C is multiplied by the despill bias), so use
+            // the Rec. 709 luminance, which is positive (the components are at least 0.0001).
+            l = luminance(eColorspaceRec709, _alphaBias);
+        }
         _alphaBias[0] /= l;
         _alphaBias[1] /= l;
         _alphaBias[2] /= l;
@@ -602,7 +619,7 @@ public:
             _screenReplaceColor[2] = screenReplaceColor.b;
             // only normalize if the replace method is soft color
             if (screenReplace == eReplaceSoftColor) {
-                l = luminance(_colorspace, _screenReplaceColor);
+                l = luminance(normColorspace, _screenReplaceColor);
                 if (std::abs(l) < kReplaceColorLuminanceMin) {
                     // black, or a color with (almost) zero luminance (with negative components),
                     // which can't be normalized (0/0 is NaN, or a huge color): use white, as for black
@@ -622,7 +639,7 @@ public:
             _insideReplaceColor[2] = insideReplaceColor.b;
             // only normalize if the replace method is soft color
             if (insideReplace == eReplaceSoftColor) {
-                l = luminance(_colorspace, _insideReplaceColor);
+                l = luminance(normColorspace, _insideReplaceColor);
                 if (std::abs(l) < kReplaceColorLuminanceMin) {
                     // black, or a color with (almost) zero luminance (with negative components),
                     // which can't be normalized (0/0 is NaN, or a huge color): use white, as for black
@@ -637,7 +654,6 @@ public:
         _noKey = noKey;
         _ubl = ubl;
         _ubc = ubc;
-        _colorspace = colorspace;
         _outputMode = outputMode;
     } // setValues
 };
@@ -1389,7 +1405,8 @@ class PIKPlugin
 {
 public:
     /** @brief ctor */
-    PIKPlugin(OfxImageEffectHandle handle)
+    PIKPlugin(OfxImageEffectHandle handle,
+              unsigned int majorVersion)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _fgClip(NULL)
@@ -1427,6 +1444,8 @@ public:
         , _ubl(NULL)
         , _ubc(NULL)
         , _colorspace(NULL)
+        , _outputMode(NULL)
+        , _majorVersion(majorVersion)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -1603,6 +1622,7 @@ private:
     BooleanParam* _ubc; // Use Bg Chroma: Have the output rgb be biased by the bg chroma.
     ChoiceParam* _colorspace;
     ChoiceParam* _outputMode;
+    unsigned int _majorVersion;
 };
 
 
@@ -1827,7 +1847,8 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
 
     processor.setValues(screenType, color, redWeight, blueGreenWeight, alphaBias, despillBias, lmEnable, level, luma, llEnable, autolevels, yellow, cyan, magenta, ss, clampAlpha,
                         screenClipMin, screenClipMax, screenReplace, screenReplaceColor,
-                        sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode);
+                        sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode,
+                        /*legacyColorspaceNormalization=*/_majorVersion < 2);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( /*!noKey &&*/ !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
@@ -1988,14 +2009,18 @@ PIKPlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(PIKPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(PIKPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-PIKPluginFactory::describe(ImageEffectDescriptor &desc)
+PIKPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsDeprecated(true);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -2127,8 +2152,9 @@ PIKPlugin::getFramesNeeded(const FramesNeededArguments &args,
     }
 } // PIKPlugin::getFramesNeeded
 
+template<unsigned int majorVersion>
 void
-PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                     ContextEnum /*context*/)
 {
     {
@@ -2714,7 +2740,7 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamColorspace);
         param->setLabel(kParamColorspaceLabel);
-        param->setHint(kParamColorspaceHint);
+        param->setHint(majorVersion < 2 ? kParamColorspaceHintV1 : kParamColorspaceHint);
         assert(param->getNOptions() == eColorspaceRec709);
         param->appendOption(kParamColorspaceOptionRec709);
         assert(param->getNOptions() == eColorspaceRec2020);
@@ -2776,14 +2802,22 @@ PIKPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // PIKPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-PIKPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                 ContextEnum /*context*/)
+PIKPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                               ContextEnum /*context*/)
 {
-    return new PIKPlugin(handle);
+    return new PIKPlugin(handle, majorVersion);
 }
 
-static PIKPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// Each major version needs its own factory class: FactoryMainEntryHelper stores
+// the plugin UID in a static shared by all objects of the same class.
+static PIKPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+// Version 1: the alpha bias, the despill bias and the Soft Color replace colors are always
+// normalized using the Rec. 709 luminance (deprecated, kept so that old projects render the same)
+static PIKPluginFactory<1> p1(kPluginIdentifier, 1);
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
