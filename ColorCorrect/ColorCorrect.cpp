@@ -23,7 +23,7 @@
 
 #include <cmath>
 #include <algorithm>
-#include <cfloat> // DBL_MAX
+#include <cfloat> // DBL_MAX, FLT_MAX
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
@@ -54,8 +54,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: add range params
+// version 2.2: gamma = 0 gives its limit (0 below 1, 1 at 1, FLT_MAX above 1) instead of dividing by zero,
+//              and the results of a small gamma are capped to FLT_MAX
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -283,19 +285,35 @@ private:
         }
     }
 
+    // pow(v, 1/gamma) for v > 0. gamma = 0 would divide by zero: use the limit when gamma -> 0+
+    // (0 below 1, 1 at 1, and +infinity above 1, replaced by the largest float, as in Grade,
+    // because an infinite value gives NaN when it is multiplied by a zero range weight in
+    // applySMH, or premultiplied by alpha = 0)
+    static double gammaFunc(double v,
+                            double gamma)
+    {
+        if (gamma == 0.) {
+            return v < 1. ? 0. : (v == 1. ? 1. : (double)FLT_MAX);
+        }
+
+        // a small gamma makes pow overflow to +inf, as gamma = 0 above: cap it to FLT_MAX (pow of
+        // a positive value is never NaN, and the result is unchanged whenever it fits in a float)
+        return (std::min)( std::pow(v, 1. / gamma), (double)FLT_MAX );
+    }
+
     void applyGamma(const ColorControlValues &c)
     {
         if ( processR && (r > 0) && c.r != 1. ) {
-            r = std::pow(r, 1. / c.r);
+            r = gammaFunc(r, c.r);
         }
         if ( processG && (g > 0) && c.g != 1. ) {
-            g = std::pow(g, 1. / c.g);
+            g = gammaFunc(g, c.g);
         }
         if ( processB && (b > 0) && c.b != 1. ) {
-            b = std::pow(b, 1. / c.b);
+            b = gammaFunc(b, c.b);
         }
         if ( processA && (a > 0) && c.a != 1. ) {
-            a = std::pow(a, 1. / c.a);
+            a = gammaFunc(a, c.a);
         }
     }
 
