@@ -24,6 +24,8 @@
 CMakeLists.txt text whitespace=tab-in-indent,trail,space
 
 *.sh            eol=lf
+# the CImg.h patch scripts (from openfx-gmic) refuse CRLF, and must stay byte-identical to openfx-gmic's
+CImg/patches/*.sh text eol=lf
 
 # Declare files that will always have CRLF line endings on checkout.
 # VS 20xx files

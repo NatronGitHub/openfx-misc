@@ -24,3 +24,32 @@
 # commit b33dcc8f9f1acf1f276ded92c04f8231f6c23fcd is CImg 2.9.9
 # commit 81f0dd58ac6a178e8d2d20153827af76fe65357a is CImg 4.0.7 (tag v.4.0.7)
 CIMGVERSION=81f0dd58ac6a178e8d2d20153827af76fe65357a
+
+# CImg.h is patched with the same scripts as NatronGitHub/openfx-gmic, which uses the same CImg
+# version (the CImg.h of its GMICVER tarball), so that both get the same CImg code: the scripts in
+# CImg/patches/ are verbatim copies of openfx-gmic's patches/cimg-*.sh at the openfx-gmic commit
+# CIMG_PATCHES_FROM. openfx-gmic is the source of truth: fix or update the scripts there, then copy
+# them again and update CIMG_PATCHES_FROM (.github/tools/check-cimg-patches.sh, run nightly, reports
+# a drift). They are applied in this order, as in openfx-gmic's Makefile: CIMG_PATCHES, then
+# CIMG_PATCHES_POCKETFFT with FFT=pocketfft (see license.mk). Changing CIMGVERSION,
+# CIMG_PATCHES_FROM or FFT downloads and patches CImg.h again (CImg.h.version records them).
+# - cimg-math-macro-overread.sh: the math parser read past the end of a macro body ending with an
+#   argument, e.g. "f(a)=1+a" (GreycLab/CImg#496, fixed upstream after 4.0.7)
+# - cimg-omp-rand.sh: the random numbers of rand(), noise() and the math parser in OpenMP loops
+#   do not depend on thread scheduling (NatronGitHub/openfx-gmic#44, local fix)
+# - cimg-ij-boundary.sh: i(), j(), I() and J() read out of bounds with linear or cubic
+#   interpolation when an integer coordinate is outside the image (GreycLab/CImg#498, backport of
+#   GreycLab/CImg 41e121c)
+# - cimg-symmetric-eigen.sh: NaN eigenvectors of rank-deficient symmetric matrices
+#   (GreycLab/gmic#221, backport of GreycLab/CImg e3de7b0)
+# - cimg-pocketfft.sh: FFTs of any size with pocketfft, when cimg_use_pocketfft is defined
+#   (GreycLab/CImg#497, merged upstream after 4.0.7)
+# CMakeLists.txt reads these variables: keep each on one line, as a plain "NAME=value" assignment.
+CIMG_PATCHES_FROM=780671f3f6ad4418802b840720f8f40e1d25451b
+CIMG_PATCHES=patches/cimg-math-macro-overread.sh patches/cimg-omp-rand.sh patches/cimg-ij-boundary.sh patches/cimg-symmetric-eigen.sh
+CIMG_PATCHES_POCKETFFT=patches/cimg-pocketfft.sh
+
+# pocketfft (FFT=pocketfft), C++ header-only version, at a pinned commit of its 'cpp' branch: the
+# same commit and checksum as openfx-gmic's Makefile
+POCKETFFTCOMMIT=4d865cba24359b05b37da4e75aee24498c3b78e7
+POCKETFFT_SHA256=518a95c552aeaee352aa30122137cd9e135d23c91e2863d9272aaa758744c86d

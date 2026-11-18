@@ -9,6 +9,9 @@ name: Nightly extra builds
 # The Makefiles are still built, with one bundle per plugin (make nomulti), on
 # Linux and Windows, as long as Natron's build-plugins.sh uses them.
 # Each build is followed by the same plugin load test as in ci.yml.
+# The CImg plug-ins: ci.yml builds the default licence (GPL: FFTW, FFT=fftw3, pocketfft on macOS);
+# here, Linux C++20 is COMMERCIAL (pocketfft), and macOS OpenMP is FFT=pow2. The cimg_patches job
+# checks that CImg.h is still patched as openfx-gmic's.
 # The render and smoke tests of ci.yml (Linux release) also run after the macOS
 # release and the Linux debug builds (debug: with the plugins' assertions), with
 # hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. They are not run on Windows (the
@@ -63,6 +66,25 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
+  # CImg.h is patched as openfx-gmic's (CImg/CImgVersion.mk): check that CImg/patches are still
+  # byte-identical to openfx-gmic's patches at master, and that CIMGVERSION is the CImg tag of its
+  # GMICVER (a few seconds, no build).
+  cimg_patches:
+    name: CImg.h patches (openfx-gmic)
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Compare with openfx-gmic master
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/tools/check-cimg-patches.sh master
+
   macos:
     name: macOS 15 ${{ matrix.name }}
     needs: changes
@@ -75,20 +97,22 @@ jobs:
         include:
           # release: the macOS build of ci.yml (deployed, no OpenMP: MacPorts' libomp has
           # minos 15, so deployed bundles with it would not load on macOS 11 to 14).
+          # pocketfft rather than MacPorts' FFTW, for the same reason.
           - name: release # the macOS build of ci.yml
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
+            options: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON -DFFT=pocketfft
             rendertest: true
           - name: debug
             config: debug
-            options: -DCMAKE_BUILD_TYPE=Debug
+            options: -DCMAKE_BUILD_TYPE=Debug -DFFT=pocketfft
           - name: C++20
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20
-          # OpenMP: Apple clang with the MacPorts libomp (not deployed)
-          - name: OpenMP
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DFFT=pocketfft
+          # OpenMP: Apple clang with the MacPorts libomp (not deployed). FFT=pow2: CImg's own FFT
+          # (no FFT library), the configuration of the rare builds without one.
+          - name: OpenMP pow2
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release
+            options: -DCMAKE_BUILD_TYPE=Release -DFFT=pow2
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -139,10 +163,13 @@ jobs:
             config: debug
             options: -DCMAKE_BUILD_TYPE=Debug -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
-          - name: C++20
+          # C++20, and Natron's COMMERCIAL licence (OFX_LICENSE=COMMERCIAL: pocketfft, not FFTW),
+          # with the render tests (the FFT convolution test of rendertest.sh)
+          - name: C++20 COMMERCIAL
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20
-          # OpenMP: Apple clang with the MacPorts libomp (not deployed)
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DOFX_LICENSE=COMMERCIAL -DOFX_BUILD_HOSTDEMO=ON
+            rendertest: true
+          # OpenMP (GCC's libgomp)
           - name: OpenMP
             config: release
             options: -DCMAKE_BUILD_TYPE=Release
@@ -158,7 +185,7 @@ jobs:
       - name: Install Ubuntu system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglu1-mesa-dev libgl-dev cmake ninja-build
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev cmake ninja-build libfftw3-dev pkg-config
       - name: Build (make)
         if: matrix.make
         run: make -j"$(nproc)" ${{ matrix.make }}
@@ -202,7 +229,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # -static everywhere: loadtest.sh fails on a MinGW runtime DLL dependency.
+          # -static everywhere: loadtest.sh fails on a MinGW runtime (or FFTW) DLL dependency.
           # No OpenMP: -static still leaves a libgomp-1.dll dependency (see ci.yml).
           - name: debug
             config: debug
@@ -231,7 +258,7 @@ jobs:
           cache: true
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p pkgconf:p fftw:p
       - name: Build (make)
         if: matrix.make
         run: |
@@ -267,8 +294,9 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Build
+        # FFT=pocketfft: no FFTW on the runner (the patches of CImg.h use Git for Windows' sh)
         run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DFFT=pocketfft
           cmake --build build --config Release --parallel
           cmake --install build --config Release --prefix "$PWD/cmake-install"
       - name: Setup MSYS2 UCRT64 environment (cached), for the load test
@@ -279,7 +307,7 @@ jobs:
           update: false
           cache: true
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p pkgconf:p fftw:p
       - name: Load test
         # ofxload is built with the MSYS2 UCRT64 GCC (loadtest.sh uses GCC options),
         # and objdump is MSYS2's; ofxload only loads the MSVC-built plugins through

@@ -133,10 +133,46 @@ cimgGetFilterRoD(const OFX::ImageEffect& effect,
     }
 }
 
+// The size of the FFT that holds a linear convolution of size n (the image size plus the kernel
+// size minus one): any size >= n gives the exact linear convolution, since the zero padding
+// prevents the circular wrap-around.
+// With FFTW (cimg_use_fftw3) or pocketfft (cimg_use_pocketfft), which handle any size, this is
+// the smallest 5-smooth number (2^a 3^b 5^c) >= n: these sizes are fast, while a size with a large
+// prime factor is several times slower. CImg's own FFT only handles powers of two (it throws
+// "non 2^N dimension" otherwise), which may need up to twice as many samples along each axis
+// (e.g. 4096 for 2049).
+static inline unsigned int
+cimgFFTSize(unsigned int n)
+{
+#if defined(cimg_use_fftw3) || defined(cimg_use_pocketfft)
+    if (n <= 1) {
+        return 1;
+    }
+    unsigned int best = (unsigned int)cimg_library::cimg::nearest_pow2(n); // a 2-smooth upper bound
+    for (unsigned long long p5 = 1; p5 < best; p5 *= 5) {
+        for (unsigned long long p35 = p5; p35 < best; p35 *= 3) {
+            // the smallest p35 * 2^a >= n
+            unsigned long long m = p35;
+            while (m < n) {
+                m *= 2;
+            }
+            if (m < best) {
+                best = (unsigned int)m;
+            }
+        }
+    }
+
+    return best;
+#else
+
+    return (unsigned int)cimg_library::cimg::nearest_pow2(n);
+#endif
+}
+
 // Convolve the channels chans of img (in place) by kernel * scale, using the FFT.
 // (mx, my) is the offset of the first kernel pixel w.r.t. the kernel origin (the pixel that does
 // not shift the image). Pixels outside of img are zero: the FFT is computed on the zero-padded
-// image, which gives the exact linear convolution.
+// image (see cimgFFTSize()), which gives the exact linear convolution.
 // Returns false if the effect was aborted (img is then partially processed).
 static inline bool
 cimgConvolveFFT(cimg_library::CImg<cimgpix_t>& img,
@@ -151,9 +187,9 @@ cimgConvolveFFT(cimg_library::CImg<cimgpix_t>& img,
     const int h = img.height();
     const int kw = kernel.width();
     const int kh = kernel.height();
-    // FFT size: power of two, large enough to hold the linear convolution
-    const unsigned int fw = (unsigned int)cimg_library::cimg::nearest_pow2( (unsigned int)(w + kw - 1) );
-    const unsigned int fh = (unsigned int)cimg_library::cimg::nearest_pow2( (unsigned int)(h + kh - 1) );
+    // FFT size: large enough to hold the linear convolution
+    const unsigned int fw = cimgFFTSize( (unsigned int)(w + kw - 1) );
+    const unsigned int fh = cimgFFTSize( (unsigned int)(h + kh - 1) );
 
     // FFT of the kernel, placed at the origin
     cimg_library::CImg<cimgpix_t> kre(fw, fh, 1, 1, 0), kim(fw, fh, 1, 1, 0);

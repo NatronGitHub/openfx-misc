@@ -49,6 +49,8 @@ env:
   # CMake options shared by the release builds: C++17 (OFX_CXX_STANDARD, the
   # default: the standard of Natron RB-2.6, Qt5; C++20 is built by nightly.yml),
   # OpenMP (OFX_USE_OPENMP, the default; not on macOS, see MACOS_OPTIONS), and the Test bundle.
+  # The default licence (OFX_LICENSE=GPL), so the CImg plug-ins use FFTW (FFT=fftw3, installed
+  # below), except on macOS (see MACOS_OPTIONS); nightly.yml builds COMMERCIAL (pocketfft) and pow2.
   CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
   # The release bundles are uploaded as artifacts only for manual runs
   # ("Run workflow" on the Actions page) and for pre-release tags. This repo is
@@ -83,8 +85,9 @@ jobs:
       # The bundles load on macOS 11 and later (by default, the SDK version).
       # No OpenMP (as the make CI): the bundles are deployed (OFX_DEPLOY_BUNDLES, osxDeploy.sh),
       # and MacPorts' libomp is built for the runner's macOS (minos 15), so bundles with it
-      # would not load on macOS 11 to 14.
-      MACOS_OPTIONS: -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF
+      # would not load on macOS 11 to 14. For the same reason, the CImg plug-ins use pocketfft
+      # (header-only) rather than MacPorts' FFTW.
+      MACOS_OPTIONS: -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF -DFFT=pocketfft
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -143,7 +146,7 @@ jobs:
       - name: Install Ubuntu system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglu1-mesa-dev libgl-dev cmake ninja-build
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev cmake ninja-build libfftw3-dev pkg-config
       - name: Build (release)
         # OFX_BUILD_HOSTDEMO: openfx's hostDemo, in install/bin, for the render tests
         run: |
@@ -208,9 +211,10 @@ jobs:
           # is derived from these options). update: false: see nightly.yml.
           update: false
           cache: true
-          # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
+          # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes (fftw and
+          # pkgconf: FFTW for the CImg plug-ins, linked statically)
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p pkgconf:p fftw:p
       - name: Build (release)
         run: |
           set -eo pipefail

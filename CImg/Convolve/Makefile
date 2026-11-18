@@ -29,3 +29,10 @@ $(OBJECTPATH)/CImgConvolve.o: CImgConvolve.cpp CImgFFTConvolve.h CImgFilter.h CI
 
 CImg.h:
 	cd .. && $(MAKE) $@
+
+# LICENSE and FFT (see ../license.mk): the FFT flags, and pocketfft
+include $(TOP_SRCDIR)/CImg/CImgFFT.mk
+ifeq ($(FFT),pocketfft)
+$(FFT_HEADERS) $(FFT_RESOURCES):
+	cd .. && $(MAKE) sources
+endif

@@ -138,6 +138,15 @@ for y in range(h):
         pix += [1. if 10 <= x < 42 and 8 <= y < 24 else 0.] * 3
 with open("autocrop.pfm", "wb") as f:
     f.write(b"PF\n%d %d\n-1.0\n" % (w, h) + struct.pack("<%df" % len(pix), *pix))
+# convsrc.pfm: a 720x576 PF (not a power of two) with pseudo-random values in [0,1), different in
+# each channel; convk.pfm: a 7x5 PF kernel, positive, not symmetric, different in each channel
+# (for the "conv" check: an exact linear convolution)
+def pfm(name, w, h, val):
+    pix = [val(x, y, c) for y in range(h) for x in range(w) for c in range(3)]
+    with open(name, "wb") as f:
+        f.write(b"PF\n%d %d\n-1.0\n" % (w, h) + struct.pack("<%df" % len(pix), *pix))
+pfm("convsrc.pfm", 720, 576, lambda x, y, c: ((x * 7919 + y * 104729 + c * 4099) % 1009) / 1009.)
+pfm("convk.pfm", 7, 5, lambda x, y, c: 1. + ((x * 3 + y * 5 + c * 7) % 11))
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -228,6 +237,57 @@ if out0:
             if diff:
                 errors.append("%d pixels of the tile %s differ from the full render" % (diff, tb))
             desc += " tile=%s" % ",".join(str(v) for v in tb)
+        elif expect.startswith("conv="):
+            # conv=SRC,KERNEL (float RGB PFM files, bottom row first): the output (RGB) must be the
+            # linear convolution of SRC (at 0,0, zero outside) by KERNEL (its RGB channels, each
+            # normalized by its sum), with the kernel origin at pixel (kw//2, kh//2) of KERNEL
+            # (filterCenter=2, the center of its RoD), on the rendered part of the RoD. Checked on
+            # every 7th pixel and on the borders of the output, within 1e-4.
+            def readpfm(path):
+                with open(path, "rb") as f:
+                    h = f.read().split(b"\n", 3)
+                w, hh = (int(v) for v in h[1].split())
+                a = array.array("f")
+                a.frombytes(h[3][:w * hh * 3 * 4])
+                if sys.byteorder != "little":
+                    a.byteswap()
+                return w, hh, a
+            sw, sh, src = readpfm(expect[5:].split(",")[0])
+            kw, kh, ker = readpfm(expect[5:].split(",")[1])
+            ow, oh, out = readpfm(out0["files"][0])
+            ob = out0["bounds"]
+            cx, cy = kw // 2, kh // 2
+            # the output RoD is the source RoD expanded by the kernel, but hostDemo may render
+            # only a part of it (the project): the pixels outside SRC are checked if rendered
+            want = [-cx, -cy, sw + kw - 1 - cx, sh + kh - 1 - cy]
+            if not (want[0] <= ob[0] < ob[2] <= want[2] and want[1] <= ob[1] < ob[3] <= want[3]):
+                errors.append("output bounds %s, not within %s" % (ob, want))
+            else:
+                ksum = [sum(ker[c::3]) for c in range(3)]
+                xs = sorted(set(range(ob[0], ob[2], 7)) | {ob[0], ob[0] + 1, ob[2] - 2, ob[2] - 1})
+                ys = sorted(set(range(ob[1], ob[3], 7)) | {ob[1], ob[1] + 1, ob[3] - 2, ob[3] - 1})
+                pts = {(x, y) for x in xs for y in ys}
+                pts |= {(x, y) for x in range(ob[0], ob[2]) for y in (ob[1], ob[3] - 1)}
+                pts |= {(x, y) for y in range(ob[1], ob[3]) for x in (ob[0], ob[2] - 1)}
+                maxerr, worst = 0., None
+                for x, y in pts:
+                    for c in range(3):
+                        v = 0.
+                        for j in range(kh):
+                            sy = y + cy - j
+                            if 0 <= sy < sh:
+                                for i in range(kw):
+                                    sx = x + cx - i
+                                    if 0 <= sx < sw:
+                                        v += ker[(j * kw + i) * 3 + c] * src[(sy * sw + sx) * 3 + c]
+                        v /= ksum[c]
+                        err = abs(out[((y - ob[1]) * ow + x - ob[0]) * 3 + c] - v)
+                        if err > maxerr:
+                            maxerr, worst = err, (x, y, c, v)
+                if maxerr > 1e-4:
+                    errors.append("not the linear convolution: error %.3g at (x,y,c)=%s (expected %.6g)" %
+                                  (maxerr, worst[:3], worst[3]))
+                desc += " conv: max error %.2g on %d pixels" % (maxerr, len(pts))
         elif expect.startswith(("value:", "keys:", "keyrange:")):
             # the parameters after the run (analysis results): value:NAME=v,... (the
             # value at t=0; with keys, also the one of the t=0 render), keys:NAME=N (the
@@ -389,6 +449,26 @@ tests=(
     "ImageStatistics auto crop|net.sf.openfx.ImageStatistics|filter|float|value:autoCropBottomLeft=117.333333,58+value:autoCropSize=34.133333,16+keys:autoCropSize=1||-i Source=file:autocrop.pfm@100,50 -s analyzeFrameAutoCrop"
     "ImageStatistics auto crop RGBA|net.sf.openfx.ImageStatistics|filter|float|value:autoCropBottomLeft=106.666667,50+value:autoCropSize=68.266667,48||-i Source=file:autocrop.pfm@100,50 autoCropMode=RGBA -s analyzeFrameAutoCrop"
     "ImageStatistics auto crop seq|net.sf.openfx.ImageStatistics|filter|float|value:autoCropSize=34.133333,16+keys:autoCropBottomLeft=26+keys:autoCropSize=26+keyrange:autoCropSize=0,25||-i Source=file:autocrop.pfm@100,50 -s analyzeSequenceAutoCrop"
+    # The CImg.h patches (CImg/patches, from openfx-gmic). A math parser macro whose body ends
+    # with an argument (cimg-math-macro-overread.sh: read past the end of the body).
+    "CImgExpression macro|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=f(a)=0.25+a;f(0.25)"
+    # J() with linear interpolation and periodic boundaries, and cubic and Neumann, 500 pixels
+    # below the image: the Source values; cubic and Dirichlet, half a pixel right: zero, except in
+    # the top 76 rows (cimg-ij-boundary.sh; without it, a segmentation fault)
+    "CImgExpression J periodic|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,1,2)"
+    "CImgExpression J Neumann|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,2,1)"
+    "CImgExpression J Dirichlet|net.sf.cimg.CImgExpression|filter|float|mean=0.033,0.066,0.099,0.132||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0.5,-500,0,2,0)"
+    # symmetric_eigen() on the rank-deficient structure tensors of flat images and ramps
+    # (cimg-symmetric-eigen.sh: NaN eigenvectors when the compiler contracts to FMAs): no NaN
+    # output pixels (the float outputs are checked for NaN)
+    "CImgSmooth flat|net.sf.cimg.CImgSmooth|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "CImgSmooth ramp|net.sf.cimg.CImgSmooth|filter|float|mean=0.5,0.5,0.5,0.5+nonconst||-i Source=ramp -i Mask=none"
+    "CImgSharpenShock flat|net.sf.cimg.CImgSharpenShock|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "CImgSharpenShock ramp|net.sf.cimg.CImgSharpenShock|filter|float|nonconst||-i Source=ramp -i Mask=none"
+    # FFT convolution of a 720x576 image (not a power of two: with FFTW or pocketfft, the FFT is
+    # not padded to 1024x1024) by a 7x5 kernel: the exact linear convolution, without a CImg
+    # "non 2^N dimension" error, whatever the FFT library (CImgFFTConvolve.h)
+    "CImgConvolve 720x576|net.sf.cimg.CImgConvolve|filter|float|conv=convsrc.pfm,convk.pfm||--frames 0 -i Source=file:convsrc.pfm -i Filter=file:convk.pfm -i Mask=none filterCenter=2"
 )
 
 n=0 failed=() xfailed=()
@@ -493,7 +573,7 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* full.* report.json ref.json autocrop.pfm
+rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm
 
 echo
 echo "rendertest: $((n - ${#failed[@]} - ${#xfailed[@]})) passed, ${#xfailed[@]} known bugs (XFAIL), ${#failed[@]} failed, $n renders in $(( $(date +%s) - start ))s"

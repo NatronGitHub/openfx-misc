@@ -82,6 +82,13 @@ You should have received a copy of the GNU General Public License
 along with openfx-misc.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 <!-- END LICENSE BLOCK -->
 
+Third-party code: the CImg plugins use [CImg](https://github.com/GreycLab/CImg)
+(CeCILL-C or CeCILL), downloaded at build time (see below), and, for their Fourier transforms
+(ConvolveCImg, ZDefocusCImg), either [FFTW](https://www.fftw.org) (GPL, the default
+for GPL builds) or [pocketfft](https://github.com/mreineck/pocketfft) (BSD-3-Clause,
+header-only, the default for COMMERCIAL builds). Builds with pocketfft include its
+licence, `Licence_pocketfft.txt`, in `CImg.ofx.bundle/Contents/Resources`.
+
 Contents
 --------
 
@@ -349,6 +356,27 @@ binary (OS X only).
 See the file `Makefile.master`in the toplevel directory for other useful
 flags/variables.
 
+The CImg plugins also take `LICENSE=GPL` (default) or `LICENSE=COMMERCIAL` (Natron's
+`NATRON_LICENSE`: no FFTW, which is GPL), and `FFT=fftw3|pocketfft|pow2`, the library
+of the Fourier transforms of ConvolveCImg and ZDefocusCImg (see `CImg/license.mk`):
+`fftw3` (FFTW, found with `pkg-config fftw3`, plus `fftw3_threads`; the default for
+GPL builds: install MacPorts' `fftw-3`, MSYS2's `${MINGW_PACKAGE_PREFIX}-fftw` or
+Ubuntu's `libfftw3-dev`), `pocketfft` (header-only, downloaded at a pinned commit; the
+default for COMMERCIAL builds, and refused with FFTW for them), or `pow2` (CImg's own
+FFT, with no library: the images are padded to a power of two, which is slower and
+uses more memory).
+
+`CImg/CImg.h` (and `CImg/Inpaint/inpaint.h`) are downloaded by `make -C CImg sources`
+(run by the top-level `make`) at the version given in `CImg/CImgVersion.mk`, and
+`CImg.h` is patched the same way as in
+[openfx-gmic](https://github.com/NatronGitHub/openfx-gmic), which uses the same CImg
+version: `CImg/patches/cimg-*.sh` are copies of openfx-gmic's `patches/cimg-*.sh` (the
+source of truth), at the openfx-gmic commit `CIMG_PATCHES_FROM` of
+`CImg/CImgVersion.mk`, applied in the same order (`cimg-pocketfft.sh` only with
+`FFT=pocketfft`), so that both get the same `CImg.h`. They need a POSIX `sh`, `awk`,
+`grep` and `wc`. A nightly CI job (`.github/tools/check-cimg-patches.sh`) reports when
+openfx-gmic's scripts or G'MIC version change.
+
 The compiled plugins are placed in subdirectories named after the
 configuration, for example Linux-64-realease for a 64-bits Linux
 compilation. In each of these directories, a `*.bundle` directory is
@@ -363,9 +391,9 @@ compiling:
 
 CMake builds the same bundles as the Makefiles (`make nomulti` is make-only): `Misc`,
 `CImg` and `Shadertoy`, plus `Test` and `DebugProxy` in Debug builds. Only out-of-tree
-builds are allowed. `CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded at
-configure time if missing (at the version given in `CImg/CImgVersion.mk`, again when it
-changes). The bundles are assembled in `<build>/Plugins`, and `cmake --install` copies
+builds are allowed. `CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded (and
+`CImg.h` patched as openfx-gmic's, see above) at configure time if missing (at the
+version given in `CImg/CImgVersion.mk`, again when it, the patches or `FFT` change). The bundles are assembled in `<build>/Plugins`, and `cmake --install` copies
 them into `<prefix>/OFX/Plugins` (openfx's `PLUGIN_INSTALLDIR`, relative to
 `CMAKE_INSTALL_PREFIX`). For the OpenFX plugins directory (as `make install`), use the
 prefix `/usr` on Linux and `/Library` on macOS:
@@ -397,6 +425,11 @@ to the prefix (or absolute). The main options are:
   `make CONFIG=release` does). The bundles then also need these libraries' minimum
   macOS version (e.g. MacPorts' libomp is built for the build machine's macOS).
 - `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`.
+- `-DOFX_LICENSE=GPL` (default) or `COMMERCIAL` (`make LICENSE=...`, as openfx-gmic's
+  option), and `-DFFT=fftw3|pocketfft|pow2` (`make FFT=...`): the FFT of the CImg
+  plugins, see above (default: `fftw3` for GPL, `pocketfft` for COMMERCIAL;
+  COMMERCIAL refuses `fftw3`). With MSVC, the CImg.h patches need a POSIX `sh` in the
+  `PATH` (e.g. Git for Windows'), or `-DCIMG_PATCH_SH=<path>`.
 - `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
   build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.
