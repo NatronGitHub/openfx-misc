@@ -370,7 +370,8 @@ See the file `Makefile.master` in the toplevel directory for other useful
 flags/variables.
 
 The CImg plugins also take `FFT=pocketfft|pow2|fftw3`, the library of the Fourier
-transforms of ConvolveCImg and ZDefocusCImg (see `CImg/license.mk`):
+transforms of ConvolveCImg, ZDefocusCImg and the `fft()` of ExpressionCImg (see
+`CImg/license.mk`):
 - `pocketfft` (default): header-only, downloaded at a pinned commit, any image size.
   It has no dependency and no global state shared with other plugins, and it was faster
   than FFTW in our benchmarks.
@@ -381,6 +382,11 @@ transforms of ConvolveCImg and ZDefocusCImg (see `CImg/license.mk`):
   `${MINGW_PACKAGE_PREFIX}-fftw`, Ubuntu's `libfftw3-dev`). FFTW is a shared library
   with a single global planner that other plugins in the same host (e.g. openfx-gmic)
   also use, so the plugins make its planner thread-safe at load.
+
+`FFT` is an option of the Makefiles and of CMake only. The Xcode and Visual Studio
+projects (`Misc.xcodeproj`, `Misc/CImg.vcxproj`) define neither `cimg_use_pocketfft`
+nor `cimg_use_fftw3`, and do not fetch pocketfft: their CImg plugins always use `pow2`,
+whatever `CImg.h` was downloaded with.
 
 `LICENSE=GPL` (default) or `LICENSE=COMMERCIAL` (Natron's `NATRON_LICENSE`, as in
 openfx-gmic) only matters for FFTW: COMMERCIAL builds refuse `FFT=fftw3`.
@@ -412,8 +418,8 @@ CMake builds the same bundles as the Makefiles (`make nomulti` is make-only): `M
 `CImg` and `Shadertoy`, plus `Test` and `DebugProxy` in Debug builds. Only out-of-tree
 builds are allowed. `CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded (and
 `CImg.h` patched as openfx-gmic's, see above) at configure time if missing (at the
-version given in `CImg/CImgVersion.mk`, again when it, the patches or `FFT` change). The bundles are assembled in `<build>/Plugins`, and `cmake --install` copies
-them into `<prefix>/OFX/Plugins` (openfx's `PLUGIN_INSTALLDIR`, relative to
+version given in `CImg/CImgVersion.mk`, again when it, the patches or `FFT` change).
+The bundles are assembled in `<build>/Plugins`, and `cmake --install` copies them into `<prefix>/OFX/Plugins` (openfx's `PLUGIN_INSTALLDIR`, relative to
 `CMAKE_INSTALL_PREFIX`). For the OpenFX plugins directory (as `make install`), use the
 prefix `/usr` on Linux and `/Library` on macOS:
 
@@ -446,8 +452,9 @@ to the prefix (or absolute). The main options are:
 - `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`.
 - `-DFFT=pocketfft|pow2|fftw3` (`make FFT=...`): the FFT of the CImg plugins, see above
   (default `pocketfft`; `fftw3` is opt-in), and `-DOFX_LICENSE=GPL` (default) or
-  `COMMERCIAL` (`make LICENSE=...`, as openfx-gmic's option), which refuses `fftw3`. With MSVC, the CImg.h patches need a POSIX `sh` in the
-  `PATH` (e.g. Git for Windows'), or `-DCIMG_PATCH_SH=<path>`.
+  `COMMERCIAL` (`make LICENSE=...`, as openfx-gmic's option), which refuses `fftw3`.
+  With MSVC, the CImg.h patches need a POSIX `sh` in the `PATH` (e.g. Git for
+  Windows'), or `-DCIMG_PATCH_SH=<path>`.
 - `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
   build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.

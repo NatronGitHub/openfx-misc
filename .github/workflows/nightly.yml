@@ -67,12 +67,12 @@ jobs:
           fi
 
   # CImg.h is patched as openfx-gmic's (CImg/CImgVersion.mk): check that CImg/patches are still
-  # byte-identical to openfx-gmic's patches at master, and that CIMGVERSION is the CImg tag of its
-  # GMICVER (a few seconds, no build).
+  # byte-identical to openfx-gmic's patches at master, that they are applied in the same order,
+  # that the pocketfft pin is the same, and that CIMGVERSION is the CImg tag of its GMICVER (a few
+  # seconds, no build). It runs every night, without needs: changes, since the drift it catches
+  # comes from openfx-gmic, not from this repository.
   cimg_patches:
     name: CImg.h patches (openfx-gmic)
-    needs: changes
-    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

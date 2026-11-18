@@ -6,7 +6,8 @@
 # build-plugins.sh passes as LICENSE="$NATRON_LICENSE", as for openfx-arena). COMMERCIAL builds
 # refuse FFTW (GPL).
 #
-# FFT: the library that computes the Fourier transforms of ConvolveCImg and ZDefocusCImg:
+# FFT: the library that computes the Fourier transforms of ConvolveCImg, ZDefocusCImg
+# and the fft() of ExpressionCImg:
 # - pocketfft (default): pocketfft (BSD-3-Clause, header-only, multithreaded, downloaded at
 #   POCKETFFTCOMMIT, see CImgVersion.mk), through patches/cimg-pocketfft.sh (applied only for
 #   FFT=pocketfft). Any size, no dependency, no global state shared with other plug-ins, and faster

@@ -37,7 +37,7 @@
 #   -DBUILD_CIMG_PLUGINS=OFF ("make HAVE_CIMG=0"), -DBUILD_SHADERTOY=OFF
 #   -DOFX_LICENSE=GPL (default) or COMMERCIAL ("make LICENSE=...", Natron's NATRON_LICENSE, as in
 #      openfx-gmic): COMMERCIAL builds refuse FFT=fftw3 (FFTW is GPL)
-#   -DFFT=pocketfft|pow2|fftw3 ("make FFT=..."): the FFT of ConvolveCImg and ZDefocusCImg: pocketfft
+#   -DFFT=pocketfft|pow2|fftw3 ("make FFT=..."): the FFT of the CImg plugins: pocketfft
 #      (default: header-only, downloaded), pow2 (CImg's own FFT, images padded to a power of two:
 #      slower), or fftw3 (opt-in, GPL only: FFTW >= 3.3.5, found with pkg-config)
 #   -DBUILD_TESTING=ON|OFF, -DBUILD_DEBUGPROXY=ON|OFF (default: ON in Debug builds)
@@ -489,7 +489,8 @@ if(BUILD_CIMG_PLUGINS)
 # except that pocketfft is the default for all licences (no dependency, no global FFTW planner
 # shared with other plug-ins, and faster than FFTW in our benchmarks).
 # OFX_LICENSE: GPL (default), or COMMERCIAL (Natron's NATRON_LICENSE), which does not use FFTW (GPL).
-# FFT: the library of the Fourier transforms of ConvolveCImg and ZDefocusCImg (CImgFFTConvolve.h):
+# FFT: the library of the Fourier transforms of ConvolveCImg, ZDefocusCImg and the fft() of
+# ExpressionCImg (CImgFFTConvolve.h):
 # fftw3 (FFTW, GPL, multithreaded, opt-in), pocketfft (BSD-3-Clause, header-only, downloaded at
 # POCKETFFTCOMMIT, through CImg/patches/cimg-pocketfft.sh), or pow2 (CImg's own FFT, which only
 # handles power-of-two sizes: the images are padded to the next power of two). Empty (default):
@@ -604,6 +605,12 @@ if(NOT EXISTS "${CIMG_DIR}/Inpaint/inpaint.h")
     message(FATAL_ERROR "Failed to apply CImg/Inpaint/inpaint.h.patch")
   endif()
 endif()
+# The stamp is written before CImg.h, which must be newer than it for CImg/Makefile (CImg.h depends
+# on CImg.h.version there): otherwise a later make would download and patch CImg.h again. If the
+# download or a patch fails, there is no CImg.h, and the next configure tries again.
+if(NOT _cimg_downloaded STREQUAL _cimg_stamp)
+  file(WRITE "${CIMG_VERSION_STAMP}" "${_cimg_stamp}\n")
+endif()
 if(NOT EXISTS "${CIMG_DIR}/CImg.h")
   find_program(CIMG_PATCH_SH sh)
   if(NOT CIMG_PATCH_SH)
@@ -626,9 +633,9 @@ if(NOT EXISTS "${CIMG_DIR}/CImg.h")
   endforeach()
   file(COPY "${_cimg_tmp}/CImg.h" DESTINATION "${CIMG_DIR}")
   file(REMOVE_RECURSE "${_cimg_tmp}")
-endif()
-if(NOT _cimg_downloaded STREQUAL _cimg_stamp)
-  file(WRITE "${CIMG_VERSION_STAMP}" "${_cimg_stamp}\n")
+  # file(COPY) keeps the time of the temporary file: make CImg.h newer than CImg.h.version and
+  # Inpaint/inpaint.h, its prerequisites in CImg/Makefile
+  file(TOUCH "${CIMG_DIR}/CImg.h")
 endif()
 # reconfigure if another build (e.g. make, or a build directory with another FFT) changes CImg.h
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CIMG_VERSION_STAMP}")

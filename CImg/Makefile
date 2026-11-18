@@ -240,7 +240,7 @@ $(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImgErodeDilate.h CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgErodeSmooth.o: CImgErodeSmooth.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImgFilter.h CImg.h
+$(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgFilter.o: CImgOperator.cpp CImgOperator.h CImgFilter.h CImg.h
 

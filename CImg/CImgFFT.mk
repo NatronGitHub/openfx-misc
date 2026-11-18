@@ -1,6 +1,7 @@
-# The FFT backend of ConvolveCImg and ZDefocusCImg (CImgFFTConvolve.h), for CImg/Makefile and for
-# the "make nomulti" Makefiles of CImg/Convolve and CImg/ZDefocus. Include it after Makefile.master
-# and PLUGINOBJECTS, with CIMG_DIR set to the CImg directory (default: $(TOP_SRCDIR)/CImg).
+# The FFT backend of ConvolveCImg, ZDefocusCImg and ExpressionCImg's fft() (CImgFFTConvolve.h),
+# for CImg/Makefile and for the "make nomulti" Makefiles of CImg/Convolve and CImg/ZDefocus (the
+# standalone ExpressionCImg uses pow2). Include it after Makefile.master and PLUGINOBJECTS, with
+# CIMG_DIR set to the CImg directory (default: $(TOP_SRCDIR)/CImg).
 # LICENSE and FFT: see license.mk. CMakeLists.txt does the same (OFX_LICENSE and FFT).
 CIMG_DIR ?= $(TOP_SRCDIR)/CImg
 include $(CIMG_DIR)/license.mk

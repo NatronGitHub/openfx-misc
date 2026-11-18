@@ -31,12 +31,22 @@
 
 #include "CImgFilter.h" // CImg.h, cimgpix_t
 
+// -Dcimg_use_pocketfft (CImgFFT.mk, CMakeLists.txt) only works with a CImg.h patched by
+// patches/cimg-pocketfft.sh, which then includes pocketfft_hdronly.h (include guard
+// POCKETFFT_HDRONLY_H). An unpatched CImg.h (e.g. one made with FFT=pow2 or fftw3, then used by a
+// standalone build of a subdirectory with the default FFT=pocketfft) would silently use CImg's own
+// power-of-two FFT: fail instead.
+#if defined(cimg_use_pocketfft) && !defined(cimg_use_fftw3) && !defined(POCKETFFT_HDRONLY_H)
+#error "CImg.h is not patched for pocketfft (run make -C CImg sources)"
+#endif
+
 #if defined(cimg_use_fftw3) && !defined(cimg_use_fftw3_singlethread)
 #include <mutex> // std::call_once
 #include <fftw3.h>
 #endif
 
-// To be called by the load action (the factory's load()) of the plug-ins that use the FFT.
+// To be called by the load action (the factory's load()) of the plug-ins that use the FFT:
+// ConvolveCImg, ZDefocusCImg, and ExpressionCImg (the math parser's fft()).
 // With FFT=fftw3 (opt-in): FFTW is a shared library (Natron's SDK, MacPorts, MSYS2) with a single
 // global planner, which other plug-ins of the host process use too, e.g. openfx-gmic's GMIC.ofx,
 // whose CImg plans under another mutex than ours (cimg::mutex(12) of our cimg_library namespace).
