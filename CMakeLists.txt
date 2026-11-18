@@ -783,10 +783,17 @@ int main() { fftw_make_planner_thread_safe(); return 0; }" CIMG_FFTW3_HAS_PLANNE
   endif()
   target_compile_definitions(CImg PRIVATE cimg_use_fftw3)
 elseif(CIMG_FFT STREQUAL "pocketfft")
-  # pocketfft, header-only (CImg/pocketfft_hdronly.h), multithreaded (std::thread)
+  # pocketfft, header-only (CImg/pocketfft_hdronly.h), multithreaded (std::thread) except on Windows
   find_package(Threads REQUIRED)
   target_link_libraries(CImg PRIVATE Threads::Threads)
   target_compile_definitions(CImg PRIVATE cimg_use_pocketfft)
+  # Windows (MinGW and MSVC): single-threaded pocketfft, as openfx-gmic (NatronGitHub/openfx-gmic#94).
+  # Its static thread pool is destroyed when the host unloads the plug-in (FreeLibrary runs the DLL's
+  # static destructors under the loader lock): ~thread_pool() joins the worker threads, which wait
+  # for that lock in LdrShutdownThread (deadlock). CImg.h is unchanged; OpenMP is not involved.
+  if(WIN32)
+    target_compile_definitions(CImg PRIVATE POCKETFFT_NO_MULTITHREADING)
+  endif()
   target_sources(CImg PRIVATE "${CIMG_DIR}/pocketfft_hdronly.h")
   ofx_plugin_resources(CImg "${CIMG_POCKETFFT_LICENCE}")
 endif()

@@ -374,7 +374,9 @@ transforms of ConvolveCImg, ZDefocusCImg and the `fft()` of ExpressionCImg (see
 `CImg/license.mk`):
 - `pocketfft` (default): header-only, downloaded at a pinned commit, any image size.
   It has no dependency and no global state shared with other plugins, and it was faster
-  than FFTW in our benchmarks.
+  than FFTW in our benchmarks. On Windows it is single-threaded (`POCKETFFT_NO_MULTITHREADING`,
+  as openfx-gmic#94): unloading the plugin deadlocked when its thread pool joined its
+  threads under the loader lock.
 - `pow2`: CImg's own FFT, with no library. The images are padded to a power of two,
   which is slower and uses more memory.
 - `fftw3`: FFTW, opt-in and GPL only. It needs FFTW >= 3.3.5, found with

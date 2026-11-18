@@ -239,10 +239,10 @@ jobs:
           # No OpenMP: -static still leaves a libgomp-1.dll dependency (see ci.yml).
           - name: debug
             config: debug
-            options: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
+            options: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
           - name: C++20
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
+            options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
           # the Makefiles, while Natron's build-plugins.sh uses them (GCC's default, gnu++17)
           - name: make nomulti
             make: nomulti CONFIG=release LDFLAGS_ADD=-static
@@ -264,7 +264,7 @@ jobs:
           cache: true
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p expat:p python:p
       - name: Build (make)
         if: matrix.make
         run: |
@@ -282,6 +282,14 @@ jobs:
         run: |
           set -eo pipefail
           .github/tools/loadtest.sh ${{ matrix.make && ' ' || format('install-{0}', matrix.config) }}
+      - name: Render test (hostDemo, FFT convolution)
+        # as ci.yml: a hang at hostDemo's exit (pocketfft's thread pool, openfx-gmic#94) fails
+        # at the step timeout. CMake only (hostDemo from -DOFX_BUILD_HOSTDEMO=ON).
+        if: ${{ !matrix.make }}
+        timeout-minutes: 5
+        run: |
+          set -eo pipefail
+          RENDERTEST_ONLY='^CImgConvolve' .github/tools/rendertest.sh install-${{ matrix.config }}
 
   # MSVC is not used by the CI's make builds (MinGW GCC), but the CMake build and
   # Misc/*.vcxproj support it: check that the sources build with Visual Studio 2022
@@ -313,7 +321,7 @@ jobs:
           update: false
           cache: true
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p expat:p python:p
       - name: Load test
         # ofxload is built with the MSYS2 UCRT64 GCC (loadtest.sh uses GCC options),
         # and objdump is MSYS2's; ofxload only loads the MSVC-built plugins through

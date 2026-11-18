@@ -25,9 +25,17 @@ endif
 endif
 endif
 ifeq ($(FFT),pocketfft)
-# pocketfft (BSD-3-Clause), header-only, multithreaded (std::thread): patches/cimg-pocketfft.sh.
+# pocketfft (BSD-3-Clause), header-only, multithreaded (std::thread) except on Windows:
+# patches/cimg-pocketfft.sh.
 # Its licence asks for its notice in binary distributions: Licence_pocketfft.txt, in the bundle.
 FFT_CXXFLAGS = -Dcimg_use_pocketfft
+# Windows (MinGW): single-threaded pocketfft, as openfx-gmic (NatronGitHub/openfx-gmic#94). Its
+# static thread pool is destroyed when the host unloads the plug-in (FreeLibrary runs the DLL's
+# static destructors under the loader lock): ~thread_pool() joins the worker threads, which wait
+# for that lock in LdrShutdownThread (deadlock). CImg.h is unchanged; OpenMP is not involved.
+ifneq ($(MINGW_OS),)
+FFT_CXXFLAGS += -DPOCKETFFT_NO_MULTITHREADING
+endif
 ifneq ($(OS),Darwin)
 FFT_LINKFLAGS = -pthread
 endif

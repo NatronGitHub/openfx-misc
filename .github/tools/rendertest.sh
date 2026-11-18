@@ -2,9 +2,12 @@
 # Headless render smoke test used by the CI: build hostDemo (the OFX test host
 # of the openfx submodule) and render a representative set of plugins (all the
 # generators and some common filters) at the byte, short and float depths.
-# Linux and macOS only (the checks need python3).
+# Linux, macOS and Windows (MSYS2, e.g. UCRT64, with its python and a hostDemo from
+# -DOFX_BUILD_HOSTDEMO=ON, which needs its expat). The checks need python3.
 #
 # Usage (from the top of the source tree): .github/tools/rendertest.sh [DIR...]
+# RENDERTEST_ONLY=ERE: only the renders whose label (the first field of the test
+# list below) matches the extended regular expression ERE, e.g. ^CImgConvolve.
 # The plugins are the *.ofx.bundle found under the DIRs, which should be the
 # build directories of one configuration, e.g. Misc/Linux-64-release
 # CImg/Linux-64-release. Without DIRs, the *-$CONFIG directories of the source
@@ -45,7 +48,8 @@
 set -eo pipefail
 
 case "$(uname -s)" in
-    Darwin|Linux) ;;
+    Darwin|Linux) windows=0 ;;
+    *_NT-*) windows=1 ;; # MSYS2: MINGW64_NT-*, UCRT64_NT-*, CLANG64_NT-*...
     *) echo "unsupported OS $(uname -s)"; exit 1 ;;
 esac
 
@@ -86,6 +90,8 @@ if [ ${#dirs[@]} -eq 0 ]; then
     exit 1
 fi
 OFX_PLUGIN_PATH=$(IFS=:; echo "${dirs[*]}")
+# Windows: a native list (C:\...;D:\...), for the native hostDemo
+[ $windows = 0 ] || OFX_PLUGIN_PATH=$(cygpath -w -p "$OFX_PLUGIN_PATH")
 export OFX_PLUGIN_PATH
 echo "OFX_PLUGIN_PATH=$OFX_PLUGIN_PATH"
 # debug builds (*-debug directories, or RENDERTEST_DEBUG=1, e.g. for a CMake install
@@ -100,6 +106,9 @@ if [ -z "$HOSTDEMO" ]; then
     for d in "$@"; do
         if [ -x "$d/bin/hostDemo" ]; then
             HOSTDEMO=$d/bin/hostDemo
+            break
+        elif [ -x "$d/bin/hostDemo.exe" ]; then
+            HOSTDEMO=$d/bin/hostDemo.exe
             break
         fi
     done
@@ -344,7 +353,8 @@ EOF
 crc32() {
     python3 -I -c 'import json, sys
 r = json.load(open(sys.argv[1]))
-print([k for k in r["renders"] if k["time"] == 0 and not k.get("view")][0]["output"]["crc32"])' "$1"
+print([k for k in r["renders"] if k["time"] == 0 and not k.get("view")][0]["output"]["crc32"])' "$1" |
+        tr -d '\r' # Windows: the CRLF of python's print
 }
 
 # hostdemo LOG ARGS...: run hostDemo with its output in LOG. The subshell
@@ -478,6 +488,9 @@ tests=(
 n=0 failed=() xfailed=()
 for t in "${tests[@]}"; do
     IFS='|' read -r label id ctx depths expect bug args <<< "$t"
+    if [ -n "$RENDERTEST_ONLY" ] && ! echo "$label" | grep -E -e "$RENDERTEST_ONLY" > /dev/null; then
+        continue
+    fi
     [ "$depths" != '*' ] || depths="byte short float"
     case "$bug" in debug:*) [ $debug = 1 ] && bug=${bug#debug:} || bug= ;; esac
     bugmsg=
@@ -579,6 +592,10 @@ for t in "${tests[@]}"; do
 done
 rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm
 
+if [ $n = 0 ]; then
+    echo "no render matches RENDERTEST_ONLY=$RENDERTEST_ONLY"
+    exit 1
+fi
 echo
 echo "rendertest: $((n - ${#failed[@]} - ${#xfailed[@]})) passed, ${#xfailed[@]} known bugs (XFAIL), ${#failed[@]} failed, $n renders in $(( $(date +%s) - start ))s"
 if [ ${#failed[@]} -ne 0 ]; then
