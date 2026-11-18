@@ -105,8 +105,13 @@ drawImage(const Image* src,
           const OfxPointD& renderScale,
           double dstPar)
 {
+    // The plugins only declare eBitDepthFloat, and the pixels are accessed as float: check it in
+    // release builds too, since a host that ignores kOfxImageEffectPropSupportedPixelDepths
+    // (e.g. giving 8-bit images) would otherwise make this write past the end of the buffers.
+    if ( (dst->getPixelDepth() != eBitDepthFloat) || (src->getPixelDepth() != eBitDepthFloat) ) {
+        throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
     const OfxRectI& dstBounds = dst->getBounds();
-    assert(dst->getPixelDepth() == eBitDepthFloat);
     float* b = (float*)dst->getPixelData();
     const size_t bwidth = dstBounds.x2 - dstBounds.x1;
     const size_t bheight = dstBounds.y2 - dstBounds.y1;
@@ -114,7 +119,6 @@ drawImage(const Image* src,
     const size_t bystride = bwidth * bxstride;
 
     const OfxRectI& srcBounds = src->getBounds();
-    assert(src->getPixelDepth() == eBitDepthFloat);
     const float* a = (const float*)src->getPixelData();
     const size_t awidth = srcBounds.x2 - srcBounds.x1;
     const size_t aheight = srcBounds.y2 - srcBounds.y1;
