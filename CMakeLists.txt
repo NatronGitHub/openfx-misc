@@ -44,7 +44,8 @@
 #      BUILD_EXAMPLE_HOSTS) and install it into <prefix>/bin, for the CI's render tests
 #      (.github/tools/rendertest.sh and smoketest.sh). Needs the system expat (openfx's
 #      HostSupport): libexpat1-dev, MSYS2 mingw-w64-ucrt-x86_64-expat, vcpkg expat; on macOS,
-#      the SDK's or MacPorts' expat
+#      the SDK's or MacPorts' expat. If expat is missing, openfx's configure error suggests
+#      -DOFX_BUILD_HOSTSUPPORT=OFF: here, use -DOFX_BUILD_HOSTDEMO=OFF instead (it sets that)
 #   -DOFXMISC_SUPPORTEXT_DIR=<dir>: the openfx-supportext sources to build with (default: the
 #      SupportExt submodule), e.g. a SupportExt pull request in SupportExt's CI
 ########################################################################
