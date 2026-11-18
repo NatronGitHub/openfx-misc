@@ -118,10 +118,11 @@ EOF
             fi
             ;;
         Linux) cat << 'EOF'
-The bundles are built on Rocky Linux 8 (glibc 2.28) for x86_64. They need the
-system's OpenGL library (libGL.so.1); the OSMesa Shadertoy also needs libz.so.1
-and libzstd.so.1. GCC's OpenMP runtime (libgomp.so.1, used by DenoiseSharpen
-and the CImg plug-ins) is included in the bundles that use it.
+The bundles are built on Rocky Linux 9 for x86_64. They need these system
+libraries, which are never included: glibc 2.34 or later, libstdc++ and
+libgcc_s (GCC 11 or later), the OpenGL library (libGL.so.1), and GCC's OpenMP
+runtime (libgomp.so.1, for DenoiseSharpen and the CImg plug-ins; e.g. the
+libgomp package). Any other library is in the bundle (<bundle>.ofx.bundle/Libraries).
 EOF
             ;;
         Windows) cat << 'EOF'

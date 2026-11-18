@@ -16,7 +16,7 @@ name: Binary release
 # set: users install one or the other, never both, and only one Shadertoy.
 #
 # OSMesa (Shadertoy's CPU rendering) needs a mangled OSMesa and LLVM:
-# - Linux builds it (.github/tools/build-osmesa.sh: Mesa 25.0.7 with Rocky Linux 8's
+# - Linux builds it (.github/tools/build-osmesa.sh: Mesa 25.0.7 with Rocky Linux 9's
 #   static LLVM, cached).
 # - macOS and Windows download the prebuilt OSMesa + LLVM of an osmesa-install binary
 #   release (.github/tools/fetch-osmesa.sh), whose tag is the "osmesa_release" input of a
@@ -86,28 +86,32 @@ defaults:
 
 jobs:
   build_linux:
-    name: Linux x86_64 (Rocky Linux 8)
-    # Natron's Linux baseline: Rocky Linux 8 (glibc 2.28) with gcc-toolset-14, so that
-    # the bundles load on the systems Natron supports. The libgomp.so.1 of OpenMP
-    # (DenoiseSharpen in Misc and standalone, CImg) is copied into these bundles, next to
-    # their binary, found through the rpath $ORIGIN (-DOFXMISC_BUNDLE_LIBGOMP=ON).
+    name: Linux x86_64 (Rocky Linux 9)
+    # Natron 2.6's Linux baseline: Rocky Linux 9 (EL9, glibc 2.34, VFX Reference Platform
+    # CY2027) with gcc-toolset-14 (the system GCC is 11), so that
+    # the bundles load on the systems Natron supports. The system libraries (glibc,
+    # libstdc++, libgcc_s, libgomp, libGL) are never bundled: gcc-toolset-14 links the
+    # system's libstdc++.so.6 (plus libstdc++_nonshared.a) and libgomp.so.1 (its libgomp.so
+    # is a linker script to /usr/lib64/libgomp.so.1), and check-linux-deps.sh checks that the
+    # symbol versions are no newer than Rocky 9's runtime (glibc 2.34, GCC 11). Third-party libraries (libz and
+    # libzstd of the OSMesa built here) are bundled in Shadertoy.ofx.bundle/Libraries.
     timeout-minutes: 120
     runs-on: ubuntu-24.04
-    container: rockylinux/rockylinux:8
+    container: rockylinux/rockylinux:9
     steps:
       - name: Install Rocky Linux packages
         # git before the checkout (else actions/checkout downloads the sources without
         # the submodules); python3.11 and perl for smoketest.sh; meson (pip), bison,
         # flex, the static LLVM (and the zstd and libxml2 of its llvm-config --system-libs)
-        # and zlib for OSMesa. Not the OpenGL headers yet (see below).
+        # and zlib for OSMesa; expat-devel for hostDemo. Not the OpenGL headers yet (see below).
         run: |
           dnf -y -q install dnf-plugins-core epel-release
-          dnf config-manager --set-enabled powertools
-          dnf -y -q install gcc-toolset-14-gcc-c++ cmake ninja-build git patch xz bzip2 curl \
+          dnf config-manager --set-enabled crb
+          dnf -y -q install gcc-toolset-14-gcc-c++ cmake ninja-build git patch xz bzip2 \
               python3.11 python3.11-pip bison flex zlib-devel libzstd-devel libxml2-devel llvm-devel llvm-static \
-              pkgconf-pkg-config perl file which diffutils findutils binutils
+              pkgconf-pkg-config perl file which diffutils findutils binutils expat-devel
           python3.11 -m pip install -q meson mako pyyaml packaging
-          alternatives --set python3 /usr/bin/python3.11
+          ln -sf /usr/bin/python3.11 /usr/local/bin/python3 # (EL9's python3 is 3.9)
           # gcc-toolset-14 in the next steps
           bash -c 'source /opt/rh/gcc-toolset-14/enable; echo "PATH=$PATH"; echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}"; echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH:-}"' >> "$GITHUB_ENV"
       - name: Checkout
@@ -123,14 +127,26 @@ jobs:
           cmake --version | head -1
           echo "llvm=$(llvm-config --version)" >> "$GITHUB_OUTPUT"
           llvm-config --version
+      - name: Download the prebuilt OSMesa
+        # The linux-x86_64 asset of the osmesa-install release (OSMESA_RELEASE), if it is
+        # listed in .github/parameters/osmesa-install.sha256; else OSMesa is built below
+        id: prebuilt
+        if: env.OSMESA_RELEASE != ''
+        run: |
+          if .github/tools/fetch-osmesa.sh --check "$OSMESA_RELEASE" linux-x86_64; then
+            .github/tools/fetch-osmesa.sh "$OSMESA_RELEASE" linux-x86_64 /opt/osmesa-prebuilt
+            echo "OSMESA_LINUX_OPTIONS=-DOSMESA_PATH=/opt/osmesa-prebuilt/osmesa -DLLVM_PATH=/opt/osmesa-prebuilt/llvm" >> "$GITHUB_ENV"
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Cache OSMesa
+        if: steps.prebuilt.outputs.done != 'true'
         id: osmesa-cache
         uses: actions/cache@v5
         with:
           path: /opt/osmesa
-          key: osmesa-rocky8-llvm${{ steps.tools.outputs.llvm }}-${{ hashFiles('.github/tools/build-osmesa.sh') }}
+          key: osmesa-rocky9-llvm${{ steps.tools.outputs.llvm }}-${{ hashFiles('.github/tools/build-osmesa.sh') }}
       - name: Build OSMesa
-        if: steps.osmesa-cache.outputs.cache-hit != 'true'
+        if: steps.prebuilt.outputs.done != 'true' && steps.osmesa-cache.outputs.cache-hit != 'true'
         env:
           PYTHON: python3.11
         # libdrm-devel must not be installed: Mesa would use libdrm, which the static
@@ -145,8 +161,8 @@ jobs:
         # --as-needed: Shadertoy only links the libraries of llvm-config --system-libs that
         # LLVM's code in it uses (not libxml2)
         run: |
-          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DOFXMISC_BUNDLE_LIBGOMP=ON \
-              -DUSE_OSMESA=ON -DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr \
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS \
+              -DUSE_OSMESA=ON ${OSMESA_LINUX_OPTIONS:--DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr} \
               -DCMAKE_MODULE_LINKER_FLAGS=-Wl,--as-needed
           cmake --build build
           cmake --install build --prefix "$PWD/install"
@@ -162,22 +178,13 @@ jobs:
           mkdir -p install-denoisesharpen/OFX/Plugins
           mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
           ldd install/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx install-*/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx
-      - name: Check the bundled libgomp
-        # Misc, CImg and DenoiseSharpen have Contents/Linux-x86-64/libgomp.so.1 and the
-        # RUNPATH $ORIGIN, and their libgomp.so.1 resolves to that copy
+      - name: Bundle Shadertoy's third-party libraries, check the dependencies
+        # Only Shadertoy (OSMesa, LLVM) may need third-party libraries: they are copied into
+        # Shadertoy.ofx.bundle/Libraries ($ORIGIN/../../Libraries). Then every binary may only need Rocky 9's system libraries
+        # (or bundled ones), with symbol versions no newer than Rocky 9's runtime.
         run: |
-          for f in install/OFX/Plugins/Misc.ofx.bundle/Contents/Linux-x86-64/Misc.ofx \
-                   install/OFX/Plugins/CImg.ofx.bundle/Contents/Linux-x86-64/CImg.ofx \
-                   install-denoisesharpen/OFX/Plugins/DenoiseSharpen.ofx.bundle/Contents/Linux-x86-64/DenoiseSharpen.ofx; do
-            dir=$(cd "$(dirname "$f")" && pwd)
-            test -f "$dir/libgomp.so.1"
-            readelf -d "$f" | grep -E 'RUNPATH|RPATH' | grep -F '$ORIGIN'
-            if ! ldd "$f" | grep -F "libgomp.so.1 => $dir/libgomp.so.1"; then
-              echo "ERROR: $f does not load $dir/libgomp.so.1:"
-              ldd "$f"
-              exit 1
-            fi
-          done
+          .github/tools/check-linux-deps.sh --bundle install/OFX/Plugins/Shadertoy.ofx.bundle
+          .github/tools/check-linux-deps.sh install install-shadertoy install-denoisesharpen
       - name: Load test
         run: |
           .github/tools/loadtest.sh install
@@ -313,8 +320,8 @@ jobs:
         shell: msys2 {0}
     env:
       # As ci.yml: the MinGW runtime is linked statically (loadtest.sh checks it), and no
-      # OpenMP (MSYS2's libgomp would still be a DLL dependency).
-      WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
+      # OpenMP (MSYS2's libgomp would still be a DLL dependency), and no hostDemo (smoketest.sh does not run on Windows).
+      WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=OFF
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -342,8 +349,7 @@ jobs:
           echo "SHADERTOY_OSMESA=--shadertoy-osmesa install/OFX/Plugins" >> "$GITHUB_ENV"
       - name: Build the full set and DenoiseSharpen
         # Shadertoy has OSMesa with OSMESA_RELEASE, else it is OpenGL only (and is also the
-        # standalone Shadertoy (OpenGL)). hostDemo (OFX_BUILD_HOSTDEMO) is built but not
-        # used: smoketest.sh does not run on Windows.
+        # standalone Shadertoy (OpenGL)).
         run: |
           set -eo pipefail
           cmake -S . -B build -G Ninja $CMAKE_OPTIONS $WINDOWS_OPTIONS ${OSMESA_OPTIONS:-}
@@ -421,7 +427,7 @@ jobs:
           case "$tag" in *-[rR][cC]*|*-beta*|*-alpha*) prerelease=--prerelease ;; esac
           osmesa=$(cd dist && ls openfx-misc-Shadertoy-OSMesa-* | sed -e 's/^openfx-misc-Shadertoy-OSMesa-.*-\(linux\|macos\|windows\)-.*/\1/' | sort -u | paste -sd, - | sed 's/,/, /g')
           cat > notes.md << EOF
-          openfx-misc binaries of \`$tag\`, for Linux x86_64 (Rocky Linux 8 and later), Windows x86_64 and macOS 11 or later (universal).
+          openfx-misc binaries of \`$tag\`, for Linux x86_64 (Rocky Linux 9, glibc 2.34, and later), Windows x86_64 and macOS 11 or later (universal).
 
           Downloads, per platform:
           - \`openfx-misc-<version>-<platform>\`: the full set, as shipped with Natron: \`Misc.ofx.bundle\`, \`CImg.ofx.bundle\` and \`Shadertoy.ofx.bundle\` (with OSMesa CPU rendering where it is built: $osmesa; OpenGL only elsewhere).

@@ -29,7 +29,7 @@ distributions, so there is nothing else to install.
 To use the plugins with another OpenFX host, download them from the
 [GitHub releases](https://github.com/NatronGitHub/openfx-misc/releases) (built by
 `.github/workflows/release.yml` from the release tags). There are four downloads for
-each platform (Linux x86_64, built on Rocky Linux 8; Windows x86_64; macOS 11 or later,
+each platform (Linux x86_64, built on Rocky Linux 9; Windows x86_64; macOS 11 or later,
 universal):
 
 - `openfx-misc-<version>-<platform>`: the full set, the same bundles as in Natron:
@@ -44,6 +44,11 @@ universal):
   `Shadertoy.ofx.bundle` alone, OpenGL + OSMesa: the bundle of the full set.
 - `openfx-misc-DenoiseSharpen-<version>-<platform>`: `DenoiseSharpen.ofx.bundle`, with
   only the DenoiseSharpen plugin.
+
+The Linux bundles are built on Rocky Linux 9 (Natron 2.6's baseline), and need glibc 2.34
+or later, the system's libstdc++ (GCC 11 or later), `libGL.so.1` (OpenGL) and `libgomp.so.1` (GCC's OpenMP runtime,
+for DenoiseSharpen and the CImg plugins): these system libraries are never bundled. Any
+other library is inside the bundle (`<bundle>.ofx.bundle/Libraries`).
 
 **Install either the full set or standalone bundles, not both**: the standalone
 bundles contain the same plugins, with the same identifiers and versions, as the full
@@ -445,9 +450,6 @@ to the prefix (or absolute). The main options are:
 - `-DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen"`: also build these Misc plugins as
   standalone bundles (`DenoiseSharpen.ofx.bundle`, as `make nomulti`), for the binary
   releases. They have the same plugins as `Misc.ofx.bundle`: install one or the other.
-- `-DOFXMISC_BUNDLE_LIBGOMP=ON` (Linux, GCC): copy `libgomp.so.1` next to the binary of the
-  bundles that use OpenMP (`Contents/Linux-x86-64/`), with the rpath `$ORIGIN`, so that
-  they do not need the system's OpenMP runtime (the binary releases).
 - `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
   build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.
