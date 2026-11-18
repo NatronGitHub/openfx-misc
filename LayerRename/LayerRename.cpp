@@ -137,11 +137,6 @@ enum MatchEnum
 
 #define kColorPlaneName "Color" // the name of the color plane for the renaming (kOfxMultiplaneColorPlaneLabel)
 
-// separators of the Natron custom plane encoding (see ofxNatron.h): a plane name must not contain them
-#define kNatronPlaneSeparatorLabel "_PlaneLabel_"
-#define kNatronPlaneSeparatorChannelsLabel "_ChannelsLabel_"
-#define kNatronPlaneSeparatorChannel "_Channel_"
-
 static bool gIsMultiPlanar = false;
 
 // A plane of the output, and the input plane it is copied from.
@@ -267,7 +262,12 @@ LayerRenamePlugin::renamePlane(const std::string& name,
         if (!re) {
             return false;
         }
-        *newName = std::regex_replace(name, *re, replace);
+        try {
+            *newName = std::regex_replace(name, *re, replace);
+        } catch (const std::regex_error&) {
+            // e.g. error_complexity or error_stack while matching: the plane is not renamed
+            return false;
+        }
         break;
     }
 
@@ -344,9 +344,11 @@ LayerRenamePlugin::getPlaneRenames(double time,
         } else {
             c.desc = MultiPlane::ImagePlaneDesc::mapOFXPlaneStringToPlane(planes[i]);
             c.name = c.desc.getPlaneID();
-            if (planes[i].compare(0, sizeof(kNatronOfxImageComponentsPlaneName) - 1, kNatronOfxImageComponentsPlaneName) != 0 ||
-                !c.desc) {
-                // not a Natron custom plane (e.g. motion vectors or disparity): never renamed
+            if ( (planes[i].compare(0, sizeof(kNatronOfxImageComponentsPlaneName) - 1, kNatronOfxImageComponentsPlaneName) != 0) ||
+                 !c.desc ||
+                 isReservedPlaneName(c.name) ) {
+                // not a Natron custom plane, or a plane with a special name (e.g. motion vectors or
+                // disparity, or a custom plane literally named Forward or DisparityLeft): never renamed
                 taken.insert(planes[i]);
                 taken.insert( c.desc.getPlaneLabel() );
                 candidates.push_back(c);
@@ -381,9 +383,10 @@ LayerRenamePlugin::getPlaneRenames(double time,
         std::string problem;
         if ( c.newName.empty() ) {
             problem = "empty name";
-        } else if ( (c.newName.find(kNatronPlaneSeparatorLabel) != std::string::npos) ||
-                    (c.newName.find(kNatronPlaneSeparatorChannelsLabel) != std::string::npos) ||
-                    (c.newName.find(kNatronPlaneSeparatorChannel) != std::string::npos) ) {
+        } else if ( (c.newName.find(kNatronOfxImageComponentsPlaneLabel) != std::string::npos) ||
+                    (c.newName.find(kNatronOfxImageComponentsPlaneChannelsLabel) != std::string::npos) ||
+                    (c.newName.find(kNatronOfxImageComponentsPlaneChannel) != std::string::npos) ) {
+            // separators of the Natron custom plane encoding (ofxNatron.h): a plane name must not contain them
             problem = "invalid name";
         } else if ( isReservedPlaneName(c.newName) ) {
             problem = "reserved name";
@@ -406,6 +409,7 @@ LayerRenamePlugin::getPlaneRenames(double time,
             warn += c.name + " -> " + c.newName + ": " + problem + ", not renamed\n";
         } else if ( taken.count(c.name) ) {
             warn += c.name + " -> " + c.newName + ": " + problem + ", and " + c.name + " is used by another renamed layer: removed\n";
+            renamed = true; // the output differs from the input: a plane is removed
         } else {
             r.dstPlane = c.srcPlane;
             r.dstName = c.name;
@@ -414,7 +418,7 @@ LayerRenamePlugin::getPlaneRenames(double time,
             renames->push_back(r);
             warn += c.name + " -> " + c.newName + ": " + problem + ", kept as " + c.name + "\n";
         }
-        renamed = true; // the output differs from the input (a plane may be removed)
+        // the color copy that is not added, or a plane kept with its name: the output is unchanged
     }
     if (messages) {
         *messages = msgs + warn;
@@ -429,6 +433,9 @@ LayerRenamePlugin::getPlaneRenames(double time,
     return renamed;
 } // LayerRenamePlugin::getPlaneRenames
 
+// Sets the Renamed Layers param: called from changedParam and changedClip (kOfxActionInstanceChanged,
+// as the OFX spec requires), and from getClipPreferences, which is a Natron-only exception to the spec
+// (see getClipPreferences). Does nothing unless gIsMultiPlanar.
 void
 LayerRenamePlugin::updateRenames()
 {
@@ -539,8 +546,11 @@ LayerRenamePlugin::isIdentity(const IsIdentityArguments &args,
 void
 LayerRenamePlugin::getClipPreferences(ClipPreferencesSetter & /*clipPreferences*/)
 {
-    // The planes of the input may have changed upstream: refresh the list of renames
-    // (setValue is allowed in getClipPreferences by Natron).
+    // The planes of the input may have changed upstream: refresh the list of renames.
+    // This is a Natron-only exception to the OFX spec, which says (ofxParam.h, paramSetValue):
+    // "paramSetValue should only be called from within a ::kOfxActionInstanceChanged or interact action."
+    // Natron allows setting param values in getClipPreferences. updateRenames() does nothing unless
+    // gIsMultiPlanar (a multiplane host with arbitrary plane names: in practice, Natron).
     updateRenames();
 }
 
