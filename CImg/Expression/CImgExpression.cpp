@@ -44,7 +44,7 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-#define kPluginName          "GMICExpr"
+#define kPluginName          "G'MIC Expression"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
     "Quickly generate or process image from mathematical formula evaluated for each pixel.\n" \
@@ -233,7 +233,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamHelp "help"
 #define kParamHelpLabel "Help..."
-#define kParamHelpHint "Display help for writing GMIC expressions."
+#define kParamHelpHint "Display help for writing G'MIC expressions."
 
 
 /// Expression plugin
@@ -338,7 +338,7 @@ void
 CImgExpressionPluginFactory::describe(ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabel(kPluginName);
+    desc.setLabels(kPluginName, "G'MIC Expr", kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     if ( desc.getPropertySet().propGetDimension(kNatronOfxPropDescriptionIsMarkdown, false) ) {
         desc.setPluginDescription(kPluginDescriptionMarkdown, false);

@@ -493,6 +493,14 @@ private:
     // get the custom aperture kernel from the Filter input; returns false if it is not available or empty
     bool getCustomKernel(const RenderArguments &args, CImg<cimgpix_t>* kernel);
 
+    // only float images are supported: post an error message and throw kOfxStatFailed
+    // (see CImgFilterPluginHelperBase::throwBitDepthUnsupported())
+    void throwBitDepthUnsupported()
+    {
+        setPersistentMessage(Message::eMessageError, "", kCImgFilterBitDepthUnsupportedMessage);
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -550,7 +558,7 @@ ZDefocusPlugin::getCustomKernel(const RenderArguments &args,
     }
     checkBadRenderScaleOrField(filter, args);
     if (filter->getPixelDepth() != eBitDepthFloat) {
-        throwSuiteStatusException(kOfxStatErrImageFormat);
+        throwBitDepthUnsupported();
     }
     // the kernel is the Filter image within its (finite) RoD
     OfxRectD rod;
@@ -598,13 +606,16 @@ ZDefocusPlugin::render(const RenderArguments &args)
     const BitDepthEnum dstBitDepth = dst->getPixelDepth();
     const int nComps = dst->getPixelComponentCount();
     if (dstBitDepth != eBitDepthFloat) {
-        throwSuiteStatusException(kOfxStatErrUnsupported);
+        throwBitDepthUnsupported();
     }
 
     auto_ptr<const Image> src( _srcClip->isConnected() ?
                                _srcClip->fetchImage(time) : 0 );
     if ( src.get() ) {
-        if ( (src->getPixelDepth() != dstBitDepth) || (src->getPixelComponentCount() != nComps) ) {
+        if (src->getPixelDepth() != dstBitDepth) {
+            throwBitDepthUnsupported();
+        }
+        if (src->getPixelComponentCount() != nComps) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
         checkBadRenderScaleOrField(src, args);
@@ -612,8 +623,11 @@ ZDefocusPlugin::render(const RenderArguments &args)
     auto_ptr<const Image> depth( ( _depthClip && _depthClip->isConnected() ) ?
                                  _depthClip->fetchImage(time) : 0 );
     if ( depth.get() && (depth->getPixelDepth() != eBitDepthFloat) ) {
-        throwSuiteStatusException(kOfxStatErrImageFormat);
+        throwBitDepthUnsupported();
     }
+    // all the images are float: clear the message of throwBitDepthUnsupported() if a previous
+    // render posted it (the Filter image is checked below, in getCustomKernel())
+    clearPersistentMessage();
 
     // fill the render window with black first
     for (int y = renderWindow.y1; y < renderWindow.y2; ++y) {

@@ -143,9 +143,10 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Install Ubuntu system packages
+        # libexpat1-dev: openfx's HostSupport (hostDemo) uses the system expat
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglu1-mesa-dev libgl-dev cmake ninja-build
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev libexpat1-dev cmake ninja-build
       - name: Build (release)
         # OFX_BUILD_HOSTDEMO: openfx's hostDemo, in install/bin, for the render tests
         run: |

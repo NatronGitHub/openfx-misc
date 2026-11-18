@@ -47,7 +47,10 @@
 #   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX (OFX/Plugins)
 #   -DOFX_BUILD_HOSTDEMO=ON (default OFF): also build openfx's test host hostDemo (openfx's
 #      BUILD_EXAMPLE_HOSTS) and install it into <prefix>/bin, for the CI's render tests
-#      (.github/tools/rendertest.sh and smoketest.sh)
+#      (.github/tools/rendertest.sh and smoketest.sh). Needs the system expat (openfx's
+#      HostSupport): libexpat1-dev, MSYS2 mingw-w64-ucrt-x86_64-expat, vcpkg expat; on macOS,
+#      the SDK's or MacPorts' expat. If expat is missing, openfx's configure error suggests
+#      -DOFX_BUILD_HOSTSUPPORT=OFF: here, use -DOFX_BUILD_HOSTDEMO=OFF instead (it sets that)
 #   -DOFXMISC_SUPPORTEXT_DIR=<dir>: the openfx-supportext sources to build with (default: the
 #      SupportExt submodule), e.g. a SupportExt pull request in SupportExt's CI
 ########################################################################
@@ -128,7 +131,8 @@ option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into
 
 # C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
 # Qt5), or 20 (Qt6, RB-2.7): -DOFX_CXX_STANDARD=20. It is used by add_ofx_plugin and
-# openfx::Support, without compiler extensions (-std=c++17, as the Makefile CI builds).
+# openfx::Support, without compiler extensions (-std=c++17, not -std=gnu++17). The Makefiles
+# pass no -std: they use the compiler's default, or the -std that Natron passes in CXX.
 
 # ========================== compiler flags ==========================
 # Release: CMake's default flags (-O3 -DNDEBUG with GCC and Clang; Makefile.master uses
@@ -153,14 +157,15 @@ if(MSVC)
 endif()
 
 # ========================== openfx ==========================
-# openfx::Support (the C++ Support library, static), openfx::HostSupport (DebugProxy),
+# openfx::Support (the C++ Support library, static), openfx::HostSupport (hostDemo),
 # add_ofx_plugin and ARCHDIR (cmake/OpenFX.cmake). The OFX_EXTENSIONS_* (NATRON, NUKE,
 # VEGAS, TUTTLE) and OFX_SUPPORTS_OPENGLRENDER options of openfx default to what the
 # Makefiles use, and are usage requirements of these targets.
 # EXCLUDE_FROM_ALL: only what the bundles link is built, and openfx is not installed.
-# HostSupport is only needed by DebugProxy and hostDemo (OFX_BUILD_HOSTDEMO, openfx's
-# BUILD_EXAMPLE_HOSTS). These are openfx options (CMP0077: option() uses these variables).
-if(BUILD_DEBUGPROXY OR OFX_BUILD_HOSTDEMO)
+# HostSupport is only needed by hostDemo (OFX_BUILD_HOSTDEMO, openfx's BUILD_EXAMPLE_HOSTS),
+# and it needs the system expat (find_package(EXPAT)); DebugProxy compiles the two HostSupport
+# sources it uses. These are openfx options (CMP0077: option() uses these variables).
+if(OFX_BUILD_HOSTDEMO)
   set(OFX_BUILD_HOSTSUPPORT ON)
 else()
   set(OFX_BUILD_HOSTSUPPORT OFF)
@@ -192,6 +197,13 @@ if(NOT DEFINED OpenGL_GL_PREFERENCE)
 endif()
 find_package(OpenGL REQUIRED)
 
+# The Windows SDK has GL/gl.h (OpenGL 1.1) but no GL/glext.h (MinGW-w64 and the Linux/Mesa
+# GL headers have one): MSVC builds use the copy bundled in GL/ (Khronos glext.h, no
+# KHR/khrplatform.h needed), for ColorLookup (Misc), Shadertoy and TestOpenGL (Test).
+if(MSVC)
+  set(OFXMISC_GLEXT_INCLUDE_DIR ${PROJECT_SOURCE_DIR})
+endif()
+
 # Include directory of Makefile.master (ofxsProcessing.H...); SupportExt's comes with
 # supportext_add_sources, Misc's (Misc/Makefile) is on the Misc target
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/openfx/Support/Plugins/include)
@@ -211,7 +223,7 @@ set(MISC_PLUGIN_DIRS
   Constant ContactSheet CopyRectangle CornerPin Crop Deinterlace DenoiseSharpen Despill
   Difference DiscBlades Dissolve Distortion FrameBlend FrameHold FrameRange Gamma GodRays
   Grade HSVTool HueCorrect ImageStatistics Invert JoinViews KeyMix Keyer LayerContactSheet
-  Log2Lin MatteMonitor Merge Mirror MixViews Multiply NoOp OneView PIK PLogLin Position
+  LayerRename Log2Lin MatteMonitor Merge Mirror MixViews Multiply NoOp OneView PIK PLogLin Position
   Premult Quantize Radial Ramp Rand ReConverge Rectangle Reformat Retime Roto Saturation
   Shuffle SideBySide SlitScan SpriteSheet Switch Threshold TimeBlur TimeBuffer
   TimeDissolve TimeOffset TrackerPM Transform VectorToColor)
@@ -226,7 +238,7 @@ add_ofx_plugin(Misc INFO_PLIST Misc/Info.plist SOURCES ${MISC_SOURCES})
 supportext_add_sources(Misc COMPONENTS THREADS FILEOPEN GENERATOR LUT MULTIPLANE TEXT RAMP SHUTTER
   TRACKING TRANSFORM3X3 TRANSFORM_INTERACT RECTANGLE_INTERACT POSITION_INTERACT)
 # openfx::Support and OpenGL::GL come with supportext_add_sources
-target_include_directories(Misc PRIVATE Misc ${MISC_PLUGIN_DIRS} Test)
+target_include_directories(Misc PRIVATE Misc ${MISC_PLUGIN_DIRS} Test ${OFXMISC_GLEXT_INCLUDE_DIR})
 if(NOT MSVC) # MSVC has OpenMP 2.0 only
   ofx_target_openmp(Misc) # DenoiseSharpen (Misc/Makefile: OPENMP=1)
 endif()
@@ -388,6 +400,9 @@ if(BUILD_SHADERTOY)
     Shadertoy/ShadertoyRenderGL.cpp Shadertoy/ShadertoyRenderMesa.cpp)
   supportext_add_sources(Shadertoy COMPONENTS THREADS) # as Shadertoy/Makefile
   target_link_libraries(Shadertoy PRIVATE OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup
+  # MSVC: GL/glext.h. With USE_OSMESA on MSVC, this bundled (2017) glext.h would come before
+  # Mesa's for ShadertoyRenderMesa.cpp; that case is theoretical (Natron's OSMesa builds use MinGW).
+  target_include_directories(Shadertoy PRIVATE ${OFXMISC_GLEXT_INCLUDE_DIR})
   if(USE_OSMESA)
     # Shadertoy/Makefile with OSMESA=1: -DHAVE_OSMESA, OSMesa's headers for ShadertoyRenderMesa.cpp
     # only, and -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `llvm-config ...`.
@@ -830,6 +845,7 @@ if(BUILD_TESTING)
     Test/TestOpenGL.cpp Test/TestOpenGLRenderGL.cpp Test/TestOpenGLRenderMesa.cpp)
   supportext_add_sources(Test COMPONENTS THREADS TRANSFORM3X3) # + SHUTTER, as Test/Makefile
   target_link_libraries(Test PRIVATE OpenGL::GL)
+  target_include_directories(Test PRIVATE ${OFXMISC_GLEXT_INCLUDE_DIR}) # MSVC: GL/glext.h
   ofx_deploy_bundle(Test)
 endif()
 
@@ -837,9 +853,13 @@ endif()
 # DebugProxy.ofx.bundle (DebugProxy/Makefile; make CONFIG=debug)
 ########################################################################
 if(BUILD_DEBUGPROXY)
-  # not linked with openfx::Support: it uses HostSupport's ofxhBinary and ofxhUtilities
-  add_ofx_plugin(DebugProxy INFO_PLIST DebugProxy/Info.plist SOURCES DebugProxy/DebugProxy.cpp)
-  target_link_libraries(DebugProxy PRIVATE openfx::HostSupport)
-  target_include_directories(DebugProxy PRIVATE ${OFXMISC_SUPPORTEXT_DIR}) # ofxsMacros.h
+  # not linked with openfx::Support: it uses HostSupport's ofxhBinary and ofxhUtilities, compiled
+  # here as in DebugProxy/Makefile, and not openfx::HostSupport, which would link expat (for its
+  # plug-in cache, which DebugProxy doesn't use) into the bundle, and deploy it
+  add_ofx_plugin(DebugProxy INFO_PLIST DebugProxy/Info.plist SOURCES DebugProxy/DebugProxy.cpp
+    openfx/HostSupport/src/ofxhBinary.cpp openfx/HostSupport/src/ofxhUtilities.cpp)
+  target_include_directories(DebugProxy PRIVATE openfx/HostSupport/include
+    ${OFXMISC_SUPPORTEXT_DIR}) # ofxsMacros.h
+  target_link_libraries(DebugProxy PRIVATE ${CMAKE_DL_LIBS})
   ofx_deploy_bundle(DebugProxy)
 endif()

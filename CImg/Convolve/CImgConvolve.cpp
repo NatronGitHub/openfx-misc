@@ -326,7 +326,7 @@ public:
         }
         checkBadRenderScaleOrField(filter, args);
         if ( filter->getPixelDepth() != eBitDepthFloat ) {
-            throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwBitDepthUnsupported();
         }
         const int fnc = filter->getPixelComponentCount();
         // the kernel is the part of the filter image within its RoD
