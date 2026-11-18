@@ -162,11 +162,17 @@ else()
 endif()
 set(BUILD_EXAMPLE_HOSTS ${OFX_BUILD_HOSTDEMO})
 add_subdirectory(openfx EXCLUDE_FROM_ALL)
-if(OFX_BUILD_HOSTDEMO)
+if(OFX_BUILD_HOSTDEMO AND NOT TARGET hostDemo)
+  # openfx skips the example hosts with OFX_SUPPORTS_MULTITHREAD (hostDemo doesn't implement
+  # the multi-thread suite)
+  message(FATAL_ERROR "OFX_BUILD_HOSTDEMO=ON: openfx did not define the hostDemo target "
+    "(hostDemo does not support OFX_SUPPORTS_MULTITHREAD=ON): set OFX_SUPPORTS_MULTITHREAD=OFF "
+    "or OFX_BUILD_HOSTDEMO=OFF")
+elseif(OFX_BUILD_HOSTDEMO)
   # hostDemo is built with the same OFX_EXTENSIONS_* as the plug-ins (so it renders the two
   # views of a stereo frame), and is installed next to the bundles' OFX directory
-  add_custom_target(hostdemo ALL)
-  add_dependencies(hostdemo hostDemo)
+  add_custom_target(ofxmisc_hostdemo ALL)
+  add_dependencies(ofxmisc_hostdemo hostDemo)
   # openfx's install rules are not used (EXCLUDE_FROM_ALL, and openfx's OFX_INSTALL is OFF)
   install(PROGRAMS $<TARGET_FILE:hostDemo> DESTINATION bin)
 endif()
