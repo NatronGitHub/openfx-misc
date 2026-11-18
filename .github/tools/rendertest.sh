@@ -160,11 +160,13 @@ for m in r.get("messages") or []:
         errors.append("%s %s: %s" % (m.get("kind"), m.get("type"), m.get("text")))
 renders = r.get("renders") or []
 nframes = int(refs.get("frames", 2))
-# a stereo hostDemo renders views 0 and 1 of each frame: the expectations are
-# checked on view 0
-nviews = max([k.get("view") or 0 for k in renders] + [0]) + 1
-if len(renders) != nframes * nviews:
-    errors.append("%d renders, expected %d frames of %d views" % (len(renders), nframes, nviews))
+# hostDemo is built with the OFX_EXTENSIONS_* of the plugins (by -DOFX_BUILD_HOSTDEMO=ON,
+# or above with openfx's defaults): it always renders views 0 and 1 of each frame (the
+# report has no view count). The expectations are checked on view 0.
+nviews = 2
+views = [k.get("view") or 0 for k in renders]
+if len(renders) != nframes * nviews or views != list(range(nviews)) * nframes:
+    errors.append("%d renders (views %s), expected %d frames of %d views" % (len(renders), views, nframes, nviews))
 out0 = None
 for k in renders:
     o = k.get("output")
@@ -240,9 +242,10 @@ if out0:
             if kind == "value":
                 want = [float(v) for v in want.split(",")]
                 def close(got):
+                    # got: a number, a list, or None (no value, or NaN)
                     got = got if isinstance(got, list) else [got]
                     return (len(got) == len(want) and
-                            all(abs(a - b) <= 1e-4 * max(1., abs(b)) for a, b in zip(got, want)))
+                            all(a is not None and abs(a - b) <= 1e-4 * max(1., abs(b)) for a, b in zip(got, want)))
                 if not close(p.get("value")):
                     errors.append("%s = %s, expected %s" % (pname, p.get("value"), rest.split("=", 1)[1]))
                 k0 = [k for k in renders if k.get("time") == 0]
@@ -258,6 +261,7 @@ if out0:
                 first, last = (float(v) for v in want.split(","))
                 if not keys or keys[0][0] != first or keys[-1][0] != last:
                     errors.append("%s: keys at %s, expected %s..%s" % (pname, [k[0] for k in keys], first, last))
+                desc += " %s:keys%s" % (pname, "%g..%g" % (keys[0][0], keys[-1][0]) if keys else "=none")
         elif expect.startswith("changed:"):
             clip = expect[8:]
             if not refs.get(clip):
