@@ -50,8 +50,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: in "Alpha" and "Image and Alpha" output modes, premultiply RGB by the source alpha
 //              (version 1 premultiplied RGB by the suppress mask)
+// version 2.1: premultiplying by alpha 0 gives 0, not NaN, for an infinite colour
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -377,8 +378,10 @@ private:
                             if (_outputMode == eOutputModeAlpha) {
                                 outPix[c] = srcPix ? (float)srcPix[c] : 0.f;
                             } else {
-                                // premult by alpha <= 0 gives 0, as in ofxsPremult()
-                                outPix[c] = tmpPix[c] * (_premult ? (std::max)(0.f, unpPix[3]) : 1.f) * maxValue;
+                                // premult by alpha <= 0 gives a signed zero, as in ofxsPremult():
+                                // an infinite colour (e.g. unpremultiplied by a tiny alpha) gave inf * 0 = NaN
+                                const float a = _premult ? (std::max)(0.f, unpPix[3]) : 1.f;
+                                outPix[c] = (a == 0.f) ? std::copysign(0.f, tmpPix[c]) : (tmpPix[c] * a * maxValue);
                             }
                         }
                         if (nComponents == 4) {
