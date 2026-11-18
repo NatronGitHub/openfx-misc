@@ -156,9 +156,10 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Install Ubuntu system packages
+        # libexpat1-dev: openfx's HostSupport (hostDemo, debug) uses the system expat
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglu1-mesa-dev libgl-dev cmake ninja-build
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev libexpat1-dev cmake ninja-build
       - name: Build (make)
         if: matrix.make
         run: make -j"$(nproc)" ${{ matrix.make }}
