@@ -126,6 +126,7 @@ grouping).
 
 ### Channel
 
+* LayerRenameOFX: Rename the layers of the input with find and replace (on hosts that support multiple planes, e.g. Natron).
 * ShuffleOFX: Rearrange channels from one or two inputs, and convert to a different bit depth (on hosts that support it).
 
 ### Color
