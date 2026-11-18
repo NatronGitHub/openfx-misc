@@ -134,7 +134,7 @@ XFAIL=(
     "net.sf.openfx.PLogLin@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"
     "net.sf.openfx.FrameBlend@filter|_fgMClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the FgM clip is Alpha, also when it is not connected (filter context)"
     "net.sf.openfx.ShufflePlugin:1@filter|_srcClipA && _srcClipB && _dstClip|debug:v1 (ShuffleClassic) is an identity in the filter context by default, and its render, which hostDemo calls anyway, asserts that the A and B clips exist (the filter context has Source only)"
-    "net.sf.openfx.TimeBufferWrite|Pure virtual function called|debug:render fails (kOfxStatFailed) without a TimeBufferRead, then a pure virtual function is called (abort)"
+    "net.sf.openfx.TimeBufferWrite|[Pp]ure virtual [fm][a-z]* called|debug:render fails (kOfxStatFailed) without a TimeBufferRead, then a pure virtual function is called (abort; macOS: \"Pure virtual function called\", libstdc++: \"pure virtual method called\")"
 )
 # ---------------------------------------------------------------------------
 
