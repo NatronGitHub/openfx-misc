@@ -136,7 +136,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or highlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero..\n" \
     "\n" \
-    "The analysis warns if the analysis area is likely to give wrong noise levels: a color channel has many clipped values, or the area contains details or texture rather than flat areas, or the AnalysisMask leaves too few pixels. The warning is also shown in the \"Analysis Warning\" parameter, until the next analysis.\n" \
+    "The analysis warns if the analysis area is likely to give wrong noise levels: a color channel has many clipped values, or the area contains details or texture rather than flat areas, or the AnalysisMask leaves too few pixels. The warning is shown in the \"Analysis Warning\" parameter (hidden when there is no warning), until the next analysis or a change of the color model.\n" \
     "\n" \
     "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, and noise analysis can only be performed on areas which also contain details, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
     "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it commes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
@@ -272,13 +272,16 @@ enum ColorModelEnum
 #define kParamNoiseLevelVeryLowLabel " (Very Low)"
 #define kParamAnalyzeNoiseLevels "analyzeNoiseLevels"
 #define kParamAnalyzeNoiseLevelsLabel "Analyze Noise Levels"
-#define kParamAnalyzeNoiseLevelsHint "Computes the noise levels from the current frame and current color model. To use the same settings for the whole sequence, analyze a frame that is representative of the sequence. If a mask is set, it is used to compute the noise levels from areas where the mask is non-zero. If there are keyframes on the noise level parameters, this sets a keyframe at the current frame. The noise levels can then be fine-tuned. A warning is shown if the analysis region is likely to give wrong noise levels (clipped values, details or texture, too few pixels)."
+#define kParamAnalyzeNoiseLevelsHint "Computes the noise levels from the current frame and current color model. To use the same settings for the whole sequence, analyze a frame that is representative of the sequence. If a mask is set, it is used to compute the noise levels from areas where the mask is non-zero. If there are keyframes on the noise level parameters, this sets a keyframe at the current frame. The noise levels can then be fine-tuned. The \"Analysis Warning\" parameter is shown if the analysis region is likely to give wrong noise levels (clipped values, details or texture, too few pixels)."
 
 #define kParamAnalysisWarning "analysisWarning"
 #define kParamAnalysisWarningLabel "Analysis Warning"
 #define kParamAnalysisWarningHint "Set by \"Analyze Noise Levels\" if the analysis region is likely to give wrong noise levels: a channel has many clipped values, or the region contains details or texture rather than flat areas, or the AnalysisMask leaves too few pixels. Empty (and hidden) if the last analysis found no problem. The analysis results are not changed: the noise levels may still be used, but it is better to analyze a flat area, free from details, shadows, highlights and clipped values."
 
 // Noise analysis checks (issue #142). These only produce a warning: the analysis results never depend on them.
+// The thresholds below are initial values, chosen from simulations, to be tuned from user feedback.
+// NaN: the checks contain no division by a value that can be zero and no NaN test. NaN or Inf values in the
+// input image (input data) may only change the warning, never the noise levels.
 //
 // Minimum size of the analysis window, in pixels (an error, as before: the analysis is not done).
 #define kAnalysisMinSize 80
@@ -3106,10 +3109,11 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-// Show the warning about the analysis region (issue #142) in the analysisWarning param, and in a (transient) warning
-// message. A persistent message (OfxMessageSuiteV2::setPersistentMessage) would not stay: the render action clears
-// the persistent messages, and the analysis triggers a render (it sets the noise levels and the analysis lock).
-// An empty warning clears the param.
+// Show the warning about the analysis region (issue #142) in the analysisWarning param only: no modal dialog
+// (sendMessage), which would interrupt the user at each analysis. A persistent message
+// (OfxMessageSuiteV2::setPersistentMessage) would not stay either: the render action clears the persistent
+// messages, and the analysis triggers a render (it sets the noise levels and the analysis lock).
+// An empty warning clears and hides the param.
 void
 DenoiseSharpenPlugin::setAnalysisWarning(const std::string& warning)
 {
@@ -3120,9 +3124,6 @@ DenoiseSharpenPlugin::setAnalysisWarning(const std::string& warning)
             _analysisWarning->setValue(warning);
         }
         _analysisWarning->setIsSecret( warning.empty() );
-    }
-    if ( !warning.empty() ) {
-        sendMessage(Message::eMessageWarning, "", warning); // the Support library passes it as "%s" (openfx#133)
     }
 }
 
@@ -3425,6 +3426,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
             const bool lowClipped = (vmin[c] <= 0.f) && (nmin[c] > 0);
             const bool highClipped = (vmax[c] >= 1.f) && (nmax[c] > 0);
             const unsigned int nclip = (lowClipped ? nmin[c] : 0) + (highClipped ? nmax[c] : 0);
+            // nSamples > 0 here, so the percentage below has no division by zero
             if (nclip > kAnalysisClipFractionMax * nSamples) {
                 problems << "- " << (int)(100. * nclip / nSamples + 0.5) << "% of the " << rgbName[c]
                          << " values are clipped (at ";
