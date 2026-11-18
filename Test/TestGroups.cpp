@@ -112,7 +112,8 @@ public:
                                _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
         _optionalClip = fetchClip(kClipOptional);
-        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
+        // there is no mask clip in the generator context (see describeInContext())
+        _maskClip = getContext() == eContextGenerator ? NULL : fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _color = fetchRGBAParam(kParamColor0);
@@ -592,6 +593,10 @@ TestGroupsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setIsMask(false);
+    if (context == eContextGenerator) {
+        // "Any input clips that are specified must be optional" (OFX spec, Generator Context)
+        srcClip->setOptional(true);
+    }
 
     {
         ClipDescriptor *clip = desc.defineClip(kClipOptional);

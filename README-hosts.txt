@@ -275,7 +275,17 @@ supportsDynamicChoices=0
 supportsCascadingChoices=0
 supportsChannelSelector=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxImageEffectOpenGLRenderSuite,OfxVegasProgressSuite,OfxVegasStereoscopicImageEffectSuite,OfxVegasKeyframeSuite,OfxOpenCLProgramSuite,
-OFX DebugProxy: host description finished
+
+Caveats/Bugs (see https://github.com/NatronGitHub/openfx-misc/issues/66):
+- no OfxInteractSuite and supportsOverlays=0: overlays (and custom interacts) are never shown.
+- no OfxParametricParameterSuite: plugins with parametric (curve) parameters cannot be described.
+- only RGBA and Alpha components, only 8-bit and float pixel depths (no 16-bit).
+- the render scale in the action arguments is not set on the images (kOfxImageEffectPropRenderScale is always 1 on images, e.g. 0.25 in the inArgs with "Auto" preview quality, but the images are at the inArgs scale). The Support library ignores the image render scale when the host name starts with com.sonycreativesoftware.vegas.
+- generator plugins ("Generated Media") are instantiated in the generator context, which Natron never uses for plugins that also support the general context: code paths specific to that context (e.g. a NULL source clip) are only exercised there.
+- crashes are caught by the VEGAS crash handler: Windows Event Viewer does not log them, and no crash dump is available. The OFX log of debug builds and the "More Information" logs of the crash handler are the only sources of information.
+- VEGAS Pro 15 and later (MAGIX) were tested with recent openfx-misc builds, but their host description is not documented yet (the host name may differ from com.sonycreativesoftware.vegas):
+  - Shadertoy: VEGAS Pro 15 finds no plugin in Shadertoy.ofx, and VEGAS Pro 2027 reports that OfxImageEffectActionDescribeInContext fails in all contexts (Shadertoy needs OpenGL render when it is built without OSMesa).
+  - float-only plugins (all CImg plugins, ContactSheet) misbehaved or crashed. They now fail cleanly (kOfxStatErrUnsupported) if the host gives them images that are not float, instead of writing past the end of the image buffers.
 
 * Blackmagic Fusion
 
