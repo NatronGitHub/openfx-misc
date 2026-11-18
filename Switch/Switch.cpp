@@ -79,7 +79,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamAutomaticHint \
     "When checked, automatically switch to the first connected input with a non-empty region of definition. This can be used to recompose a single clip from effects applied to different frame ranges."
 
-#define kClipSourceCount 16
+#define kClipSourceCount 2 // the clips defined on hosts other than Natron >= 2 ("0" or Source, and "1")
 #define kClipSourceCountNumerous 128
 
 static

@@ -1000,8 +1000,12 @@ PremultPluginFactory<isPremult>::describe(ImageEffectDescriptor &desc)
 #else
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
     desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelPassThroughNonRenderedPlanes);
-    // optional=true: fetchSuite() throws instead of returning NULL when the host lacks the suite
-    gIsMultiplanar = getImageEffectHostDescription()->supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true);
+    // optional=true: fetchSuite() returns NULL instead of throwing when the host lacks the suite.
+    // The host must also be multi-planar (kFnOfxImageEffectPropMultiPlanar), as Shuffle checks:
+    // SupportExt's MultiPlane parameters need it.
+    gIsMultiplanar = ( getImageEffectHostDescription()->isMultiPlanar &&
+                       getImageEffectHostDescription()->supportsDynamicChoices &&
+                       fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) );
     desc.setIsMultiPlanar(gIsMultiplanar);
 #endif
 }

@@ -118,11 +118,6 @@ INPUTS=(
 # to describe failures: the entries without a context to hostDemo --describe failures,
 # those with a context to the describeInContext failures of that context.
 XFAIL=(
-    # issue #166
-    "net.sf.openfx.Premult:2|describe in context action failed|v2 describes the multi-plane parameters when the host has the plane suite V2 and dynamic choices, but not kFnOfxImageEffectPropMultiPlanar (Premult.cpp does not check isMultiPlanar), and SupportExt's MultiPlane (describeInContextAddPlaneChannelChoice) throws"
-    "net.sf.openfx.Unpremult:2|describe in context action failed|v2 describes the multi-plane parameters when the host has the plane suite V2 and dynamic choices, but not kFnOfxImageEffectPropMultiPlanar (Premult.cpp does not check isMultiPlanar), and SupportExt's MultiPlane (describeInContextAddPlaneChannelChoice) throws"
-    # issue #163
-    "net.sf.openfx.switchPlugin|create instance action failed \(status 9\)|on hosts other than Natron, describeInContext defines 2 source clips, but the instance fetches kClipSourceCount (16): fetchClip(\"2\") throws kOfxStatErrBadHandle"
     # issue #164
     "net.sf.openfx.TrackerPM@filter|create instance action failed \(status 9\)|the instance fetches the Mask clip, which describeInContext only defines in the general, paint and tracker contexts"
     # issue #165 (PIK supports short and float only)
