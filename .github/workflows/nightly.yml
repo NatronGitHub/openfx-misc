@@ -128,7 +128,8 @@ jobs:
     name: Ubuntu 24.04 ${{ matrix.name }}
     needs: changes
     if: needs.changes.outputs.run == 'true'
-    timeout-minutes: 30
+    # debug: the full smoke test of the -O0 build (with OpenMP) is much slower
+    timeout-minutes: ${{ matrix.config == 'debug' && 75 || 30 }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -179,9 +180,11 @@ jobs:
           .github/tools/rendertest.sh install-${{ matrix.config }}
       - name: Smoke test (hostDemo, all plug-ins)
         if: matrix.rendertest
-        timeout-minutes: 15
+        # debug (-O0): SMOKETEST_DEBUG=1 for the "debug:" entries, and 600 s per render
+        # (CImg plug-ins at -O0, with OpenMP)
+        timeout-minutes: ${{ matrix.config == 'debug' && 50 || 15 }}
         run: |
-          [ "${{ matrix.config }}" != debug ] || export SMOKETEST_DEBUG=1
+          [ "${{ matrix.config }}" != debug ] || export SMOKETEST_DEBUG=1 SMOKETEST_TIMEOUT=600
           .github/tools/smoketest.sh install-${{ matrix.config }}
 
   windows:
