@@ -262,7 +262,9 @@ public:
                 // a huge or infinite value (some hosts return inf or NaN with keys at both 0
                 // and 6, NatronGitHub/Natron#1267) would give NaN pixels: use 0, as for negative
                 // values (below). This domain check also works with -ffast-math. NaN is not
-                // detected, but in IEEE arithmetic std::max(0., NaN) below gives 0.
+                // detected: in IEEE arithmetic, std::max(0., NaN) below gives 0, but a NaN curve
+                // value from the host is not guaranteed to be caught in -ffast-math builds, where
+                // std::max with NaN is undefined.
                 if (value > kCurveValueMax) {
                     value = 0.;
                 }
@@ -351,7 +353,7 @@ private:
                     g *= (float)((sat_thrsh * 1. + (s - sat_thrsh) * green * lum) / s); // green * lum;
                     b *= (float)((sat_thrsh * 1. + (s - sat_thrsh) * blue * lum) / s); // blue * lum;
                 } else if (sat_thrsh == 0.) {
-                    assert(s == 0.);
+                    assert(s <= 0.); // s < 0 if all the components are negative
                     r *= (float)(red * lum); // red * lum
                     g *= (float)(green * lum); // green * lum;
                     b *= (float)(blue * lum); // blue * lum;

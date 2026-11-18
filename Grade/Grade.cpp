@@ -75,7 +75,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1: gamma <= 0 gives FLT_MAX instead of +inf above 1 (NaN after premultiplying by alpha = 0);
+// version 2.1: gamma <= 0 gives FLT_MAX instead of +inf above 1 (NaN after premultiplying by alpha = 0),
+//              and the results of a small gamma are capped to FLT_MAX;
 //              Normalize with no analyzed pixel leaves the black and white points unchanged
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
@@ -447,7 +448,11 @@ public:
             *v = A; // pow would produce NaNs in that case (in Nuke, negative values produce v on output in Grade and Gamma)
         } else {
             double invgamma = 1. / gamma;
-            *v = std::pow(A, invgamma);
+            // a small gamma makes pow overflow (to +inf, or to a double above the float range,
+            // which is +inf as a float): cap it to FLT_MAX, the value of the gamma <= 0 branch
+            // above. pow of a positive value is never NaN, and the result is unchanged whenever
+            // it fits in a float.
+            *v = (std::min)( std::pow(A, invgamma), (double)FLT_MAX );
         }
     }
 
@@ -472,6 +477,10 @@ public:
         if (A != 0) {
             *v /= A;
         }
+        // pow overflows to +inf with a large (or negative) gamma: cap the result to the float
+        // range, as in grade(). It is never NaN (A and B are finite), and it is unchanged whenever
+        // it fits in a float.
+        *v = (std::max)( -(double)FLT_MAX, (std::min)(*v, (double)FLT_MAX) );
      }
 
     template<bool processR, bool processG, bool processB, bool processA>

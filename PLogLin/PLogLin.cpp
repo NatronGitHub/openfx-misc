@@ -22,6 +22,7 @@
  */
 
 #include <cmath>
+#include <cfloat> // DBL_MAX, FLT_MAX
 #include <algorithm>
 //#include <iostream>
 
@@ -46,7 +47,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.PLogLin"
 // History:
 // version 1.0: initial version
-// version 1.1: channels with nGamma = 0 (Log to Lin), or linRef <= 0 or density = 0 (Lin to Log), are passed through
+// version 1.1: channels with nGamma = 0 (Log to Lin), or linRef <= 0 or density = 0 (Lin to Log), are passed through;
+//              the results are capped to the float range
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -194,13 +196,25 @@ protected:
             // the result is 0 (and pow may overflow to +inf, and 0 * inf is NaN)
             return 0.;
         }
-        return _linRef[c] * std::pow( 10.0, (xLog * 1023. - _logRef[c]) * _density[c] / _nGamma[c] );
+        // pow overflows to +inf with a tiny nGamma, which gives NaN when premultiplied by
+        // alpha = 0: cap the result to the float range (never NaN: linRef is finite and
+        // non-zero, pow is positive). It is unchanged whenever it fits in a float.
+        double ret = _linRef[c] * std::pow( 10.0, (xLog * 1023. - _logRef[c]) * _density[c] / _nGamma[c] );
+
+        return (std::max)( -(double)FLT_MAX, (std::min)(ret, (double)FLT_MAX) );
     }
 
     double lin2log(double xLin,
                    int c)
     {
-        return (_logRef[c] + std::log10((std::max)(xLin, 1e-10) / _linRef[c]) * _nGamma[c] / _density[c]) / 1023.;
+        // the log argument is positive (linRef > 0: lin2logUndefined), but it may overflow to
+        // +inf with a tiny linRef, and log(inf) * nGamma is NaN if nGamma = 0: cap it. Also cap
+        // the result to the float range (it overflows with a tiny density). Both are unchanged
+        // whenever they are finite and the result fits in a float.
+        double ratio = (std::min)( (std::max)(xLin, 1e-10) / _linRef[c], DBL_MAX );
+        double ret = (_logRef[c] + std::log10(ratio) * _nGamma[c] / _density[c]) / 1023.;
+
+        return (std::max)( -(double)FLT_MAX, (std::min)(ret, (double)FLT_MAX) );
     }
 
     // the conversion is undefined for this channel with these parameters (it would divide by zero,

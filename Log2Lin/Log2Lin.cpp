@@ -22,6 +22,7 @@
  */
 
 #include <cmath>
+#include <cfloat> // DBL_MAX, FLT_MAX
 #include <algorithm>
 //#include <iostream>
 
@@ -44,7 +45,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.Log2Lin"
 // History:
 // version 1.0: initial version
-// version 1.1: also pass through the channels where black and white are almost equal (the offset rounds to 1)
+// version 1.1: also pass through the channels where black and white are almost equal (the offset rounds to 1),
+//              or where the offset overflows; Log to Lin results are capped to the float range
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -181,7 +183,11 @@ protected:
     {
         double retval = _gain[c] * (std::pow(10., (1023. * xLog - _whitepoint[c]) * 0.002 / _gamma[c]) - _offset[c]);
 
-        return retval;
+        // pow overflows to +inf with a small gamma (e.g. kParamGammaMin), which gives NaN when
+        // premultiplied by alpha = 0: cap the result to the float range. The result is never
+        // NaN (the gain is finite and non-zero, the offset is finite), and it is unchanged
+        // whenever it fits in a float.
+        return (std::max)( -(double)FLT_MAX, (std::min)(retval, (double)FLT_MAX) );
     }
 
     double lin2log(double xLin,
@@ -245,11 +251,17 @@ public:
             // gamma = 0 would divide by zero (projects may hold values below the
             // param minimum, and hosts may not enforce the range)
             const double g = (std::max)(gamma[c], kParamGammaMin);
-            _offset[c] = std::pow(10., (black[c] - white[c]) * 0.002 / g);
+            const double e = (black[c] - white[c]) * 0.002 / g;
+            // e >= log10(DBL_MAX) (e.g. black = 1023, white = 0, gamma = 0.001) makes the offset
+            // overflow to +inf, the gain -0, and both conversions NaN: pass the channel through.
+            // Below that threshold the offset is finite and nothing changes (only the offsets
+            // within one ulp of DBL_MAX, where e is at the threshold, are passed through too).
+            const bool offsetOverflows = ( e >= std::log10(DBL_MAX) );
+            _offset[c] = offsetOverflows ? 1. : std::pow(10., e);
             // black == white gives offset = 1 and an infinite gain: pass the channel through.
             // Test the offset rather than black == white: it also rounds to 1 when black and
             // white are almost equal.
-            _passThrough[c] = (_offset[c] == 1.);
+            _passThrough[c] = offsetOverflows || (_offset[c] == 1.);
             _gain[c] = _passThrough[c] ? 1. : 1. / (1. - _offset[c]);
             _whitepoint[c] = white[c];
             _gamma[c] = g;

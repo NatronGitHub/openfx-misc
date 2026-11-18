@@ -158,9 +158,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier "net.sf.openfx.PIK"
 // version 1.0: initial version
-// version 1.1: a soft replace color with zero luminance is replaced by white, as black is (instead of NaN)
+// version 1.1: a soft replace color with (almost) zero luminance is replaced by white, as black is (instead of NaN)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+
+// a Soft Color replace color is normalized to unit luminance. Below this luminance (in absolute
+// value), it is replaced by white, as black is. Real replace colors are far above it; it is also
+// well above the rounding error of the luminance of a zero-luminance color (exactly 0 without FMA,
+// about 1e-9 with FMA contraction, e.g. on arm64).
+#define kReplaceColorLuminanceMin 1e-6
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -597,9 +603,9 @@ public:
             // only normalize if the replace method is soft color
             if (screenReplace == eReplaceSoftColor) {
                 l = luminance(_colorspace, _screenReplaceColor);
-                if (l == 0.) {
-                    // black, or a color with zero luminance (with negative components), which
-                    // can't be normalized (0/0 is NaN): use white, as for black
+                if (std::abs(l) < kReplaceColorLuminanceMin) {
+                    // black, or a color with (almost) zero luminance (with negative components),
+                    // which can't be normalized (0/0 is NaN, or a huge color): use white, as for black
                     _screenReplaceColor[0] = _screenReplaceColor[1] = _screenReplaceColor[2] = 1.;
                 } else {
                     _screenReplaceColor[0] /= l;
@@ -617,9 +623,9 @@ public:
             // only normalize if the replace method is soft color
             if (insideReplace == eReplaceSoftColor) {
                 l = luminance(_colorspace, _insideReplaceColor);
-                if (l == 0.) {
-                    // black, or a color with zero luminance (with negative components), which
-                    // can't be normalized (0/0 is NaN): use white, as for black
+                if (std::abs(l) < kReplaceColorLuminanceMin) {
+                    // black, or a color with (almost) zero luminance (with negative components),
+                    // which can't be normalized (0/0 is NaN, or a huge color): use white, as for black
                     _insideReplaceColor[0] = _insideReplaceColor[1] = _insideReplaceColor[2] = 1.;
                 } else {
                     _insideReplaceColor[0] /= l;

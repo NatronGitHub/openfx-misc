@@ -54,7 +54,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: add range params
-// version 2.2: gamma = 0 gives its limit (0 below 1, 1 at 1, FLT_MAX above 1) instead of dividing by zero
+// version 2.2: gamma = 0 gives its limit (0 below 1, 1 at 1, FLT_MAX above 1) instead of dividing by zero,
+//              and the results of a small gamma are capped to FLT_MAX
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -295,7 +296,9 @@ private:
             return v < 1. ? 0. : (v == 1. ? 1. : (double)FLT_MAX);
         }
 
-        return std::pow(v, 1. / gamma);
+        // a small gamma makes pow overflow to +inf, as gamma = 0 above: cap it to FLT_MAX (pow of
+        // a positive value is never NaN, and the result is unchanged whenever it fits in a float)
+        return (std::min)( std::pow(v, 1. / gamma), (double)FLT_MAX );
     }
 
     void applyGamma(const ColorControlValues &c)
