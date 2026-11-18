@@ -25,7 +25,8 @@
 # <build>/Plugins and installed by "cmake --install" into ${CMAKE_INSTALL_PREFIX}/OFX/Plugins
 # (openfx's PLUGIN_INSTALLDIR): use --prefix /usr (Linux) or /Library (macOS) to get the
 # directories of "make install".
-# The "make nomulti" bundles (one per plug-in directory) are only built by make.
+# The "make nomulti" bundles (one per plug-in directory) are only built by make, except those of
+# OFXMISC_STANDALONE_BUNDLES (below).
 #
 # Options:
 #   -DCMAKE_BUILD_TYPE=Release|Debug|RelWithDebInfo (default: Release)
@@ -34,7 +35,12 @@
 #      ("make OPENMP=1"). Apple clang uses MacPorts' libomp (port install libomp).
 #   -DOFX_DEPLOY_BUNDLES=ON: at install, copy the non-system libraries into the bundles
 #      (macOS: osxDeploy.sh, as "make CONFIG=release" does; needs gsed)
-#   -DBUILD_CIMG_PLUGINS=OFF ("make HAVE_CIMG=0"), -DBUILD_SHADERTOY=OFF
+#   -DBUILD_CIMG_PLUGINS=OFF ("make HAVE_CIMG=0"), -DBUILD_SHADERTOY=OFF, -DBUILD_MISC=OFF (e.g.
+#      -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF builds only Shadertoy.ofx.bundle)
+#   -DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen": also build these plug-in directories of Misc as
+#      standalone bundles (<Dir>.ofx.bundle, with <Dir>/Info.plist, as "make nomulti"), for the
+#      binary releases. Their plug-ins are also in Misc.ofx.bundle, with the same identifiers and
+#      versions: a host must not load both (install one or the other).
 #   -DBUILD_TESTING=ON|OFF, -DBUILD_DEBUGPROXY=ON|OFF (default: ON in Debug builds)
 #   -DUSE_OSMESA=ON ("make -C Shadertoy OSMESA=1"): Shadertoy CPU rendering with a mangled
 #      OSMesa in OSMESA_PATH (default /opt/osmesa) and LLVM in LLVM_PATH (default /opt/llvm)
@@ -103,6 +109,7 @@ endif()
 
 # ========================== options ==========================
 
+option(BUILD_MISC "Build the Misc plugins (Misc.ofx.bundle)" ON)
 option(BUILD_CIMG_PLUGINS "Build the CImg plugins (CImg.ofx.bundle)" ON)
 option(BUILD_SHADERTOY "Build the Shadertoy plugin (Shadertoy.ofx.bundle, needs OpenGL)" ON)
 # Debug-only bundles, as "make CONFIG=debug" (Test also with "make TESTS=1"). The defaults
@@ -210,6 +217,7 @@ set(MISC_PLUGIN_DIRS
   Premult Quantize Radial Ramp Rand ReConverge Rectangle Reformat Retime Roto Saturation
   Shuffle SideBySide SlitScan SpriteSheet Switch Threshold TimeBlur TimeBuffer
   TimeDissolve TimeOffset TrackerPM Transform VectorToColor)
+if(BUILD_MISC)
 set(MISC_SOURCES Misc/randomGenerator.cpp Test/TestRender.cpp)
 foreach(_dir IN LISTS MISC_PLUGIN_DIRS)
   file(GLOB _srcs "${_dir}/*.cpp")
@@ -373,6 +381,37 @@ ofx_plugin_resources(Misc
   "VectorToColor/net.sf.openfx.VectorToColorPlugin.svg"
 )
 ofx_deploy_bundle(Misc)
+endif(BUILD_MISC)
+
+########################################################################
+# Standalone bundles of Misc plug-ins (OFXMISC_STANDALONE_BUNDLES; make nomulti's <Dir>/Makefile)
+########################################################################
+# One bundle per listed plug-in directory, <Dir>.ofx.bundle, with the sources of <Dir> (the same
+# sources, hence the same identifiers and versions, as in Misc.ofx.bundle), <Dir>/Info.plist, and
+# the SupportExt components of <Dir>/Makefile. The supported directories, with their SupportExt
+# components (and OPENMP if it uses OpenMP) and resources:
+set(_ofxmisc_standalone_DenoiseSharpen COMPONENTS THREADS LUT RECTANGLE_INTERACT OPENMP) # no icon
+set(OFXMISC_STANDALONE_BUNDLES "" CACHE STRING
+  "Misc plug-in directories also built as standalone bundles (supported: DenoiseSharpen)")
+foreach(_dir IN LISTS OFXMISC_STANDALONE_BUNDLES)
+  if(NOT DEFINED _ofxmisc_standalone_${_dir})
+    message(FATAL_ERROR "OFXMISC_STANDALONE_BUNDLES: ${_dir} is not supported (supported: DenoiseSharpen; "
+      "to add one, define _ofxmisc_standalone_${_dir} in ${CMAKE_CURRENT_LIST_FILE})")
+  endif()
+  cmake_parse_arguments(_sb "OPENMP" "" "COMPONENTS;RESOURCES" ${_ofxmisc_standalone_${_dir}})
+  file(GLOB _srcs "${_dir}/*.cpp")
+  add_ofx_plugin(${_dir} INFO_PLIST ${_dir}/Info.plist SOURCES ${_srcs})
+  supportext_add_sources(${_dir} COMPONENTS ${_sb_COMPONENTS})
+  target_include_directories(${_dir} PRIVATE ${_dir})
+  if(_sb_OPENMP AND NOT MSVC) # as Misc: MSVC has OpenMP 2.0 only
+    ofx_target_openmp(${_dir})
+  endif()
+  if(_sb_RESOURCES)
+    ofx_plugin_resources(${_dir} ${_sb_RESOURCES})
+  endif()
+  ofx_deploy_bundle(${_dir})
+  message(STATUS "    Standalone bundle: ${_dir}.ofx.bundle")
+endforeach()
 
 ########################################################################
 # Shadertoy.ofx.bundle (Shadertoy/Makefile)

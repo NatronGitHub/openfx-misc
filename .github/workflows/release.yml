@@ -1,0 +1,338 @@
+name: Binary release
+
+# Builds the openfx-misc binary downloads of Linux x86_64, Windows x86_64 and macOS
+# (universal), tests them, and attaches them to a DRAFT GitHub release, which a
+# maintainer checks and publishes by hand. Per platform (see
+# .github/tools/package-release.sh, which also writes the README.txt of each archive):
+#   openfx-misc-<version>-<platform>                  the full set, as Natron ships it:
+#                                                     Misc.ofx, CImg.ofx and Shadertoy.ofx
+#                                                     (the OSMesa variant where it is built)
+#   openfx-misc-Shadertoy-OpenGL-<version>-<platform>  Shadertoy.ofx alone, OpenGL only
+#   openfx-misc-Shadertoy-OSMesa-<version>-<platform>  Shadertoy.ofx alone, OpenGL + OSMesa
+#                                                     (the bundle of the full set; Linux only)
+#   openfx-misc-DenoiseSharpen-<version>-<platform>    DenoiseSharpen.ofx alone
+#                                                     (-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen)
+# The standalone bundles have the same plug-ins (identifiers and versions) as the full
+# set: users install one or the other, never both, and only one Shadertoy.
+#
+# OSMesa (Shadertoy's CPU rendering) needs a mangled OSMesa and LLVM. Only the Linux job
+# builds it (.github/tools/build-osmesa.sh: Mesa 25.0.7 with Rocky Linux 8's static LLVM,
+# cached): on macOS, the bundles are universal and OSMesa would need a universal LLVM
+# built from source (hours); on Windows (UCRT64), osmesa-install is not tested. There,
+# the full set has the OpenGL-only Shadertoy and there is no OSMesa download.
+#
+# Frugal CI (NatronGitHub runners are shared by all repos): this workflow never runs on
+# pushes to branches or on pull requests, only on release tags (Natron-*, the Natron
+# version this repo is tagged with, and openfx-misc-*) and on manual runs ("Run
+# workflow"). A manual run without a tag only uploads the archives as workflow
+# artifacts; with the "tag" input (an existing tag), it builds that tag and makes (or
+# updates) its draft release. This workflow never creates tags (gh release --verify-tag).
+on:
+  push:
+    tags: ['Natron-*', 'openfx-misc-*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and attach to a draft release (empty: build the selected branch, artifacts only)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# Third-party actions are pinned to a commit SHA (version in the comment), since
+# a tag can be moved to other code. GitHub's own actions/* stay on version tags.
+# Checkouts use persist-credentials: false: no step needs to push.
+
+# One release run per tag or branch at a time; a release run is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+env:
+  # The tag of the release: the pushed tag, or the "tag" input of a manual run
+  RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+  # Release builds (C++17, the default), without the Test bundle; the bundles are
+  # deployed (OFX_DEPLOY_BUNDLES: on macOS, osxDeploy.sh copies the non-system libraries
+  # into the bundles); hostDemo is built for the smoke test (installed in <prefix>/bin,
+  # not packaged). DenoiseSharpen is also built as a standalone bundle.
+  CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DOFX_BUILD_HOSTDEMO=ON -DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen
+  # The Shadertoy-only build (Shadertoy, OpenGL only, where the full set has OSMesa)
+  SHADERTOY_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF -DUSE_OSMESA=OFF
+  # The bundles that the smoke test of the full set expects (no Test bundle)
+  SMOKETEST_FULL: Misc:168 CImg:40 Shadertoy:1
+
+defaults:
+  run:
+    shell: bash -eo pipefail {0}
+
+jobs:
+  build_linux:
+    name: Linux x86_64 (Rocky Linux 8)
+    # Natron's Linux baseline: Rocky Linux 8 (glibc 2.28) with gcc-toolset-14, so that
+    # the bundles load on the systems Natron supports. OpenMP (DenoiseSharpen, CImg) uses
+    # the system's libgomp.so.1.
+    timeout-minutes: 120
+    runs-on: ubuntu-24.04
+    container: rockylinux/rockylinux:8
+    steps:
+      - name: Install Rocky Linux packages
+        # git before the checkout (else actions/checkout downloads the sources without
+        # the submodules); python3.11 and perl for smoketest.sh; meson (pip), bison,
+        # flex, the static LLVM (and the zstd and libxml2 of its llvm-config --system-libs)
+        # and zlib for OSMesa. Not the OpenGL headers yet (see below).
+        run: |
+          dnf -y -q install dnf-plugins-core epel-release
+          dnf config-manager --set-enabled powertools
+          dnf -y -q install gcc-toolset-14-gcc-c++ cmake ninja-build git patch xz bzip2 curl \
+              python3.11 python3.11-pip bison flex zlib-devel libzstd-devel libxml2-devel llvm-devel llvm-static \
+              pkgconf-pkg-config perl file which diffutils findutils
+          python3.11 -m pip install -q meson mako pyyaml packaging
+          alternatives --set python3 /usr/bin/python3.11
+          # gcc-toolset-14 in the next steps
+          bash -c 'source /opt/rh/gcc-toolset-14/enable; echo "PATH=$PATH"; echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}"; echo "PKG_CONFIG_PATH=${PKG_CONFIG_PATH:-}"' >> "$GITHUB_ENV"
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_TAG && format('refs/tags/{0}', env.RELEASE_TAG) || github.ref }}
+          submodules: recursive
+          persist-credentials: false
+      - name: Show tools
+        id: tools
+        run: |
+          g++ --version | head -1
+          cmake --version | head -1
+          echo "llvm=$(llvm-config --version)" >> "$GITHUB_OUTPUT"
+          llvm-config --version
+      - name: Cache OSMesa
+        id: osmesa-cache
+        uses: actions/cache@v5
+        with:
+          path: /opt/osmesa
+          key: osmesa-rocky8-llvm${{ steps.tools.outputs.llvm }}-${{ hashFiles('.github/tools/build-osmesa.sh') }}
+      - name: Build OSMesa
+        if: steps.osmesa-cache.outputs.cache-hit != 'true'
+        env:
+          PYTHON: python3.11
+        # libdrm-devel must not be installed: Mesa would use libdrm, which the static
+        # OSMesa doesn't bring (Shadertoy would not load: undefined symbol drmIoctl)
+        run: |
+          ! rpm -q libdrm-devel
+          .github/tools/build-osmesa.sh /opt/osmesa /usr
+      - name: Install the OpenGL headers
+        # mesa-libGL-devel (which requires libdrm-devel), after OSMesa
+        run: dnf -y -q install mesa-libGL-devel
+      - name: Build the full set (Shadertoy with OSMesa) and DenoiseSharpen
+        # --as-needed: Shadertoy only links the libraries of llvm-config --system-libs that
+        # LLVM's code in it uses (not libxml2)
+        run: |
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DUSE_OSMESA=ON -DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr \
+              -DCMAKE_MODULE_LINKER_FLAGS=-Wl,--as-needed
+          cmake --build build
+          cmake --install build --prefix "$PWD/install"
+      - name: Build Shadertoy (OpenGL only)
+        run: |
+          cmake -S . -B build-shadertoy -G Ninja $SHADERTOY_OPTIONS
+          cmake --build build-shadertoy
+          cmake --install build-shadertoy --prefix "$PWD/install-shadertoy"
+      - name: Separate the standalone bundles
+        # DenoiseSharpen.ofx.bundle and Misc.ofx.bundle have the same plug-in: each is
+        # tested and packaged on its own
+        run: |
+          mkdir -p install-denoisesharpen/OFX/Plugins
+          mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
+          ldd install/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx install-*/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx
+      - name: Load test
+        run: |
+          .github/tools/loadtest.sh install
+          .github/tools/loadtest.sh install-shadertoy
+          .github/tools/loadtest.sh install-denoisesharpen
+      - name: Smoke test (hostDemo, all plug-ins)
+        timeout-minutes: 15
+        run: |
+          SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
+          SMOKETEST_BUNDLES="DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
+      - name: Package
+        run: |
+          .github/tools/package-release.sh \
+              --platform linux-x86_64 --out dist \
+              --full install/OFX/Plugins --shadertoy-osmesa install/OFX/Plugins \
+              --shadertoy-gl install-shadertoy/OFX/Plugins --denoisesharpen install-denoisesharpen/OFX/Plugins
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: openfx-misc-release-linux-x86_64
+          path: dist
+          if-no-files-found: error
+
+  build_macos:
+    name: macOS universal (arm64, x86_64)
+    timeout-minutes: 60
+    # GitHub-hosted arm64 runner; universal bundles (CMAKE_OSX_ARCHITECTURES), built with
+    # the system Xcode clang and SDK, for macOS 11 and later. No OpenMP (as ci.yml:
+    # MacPorts' libomp is built for the runner's macOS) and no OSMesa (see above): the
+    # bundles only need system libraries. MacPorts (never Homebrew) provides the tools.
+    runs-on: macos-15
+    env:
+      MACOS_OPTIONS: -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DOFX_USE_OPENMP=OFF -DCMAKE_OSX_ARCHITECTURES=arm64;x86_64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_TAG && format('refs/tags/{0}', env.RELEASE_TAG) || github.ref }}
+          submodules: recursive
+          persist-credentials: false
+      - name: Install MacPorts (cached), CMake, GNU sed and libomp
+        # gsed is needed by openfx/Support/include/osxDeploy.sh. See
+        # .github/parameters/setup-macports.yaml (shared with ci.yml and nightly.yml).
+        uses: melusina-org/setup-macports@103eded5f10979e927bffcd6d0b86cbbdb2c3bb3 # v1.1.6
+        with:
+          parameters: .github/parameters/setup-macports.yaml
+      - name: Use MacPorts, not Homebrew
+        run: |
+          PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
+          echo "PATH=/opt/local/bin:/opt/local/sbin:$PATH" >> "$GITHUB_ENV"
+      - name: Build the full set and DenoiseSharpen
+        # Shadertoy is OpenGL only: it is also the standalone Shadertoy (OpenGL)
+        run: |
+          cmake -S . -B build $CMAKE_OPTIONS $MACOS_OPTIONS
+          cmake --build build --parallel "$(getconf _NPROCESSORS_ONLN)"
+          cmake --install build --prefix "$PWD/install"
+      - name: Separate the standalone bundles
+        run: |
+          mkdir -p install-denoisesharpen/OFX/Plugins
+          mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
+          for f in install*/OFX/Plugins/*.ofx.bundle/Contents/MacOS/*.ofx; do lipo -info "$f"; otool -L "$f"; done
+      - name: Load test
+        run: |
+          .github/tools/loadtest.sh install
+          .github/tools/loadtest.sh install-denoisesharpen
+      - name: Smoke test (hostDemo, all plug-ins)
+        timeout-minutes: 20
+        run: |
+          SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
+          SMOKETEST_BUNDLES="DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
+      - name: Package
+        run: |
+          .github/tools/package-release.sh \
+              --platform macos-universal --out dist \
+              --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins \
+              --denoisesharpen install-denoisesharpen/OFX/Plugins
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: openfx-misc-release-macos-universal
+          path: dist
+          if-no-files-found: error
+
+  build_windows:
+    name: Windows x86_64 (MSYS2 UCRT64)
+    timeout-minutes: 60
+    runs-on: windows-2022
+    defaults:
+      run:
+        # The msys2 shell has no pipefail option, so each run block starts
+        # with "set -eo pipefail".
+        shell: msys2 {0}
+    env:
+      # As ci.yml: the MinGW runtime is linked statically (loadtest.sh checks it), no OpenMP
+      # (MSYS2's libgomp would still be a DLL dependency), and no OSMesa (see above).
+      WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_TAG && format('refs/tags/{0}', env.RELEASE_TAG) || github.ref }}
+          submodules: recursive
+          persist-credentials: false
+      - name: Setup MSYS2 UCRT64 environment (cached)
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+        with:
+          msystem: UCRT64
+          update: false
+          cache: true
+          # zip: for the archives
+          install: git base-devel zip
+          pacboy: cc:p cmake:p ninja:p
+      - name: Build the full set and DenoiseSharpen
+        # Shadertoy is OpenGL only: it is also the standalone Shadertoy (OpenGL).
+        # hostDemo (OFX_BUILD_HOSTDEMO) is built but not used: smoketest.sh does not run
+        # on Windows.
+        run: |
+          set -eo pipefail
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS $WINDOWS_OPTIONS
+          cmake --build build
+          cmake --install build --prefix "$PWD/install"
+      - name: Separate the standalone bundles
+        run: |
+          set -eo pipefail
+          mkdir -p install-denoisesharpen/OFX/Plugins
+          mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
+      - name: Load test
+        run: |
+          set -eo pipefail
+          .github/tools/loadtest.sh install
+          .github/tools/loadtest.sh install-denoisesharpen
+      - name: Package
+        run: |
+          set -eo pipefail
+          .github/tools/package-release.sh \
+              --platform windows-x86_64 --out dist \
+              --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins \
+              --denoisesharpen install-denoisesharpen/OFX/Plugins
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: openfx-misc-release-windows-x86_64
+          path: dist
+          if-no-files-found: error
+
+  release:
+    name: Draft GitHub release
+    # only for a tag (pushed, or the "tag" input of a manual run), once every platform passed
+    if: github.ref_type == 'tag' || inputs.tag != ''
+    needs: [build_linux, build_macos, build_windows]
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # create the draft release and upload its assets
+    steps:
+      - name: Download the archives
+        uses: actions/download-artifact@v7
+        with:
+          pattern: openfx-misc-release-*
+          merge-multiple: true
+          path: dist
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum -- *.tar.gz *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Create or update the draft release
+        # A new release is a draft (published by hand); --verify-tag: never create a tag.
+        # If the release exists (a re-run), its assets are replaced and it is left as is.
+        # Tags with -rc, -beta or -alpha are marked as pre-releases.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag=$RELEASE_TAG
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+            exit 0
+          fi
+          prerelease=
+          case "$tag" in *-[rR][cC]*|*-beta*|*-alpha*) prerelease=--prerelease ;; esac
+          cat > notes.md << EOF
+          openfx-misc binaries of \`$tag\`, for Linux x86_64 (Rocky Linux 8 and later), Windows x86_64 and macOS 11 or later (universal).
+
+          Downloads, per platform:
+          - \`openfx-misc-<version>-<platform>\`: the full set, as shipped with Natron: \`Misc.ofx.bundle\`, \`CImg.ofx.bundle\` and \`Shadertoy.ofx.bundle\` (with OSMesa CPU rendering on Linux, OpenGL only on macOS and Windows).
+          - \`openfx-misc-Shadertoy-OpenGL-<version>-<platform>\`: \`Shadertoy.ofx.bundle\` alone, OpenGL only.
+          - \`openfx-misc-Shadertoy-OSMesa-<version>-<platform>\` (Linux): \`Shadertoy.ofx.bundle\` alone, OpenGL + OSMesa, the one of the full set.
+          - \`openfx-misc-DenoiseSharpen-<version>-<platform>\`: \`DenoiseSharpen.ofx.bundle\` alone (DenoiseSharpen is also in \`Misc.ofx.bundle\`).
+
+          **Install either the full set or standalone bundles, not both**: they contain the same plug-ins, with the same identifiers and versions. The two Shadertoy downloads are mutually exclusive. Each archive has a README.txt with the installation directories. Natron users don't need these: Natron includes them.
+          EOF
+          gh release create "$tag" dist/* --draft --verify-tag $prerelease \
+              --title "openfx-misc $tag" --notes-file notes.md

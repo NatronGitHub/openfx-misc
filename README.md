@@ -24,8 +24,36 @@ The easiest way to get these plugins is to install
 [Natron](https://natrongithub.github.io/): they are included in all Natron binary
 distributions, so there is nothing else to install.
 
-To use the plugins with another OpenFX host, download binaries built by the
-continuous integration. They are not kept for every change, only for pre-release
+### Binary downloads
+
+To use the plugins with another OpenFX host, download them from the
+[GitHub releases](https://github.com/NatronGitHub/openfx-misc/releases) (built by
+`.github/workflows/release.yml` from the release tags). There are four downloads for
+each platform (Linux x86_64, built on Rocky Linux 8; Windows x86_64; macOS 11 or later,
+universal):
+
+- `openfx-misc-<version>-<platform>`: the full set, the same bundles as in Natron:
+  `Misc.ofx.bundle`, `CImg.ofx.bundle` and `Shadertoy.ofx.bundle`. Shadertoy is the
+  OSMesa variant (it can also render on the CPU, when the host has no OpenGL rendering)
+  where it is built (Linux), OpenGL only elsewhere.
+- `openfx-misc-Shadertoy-OpenGL-<version>-<platform>`: `Shadertoy.ofx.bundle` alone,
+  OpenGL only.
+- `openfx-misc-Shadertoy-OSMesa-<version>-<platform>` (Linux only): `Shadertoy.ofx.bundle`
+  alone, OpenGL + OSMesa: the bundle of the full set.
+- `openfx-misc-DenoiseSharpen-<version>-<platform>`: `DenoiseSharpen.ofx.bundle`, with
+  only the DenoiseSharpen plugin.
+
+**Install either the full set or standalone bundles, not both**: the standalone
+bundles contain the same plugins, with the same identifiers and versions, as the full
+set (DenoiseSharpen is also in `Misc.ofx.bundle`), and a host must not find a plugin
+twice. The two Shadertoy downloads are mutually exclusive too (both are
+`Shadertoy.ofx.bundle`). Each archive has a `README.txt` that tells where to install
+it; the steps are the same as steps 3 to 6 below.
+
+### Development builds
+
+Binaries are also built by the continuous integration. They are not kept for every
+change, only for pre-release
 tags (tags that start with `Natron-` and contain `-rc`, `-beta` or `-alpha`, in any
 case, such as `Natron-2.6.0-RC1` or `Natron-2.6.0-beta1`; not final releases such
 as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
@@ -361,8 +389,9 @@ compiling:
 
 ### Using CMake
 
-CMake builds the same bundles as the Makefiles (`make nomulti` is make-only): `Misc`,
-`CImg` and `Shadertoy`, plus `Test` and `DebugProxy` in Debug builds. Only out-of-tree
+CMake builds the same bundles as the Makefiles (`make nomulti` is make-only, except for
+`OFXMISC_STANDALONE_BUNDLES` below): `Misc`, `CImg` and `Shadertoy`, plus `Test` and
+`DebugProxy` in Debug builds. Only out-of-tree
 builds are allowed. `CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded at
 configure time if missing (at the version given in `CImg/CImgVersion.mk`, again when it
 changes). The bundles are assembled in `<build>/Plugins`, and `cmake --install` copies
@@ -396,7 +425,11 @@ to the prefix (or absolute). The main options are:
   (on macOS, `osxDeploy.sh`, which needs GNU sed (`sudo port install gsed`), as
   `make CONFIG=release` does). The bundles then also need these libraries' minimum
   macOS version (e.g. MacPorts' libomp is built for the build machine's macOS).
-- `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`.
+- `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`,
+  `-DBUILD_MISC=OFF` (with `-DBUILD_CIMG_PLUGINS=OFF`: only `Shadertoy.ofx.bundle`).
+- `-DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen"`: also build these Misc plugins as
+  standalone bundles (`DenoiseSharpen.ofx.bundle`, as `make nomulti`), for the binary
+  releases. They have the same plugins as `Misc.ofx.bundle`: install one or the other.
 - `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
   build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.
