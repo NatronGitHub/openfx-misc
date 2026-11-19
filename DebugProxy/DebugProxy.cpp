@@ -1690,6 +1690,11 @@ fetchSuiteNth(OfxPropertySetHandle host,
     }
 
     std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..fetchSuite(" << suiteName << "," << suiteVersion << ")->" << suite << std::endl;
+    if (!suite) {
+        // the host does not have this suite (e.g. an OFX 1.4 host without the Nuke
+        // plane suite): don't hand a proxy that would make the plug-in believe it has it
+        return NULL;
+    }
     if ( (strcmp(suiteName, kOfxImageEffectSuite) == 0) && (suiteVersion == 1) ) {
         assert(nth < gEffectHost.size() && suite == gEffectHost[nth]);
 

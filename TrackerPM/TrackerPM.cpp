@@ -61,8 +61,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Canceling a tracking operation will not wipe all the data analysed so far. If you resume a previously canceled tracking, " \
     "the tracker will continue tracking, picking up the previous/next frame as reference. "
 #define kPluginIdentifier "net.sf.openfx.TrackerPM"
+// version 1.1: works in the filter context (it fetched the Mask clip that is not defined there)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 // The score of a position that cannot be scored (zero standard deviation with NCC or ZNCC), and the
 // best score before any position is scored. A finite value, so that it can be tested (with
@@ -115,7 +116,10 @@ public:
         , _outerTopRight(NULL)
     {
 
-        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
+        // describeInContext only defines the mask clip in these contexts (not in the filter context)
+        const ContextEnum context = getContext();
+        _maskClip = ( (context == eContextGeneral) || (context == eContextPaint) || (context == eContextTracker) ) ?
+                    fetchClip(context == eContextPaint ? "Brush" : "Mask") : NULL;
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kParamScore);
         assert(_score);
