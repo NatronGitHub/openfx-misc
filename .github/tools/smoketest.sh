@@ -109,8 +109,6 @@ SKIP=(
 # (a "debug:" reason is only used in debug builds). Another identity render without an
 # output fails, so that a plug-in that becomes an identity by default is noticed.
 IDENTITY=(
-    "net.sf.openfx.FrameHold|always an identity: the Source at another time"
-    "net.sf.openfx.timeOffset|always an identity: the Source at another time"
     "net.sf.openfx.TrackerPM|trackers are identity effects (SupportExt's GenericTrackerPlugin)"
     "net.sf.openfx.ShufflePlugin:1@filter|the default channels are those of A, which is the Source in the filter context"
     # debug builds: render posts "OFX Host should not render" and fails (kOfxStatFailed) when

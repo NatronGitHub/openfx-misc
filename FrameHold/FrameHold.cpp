@@ -34,6 +34,7 @@
 #endif // defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
 #include "ofxsProcessing.H"
+#include "ofxsCopier.h"
 #include "ofxsMacros.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
@@ -48,8 +49,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 #define kPluginDescription "Hold a given frame for the input clip indefinitely, or use a subsample of the input frames and hold them for several frames."
 #define kPluginIdentifier "net.sf.openfx.FrameHold"
+// History:
+// version 1.0: initial version
+// version 1.1: render copies the Source at the source time (it wrote nothing): the spec says that the
+//              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo) do
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -184,9 +189,25 @@ FrameHoldPlugin::getFramesNeeded(const FramesNeededArguments &args,
 
 // the overridden render function
 void
-FrameHoldPlugin::render(const RenderArguments & /*args*/)
+FrameHoldPlugin::render(const RenderArguments &args)
 {
-    // do nothing as this should never be called as isIdentity should always be trapped
+    // isIdentity is always true, and the spec says that the host should not call render after
+    // isIdentity returns true, but some hosts (e.g. hostDemo) do: copy the identity result (the
+    // Source at the source time), for robustness
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    if ( !dst.get() ) {
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+    checkBadRenderScaleOrField(dst, args);
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                               _srcClip->fetchImage( getSourceTime(args.time) ) : 0 );
+    if ( src.get() ) {
+        checkBadRenderScaleOrField(src, args);
+        if ( (src->getPixelDepth() != dst->getPixelDepth()) || (src->getPixelComponents() != dst->getPixelComponents()) ) {
+            throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
+    }
+    copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 }
 
 // overridden is identity
