@@ -70,7 +70,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "First, set the Range parameter of the Hue parameter set and then work down the other Ranges parameters, tuning with the range Falloff and Adjustment parameters." \
 
 #define kPluginIdentifier "net.sf.openfx.HSVToolPlugin"
-// version 1.1: wrap the rotated hue into the hue circle (bug fix: some rotations gave magenta)
+// version 1.1: wrap the rotated hue into the hue circle (bug fix: some rotations gave magenta), and
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

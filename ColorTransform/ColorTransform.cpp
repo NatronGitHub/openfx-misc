@@ -166,7 +166,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     only support float images, because their output may be negative (version 1 clamps negative
 //     values to 0 on 8-bit and 16-bit images). The other conversions are still version 1.0.
 // 1.1/2.1 HSVToRGB, HSLToRGB, HSIToRGB wrap the hue into the hue circle (bug fix: HSV and HSL gave
-//     magenta for hues in [-1, -5/6) mod 1, and HSI was not periodic for out-of-range hues)
+//     magenta for hues in [-1, -5/6) mod 1, and HSI was not periodic for out-of-range hues);
+//     all conversions: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 #define kPluginSignedOutputVersionMajor 2 // version of the conversions with a signed output (see signedOutput())
