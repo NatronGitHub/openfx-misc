@@ -103,6 +103,7 @@ SKIP=(
     "net.sf.openfx.HueCorrect|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
     "net.sf.openfx.HueKeyer|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
     "net.sf.openfx.TimeBufferRead|debug:reads the buffer of a TimeBufferWrite instance of the same name, in the same host process (getClipPreferences fails: No TimeBuffer exists with name \"\")"
+    "net.sf.openfx.TimeBufferWrite|debug:writes the buffer of a TimeBufferRead instance of the same name, in the same host process (render fails: No TimeBuffer exists with name \"\")"
 )
 # The plug-ins that are identity effects with their default parameters, and do not write
 # their output when hostDemo renders them anyway: "identifier regex[:major][@context]|why"
@@ -110,7 +111,6 @@ SKIP=(
 # output fails, so that a plug-in that becomes an identity by default is noticed.
 IDENTITY=(
     "net.sf.openfx.TrackerPM|trackers are identity effects (SupportExt's GenericTrackerPlugin)"
-    "net.sf.openfx.ShufflePlugin:1@filter|the default channels are those of A, which is the Source in the filter context"
     # debug builds: render posts "OFX Host should not render" and fails (kOfxStatFailed) when
     # it is called for an identity (release builds copy the input)
     "net.sf.openfx.NoOpPlugin@filter|debug:an identity unless Force Copy is set"
@@ -158,14 +158,7 @@ PARAMS=(
 # to describe failures: the entries without a context to hostDemo --describe failures,
 # those with a context to the describeInContext failures of that context.
 XFAIL=(
-    # issue #167: debug builds, failed assertions (an unconnected clip has the components
-    # kOfxImageComponentNone)
-    "net.sf.openfx.DenoiseSharpen@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"
-    "net.sf.openfx.Log2Lin@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"
-    "net.sf.openfx.PLogLin@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"
-    "net.sf.openfx.FrameBlend@filter|_fgMClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the FgM clip is Alpha, also when it is not connected (filter context)"
-    "net.sf.openfx.ShufflePlugin:1@filter|_srcClipA && _srcClipB && _dstClip|debug:v1 (ShuffleClassic) is an identity in the filter context by default, and its render, which hostDemo calls anyway, asserts that the A and B clips exist (the filter context has Source only)"
-    "net.sf.openfx.TimeBufferWrite|[Pp]ure virtual [fm][a-z]* called|debug:render fails (kOfxStatFailed) without a TimeBufferRead, then a pure virtual function is called (abort; macOS: \"Pure virtual function called\", libstdc++: \"pure virtual method called\")"
+    # (none: add the known bugs here, each with its GitHub issue)
 )
 # ---------------------------------------------------------------------------
 

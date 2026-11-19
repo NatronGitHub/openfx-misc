@@ -344,17 +344,7 @@ protected:
         }
         std::string key = getTimeBufferKey(_projectId, _groupId, name);
         if ( _buffer && (name != _name) ) {
-            thisInstance(_buffer) = 0; // remove reference to this instance
-            if ( !otherInstance(_buffer) ) {
-                // we may free this buffer
-                {
-                    AutoMutex guard( gTimeBufferMapMutex.get() );
-                    gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
-                }
-                delete _buffer;
-                _buffer = 0;
-                _name.clear();
-            }
+            releaseBuffer();
         }
         if (!name.empty() && !_buffer) {
             TimeBuffer* timeBuffer = 0;
@@ -401,6 +391,43 @@ protected:
         clearPersistentMessage();
         check();
     } // setName
+
+    // remove the reference of this instance to its buffer, and free the buffer if the other side
+    // does not use it. No host call (messages...), no exception: the destructors call it
+    // (kOfxActionDestroyInstance), where the host instance may be partly destroyed: hostDemo sent it
+    // from the HostSupport Instance destructor ("Pure virtual function called"). NatronGitHub/openfx#190
+    // makes hostDemo call destroyInstanceAction() before deleting the instance; this stays for the
+    // hosts that don't.
+    void releaseBuffer()
+    {
+        if (!_buffer) {
+            return;
+        }
+        // clear this side, check the other side and free the buffer under one lock, so that the
+        // Read and the Write instances, destroyed on different threads, cannot both free it
+        // (no lock if the mutex was already freed)
+        if ( gTimeBufferMapMutex.get() ) {
+            AutoMutex guard( gTimeBufferMapMutex.get() );
+            releaseBufferLocked();
+        } else {
+            releaseBufferLocked();
+        }
+    }
+
+    // releaseBuffer(), with gTimeBufferMapMutex locked (if it exists)
+    void releaseBufferLocked()
+    {
+        thisInstance(_buffer) = 0; // remove reference to this instance
+        if ( !otherInstance(_buffer) ) {
+            // we may free this buffer
+            if ( gTimeBufferMap.get() ) {
+                gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
+            }
+            delete _buffer;
+            _buffer = 0;
+            _name.clear();
+        }
+    }
 
     void check()
     {
@@ -525,7 +552,7 @@ public:
 
     virtual ~TimeBufferReadPlugin()
     {
-        setName("");
+        releaseBuffer();
     }
 
 private:
@@ -1026,11 +1053,7 @@ public:
 
     virtual ~TimeBufferWritePlugin()
     {
-        try {
-            setName("");
-        } catch (OFX::Exception::Suite&) {
-            // ignore
-        }
+        releaseBuffer();
     }
 
 private:
