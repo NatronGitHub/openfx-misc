@@ -182,11 +182,6 @@ private:
 
                 if (srcPixA) {
                     for (std::size_t c = 0; c < nComponents; ++c) {
-#                     ifdef DEBUG
-                        // check for NaN
-                        assert( !srcPixA || !OFX::IsNaN(srcPixA[c]) );
-                        assert( !srcPixB || !OFX::IsNaN(srcPixB[c]) );
-#                     endif
                         // all images are supposed to be black and transparent outside o
                         tmpPix[c] = (_aChannels[alphaFromA ? 3 : c] && srcPixA) ? srcPixA[c] : 0.f;
                     }
@@ -196,13 +191,6 @@ private:
                         tmpPix[c] = 0;
                     }
                 }
-
-#             ifdef DEBUG
-                // check for NaN
-                for (int c = 0; c < 4; ++c) {
-                    assert( !OFX::IsNaN(tmpPix[c]) );
-                }
-#             endif
 
                 // tmpPix has 4 components, but we only need the first nComponents
 

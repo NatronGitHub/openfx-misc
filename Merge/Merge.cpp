@@ -505,19 +505,9 @@ private:
 
                     if (srcPixA || srcPixB) {
                         for (std::size_t c = 0; c < nComponents; ++c) {
-#                         ifdef DEBUG
-                            // check for NaN
-                            assert( !srcPixA || !OFX::IsNaN(srcPixA[c]) );
-                            assert( !srcPixB || !OFX::IsNaN(srcPixB[c]) );
-#                         endif
                             // all images are supposed to be black and transparent outside o
                             tmpA[c] = (_aChannels[alphaFromA ? 3 : c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
                             tmpB[c] = (_bChannels[alphaFromA ? 3 : c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
-#                         ifdef DEBUG
-                            // check for NaN
-                            assert( !OFX::IsNaN(tmpA[c]) );
-                            assert( !OFX::IsNaN(tmpB[c]) );
-#                         endif
                         }
 
                         // work in float: clamping is done when mixing
@@ -540,13 +530,6 @@ private:
                         }
                     }
 
-#                 ifdef DEBUG
-                    // check for NaN
-                    for (int c = 0; c < nComponents; ++c) {
-                        assert( !OFX::IsNaN(tmpPix[c]) );
-                    }
-#                 endif
-
                     for (std::size_t i = 1; i < _srcImgAs.size(); ++i) {
                         // process the other connected A inputs
 
@@ -557,16 +540,8 @@ private:
                         // Before version 3, they were skipped there.
                         if ( srcPixA || (_majorVersion >= 3) ) {
                             for (std::size_t c = 0; c < nComponents; ++c) {
-#                             ifdef DEBUG
-                                // check for NaN
-                                assert( !srcPixA || !OFX::IsNaN(srcPixA[c]) );
-#                             endif
                                 // all images are supposed to be black and transparent outside o
                                 tmpA[c] = (_aChannels[alphaFromA ? 3 : c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
-#                             ifdef DEBUG
-                                // check for NaN
-                                assert( !OFX::IsNaN(tmpA[c]) );
-#                             endif
                             }
 
                             // work in float: clamping is done when mixing
@@ -583,13 +558,6 @@ private:
                             }
 
                             mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
-
-#                         ifdef DEBUG
-                            // check for NaN
-                            for (int c = 0; c < nComponents; ++c) {
-                                assert( !OFX::IsNaN(tmpPix[c]) );
-                            }
-#                         endif
                         }
                     }
 

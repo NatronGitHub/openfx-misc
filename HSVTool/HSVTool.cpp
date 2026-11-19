@@ -71,7 +71,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier "net.sf.openfx.HSVToolPlugin"
 // version 1.1: wrap the rotated hue into the hue circle (bug fix: some rotations gave magenta), and
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+//              normalizing an angle no longer converts it to int (undefined beyond the int range) (#178)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -253,10 +254,14 @@ static inline
 double
 normalizeAngle(double a)
 {
-    int c = (int)std::floor(a / 360);
-
-    a -= c * 360;
-    assert(a >= 0 && a <= 360);
+    // no int conversion (undefined beyond the int range); the same result inside it
+    // (+ 0.: subtract +0, not -0, when the floor is -0, so that -0 stays -0 as before)
+    a -= 360. * std::floor(a / 360) + 0.;
+    // beyond about 1e15, the result may be outside [0,360] (and NaN gives NaN): fold it, with
+    // comparisons only (unchanged in the normal range, -0 included)
+    if ( !( (a >= 0.) && (a <= 360.) ) ) {
+        a = 0.;
+    }
 
     return a;
 }
@@ -274,7 +279,9 @@ angleWithinRange(double h,
                  double h0,
                  double h1)
 {
-    assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
+    // h comes from a pixel, and is NaN for a NaN pixel: every comparison is false, so a NaN h is not
+    // within the range
+    assert(0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
 
     return ( ( h1 < h0 && (h <= h1 || h0 <= h) ) ||
              (h0 <= h && h <= h1) );
@@ -349,7 +356,7 @@ angleCoeff01(double h,
              double h0,
              double h1)
 {
-    assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
+    assert(0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360); // not h, which may be NaN (see angleWithinRange())
     if ( h1 == (h0 + 360.) ) {
         // interval is the whole hue circle
         return 1.;
@@ -382,7 +389,7 @@ angleCoeff10(double h,
              double h0,
              double h1)
 {
-    assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
+    assert(0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360); // not h, which may be NaN (see angleWithinRange())
     if ( !angleWithinRange(h, h0, h1) ) {
         return 0.;
     }
@@ -547,7 +554,6 @@ public:
             }
             *hcoeff = (float)(std::max)(c0, c1);
         }
-        assert(0 <= *hcoeff && *hcoeff <= 1.);
         const double s0 = _values.satRange[0];
         const double s1 = _values.satRange[1];
         const double s0mrolloff = s0 - _values.satRolloff;
@@ -561,7 +567,6 @@ public:
         } else {
             *scoeff = 0.f;
         }
-        assert(0 <= *scoeff && *scoeff <= 1.);
         const double v0 = _values.valRange[0];
         const double v1 = _values.valRange[1];
         const double v0mrolloff = v0 - _values.valRolloff;
@@ -575,9 +580,9 @@ public:
         } else {
             *vcoeff = 0.f;
         }
-        assert(0 <= *vcoeff && *vcoeff <= 1.);
+        // a NaN h, s or v (from a NaN pixel) fails every range test above and gives a coefficient
+        // of 0, so coeff is 0 and the pixel is left unchanged (NaN)
         float coeff = (std::min)((std::min)(*hcoeff, *scoeff), *vcoeff);
-        assert(0 <= coeff && coeff <= 1.);
         if (coeff <= 0.) {
             *rout = r;
             *gout = g;

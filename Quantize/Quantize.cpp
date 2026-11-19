@@ -486,8 +486,10 @@ public:
                         float rounded = (unpPix[c] <= 0) ? std::floor(unpPix[c] * _colors) : std::ceil(unpPix[c] * _colors - 1.);
                         float v = unpPix[c] * (_colors - 1.);     // ok for integer _colors
                         float fv = (rounded <= v) ? rounded : (rounded - 1.);
-                        assert( (v - fv) >= 0 );
-                        assert( (v - fv) < 1 );
+                        // v - fv is in [0,1) for moderate finite values, but not for a NaN pixel (NaN) or a
+                        // huge one (e.g. 1e30, where floor/ceil are exact and v - fv may be any multiple
+                        // of the float spacing): no assert on it, the comparison below handles any value
+                        // (float arithmetic only, no int conversion)
                         if ( (v - fv) <= randValue ) {
                             tmpPix[c] = fv / (_colors - 1.);
                         } else {

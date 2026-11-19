@@ -80,7 +80,8 @@ static bool gParametricPeriodic = false;
 // History:
 // version 1.0 (deprecated): initial version
 // version 1.1 (deprecated): curve values above kCurveValueMax are replaced by 0, without detecting non-finite values;
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+//              the hue of a NaN pixel no longer converts NaN to int for the curve lookup (undefined behaviour) (#178)
 // version 2.0 (in HueCorrect.cpp): add Hue vs Hue support
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
@@ -354,7 +355,7 @@ private:
                     g *= (float)((sat_thrsh * 1. + (s - sat_thrsh) * green * lum) / s); // green * lum;
                     b *= (float)((sat_thrsh * 1. + (s - sat_thrsh) * blue * lum) / s); // blue * lum;
                 } else if (sat_thrsh == 0.) {
-                    assert(s <= 0.); // s < 0 if all the components are negative
+                    // s <= 0 if all the components are negative (s is NaN for a NaN pixel)
                     r *= (float)(red * lum); // red * lum
                     g *= (float)(green * lum); // green * lum;
                     b *= (float)(blue * lum); // blue * lum;
@@ -381,9 +382,6 @@ private:
                 tmpPix[1] = clamp<float>(g, 1.);
                 tmpPix[2] = clamp<float>(b, 1.);
                 tmpPix[3] = unpPix[3]; // alpha is left unchanged
-                for (int c = 0; c < nComponents; ++c) {
-                    assert( !OFX::IsNaN(unpPix[c]) && !OFX::IsNaN(tmpPix[c]) );
-                }
 
                 // ofxsPremultMaskMixPix expects normalized input
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -403,11 +401,10 @@ private:
             return ret;
         } else {
             double x = value / 6.;
-            int i = (int)(x * nbValues);
-            assert(0 <= i && i <= nbValues);
-            // a NaN input pixel gives a NaN hue, and an undefined i (INT_MIN on x86): keep
-            // the LUT index in range
-            i = (std::max)( 0, (std::min)(i, nbValues) );
+            // a NaN input pixel gives a NaN hue, which fails both range tests above: convert to int only
+            // inside the LUT range (converting NaN is undefined behaviour), with comparisons only
+            const double xn = x * nbValues;
+            int i = (xn > 0.) ? ( (xn < nbValues) ? (int)xn : nbValues ) : 0;
             double alpha = (std::max)( 0., (std::min)(x * nbValues - i, 1.) );
             double a = _hue[c][i];
             double b = (i  < nbValues) ? _hue[c][i + 1] : 0.f;
