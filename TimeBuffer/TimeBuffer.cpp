@@ -75,8 +75,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 // History:
 // version 1.0: initial version
+// version 1.1: the kOfxActionUnload of one of TimeBufferRead and TimeBufferWrite no longer frees the buffer map
+//              that the other one, still loaded, uses (it is freed when both are unloaded)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTilesRead 0
 #define kSupportsTilesWrite 0
@@ -246,6 +248,32 @@ typedef std::string TimeBufferKey;
 typedef std::map<TimeBufferKey, TimeBuffer*> TimeBufferMap;
 static auto_ptr<TimeBufferMap> gTimeBufferMap;
 static auto_ptr<Mutex> gTimeBufferMapMutex;
+
+// kOfxActionLoad and kOfxActionUnload are per plug-in: TimeBufferRead and TimeBufferWrite share
+// gTimeBufferMap, so it may only be freed when both are unloaded. The host sends these actions on
+// its main thread, never concurrently with other actions of the same plug-in.
+static int gTimeBufferLoadCount = 0;
+
+static void
+timeBufferLoad()
+{
+    ofxsThreadSuiteCheck();
+    ++gTimeBufferLoadCount;
+}
+
+static void
+timeBufferUnload()
+{
+    if (gTimeBufferLoadCount > 0) {
+        --gTimeBufferLoadCount;
+    }
+    if (gTimeBufferLoadCount == 0) {
+        // the last of the two plug-ins was unloaded: no instance is left (the binary may be
+        // unloaded, or loaded again, after this)
+        gTimeBufferMapMutex.reset(NULL);
+        gTimeBufferMap.reset(NULL);
+    }
+}
 
 // builds the key of a buffer in gTimeBufferMap: always use this, so that
 // insertion, lookup and erasure use the same key
@@ -788,7 +816,7 @@ TimeBufferReadPlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferReadPluginFactory, {ofxsThreadSuiteCheck();}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
+mDeclarePluginFactory(TimeBufferReadPluginFactory, { timeBufferLoad(); }, { timeBufferUnload(); });
 void
 TimeBufferReadPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -1139,7 +1167,7 @@ TimeBufferWritePlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferWritePluginFactory, {ofxsThreadSuiteCheck();}, { gTimeBufferMapMutex.reset(NULL); gTimeBufferMap.reset(NULL); });
+mDeclarePluginFactory(TimeBufferWritePluginFactory, { timeBufferLoad(); }, { timeBufferUnload(); });
 void
 TimeBufferWritePluginFactory::describe(ImageEffectDescriptor &desc)
 {
