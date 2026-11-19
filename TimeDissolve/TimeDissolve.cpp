@@ -73,7 +73,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipA "A"
 #define kClipAHint "The input you intend to dissolve from."
 #define kClipB "B"
-#define kClipBHint "The input you intend to dissolve from."
+#define kClipBHint "The input you intend to dissolve to."
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
