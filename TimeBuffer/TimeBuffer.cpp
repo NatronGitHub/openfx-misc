@@ -357,8 +357,10 @@ protected:
 
     // remove the reference of this instance to its buffer, and free the buffer if the other side
     // does not use it. No host call (messages...), no exception: the destructors call it
-    // (kOfxActionDestroyInstance), where the host instance may be partly destroyed (hostDemo
-    // destroys it in the HostSupport Instance destructor: "Pure virtual function called").
+    // (kOfxActionDestroyInstance), where the host instance may be partly destroyed: hostDemo sent it
+    // from the HostSupport Instance destructor ("Pure virtual function called"). NatronGitHub/openfx#190
+    // makes hostDemo call destroyInstanceAction() before deleting the instance; this stays for the
+    // hosts that don't.
     void releaseBuffer()
     {
         if (!_buffer) {
