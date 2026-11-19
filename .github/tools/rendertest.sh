@@ -429,24 +429,33 @@ tests=(
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
     "Clamp|net.sf.openfx.Clamp|filter|*|mean=1,0,0.5,1||-i Source=solid:1.5,-0.5,0.5,1 -i Mask=none"
-    # WhiteBalance. The default (source = target = 6504 K) is an identity.
+    # WhiteBalance. The default (source 6504 K, i.e. D65, and the working space white
+    # target) is an identity in the D65 working spaces (Rec. 709, Rec. 2020)
     "WhiteBalance default|net.sf.openfx.WhiteBalance|filter|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "WhiteBalance default Rec.2020|net.sf.openfx.WhiteBalance|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none workingSpace=1"
+    # the same temperatures (and tints) for the source and target whites: an identity
+    "WhiteBalance same whites|net.sf.openfx.WhiteBalance|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none sourceTemperature=3200 sourceTint=0.01 targetWhite=0 targetTemperature=3200 targetTint=0.01"
     "WhiteBalance ramp masked|net.sf.openfx.WhiteBalance|filter|*|nonconst+changed:Source||-i Source=ramp -i Mask=checker:32 sourceTemperature=3200"
-    # D65 (6504 K) to D50 (5003 K), Bradford, in XYZ (workingSpace=5): the
-    # columns of Lindbloom's Bradford D65->D50 matrix
-    # (http://www.brucelindbloom.com/Eqn_ChromAdapt.html). The CIE daylight
-    # D65 and D50 differ from Lindbloom's whites by less than 1e-4.
-    "WhiteBalance Bradford X|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=1.0478112,0.0295424,-0.0092345,1||-i Source=solid:1,0,0,1 -i Mask=none workingSpace=5 targetTemperature=5003"
-    "WhiteBalance Bradford Y|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=0.0228866,0.9904844,0.0150436,1||-i Source=solid:0,1,0,1 -i Mask=none workingSpace=5 targetTemperature=5003"
-    "WhiteBalance Bradford Z|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=-0.0501270,-0.0170491,0.7521316,1||-i Source=solid:0,0,1,1 -i Mask=none workingSpace=5 targetTemperature=5003"
-    # round trip in Rec. 709: the white of 3200 K with a +0.01 tint (Planckian
-    # locus) to the white of 6504 K (daylight locus), and back. The RGB values
-    # of these whites (Y=1) were computed independently (numpy).
-    "WhiteBalance 3200K to D65|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=0.9994219,1.0002588,0.9991391,1||-i Source=solid:1.6013659,0.903962,0.1800995,1 -i Mask=none sourceTemperature=3200 sourceTint=0.01"
-    "WhiteBalance D65 to 3200K|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=1.6013659,0.903962,0.1800995,1||-i Source=solid:0.9994219,1.0002588,0.9991391,1 -i Mask=none targetTemperature=3200 targetTint=0.01"
-    # a neutral color (the 3200 K white in Rec. 2020) becomes gray (the
-    # working space white), keeping the luminance
-    "WhiteBalance neutral|net.sf.openfx.WhiteBalance|filter|float|tol=1e-4+mean=0.5,0.5,0.5,1||-i Source=solid:0.6764015,0.458127,0.1972952,1 -i Mask=none workingSpace=1 sourceWhite=1 neutral=1.3528031,0.916254,0.3945904 targetWhite=1"
+    # D65 (6504 K) to D50 (5003 K), Bradford, in XYZ (workingSpace=5): the columns of the
+    # Bradford D65->D50 matrix. They are within 6.1e-4 of Lindbloom's matrix
+    # (http://www.brucelindbloom.com/Eqn_ChromAdapt.html), whose whites differ slightly:
+    # D65 is x=0.3127, y=0.3290 here, and D50 is on the CIE daylight locus. The expected
+    # values were computed independently (Python).
+    "WhiteBalance Bradford X|net.sf.openfx.WhiteBalance|filter|float|tol=2e-5+mean=1.0476843,0.0294033,-0.0092620,1||-i Source=solid:1,0,0,1 -i Mask=none workingSpace=5 targetWhite=0 targetTemperature=5003"
+    "WhiteBalance Bradford Y|net.sf.openfx.WhiteBalance|filter|float|tol=2e-5+mean=0.0228019,0.9906383,0.0150977,1||-i Source=solid:0,1,0,1 -i Mask=none workingSpace=5 targetWhite=0 targetTemperature=5003"
+    "WhiteBalance Bradford Z|net.sf.openfx.WhiteBalance|filter|float|tol=2e-5+mean=-0.0502026,-0.0170650,0.7515227,1||-i Source=solid:0,0,1,1 -i Mask=none workingSpace=5 targetWhite=0 targetTemperature=5003"
+    # round trip in Rec. 709: the white of 3200 K with a +0.01 tint (Planckian locus, RGB with
+    # Y=1 computed independently) to the working space white (the default target), and the
+    # working space white (1,1,1) from D65 (6504 K) to the 3200 K white
+    "WhiteBalance 3200K to working|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=1,1,1,1||-i Source=solid:1.6013659,0.903962,0.1800995,1 -i Mask=none sourceTemperature=3200 sourceTint=0.01"
+    "WhiteBalance D65 to 3200K|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=1.6013659,0.903962,0.1800995,1||-i Source=solid:1,1,1,1 -i Mask=none targetWhite=0 targetTemperature=3200 targetTint=0.01"
+    # a neutral color (the 3200 K white in Rec. 2020) becomes gray (the working space white,
+    # the default target), keeping the luminance
+    "WhiteBalance neutral|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=0.5,0.5,0.5,1||-i Source=solid:0.6764015,0.458127,0.1972952,1 -i Mask=none workingSpace=1 sourceWhite=1 neutral=1.3528031,0.916254,0.3945904"
+    # degenerate neutral colors give the identity, not NaN: a negative luminance, and values
+    # whose XYZ would overflow the double range without normalization
+    "WhiteBalance neutral Y<0|net.sf.openfx.WhiteBalance|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none sourceWhite=1 neutral=-1,-1,0.5"
+    "WhiteBalance neutral huge|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=0.5,0.5,0.5,1||-i Source=solid:0.6764015,0.458127,0.1972952,1 -i Mask=none workingSpace=1 sourceWhite=1 neutral=1.3528031e308,0.916254e308,0.3945904e308"
     # ColorTransform on the degenerate inputs that gave NaN or inf before openfx-supportext#55
     # (hue in [0,1]): HSL with l=0 and s!=0 (0/0 in hsl_to_rgb); RGB->HSI with a subnormal
     # sum (3/sum overflows, inf*0); RGB->HSL near white (2-(max+min) rounds to 0: s=inf)

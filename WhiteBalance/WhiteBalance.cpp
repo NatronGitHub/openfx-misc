@@ -56,19 +56,27 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "The source white is the color of the scene illuminant, i.e. the color that should become the target white " \
     "(as the white balance of a camera or of a raw developer, e.g. the Temp and Tint of Lightroom or Camera Raw). " \
-    "The target white is the white the image is adapted to, by default D65 (6504 K). For example, a scene lit by " \
-    "tungsten light is corrected by setting the Source Temperature to about 3200 K (which makes the image bluer), " \
-    "and a daylight image is warmed up by setting the Target Temperature below the Source Temperature. " \
-    "This is the source/target illuminant convention of the Chromatic Adaptation tools of e.g. DaVinci Resolve, " \
-    "and the effect is the identity when the source and target are the same.\n" \
+    "The target white is the white the image is adapted to, by default the Working Space White (R=G=B). For example, " \
+    "a scene lit by tungsten light is corrected by setting the Source Temperature to about 3200 K (which makes the " \
+    "image bluer). With Target White set to Temperature/Tint, a daylight image is warmed up by setting the Target " \
+    "Temperature below the Source Temperature: this is the source/target illuminant convention of the Chromatic " \
+    "Adaptation tools of e.g. DaVinci Resolve.\n" \
+    "The effect is the identity when the source and target whites are given by the same values. The default " \
+    "(Source Temperature 6504 K with no tint, i.e. D65, and the Working Space White target) is the identity in the " \
+    "D65 working spaces (Rec. 709, Rec. 2020, P3-D65). In the ACES and XYZ working spaces, whose white is not D65, " \
+    "it adapts D65 to the working space white.\n" \
     "\n" \
     "Each white is given by:\n" \
     "- a correlated color temperature in Kelvin: a point on the CIE daylight locus (CIE 15:2004) above 4000 K, " \
     "and on the Planckian (black body) locus (Krystek 1985 approximation) below 4000 K, or on the locus selected by " \
-    "the Locus parameter;\n" \
+    "the Locus parameter. The daylight locus is above the Planckian locus, so that the Auto locus jumps by about " \
+    "0.003 Duv (0.0028) at 4000 K. 6504 K with no tint on the daylight locus is exactly the D65 white of the " \
+    "working spaces (x=0.3127, y=0.3290);\n" \
     "- a tint: a signed distance from the locus (Duv, in the CIE 1960 uv diagram), perpendicular to it. " \
     "Positive values are above the locus (greenish), negative values below the locus (magenta/pinkish). " \
-    "A positive source tint thus removes green (as a positive Tint in Lightroom), and a positive target tint adds green.\n" \
+    "A positive source tint thus removes green, in the same direction as a positive Tint in Lightroom or Camera Raw, " \
+    "and a positive target tint adds green. For raw files, the Lightroom/Camera Raw Tint is about 3000 times the Duv " \
+    "from the Planckian locus (Adobe DNG SDK), e.g. a Source Tint of 0.01 is about +30 on the Planckian locus.\n" \
     "The source white can also be given by picking a neutral color in the image: that color (in the working space) " \
     "is mapped to the target white, so that it becomes neutral (R=G=B) when the target is the working space white. " \
     "Only its chromaticity is used: the luminance (Y) of the image is preserved.\n" \
@@ -162,7 +170,7 @@ enum AdaptationEnum
 
 #define kParamLocus "locus"
 #define kParamLocusLabel "Locus"
-#define kParamLocusHint "The locus of the color temperatures. Note that the daylight locus is above the Planckian locus (by about 0.003 Duv at 4000 K, so that Auto jumps at 4000 K)."
+#define kParamLocusHint "The locus of the color temperatures. Note that the daylight locus is above the Planckian locus (by about 0.003 Duv: 0.0028 at 4000 K, 0.0033 at 6504 K), so that the white given by a temperature and tint jumps by about 0.003 Duv at 4000 K with Auto. Choose Planckian or Daylight for a continuous locus."
 #define kParamLocusOptionAuto "Auto", "The Planckian locus below 4000 K, the CIE daylight locus above (as in most white balance tools).", "auto"
 #define kParamLocusOptionPlanckian "Planckian", "The Planckian (black body) locus, with the approximation of Krystek (1985), valid from 1000 K to 15000 K.", "planckian"
 #define kParamLocusOptionDaylight "Daylight", "The CIE daylight locus (CIE 15:2004), defined from 4000 K to 25000 K (extrapolated below 4000 K).", "daylight"
@@ -192,7 +200,7 @@ enum SourceWhiteEnum
 
 #define kParamSourceTint "sourceTint"
 #define kParamSourceTintLabel "Source Tint"
-#define kParamSourceTintHint "The distance of the scene illuminant from the locus (Duv), perpendicular to it in the CIE 1960 uv diagram. Positive values are greener (above the locus), negative values are more magenta. A positive value removes green from the image."
+#define kParamSourceTintHint "The distance of the scene illuminant from the locus (Duv), perpendicular to it in the CIE 1960 uv diagram. Positive values are greener (above the locus), negative values are more magenta. A positive value removes green from the image, in the same direction as a positive Tint in Lightroom or Camera Raw. For raw files, their Tint is about 3000 x Duv measured from the Planckian locus (Adobe DNG SDK): 0.01 is about +30 with the Planckian locus. The daylight locus (Auto above 4000 K) is about 0.003 above the Planckian one, so that a tint of 0 there is about +9 in Lightroom."
 
 #define kParamNeutral "neutral"
 #define kParamNeutralLabel "Neutral Color"
@@ -202,7 +210,7 @@ enum SourceWhiteEnum
 #define kParamTargetWhiteLabel "Target White"
 #define kParamTargetWhiteHint "How the target white is given."
 #define kParamTargetWhiteOptionTemperature "Temperature/Tint", "The target white is given by Target Temperature and Target Tint.", "temperature"
-#define kParamTargetWhiteOptionWorking "Working Space White", "The target white is the white of the working space (R=G=B), e.g. so that a picked Neutral Color becomes exactly neutral. Note that it differs slightly from the 6504 K daylight white for D65 spaces, and is about 6000 K for the ACES spaces.", "working"
+#define kParamTargetWhiteOptionWorking "Working Space White", "The target white is the white of the working space (R=G=B), e.g. so that a picked Neutral Color becomes exactly neutral. It is D65 (6504 K with no tint on the daylight locus) for the Rec. 709, Rec. 2020 and P3-D65 spaces, about 6000 K for the ACES spaces, and the equal-energy illuminant E for XYZ.", "working"
 
 enum TargetWhiteEnum
 {
@@ -212,17 +220,22 @@ enum TargetWhiteEnum
 
 #define kParamTargetTemperature "targetTemperature"
 #define kParamTargetTemperatureLabel "Target Temperature"
-#define kParamTargetTemperatureHint "The correlated color temperature of the target white, in Kelvin. Lower than Source Temperature makes the image warmer (more orange), higher makes it cooler (bluer)."
+#define kParamTargetTemperatureHint "The correlated color temperature of the target white, in Kelvin, used when Target White is Temperature/Tint. Lower than Source Temperature makes the image warmer (more orange), higher makes it cooler (bluer)."
 
 #define kParamTargetTint "targetTint"
 #define kParamTargetTintLabel "Target Tint"
-#define kParamTargetTintHint "The distance of the target white from the locus (Duv), perpendicular to it in the CIE 1960 uv diagram. Positive values are greener (above the locus), negative values are more magenta."
+#define kParamTargetTintHint "The distance of the target white from the locus (Duv), perpendicular to it in the CIE 1960 uv diagram, used when Target White is Temperature/Tint. Positive values are greener (above the locus), negative values are more magenta: a positive value adds green to the image."
 
 #define kParamPremultChanged "premultChanged"
 
 // D65 temperature: the CIE D65 illuminant has a CCT of 6500*1.4388/1.4380 = 6504 K
 // (the value of c2 changed after the definition of the D illuminants).
 #define kTemperatureDefault 6504.
+// 6504 K with no tint on the daylight locus is the D65 white of the working spaces (ITU-R
+// BT.709, BT.2020, SMPTE EG 432-1), x=0.3127, y=0.3290, instead of the daylight locus formula
+// (x=0.31271, y=0.32912), so that the default is exactly the identity in these spaces.
+#define kD65x 0.3127
+#define kD65y 0.3290
 #define kTemperatureMin 1000.
 #define kTemperatureMax 25000.
 #define kTintMax 0.1
@@ -247,8 +260,9 @@ xyToUV(double x,
     *v = 6. * y / d;
 }
 
-// CIE 1960 UCS uv -> CIE 1931 xy
-static void
+// CIE 1960 UCS uv -> CIE 1931 xy. Returns false if the denominator 2u-8v+4 (that is,
+// 12(X+Y+Z)/(X+15Y+3Z)) is not positive, which the temperature and tint ranges exclude.
+static bool
 uvToXY(double u,
        double v,
        double *x,
@@ -256,8 +270,13 @@ uvToXY(double u,
 {
     double d = 2. * u - 8. * v + 4.;
 
+    if (d <= 1e-6) {
+        return false;
+    }
     *x = 3. * u / d;
     *y = 2. * v / d;
+
+    return true;
 }
 
 // Planckian locus in uv, from J. Krystek, "An algorithm to calculate correlated colour
@@ -295,13 +314,36 @@ daylightUV(double T,
     xyToUV(x, y, u, v);
 }
 
+static Point3D
+xyToXYZ(double x,
+        double y)
+{
+    // only called with the constant chromaticities of the working spaces and D65 (y != 0)
+    return Point3D(x / y, 1., (1. - x - y) / y);
+}
+
+// true if T and tint give D65 (see kD65x)
+static bool
+isD65(double T,
+      double tint,
+      LocusEnum locus)
+{
+    return (T == kTemperatureDefault) && (tint == 0.) && (locus != eLocusPlanckian);
+}
+
 // The XYZ (with Y=1) of the white of temperature T and tint (Duv) on the given locus.
 static Point3D
 temperatureToXYZ(double T,
                  double tint,
                  LocusEnum locus)
 {
+    if ( isD65(T, tint, locus) ) {
+        return xyToXYZ(kD65x, kD65y);
+    }
+    // the parameter ranges (a host may not clamp the values). These clamps also give finite
+    // values for non-finite parameters, without testing for NaN.
     T = (std::max)(kTemperatureMin, (std::min)(kTemperatureMax, T));
+    tint = (std::max)(-kTintMax, (std::min)(kTintMax, tint));
     bool daylight = (locus == eLocusDaylight) || (locus == eLocusAuto && T >= kDaylightMinTemperature);
     void (*locusUV)(double, double*, double*) = daylight ? daylightUV : planckianUV;
     double u, v;
@@ -324,20 +366,19 @@ temperatureToXYZ(double T,
         }
     }
     double x, y;
-    uvToXY(u, v, &x, &y);
-    if (y <= 0.) {
-        // impossible with the parameter ranges, but don't divide by zero
-        return Point3D(1., 1., 1.);
+    if ( !uvToXY(u, v, &x, &y) || (y <= 1e-6) ) {
+        // impossible with the parameter ranges, but don't divide by zero: D65
+        return xyToXYZ(kD65x, kD65y);
     }
 
     return Point3D(x / y, 1., (1. - x - y) / y);
 }
 
-static Point3D
-xyToXYZ(double x,
-        double y)
+// The working spaces whose white is D65 (kD65x, kD65y).
+static bool
+workingWhiteIsD65(WorkingSpaceEnum space)
 {
-    return Point3D(x / y, 1., (1. - x - y) / y);
+    return (space == eWorkingSpaceRec709) || (space == eWorkingSpaceRec2020) || (space == eWorkingSpaceP3D65);
 }
 
 // The RGB to XYZ matrix of the working space, from its primaries and white chromaticities
@@ -685,7 +726,14 @@ WhiteBalancePlugin::computeMatrix(double time,
             srcIsWorking = true;
             src = working;
         } else {
-            src = toXYZ * Point3D(r, g, b);
+            // Only the chromaticity is used: divide by the largest absolute component, so
+            // that the XYZ conversion can neither overflow nor underflow. Zero or out of the
+            // finite range (the param range is +-DBL_MAX): not a white, no correction.
+            double s = (std::max)( std::abs(r), (std::max)( std::abs(g), std::abs(b) ) );
+            if ( !( (s > 1e-30) && (s <= DBL_MAX) ) ) {
+                return true;
+            }
+            src = toXYZ * Point3D(r / s, g / s, b / s);
             if (src.y <= 1e-10) {
                 // zero or negative luminance: not a white, no correction
                 return true;
@@ -700,7 +748,9 @@ WhiteBalancePlugin::computeMatrix(double time,
         src = temperatureToXYZ(srcTemperature, srcTint, locus);
     }
     if (targetWhite == eTargetWhiteWorking) {
-        if (srcIsWorking) {
+        if ( srcIsWorking ||
+             ( (sourceWhite == eSourceWhiteTemperature) && workingWhiteIsD65(space) && isD65(srcTemperature, srcTint, locus) ) ) {
+            // the source is the working space white (D65 for the D65 spaces)
             return true;
         }
         dst = working;
@@ -714,6 +764,8 @@ WhiteBalancePlugin::computeMatrix(double time,
     }
 
     Matrix3x3 cat = catMatrix(adaptation);
+    // the whites have Y=1, and finite X and Z (the neutral color is normalized above, and
+    // its Y is above 1e-10 of its largest component), so the cone responses are finite
     Point3D srcLMS = cat * src;
     Point3D dstLMS = cat * dst;
     // the cone responses of a real white are positive. Picked colors may not be (e.g. a
@@ -1036,7 +1088,9 @@ WhiteBalancePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
+#ifdef OFX_EXTENSIONS_NUKE
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1046,7 +1100,9 @@ WhiteBalancePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
+#ifdef OFX_EXTENSIONS_NUKE
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+#endif
         if (page) {
             page->addChild(*param);
         }
@@ -1154,7 +1210,7 @@ WhiteBalancePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamTargetWhiteOptionTemperature);
         assert(param->getNOptions() == eTargetWhiteWorking);
         param->appendOption(kParamTargetWhiteOptionWorking);
-        param->setDefault( (int)eTargetWhiteTemperature );
+        param->setDefault( (int)eTargetWhiteWorking );
         if (page) {
             page->addChild(*param);
         }
