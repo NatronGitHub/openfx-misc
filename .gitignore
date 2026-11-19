@@ -178,6 +178,11 @@ $RECYCLE.BIN/
 CImg/CImg.h
 CImg/Inpaint/inpaint.h
 CImg/CImg.h.version
+CImg/CImg.h.tmp/
+CImg/pocketfft_hdronly.h
+CImg/pocketfft_hdronly.h.tmp
+CImg/Licence_pocketfft.txt
+CImg/Licence_pocketfft.txt.tmp
 CImg/gmic.h
 CImg/gmic.cpp
 CImg/gmic_def.h

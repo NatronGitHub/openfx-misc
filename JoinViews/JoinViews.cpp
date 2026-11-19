@@ -49,6 +49,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipLeft "Left"
 #define kClipRight "Right"
 
+// OFX 1.4 hosts have neither the multiview plane suite (kFnOfxImageEffectPlaneSuite v2)
+// nor the Vegas stereoscopic suite: they have a single view, which is then every view.
+static Image*
+fetchViewImage(Clip* clip,
+               double time,
+               int view)
+{
+    if ( fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ||
+         fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
+        return clip->fetchStereoscopicImage(time, view);
+    }
+
+    return clip->fetchImage(time);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -202,9 +217,9 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
     // fetch main input image
     auto_ptr<const Image> src( args.renderView == 0 ?
                                     ( ( _srcLeftClip && _srcLeftClip->isConnected() ) ?
-                                      _srcLeftClip->fetchStereoscopicImage(args.time, 0) : 0 ) :
+                                      fetchViewImage(_srcLeftClip, args.time, 0) : 0 ) :
                                     ( ( _srcRightClip && _srcRightClip->isConnected() ) ?
-                                      _srcRightClip->fetchStereoscopicImage(args.time, 0) : 0 ) );
+                                      fetchViewImage(_srcRightClip, args.time, 0) : 0 ) );
 
     if ( !src.get() ) {
         assert(false);
@@ -266,10 +281,6 @@ JoinViewsPlugin::renderInternal(const RenderArguments &args,
 void
 JoinViewsPlugin::render(const RenderArguments &args)
 {
-    if ( !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
-        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
-    }
-
     // instantiate the render code based on the pixel depth of the dst clip
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -366,10 +377,6 @@ void
 JoinViewsPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                                         ContextEnum /*context*/)
 {
-    if ( !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) &&
-         !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
-        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
-    }
 
     // create the source clips from the rightmost one (in Nuke's GUI) to the leftmost
     ClipDescriptor *srcRightClip = desc.defineClip(kClipRight);
@@ -414,8 +421,9 @@ JoinViewsPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle
 // Each major version needs its own factory class: FactoryMainEntryHelper stores
 // the plugin UID in a static shared by all objects of the same class.
 static JoinViewsPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
-// version 1: isIdentity returns the rendered view of the input (deprecated, kept so old projects render the same)
-static JoinViewsPluginFactory<1> p1(kPluginIdentifier, 0);
+// version 1: isIdentity returns the rendered view of the input (deprecated, kept so old projects render the same);
+// 1.1: works on hosts without the multiview suites (OFX 1.4)
+static JoinViewsPluginFactory<1> p1(kPluginIdentifier, 1);
 mRegisterPluginFactoryInstance(p)
 mRegisterPluginFactoryInstance(p1)
 

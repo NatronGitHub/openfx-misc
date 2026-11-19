@@ -55,9 +55,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "GradeOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Modify the tonal spread of an image from the white and black points.\n" \
-    "This node can also be used to match colors of 2 images: The darkest and lightest points of " \
-    "the target image are converted to black and white using the blackpoint and whitepoint values. " \
-    "These 2 values are then moved to new values using the black(for dark point) and white(for white point). " \
+    "It can also match the colors of two images: set Black Point and White Point to the darkest and " \
+    "lightest colors of the image to correct, which maps them to 0 and 1, then set Lift (black) and " \
+    "Gain (white) to the darkest and lightest colors of the reference image. " \
     "You can also apply multiply/offset/gamma for other color fixing you may need.\n" \
     "Here is the formula used:\n" \
     "A = multiply * (white - black) / (whitepoint - blackpoint)\n" \
@@ -77,7 +77,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: gamma <= 0 gives FLT_MAX instead of +inf above 1 (NaN after premultiplying by alpha = 0),
 //              and the results of a small gamma are capped to FLT_MAX;
-//              Normalize with no analyzed pixel leaves the black and white points unchanged
+//              Normalize with no analyzed pixel leaves the black and white points unchanged;
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

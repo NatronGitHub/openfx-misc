@@ -75,7 +75,8 @@ TimeDissolve \
 TimeOffset \
 TrackerPM \
 Transform \
-VectorToColor
+VectorToColor \
+WhiteBalance
 
 TESTS ?= 0
 ifeq ($(CONFIG),debug)
@@ -130,12 +131,14 @@ subdirs: $(SUBDIRS)
 $(SUBDIRS):
 	(cd $@ && $(MAKE) $(MFLAGS))
 
-# Download CImg/CImg.h (and CImg/Inpaint/inpaint.h) once, before the CImg
-# subplugins are built in parallel by "make nomulti".
-$(filter CImg/%,$(SUBDIRS)): CImg/CImg.h
+# Download (and patch) CImg/CImg.h, CImg/Inpaint/inpaint.h and pocketfft (FFT=pocketfft) once,
+# before the CImg subplugins are built in parallel by "make nomulti". Always run, so that a
+# CIMGVERSION, patch or FFT change (see CImg/Makefile) also updates them for "make nomulti".
+.PHONY: cimg-sources
+$(filter CImg/%,$(SUBDIRS)): cimg-sources
 
-CImg/CImg.h:
-	(cd CImg && $(MAKE) $(MFLAGS) CImg.h)
+cimg-sources:
+	(cd CImg && $(MAKE) $(MFLAGS) sources)
 
 clean:
 	@for i in $(SUBDIRS) $(SUBDIRS_NOMULTI); do \

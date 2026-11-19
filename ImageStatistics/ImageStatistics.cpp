@@ -90,7 +90,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "(the default), the timeline (project) frame range, or a custom range, within the frame range of the input."
 #define kPluginIdentifier "net.sf.openfx.ImageStatistics"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+// 1.2: the S.Dev. of fewer than 2 pixels, and the skewness and kurtosis of fewer than 3 and 4 pixels,
+//      are 0 instead of infinity (an infinite parameter value gives NaN when interpolated, NaN audit)
 
 // With Auto Update, render() writes the statistics params (setValueAtTime), so it must not
 // run concurrently on the same instance (on several tiles or frames): render whole images
@@ -363,15 +365,19 @@ struct RGBAValues
 
 struct Results
 {
+    // The min/max accumulators start at +-DBL_MAX, not at +-infinity, which is undefined behaviour with
+    // -ffinite-math-only (-Ofast): the first finite value replaces them, as it replaced infinity.
     Results()
-    : min( std::numeric_limits<double>::infinity() )
-    , max( -std::numeric_limits<double>::infinity() )
+    : min( DBL_MAX )
+    , max( -DBL_MAX )
     , mean(0.)
-    , sdev( std::numeric_limits<double>::infinity() )
-    , skewness( std::numeric_limits<double>::infinity() )
-    , kurtosis( std::numeric_limits<double>::infinity() )
-    , maxVal( -std::numeric_limits<double>::infinity() )
-    , minVal( std::numeric_limits<double>::infinity() )
+    // undefined for too few pixels: 0, never an infinite value (it would be written to the params, where
+    // the host may interpolate it, giving NaN, and the skewness processor would divide by it)
+    , sdev(0.)
+    , skewness(0.)
+    , kurtosis(0.)
+    , maxVal( -DBL_MAX )
+    , minVal( DBL_MAX )
     {
         maxPos.x = maxPos.y = minPos.x = minPos.y = 0.;
         // empty
@@ -560,8 +566,8 @@ public:
     ImageMinMaxMeanProcessorBase(ImageEffect &instance)
         : ImageStatisticsProcessorBase(instance)
     {
-        std::fill( _min, _min + nValues, +std::numeric_limits<double>::infinity() );
-        std::fill( _max, _max + nValues, -std::numeric_limits<double>::infinity() );
+        std::fill( _min, _min + nValues, DBL_MAX );
+        std::fill( _max, _max + nValues, -DBL_MAX );
         std::fill(_sum, _sum + nValues, 0.);
     }
 
@@ -602,8 +608,8 @@ private:
         unused(rs);
         double min[nValues], max[nValues], sum[nValues];
 
-        std::fill( min, min + nValues, +std::numeric_limits<double>::infinity() );
-        std::fill( max, max + nValues, -std::numeric_limits<double>::infinity() );
+        std::fill( min, min + nValues, DBL_MAX );
+        std::fill( max, max + nValues, -DBL_MAX );
         std::fill(sum, sum + nValues, 0.);
         unsigned long count = 0;
 
@@ -910,11 +916,11 @@ public:
         , _luminanceMath(eLuminanceMathRec709)
     {
         _maxPos.x = _maxPos.y = 0.;
-        std::fill( _maxVal, _maxVal + nComponents, -std::numeric_limits<double>::infinity() );
-        _maxLuma = -std::numeric_limits<double>::infinity();
+        std::fill( _maxVal, _maxVal + nComponents, -DBL_MAX );
+        _maxLuma = -DBL_MAX;
         _minPos.x = _minPos.y = 0.;
-        std::fill( _minVal, _minVal + nComponents, +std::numeric_limits<double>::infinity() );
-        _minLuma = +std::numeric_limits<double>::infinity();
+        std::fill( _minVal, _minVal + nComponents, DBL_MAX );
+        _minLuma = DBL_MAX;
     }
 
     ImageLumaProcessor()
@@ -979,10 +985,10 @@ private:
         unused(rs);
         OfxPointD maxPos = {0., 0.};
         double maxVal[nComponents] = {0.};
-        double maxLuma = -std::numeric_limits<double>::infinity();
+        double maxLuma = -DBL_MAX;
         OfxPointD minPos = {0., 0.};
         double minVal[nComponents] = {0.};
-        double minLuma = +std::numeric_limits<double>::infinity();
+        double minLuma = DBL_MAX;
 
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.x2 <= _dstImg->getBounds().x2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);

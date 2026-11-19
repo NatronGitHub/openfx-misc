@@ -119,7 +119,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginMaskedIdentifier "net.sf.openfx.CornerPinMaskedPlugin"
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 2.1: overlay point selection, host selection rectangle param (Natron)
+// 2.1: overlay point selection, host selection rectangle param (Natron);
+//      the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 
 #define POINT_SIZE 5
 // Pick tolerance in screen pixels, through kOfxInteractPropPixelScale. As in RectangleInteract and
@@ -1775,7 +1776,7 @@ CornerPinMaskedPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle 
 static CornerPinPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
 static CornerPinMaskedPluginFactory<kPluginVersionMajor> p2(kPluginMaskedIdentifier, kPluginVersionMinor);
 // version 1: "Invert" composes the extra matrix as homo3x3 * extraMat
-// 1.1: overlay point selection, host selection rectangle param (Natron)
+// 1.1: overlay point selection, host selection rectangle param (Natron); the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 static CornerPinPluginFactory<1> p1v1(kPluginIdentifier, 1);
 static CornerPinMaskedPluginFactory<1> p2v1(kPluginMaskedIdentifier, 1);
 mRegisterPluginFactoryInstance(p1)

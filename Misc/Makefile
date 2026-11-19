@@ -95,6 +95,7 @@ TimeOffset.o \
 TrackerPM.o \
 Transform.o \
 VectorToColor.o \
+WhiteBalance.o \
 
 PLUGINNAME = Misc
 
@@ -247,6 +248,8 @@ $(TOP_SRCDIR)/Transform/net.sf.openfx.TransformPlugin.png \
 $(TOP_SRCDIR)/Transform/net.sf.openfx.TransformPlugin.svg \
 $(TOP_SRCDIR)/VectorToColor/net.sf.openfx.VectorToColorPlugin.png \
 $(TOP_SRCDIR)/VectorToColor/net.sf.openfx.VectorToColorPlugin.svg \
+$(TOP_SRCDIR)/WhiteBalance/net.sf.openfx.WhiteBalance.png \
+$(TOP_SRCDIR)/WhiteBalance/net.sf.openfx.WhiteBalance.svg \
 
 
 VPATH += \
@@ -328,7 +331,8 @@ $(TOP_SRCDIR)/TimeDissolve \
 $(TOP_SRCDIR)/TimeOffset \
 $(TOP_SRCDIR)/TrackerPM \
 $(TOP_SRCDIR)/Transform \
-$(TOP_SRCDIR)/VectorToColor
+$(TOP_SRCDIR)/VectorToColor \
+$(TOP_SRCDIR)/WhiteBalance
 
 include $(TOP_SRCDIR)/Makefile.master
 
@@ -411,7 +415,8 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/TimeOffset \
 -I$(TOP_SRCDIR)/TrackerPM \
 -I$(TOP_SRCDIR)/Transform \
--I$(TOP_SRCDIR)/VectorToColor
+-I$(TOP_SRCDIR)/VectorToColor \
+-I$(TOP_SRCDIR)/WhiteBalance
 
 # openmp
 ifeq ($(OPENMP),1)

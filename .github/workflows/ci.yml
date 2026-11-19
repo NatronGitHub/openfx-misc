@@ -5,9 +5,11 @@ name: Continous Integration tests
 # plugin load test of the install tree. The Linux build is also followed by a
 # headless render test (.github/tools/rendertest.sh, with openfx's hostDemo,
 # built with -DOFX_BUILD_HOSTDEMO=ON) and a smoke test that renders every plug-in
-# (.github/tools/smoketest.sh); nightly.yml runs them on macOS too. macOS runs
-# only after Linux and Windows pass, and is informative: a red or missing macOS
-# check does not block merging (macOS arm64 runners are scarce).
+# (.github/tools/smoketest.sh), then again in an OFX 1.4 host (smoketest.sh
+# --ofx14); nightly.yml runs the first two on macOS too. Windows renders
+# the FFT convolution test only (a pocketfft deadlock at plug-in unload, openfx-gmic#94).
+# macOS runs only after Linux and Windows pass, and is informative: a red or missing
+# macOS check does not block merging (macOS arm64 runners are scarce).
 # Other variants (debug, C++20, no OpenMP, MSVC, and make nomulti) are in nightly.yml.
 #
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
@@ -59,6 +61,8 @@ env:
   # CMake options shared by the release builds: C++17 (OFX_CXX_STANDARD, the
   # default: the standard of Natron RB-2.6, Qt5; C++20 is built by nightly.yml),
   # OpenMP (OFX_USE_OPENMP, the default; not on macOS, see MACOS_OPTIONS), and the Test bundle.
+  # The CImg plug-ins use their default FFT, pocketfft (header-only, downloaded); nightly.yml also
+  # builds COMMERCIAL, FFT=pow2 and FFT=fftw3 (opt-in).
   CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
   # The release bundles are uploaded as artifacts only for manual runs
   # ("Run workflow" on the Actions page) and for pre-release tags. This repo is
@@ -164,6 +168,21 @@ jobs:
           cmake --install build --prefix "$PWD/install"
       - name: Load test
         run: .github/tools/loadtest.sh install
+      - name: Check bundles (linuxCheckBundle.sh)
+        # openfx's bundle checker: no bundled system libraries, $ORIGIN-only RUNPATH, no
+        # GLIBC_PRIVATE. Ubuntu 24.04 is newer than the release baseline (EL9), so the
+        # symbol-version limits are off here (the release build checks them). Every
+        # DT_NEEDED must be a system library (or the optional libz): a new non-system
+        # dependency fails.
+        env:
+          OFX_ABI_GLIBC: 99
+          OFX_ABI_GLIBCXX: 99
+          OFX_ABI_CXXABI: 99
+          OFX_ABI_GCC: 99
+          OFX_ABI_GOMP: 99
+          OFX_ABI_LIBATOMIC: 99
+          OFX_ABI_ZLIB: 99
+        run: openfx/Support/include/linuxCheckBundle.sh install/OFX/Plugins
       - name: Render test (hostDemo)
         # Renders the generators and some filters at the three depths, and checks
         # the outputs (21 s in CI).
@@ -175,6 +194,12 @@ jobs:
         # supported depth (38 s in CI).
         timeout-minutes: 10
         run: .github/tools/smoketest.sh --quick install
+      - name: Smoke test (hostDemo --ofx14, all plug-ins)
+        # The same in an OFX 1.4 host (hostDemo --ofx14: only the OFX 1.4 host
+        # properties and suites, no OfxSetHost, no StrChoice or Bytes params, one
+        # view): every plug-in must also work without OFX 1.5 and the extensions.
+        timeout-minutes: 10
+        run: .github/tools/smoketest.sh --quick --ofx14 install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
         # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for
@@ -205,7 +230,8 @@ jobs:
       # that the bundles also load in hosts that do not ship these DLLs (loadtest.sh
       # checks it). No OpenMP (as the make CI): with MSYS2's libgomp, -static still
       # leaves a libgomp-1.dll dependency (rejected by loadtest.sh, CI run 44066372220).
-      WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF
+      # OFX_BUILD_HOSTDEMO: openfx's hostDemo, in install/bin, for the FFT render test.
+      WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -221,8 +247,9 @@ jobs:
           update: false
           cache: true
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
+          # (expat: hostDemo's HostSupport; python: rendertest.sh's checks)
           install: git base-devel
-          pacboy: cc:p cmake:p ninja:p
+          pacboy: cc:p cmake:p ninja:p expat:p python:p
       - name: Build (release)
         run: |
           set -eo pipefail
@@ -233,6 +260,15 @@ jobs:
         run: |
           set -eo pipefail
           .github/tools/loadtest.sh install
+      - name: Render test (hostDemo, FFT convolution)
+        # ConvolveCImg's FFT, which starts pocketfft's thread pool, then hostDemo's exit,
+        # which unloads the plug-in: with a multithreaded pocketfft, ~thread_pool() joined
+        # its threads under the loader lock and hostDemo hung (NatronGitHub/openfx-gmic#94).
+        # A hang fails at the step timeout.
+        timeout-minutes: 5
+        run: |
+          set -eo pipefail
+          RENDERTEST_ONLY='^CImgConvolve' .github/tools/rendertest.sh install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
         # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for

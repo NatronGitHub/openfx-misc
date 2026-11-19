@@ -79,7 +79,8 @@ static bool gParametricPeriodic = false;
 #define kPluginIdentifier "net.sf.openfx.HueCorrect"
 // History:
 // version 1.0 (deprecated): initial version
-// version 1.1 (deprecated): curve values above kCurveValueMax are replaced by 0, without detecting non-finite values
+// version 1.1 (deprecated): curve values above kCurveValueMax are replaced by 0, without detecting non-finite values;
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 // version 2.0 (in HueCorrect.cpp): add Hue vs Hue support
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
@@ -704,7 +705,7 @@ public:
             // red is at parametricPos = 1
             float h = (parametricPos - 1) / 6;
             float r, g, b;
-            Color::hsv_to_rgb( h, s, v, &r, &g, &b );
+            Color::hsv_to_rgb( h, s, v, &r, &g, &b, true ); // the overlay strip extends beyond one hue period
             glColor3f(r, g, b);
             glVertex2f(parametricPos, _yMin);
             glVertex2f(parametricPos, _yMax);

@@ -82,7 +82,8 @@ static bool gParametricPeriodic = false;
 // version 1.0 (deprecated, in HueCorrect1.cpp): initial version
 // version 2.0: add Hue vs Hue support
 // version 2.1: curve values above kCurveValueMax are replaced by 0, without detecting non-finite values;
-//              HueKeyer: a zero sat_thrsh no longer divides by zero
+//              HueKeyer: a zero sat_thrsh no longer divides by zero;
+//              HueCorrect: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -721,7 +722,7 @@ public:
                 // red is at parametricPos = 1
                 float h = (parametricPos - 1) / 6;
                 float r, g, b;
-                Color::hsv_to_rgb( h, s, v, &r, &g, &b );
+                Color::hsv_to_rgb( h, s, v, &r, &g, &b, true ); // the overlay strip extends beyond one hue period
                 glColor3f(r, g, b);
                 glVertex2f(parametricPos+9, _yMin-(_yMax-_yMin));
                 glVertex2f(parametricPos-9, _yMax+(_yMax-_yMin));
@@ -770,7 +771,7 @@ public:
             // red is at parametricPos = 1
             float h = (parametricPos - 1) / 6;
             float r, g, b;
-            Color::hsv_to_rgb( h, s, v, &r, &g, &b );
+            Color::hsv_to_rgb( h, s, v, &r, &g, &b, true ); // the overlay strip extends beyond one hue period
             glColor3f(r, g, b);
             glVertex2f(parametricPos, _yMin);
             glVertex2f(parametricPos, _yMax);

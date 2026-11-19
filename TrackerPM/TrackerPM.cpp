@@ -61,8 +61,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Canceling a tracking operation will not wipe all the data analysed so far. If you resume a previously canceled tracking, " \
     "the tracker will continue tracking, picking up the previous/next frame as reference. "
 #define kPluginIdentifier "net.sf.openfx.TrackerPM"
+// version 1.1: works in the filter context (it fetched the Mask clip that is not defined there)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+
+// The score of a position that cannot be scored (zero standard deviation with NCC or ZNCC), and the
+// best score before any position is scored. A finite value, so that it can be tested (with
+// -ffinite-math-only, x == infinity is assumed false), and larger than any finite score.
+#define kScoreNone DBL_MAX
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -110,7 +116,10 @@ public:
         , _outerTopRight(NULL)
     {
 
-        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
+        // describeInContext only defines the mask clip in these contexts (not in the filter context)
+        const ContextEnum context = getContext();
+        _maskClip = ( (context == eContextGeneral) || (context == eContextPaint) || (context == eContextTracker) ) ?
+                    fetchClip(context == eContextPaint ? "Brush" : "Mask") : NULL;
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kParamScore);
         assert(_score);
@@ -193,7 +202,7 @@ public:
         , _refRectPixel()
         , _refCenterI()
     {
-        _bestMatch.second = std::numeric_limits<double>::infinity();
+        _bestMatch.second = kScoreNone;
     }
 
     virtual ~TrackerPMProcessorBase()
@@ -407,7 +416,7 @@ private:
             if (sdev != 0.) {
                 score /= sdev;
             } else {
-                score = std::numeric_limits<double>::infinity();
+                score = kScoreNone;
             }
         }
 
@@ -421,7 +430,7 @@ private:
         assert(rs.x == 1. && rs.y == 1.);
         assert(_patternImg.get() && _patternData && _weightImg.get() && _weightData && _otherImg && _weightTotal > 0.);
         assert(scoreType == scoreTypeE);
-        double bestScore = std::numeric_limits<double>::infinity();
+        double bestScore = kScoreNone;
         OfxPointI point;
         point.x = -1;
         point.y = -1;
@@ -486,7 +495,8 @@ private:
             // compute subpixel position.
             double scorepc = computeScore<scoreTypeE>(point.x - 1, point.y, refMean);
             double scorenc = computeScore<scoreTypeE>(point.x + 1, point.y, refMean);
-            if ( (bestScore < scorepc) && (bestScore <= scorenc) ) {
+            // only with neighbours that have a score (kScoreNone would give dx = 0.5)
+            if ( (scorepc < kScoreNone) && (scorenc < kScoreNone) && (bestScore < scorepc) && (bestScore <= scorenc) ) {
                 // don't simplify the denominator in the following expression,
                 // 2*bestScore - scorenc - scorepc may cause an underflow.
                 double factor = 1. / ( (bestScore - scorenc) + (bestScore - scorepc) );
@@ -497,7 +507,7 @@ private:
             }
             double scorecp = computeScore<scoreTypeE>(point.x, point.y - 1, refMean);
             double scorecn = computeScore<scoreTypeE>(point.x, point.y + 1, refMean);
-            if ( (bestScore < scorecp) && (bestScore <= scorecn) ) {
+            if ( (scorecp < kScoreNone) && (scorecn < kScoreNone) && (bestScore < scorecp) && (bestScore <= scorecn) ) {
                 // don't simplify the denominator in the following expression,
                 // 2*bestScore - scorenc - scorepc may cause an underflow.
                 double factor = 1. / ( (bestScore - scorecn) + (bestScore - scorecp) );
@@ -754,7 +764,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
         //////////////////////////////////
 
         ///ok the score is now computed, update the center
-        if ( processor.getBestScore() == std::numeric_limits<double>::infinity() ) {
+        if (processor.getBestScore() >= kScoreNone) {
             // can't track: erase any existing track
             _center->deleteKeyAtTime(otherTime);
         } else {

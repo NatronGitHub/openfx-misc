@@ -46,7 +46,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The Contrast adjustment works using the formula: Output = (Input/0.18)^Contrast*0.18.\n" \
     "\n" \
     "See also:\n" \
-    "- http://opticalenquiry.com/nuke/index.php?title=ColorCorrect\n" \
+    "- https://web.archive.org/web/20220627021703/http://www.opticalenquiry.com/nuke/index.php?title=ColorCorrect\n" \
     "- https://compositormathematic.wordpress.com/2013/07/06/gamma-contrast/"
 
 #define kPluginIdentifier "net.sf.openfx.ColorCorrectPlugin"
@@ -55,7 +55,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: add range params
 // version 2.2: gamma = 0 gives its limit (0 below 1, 1 at 1, FLT_MAX above 1) instead of dividing by zero,
-//              and the results of a small gamma are capped to FLT_MAX
+//              and the results of a small gamma are capped to FLT_MAX;
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 

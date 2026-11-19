@@ -134,15 +134,24 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: no NaN or infinite output: a source transform that sends a pixel to infinity gives
+//              transparent black (it used to sample at an infinite position), NaN audit;
+//              the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 3.0: use format instead of rod as the default for distortion domain
 // version 4.0: add the CropToFormat parameter
+// version 4.1 (and 2.1, 3.1): no NaN or infinite output (NaN audit): degenerate model parameters (a zero
+//              squeeze, filmback, pixel aspect, fov or format size, PanoTools/Nuke radial factors that vanish,
+//              3DE Standard cylindric bending b <= -1, 3DE Fisheye focal length 0) are clamped away from
+//              the singularity, see DistortionModel.cpp; the u and v of the STMap output mode are 0 for a
+//              format less than one pixel wide or high (they were 0/0); a format PAR of 0 is taken as 1;
+//              plus the IDistort/STMap 2.1 fix
 #define kPluginVersionLensDistortionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionLensDistortionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionLensDistortionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -1096,6 +1105,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             }
             } // switch
             double Jxx = 1., Jxy = 0., Jyx = 0., Jyy = 1.;
+            bool atInfinity = false; // the source position is at infinity: nothing to sample
             if (_transformIsIdentity) {
                 if (filter != eFilterImpulse) {
                     Jxx = sxx;
@@ -1108,8 +1118,11 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 double transformedx = H(0,0) * sx + H(0,1) * sy + H(0,2);
                 double transformedy = H(1,0) * sx + H(1,1) * sy + H(1,2);
                 double transformedz = H(2,0) * sx + H(2,1) * sy + H(2,2);
-                if (transformedz == 0) {
-                    sx = sy = std::numeric_limits<double>::infinity();
+                // z * z (the Jacobian below) underflows for |z| < 1.5e-154: such a point is at infinity
+                // too (a z of that magnitude never occurs with a non-degenerate transform)
+                if (std::abs(transformedz) < 1e-150) {
+                    // no infinite sentinel: it would be fed to the filter (floor, int conversion, inf - inf)
+                    atInfinity = true;
                 } else {
                     sx = transformedx / transformedz;
                     sy = transformedy / transformedz;
@@ -1122,10 +1135,15 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 }
             }
             
-            if (_outputMode == eOutputModeSTMap) {
-                // 0,0 corresponds to the lower left corner of the first pixel
-                tmpPix[0] = (sx - srcx1) / (srcx2 - srcx1); // u
-                tmpPix[1] = (sy - srcy1) / (srcy2 - srcy1); // v
+            if (atInfinity) {
+                // transparent black, as Transform3x3 gives for z == 0 (Transform3x3 also gives black for z < 0,
+                // behind the camera, which this code does not test). Also u = v = 0, with a transparent STMap alpha.
+                std::fill(tmpPix, tmpPix + 4, 0.f);
+            } else if (_outputMode == eOutputModeSTMap) {
+                // 0,0 corresponds to the lower left corner of the first pixel. The format may be less
+                // than one pixel wide or high (srcx2 == srcx1): then u (or v) is 0.
+                tmpPix[0] = (srcx2 != srcx1) ? (sx - srcx1) / (srcx2 - srcx1) : 0.; // u
+                tmpPix[1] = (srcy2 != srcy1) ? (sy - srcy1) / (srcy2 - srcy1) : 0.; // v
                 tmpPix[2] = 1.; // a
                 tmpPix[3] = 1.; // be opaque
             } else {
@@ -2153,6 +2171,11 @@ DistortionPlugin::getLensDistortionFormat(double time,
             int w, h;
             _formatSize->getValue(w, h);
             *par = _formatPar->getValue();
+            if (*par <= 0.) {
+                // the range of the hidden format PAR is [0,DBL_MAX]: 0 would be a division by zero
+                // (toPixelEnclosing, canonical coordinates): use the default PAR, as the generators do
+                *par = 1.;
+            }
             format->x1 = format->y1 = 0;
             format->x2 = w * renderScale.x;
             format->y2 = h * renderScale.y;
@@ -2926,7 +2949,8 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
         auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
 
-        OfxRectD roiPixel = { std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
+        // empty, enlarged by each point below (+-DBL_MAX, since infinity is undefined behaviour with -ffinite-math-only)
+        OfxRectD roiPixel = { DBL_MAX, DBL_MAX, -DBL_MAX, -DBL_MAX };
         assert( OFX::Coords::rectIsEmpty(roiPixel) );
 
         OfxRectI renderWinPixel;
@@ -3048,7 +3072,8 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
         auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
 
-        OfxRectD rodPixel = { std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
+        // empty, enlarged by each point below (+-DBL_MAX, since infinity is undefined behaviour with -ffinite-math-only)
+        OfxRectD rodPixel = { DBL_MAX, DBL_MAX, -DBL_MAX, -DBL_MAX };
         assert( OFX::Coords::rectIsEmpty(rodPixel) );
 
         OfxRectD srcRodPixel;
