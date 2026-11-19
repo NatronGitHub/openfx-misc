@@ -162,15 +162,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // history:
 // 1.0 initial version
 //     (later, plugins were named more consistently and a few conversions were added, without changing the version)
+// 1.1 HSVToRGB, HSLToRGB, HSIToRGB wrap the hue into the hue circle (bug fix: HSV and HSL gave
+//     magenta for hues in [-1, -5/6) mod 1, and HSI was not periodic for out-of-range hues);
+//     all conversions released as 1.0, including version 1 of the signedOutput() conversions
+//     (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+// 1.0 RGBToYIQ, YIQToRGB, RGBToYDbDr, YDbDrToRGB: initial version
 // 2.0 RGBToYPbPr601, RGBToYPbPr709, RGBToYUV601, RGBToYUV709, RGB709ToLab, XYZToLab only:
 //     only support float images, because their output may be negative (version 1 clamps negative
-//     values to 0 on 8-bit and 16-bit images). The other conversions are still version 1.0.
-// 1.1/2.1 HSVToRGB, HSLToRGB, HSIToRGB wrap the hue into the hue circle (bug fix: HSV and HSL gave
-//     magenta for hues in [-1, -5/6) mod 1, and HSI was not periodic for out-of-range hues);
-//     all conversions: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+//     values to 0 on 8-bit and 16-bit images); premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73).
+//     The other conversions are still version 1.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginNewVersionMinor 0 // minor version of the conversions added after version 1.0 was released (YIQ, YDbDr)
 #define kPluginSignedOutputVersionMajor 2 // version of the conversions with a signed output (see signedOutput())
+#define kPluginSignedOutputVersionMinor 0
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -1118,45 +1123,45 @@ static ColorTransformPluginFactory<eColorTransformRGBToYCbCr709, kPluginVersionM
 // YCbCrToRGB709
 static ColorTransformPluginFactory<eColorTransformYCbCrToRGB709, kPluginVersionMajor> p18(kPluginYCbCrToRGB709Identifier, kPluginVersionMinor);
 // RGBToYPbPr601
-static ColorTransformPluginFactory<eColorTransformRGBToYPbPr601, kPluginSignedOutputVersionMajor> p9(kPluginRGBToYPbPr601Identifier, kPluginVersionMinor);
-static ColorTransformPluginFactory<eColorTransformRGBToYPbPr601, 1> p9v1(kPluginRGBToYPbPr601Identifier, 0);
+static ColorTransformPluginFactory<eColorTransformRGBToYPbPr601, kPluginSignedOutputVersionMajor> p9(kPluginRGBToYPbPr601Identifier, kPluginSignedOutputVersionMinor);
+static ColorTransformPluginFactory<eColorTransformRGBToYPbPr601, 1> p9v1(kPluginRGBToYPbPr601Identifier, kPluginVersionMinor);
 // YPbPrToRGB601
 static ColorTransformPluginFactory<eColorTransformYPbPrToRGB601, kPluginVersionMajor> p10(kPluginYPbPrToRGB601Identifier, kPluginVersionMinor);
 // RGBToYPbPr709
-static ColorTransformPluginFactory<eColorTransformRGBToYPbPr709, kPluginSignedOutputVersionMajor> p15(kPluginRGBToYPbPr709Identifier, kPluginVersionMinor);
-static ColorTransformPluginFactory<eColorTransformRGBToYPbPr709, 1> p15v1(kPluginRGBToYPbPr709Identifier, 0);
+static ColorTransformPluginFactory<eColorTransformRGBToYPbPr709, kPluginSignedOutputVersionMajor> p15(kPluginRGBToYPbPr709Identifier, kPluginSignedOutputVersionMinor);
+static ColorTransformPluginFactory<eColorTransformRGBToYPbPr709, 1> p15v1(kPluginRGBToYPbPr709Identifier, kPluginVersionMinor);
 // YPbPrToRGB709
 static ColorTransformPluginFactory<eColorTransformYPbPrToRGB709, kPluginVersionMajor> p16(kPluginYPbPrToRGB709Identifier, kPluginVersionMinor);
 // RGBToYUV601
-static ColorTransformPluginFactory<eColorTransformRGBToYUV601, kPluginSignedOutputVersionMajor> p19(kPluginRGBToYUV601Identifier, kPluginVersionMinor);
-static ColorTransformPluginFactory<eColorTransformRGBToYUV601, 1> p19v1(kPluginRGBToYUV601Identifier, 0);
+static ColorTransformPluginFactory<eColorTransformRGBToYUV601, kPluginSignedOutputVersionMajor> p19(kPluginRGBToYUV601Identifier, kPluginSignedOutputVersionMinor);
+static ColorTransformPluginFactory<eColorTransformRGBToYUV601, 1> p19v1(kPluginRGBToYUV601Identifier, kPluginVersionMinor);
 // YUVToRGB601
 static ColorTransformPluginFactory<eColorTransformYUVToRGB601, kPluginVersionMajor> p20(kPluginYUVToRGB601Identifier, kPluginVersionMinor);
 // RGBToYUV709
-static ColorTransformPluginFactory<eColorTransformRGBToYUV709, kPluginSignedOutputVersionMajor> p21(kPluginRGBToYUV709Identifier, kPluginVersionMinor);
-static ColorTransformPluginFactory<eColorTransformRGBToYUV709, 1> p21v1(kPluginRGBToYUV709Identifier, 0);
+static ColorTransformPluginFactory<eColorTransformRGBToYUV709, kPluginSignedOutputVersionMajor> p21(kPluginRGBToYUV709Identifier, kPluginSignedOutputVersionMinor);
+static ColorTransformPluginFactory<eColorTransformRGBToYUV709, 1> p21v1(kPluginRGBToYUV709Identifier, kPluginVersionMinor);
 // YUVToRGB709
 static ColorTransformPluginFactory<eColorTransformYUVToRGB709, kPluginVersionMajor> p22(kPluginYUVToRGB709Identifier, kPluginVersionMinor);
 // RGBToYIQ
-static ColorTransformPluginFactory<eColorTransformRGBToYIQ, kPluginVersionMajor> p27(kPluginRGBToYIQIdentifier, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformRGBToYIQ, kPluginVersionMajor> p27(kPluginRGBToYIQIdentifier, kPluginNewVersionMinor);
 // YIQToRGB
-static ColorTransformPluginFactory<eColorTransformYIQToRGB, kPluginVersionMajor> p28(kPluginYIQToRGBIdentifier, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformYIQToRGB, kPluginVersionMajor> p28(kPluginYIQToRGBIdentifier, kPluginNewVersionMinor);
 // RGBToYDbDr
-static ColorTransformPluginFactory<eColorTransformRGBToYDbDr, kPluginVersionMajor> p29(kPluginRGBToYDbDrIdentifier, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformRGBToYDbDr, kPluginVersionMajor> p29(kPluginRGBToYDbDrIdentifier, kPluginNewVersionMinor);
 // YDbDrToRGB
-static ColorTransformPluginFactory<eColorTransformYDbDrToRGB, kPluginVersionMajor> p30(kPluginYDbDrToRGBIdentifier, kPluginVersionMinor);
+static ColorTransformPluginFactory<eColorTransformYDbDrToRGB, kPluginVersionMajor> p30(kPluginYDbDrToRGBIdentifier, kPluginNewVersionMinor);
 // RGB709ToXYZ
 static ColorTransformPluginFactory<eColorTransformRGB709ToXYZ, kPluginVersionMajor> p11(kPluginRGB709ToXYZIdentifier, kPluginVersionMinor);
 // XYZToRGB709
 static ColorTransformPluginFactory<eColorTransformXYZToRGB709, kPluginVersionMajor> p12(kPluginXYZToRGB709Identifier, kPluginVersionMinor);
 // RGB709ToLab
-static ColorTransformPluginFactory<eColorTransformRGB709ToLab, kPluginSignedOutputVersionMajor> p13(kPluginRGB709ToLabIdentifier, kPluginVersionMinor);
-static ColorTransformPluginFactory<eColorTransformRGB709ToLab, 1> p13v1(kPluginRGB709ToLabIdentifier, 0);
+static ColorTransformPluginFactory<eColorTransformRGB709ToLab, kPluginSignedOutputVersionMajor> p13(kPluginRGB709ToLabIdentifier, kPluginSignedOutputVersionMinor);
+static ColorTransformPluginFactory<eColorTransformRGB709ToLab, 1> p13v1(kPluginRGB709ToLabIdentifier, kPluginVersionMinor);
 // LabToRGB709
 static ColorTransformPluginFactory<eColorTransformLabToRGB709, kPluginVersionMajor> p14(kPluginLabToRGB709Identifier, kPluginVersionMinor);
 // XYZToLab
-static ColorTransformPluginFactory<eColorTransformXYZToLab, kPluginSignedOutputVersionMajor> p23(kPluginXYZToLabIdentifier, kPluginVersionMinor);
-static ColorTransformPluginFactory<eColorTransformXYZToLab, 1> p23v1(kPluginXYZToLabIdentifier, 0);
+static ColorTransformPluginFactory<eColorTransformXYZToLab, kPluginSignedOutputVersionMajor> p23(kPluginXYZToLabIdentifier, kPluginSignedOutputVersionMinor);
+static ColorTransformPluginFactory<eColorTransformXYZToLab, 1> p23v1(kPluginXYZToLabIdentifier, kPluginVersionMinor);
 // LabToXYZ
 static ColorTransformPluginFactory<eColorTransformLabToXYZ, kPluginVersionMajor> p24(kPluginLabToXYZIdentifier, kPluginVersionMinor);
 // XYZToxyY

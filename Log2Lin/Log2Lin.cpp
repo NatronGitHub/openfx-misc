@@ -46,10 +46,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 1.1: also pass through the channels where black and white are almost equal (the offset rounds to 1),
-//              or where the offset overflows; Log to Lin results are capped to the float range
-// version 1.2: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+//              or where the offset overflows; Log to Lin results are capped to the float range;
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1

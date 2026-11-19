@@ -69,10 +69,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History (BilateralGuided):
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 3.0: the Mix parameter is applied (it was ignored before)
-// version 2.1 and 3.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+// version 2.1 (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+// version 3.0: the Mix parameter is applied (it was ignored before);
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginGuidedVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginGuidedVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginGuidedVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginGuidedDescription \
     "Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B. " \
     "Uses the 'blur_bilateral' function from the CImg library.\n" \

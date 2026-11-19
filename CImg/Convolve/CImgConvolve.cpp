@@ -63,9 +63,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier    "net.sf.cimg.CImgConvolve"
 // History:
 // version 1.0: initial version
-// version 1.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsComponentRemapping 0 // the cimg channels are the source channels, in the same order
 // Tiles are supported: the source RoI is the render window enlarged by the kernel extent, and

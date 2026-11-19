@@ -224,11 +224,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.0: use kNatronOfxParamProcess* parameters
 // version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
 // version 4.0: added cropToFormat parameter on Natron (this line said 4.1, but the minor version was not incremented)
-// EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5)
-// versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom), 4.1 and EdgeDetect 5.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73);
+// versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73);
 //              EdgeExtend has no premult parameter and stays 4.0
+// EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5);
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajorEdgeDetect 5
-#define kPluginVersionMinorEdgeDetect 1
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
 #define kPluginVersionMinorEdgeExtend 0
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -3296,7 +3296,7 @@ static CImgErodeBlurPluginFactory<kPluginVersionMajor> p5(kPluginIdentifierErode
 static CImgSharpenPluginFactory<kPluginVersionMajor> p6(kPluginIdentifierSharpen, kPluginVersionMinor);
 static CImgSoftenPluginFactory<kPluginVersionMajor> p7(kPluginIdentifierSoften, kPluginVersionMinor);
 static CImgEdgeExtendPluginFactory<kPluginVersionMajor> p8(kPluginIdentifierEdgeExtend, kPluginVersionMinorEdgeExtend);
-static CImgEdgeDetectPluginFactory<kPluginVersionMajorEdgeDetect> p9(kPluginIdentifierEdgeDetect, kPluginVersionMinorEdgeDetect);
+static CImgEdgeDetectPluginFactory<kPluginVersionMajorEdgeDetect> p9(kPluginIdentifierEdgeDetect, 0);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)

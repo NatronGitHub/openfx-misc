@@ -82,10 +82,10 @@ static bool gParametricPeriodic = false;
 // version 1.0 (deprecated, in HueCorrect1.cpp): initial version
 // version 2.0: add Hue vs Hue support
 // version 2.1: curve values above kCurveValueMax are replaced by 0, without detecting non-finite values;
-//              HueKeyer: a zero sat_thrsh no longer divides by zero
-// version 2.2 (HueCorrect only, HueKeyer does not premultiply and stays 2.1): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+//              HueKeyer: a zero sat_thrsh no longer divides by zero;
+//              HueCorrect: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 // curve values above this (or infinite) are invalid, and replaced by 0
 #define kCurveValueMax 1e6
@@ -1110,7 +1110,6 @@ mRegisterPluginFactoryInstance(p)
     "sat_thrsh: if source saturation is below this value, the output transparency is gradually decreased."
 
 #define kPluginKeyerIdentifier "net.sf.openfx.HueKeyer"
-#define kPluginKeyerVersionMinor 1 // HueKeyer does not premultiply, so SupportExt #73 does not change it
 
 #define kParamKeyerHue "hue"
 #define kParamKeyerHueLabel "Hue Curves"
@@ -1591,7 +1590,7 @@ HueKeyerPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new HueKeyerPlugin(handle);
 }
 
-static HueKeyerPluginFactory p1(kPluginKeyerIdentifier, kPluginVersionMajor, kPluginKeyerVersionMinor);
+static HueKeyerPluginFactory p1(kPluginKeyerIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

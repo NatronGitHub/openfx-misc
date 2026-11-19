@@ -48,11 +48,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // History:
 // version 1.0: initial version
+// version 1.1 (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 // version 2.0: in "Alpha" and "Image and Alpha" output modes, premultiply RGB by the source alpha
-//              (version 1 premultiplied RGB by the suppress mask)
-// version 2.1: premultiplying by alpha 0 gives 0, not NaN, for an infinite colour
+//              (version 1 premultiplied RGB by the suppress mask);
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -1005,7 +1006,7 @@ ColorSuppressPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle ha
 
 static ColorSuppressPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 1: in "Alpha" and "Image and Alpha" modes, RGB is premultiplied by the suppress mask
-static ColorSuppressPluginFactory<1> p1(kPluginIdentifier, 0);
+static ColorSuppressPluginFactory<1> p1(kPluginIdentifier, 1);
 mRegisterPluginFactoryInstance(p)
 mRegisterPluginFactoryInstance(p1)
 
