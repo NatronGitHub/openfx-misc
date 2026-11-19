@@ -168,6 +168,7 @@ grouping).
 * Transform/RGB709ToLab and LabToRGB709: Convert to/from Lab color representation.
 * Transform/RGB709ToXYZ and XYZToRGB709: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.
+* WhiteBalanceOFX: Correct the white balance by a chromatic adaptation (Bradford, CAT02...) from a source white (color temperature and tint, or a picked neutral color) to a target white, in linear RGB.
 
 ### Filter
 

@@ -1732,6 +1732,9 @@
 		D7BB85C21955C00100A86649 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		D7BB85C31955C00100A86649 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		D7BB85C51955C00100A86649 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EAB0B802F5A100000C0FFEE /* WhiteBalance.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAB0B7C2F5A100000C0FFEE /* WhiteBalance.cpp */; };
+		1EAB0B812F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EAB0B7D2F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.png */; };
+		1EAB0B822F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EAB0B7E2F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.svg */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -3232,6 +3235,8 @@
 				1E814CD619C983F700C2C668 /* net.sf.openfx.TransformMaskedPlugin.svg in CopyFiles */,
 				AC6486E61A41A5E40088844F /* net.sf.openfx.VectorToColorPlugin.png in CopyFiles */,
 				1E3284A81A41C49E00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg in CopyFiles */,
+				1EAB0B812F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.png in CopyFiles */,
+				1EAB0B822F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4254,6 +4259,9 @@
 		D7B4C96118D9DA410004137D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7BB85C91955C00100A86649 /* TrackerPM.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackerPM.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D7C6B8691A0CF2F300950A28 /* ofxsGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsGenerator.h; sourceTree = "<group>"; };
+		1EAB0B7C2F5A100000C0FFEE /* WhiteBalance.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WhiteBalance.cpp; sourceTree = "<group>"; };
+		1EAB0B7D2F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.WhiteBalance.png; sourceTree = "<group>"; };
+		1EAB0B7E2F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.WhiteBalance.svg; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -5442,6 +5450,7 @@
 				D7704C74195B5E4F002E163E /* TrackerPM */,
 				D7349E8818E7766F0097DB1D /* Transform */,
 				1EFBC97E1A23A1CC00086E7A /* VectorToColor */,
+				1EAB0B7F2F5A100000C0FFEE /* WhiteBalance */,
 				1E8B5D4618B769B400C31FDC /* Misc */,
 				1E9B5F46198A51590095C8AA /* SupportExt */,
 				1E3E3CB417995D15005F2132 /* Library */,
@@ -6536,6 +6545,16 @@
 				D7B4C96118D9DA410004137D /* Makefile */,
 			);
 			path = ColorCorrect;
+			sourceTree = "<group>";
+		};
+		1EAB0B7F2F5A100000C0FFEE /* WhiteBalance */ = {
+			isa = PBXGroup;
+			children = (
+				1EAB0B7C2F5A100000C0FFEE /* WhiteBalance.cpp */,
+				1EAB0B7D2F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.png */,
+				1EAB0B7E2F5A100000C0FFEE /* net.sf.openfx.WhiteBalance.svg */,
+			);
+			path = WhiteBalance;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -8693,6 +8712,7 @@
 				D780C414198938AD002470C9 /* TrackerPM.cpp in Sources */,
 				D7349E8E18E776780097DB1D /* Transform.cpp in Sources */,
 				1EFBC9991A23A23C00086E7A /* VectorToColor.cpp in Sources */,
+				1EAB0B802F5A100000C0FFEE /* WhiteBalance.cpp in Sources */,
 				1EF77B741E4A3CA7005C4845 /* ofxsThreadSuite.cpp in Sources */,
 				1ED4AEB81973DE1200EE64C8 /* randomGenerator.cpp in Sources */,
 				1EEAA6C81BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */,

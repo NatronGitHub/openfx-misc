@@ -75,7 +75,8 @@ TimeDissolve \
 TimeOffset \
 TrackerPM \
 Transform \
-VectorToColor
+VectorToColor \
+WhiteBalance
 
 TESTS ?= 0
 ifeq ($(CONFIG),debug)
