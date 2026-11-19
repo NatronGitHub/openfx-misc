@@ -77,7 +77,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: gamma <= 0 gives FLT_MAX instead of +inf above 1 (NaN after premultiplying by alpha = 0),
 //              and the results of a small gamma are capped to FLT_MAX;
-//              Normalize with no analyzed pixel leaves the black and white points unchanged
+//              Normalize with no analyzed pixel leaves the black and white points unchanged;
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

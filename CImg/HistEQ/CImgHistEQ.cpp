@@ -61,9 +61,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1 (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 // version 3.0: when only some of the R, G, B channels are processed, compute the HSV decomposition
 //              from R, G and B anyway, and only write the processed channels (version 2 used the
-//              processed channels as if they were R, G, B)
+//              processed channels as if they were R, G, B);
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -340,7 +342,7 @@ CImgHistEQPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handl
 }
 
 // version 2 is kept for backward compatibility
-static CImgHistEQPluginFactory<2> p2(kPluginIdentifier, 0);
+static CImgHistEQPluginFactory<2> p2(kPluginIdentifier, 1);
 static CImgHistEQPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p)

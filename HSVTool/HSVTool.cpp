@@ -70,8 +70,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "First, set the Range parameter of the Hue parameter set and then work down the other Ranges parameters, tuning with the range Falloff and Adjustment parameters." \
 
 #define kPluginIdentifier "net.sf.openfx.HSVToolPlugin"
+// version 1.1: wrap the rotated hue into the hue circle (bug fix: some rotations gave magenta), and
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -589,7 +591,7 @@ public:
             }
             v += coeff * ( (float)_values.valAdjust + (_values.valAdjustGain - 1.) * (v - (v0 + v1) / 2) );
             h *= OFXS_HUE_CIRCLE / 360.;
-            Color::hsv_to_rgb(h, s, v, rout, gout, bout);
+            Color::hsv_to_rgb(h, s, v, rout, gout, bout, true);
         }
         if (_clampBlack) {
             *rout = (std::max)(0.f, *rout);
@@ -1552,7 +1554,7 @@ HSVToolPlugin::setSrcFromRectangle(const Image* srcImg,
     float r = 0.f;
     float g = 0.f;
     float b = 0.f;
-    Color::hsv_to_rgb(h * OFXS_HUE_CIRCLE / 360., s, v, &r, &g, &b);
+    Color::hsv_to_rgb(h * OFXS_HUE_CIRCLE / 360., s, v, &r, &g, &b, true);
     double tor, tog, tob;
     _dstColor->getValueAtTime(time, tor, tog, tob);
     float toh, tos, tov;

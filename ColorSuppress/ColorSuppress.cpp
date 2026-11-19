@@ -48,8 +48,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // History:
 // version 1.0: initial version
+// version 1.1 (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 // version 2.0: in "Alpha" and "Image and Alpha" output modes, premultiply RGB by the source alpha
-//              (version 1 premultiplied RGB by the suppress mask)
+//              (version 1 premultiplied RGB by the suppress mask);
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -377,8 +379,10 @@ private:
                             if (_outputMode == eOutputModeAlpha) {
                                 outPix[c] = srcPix ? (float)srcPix[c] : 0.f;
                             } else {
-                                // premult by alpha <= 0 gives 0, as in ofxsPremult()
-                                outPix[c] = tmpPix[c] * (_premult ? (std::max)(0.f, unpPix[3]) : 1.f) * maxValue;
+                                // premult by alpha <= 0 gives a signed zero, as in ofxsPremult():
+                                // an infinite colour (HDR overflow upstream) gave inf * 0 = NaN
+                                const float a = _premult ? (std::max)(0.f, unpPix[3]) : 1.f;
+                                outPix[c] = (a == 0.f) ? std::copysign(0.f, tmpPix[c]) : (tmpPix[c] * a * maxValue);
                             }
                         }
                         if (nComponents == 4) {
@@ -1002,7 +1006,7 @@ ColorSuppressPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle ha
 
 static ColorSuppressPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 1: in "Alpha" and "Image and Alpha" modes, RGB is premultiplied by the suppress mask
-static ColorSuppressPluginFactory<1> p1(kPluginIdentifier, 0);
+static ColorSuppressPluginFactory<1> p1(kPluginIdentifier, 1);
 mRegisterPluginFactoryInstance(p)
 mRegisterPluginFactoryInstance(p1)
 
