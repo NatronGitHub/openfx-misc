@@ -560,7 +560,7 @@ public:
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _fgMClip = fetchClip(kClipFgMName);
-        assert(!_fgMClip || _fgMClip->getPixelComponents() == ePixelComponentAlpha);
+        assert(!_fgMClip || !_fgMClip->isConnected() || _fgMClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
         _processB = fetchBooleanParam(kParamProcessB);

@@ -307,17 +307,7 @@ protected:
         }
         std::string key = getTimeBufferKey(_projectId, _groupId, name);
         if ( _buffer && (name != _name) ) {
-            thisInstance(_buffer) = 0; // remove reference to this instance
-            if ( !otherInstance(_buffer) ) {
-                // we may free this buffer
-                {
-                    AutoMutex guard( gTimeBufferMapMutex.get() );
-                    gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
-                }
-                delete _buffer;
-                _buffer = 0;
-                _name.clear();
-            }
+            releaseBuffer();
         }
         if (!name.empty() && !_buffer) {
             TimeBuffer* timeBuffer = 0;
@@ -364,6 +354,30 @@ protected:
         clearPersistentMessage();
         check();
     } // setName
+
+    // remove the reference of this instance to its buffer, and free the buffer if the other side
+    // does not use it. No host call (messages...), no exception: the destructors call it
+    // (kOfxActionDestroyInstance), where the host instance may be partly destroyed (hostDemo
+    // destroys it in the HostSupport Instance destructor: "Pure virtual function called").
+    void releaseBuffer()
+    {
+        if (!_buffer) {
+            return;
+        }
+        thisInstance(_buffer) = 0; // remove reference to this instance
+        if ( !otherInstance(_buffer) ) {
+            // we may free this buffer
+            if ( gTimeBufferMapMutex.get() ) {
+                AutoMutex guard( gTimeBufferMapMutex.get() );
+                if ( gTimeBufferMap.get() ) {
+                    gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
+                }
+            }
+            delete _buffer;
+            _buffer = 0;
+            _name.clear();
+        }
+    }
 
     void check()
     {
@@ -488,7 +502,7 @@ public:
 
     virtual ~TimeBufferReadPlugin()
     {
-        setName("");
+        releaseBuffer();
     }
 
 private:
@@ -989,11 +1003,7 @@ public:
 
     virtual ~TimeBufferWritePlugin()
     {
-        try {
-            setName("");
-        } catch (OFX::Exception::Suite&) {
-            // ignore
-        }
+        releaseBuffer();
     }
 
 private:

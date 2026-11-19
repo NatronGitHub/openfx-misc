@@ -49,6 +49,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.ShufflePlugin"
 // History:
 // version 1.0: initial version (see ShuffleClassic.cpp)
+// version 1.1: fix the render in the filter context (see ShuffleClassic.cpp)
 // version 2.0: support multiplane
 // version 2.1: add kParamSetGBAFromR
 // version 3.0: B input is now the default, pass-through when plugin is disabled

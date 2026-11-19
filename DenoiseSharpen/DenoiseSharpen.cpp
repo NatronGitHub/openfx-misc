@@ -930,13 +930,14 @@ public:
                                _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                                _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
-        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _analysisSrcClip = fetchClip(kClipAnalysisSource);
-        assert( ( _analysisSrcClip && (_analysisSrcClip->getPixelComponents() == ePixelComponentRGB ||
-                                       _analysisSrcClip->getPixelComponents() == ePixelComponentRGBA ||
-                                       _analysisSrcClip->getPixelComponents() == ePixelComponentAlpha) ) );
+        assert( _analysisSrcClip && (!_analysisSrcClip->isConnected() ||
+                                     _analysisSrcClip->getPixelComponents() == ePixelComponentRGB ||
+                                     _analysisSrcClip->getPixelComponents() == ePixelComponentRGBA ||
+                                     _analysisSrcClip->getPixelComponents() == ePixelComponentAlpha) );
         _analysisMaskClip = fetchClip(kClipAnalysisMask);
-        assert(!_analysisMaskClip || _analysisMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        assert(!_analysisMaskClip || !_analysisMaskClip->isConnected() || _analysisMaskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);

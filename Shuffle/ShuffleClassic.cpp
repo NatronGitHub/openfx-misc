@@ -36,8 +36,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Channel"
 #define kPluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types)."
 #define kPluginIdentifier "net.sf.openfx.ShufflePlugin"
+// History:
+// version 1.0: initial version
+// version 1.1: fix the render in the filter context (it failed, or asserted in debug builds, because there is no B clip),
+//              where the Output components are those of Source
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -439,6 +443,7 @@ public:
     ShufflePlugin(OfxImageEffectHandle handle,
                   ContextEnum context)
         : ImageEffect(handle)
+        , _isFilterContext(context == eContextFilter)
         , _dstClip(NULL)
         , _srcClipA(NULL)
         , _srcClipB(NULL)
@@ -510,10 +515,14 @@ private:
 
     void updateVisibility();
 
+    // The filter context only has the Source (A) and Output clips: _srcClipB is NULL, and
+    // "a plugin cannot change the component type of the Output clip, it will always be the same as the Source clip"
+    // (ofxImageEffectContexts.rst, The Filter Context)
+    const bool _isFilterContext;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClipA;
-    Clip *_srcClipB;
+    Clip *_srcClipB; // NULL in the filter context
     ChoiceParam *_outputBitDepth;
     ChoiceParam* _channelParam[4];
     ChoiceParam *_outputComponents;
@@ -676,7 +685,8 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     }
     processor.setSrcImg( srcA.get(), srcB.get() );
 
-    PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
+    // in the filter context, the Output components are those of Source (see getClipPreferences())
+    PixelComponentEnum outputComponents = _isFilterContext ? dstComponents : gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
     assert(dstComponents == outputComponents);
     BitDepthEnum outputBitDepth = srcBitDepth;
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
@@ -744,8 +754,9 @@ ShufflePlugin::renderInternal(const RenderArguments &args,
 void
 ShufflePlugin::render(const RenderArguments &args)
 {
-    assert (_srcClipA && _srcClipB && _dstClip);
-    if (!_srcClipA || !_srcClipB || !_dstClip) {
+    // _srcClipB is NULL in the filter context
+    assert (_srcClipA && (_srcClipB || _isFilterContext) && _dstClip);
+    if ( !_srcClipA || (!_srcClipB && !_isFilterContext) || !_dstClip ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
     // instantiate the render code based on the pixel depth of the dst clip
@@ -755,15 +766,16 @@ ShufflePlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClipB || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClipB || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
     // get the components of _dstClip
 
     BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
 # ifndef NDEBUG
     const double time = args.time;
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
-    {
+    if (!_isFilterContext) {
+        // in the filter context, the Output components are those of Source (see getClipPreferences())
         PixelComponentEnum outputComponents = gOutputComponentsMap[_outputComponents->getValueAtTime(time)];
         if (dstComponents != outputComponents) {
             setPersistentMessage(Message::eMessageError, "", "Shuffle: OFX Host did not take into account output components");
@@ -781,7 +793,7 @@ ShufflePlugin::render(const RenderArguments &args)
     }
 
 
-    if ( _srcClipA->isConnected() && _srcClipB->isConnected() ) {
+    if ( _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected() ) {
         BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
         // both input must have the same bit depth
         if (srcBitDepth != srcBBitDepth) {
@@ -820,10 +832,12 @@ ShufflePlugin::updateVisibility()
 void
 ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    // set the components of _dstClip
-    PixelComponentEnum dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
+    // set the components of _dstClip (in the filter context, they are those of Source)
+    PixelComponentEnum dstPixelComps = _isFilterContext ? _srcClipA->getPixelComponents() : gOutputComponentsMap[_outputComponents->getValue()];
 
-    clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
+    if (!_isFilterContext) {
+        clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
+    }
 
 
     //Enable components according to the new dstPixelComps
