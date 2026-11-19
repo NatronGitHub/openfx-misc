@@ -57,8 +57,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also:\n" \
     "- https://web.archive.org/web/20220524000628/http://www.opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#Keyer" \
     "\n" \
-    "- http://opticalenquiry.com/nuke/index.php?title=Green_Screen" \
-    "\n" \
     "- https://web.archive.org/web/20211023071843/http://opticalenquiry.com/nuke/index.php?title=Keying_Tips"
 
 #define kPluginIdentifier "net.sf.openfx.KeyerPlugin"
