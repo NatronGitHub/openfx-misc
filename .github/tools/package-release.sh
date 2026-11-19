@@ -187,7 +187,9 @@ sources): Misc/randomGenerator.cpp (the MT19937 generator of Makoto Matsumoto
 and Takuji Nishimura, GNU Library General Public License, version 2 or later)
 and the Yadif mode of Deinterlace/Deinterlace.cpp (from FFmpeg's
 libavfilter/vf_yadif.c, Michael Niedermayer, GNU Lesser General Public License,
-version 2.1 or later).
+version 2.1 or later). Distortion's PFBarrel (.pfb) file reader contains code
+"Copyright (C) 2011 The Pixel Farm Ltd", distributed under the GPL as part of
+Misc.ofx.
 EOF
 }
 

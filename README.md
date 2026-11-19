@@ -62,7 +62,9 @@ in Misc; CImg, with the CeCILL-C text, and pocketfft; and Mesa and LLVM in the O
 also carries them in `Shadertoy.ofx.bundle/Contents/Resources/licenses`), and TinyThread++
 (zlib) in every bundle. Misc also contains `Misc/randomGenerator.cpp` (MT19937, GNU Library
 GPL v2 or later) and the Yadif code of `Deinterlace/Deinterlace.cpp` (from FFmpeg, LGPL 2.1
-or later), distributed under the GPL as part of Misc.
+or later), distributed under the GPL as part of Misc. Distortion's PFBarrel (`.pfb`) file
+reader contains code "Copyright (C) 2011 The Pixel Farm Ltd", distributed under the GPL as part
+of Misc.
 
 ### Development builds
 
