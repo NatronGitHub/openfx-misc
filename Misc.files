@@ -72,6 +72,9 @@ openfx/include/nuke/fnOfxExtensions.h
 openfx/include/nuke/fnPublicOfxExtensions.h
 openfx/include/ofxCore.h
 openfx/include/ofxDialog.h
+openfx/include/ofxDrawSuite.h
+openfx/include/ofxDrawSuiteOpenGL.h
+openfx/include/ofxFont5x7.h
 openfx/include/ofxImageEffect.h
 openfx/include/ofxInteract.h
 openfx/include/ofxKeySyms.h
@@ -99,7 +102,6 @@ openfx/Support/include/ofxsMultiThread.h
 openfx/Support/include/ofxsParam.h
 openfx/Support/Library/ofxsCore.cpp
 openfx/Support/Library/ofxsDrawContextOpenGL.cpp
-openfx/Support/Library/ofxsFont5x7.h
 openfx/Support/Library/ofxsHWNDInteract.cpp
 openfx/Support/Library/ofxsImageEffect.cpp
 openfx/Support/Library/ofxsInteract.cpp
@@ -138,6 +140,7 @@ SupportExt/ofxsOGLFontData.cpp
 SupportExt/ofxsOGLFontUtils.h
 SupportExt/ofxsOGLTextRenderer.cpp
 SupportExt/ofxsOGLTextRenderer.h
+SupportExt/ofxsOverlayDraw.h
 SupportExt/ofxsPixelProcessor.h
 SupportExt/ofxsPositionInteract.h
 SupportExt/ofxsRectangleInteract.cpp
