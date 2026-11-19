@@ -49,7 +49,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: a Gamma of magnitude below 1e-8 (e.g. 0) interpolates the colors geometrically, the limit of the "gamma"
 //      interpolation (it computed pow(x, 1/gamma) of x = 1 up to rounding: the colors were 1, or infinite
-//      if x rounded above 1, NaN audit)
+//      if x rounded above 1, NaN audit); the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false

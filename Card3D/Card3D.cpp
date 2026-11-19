@@ -73,7 +73,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.Card3D"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit)
+// 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit);
+//      the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 
 #define kParamSrcClipChanged "srcClipChanged"
 

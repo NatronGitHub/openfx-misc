@@ -57,8 +57,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.1: fix https://github.com/MrKepzie/Natron/issues/1397
 // version 1.2: add useRoD parameter for Natron
 // version 2.0: add eReformatTypeToProjectFormat
+// version 2.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kParamUseRoD "useRoD"
 #define kParamUseRoDLabel "Use Source RoD"

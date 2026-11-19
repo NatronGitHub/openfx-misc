@@ -156,7 +156,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: warn when the noise analysis region is unsuitable (clipped values, details, too few pixels),
 //              with the analysisWarning status parameter (the analysis and the render are unchanged);
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

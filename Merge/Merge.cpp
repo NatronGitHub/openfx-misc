@@ -145,6 +145,7 @@ enum MergePluginEnum
 // 3.0: With Alpha-only images, the A checkboxes (instead of the R checkboxes) of A and B control the alpha channel.
 //      A inputs after the first one are merged as transparent black outside of their image (instead of being skipped).
 //      MergeRoto renders on hosts without the plane suite v2, as in 2.1.
+//      In 1.1, 2.1 and 3.0, a merge result beyond the float range gives +-FLT_MAX, not +-inf, and a huge masked alpha no longer gives NaN (SupportExt #80).
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1

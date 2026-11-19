@@ -135,7 +135,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: no NaN or infinite output: a source transform that sends a pixel to infinity gives
-//              transparent black (it used to sample at an infinite position), NaN audit
+//              transparent black (it used to sample at an infinite position), NaN audit;
+//              the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
