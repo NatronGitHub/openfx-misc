@@ -38,7 +38,7 @@ name: Binary release
 #   "publish" input is true (default false). It builds the "tag" input (an existing tag), else
 #   the ref it is run on (a branch, or a tag: "Use workflow from"). With "publish", that tag
 #   (the input, or the tag ref) gets its draft release, as with a tag push; "publish" without a
-#   tag fails.
+#   tag fails at once (the preflight job, before any build).
 # The release job is the only one with write access (contents: write). A release that is not a
 # draft anymore (published) is never changed: the run fails. This workflow never creates tags
 # (gh release create --verify-tag) and never publishes a release: a maintainer does, by hand.
@@ -100,6 +100,22 @@ defaults:
     shell: bash -eo pipefail {0}
 
 jobs:
+  preflight:
+    name: Check the inputs
+    # Before any build: a manual run with "publish" needs a tag (the "tag" input or a tag ref)
+    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check the tag
+        env:
+          PUBLISH: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
+        run: |
+          echo "release tag: ${RELEASE_TAG:-(none)}, publish: $PUBLISH"
+          if [ "$PUBLISH" = true ] && [ -z "$RELEASE_TAG" ]; then
+            echo "ERROR: publish needs a tag: the \"tag\" input, or a run on a tag ref"
+            exit 1
+          fi
+
   build_linux:
     name: Linux x86_64 (Rocky Linux 9)
     # Natron 2.6's Linux baseline: Rocky Linux 9 (EL9, glibc 2.34, VFX Reference Platform
@@ -109,8 +125,11 @@ jobs:
     # system's libstdc++.so.6 (plus libstdc++_nonshared.a) and libgomp.so.1 (its libgomp.so
     # is a linker script to /usr/lib64/libgomp.so.1), and openfx's linuxCheckBundle.sh checks
     # the bundles against its EL9 baseline (no bundled system library, symbol versions no newer
-    # than Rocky 9's runtime: glibc 2.34, GCC 11). Third-party libraries (libz and libzstd of
-    # the OSMesa built here) are bundled in Shadertoy.ofx.bundle/Libraries.
+    # than Rocky 9's runtime: glibc 2.34, GCC 11). A third-party library (libzstd, only with
+    # the fallback OSMesa built here) is bundled in Shadertoy.ofx.bundle/Libraries, with its
+    # license; the prebuilt OSMesa needs none. Mesa's and LLVM's licenses are in Shadertoy's
+    # Contents/Resources/licenses (OSMESA_LICENSES_DIR).
+    needs: preflight
     timeout-minutes: 120
     runs-on: ubuntu-24.04
     # rockylinux/rockylinux:9, pinned by digest (of its multi-platform index; to update it:
@@ -155,7 +174,7 @@ jobs:
         run: |
           if .github/tools/fetch-osmesa.sh --check "$OSMESA_RELEASE" linux-x86_64; then
             .github/tools/fetch-osmesa.sh "$OSMESA_RELEASE" linux-x86_64 /opt/osmesa-prebuilt
-            echo "OSMESA_LINUX_OPTIONS=-DOSMESA_PATH=/opt/osmesa-prebuilt/osmesa -DLLVM_PATH=/opt/osmesa-prebuilt/llvm" >> "$GITHUB_ENV"
+            echo "OSMESA_LINUX_OPTIONS=-DOSMESA_PATH=/opt/osmesa-prebuilt/osmesa -DLLVM_PATH=/opt/osmesa-prebuilt/llvm -DOSMESA_LICENSES_DIR=/opt/osmesa-prebuilt/licenses" >> "$GITHUB_ENV"
             echo "done=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Cache OSMesa
@@ -189,7 +208,7 @@ jobs:
         # LLVM's code in it uses (not libxml2)
         run: |
           cmake -S . -B build -G Ninja $CMAKE_OPTIONS \
-              -DUSE_OSMESA=ON ${OSMESA_LINUX_OPTIONS:--DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr} \
+              -DUSE_OSMESA=ON ${OSMESA_LINUX_OPTIONS:--DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr -DOSMESA_LICENSES_DIR=/opt/osmesa/licenses} \
               -DCMAKE_MODULE_LINKER_FLAGS=-Wl,--as-needed
           cmake --build build
           # each bundle is an install component (openfx's add_ofx_plugin): DenoiseSharpen.ofx.bundle
@@ -204,13 +223,15 @@ jobs:
           cmake --install build-shadertoy --prefix "$PWD/install-shadertoy"
           ldd install*/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx
       - name: Bundle Shadertoy's third-party libraries, check the bundles
-        # Only Shadertoy (OSMesa, LLVM) may need third-party libraries, libz and libzstd: they are
-        # copied into Shadertoy.ofx.bundle/Libraries ($ORIGIN/../../Libraries). Then openfx's
+        # Only Shadertoy with the OSMesa built here (Rocky's LLVM) needs a third-party library,
+        # libzstd: it is copied into Shadertoy.ofx.bundle/Libraries ($ORIGIN/../../Libraries), and
+        # its license into Contents/Resources/licenses. (libz too, which linuxCheckBundle.sh lets
+        # come from the system: it is not bundled.) Then openfx's
         # linuxCheckBundle.sh (OFX_LINUX_CHECK_BUNDLE) checks every bundle against its default
         # EL9 baseline: no bundled system library, every other needed library in the bundle,
         # symbol versions no newer than Rocky 9's runtime, no GLIBC_PRIVATE, GLIBC_ABI_* or DT_RELR.
         run: |
-          .github/tools/bundle-linux-libs.sh install/OFX/Plugins/Shadertoy.ofx.bundle libz.so.1 libzstd.so.1
+          .github/tools/bundle-linux-libs.sh install/OFX/Plugins/Shadertoy.ofx.bundle libzstd.so.1
           check=$(sed -n 's/^OFX_LINUX_CHECK_BUNDLE:[A-Z]*=//p' build/CMakeCache.txt)
           "$check" install/OFX/Plugins install-shadertoy/OFX/Plugins install-denoisesharpen/OFX/Plugins
       - name: Load test
@@ -246,6 +267,7 @@ jobs:
     # need system libraries. MacPorts (never Homebrew) provides the tools. With
     # OSMESA_RELEASE, a Shadertoy-only build with the prebuilt OSMesa (one per architecture,
     # see below, so it is not part of the main build).
+    needs: preflight
     runs-on: macos-15
     env:
       MACOS_OPTIONS: -DOFX_USE_OPENMP=OFF -DOFX_DEPLOY_STRICT_MINOS=ON
@@ -287,7 +309,8 @@ jobs:
           build() { # build ARCHS PLATFORM PREFIX
             .github/tools/fetch-osmesa.sh "$OSMESA_RELEASE" "$2" "$PWD/osmesa-$2"
             cmake -S . -B "build-osmesa-$2" $SHADERTOY_OPTIONS $MACOS_OPTIONS "-DCMAKE_OSX_ARCHITECTURES=$1" \
-                -DUSE_OSMESA=ON "-DOSMESA_PATH=$PWD/osmesa-$2/osmesa" "-DLLVM_PATH=$PWD/osmesa-$2/llvm"
+                -DUSE_OSMESA=ON "-DOSMESA_PATH=$PWD/osmesa-$2/osmesa" "-DLLVM_PATH=$PWD/osmesa-$2/llvm" \
+                "-DOSMESA_LICENSES_DIR=$PWD/osmesa-$2/licenses"
             cmake --build "build-osmesa-$2" --parallel "$(getconf _NPROCESSORS_ONLN)"
             cmake --install "build-osmesa-$2" --prefix "$3"
           }
@@ -339,6 +362,7 @@ jobs:
 
   build_windows:
     name: Windows x86_64 (MSYS2 UCRT64)
+    needs: preflight
     timeout-minutes: 60
     runs-on: windows-2022
     defaults:
@@ -373,7 +397,7 @@ jobs:
         run: |
           set -eo pipefail
           .github/tools/fetch-osmesa.sh "$OSMESA_RELEASE" windows-ucrt64-x86_64 "$PWD/osmesa"
-          echo "OSMESA_OPTIONS=-DUSE_OSMESA=ON -DOSMESA_PATH=$(cygpath -m "$PWD/osmesa/osmesa") -DLLVM_PATH=$(cygpath -m "$PWD/osmesa/llvm")" >> "$GITHUB_ENV"
+          echo "OSMESA_OPTIONS=-DUSE_OSMESA=ON -DOSMESA_PATH=$(cygpath -m "$PWD/osmesa/osmesa") -DLLVM_PATH=$(cygpath -m "$PWD/osmesa/llvm") -DOSMESA_LICENSES_DIR=$(cygpath -m "$PWD/osmesa/licenses")" >> "$GITHUB_ENV"
           echo "SHADERTOY_OSMESA=--shadertoy-osmesa install/OFX/Plugins" >> "$GITHUB_ENV"
       - name: Build the full set and DenoiseSharpen
         # Shadertoy has OSMesa with OSMESA_RELEASE, else it is OpenGL only (and is also the
@@ -428,12 +452,6 @@ jobs:
     permissions:
       contents: write # create the draft release and upload its assets
     steps:
-      - name: Check the tag
-        run: |
-          if [ -z "$RELEASE_TAG" ]; then
-            echo "ERROR: publish needs a tag: the \"tag\" input, or a run on a tag ref"
-            exit 1
-          fi
       - name: Download the archives
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:

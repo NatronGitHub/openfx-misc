@@ -5,6 +5,8 @@
 # (libMangledOSMesa32.a), linked with the static libraries of an existing LLVM (>= 15).
 # The Mesa archive is downloaded here (HTTPS only) and checked against its pinned SHA256 before
 # osmesa-install.sh runs (which then skips its own download); GLU is not built (BUILD_GLU=0).
+# The license texts of Mesa (from the verified archive) and LLVM (LLVM_PREFIX's LICENSE.TXT) are
+# copied into OSMESA_PREFIX/licenses (CMake's OSMESA_LICENSES_DIR).
 # Usage: .github/tools/build-osmesa.sh OSMESA_PREFIX LLVM_PREFIX
 #        .github/tools/build-osmesa.sh --mesa-sha256 (prints the SHA256 of the Mesa archive, for
 #        release.yml's cache key)
@@ -64,6 +66,17 @@ if command -v sha256sum > /dev/null; then
 else
     echo "$mesa_sha256  $mesa_archive" | shasum -a 256 -c -
 fi
+# the licenses: Mesa's from the verified archive, LLVM's from its prefix (a package's license or
+# doc directory)
+mkdir -p "$osmesa_prefix/licenses"
+tar -xJOf "$mesa_archive" "mesa-$mesa_version/docs/license.rst" > "$osmesa_prefix/licenses/Mesa-license.rst"
+llvm_license=$(find "$llvm_prefix/share/licenses" "$llvm_prefix/share/doc" "$llvm_prefix" -maxdepth 2 \
+    -name LICENSE.TXT -path '*llvm*' 2> /dev/null | head -1 || true)
+if [ -z "$llvm_license" ]; then
+    echo "ERROR: no LLVM LICENSE.TXT in $llvm_prefix/share/licenses, $llvm_prefix/share/doc or $llvm_prefix"
+    exit 1
+fi
+cp "$llvm_license" "$osmesa_prefix/licenses/LLVM-LICENSE.TXT"
 # OSMESA_DRIVER=3: llvmpipe (and softpipe); BUILD_OSDEMO=0: no GLUT needed; BUILD_GLU=0: Shadertoy
 # doesn't use GLU; SILENT_LOG=0: the log goes to the CI output
 env OSMESA_PREFIX="$osmesa_prefix" LLVM_PREFIX="$llvm_prefix" LLVM_BUILD=0 \

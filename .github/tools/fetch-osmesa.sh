@@ -14,7 +14,9 @@
 # directory, the two prefixes of osmesa-install.sh:
 #   osmesa/  OSMESA_PREFIX: include/GL/osmesa.h, lib/libMangledOSMesa32.a, lib/pkgconfig/osmesa.pc
 #   llvm/    LLVM_PREFIX: bin/llvm-config (relocatable), lib/libLLVM*.a
-# After unpacking, DEST/osmesa and DEST/llvm are these prefixes (OSMESA_PATH and LLVM_PATH), and
+#   licenses/  the license texts of Mesa and LLVM (CMake's OSMESA_LICENSES_DIR)
+# After unpacking, DEST/osmesa, DEST/llvm and DEST/licenses are these directories (OSMESA_PATH,
+# LLVM_PATH and OSMESA_LICENSES_DIR), and
 # osmesa.pc is made relocatable: its prefix is DEST/osmesa, and the LLVM flags of its Libs.private
 # (paths of the build machine) are removed, since CMake adds LLVM's flags from llvm-config.
 set -eo pipefail
@@ -67,8 +69,9 @@ for f in osmesa/include/GL/osmesa.h osmesa/lib/libMangledOSMesa32.a osmesa/lib/p
     [ -f "$top/$f" ] || { echo "ERROR: $asset has no $f"; exit 1; }
 done
 [ -f "$top/llvm/bin/llvm-config" ] || [ -f "$top/llvm/bin/llvm-config.exe" ] || { echo "ERROR: $asset has no llvm/bin/llvm-config"; exit 1; }
-rm -rf "$dest/osmesa" "$dest/llvm"
-mv "$top/osmesa" "$top/llvm" "$dest/"
+[ -n "$(ls -A "$top/licenses" 2> /dev/null)" ] || { echo "ERROR: $asset has no licenses/"; exit 1; }
+rm -rf "$dest/osmesa" "$dest/llvm" "$dest/licenses"
+mv "$top/osmesa" "$top/llvm" "$top/licenses" "$dest/"
 
 prefix=$dest/osmesa
 if command -v cygpath > /dev/null; then

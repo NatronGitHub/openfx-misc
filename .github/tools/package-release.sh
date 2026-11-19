@@ -7,8 +7,14 @@
 #   openfx-misc-Shadertoy-OSMesa-<VERSION>-<PLATFORM>  Shadertoy alone, OpenGL + OSMesa (CPU
 #                                                      rendering): the Shadertoy of the full set
 #   openfx-misc-DenoiseSharpen-<VERSION>-<PLATFORM>    DenoiseSharpen alone
-# Each is a .tar.gz (.zip on Windows) of a directory of the same name, with the bundles and a
-# README.txt (what it contains, where to install it, and which downloads exclude each other).
+# Each is a .tar.gz (.zip on Windows) of a directory of the same name, with the bundles, a
+# README.txt (what it contains, where to install it, and which downloads exclude each other),
+# LICENSE.txt (openfx-misc's GPLv2) and LICENSES/: the licenses of the third-party code in the
+# bundles (openfx's Support library in every bundle; CImg and pocketfft in CImg.ofx; and a copy of
+# each bundle's Contents/Resources/licenses/, e.g. Mesa and LLVM, linked statically into the OSMesa
+# Shadertoy, or the libraries bundled on Linux). A bundle with bundled libraries (Libraries/,
+# Contents/Libraries/, Contents/Frameworks/, or a DLL) but no Contents/Resources/licenses/ is an
+# error, and so is an OSMesa Shadertoy without it.
 #
 # Usage (from the top of the source tree):
 #   .github/tools/package-release.sh [--version VERSION] --platform PLATFORM --out DIR \
@@ -150,6 +156,16 @@ EOF
     cat << 'EOF'
 
 Natron already includes all these plug-ins: Natron users don't need them.
+
+Licenses
+--------
+openfx-misc is free software, under the GNU General Public License, version 2
+or later: see LICENSE.txt. The bundles also contain third-party code, whose
+licenses are in LICENSES/: openfx's Support library (BSD 3-clause) in every
+bundle, CImg (CeCILL-C) and pocketfft (BSD 3-clause) in CImg.ofx, and, in
+LICENSES/<bundle>/, those of the libraries linked statically into a bundle or
+bundled with it (e.g. Mesa and LLVM in the OSMesa Shadertoy), which are also in
+<bundle>.ofx.bundle/Contents/Resources/licenses/.
 EOF
 }
 
@@ -165,6 +181,7 @@ package() {
         fi
         cp -R "$b" "$work/$name/"
     done
+    licenses "$work/$name" "$@"
     readme "$name" "$contents" > "$work/$name/README.txt"
     [ "$os" != Windows ] || sed -i 's/$/\r/' "$work/$name/README.txt"
     rm -f "$out/$name.$ext"
@@ -174,9 +191,51 @@ package() {
         # COPYFILE_DISABLE: no ._* AppleDouble files (macOS tar)
         (cd "$work" && COPYFILE_DISABLE=1 tar -czf "$out/$name.$ext" "$name")
     fi
-    echo "$out/$name.$ext: $(cd "$work/$name" && echo *.ofx.bundle) + README.txt"
+    echo "$out/$name.$ext: $(cd "$work/$name" && echo *.ofx.bundle) + README.txt LICENSE.txt LICENSES/: $(cd "$work/$name/LICENSES" && echo *)"
 }
 
+# header_block FILE: the first comment block of FILE (its license), up to the first "*/" line
+header_block() {
+    awk '{ print } /^[[:space:]]*\*\/[[:space:]]*$/ { exit }' "$1"
+}
+
+# bundled_libs BUNDLE: the libraries that the bundle carries, besides its plug-in binary
+bundled_libs() {
+    find "$1/Libraries" "$1/Contents/Libraries" "$1/Contents/Frameworks" -mindepth 1 -maxdepth 1 2> /dev/null || true
+    find "$1/Contents" -iname '*.dll' 2> /dev/null || true
+}
+
+# licenses DIR BUNDLE...: LICENSE.txt and LICENSES/ of the download DIR, with these bundles
+licenses() {
+    local dir=$1 b bn
+    shift
+    cp "$src/LICENSE" "$dir/LICENSE.txt"
+    mkdir "$dir/LICENSES"
+    cp "$src/openfx/LICENSE" "$dir/LICENSES/openfx-Support-BSD-3-Clause.txt"
+    for b in "$@"; do
+        bn=$(basename "$b" .ofx.bundle)
+        if [ "$bn" = CImg ]; then
+            [ -f "$src/CImg/CImg.h" ] || { echo "ERROR: $src/CImg/CImg.h not found (its license)"; exit 1; }
+            header_block "$src/CImg/CImg.h" > "$dir/LICENSES/CImg-CeCILL-C.txt"
+            if [ -f "$src/CImg/pocketfft_hdronly.h" ]; then
+                header_block "$src/CImg/pocketfft_hdronly.h" > "$dir/LICENSES/pocketfft-BSD-3-Clause.txt"
+            fi
+        fi
+        if [ -n "$(ls -A "$b/Contents/Resources/licenses" 2> /dev/null)" ]; then
+            cp -R "$b/Contents/Resources/licenses" "$dir/LICENSES/$bn"
+        elif [ -n "$(bundled_libs "$b")" ]; then
+            echo "ERROR: $b has bundled libraries but no Contents/Resources/licenses:"
+            bundled_libs "$b"
+            exit 1
+        fi
+    done
+}
+
+src=$(cd "$(dirname "$0")/../.." && pwd)
+if [ -n "$stmesa" ] && [ -z "$(ls -A "$stmesa/Shadertoy.ofx.bundle/Contents/Resources/licenses" 2> /dev/null)" ]; then
+    echo "ERROR: $stmesa/Shadertoy.ofx.bundle has no Contents/Resources/licenses (OSMesa and LLVM: CMake's OSMESA_LICENSES_DIR)"
+    exit 1
+fi
 shadertoy_src=${stmesa:-$stgl}
 
 package "openfx-misc-$version-$platform" \

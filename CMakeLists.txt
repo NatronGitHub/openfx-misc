@@ -54,6 +54,9 @@
 #      Libs.private, e.g. -lsynchronization -lws2_32 on Windows), as the binary releases
 #      (release.yml) do with osmesa-install's OSMesa. Off: the flags of "pkg-config --libs" (the
 #      osmesa.pc of a Natron SDK may have Libs.private with paths of the machine that built it).
+#   -DOSMESA_LICENSES_DIR=<dir> (default empty): with USE_OSMESA, the license texts of the OSMesa
+#      and LLVM linked statically into Shadertoy (e.g. osmesa-install's licenses/), installed into
+#      Shadertoy.ofx.bundle/Contents/Resources/licenses (the binary releases need them)
 #   --prefix /usr (Linux) or /Library (macOS) at install: the bundles go to <prefix>/OFX/Plugins
 #   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX (OFX/Plugins)
 #   -DOFX_BUILD_HOSTDEMO=ON (default OFF): also build openfx's test host hostDemo (openfx's
@@ -147,6 +150,7 @@ option(BUILD_DEBUGPROXY "Build the DebugProxy bundle (wraps the plugin given by 
 option(USE_OSMESA "Shadertoy: CPU rendering with OSMesa (OSMESA_PATH) and LLVM (LLVM_PATH)" OFF)
 set(OSMESA_PATH "/opt/osmesa" CACHE PATH "USE_OSMESA: OSMesa prefix (mangled OSMesa, libMangledOSMesa32)")
 set(LLVM_PATH "/opt/llvm" CACHE PATH "USE_OSMESA: LLVM prefix (bin/llvm-config)")
+set(OSMESA_LICENSES_DIR "" CACHE PATH "USE_OSMESA: license texts of OSMesa and LLVM, installed into Shadertoy.ofx.bundle/Contents/Resources/licenses")
 option(OSMESA_PKGCONFIG_STATIC "USE_OSMESA: link the static OSMesa with the flags of pkg-config --static (osmesa.pc's Libs.private)" OFF)
 option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into <prefix>/bin (CI render tests)" OFF)
 
@@ -547,6 +551,14 @@ if(BUILD_SHADERTOY)
   endif()
   ofx_plugin_resources(Shadertoy Shadertoy/net.sf.openfx.Shadertoy.png Shadertoy/net.sf.openfx.Shadertoy.svg)
   ofx_plugin_resources(Shadertoy Shadertoy/presets) # with its contents, as "cp -r presets"
+  if(USE_OSMESA AND OSMESA_LICENSES_DIR)
+    # the licenses of the statically linked OSMesa and LLVM (before ofx_deploy_bundle, which signs)
+    file(GLOB _osmesa_licenses LIST_DIRECTORIES true "${OSMESA_LICENSES_DIR}/*")
+    if(NOT _osmesa_licenses)
+      message(FATAL_ERROR "OSMESA_LICENSES_DIR: no file in ${OSMESA_LICENSES_DIR}")
+    endif()
+    ofx_plugin_resources(Shadertoy DESTINATION licenses ${_osmesa_licenses})
+  endif()
   ofx_deploy_bundle(Shadertoy)
 endif()
 
