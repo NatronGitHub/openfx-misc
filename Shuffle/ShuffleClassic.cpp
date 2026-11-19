@@ -469,6 +469,10 @@ public:
         _channelParam[3] = fetchChoiceParam(kParamOutputA);
 
         _outputComponents = fetchChoiceParam(kParamOutputComponents);
+        if (_isFilterContext) {
+            // the Output components are those of Source (see getClipPreferences())
+            _outputComponents->setIsSecretAndDisabled(true);
+        }
 
         _outputPremult = fetchChoiceParam(kParamOutputPremultiplication);
 
@@ -502,6 +506,13 @@ private:
 
 private:
     void enableComponents(void);
+
+    // the components of the Output clip: those of Source in the filter context (where Output
+    // Components is hidden and ignored), else the Output Components parameter
+    PixelComponentEnum outputComponentsParamOrSource() const
+    {
+        return _isFilterContext ? _srcClipA->getPixelComponents() : gOutputComponentsMap[_outputComponents->getValue()];
+    }
 
     /* internal render function */
     template <class DSTPIX, int nComponentsDst>
@@ -822,7 +833,7 @@ ShufflePlugin::render(const RenderArguments &args)
 void
 ShufflePlugin::updateVisibility()
 {
-    PixelComponentEnum dstPixelComps = gOutputComponentsMap[_outputComponents->getValue()];
+    PixelComponentEnum dstPixelComps = outputComponentsParamOrSource();
 
     // Premult is only needed for RGBA
     _outputPremult->setIsSecretAndDisabled( !(dstPixelComps == ePixelComponentRGBA) );
@@ -833,7 +844,7 @@ void
 ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     // set the components of _dstClip (in the filter context, they are those of Source)
-    PixelComponentEnum dstPixelComps = _isFilterContext ? _srcClipA->getPixelComponents() : gOutputComponentsMap[_outputComponents->getValue()];
+    PixelComponentEnum dstPixelComps = outputComponentsParamOrSource();
 
     if (!_isFilterContext) {
         clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
@@ -999,7 +1010,7 @@ void
 ShufflePlugin::enableComponents(void)
 {
     {
-        switch (gOutputComponentsMap[_outputComponents->getValue()]) {
+        switch ( outputComponentsParamOrSource() ) {
         case ePixelComponentRGBA:
             for (int i = 0; i < 4; ++i) {
                 _channelParam[i]->setEnabled(true);
@@ -1034,6 +1045,12 @@ ShufflePlugin::enableComponents(void)
             _channelParam[3]->setEnabled(false);
             break;
 #endif
+        case ePixelComponentNone:
+            // the Source is not connected (filter context): nothing to disable
+            for (int i = 0; i < 4; ++i) {
+                _channelParam[i]->setEnabled(true);
+            }
+            break;
         default:
             assert(0);
             break;
