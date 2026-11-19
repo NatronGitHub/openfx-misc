@@ -668,7 +668,7 @@ jobs:
           # SHA256SUMS.txt of the attached archives of this run (downloaded again by name: not the
           # files attached by hand), uploaded only if they are the archives built here
           mkdir attached
-          names=$(cd dist && ls -- *.tar.gz *.zip)
+          names=$(cd dist && printf '%s\n' *.tar.gz *.zip) # the order of built.sha256 (each glob sorted on its own)
           for a in $names; do
             gh release download "$tag" --dir attached --pattern "$a"
           done
