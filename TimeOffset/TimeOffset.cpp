@@ -24,6 +24,7 @@
  */
 
 #include "ofxsProcessing.H"
+#include "ofxsCopier.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 
@@ -38,8 +39,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also https://web.archive.org/web/20220627025738/http://www.opticalenquiry.com/nuke/index.php?title=TimeOffset"
 
 #define kPluginIdentifier "net.sf.openfx.timeOffset"
+// History:
+// version 1.0: initial version
+// version 1.1: render copies the Source at the source time (it wrote nothing), for hosts that render
+//              although isIdentity is true (the spec allows it)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -87,7 +92,7 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    //Clip *_dstClip;            /**< @brief Mandated output clips */
+    Clip *_dstClip;            /**< @brief Mandated output clips */
     Clip *_srcClip;            /**< @brief Mandated input clips */
     IntParam  *_time_offset;      /**< @brief only used in the filter context. */
     BooleanParam  *_reverse_input;
@@ -96,10 +101,13 @@ private:
 
 TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
+    , _dstClip(NULL)
     , _srcClip(NULL)
     , _time_offset(NULL)
     , _reverse_input(NULL)
 {
+    _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+    assert(_dstClip);
     _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert( (!_srcClip && getContext() == eContextGenerator) ||
             ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
@@ -176,9 +184,24 @@ TimeOffsetPlugin::getFramesNeeded(const FramesNeededArguments &args,
 
 // the overridden render function
 void
-TimeOffsetPlugin::render(const RenderArguments & /*args*/)
+TimeOffsetPlugin::render(const RenderArguments &args)
 {
-    // do nothing as this should never be called as isIdentity should always be trapped
+    // isIdentity is always true, but the host may render anyway (the spec doesn't forbid it,
+    // and hostDemo does): copy the Source at the source time, as the identity would
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    if ( !dst.get() ) {
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+    checkBadRenderScaleOrField(dst, args);
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                               _srcClip->fetchImage( getSourceTime(args.time) ) : 0 );
+    if ( src.get() ) {
+        checkBadRenderScaleOrField(src, args);
+        if ( (src->getPixelDepth() != dst->getPixelDepth()) || (src->getPixelComponents() != dst->getPixelComponents()) ) {
+            throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
+    }
+    copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 }
 
 // overridden is identity

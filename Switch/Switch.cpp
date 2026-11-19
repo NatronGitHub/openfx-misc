@@ -59,7 +59,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: https://web.archive.org/web/20220120145727/http://opticalenquiry.com/nuke/index.php?title=Switch"
 
 #define kPluginIdentifier "net.sf.openfx.switchPlugin"
-// version 1.1: works on hosts other than Natron (it fetched 16 clips but defined only 2)
+// version 1.1: works on hosts other than Natron (it fetched 16 clips but defined only 2);
+//              render and getRegionsOfInterest no longer assert in debug builds when a host calls them
+//              although isIdentity is true (the spec allows it), and render checks the image formats
+//              in debug builds too
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -215,9 +218,8 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle,
 void
 SwitchPlugin::render(const RenderArguments &args)
 {
-    // do nothing as this should never be called as isIdentity should always be trapped
-    assert(false);
-
+    // Switch is always an identity, but the host may render it anyway (the spec doesn't forbid
+    // it, and hostDemo does): copy the selected input
     const double time = args.time;
 
     // copy input to output
@@ -233,7 +235,6 @@ SwitchPlugin::render(const RenderArguments &args)
     checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
                                     srcClip->fetchImage(time) : 0 );
-# ifndef DEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
@@ -244,7 +245,6 @@ SwitchPlugin::render(const RenderArguments &args)
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
     copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 }
 
@@ -270,15 +270,17 @@ void
 SwitchPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                    RegionOfInterestSetter &rois)
 {
-    // this should never be called as isIdentity should always be trapped
-    assert(false);
+    // Switch is always an identity, but the host may still ask for the RoIs (the spec doesn't
+    // forbid it, and hostDemo does): the selected input is needed on the rendered region, the
+    // others not at all
     const double time = args.time;
     int input = getInput(time);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if (i != (unsigned)input) {
-            rois.setRegionOfInterest(*_srcClip[i], emptyRoI);
+        if (!_srcClip[i]) {
+            continue;
         }
+        rois.setRegionOfInterest(*_srcClip[i], (i == (unsigned)input) ? args.regionOfInterest : emptyRoI);
     }
 }
 
