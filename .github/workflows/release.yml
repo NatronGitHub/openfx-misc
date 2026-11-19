@@ -1,8 +1,9 @@
 name: Binary release
 
 # Builds the openfx-misc binary downloads of Linux x86_64, Windows x86_64 and macOS
-# (universal), tests them, and attaches them to a DRAFT GitHub release, which a
-# maintainer checks and publishes by hand. Per platform (see
+# (universal), tests them, uploads them as workflow artifacts, and (on a tag push, or a manual
+# run with "publish") attaches them to a DRAFT GitHub release, which a maintainer checks and
+# publishes by hand. Per platform (see
 # .github/tools/package-release.sh, which also writes the README.txt of each archive):
 #   openfx-misc-<version>-<platform>                  the full set, as Natron ships it:
 #                                                     Misc.ofx, CImg.ofx and Shadertoy.ofx
@@ -15,37 +16,32 @@ name: Binary release
 # The standalone bundles have the same plug-ins (identifiers and versions) as the full
 # set: users install one or the other, never both, and only one Shadertoy.
 #
-# OSMesa (Shadertoy's CPU rendering) needs a mangled OSMesa and LLVM:
-# - Linux builds it (.github/tools/build-osmesa.sh: Mesa 25.0.7, its archive checked against a
-#   pinned SHA256, with Rocky Linux 9's static LLVM), unless OSMESA_RELEASE (below) lists a
-#   linux-x86_64 asset. The build is cached (actions/cache), but GitHub scopes caches by ref: a
-#   tag run can restore the cache of the default branch, while what it saves is only for that
-#   tag. A manual run on master (without the tag input) warms the cache for the next tags.
-# - macOS and Windows download the prebuilt OSMesa + LLVM of an osmesa-install binary
-#   release (.github/tools/fetch-osmesa.sh), whose tag is the "osmesa_release" input of a
-#   manual run, or else the OSMESA_INSTALL_RELEASE repository variable (for tag pushes):
+# OSMesa (Shadertoy's CPU rendering) needs a mangled OSMesa and LLVM: every platform downloads
+# the prebuilt static OSMesa + LLVM of an osmesa-install binary release
+# (.github/tools/fetch-osmesa.sh), OSMESA_RELEASE below: the "osmesa_release" input of a manual
+# run, else the OSMESA_INSTALL_RELEASE repository variable, else osmesa-mesa-25.0.7-llvm-19.1.7:
 #     https://github.com/devernay/osmesa-install/releases/download/<TAG>/osmesa-install-<TAG>-<PLATFORM>.tar.xz
-#   with PLATFORM macos-arm64 and macos-x86_64 (merged with lipo; else macos-universal) and
-#   windows-ucrt64-x86_64, and their SHA256 listed in .github/parameters/osmesa-install.sha256.
-#   The prebuilt macOS binaries need macOS 14, the target of every macOS bundle (with
-#   OFX_DEPLOY_STRICT_MINOS: a bundled file for a newer macOS fails). With an osmesa-install
-#   tag, macOS and Windows fail if their asset is missing or not listed in
-#   osmesa-install.sha256 (Linux falls back to building OSMesa). Without a tag, there is no
-#   OSMesa variant on macOS and Windows: the full set has the OpenGL-only Shadertoy, and
-#   there is no OSMesa download.
+# with PLATFORM linux-x86_64, macos-arm64 and macos-x86_64 (merged with lipo; else
+# macos-universal) and windows-ucrt64-x86_64. Only an asset whose SHA256 is listed in
+# .github/parameters/osmesa-install.sha256 is used (checked before it is unpacked); macOS and
+# Windows fail if theirs is not listed. The prebuilt macOS libraries are for macOS 14, the target
+# of every macOS bundle (OFX_DEPLOY_STRICT_MINOS: a bundled file for a newer macOS fails).
+# Linux falls back to building OSMesa when its asset is not listed (.github/tools/build-osmesa.sh:
+# Mesa 25.0.7, its archive checked against a pinned SHA256, with Rocky Linux 9's static LLVM;
+# cached with actions/cache, which GitHub scopes by ref).
 #
-# Frugal CI (NatronGitHub runners are shared by all repos): this workflow never runs on
-# pushes to branches or on pull requests, only on release tags (Natron-*, the Natron
-# version this repo is tagged with, and openfx-misc-*) and on manual runs ("Run
-# workflow"). A manual run on a branch without the "tag" input only uploads the archives
-# as workflow artifacts. With the "tag" input (an existing tag), or when it is run on a
-# tag ref ("Use workflow from" a tag), it builds that tag and makes (or updates) its draft
-# release, as a tag push does. A release that is not a draft anymore (published) is never
-# changed: the run fails. This workflow never creates tags (gh release --verify-tag).
-#
-# TODO: now that openfx's per-plug-in install components (NatronGitHub/openfx#155) are in the
-# openfx submodule, install each bundle with "cmake --install build --component <Bundle>"
-# into its own prefix, instead of moving the standalone bundles after "cmake --install".
+# Publishing. Frugal CI (NatronGitHub runners are shared by all repos): this workflow never runs
+# on pushes to branches or on pull requests, only on release tags (Natron-*, the Natron version
+# this repo is tagged with, and openfx-misc-*) and on manual runs ("Run workflow").
+# - A tag push builds the tag and makes (or updates) its DRAFT release.
+# - A manual run only builds and uploads the archives as workflow artifacts, unless its
+#   "publish" input is true (default false). It builds the "tag" input (an existing tag), else
+#   the ref it is run on (a branch, or a tag: "Use workflow from"). With "publish", that tag
+#   (the input, or the tag ref) gets its draft release, as with a tag push; "publish" without a
+#   tag fails.
+# The release job is the only one with write access (contents: write). A release that is not a
+# draft anymore (published) is never changed: the run fails. This workflow never creates tags
+# (gh release create --verify-tag) and never publishes a release: a maintainer does, by hand.
 on:
   push:
     tags: ['Natron-*', 'openfx-misc-*']
@@ -55,8 +51,13 @@ on:
         description: 'Existing tag to build and attach to a draft release (empty: build the selected branch, artifacts only)'
         required: false
         default: ''
+      publish:
+        description: 'Attach the archives to the draft release of the tag (the "tag" input or the tag ref). Default: build and upload workflow artifacts only'
+        type: boolean
+        required: false
+        default: false
       osmesa_release:
-        description: 'osmesa-install release tag with prebuilt OSMesa (empty: the OSMESA_INSTALL_RELEASE variable, else osmesa-mesa-25.0.7-llvm-19.1.7)'
+        description: 'osmesa-install release tag with prebuilt OSMesa, listed in .github/parameters/osmesa-install.sha256 (empty: the OSMESA_INSTALL_RELEASE variable, else osmesa-mesa-25.0.7-llvm-19.1.7)'
         required: false
         default: ''
 
@@ -191,19 +192,17 @@ jobs:
               -DUSE_OSMESA=ON ${OSMESA_LINUX_OPTIONS:--DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr} \
               -DCMAKE_MODULE_LINKER_FLAGS=-Wl,--as-needed
           cmake --build build
-          cmake --install build --prefix "$PWD/install"
+          # each bundle is an install component (openfx's add_ofx_plugin): DenoiseSharpen.ofx.bundle
+          # and Misc.ofx.bundle have the same plug-in, so each is installed, tested and packaged
+          # in its own prefix
+          for c in Misc CImg Shadertoy hostDemo; do cmake --install build --prefix "$PWD/install" --component $c; done
+          cmake --install build --prefix "$PWD/install-denoisesharpen" --component DenoiseSharpen
       - name: Build Shadertoy (OpenGL only)
         run: |
           cmake -S . -B build-shadertoy -G Ninja $SHADERTOY_OPTIONS -DUSE_OSMESA=OFF
           cmake --build build-shadertoy
           cmake --install build-shadertoy --prefix "$PWD/install-shadertoy"
-      - name: Separate the standalone bundles
-        # DenoiseSharpen.ofx.bundle and Misc.ofx.bundle have the same plug-in: each is
-        # tested and packaged on its own (TODO: install components, see above)
-        run: |
-          mkdir -p install-denoisesharpen/OFX/Plugins
-          mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
-          ldd install/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx install-*/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx
+          ldd install*/OFX/Plugins/*.ofx.bundle/Contents/Linux-x86-64/*.ofx
       - name: Bundle Shadertoy's third-party libraries, check the bundles
         # Only Shadertoy (OSMesa, LLVM) may need third-party libraries, libz and libzstd: they are
         # copied into Shadertoy.ofx.bundle/Libraries ($ORIGIN/../../Libraries). Then openfx's
@@ -272,7 +271,9 @@ jobs:
         run: |
           cmake -S . -B build $CMAKE_OPTIONS $MACOS_OPTIONS "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
           cmake --build build --parallel "$(getconf _NPROCESSORS_ONLN)"
-          cmake --install build --prefix "$PWD/install"
+          # each bundle is an install component; DenoiseSharpen in its own prefix (see Linux)
+          for c in Misc CImg Shadertoy hostDemo; do cmake --install build --prefix "$PWD/install" --component $c; done
+          cmake --install build --prefix "$PWD/install-denoisesharpen" --component DenoiseSharpen
       - name: Build Shadertoy with OSMesa (prebuilt OSMesa)
         if: env.OSMESA_RELEASE != ''
         # Preferred: one build per architecture with the macos-arm64 and macos-x86_64 assets,
@@ -310,11 +311,8 @@ jobs:
           lipo -archs "$f" | grep -w arm64 | grep -w x86_64
           otool -L "$f"
           echo "SHADERTOY_OSMESA=--shadertoy-osmesa install-shadertoy-osmesa/OFX/Plugins" >> "$GITHUB_ENV"
-      - name: Separate the standalone bundles
-        # (TODO: install components, see above)
+      - name: Show the binaries
         run: |
-          mkdir -p install-denoisesharpen/OFX/Plugins
-          mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
           for f in install*/OFX/Plugins/*.ofx.bundle/Contents/MacOS/*.ofx; do lipo -info "$f"; otool -L "$f"; done
       - name: Load test
         run: |
@@ -384,7 +382,9 @@ jobs:
           set -eo pipefail
           cmake -S . -B build -G Ninja $CMAKE_OPTIONS $WINDOWS_OPTIONS ${OSMESA_OPTIONS:-}
           cmake --build build
-          cmake --install build --prefix "$PWD/install"
+          # each bundle is an install component; DenoiseSharpen in its own prefix (see Linux)
+          for c in Misc CImg Shadertoy; do cmake --install build --prefix "$PWD/install" --component $c; done
+          cmake --install build --prefix "$PWD/install-denoisesharpen" --component DenoiseSharpen
       - name: Build Shadertoy (OpenGL only)
         if: env.OSMESA_RELEASE != ''
         run: |
@@ -392,13 +392,11 @@ jobs:
           cmake -S . -B build-shadertoy -G Ninja $SHADERTOY_OPTIONS $WINDOWS_OPTIONS -DUSE_OSMESA=OFF
           cmake --build build-shadertoy
           cmake --install build-shadertoy --prefix "$PWD/install-shadertoy"
-      - name: Separate the standalone bundles
-        # (TODO: install components, see above)
+      - name: Shadertoy (OpenGL only) without OSMesa
+        if: env.OSMESA_RELEASE == ''
         run: |
           set -eo pipefail
-          mkdir -p install-denoisesharpen/OFX/Plugins
-          mv install/OFX/Plugins/DenoiseSharpen.ofx.bundle install-denoisesharpen/OFX/Plugins/
-          [ -d install-shadertoy ] || cp -R install install-shadertoy # (OpenGL only: the full set's)
+          cp -R install install-shadertoy # (OpenGL only: the full set's)
       - name: Load test
         run: |
           set -eo pipefail
@@ -421,15 +419,21 @@ jobs:
 
   release:
     name: Draft GitHub release
-    # only for a tag (pushed, a manual run on a tag ref, or the "tag" input of a manual run),
-    # once every platform passed
-    if: github.ref_type == 'tag' || inputs.tag != ''
+    # only for a tag push, or a manual run with "publish" (on a tag ref, or with the "tag"
+    # input), once every platform passed. A manual run without "publish" never gets here.
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish)
     needs: [build_linux, build_macos, build_windows]
     timeout-minutes: 15
     runs-on: ubuntu-24.04
     permissions:
       contents: write # create the draft release and upload its assets
     steps:
+      - name: Check the tag
+        run: |
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "ERROR: publish needs a tag: the \"tag\" input, or a run on a tag ref"
+            exit 1
+          fi
       - name: Download the archives
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
@@ -459,7 +463,7 @@ jobs:
           else
             prerelease=
             case "$tag" in *-[rR][cC]*|*-[bB][eE][tT][aA]*|*-[aA][lL][pP][hH][aA]*) prerelease=--prerelease ;; esac
-            osmesa=$(cd dist && ls openfx-misc-Shadertoy-OSMesa-* | sed -e 's/^openfx-misc-Shadertoy-OSMesa-.*-\(linux\|macos\|windows\)-.*/\1/' | sort -u | paste -sd, - | sed 's/,/, /g')
+            osmesa=$(cd dist && { ls openfx-misc-Shadertoy-OSMesa-* 2> /dev/null || true; } | sed -e 's/^openfx-misc-Shadertoy-OSMesa-.*-\(linux\|macos\|windows\)-.*/\1/' | sort -u | paste -sd, - | sed 's/,/, /g')
             cat > notes.md << EOF
           openfx-misc binaries of \`$tag\`, for Linux x86_64 (Rocky Linux 9, glibc 2.34, and later), Windows x86_64 and macOS 14 or later (universal).
 

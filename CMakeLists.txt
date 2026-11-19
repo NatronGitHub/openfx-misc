@@ -204,8 +204,10 @@ elseif(OFX_BUILD_HOSTDEMO)
   # views of a stereo frame), and is installed next to the bundles' OFX directory
   add_custom_target(ofxmisc_hostdemo ALL)
   add_dependencies(ofxmisc_hostdemo hostDemo)
-  # openfx's install rules are not used (EXCLUDE_FROM_ALL, and openfx's OFX_INSTALL is OFF)
-  install(PROGRAMS $<TARGET_FILE:hostDemo> DESTINATION bin)
+  # openfx's install rules are not used (EXCLUDE_FROM_ALL, and openfx's OFX_INSTALL is OFF).
+  # Component hostDemo (each bundle is the component named after its target, e.g. Misc), so
+  # that "cmake --install --component" can install it with the bundles (release.yml).
+  install(PROGRAMS $<TARGET_FILE:hostDemo> DESTINATION bin COMPONENT hostDemo)
 endif()
 # add_ofx_plugin, ofx_plugin_resources, ofx_target_openmp, ofx_deploy_bundle and ARCHDIR
 # come from openfx/cmake/OpenFX.cmake (included by openfx's CMakeLists.txt).

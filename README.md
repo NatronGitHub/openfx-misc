@@ -34,13 +34,12 @@ universal):
 
 - `openfx-misc-<version>-<platform>`: the full set, the same bundles as in Natron:
   `Misc.ofx.bundle`, `CImg.ofx.bundle` and `Shadertoy.ofx.bundle`. Shadertoy is the
-  OSMesa variant (it can also render on the CPU, when the host has no OpenGL rendering)
-  where it is built: always on Linux, and on macOS and
-  Windows when the release uses a prebuilt OSMesa from
-  [osmesa-install](https://github.com/devernay/osmesa-install); OpenGL only otherwise.
+  OSMesa variant (it can also render on the CPU, when the host has no OpenGL rendering),
+  linked with a prebuilt static OSMesa and LLVM from
+  [osmesa-install](https://github.com/devernay/osmesa-install).
 - `openfx-misc-Shadertoy-OpenGL-<version>-<platform>`: `Shadertoy.ofx.bundle` alone,
   OpenGL only.
-- `openfx-misc-Shadertoy-OSMesa-<version>-<platform>` (where OSMesa is built):
+- `openfx-misc-Shadertoy-OSMesa-<version>-<platform>`:
   `Shadertoy.ofx.bundle` alone, OpenGL + OSMesa: the bundle of the full set.
 - `openfx-misc-DenoiseSharpen-<version>-<platform>`: `DenoiseSharpen.ofx.bundle`, with
   only the DenoiseSharpen plugin.

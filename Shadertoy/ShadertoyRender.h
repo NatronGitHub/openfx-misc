@@ -55,8 +55,8 @@
 
 #ifdef USE_OSMESA
 #  include <GL/gl_mangle.h>
-// no GL/glu_mangle.h: Shadertoy doesn't use GLU (the OSMesa of the binary releases is built
-// without it, osmesa-install's BUILD_GLU=0)
+// no GL/glu_mangle.h: Shadertoy doesn't use GLU (the OSMesa that release.yml builds has no
+// GLU, osmesa-install's BUILD_GLU=0)
 #  include <GL/osmesa.h>
 #  define RENDERFUNC renderMesa
 #  define contextAttached contextAttachedMesa
