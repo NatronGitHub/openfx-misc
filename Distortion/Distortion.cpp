@@ -149,7 +149,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              3DE Standard cylindric bending b <= -1, 3DE Fisheye focal length 0) are clamped away from
 //              the singularity, see DistortionModel.cpp; the u and v of the STMap output mode are 0 for a
 //              format less than one pixel wide or high (they were 0/0); a format PAR of 0 is taken as 1;
-//              plus the IDistort/STMap 2.1 fix
+//              plus the IDistort/STMap 2.1 fix; the RoD (3.1, 4.1) and the RoI (2.1, 3.1, 4.1), the bounding box
+//              of distorted sample points that can be 1e12 pixels away or more for strong or degenerate
+//              parameters (e.g. Nuke k1=-1), are clamped to the infinite region (kOfxFlagInfiniteMin/Max)
 #define kPluginVersionLensDistortionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionLensDistortionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -2928,6 +2930,40 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 } // DistortionPlugin::isIdentity
 
+// Convert a region in pixel coordinates, computed by LensDistortion as the bounding box of
+// distorted or undistorted sample points, to canonical coordinates, clamped to the OFX infinite
+// region [kOfxFlagInfiniteMin, kOfxFlagInfiniteMax] (ofxCore.h: "Infinite regions are flagged by
+// setting x1 = kOfxFlagInfiniteMin, y1 = kOfxFlagInfiniteMin, x2 = kOfxFlagInfiniteMax,
+// y2 = kOfxFlagInfiniteMax"). For strong or degenerate distortions (e.g. Nuke k1=-1), the sample
+// points can be 1e12 pixels away or more: such a region is meaningless, and a host could try to
+// allocate it. A side that reaches the infinite flag in pixel coordinates (or beyond it in
+// canonical coordinates, at a render scale below 1 or a PAR above 1) is exactly the flag, so that
+// hosts see an infinite side. Regions within these bounds (all normal inputs) are unchanged. The
+// result is empty if all the sample points are beyond the same infinite flag (nothing finite to see).
+// Only comparisons and min/max: no NaN can be produced here.
+static void
+lensDistortionPixelToCanonicalClamped(const OfxRectD & rectPixel,
+                                      const OfxPointD & renderScale,
+                                      double par,
+                                      OfxRectD *rect)
+{
+    const double infMin = (double)kOfxFlagInfiniteMin;
+    const double infMax = (double)kOfxFlagInfiniteMax;
+    OfxRectD r;
+    r.x1 = (std::min)( (std::max)(rectPixel.x1, infMin), infMax );
+    r.y1 = (std::min)( (std::max)(rectPixel.y1, infMin), infMax );
+    r.x2 = (std::min)( (std::max)(rectPixel.x2, infMin), infMax );
+    r.y2 = (std::min)( (std::max)(rectPixel.y2, infMin), infMax );
+    OFX::Coords::toCanonical(r, renderScale, par, rect);
+    if (OFX::Coords::rectIsEmpty(r)) {
+        return; // toCanonical gave the empty rect (0,0,0,0)
+    }
+    rect->x1 = (r.x1 <= infMin) ? infMin : (std::min)( (std::max)(rect->x1, infMin), infMax );
+    rect->y1 = (r.y1 <= infMin) ? infMin : (std::min)( (std::max)(rect->y1, infMin), infMax );
+    rect->x2 = (r.x2 >= infMax) ? infMax : (std::min)( (std::max)(rect->x2, infMin), infMax );
+    rect->y2 = (r.y2 >= infMax) ? infMax : (std::min)( (std::max)(rect->y2, infMin), infMax );
+}
+
 // override the roi call
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
@@ -3008,8 +3044,7 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         roiPixel.y2 += 2;
 
         OfxRectD roi;
-        OFX::Coords::toCanonical(roiPixel, args.renderScale, par, &roi);
-        assert( !OFX::Coords::rectIsEmpty(roi) );
+        lensDistortionPixelToCanonicalClamped(roiPixel, args.renderScale, par, &roi);
         rois.setRegionOfInterest(*_srcClip, roi);
         /*
         printf("getRegionsOfInterest: rs=(%g,%g) rw=(%g,%g,%g,%g) rwp=(%d,%d,%d,%d) -> roiPixel(%g,%g,%g,%g) roiCanonical=(%g,%g,%g,%g)\n",
@@ -3144,8 +3179,7 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         rodPixel.y1 -= 2;
         rodPixel.y2 += 2;
 
-        OFX::Coords::toCanonical(rodPixel, args.renderScale, par, &rod);
-        assert( !OFX::Coords::rectIsEmpty(rod) );
+        lensDistortionPixelToCanonicalClamped(rodPixel, args.renderScale, par, &rod);
         /*
         printf("getRegionOfDefinition: rs=(%g,%g) srcrodp=(%g,%g,%g,%g) -> rodPixel(%g,%g,%g,%g) rodCanonical=(%g,%g,%g,%g)\n",
                args.renderScale.x, args.renderScale.y,
@@ -3154,7 +3188,11 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                rod.x1, rod.y1, rod.x2, rod.y2);
          */
 
-        if ( _cropToFormat && _cropToFormat->getValueAtTime(time) ) {
+        // an empty rod (all the sample points beyond the same infinite flag) stays empty: cropping
+        // it to the format would make a non-empty rod out of nothing. Otherwise, the tests below
+        // on the unclamped rodPixel give the same results as on the clamped one (the format is
+        // within the int range)
+        if ( !OFX::Coords::rectIsEmpty(rod) && _cropToFormat && _cropToFormat->getValueAtTime(time) ) {
             // crop to format works by clamping the output rod to the format wherever the input rod was inside the format
             // this avoids unwanted crops (cropToFormat is checked by default)
             OfxRectI srcFormat;
