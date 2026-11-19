@@ -3188,7 +3188,11 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                rod.x1, rod.y1, rod.x2, rod.y2);
          */
 
-        if ( _cropToFormat && _cropToFormat->getValueAtTime(time) ) {
+        // an empty rod (all the sample points beyond the same infinite flag) stays empty: cropping
+        // it to the format would make a non-empty rod out of nothing. Otherwise, the tests below
+        // on the unclamped rodPixel give the same results as on the clamped one (the format is
+        // within the int range)
+        if ( !OFX::Coords::rectIsEmpty(rod) && _cropToFormat && _cropToFormat->getValueAtTime(time) ) {
             // crop to format works by clamping the output rod to the format wherever the input rod was inside the format
             // this avoids unwanted crops (cropToFormat is checked by default)
             OfxRectI srcFormat;
